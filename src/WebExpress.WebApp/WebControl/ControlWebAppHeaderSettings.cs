@@ -110,15 +110,15 @@ namespace WebExpress.WebApp.WebControl
         {
             var items = GetItems(renderContext);
 
-            var settingCtlr = items.Any() ?
-            new ControlDropdown(Id, [.. items])
-            {
-                Icon = new IconCog(),
-                AlignmentMenu = TypeAlignmentDropdownMenu.Right,
-                BackgroundColor = new PropertyColorButton(TypeColorButton.Dark),
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None)
-            } :
-            null;
+            var settingCtlr = items.Any()
+                ? new ControlDropdown(Id, [.. items])
+                {
+                    Icon = new IconCog(),
+                    AlignmentMenu = TypeAlignmentDropdownMenu.Right,
+                    BackgroundColor = new PropertyColorButton(TypeColorButton.Dark),
+                    Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None)
+                }
+                : null;
 
             return settingCtlr?.Render(renderContext, visualTree);
         }
@@ -134,6 +134,7 @@ namespace WebExpress.WebApp.WebControl
             var appicationContext = renderContext.PageContext?.ApplicationContext;
             var preferenceCategories = settinPageManager?.GetSettingCategories(appicationContext)
                 .Where(x => x.Section == SettingSection.Preferences)
+                .Where(x => settinPageManager.GetSettingPages(appicationContext, x).Any())
                 .Select
                 (
                     x => new ControlDropdownItemLink()
@@ -145,6 +146,7 @@ namespace WebExpress.WebApp.WebControl
                 );
             var primaryCategories = settinPageManager?.GetSettingCategories(appicationContext)
                 .Where(x => x.Section == SettingSection.Primary)
+                .Where(x => settinPageManager.GetSettingPages(appicationContext, x).Any())
                 .Select
                 (
                     x => new ControlDropdownItemLink()
@@ -156,6 +158,7 @@ namespace WebExpress.WebApp.WebControl
                 );
             var secondaryCategories = settinPageManager?.GetSettingCategories(appicationContext)
                 .Where(x => x.Section == SettingSection.Secondary)
+                .Where(x => settinPageManager.GetSettingPages(appicationContext, x).Any())
                 .Select
                 (
                     x => new ControlDropdownItemLink()

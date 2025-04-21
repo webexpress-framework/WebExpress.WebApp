@@ -26,8 +26,11 @@
 
   <ItemGroup>
     <Compile Remove="WebAttribute\**" />
+    <Compile Remove="WebComponent\**" />
     <EmbeddedResource Remove="WebAttribute\**" />
+    <EmbeddedResource Remove="WebComponent\**" />
     <None Remove="WebAttribute\**" />
+    <None Remove="WebComponent\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -67,10 +70,6 @@
 	  <PackageReference Include="WebExpress.WebCore" Version="0.0.9-alpha" />
 	  <PackageReference Include="WebExpress.WebUI" Version="0.0.9-alpha" />
 	  <PackageReference Include="WebExpress.WebIndex" Version="0.0.9-alpha" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Folder Include="WebComponent\" />
 	</ItemGroup>
 
 </Project>

@@ -1,5 +1,6 @@
 ﻿using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebControl;
+using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.Test.WebControl
@@ -14,9 +15,10 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the id property of the web app header settings control.
         /// </summary>
         [Theory]
-        [InlineData(null, "<div class=\"dropdown ms-2\">*</div>")]
-        [InlineData("id", "<div id=\"id\" class=\"dropdown ms-2\">*</div>")]
-        public void Id(string id, string expected)
+        [InlineData(null, false, "<div class=\"dropdown ms-2\">*</div>")]
+        [InlineData("id", false, "<div id=\"id\" class=\"dropdown ms-2\">*</div>")]
+        [InlineData("id", true, "")]
+        public void Id(string id, bool empty, string expected)
         {
             // preconditions
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
@@ -26,6 +28,11 @@ namespace WebExpress.WebApp.Test.WebControl
             var control = new ControlWebAppHeaderSettings(id)
             {
             };
+
+            if (!empty)
+            {
+                control.AddPrimary(new ControlDropdownItemLink());
+            }
 
             // test execution
             var html = control.Render(context, visualTree);

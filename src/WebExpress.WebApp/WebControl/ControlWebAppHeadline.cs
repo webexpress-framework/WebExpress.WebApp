@@ -205,7 +205,6 @@ namespace WebExpress.WebApp.WebControl
                     {
                         Text = I18N.Translate(renderContext.Request?.Culture, renderContext.PageContext?.PageTitle),
                         Format = TypeFormatText.H2,
-                        Padding = new PropertySpacingPadding(PropertySpacing.Space.One),
                         Margin = new PropertySpacingMargin(PropertySpacing.Space.None, PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.Null)
                     },
                     preferences.Any() ? new ControlPanelFlexbox(null, [.. preferences])
