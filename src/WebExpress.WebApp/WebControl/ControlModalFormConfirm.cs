@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebIcon;
+using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
@@ -16,7 +17,7 @@ namespace WebExpress.WebApp.WebControl
         /// <summary>
         /// Event is triggered when deletion is confirmed.
         /// </summary>
-        public event EventHandler<FormEventArgs> Confirm;
+        public event EventHandler<ControlFormEvent> Confirm;
 
         /// <summary>
         /// Returns or sets the submit button icon.
@@ -46,7 +47,7 @@ namespace WebExpress.WebApp.WebControl
         /// <summary>
         /// Returns or sets the redirect uri.
         /// </summary>
-        public string RedirectUri { get { return Form?.RedirectUri; } set { Form.RedirectUri = value; } }
+        public IUri RedirectUri { get { return Form?.RedirectUri; } set { Form.RedirectUri = value; } }
 
         /// <summary>
         /// Initializes a new instance of the class.
@@ -55,9 +56,9 @@ namespace WebExpress.WebApp.WebControl
         public ControlModalFormConfirm(string id = null, params ControlFormItem[] content)
             : base(id, content)
         {
-            Form.ProcessForm += (s, e) =>
+            Form.ProcessForm += (argument) =>
             {
-                OnConfirm(e.Context);
+                OnConfirm(argument.Context);
             };
 
             Form.AddPrimaryButton(SubmitButton);
@@ -69,7 +70,7 @@ namespace WebExpress.WebApp.WebControl
         /// <param name="context">The context in which the control is rendered.</param>
         protected virtual void OnConfirm(IRenderControlFormContext context)
         {
-            Confirm?.Invoke(this, new FormEventArgs() { Context = context });
+            Confirm?.Invoke(this, new ControlFormEvent() { Context = context });
         }
 
         /// <summary>
@@ -95,7 +96,7 @@ namespace WebExpress.WebApp.WebControl
         /// <param name="visualTree">The visual tree representing the control's structure.</param>
         /// <param name="items">The form items.</param>
         /// <returns>An HTML node representing the rendered control.</returns>
-        public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IEnumerable<ControlFormItem> items)
+        public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IEnumerable<IControlFormItem> items)
         {
             if (string.IsNullOrWhiteSpace(Header))
             {
