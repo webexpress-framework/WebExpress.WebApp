@@ -67,7 +67,7 @@ namespace WebExpress.WebApp.WebPage
         /// <summary>
         /// Returns the control for displaying notification popups via API.
         /// </summary>
-        public ControlApiNotificationPopup NotificationPopup { get; protected set; } = new ControlApiNotificationPopup("wx-notificationpopup");
+        public ControlApiPopupNotification NotificationPopup { get; protected set; } = new ControlApiPopupNotification("wx-notificationpopup");
 
         /// <summary>
         /// Initializes a new instance of the class.

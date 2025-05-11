@@ -1,4 +1,4 @@
-.popupnotification {
+.wx-popupnotification {
     position: fixed;
     z-index: 999;
     top: 5em;
@@ -7,18 +7,18 @@
     width: 25em;
 }
 
-    .popupnotification > div {
+    .wx-popupnotification > div {
     }
-        .popupnotification > div > .d-flex {
+        .wx-popupnotification > div > .d-flex {
             align-items: flex-start;
         }
         
-            .popupnotification > div > .d-flex > img {
+            .wx-popupnotification > div > .d-flex > img {
                 max-width: 80px;
                 padding-top: 0.5em;
                 padding-right: 1em;
             }
 
-            .popupnotification > div > .progress {
+            .wx-popupnotification > div > .progress {
                 height: 3px;
             }

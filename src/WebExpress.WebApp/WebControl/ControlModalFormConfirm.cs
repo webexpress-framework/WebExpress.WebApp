@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebIcon;
-using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
@@ -45,23 +44,18 @@ namespace WebExpress.WebApp.WebControl
         private ControlFormItemButtonSubmit SubmitButton { get; } = new ControlFormItemButtonSubmit("submit");
 
         /// <summary>
-        /// Returns or sets the redirect uri.
-        /// </summary>
-        public IUri RedirectUri { get { return Form?.RedirectUri; } set { Form.RedirectUri = value; } }
-
-        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The id.</param>
         public ControlModalFormConfirm(string id = null, params ControlFormItem[] content)
             : base(id, content)
         {
-            Form.ProcessForm += (argument) =>
+            ProcessForm += (argument) =>
             {
                 OnConfirm(argument.Context);
             };
 
-            Form.AddPrimaryButton(SubmitButton);
+            AddPrimaryButton(SubmitButton);
         }
 
         /// <summary>
@@ -108,7 +102,7 @@ namespace WebExpress.WebApp.WebControl
                 SubmitButtonLabel = I18N.Translate(renderContext.Request, "webexpress.webapp:confirm.label");
             }
 
-            Form.RedirectUri = RedirectUri ?? renderContext.Request.Uri;
+            RedirectUri = RedirectUri ?? renderContext.Request.Uri;
             SubmitButton.Text = SubmitButtonLabel;
 
             return base.Render(renderContext, visualTree, items);

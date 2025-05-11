@@ -132,7 +132,7 @@ namespace WebExpress.WebApp.WebControl
             var nextQuickcreate = quickcreateList.Skip(1);
 
             var quickcreate = nextQuickcreate.Any() ?
-            (IControl)new ControlSplitButtonLink(Id, nextQuickcreate.Skip(1).ToArray())
+            (IControl)new ControlSplitButtonLink(Id, [.. nextQuickcreate.Skip(1)])
             {
                 Text = I18N.Translate(renderContext.Request?.Culture, "webexpress.webapp:header.quickcreate.label"),
                 Uri = firstQuickcreate?.Uri,

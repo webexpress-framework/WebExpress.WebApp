@@ -44,8 +44,10 @@ namespace WebExpress.WebApp.WWW.Api._1
         /// <returns>A collection of notifications.</returns>
         public object GetData(Request request)
         {
-
-            return _componentHub.GetComponentManager<NotificationManager>()?.GetNotifications(_applicationContext, request);
+            return _componentHub.GetComponentManager<NotificationManager>()?.GetNotifications
+            (
+                _applicationContext, request
+            );
         }
 
         /// <summary>

@@ -1,35 +1,36 @@
 /**
- * Popup-Benachrichtigungen
+ * Control for displaying popup notifications.
  * The following events are triggered:
  * - webexpress.webapp.close with parameter id.
  */
-webexpress.webapp.popupNotificationCtrl = class extends webexpress.webui.events {
-    _restUri = "";
-    _container = $("<div class='popupnotification'/>");
+webexpress.webapp.PopupNotificationCtrl = class extends webexpress.webui.Ctrl {
+    _interval = null;
+    _restUri = null;
     _activeNotifications = new Map();
 
     /**
-     * Constructor
-     * @param settings Options for styling the control:
-     *        - id Sets the id of the control.
-     *        - resturi The uri of the rest api interface that collects the data.
-     *        - intervall The interval determines the timing of the rest api requests.
-     */
-    constructor(settings) {
-        super();
-        
-        let id = settings.id;
-        let interval = settings.interval ?? 10000;
-        this._restUri = settings.resturi;
+    * Constructor
+    * @param {HTMLElement} element - The DOM element associated with the move control.
+    */
+    constructor(element) {
+        super(element);
 
-        this._container.attr("id", id ?? "");
+        // Initialize structure and parse existing data
+        this._interval = $(element).data("interval") || 10000;
+        this._restUri = $(element).data("uri") || null;
 
         setInterval(function () {
             this.receiveData();
 
-        }.bind(this), interval);
+        }.bind(this), this._interval);
 
         this.receiveData();
+
+        // Clean up the DOM
+        $(element)
+            .empty()
+            .removeAttr("data-interval data-uri")
+            .addClass("wx-popupnotification");
     }
 
     /**
@@ -101,7 +102,7 @@ webexpress.webapp.popupNotificationCtrl = class extends webexpress.webui.events 
                     alert.append($("<div class='progress mt-2'></div>").append(progressbar));
                 }
                 
-                this._container.append(alert);
+                $(this._element).append(alert);
                 
                 if (!this._activeNotifications.has(id)) {
                     let data = { 
@@ -159,11 +160,7 @@ webexpress.webapp.popupNotificationCtrl = class extends webexpress.webui.events 
             });
         }.bind(this));
     }
-
-    /**
-    * Returns the control.
-    */
-    get getCtrl() {
-        return this._container;
-    }
 }
+
+// Register the class in the controller
+webexpress.webui.Controller.registerClass("wx-webapp-popupnotification", webexpress.webapp.PopupNotificationCtrl);
