@@ -1,27 +1,26 @@
 /**
- * A dopdown box with features for create, read, update, and delete.
+ * A selection box.
+ * The following events are triggered:
+ * - webexpress.webui.Event.CHANGE_FILTER_EVENT
+ * - webexpress.webui.Event.CHANGE_VALUE_EVENT
+ * - webexpress.webui.Event.DROPDOWN_SHOW_EVENT
+ * - webexpress.webui.Event.DROPDOWN_HIDDEN_EVENT 
  */
-webexpress.webapp.selectionCtrl = class extends webexpress.webui.selectionCtrl {
+webexpress.webapp.SelectionCtrl = class extends webexpress.webui.SelectionCtrl {
     _optionUri = "";
-    _spinner = $("<div class='spinner-border spinner-border-sm text-secondary' role='status'/>");
+    _spinner = $("<div class='spinner-border spinner-border-sm text-secondary ms-2' role='status'/>");
 
     /**
      * Constructor
-     * @param settings Options for styling the control:
-     *        - id Sets the id of the control.
-     *        - css The css class used to design the control.
-     *        - placeholder The placeholder text.
-     *        - hidedescription Disabled the description.
-     *        - multiselect Allows you to select multiple items.
-     *        - optionuri The uri of the rest api interface that collects the options.
+     * @param {HTMLElement} element - The DOM element for the selection control.
      */
-    constructor(settings) {
-        super(settings);
+    constructor(element) {
+        super(element);
 
-        this._optionUri = settings.optionuri;
+        this._optionUri = $(element).data("uri") ?? ""; // Retrieve the URI for loading content
         this._optionfilter = function (x, y) { return true; };
 
-        this._container.on('show.bs.dropdown', function () {
+        $(this._element).on('show.bs.dropdown', function () {
             this.receiveData(this._filter.val());
         }.bind(this));
     }
@@ -35,15 +34,20 @@ webexpress.webapp.selectionCtrl = class extends webexpress.webui.selectionCtrl {
         filter = filter !== undefined || filter != null ? filter : "";
         this._selection.append(this._spinner);
 
-         $.ajax({ type: "GET", url: this._optionUri + "?search=" + filter + "&page=0", dataType: 'json', }).then(function (response) {
-             var data = response.data;
+         $.get(`${this._optionUri}?search=${filter}&page=${this._page}`)
+            .done((response) => {
+                 this.options = response.options;
+                 this.trigger('webexpress.webui.receive.complete');
 
-             this.options = data;
-             this.trigger('webexpress.webui.receive.complete');
+                 //this.update();
 
-             //this.update();
-
-             this._selection.children("div").remove();
-         }.bind(this));
+                 this._selection.children("div").remove();
+             })
+             .fail((error) => {
+                console.error("The request could not be completed successfully:", error);
+            });
     }
 }
+
+// Register the class in the controller
+webexpress.webui.Controller.registerClass("wx-webapp-selection", webexpress.webapp.SelectionCtrl);

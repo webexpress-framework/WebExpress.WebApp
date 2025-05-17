@@ -1,38 +1,43 @@
 /**
  * Progress bar of a task (WebTask).
  * The following events are triggered:
- * - webexpress.webapp.finish with parameter id.
+ * - webexpress.webui.Event.TASK_START_EVENT
+ * - webexpress.webui.Event.TASK_UPDATE_EVENT
+ * - webexpress.webui.Event.TASK_FINISH_EVENT
  */
-webexpress.webapp.taskProgressBarCtrl = class extends webexpress.webui.events {
+webexpress.webapp.TaskProgressBarCtrl = class extends webexpress.webui.Ctrl {
+    _interval = null;
     _restUri = "";
-    _container = $("<div class='taskprogressbar'/>");
-    _progress = $("<div class='progress'><div class='progress-bar progress-bar-striped progress-bar-animated' role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'></div></div>");
+    _progress = $("<div class='progress'>").append($("<div role='progressbar' style='width: 0%' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100'>"));
     _message = $("<div class='text-secondary'/>");
     _interval = null;
 
     /**
      * Constructor
-     * @param settings Options for styling the control:
-     *        - id Sets the id of the control.
-     *        - resturi The uri of the rest api interface that collects the data.
-     *        - intervall The interval determines the timing of the rest api requests.
+     * @param {HTMLElement} element - The DOM element associated with the modal control.
      */
-    constructor(settings) {
-        super();
+    constructor(element) {
+        super(element);
         
-        let id = settings.id;
-        let interval = settings.interval ?? 15000;
-        this._restUri = settings.resturi;
+        this._interval = $(element).data("interval") ?? 15000;
+        this._restUri = $(element).data("uri") ?? ""; // Retrieve the URI for loading content
+        this._size = $(element).data("size") || null;
 
-        this._container.attr("id", id ?? "");
-
-        this._interval = setInterval(function () {
+        this._interval = setInterval(() => {
             this.receiveData();
-        }.bind(this), interval);
+        }, this._interval);
         
-        this._container.append(this._progress);
-        this._container.append(this._message);
-
+        // Cleanup the DOM element
+        $(this._element)
+            .empty()
+            .removeAttr("data-interval data-uri data-size")
+            .addClass("wx-taskprogressbar");
+        
+        $(this._element).append(this._progress);
+        $(this._element).append(this._message);
+        
+        
+        
         this.receiveData();
     }
 
@@ -40,27 +45,30 @@ webexpress.webapp.taskProgressBarCtrl = class extends webexpress.webui.events {
      * Retrieve data from rest api.
      */
     receiveData() {        
-        $.ajax({ type: "GET", url: this._restUri, dataType: 'json', }).then(function (data) {
-            let progress = data.Progress ?? 0;
-            let type = data.Type ?? "bg-primary";
-            let message = data.Message ?? "";
+        $.get(this._restUri)
+            .done((response) => {
+                const progress = response.progress ?? 0;
+                const type = response.tpe ?? "bg-primary";
+                const message = response.message ?? "";
 
-            this._progress.children().first().width(Math.min(Math.max(progress, 0), 100) + "%");
-            this._progress.children().first().css("progress-bar progress-bar-striped progress-bar-animated" + type);
-            this._message.html(message);
-            
-            if (data.State == 3) {
-                clearInterval(this._interval);
-                this.trigger('webexpress.webapp.finish', data.Id);
-            }
-            
-        }.bind(this));
-    }
-
-    /**
-     * Returns the control.
-     */
-    get getCtrl() {
-        return this._container;
+                this._progress.children().first().width(Math.min(Math.max(progress, 0), 100) + "%");
+                this._progress.children().first()
+                    .addClass("progress-bar progress-bar-striped progress-bar-animated")
+                    .addClass(type)
+                    .addClass(this._size);
+                this._message.html(message);
+                
+                if (response.state == 3) {
+                    clearInterval(this._interval);
+                    this.trigger('webexpress.webapp.finish', data.Id);
+                }
+                
+            })
+            .fail((error) => {
+                console.error("The request could not be completed successfully:", error);
+            });
     }
 }
+
+// Register the class in the controller
+webexpress.webui.Controller.registerClass("wx-webapp-taskprogressbar", webexpress.webapp.TaskProgressBarCtrl);

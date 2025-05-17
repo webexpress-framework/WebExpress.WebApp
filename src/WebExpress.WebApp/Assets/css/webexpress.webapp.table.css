@@ -1,0 +1,15 @@
+.wx-table-toolbar {
+    display: flex; 
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    align-items: center;
+    color: var(--bs-body-color);
+}
+
+.wx-table-statusbar {
+    display: flex; 
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    color: var(--bs-body-color);
+}

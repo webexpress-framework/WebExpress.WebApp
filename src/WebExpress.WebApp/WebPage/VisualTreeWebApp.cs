@@ -88,6 +88,7 @@ namespace WebExpress.WebApp.WebPage
 
             AddCssLink(RouteEndpoint.Combine(applicationContext?.Route, "/assets/css/webexpress.webapp.css"));
             AddCssLink(RouteEndpoint.Combine(applicationContext?.Route, "/assets/css/webexpress.webapp.popupnotification.css"));
+            AddCssLink(RouteEndpoint.Combine(applicationContext?.Route, "/assets/css/webexpress.webapp.table.css"));
             AddCssLink(RouteEndpoint.Combine(applicationContext?.Route, "/assets/css/webexpress.webapp.taskprogressbar.css"));
             AddCssLink(Theme?.ThemeStyle.ToString() ?? RouteEndpoint.Combine(applicationContext?.Route, "/assets/css/webexpress.webapp.theme.css"));
             AddHeaderScriptLink(RouteEndpoint.Combine(applicationContext?.Route, "assets/js/webexpress.webapp.js"));

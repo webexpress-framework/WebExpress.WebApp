@@ -34,12 +34,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove="Assets\css\webexpress.webapp.table.css" />
     <None Remove="Assets\css\webexpress.webapp.theme.css" />
   </ItemGroup>
 
 	<ItemGroup>
 		<EmbeddedResource Include="Assets\css\webexpress.webapp.css" />
 		<EmbeddedResource Include="Assets\css\webexpress.webapp.popupnotification.css" />
+		<EmbeddedResource Include="Assets\css\webexpress.webapp.table.css" />
 		<EmbeddedResource Include="Assets\css\webexpress.webapp.taskprogressbar.css" />
 		<EmbeddedResource Include="Assets\css\webexpress.webapp.theme.css" />
 		<EmbeddedResource Include="Assets\js\webexpress.webapp.popupnotification.js" />
