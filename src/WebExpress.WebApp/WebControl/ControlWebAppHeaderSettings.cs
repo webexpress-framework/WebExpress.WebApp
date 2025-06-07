@@ -115,7 +115,7 @@ namespace WebExpress.WebApp.WebControl
                 {
                     Icon = new IconCog(),
                     AlignmentMenu = TypeAlignmentDropdownMenu.Right,
-                    BackgroundColor = new PropertyColorButton(TypeColorButton.Dark),
+                    Color = new PropertyColorButton(TypeColorButton.Dark),
                     Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None)
                 }
                 : null;

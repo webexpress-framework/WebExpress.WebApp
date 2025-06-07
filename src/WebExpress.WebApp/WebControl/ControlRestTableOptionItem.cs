@@ -1,11 +1,11 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace WebExpress.WebApp.WebApiControl
+namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
     /// Meta information of a CRUD option (e.g. Edit, Delete, ...).
     /// </summary>
-    public class ControlApiTableOptionItem
+    public class ControlRestTableOptionItem
     {
         /// <summary>
         /// The types of an option entry.
@@ -67,7 +67,7 @@ namespace WebExpress.WebApp.WebApiControl
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
-        public ControlApiTableOptionItem()
+        public ControlRestTableOptionItem()
         {
             Type = OptionType.Divider;
         }
@@ -77,7 +77,7 @@ namespace WebExpress.WebApp.WebApiControl
         /// </summary>
         /// <param name="label">The label of the column.</param>
         /// <param name="type">The type of option entry.</param>
-        public ControlApiTableOptionItem(string label, OptionType type = OptionType.Item)
+        public ControlRestTableOptionItem(string label, OptionType type = OptionType.Item)
         {
             Label = label;
             Type = type;

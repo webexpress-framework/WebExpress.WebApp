@@ -14,8 +14,8 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the id property of the web app header app navigator control.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div class=""dropdown mx-2"">*</div>")]
-        [InlineData("id", @"<div id=""id"" class=""dropdown mx-2"">*</div>")]
+        [InlineData(null, @"<div class=""wx-webui-dropdownbutton mx-2"" role=""button""><div id=""webexpress.webapp.test.testfragmentsectionapppreferencesitem"" class=""wx-dropdownbutton-item"">TestFragmentSectionAppPreferencesItem</div></div>")]
+        [InlineData("id", @"<div id=""id"" class=""wx-webui-dropdownbutton mx-2"" role=""button""><div id=""webexpress.webapp.test.testfragmentsectionapppreferencesitem"" class=""wx-dropdownbutton-item"">TestFragmentSectionAppPreferencesItem</div></div>")]
         public void Id(string id, string expected)
         {
             // preconditions

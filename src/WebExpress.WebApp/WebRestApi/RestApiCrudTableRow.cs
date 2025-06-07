@@ -1,0 +1,31 @@
+﻿using System.Collections.Generic;
+using System.Text.Json.Serialization;
+
+namespace WebExpress.WebApp.WebRestApi
+{
+    /// <summary>
+    /// Represents a row definition for a REST API-based CRUD table, including metadata such as label, icon, width, and
+    /// rendering logic.
+    /// </summary>
+    public class RestApiCrudTableRow
+    {
+        /// <summary>
+        /// Returns or sets the id.
+        /// </summary>
+        [JsonPropertyName("cells")]
+        public IEnumerable<RestApiCrudTableCell> Cells { get; set; } = [];
+
+        /// <summary>
+        /// Returns or sets the options associated with the REST API CRUD row.
+        /// </summary>
+        [JsonPropertyName("options")]
+        public IEnumerable<RestApiCrudTableRowOption> Options { get; set; } = [];
+
+        /// <summary>
+        /// Initializes a new instance of the class.
+        /// </summary>
+        public RestApiCrudTableRow()
+        {
+        }
+    }
+}

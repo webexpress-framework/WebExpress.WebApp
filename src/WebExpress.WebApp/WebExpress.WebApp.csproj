@@ -24,20 +24,6 @@
 		<IsPackable>true</IsPackable>
 	</PropertyGroup>
 
-  <ItemGroup>
-    <Compile Remove="WebAttribute\**" />
-    <Compile Remove="WebComponent\**" />
-    <EmbeddedResource Remove="WebAttribute\**" />
-    <EmbeddedResource Remove="WebComponent\**" />
-    <None Remove="WebAttribute\**" />
-    <None Remove="WebComponent\**" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Remove="Assets\css\webexpress.webapp.table.css" />
-    <None Remove="Assets\css\webexpress.webapp.theme.css" />
-  </ItemGroup>
-
 	<ItemGroup>
 		<EmbeddedResource Include="Assets\css\webexpress.webapp.css" />
 		<EmbeddedResource Include="Assets\css\webexpress.webapp.popupnotification.css" />
@@ -54,10 +40,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Resource Include="Assets\js\webexpress.webapp.js" />
-	</ItemGroup>
-
-	<ItemGroup>
 	  <None Include="..\..\icon.png" Link="icon.png">
 	    <PackagePath>\</PackagePath>
 	    <Pack>True</Pack>
@@ -66,6 +48,8 @@
 	    <PackagePath>\</PackagePath>
 	    <Pack>True</Pack>
 	  </None>
+	  <None Include="WebRestApi\RestApiCrudTableCell.cs" />
+	  <None Include="WebRestApi\RestApiCrudTableRow.cs" />
 	</ItemGroup>
 
 	<ItemGroup>

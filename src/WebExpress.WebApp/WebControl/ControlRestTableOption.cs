@@ -1,11 +1,11 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace WebExpress.WebApp.WebApiControl
+namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
     /// Meta information of a CRUD option (e.g. Edit, Delete, ...).
     /// </summary>
-    public class ControlApiTableOption
+    public class ControlRestTableOption
     {
         /// <summary>
         /// Returns or sets the label of the option entry. Null for separators.
@@ -28,7 +28,7 @@ namespace WebExpress.WebApp.WebApiControl
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
-        public ControlApiTableOption()
+        public ControlRestTableOption()
         {
         }
     }

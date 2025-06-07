@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using WebExpress.WebApp.WebApiControl;
 using WebExpress.WebApp.WebControl;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebComponent;
@@ -67,7 +66,7 @@ namespace WebExpress.WebApp.WebPage
         /// <summary>
         /// Returns the control for displaying notification popups via API.
         /// </summary>
-        public ControlApiPopupNotification NotificationPopup { get; protected set; } = new ControlApiPopupNotification("wx-notificationpopup");
+        public ControlRestPopupNotification NotificationPopup { get; protected set; } = new ControlRestPopupNotification("wx-notificationpopup");
 
         /// <summary>
         /// Initializes a new instance of the class.

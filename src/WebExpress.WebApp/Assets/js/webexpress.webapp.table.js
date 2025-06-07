@@ -16,7 +16,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrl {
     _paginationDiv = $("<div class='justify-content-end'>");
     _paginationCtrl = null;
     _filter = null;
-    _page = null;
+    _page = 0;
     _previewColumns = [ 
         { label: "<span class='placeholder col-6 placeholder-lg'></span>" }, 
         { label: "<span class='placeholder col-6 placeholder-lg'></span>" }, 
@@ -52,15 +52,21 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrl {
         
         this._filterCtrl = new webexpress.webui.SearchCtrl(this._filterDiv[0]);
         $(document).on(webexpress.webui.Event.CHANGE_FILTER_EVENT, (event, data) => { 
-            this._filter = data.value; 
-            this._receiveData(); 
+            if(data.sender && data.sender === this._filterDiv[0]) {
+                this._filter = data.value;
+                this._receiveData();
+            }
         });
         
         this._paginationCtrl = new webexpress.webui.PaginationCtrl(this._paginationDiv[0]);
-        //this._paginationCtrl = webexpress.webui.Controller.getInstanceByElement(this._paginationDiv);
         $(document).on(webexpress.webui.Event.CHANGE_PAGE_EVENT, (event, data) => { 
-            this._page = data.page; 
-            this._receiveData(); 
+            if (data.sender && data.sender === this._paginationDiv[0]) {
+                this._page = data.page;
+                this._receiveData();
+
+                // scroll to the top of the table
+                window.scrollTo(0, $(this._element).offset().top);
+            }
         });
         
         this._receiveData();
@@ -74,23 +80,30 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrl {
         
         $.get(`${this._restUri}?filter=${this._filter}&page=${this._page}`)
             .done((response) => {
-                
+
+                const page = response.page ?? 0; // current page number
+                const pageSize = response.pageSize ?? 50; // number of items per page
+                const total = response.total ?? 0; // total number of items
+                const totalPages = Math.ceil(total / pageSize); // calculate the total number of pages
+                const startIndex = page * pageSize + 1; // calculate the index of the first item on the current page
+                const endIndex = Math.min(startIndex + pageSize - 1, total); // calculate the index of the last item on the current page
+
                 this._columns = response.columns;
                 this._rows = response.rows;
                 this._titleDiv.text(response.title);
-                this._statusDiv.text(`${response.page * response.pageitems} - ${(response.page * response.pagecount) + response.pagecount - 1} / ${response.total}`);
+                this._statusDiv.text(`${startIndex} - ${endIndex} / ${total}`);
                 
                 // Trigger event when data has successfully arrived
                 $(this._element).trigger(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
                     id: $(this._element).attr("id"),
                     response: response
                 });
-                this._paginationCtrl.pagecount = response.pagecount;
-                this._paginationCtrl.page = response.page;
+                this._paginationCtrl.total = totalPages;
+                this._paginationCtrl.page = page;
                 
                 this._table.removeClass("placeholder-glow");
                 
-                this._hasOptions = this._rows.some(row => row.options?.length > 0);
+                this._hasOptions = Array.isArray(this._rows) && this._rows.some(row => row.options?.length > 0);
                 
                 if (this._options?.length > 0) {
                     this._hasOptions = true;

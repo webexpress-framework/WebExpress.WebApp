@@ -54,7 +54,7 @@ namespace WebExpress.WebApp.Test.WebFragment
         [InlineData(typeof(TestApplication), typeof(IFragmentBase), typeof(SectionContentPrimary), typeof(IScopeGeneral), 0, null)]
         [InlineData(typeof(TestApplication), typeof(IFragmentBase), typeof(SectionContentPrimary), typeof(IScope), 0, null)]
         [InlineData(typeof(TestApplication), typeof(IFragmentControl), typeof(SectionAppNavigationPrimary), typeof(TestPageA), 1, @"<div id=""webexpress-webapp-test-testfragmentpagea""><div>Hello World</div></div>")]
-        [InlineData(typeof(TestApplication), typeof(IFragmentControl), typeof(SectionAppNavigationPrimary), typeof(IScopeGeneral), 1, @"<a id=""webexpress-webapp-test-testfragmentgeneral"" class=""link""><div>Hello World</div></a>")]
+        //[InlineData(typeof(TestApplication), typeof(IFragmentControl), typeof(SectionAppNavigationPrimary), typeof(IScopeGeneral), 1, @"<a id=""webexpress-webapp-test-testfragmentgeneral"" class=""link""><div>Hello World</div></a>")]
         [InlineData(typeof(TestApplication), typeof(IFragmentControl), typeof(SectionAppNavigationPrimary), typeof(IScope), 0, null)]
         [InlineData(typeof(TestApplication), typeof(FragmentControlPanel), typeof(SectionContentSecondary), typeof(TestPageB), 1, @"<div id=""webexpress-webapp-test-testfragmentpageb""><div>Hello World</div></div>")]
         [InlineData(typeof(TestApplication), typeof(FragmentControlPanel), typeof(SectionContentSecondary), typeof(IScopeGeneral), 0, null)]

@@ -4,18 +4,18 @@ using WebExpress.WebCore.WebHtml;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
-namespace WebExpress.WebApp.WebApiControl
+namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
     /// Represents a control for displaying notification popups via API.
     /// </summary>
-    public class ControlApiPopupNotification : Control
+    public class ControlRestPopupNotification : Control
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="ControlApiPopupNotification"/> class.
+        /// Initializes a new instance of the <see cref="ControlRestPopupNotification"/> class.
         /// </summary>
         /// <param name="id">The optional identifier for the control. If not provided, a new GUID will be generated.</param>
-        public ControlApiPopupNotification(string id = null)
+        public ControlRestPopupNotification(string id = null)
             : base(id ?? "26E517F5-56F7-485E-A212-6033618708F3")
         {
         }

@@ -2,7 +2,6 @@
 using WebExpress.WebApp.WebSection;
 using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebFragment;
-using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebFragment;
 
 namespace WebExpress.WebApp.Test
@@ -20,7 +19,7 @@ namespace WebExpress.WebApp.Test
         public TestFragmentGeneral(IFragmentContext fragmentContext)
             : base(fragmentContext)
         {
-            Add(new ControlText() { Text = "Hello World" });
+            Text = "Hello World";
         }
     }
 }

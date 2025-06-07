@@ -1,14 +1,20 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace WebExpress.WebApp.WebApi
+namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
     /// Represents a column in a REST CRUD resource.
     /// </summary>
-    public class RestApiCrudColumn
+    public class RestApiCrudTableColumn
     {
         /// <summary>
-        /// Returns or sets the label. der Splalte
+        /// Returns or sets a value indicating whether the element is visible.
+        /// </summary>
+        [JsonPropertyName("visible")]
+        public bool Visible { get; set; }
+
+        /// <summary>
+        /// Returns or sets the label.
         /// </summary>
         [JsonPropertyName("label")]
         public string Label { get; set; }
@@ -35,7 +41,7 @@ namespace WebExpress.WebApp.WebApi
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="label">The label of the column.</param>
-        public RestApiCrudColumn(string label)
+        public RestApiCrudTableColumn(string label)
         {
             Label = label;
         }

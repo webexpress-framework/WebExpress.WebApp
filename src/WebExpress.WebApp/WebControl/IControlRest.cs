@@ -1,11 +1,11 @@
 ﻿using WebExpress.WebCore.WebUri;
 
-namespace WebExpress.WebApp.WebApiControl
+namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
     /// Interface for controlling API interactions.
     /// </summary>
-    public interface IControlApi
+    public interface IControlRest
     {
         /// <summary>
         /// Returns or sets the uri that determines the data.
