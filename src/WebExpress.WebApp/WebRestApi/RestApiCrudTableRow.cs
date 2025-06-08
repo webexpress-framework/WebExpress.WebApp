@@ -12,6 +12,12 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Returns or sets the id.
         /// </summary>
+        [JsonPropertyName("id")]
+        public object Id { get; set; }
+
+        /// <summary>
+        /// Returns or sets the cells.
+        /// </summary>
         [JsonPropertyName("cells")]
         public IEnumerable<RestApiCrudTableCell> Cells { get; set; } = [];
 

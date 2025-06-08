@@ -89,7 +89,6 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrl {
                 const endIndex = Math.min(startIndex + pageSize - 1, total); // calculate the index of the last item on the current page
 
                 this._columns = response.columns;
-                this._rows = response.rows;
                 this._titleDiv.text(response.title);
                 this._statusDiv.text(`${startIndex} - ${endIndex} / ${total}`);
                 
@@ -102,9 +101,20 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrl {
                 this._paginationCtrl.page = page;
                 
                 this._table.removeClass("placeholder-glow");
-                
-                this._hasOptions = Array.isArray(this._rows) && this._rows.some(row => row.options?.length > 0);
-                
+
+                // Bind actions to existing commands
+                this._rows = response.rows.map(row => {
+                    if (Array.isArray(row.options)) {
+                        this._hasOptions = true;
+                        row.options.forEach(option => {
+                            if (option.command === "delete") {
+                                option.action = () => this._deleteRow.call(this, row.id);
+                            }
+                        });
+                    }
+                    return row;
+                });
+
                 if (this._options?.length > 0) {
                     this._hasOptions = true;
                 }
@@ -116,6 +126,26 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrl {
             .fail((error) => {
                 console.error("The request could not be completed successfully:", error);
             });
+    }
+
+    /**
+     * Function to delete a row from the table and send a DELETE request to the REST API.
+     * @param {number} rowId - The ID of the row to be deleted.
+     */
+    _deleteRow(rowId) {
+        const confirmModal = new webexpress.webui.ModalConfirmDelete();
+
+        confirmModal.confirmation(() => {
+            fetch(`${this._restUri}?id=${rowId}`, { method: "DELETE" })
+                .then(response => {
+                    if (!response.ok) throw new Error("Failed to delete row");
+
+                    this._receiveData();
+                })
+                .catch(error => console.error(`Failed to delete row with ID ${rowId}.`, error));
+        });
+
+        confirmModal.show();
     }
 }
 

@@ -14,9 +14,9 @@ namespace WebExpress.WebApp.WebRestApi
     /// <summary>
     /// Abstract class providing CRUD operations for REST API.
     /// </summary>
-    /// <typeparam name="T">Type of the index item.</typeparam>
-    public abstract class RestApiCrudTable<T> : RestApiCrud<T>
-        where T : IIndexItem
+    /// <typeparam name="TIndexItem">Type of the index item.</typeparam>
+    public abstract class RestApiCrudTable<TIndexItem> : RestApiCrud<TIndexItem>
+        where TIndexItem : IIndexItem
     {
         private readonly Dictionary<PropertyInfo, RestApiCrudTableColumn> _cachedColumns;
 
@@ -36,7 +36,7 @@ namespace WebExpress.WebApp.WebRestApi
                 .Select(x => x.ConstructorArguments.FirstOrDefault().Value?.ToString())
                 .FirstOrDefault();
 
-            _cachedColumns = typeof(T)
+            _cachedColumns = typeof(TIndexItem)
                 .GetProperties()
                 .Where(prop => Attribute.IsDefined(prop, typeof(RestTableColumnNameAttribute)))
                 .ToDictionary(
@@ -59,7 +59,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// </summary>
         /// <param name="request">The request object containing the criteria for retrieving options. Cannot be null.</param>
         /// <param name="row">The row object for which options are being retrieved. Cannot be null.</param>
-        public virtual IEnumerable<RestApiCrudTableRowOption> GetOptions(Request request, T row)
+        public virtual IEnumerable<RestApiCrudTableRowOption> GetOptions(Request request, TIndexItem row)
         {
             return [];
         }
@@ -78,8 +78,8 @@ namespace WebExpress.WebApp.WebRestApi
             lock (Guard)
             {
                 var wqlStatement = !string.IsNullOrWhiteSpace(wql)
-                    ? WebEx.ComponentHub.GetComponentManager<WebIndex.IndexManager>()?.Retrieve<T>(wql)
-                    : WebEx.ComponentHub.GetComponentManager<WebIndex.IndexManager>()?.Retrieve<T>("");
+                    ? WebEx.ComponentHub.GetComponentManager<WebIndex.IndexManager>()?.Retrieve<TIndexItem>(wql)
+                    : WebEx.ComponentHub.GetComponentManager<WebIndex.IndexManager>()?.Retrieve<TIndexItem>("");
                 var columns = _cachedColumns
                     .Where(x => x.Value.Visible)
                     .Select(x => x.Value);
@@ -92,6 +92,7 @@ namespace WebExpress.WebApp.WebRestApi
                     columns = columns,
                     rows = data.Skip(page * pageSize).Take(pageSize).Select(row => new RestApiCrudTableRow
                     {
+                        Id = row.Id.ToString(),
                         Cells = _cachedColumns
                             .Where(x => x.Value.Visible)
                             .Select(x => new RestApiCrudTableCell

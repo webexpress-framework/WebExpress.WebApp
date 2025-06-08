@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Serialization;
+using WebExpress.WebCore.WebMessage;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -14,16 +15,28 @@ namespace WebExpress.WebApp.WebRestApi
         public string Id { get; set; }
 
         /// <summary>
+        /// Returns the command.
+        /// </summary>
+        [JsonPropertyName("command")]
+        public virtual string Command => "custom";
+
+        /// <summary>
         /// Returns or sets the label.
         /// </summary>
         [JsonPropertyName("content")]
-        public string Label { get; set; }
+        public virtual string Label { get; set; }
 
         /// <summary>
         /// Returns or sets the icon.
         /// </summary>
         [JsonPropertyName("icon")]
-        public string Icon { get; set; }
+        public virtual string Icon { get; set; }
+
+        /// <summary>
+        /// Returns or sets the text color.
+        /// </summary>
+        [JsonPropertyName("color")]
+        public virtual string Color { get; set; }
 
         /// <summary>
         /// Returns or sets the width of the table column in percentage, null for auto.
@@ -38,10 +51,18 @@ namespace WebExpress.WebApp.WebRestApi
         public string Render { get; set; }
 
         /// <summary>
+        /// Returns the request object associated with the current operation.
+        /// </summary>
+        [JsonIgnore]
+        protected Request Request { get; }
+
+        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
-        public RestApiCrudTableRowOption()
+        /// <param name="request">The request object associated with the current operation.</param>
+        public RestApiCrudTableRowOption(Request request)
         {
+            Request = request;
         }
     }
 }

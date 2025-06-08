@@ -15,22 +15,14 @@ namespace WebExpress.WebApp.WebRestApi
     /// <summary>
     /// Abstract class providing CRUD operations for REST API.
     /// </summary>
-    /// <typeparam name="T">Type of the index item.</typeparam>
-    public abstract class RestApiCrud<T> : IRestApi
-        where T : IIndexItem
+    /// <typeparam name="TIndexItem">Type of the index item.</typeparam>
+    public abstract class RestApiCrud<TIndexItem> : IRestApi
+        where TIndexItem : IIndexItem
     {
         /// <summary>
         /// Returns the lock object.
         /// </summary>
         protected object Guard { get; } = new object();
-
-        /// <summary>
-        /// Processing of the resource that was called via the get request.
-        /// </summary>
-        /// <param name="wql">The filtering and sorting options.</param>
-        /// <param name="request">The request.</param>
-        /// <returns>An enumeration of which json serializer can be serialized.</returns>
-        public abstract IEnumerable<T> GetData(IWqlStatement<T> wql, Request request);
 
         /// <summary>
         /// Processing of the resource that was called via the get request.
@@ -48,8 +40,8 @@ namespace WebExpress.WebApp.WebRestApi
             lock (Guard)
             {
                 var wqlStatement = !string.IsNullOrWhiteSpace(search) || !string.IsNullOrWhiteSpace(wql)
-                    ? WebEx.ComponentHub.GetComponentManager<WebIndex.IndexManager>()?.Retrieve<T>(wql ?? $"{GetDefaultSearchAttribute()}='{search}*'")
-                    : WebEx.ComponentHub.GetComponentManager<WebIndex.IndexManager>()?.Retrieve<T>("");
+                    ? WebEx.ComponentHub.GetComponentManager<WebIndex.IndexManager>()?.Retrieve<TIndexItem>(wql ?? $"{GetDefaultSearchAttribute()}='{search}*'")
+                    : WebEx.ComponentHub.GetComponentManager<WebIndex.IndexManager>()?.Retrieve<TIndexItem>("");
                 var data = GetData(wqlStatement, request);
 
                 var count = data.Count();
@@ -65,10 +57,21 @@ namespace WebExpress.WebApp.WebRestApi
         }
 
         /// <summary>
+        /// Processing of the resource that was called via the get request.
+        /// </summary>
+        /// <param name="wql">The filtering and sorting options.</param>
+        /// <param name="request">The request.</param>
+        /// <returns>An enumeration of which json serializer can be serialized.</returns>
+        public virtual IEnumerable<TIndexItem> GetData(IWqlStatement<TIndexItem> wql, Request request)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
         /// Creates data.
         /// </summary>
         /// <param name="request">The request.</param>
-        public void CreateData(Request request)
+        public virtual void CreateData(Request request)
         {
             throw new NotImplementedException();
         }
@@ -77,8 +80,18 @@ namespace WebExpress.WebApp.WebRestApi
         /// Updates data.
         /// </summary>
         /// <param name="request">The request.</param>
-        public void UpdateData(Request request)
+        public virtual void UpdateData(Request request)
         {
+        }
+
+        /// <summary>
+        /// Deletes data.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        public virtual void DeleteData(Request request)
+        {
+            var id = request.GetParameter("id")?.Value;
+            DeleteData(id, request);
         }
 
         /// <summary>
@@ -86,7 +99,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// </summary>
         /// <param name="id">The id of the data to delete.</param>
         /// <param name="request">The request.</param>
-        public void DeleteData(Request request)
+        public virtual void DeleteData(string id, Request request)
         {
             throw new NotImplementedException();
         }
@@ -97,7 +110,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <returns>The name of the default attribute.</returns>
         protected virtual string GetDefaultSearchAttribute()
         {
-            return typeof(T).GetProperties()
+            return typeof(TIndexItem).GetProperties()
                 .Where(x => x.GetCustomAttribute<IndexDefaultSearchAttribute>() != null)
                 .Where(x => x.GetCustomAttribute<IndexIgnoreAttribute>() == null)
                 .Select(x => x.Name)
