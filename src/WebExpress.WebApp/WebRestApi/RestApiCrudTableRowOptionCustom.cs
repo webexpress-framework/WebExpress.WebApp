@@ -1,13 +1,12 @@
 ﻿using System.Text.Json.Serialization;
-using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebMessage;
 
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Represents a configuration option for a row in a REST API-based CRUD table.
+    /// Represents a customizable row option for a CRUD table in a REST API context.
     /// </summary>
-    public class RestApiCrudTableRowOptionDelete : RestApiCrudTableRowOption
+    public abstract class RestApiCrudTableRowOptionCustom : RestApiCrudTableRowOption
     {
         /// <summary>
         /// Returns the type of the element, represented as a string.
@@ -19,31 +18,38 @@ namespace WebExpress.WebApp.WebRestApi
         /// Returns or sets the command.
         /// </summary>
         [JsonPropertyName("command")]
-        public virtual string Command => "delete";
+        public virtual string Command => "custom";
+
+        /// <summary>
+        /// Returns or sets the command args.
+        /// </summary>
+        [JsonPropertyName("arg")]
+        public virtual string CommandArg { get; set; }
+
 
         /// <summary>
         /// Returns the label.
         /// </summary>
         [JsonPropertyName("content")]
-        public virtual string Label => I18N.Translate(Request, "webexpress.webapp:delete.label");
+        public virtual string Label { get; set; }
 
         /// <summary>
         /// Returns the icon.
         /// </summary>
         [JsonPropertyName("icon")]
-        public virtual string Icon => "fa fa-trash";
+        public virtual string Icon { get; set; }
 
         /// <summary>
         /// Returns or sets the text color.
         /// </summary>
         [JsonPropertyName("color")]
-        public virtual string Color => "text-danger";
+        public virtual string Color { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="request">The request object associated with the current operation.</param>
-        public RestApiCrudTableRowOptionDelete(Request request)
+        public RestApiCrudTableRowOptionCustom(Request request)
             : base(request)
         {
         }

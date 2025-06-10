@@ -43,6 +43,8 @@ delete.label=Löschen
 delete.header=Löschen bestätigen
 delete.description=Möchten Sie wirklich löschen?
 
+edit.label=Bearbeiten
+
 search.label=Suche
 search.placeholder=Geben Sie hier Ihre Suchbegriffe ein.
 

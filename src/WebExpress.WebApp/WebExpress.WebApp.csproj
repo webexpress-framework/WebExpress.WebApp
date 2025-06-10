@@ -24,12 +24,17 @@
 		<IsPackable>true</IsPackable>
 	</PropertyGroup>
 
+  <ItemGroup>
+    <None Remove="Assets\js\webexpress.webapp.modalform.js" />
+  </ItemGroup>
+
 	<ItemGroup>
 		<EmbeddedResource Include="Assets\css\webexpress.webapp.css" />
 		<EmbeddedResource Include="Assets\css\webexpress.webapp.popupnotification.css" />
 		<EmbeddedResource Include="Assets\css\webexpress.webapp.table.css" />
 		<EmbeddedResource Include="Assets\css\webexpress.webapp.taskprogressbar.css" />
 		<EmbeddedResource Include="Assets\css\webexpress.webapp.theme.css" />
+		<EmbeddedResource Include="Assets\js\webexpress.webapp.modalform.js" />
 		<EmbeddedResource Include="Assets\js\webexpress.webapp.popupnotification.js" />
 		<EmbeddedResource Include="Assets\js\webexpress.webapp.table.js" />
 		<EmbeddedResource Include="Assets\js\webexpress.webapp.selection.js" />

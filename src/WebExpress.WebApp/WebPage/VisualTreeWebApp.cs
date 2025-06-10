@@ -93,6 +93,7 @@ namespace WebExpress.WebApp.WebPage
             AddHeaderScriptLink(RouteEndpoint.Combine(applicationContext?.Route, "assets/js/webexpress.webapp.js"));
             AddHeaderScriptLink(RouteEndpoint.Combine(applicationContext?.Route, "assets/js/webexpress.webapp.popupnotification.js"));
             AddHeaderScriptLink(RouteEndpoint.Combine(applicationContext?.Route, "assets/js/webexpress.webapp.selection.js"));
+            AddHeaderScriptLink(RouteEndpoint.Combine(applicationContext?.Route, "assets/js/webexpress.webapp.modalform.js"));
             AddHeaderScriptLink(RouteEndpoint.Combine(applicationContext?.Route, "assets/js/webexpress.webapp.table.js"));
             AddHeaderScriptLink(RouteEndpoint.Combine(applicationContext?.Route, "assets/js/webexpress.webapp.taskprogressbar.js"));
         }

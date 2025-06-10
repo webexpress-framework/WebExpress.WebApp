@@ -43,6 +43,8 @@ delete.label=Delete
 delete.header=Confirm Delete
 delete.description=Are you sure you want to delete?
 
+edit.label=Edit
+
 search.label=Search
 search.placeholder=Enter your search terms here.
 
