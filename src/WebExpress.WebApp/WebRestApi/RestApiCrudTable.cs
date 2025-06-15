@@ -43,11 +43,14 @@ namespace WebExpress.WebApp.WebRestApi
                     prop => prop,
                     prop =>
                     {
-                        var name = (RestTableColumnNameAttribute)Attribute.GetCustomAttribute(prop, typeof(RestTableColumnNameAttribute));
+                        var name = prop.Name;
+                        var label = (RestTableColumnNameAttribute)Attribute.GetCustomAttribute(prop, typeof(RestTableColumnNameAttribute));
                         var isHidden = Attribute.IsDefined(prop, typeof(RestTableColumnHiddenAttribute));
 
-                        return new RestApiCrudTableColumn(name.Name)
+                        return new RestApiCrudTableColumn()
                         {
+                            Name = name,
+                            Label = label?.Name ?? name,
                             Visible = !isHidden
                         };
                     }

@@ -168,7 +168,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrl {
                         this._hasOptions = true;
                         row.options.forEach(option => {
                             if (option.command === "edit") {
-                                option.action = () => this._editRow(row.id, option.uri);
+                                option.action = () => this._editRow(row.id, this._columns, row.cells, option.uri);
                             }
                             if (option.command === "delete") {
                                 option.action = () => this._deleteRow(row.id);
@@ -194,9 +194,11 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrl {
     /**
      * Edit a row and send a PUT request to the REST API.
      * @param {number} rowId - The ID of the row to be edited.
+     * @param {Array} columns - The column of the table.
+     * @param {Array} cells - The cells of the row to be edited.
      * @param {string} uri - The uri for the form to be used for editing.
      */
-    _editRow(rowId, uri) {
+    _editRow(rowId, columns, cells, uri) {
         const editModal = new webexpress.webapp.ModalFormCtrl();
         editModal._uri = uri;
         editModal._selector = uri?.includes("#") ? "#" + uri.split("#")[1] : "form";
@@ -209,6 +211,40 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrl {
                     this._receiveData();
                 })
                 .catch(error => console.error(`Failed to edit row with ID ${rowId}.`, error));
+        });
+
+        // Fill the form fields with the row's values after the form is rendered
+        editModal._element.addEventListener(webexpress.webui.Event.UPDATED_EVENT, (event) => {
+            const form = event.detail.form;
+            if (form === editModal._form) {
+                columns.forEach((column, index) => {
+                    const value = cells[index]?.text || "";
+                    // try standard form field
+                    let field = editModal._form.elements.namedItem(column.name);
+                    if (field) {
+                        field.value = value;
+                    } else {
+                        const editorContainer = form.querySelector(`[name="${column.name}"]`);
+                        if (editorContainer) {
+                            // check which editor type is present
+                            let editorType = "default";
+                            if (editorContainer.classList.contains("wx-webui-editor")) {
+                                editorType = "wx-webui-editor";
+                            } 
+
+                            // handle various editors
+                            switch (editorType) {
+                                case "wx-webui-editor":
+                                    editorContainer.innerHTML = value;
+                                    break;
+                                default:
+                                    // fallback: set innerHTML directly
+                                    editorContainer.innerHTML = value;
+                            }
+                        }
+                    }
+                });
+            }
         });
 
         editModal.show();

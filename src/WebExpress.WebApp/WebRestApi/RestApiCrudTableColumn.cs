@@ -8,6 +8,12 @@ namespace WebExpress.WebApp.WebRestApi
     public class RestApiCrudTableColumn
     {
         /// <summary>
+        /// Returns or sets the name of the associated property of the item that corresponds to the column.
+        /// </summary>
+        [JsonPropertyName("name")]
+        public string Name { get; set; }
+
+        /// <summary>
         /// Returns or sets a value indicating whether the element is visible.
         /// </summary>
         [JsonPropertyName("visible")]
@@ -40,10 +46,8 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
-        /// <param name="label">The label of the column.</param>
-        public RestApiCrudTableColumn(string label)
+        public RestApiCrudTableColumn()
         {
-            Label = label;
         }
     }
 }

@@ -8,13 +8,10 @@ webexpress.webapp.ModalFormCtrl = class extends webexpress.webui.ModalFormCtrl {
 
     /**
      * Constructor
-     * @param {HTMLElement} element - The DOM element associated with the modal control.
      */
-    constructor(form) {
+    constructor() {
         super(document.createElement("div"));
 
         document.body.appendChild(this._element);
-
-        this._selector = form;
     }
 };
