@@ -45,14 +45,14 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrl {
 
     // Placeholder columns and rows for loading state
     _previewColumns = [
-        { label: "<span class='placeholder col-6 placeholder-lg'></span>" },
-        { label: "<span class='placeholder col-6 placeholder-lg'></span>" },
-        { label: "<span class='placeholder col-6 placeholder-lg'></span>" }
+        { content: "<span class='placeholder col-6 placeholder-lg'></span>" },
+        { content: "<span class='placeholder col-6 placeholder-lg'></span>" },
+        { content: "<span class='placeholder col-6 placeholder-lg'></span>" }
     ];
     _previewBody = [
-        { cells: [{ text: "<span class='placeholder col-7'></span>" }, { text: "<span class='placeholder col-5'></span>" }, { text: "<span class='placeholder col-6'></span>" }] },
-        { cells: [{ text: "<span class='placeholder col-6'></span>" }, { text: "<span class='placeholder col-7'></span>" }, { text: "<span class='placeholder col-5'></span>" }] },
-        { cells: [{ text: "<span class='placeholder col-6'></span>" }, { text: "<span class='placeholder col-6'></span>" }, { text: "<span class='placeholder col-7'></span>" }] }
+        { cells: [{ content: "<span class='placeholder col-7'></span>" }, { content: "<span class='placeholder col-5'></span>" }, { content: "<span class='placeholder col-6'></span>" }] },
+        { cells: [{ content: "<span class='placeholder col-6'></span>" }, { content: "<span class='placeholder col-7'></span>" }, { content: "<span class='placeholder col-5'></span>" }] },
+        { cells: [{ content: "<span class='placeholder col-6'></span>" }, { content: "<span class='placeholder col-6'></span>" }, { content: "<span class='placeholder col-7'></span>" }] }
     ];
 
     /**
@@ -136,9 +136,9 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrl {
             })
             .then(response => {
                 // Extract paging and data info with fallback defaults
-                const page = response.page ?? 0;
-                const pageSize = response.pageSize ?? 50;
-                const total = response.total ?? 0;
+                const page = response.pagination.page ?? 0;
+                const pageSize = response.pagination.pageSize ?? 50;
+                const total = response.pagination.total ?? 0;
                 const totalPages = Math.ceil(total / pageSize);
                 const startIndex = page * pageSize + 1;
                 const endIndex = Math.min(startIndex + pageSize - 1, total);

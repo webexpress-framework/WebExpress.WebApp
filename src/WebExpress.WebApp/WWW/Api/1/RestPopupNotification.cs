@@ -5,6 +5,7 @@ using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebComponent;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
+using WebExpress.WebCore.WebStatusPage;
 using WebExpress.WebUI.WebNotification;
 
 namespace WebExpress.WebApp.WWW.Api._1
@@ -33,41 +34,51 @@ namespace WebExpress.WebApp.WWW.Api._1
         /// Creates data based on the provided request.
         /// </summary>
         /// <param name="request">The request containing the data to create.</param>
-        public void CreateData(Request request)
+        /// <returns>The response containing the result of the operation.</returns>
+        public Response CreateData(Request request)
         {
+            return new ResponseBadRequest(new StatusMessage("Not implemented."));
         }
 
         /// <summary>
         /// Retrieves data based on the provided request.
         /// </summary>
         /// <param name="request">The request containing the criteria for data retrieval.</param>
-        /// <returns>A collection of notifications.</returns>
-        public object GetData(Request request)
+        /// <returns>The response containing the result of the operation.</returns>
+        public Response GetData(Request request)
         {
-            return _componentHub.GetComponentManager<NotificationManager>()?.GetNotifications
-            (
-                _applicationContext, request
-            );
+            return new ResponseOK()
+            {
+                Content = _componentHub.GetComponentManager<NotificationManager>()?.GetNotifications
+                (
+                    _applicationContext, request
+                )
+            }.AddHeaderContentType("application/json");
         }
 
         /// <summary>
         /// Updates data based on the provided request.
         /// </summary>
         /// <param name="request">The request containing the data to update.</param>
-        public void UpdateData(Request request)
+        /// <returns>The response containing the result of the operation.</returns>
+        public Response UpdateData(Request request)
         {
+            return new ResponseBadRequest(new StatusMessage("Not implemented."));
         }
 
         /// <summary>
         /// Deletes data based on the provided request.
         /// </summary>
         /// <param name="request">The request containing the data to delete.</param>
-        public void DeleteData(Request request)
+        /// <returns>The response containing the result of the operation.</returns>
+        public Response DeleteData(Request request)
         {
             if (Guid.TryParse(request.Uri.PathSegments.Last()?.ToString(), out Guid id))
             {
                 _componentHub.GetComponentManager<NotificationManager>()?.RemoveNotifications(id);
             }
+
+            return new ResponseOK();
         }
     }
 }

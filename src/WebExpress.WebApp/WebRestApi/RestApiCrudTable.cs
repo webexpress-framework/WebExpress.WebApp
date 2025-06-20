@@ -7,6 +7,8 @@ using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebMessage;
+using WebExpress.WebCore.WebRestApi;
+using WebExpress.WebCore.WebStatusPage;
 using WebExpress.WebIndex;
 
 namespace WebExpress.WebApp.WebRestApi
@@ -71,42 +73,65 @@ namespace WebExpress.WebApp.WebRestApi
         /// Processing of the resource that was called via the get request.
         /// </summary>
         /// <param name="request">The request.</param>
-        /// <returns>An enumeration of which json serializer can be serialized.</returns>
-        public override object GetData(Request request)
+        /// <returns>The response containing the result of the operation.</returns>
+        public override Response GetData(Request request)
         {
-            var page = Convert.ToInt32(request.GetParameter("page")?.Value ?? "0"); // current page number
+            var pageNumber = Convert.ToInt32(request.GetParameter("page")?.Value ?? "0"); // current page number
             var pageSize = Convert.ToInt32(request.GetParameter("pageSize")?.Value ?? "50"); // number of items per page
+            var filter = request.GetParameter("search")?.Value ?? string.Empty;
             var wql = request.GetParameter("wql")?.Value ?? null;
 
-            lock (Guard)
+            try
             {
-                var wqlStatement = !string.IsNullOrWhiteSpace(wql)
-                    ? WebEx.ComponentHub.GetComponentManager<WebIndex.IndexManager>()?.Retrieve<TIndexItem>(wql)
-                    : WebEx.ComponentHub.GetComponentManager<WebIndex.IndexManager>()?.Retrieve<TIndexItem>("");
-                var columns = _cachedColumns
-                    .Where(x => x.Value.Visible)
-                    .Select(x => x.Value);
-                var data = GetData(wqlStatement, request);
-                var count = data.Count();
+                IEnumerable<TIndexItem> data = [];
 
-                return new
+                if (!string.IsNullOrWhiteSpace(wql))
                 {
-                    title = I18N.Translate(request, Title),
-                    columns = columns,
-                    rows = data.Skip(page * pageSize).Take(pageSize).Select(row => new RestApiCrudTableRow
-                    {
-                        Id = row.Id.ToString(),
-                        Cells = _cachedColumns
+                    var wqlStatement = WebEx.ComponentHub.GetComponentManager<WebIndex.IndexManager>()?
+                        .Retrieve<TIndexItem>(wql);
+
+                    data = GetData(wqlStatement, request);
+                }
+                else
+                {
+                    data = GetData(filter, request);
+                }
+
+                var columns = _cachedColumns
+                   .Where(x => x.Value.Visible)
+                   .Select(x => x.Value);
+
+                var result = new RestApiTableResult()
+                {
+                    Title = I18N.Translate(request, Title),
+                    Columns = columns,
+                    Rows = data
+                        .Skip(pageNumber * pageSize)
+                        .Take(pageSize)
+                        .Select(row => new RestApiCrudTableRow
+                        {
+                            Id = row.Id.ToString(),
+                            Cells = _cachedColumns
                             .Where(x => x.Value.Visible)
                             .Select(x => new RestApiCrudTableCell
                             {
                                 Text = x.Key.GetValue(row)?.ToString() ?? string.Empty
                             }),
-                        Options = GetOptions(request, row)
-                    }),
-                    page = page, // current page number
-                    total = count // total number of entries
+                            Options = GetOptions(request, row)
+                        }),
+                    Pagination = new RestApiPaginationInfo()
+                    {
+                        PageNumber = pageNumber,
+                        PageSize = pageSize,
+                        TotalCount = data.Count()
+                    }
                 };
+
+                return result.ToResponse();
+            }
+            catch (Exception ex)
+            {
+                return new ResponseBadRequest(new StatusMessage($"Error processing request.{ex}"));
             }
         }
     }

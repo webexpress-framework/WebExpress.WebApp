@@ -1,17 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using WebExpress.WebCore;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
+using WebExpress.WebCore.WebStatusPage;
 using WebExpress.WebIndex;
-using WebExpress.WebIndex.WebAttribute;
 using WebExpress.WebIndex.Wql;
 
 namespace WebExpress.WebApp.WebRestApi
 {
-
     /// <summary>
     /// Abstract class providing CRUD operations for REST API.
     /// </summary>
@@ -20,39 +18,50 @@ namespace WebExpress.WebApp.WebRestApi
         where TIndexItem : IIndexItem
     {
         /// <summary>
-        /// Returns the lock object.
-        /// </summary>
-        protected object Guard { get; } = new object();
-
-        /// <summary>
         /// Processing of the resource that was called via the get request.
         /// </summary>
         /// <param name="request">The request.</param>
-        /// <returns>An enumeration of which json serializer can be serialized.</returns>
-        public virtual object GetData(Request request)
+        /// <returns>The response containing the result of the operation.</returns>
+        public virtual Response GetData(Request request)
         {
-            var itemCount = 50;
-            var search = request.HasParameter("search") ? request.GetParameter("search").Value : string.Empty;
-            var wql = request.HasParameter("wql") ? request.GetParameter("wql").Value : null;
+            var pageSize = 50;
+            var filter = request.GetParameter("search")?.Value ?? string.Empty;
+            var wql = request.GetParameter("wql")?.Value ?? null;
             var page = request.GetParameter("page");
-            var pagenumber = !string.IsNullOrWhiteSpace(page?.Value) ? Convert.ToInt32(page?.Value) : 0;
+            var pageNumber = !string.IsNullOrWhiteSpace(page?.Value) ? Convert.ToInt32(page?.Value) : 0;
 
-            lock (Guard)
+            try
             {
-                var wqlStatement = !string.IsNullOrWhiteSpace(search) || !string.IsNullOrWhiteSpace(wql)
-                    ? WebEx.ComponentHub.GetComponentManager<WebIndex.IndexManager>()?.Retrieve<TIndexItem>(wql ?? $"{GetDefaultSearchAttribute()}='{search}*'")
-                    : WebEx.ComponentHub.GetComponentManager<WebIndex.IndexManager>()?.Retrieve<TIndexItem>("");
-                var data = GetData(wqlStatement, request);
+                IEnumerable<TIndexItem> data = [];
 
-                var count = data.Count();
-                var totalpage = Math.Round(count / (double)itemCount, MidpointRounding.ToEven);
-
-                if (page == null)
+                if (!string.IsNullOrWhiteSpace(wql))
                 {
-                    return new { Data = data };
+                    var wqlStatement = WebEx.ComponentHub.GetComponentManager<WebIndex.IndexManager>()?
+                        .Retrieve<TIndexItem>(wql);
+
+                    data = GetData(wqlStatement, request);
+                }
+                else
+                {
+                    data = GetData(filter, request);
                 }
 
-                return new { data = data.Skip(itemCount * pagenumber).Take(itemCount), pagination = new { pagenumber, totalpage } };
+                var result = new RestApiResult()
+                {
+                    Data = data.Skip(pageSize * pageNumber).Take(pageSize),
+                    Pagination = new RestApiPaginationInfo()
+                    {
+                        PageNumber = pageNumber,
+                        PageSize = pageSize,
+                        TotalCount = data.Count()
+                    }
+                };
+
+                return result.ToResponse();
+            }
+            catch (Exception ex)
+            {
+                return new ResponseBadRequest(new StatusMessage($"Error processing request.{ex}"));
             }
         }
 
@@ -68,10 +77,22 @@ namespace WebExpress.WebApp.WebRestApi
         }
 
         /// <summary>
+        /// Processing of the resource that was called via the get request.
+        /// </summary>
+        /// <param name="filter">The filtering and sorting options.</param>
+        /// <param name="request">The request.</param>
+        /// <returns>An enumeration of which json serializer can be serialized.</returns>
+        public virtual IEnumerable<TIndexItem> GetData(string filter, Request request)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
         /// Creates data.
         /// </summary>
         /// <param name="request">The request.</param>
-        public virtual void CreateData(Request request)
+        /// <returns>The response containing the result of the operation.</returns>
+        public virtual Response CreateData(Request request)
         {
             throw new NotImplementedException();
         }
@@ -80,18 +101,41 @@ namespace WebExpress.WebApp.WebRestApi
         /// Updates data.
         /// </summary>
         /// <param name="request">The request.</param>
-        public virtual void UpdateData(Request request)
+        /// <returns>The response containing the result of the operation.</returns>
+        public virtual Response UpdateData(Request request)
         {
+            var id = request.GetParameter("id")?.Value;
+
+            var errors = UpdateData(id, request);
+
+            var result = new RestApiResult()
+               .AddError(errors);
+
+            return result.ToResponse();
+        }
+
+        /// <summary>
+        /// Updates data.
+        /// </summary>
+        /// <param name="id">The id of the data to delete.</param>
+        /// <param name="request">The request.</param>
+        /// <returns>An enumeration of validation errors or null.</returns>
+        public virtual IEnumerable<RestApiError> UpdateData(string id, Request request)
+        {
+            return [];
         }
 
         /// <summary>
         /// Deletes data.
         /// </summary>
         /// <param name="request">The request.</param>
-        public virtual void DeleteData(Request request)
+        /// <returns>The response containing the result of the operation.</returns>
+        public virtual Response DeleteData(Request request)
         {
             var id = request.GetParameter("id")?.Value;
             DeleteData(id, request);
+
+            return new ResponseOK();
         }
 
         /// <summary>
@@ -102,19 +146,6 @@ namespace WebExpress.WebApp.WebRestApi
         public virtual void DeleteData(string id, Request request)
         {
             throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Returns the attribute name that has been set as for search queries.
-        /// </summary>
-        /// <returns>The name of the default attribute.</returns>
-        protected virtual string GetDefaultSearchAttribute()
-        {
-            return typeof(TIndexItem).GetProperties()
-                .Where(x => x.GetCustomAttribute<IndexDefaultSearchAttribute>() != null)
-                .Where(x => x.GetCustomAttribute<IndexIgnoreAttribute>() == null)
-                .Select(x => x.Name)
-                .FirstOrDefault();
         }
     }
 }
