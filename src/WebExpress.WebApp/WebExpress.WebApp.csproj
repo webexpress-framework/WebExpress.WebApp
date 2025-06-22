@@ -25,6 +25,8 @@
 	</PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Assets\js\i18n\de.js" />
+    <None Remove="Assets\js\i18n\en.js" />
     <None Remove="Assets\js\webexpress.webapp.modalform.js" />
   </ItemGroup>
 
@@ -34,6 +36,8 @@
 		<EmbeddedResource Include="Assets\css\webexpress.webapp.table.css" />
 		<EmbeddedResource Include="Assets\css\webexpress.webapp.taskprogressbar.css" />
 		<EmbeddedResource Include="Assets\css\webexpress.webapp.theme.css" />
+		<EmbeddedResource Include="Assets\js\i18n\de.js" />
+		<EmbeddedResource Include="Assets\js\i18n\en.js" />
 		<EmbeddedResource Include="Assets\js\webexpress.webapp.modalform.js" />
 		<EmbeddedResource Include="Assets\js\webexpress.webapp.popupnotification.js" />
 		<EmbeddedResource Include="Assets\js\webexpress.webapp.table.js" />

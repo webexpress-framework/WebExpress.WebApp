@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
 
@@ -11,32 +10,28 @@ namespace WebExpress.WebApp.WebRestApi
     /// Represents the result of a REST API call that returns a table structure, 
     /// including metadata, columns, rows, and pagination information.
     /// </summary>
-    public class RestApiTableResult : IRestApiResult
+    public class RestApiCrudTableResult : IRestApiResult
     {
         private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
         /// <summary>
         /// Returns or sets the title associated with the object.
         /// </summary>
-        [JsonPropertyName("title")]
         public string Title { get; set; }
 
         /// <summary>
         /// Returns or sets the collection of columns associated with the table.
         /// </summary>
-        [JsonPropertyName("columns")]
         public IEnumerable<RestApiCrudTableColumn> Columns { get; set; }
 
         /// <summary>
         /// Returns or sets the collection of rows in the table.
         /// </summary>
-        [JsonPropertyName("rows")]
         public IEnumerable<RestApiCrudTableRow> Rows { get; set; }
 
         /// <summary>
         /// Returns or sets the pagination information for the current API request.
         /// </summary>
-        [JsonPropertyName("pagination")]
         public RestApiPaginationInfo Pagination { get; set; }
 
         /// <summary>

@@ -101,7 +101,7 @@ namespace WebExpress.WebApp.WebRestApi
                    .Where(x => x.Value.Visible)
                    .Select(x => x.Value);
 
-                var result = new RestApiTableResult()
+                var result = new RestApiCrudTableResult()
                 {
                     Title = I18N.Translate(request, Title),
                     Columns = columns,

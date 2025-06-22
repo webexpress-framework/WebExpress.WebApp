@@ -18,6 +18,11 @@ namespace WebExpress.WebApp.WebRestApi
         where TIndexItem : IIndexItem
     {
         /// <summary>
+        /// Returns the collection of indexed items.
+        /// </summary>
+        public IEnumerable<TIndexItem> Data { get; protected set; } = [];
+
+        /// <summary>
         /// Processing of the resource that was called via the get request.
         /// </summary>
         /// <param name="request">The request.</param>
@@ -46,7 +51,7 @@ namespace WebExpress.WebApp.WebRestApi
                     data = GetData(filter, request);
                 }
 
-                var result = new RestApiResult()
+                var result = new RestApiCrudResult<TIndexItem>()
                 {
                     Data = data.Skip(pageSize * pageNumber).Take(pageSize),
                     Pagination = new RestApiPaginationInfo()
@@ -105,24 +110,46 @@ namespace WebExpress.WebApp.WebRestApi
         public virtual Response UpdateData(Request request)
         {
             var id = request.GetParameter("id")?.Value;
+            var item = Data.FirstOrDefault(x => x.Id.ToString() == id);
 
-            var errors = UpdateData(id, request);
+            var validationRsult = ValidateUpdateData(item, request);
 
-            var result = new RestApiResult()
-               .AddError(errors);
+            if (!validationRsult.IsValid)
+            {
+                return new ResponseBadRequest()
+                {
+                    Content = validationRsult.ToJson(),
+                }
+                    .AddHeaderContentType("application/json");
+            }
 
-            return result.ToResponse();
+            UpdateData(item, request);
+
+            return new ResponseOK();
         }
 
         /// <summary>
-        /// Updates data.
+        /// Performs validation before updating data.
         /// </summary>
-        /// <param name="id">The id of the data to delete.</param>
-        /// <param name="request">The request.</param>
-        /// <returns>An enumeration of validation errors or null.</returns>
-        public virtual IEnumerable<RestApiError> UpdateData(string id, Request request)
+        /// <param name="item"> The item containing the updated data.</param>
+        /// <param name="request">The HTTP request containing input data and parameters.</param>
+        /// <returns>
+        /// A <see cref="RestApiValidationResult"/> containing any validation errors 
+        /// encountered during the update process. If the operation completes successfully, 
+        /// the result will contain no errors.
+        /// </returns>
+        public virtual RestApiValidationResult ValidateUpdateData(TIndexItem item, Request request)
         {
-            return [];
+            return new RestApiValidationResult();
+        }
+
+        /// <summary>
+        /// Updates the data record identified by the specified ID.
+        /// </summary>
+        /// <param name="item"> The item containing the updated data.</param>
+        /// <param name="request">The HTTP request containing the update parameters.</param>
+        public virtual void UpdateData(TIndexItem item, Request request)
+        {
         }
 
         /// <summary>

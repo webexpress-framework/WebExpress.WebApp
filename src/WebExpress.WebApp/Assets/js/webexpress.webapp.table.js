@@ -202,15 +202,37 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrl {
         const editModal = new webexpress.webapp.ModalFormCtrl();
         editModal._uri = uri;
         editModal._selector = uri?.includes("#") ? "#" + uri.split("#")[1] : "form";
-
+        editModal._titleH1.textContent = webexpress.webui.I18N.translate("webexpress.webapp:form.edit_row");
+        editModal._dialogDiv.className = "modal-dialog modal-dialog-scrollable modal-xl";
+        
         // Bind form submission logic
-        editModal._form.addEventListener("submit", (event) => {
-            fetch(`${this._restUri}?id=${rowId}`, { method: "PUT" })
-                .then(response => {
-                    if (!response.ok) throw new Error("Failed to edit row");
+        editModal._form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const formData = new FormData(editModal._form);
+
+            try {
+                const response = await fetch(`${this._restUri}?id=${rowId}`, {
+                    method: "PUT",
+                    body: formData
+                });
+
+                if (response.ok) {
                     this._receiveData();
-                })
-                .catch(error => console.error(`Failed to edit row with ID ${rowId}.`, error));
+                    editModal.hide();
+                    return;
+                }
+
+                if (response.status === 400) {
+                    const errors = await response.json();
+                    editModal.showValidationErrors(errors);
+                    return;
+                }
+
+                throw new Error(`HTTP ${response.status}`);
+            } catch (error) {
+                console.error(`Failed to edit row with ID ${rowId}.`, error);
+            }
         });
 
         // Fill the form fields with the row's values after the form is rendered

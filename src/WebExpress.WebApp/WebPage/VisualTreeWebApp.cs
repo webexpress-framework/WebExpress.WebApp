@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using WebExpress.WebApp.WebControl;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebComponent;
@@ -77,25 +76,28 @@ namespace WebExpress.WebApp.WebPage
             : base(componentHub, pageContext)
         {
             var applicationContext = pageContext?.ApplicationContext;
+            var baseUri = RouteEndpoint.Combine(applicationContext?.Route, "assets");
 
             Header.Fixed = TypeFixed.Top;
-            Header.Styles = new List<string>(["position: sticky; top: 0; z-index: 99;"]);
+            Header.Styles = ["position: sticky; top: 0; z-index: 99;"];
 
             Breadcrumb.Uri = pageContext?.Route.ToUri();
             Breadcrumb.Margin = new PropertySpacingMargin(PropertySpacing.Space.Null);
             Content.Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None);
 
-            AddCssLink(RouteEndpoint.Combine(applicationContext?.Route, "/assets/css/webexpress.webapp.css"));
-            AddCssLink(RouteEndpoint.Combine(applicationContext?.Route, "/assets/css/webexpress.webapp.popupnotification.css"));
-            AddCssLink(RouteEndpoint.Combine(applicationContext?.Route, "/assets/css/webexpress.webapp.table.css"));
-            AddCssLink(RouteEndpoint.Combine(applicationContext?.Route, "/assets/css/webexpress.webapp.taskprogressbar.css"));
-            AddCssLink(Theme?.ThemeStyle.ToString() ?? RouteEndpoint.Combine(applicationContext?.Route, "/assets/css/webexpress.webapp.theme.css"));
-            AddHeaderScriptLink(RouteEndpoint.Combine(applicationContext?.Route, "assets/js/webexpress.webapp.js"));
-            AddHeaderScriptLink(RouteEndpoint.Combine(applicationContext?.Route, "assets/js/webexpress.webapp.popupnotification.js"));
-            AddHeaderScriptLink(RouteEndpoint.Combine(applicationContext?.Route, "assets/js/webexpress.webapp.selection.js"));
-            AddHeaderScriptLink(RouteEndpoint.Combine(applicationContext?.Route, "assets/js/webexpress.webapp.modalform.js"));
-            AddHeaderScriptLink(RouteEndpoint.Combine(applicationContext?.Route, "assets/js/webexpress.webapp.table.js"));
-            AddHeaderScriptLink(RouteEndpoint.Combine(applicationContext?.Route, "assets/js/webexpress.webapp.taskprogressbar.js"));
+            AddCssLink(RouteEndpoint.Combine(baseUri, "css/webexpress.webapp.css"));
+            AddCssLink(RouteEndpoint.Combine(baseUri, "css/webexpress.webapp.popupnotification.css"));
+            AddCssLink(RouteEndpoint.Combine(baseUri, "css/webexpress.webapp.table.css"));
+            AddCssLink(RouteEndpoint.Combine(baseUri, "css/webexpress.webapp.taskprogressbar.css"));
+            AddCssLink(Theme?.ThemeStyle.ToString() ?? RouteEndpoint.Combine(baseUri, "css/webexpress.webapp.theme.css"));
+            AddHeaderLanguageLink(RouteEndpoint.Combine(baseUri, "js/i18n/en.js"));
+            AddHeaderLanguageLink(RouteEndpoint.Combine(baseUri, "js/i18n/de.js"));
+            AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/webexpress.webapp.js"));
+            AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/webexpress.webapp.popupnotification.js"));
+            AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "assets/js/webexpress.webapp.selection.js"));
+            AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/webexpress.webapp.modalform.js"));
+            AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/webexpress.webapp.table.js"));
+            AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/webexpress.webapp.taskprogressbar.js"));
         }
 
         /// <summary>
@@ -115,7 +117,8 @@ namespace WebExpress.WebApp.WebPage
             html.Head.Meta = Meta;
             html.Head.Scripts = HeaderScripts;
             html.Head.CssLinks = CssLinks.Where(x => x != null).Select(x => x.ToString());
-            html.Head.ScriptLinks = HeaderScriptLinks?.Where(x => x != null).Select(x => x.ToString());
+            html.Head.ScriptLinks = HeaderLanguageLinks?.Where(x => x != null).Select(x => x.ToString())
+                 .Union(HeaderScriptLinks?.Where(x => x != null).Select(x => x.ToString()));
 
             // header
             Header.AppTitle.Text = html.Head.Title;
