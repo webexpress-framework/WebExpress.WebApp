@@ -76,7 +76,7 @@ namespace WebExpress.WebApp.WebPage
             : base(componentHub, pageContext)
         {
             var applicationContext = pageContext?.ApplicationContext;
-            var baseUri = RouteEndpoint.Combine(applicationContext?.Route, "assets");
+            var baseUri = RouteEndpoint.Combine(applicationContext?.Route, "webexpress.webapp/assets");
 
             Header.Fixed = TypeFixed.Top;
             Header.Styles = ["position: sticky; top: 0; z-index: 99;"];
