@@ -90,14 +90,15 @@ namespace WebExpress.WebApp.WebPage
             AddCssLink(RouteEndpoint.Combine(baseUri, "css/webexpress.webapp.table.css"));
             AddCssLink(RouteEndpoint.Combine(baseUri, "css/webexpress.webapp.taskprogressbar.css"));
             AddCssLink(Theme?.ThemeStyle.ToString() ?? RouteEndpoint.Combine(baseUri, "css/webexpress.webapp.theme.css"));
-            AddHeaderLanguageLink(RouteEndpoint.Combine(baseUri, "js/i18n/en.js"));
-            AddHeaderLanguageLink(RouteEndpoint.Combine(baseUri, "js/i18n/de.js"));
+
             AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/webexpress.webapp.js"));
             AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/webexpress.webapp.popupnotification.js"));
-            AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "assets/js/webexpress.webapp.selection.js"));
+            AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/webexpress.webapp.selection.js"));
             AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/webexpress.webapp.modalform.js"));
             AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/webexpress.webapp.table.js"));
             AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/webexpress.webapp.taskprogressbar.js"));
+            AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/i18n/en.js"));
+            AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/i18n/de.js"));
         }
 
         /// <summary>
@@ -117,8 +118,7 @@ namespace WebExpress.WebApp.WebPage
             html.Head.Meta = Meta;
             html.Head.Scripts = HeaderScripts;
             html.Head.CssLinks = CssLinks.Where(x => x != null).Select(x => x.ToString());
-            html.Head.ScriptLinks = HeaderLanguageLinks?.Where(x => x != null).Select(x => x.ToString())
-                 .Union(HeaderScriptLinks?.Where(x => x != null).Select(x => x.ToString()));
+            html.Head.ScriptLinks = HeaderScriptLinks?.Where(x => x != null).Select(x => x.ToString());
 
             // header
             Header.AppTitle.Text = html.Head.Title;
