@@ -140,8 +140,8 @@ namespace WebExpress.WebApp.WebPage
             {
                 Border = new PropertyBorder(true),
                 Orientation = TypeOrientationSplit.Horizontal,
-                Panel1InitialSize = 20,
-                Panel1MinSize = 150
+                SidePanelInitialSize = 350,
+                SidePanelMinSize = 150
             };
 
             html.Body.Add(split.Render(renderContext, this));
