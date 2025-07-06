@@ -15,8 +15,8 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the id property of the web app header settings control.
         /// </summary>
         [Theory]
-        [InlineData(null, false, "<div class=\"wx-webui-dropdownbutton ms-2\" role=\"button\" data-icon=\"fas fa-cog\" data-buttonCss=\"dropdown-menu-lg-end btn-dark\"><div id=\"Settings\" class=\"wx-dropdownbutton-header\" role=\"heading\"></div><div class=\"wx-dropdownbutton-item\"></div></div>")]
-        [InlineData("id", false, "<div id=\"id\" class=\"wx-webui-dropdownbutton ms-2\" role=\"button\" data-icon=\"fas fa-cog\" data-buttonCss=\"dropdown-menu-lg-end btn-dark\"><div id=\"Settings\" class=\"wx-dropdownbutton-header\" role=\"heading\"></div><div class=\"wx-dropdownbutton-item\"></div></div>")]
+        [InlineData(null, false, "<div class=\"wx-webui-dropdown ms-2\" role=\"button\" data-icon=\"fas fa-cog\" data-buttonCss=\"dropdown-menu-lg-end btn-dark\"><div id=\"Settings\" class=\"wx-dropdown-header\" role=\"heading\"></div><div class=\"wx-dropdown-item\"></div></div>")]
+        [InlineData("id", false, "<div id=\"id\" class=\"wx-webui-dropdown ms-2\" role=\"button\" data-icon=\"fas fa-cog\" data-buttonCss=\"dropdown-menu-lg-end btn-dark\"><div id=\"Settings\" class=\"wx-dropdown-header\" role=\"heading\"></div><div class=\"wx-dropdown-item\"></div></div>")]
         [InlineData("id", true, "")]
         public void Id(string id, bool empty, string expected)
         {

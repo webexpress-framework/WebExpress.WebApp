@@ -25,12 +25,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<None Remove="Assets\js\i18n\de.js" />
-		<None Remove="Assets\js\i18n\en.js" />
-		<None Remove="Assets\js\webexpress.webapp.modalform.js" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<EmbeddedResource Include="Assets/**/*.*">
 			<LogicalName>$(MSBuildProjectName).Assets.%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
 		</EmbeddedResource>
@@ -50,14 +44,17 @@
 			<PackagePath>\</PackagePath>
 			<Pack>True</Pack>
 		</None>
-		<None Include="WebRestApi\RestApiCrudTableCell.cs" />
-		<None Include="WebRestApi\RestApiCrudTableRow.cs" />
 	</ItemGroup>
 
-	<ItemGroup>
-		<PackageReference Include="WebExpress.WebCore" Version="0.0.9-alpha" />
+	<ItemGroup Condition="'$(Configuration)' != 'DebugLocal'">
 		<PackageReference Include="WebExpress.WebUI" Version="0.0.9-alpha" />
 		<PackageReference Include="WebExpress.WebIndex" Version="0.0.9-alpha" />
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(Configuration)' == 'DebugLocal'">
+		<ProjectReference Include="..\..\..\WebExpress.WebCore\src\WebExpress.WebCore\WebExpress.WebCore.csproj" />
+		<ProjectReference Include="..\..\..\WebExpress.WebUI\src\WebExpress.WebUI\WebExpress.WebUI.csproj" />
+		<ProjectReference Include="..\..\..\WebExpress.WebIndex\src\WebExpress.WebIndex\WebExpress.WebIndex.csproj" />
 	</ItemGroup>
 
 </Project>
