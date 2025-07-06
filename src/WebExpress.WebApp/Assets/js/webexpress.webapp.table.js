@@ -169,9 +169,9 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrl {
                         row.options.forEach(option => {
                             if (option.command === "edit") {
                                 option.action = () => this._editRow(row.id, this._columns, row.cells, option.uri);
-                            }
-                            if (option.command === "delete") {
+                            } else if (option.command === "delete") {
                                 option.action = () => this._deleteRow(row.id);
+                                option.uri = "javascript:void(0);";
                             }
                         });
                     }

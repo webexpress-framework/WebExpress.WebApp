@@ -99,7 +99,14 @@ namespace WebExpress.WebApp.WebRestApi
 
                 var columns = _cachedColumns
                    .Where(x => x.Value.Visible)
-                   .Select(x => x.Value);
+                   .Select(x => new RestApiCrudTableColumn()
+                   {
+                       Name = x.Key.Name,
+                       Label = I18N.Translate(request, x.Value.Label),
+                       Icon = x.Value.Icon,
+                       Visible = x.Value.Visible,
+                       Width = x.Value.Width
+                   });
 
                 var result = new RestApiCrudTableResult()
                 {

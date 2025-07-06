@@ -11,7 +11,7 @@ namespace WebExpress.WebApp.WebIndex
     /// <summary>
     /// Manages the index for the web application and handles component registration and removal.
     /// </summary>
-    public sealed class IndexManager : WebExpress.WebIndex.IndexManager, IComponentManager
+    public sealed class IndexManager : WebExpress.WebIndex.IndexManager, IIndexManager
     {
         private readonly IHttpServerContext _httpServerContext;
         private readonly IComponentHub _componentHub;
