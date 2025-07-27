@@ -34,13 +34,6 @@ namespace WebExpress.WebApp.WebControl
         public IEnumerable<IControlToolbarItem> Secondary => _secondary;
 
         /// <summary>
-        /// Returns the quick create.
-        /// </summary>
-        public ControlWebAppToolbarMore More { get; } = new ControlWebAppToolbarMore("wx-content-toolbar-more")
-        {
-        };
-
-        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The control id.</param>

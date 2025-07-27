@@ -66,7 +66,7 @@ namespace WebExpress.WebApp.WebControl
         /// Adds items to the prologue area.
         /// </summary>
         /// <param name="items">The items to add to the prologue area.</param>
-        public void AddPrologue(params IControlToolbarItem[] items)
+        public void AddPrologue(params IControl[] items)
         {
             _prologue.AddRange(items);
         }
@@ -75,7 +75,7 @@ namespace WebExpress.WebApp.WebControl
         /// Removes an item from the prologue area.
         /// </summary>
         /// <param name="item">The item to remove from the prologue area.</param>
-        public void RemovePrologue(IControlToolbarItem item)
+        public void RemovePrologue(IControl item)
         {
             _prologue.Remove(item);
         }
@@ -84,7 +84,7 @@ namespace WebExpress.WebApp.WebControl
         /// Adds items to the preferences area.
         /// </summary>
         /// <param name="items">The items to add to the preferences area.</param>
-        public void AddPreferences(params IControlToolbarItem[] items)
+        public void AddPreferences(params IControl[] items)
         {
             _preferences.AddRange(items);
         }
@@ -93,7 +93,7 @@ namespace WebExpress.WebApp.WebControl
         /// Removes an item from the preferences area.
         /// </summary>
         /// <param name="item">The item to remove from the preferences area.</param>
-        public void RemovePreference(IControlToolbarItem item)
+        public void RemovePreference(IControl item)
         {
             _preferences.Remove(item);
         }
@@ -102,7 +102,7 @@ namespace WebExpress.WebApp.WebControl
         /// Adds items to the primary area.
         /// </summary>
         /// <param name="items">The items to add to the primary area.</param>
-        public void AddPrimary(params IControlToolbarItem[] items)
+        public void AddPrimary(params IControl[] items)
         {
             _primary.AddRange(items);
         }
@@ -111,7 +111,7 @@ namespace WebExpress.WebApp.WebControl
         /// Removes an item from the primary area.
         /// </summary>
         /// <param name="item">The item to remove from the primary area.</param>
-        public void RemovePrimary(IControlToolbarItem item)
+        public void RemovePrimary(IControl item)
         {
             _primary.Remove(item);
         }
@@ -120,7 +120,7 @@ namespace WebExpress.WebApp.WebControl
         /// Adds items to the secondary area.
         /// </summary>
         /// <param name="items">The items to add to the secondary area.</param>
-        public void AddSecondary(params IControlToolbarItem[] items)
+        public void AddSecondary(params IControl[] items)
         {
             _secondary.AddRange(items);
         }
@@ -129,7 +129,7 @@ namespace WebExpress.WebApp.WebControl
         /// Removes an item from the secondary area.
         /// </summary>
         /// <param name="item">The item to remove from the secondary area.</param>
-        public void RemoveSecondary(IControlToolbarItem item)
+        public void RemoveSecondary(IControl item)
         {
             _secondary.Remove(item);
         }
@@ -138,7 +138,7 @@ namespace WebExpress.WebApp.WebControl
         /// Adds items to the metadata area.
         /// </summary>
         /// <param name="items">The items to add to the metadata area.</param>
-        public void AddMetadata(params IControlToolbarItem[] items)
+        public void AddMetadata(params IControl[] items)
         {
             _metadata.AddRange(items);
         }
@@ -147,7 +147,7 @@ namespace WebExpress.WebApp.WebControl
         /// Removes an item from the metadata area.
         /// </summary>
         /// <param name="item">The item to remove from the metadata area.</param>
-        public void RemoveMetadata(IControlToolbarItem item)
+        public void RemoveMetadata(IControl item)
         {
             _metadata.Remove(item);
         }

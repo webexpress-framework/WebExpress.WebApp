@@ -17,7 +17,7 @@ namespace WebExpress.WebApp.Test
         public TestFragmentSectionAppPreferencesItem(IFragmentContext fragmentContext)
             : base(fragmentContext)
         {
-            Text = "TestFragmentSectionAppPreferencesItem";
+            Label = "TestFragmentSectionAppPreferencesItem";
         }
     }
 }
