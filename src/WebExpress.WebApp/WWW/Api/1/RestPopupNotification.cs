@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Text.Json;
 using WebExpress.WebCore.WebApplication;
 using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebComponent;
@@ -47,12 +48,14 @@ namespace WebExpress.WebApp.WWW.Api._1
         /// <returns>The response containing the result of the operation.</returns>
         public Response GetData(Request request)
         {
+            var notifications = _componentHub
+                .GetComponentManager<NotificationManager>()?
+                .GetNotifications(_applicationContext, request);
+            var json = JsonSerializer.Serialize(notifications);
+
             return new ResponseOK()
             {
-                Content = _componentHub.GetComponentManager<NotificationManager>()?.GetNotifications
-                (
-                    _applicationContext, request
-                )
+                Content = json
             }.AddHeaderContentType("application/json");
         }
 
