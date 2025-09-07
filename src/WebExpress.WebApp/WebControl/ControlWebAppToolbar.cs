@@ -121,20 +121,17 @@ namespace WebExpress.WebApp.WebControl
         {
             var preferences = Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlToolbarItemButton, SectionToolbarPreferences>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ).Cast<ControlToolbarItemButton>());
 
             var primary = Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlToolbarItemButton, SectionToolbarPrimary>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ).Union(Items).Cast<ControlToolbarItemButton>());
 
             var secondary = Secondary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlToolbarItemButton, SectionToolbarSecondary>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ).Cast<ControlToolbarItemButton>());
 
             foreach (var item in preferences)

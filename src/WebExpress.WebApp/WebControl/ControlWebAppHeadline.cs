@@ -162,32 +162,27 @@ namespace WebExpress.WebApp.WebControl
         {
             var prologue = Prologue.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionHeadlinePrologue>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
             var preferences = Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionHeadlinePreferences>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
             var primary = Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionHeadlinePrimary>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
             var secondary = Secondary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionHeadlineSecondary>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
             var metadata = Metadata.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionHeadlineMetadata>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
             return new HtmlElementSectionHeader
@@ -203,7 +198,11 @@ namespace WebExpress.WebApp.WebControl
                     } : null,
                     new ControlText()
                     {
-                        Text = I18N.Translate(renderContext.Request?.Culture, renderContext.PageContext?.PageTitle),
+                        Text = I18N.Translate
+                        (
+                            renderContext, 
+                            renderContext.PageContext?.PageTitle
+                        ),
                         Format = TypeFormatText.H2,
                         Margin = new PropertySpacingMargin(PropertySpacing.Space.None, PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.Null)
                     },

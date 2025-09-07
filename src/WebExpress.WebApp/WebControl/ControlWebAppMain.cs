@@ -116,20 +116,17 @@ namespace WebExpress.WebApp.WebControl
         {
             var preferences = Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionContentPreferences>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
             var primary = Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionContentPrimary>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
             var secondary = Secondary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionContentSecondary>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
             var mainCtlr = new ControlPanelMain

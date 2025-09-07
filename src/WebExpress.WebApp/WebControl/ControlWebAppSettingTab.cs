@@ -146,8 +146,7 @@ namespace WebExpress.WebApp.WebControl
 
             foreach (var item in Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlNavigationItemLink, SectionSettingTabPreferences>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             )))
             {
                 yield return item;
@@ -160,8 +159,7 @@ namespace WebExpress.WebApp.WebControl
 
             foreach (var item in Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlNavigationItemLink, SectionSettingTabPrimary>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             )))
             {
                 yield return item;
@@ -169,8 +167,7 @@ namespace WebExpress.WebApp.WebControl
 
             foreach (var item in Secondary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlNavigationItemLink, SectionSettingTabSecondary>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             )))
             {
                 yield return item;

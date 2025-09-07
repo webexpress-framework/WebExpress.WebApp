@@ -55,7 +55,7 @@ namespace WebExpress.WebApp.WebControl
                         listCtrl.Add(new ControlListItemLink()
                         {
                             Text = page.PageTitle,
-                            Icon = page.Icon,
+                            Icon = page.PageIcon,
                             Uri = page?.Route.ToUri(),
                             Active = page == renderContext.PageContext ? TypeActive.Active : TypeActive.None
                         });
@@ -71,7 +71,7 @@ namespace WebExpress.WebApp.WebControl
                         listCtrl.Add(new ControlListItemLink()
                         {
                             Text = page.PageTitle,
-                            Icon = page.Icon,
+                            Icon = page.PageIcon,
                             Uri = page?.Route.ToUri(),
                             Active = page == renderContext.PageContext ? TypeActive.Active : TypeActive.None
                         });
@@ -87,7 +87,7 @@ namespace WebExpress.WebApp.WebControl
                         listCtrl.Add(new ControlListItemLink()
                         {
                             Text = page.PageTitle,
-                            Icon = page.Icon,
+                            Icon = page.PageIcon,
                             Uri = page?.Route.ToUri(),
                             Active = page == renderContext.PageContext ? TypeActive.Active : TypeActive.None
                         });
@@ -97,8 +97,7 @@ namespace WebExpress.WebApp.WebControl
 
             foreach (var item in Header.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionSidebarHeader>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             )))
             {
                 yield return item;
@@ -106,8 +105,7 @@ namespace WebExpress.WebApp.WebControl
 
             foreach (var item in Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionSidebarPreferences>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             )))
             {
                 yield return item;
@@ -120,8 +118,7 @@ namespace WebExpress.WebApp.WebControl
 
             foreach (var item in Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionSidebarPrimary>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             )))
             {
                 yield return item;
@@ -129,8 +126,7 @@ namespace WebExpress.WebApp.WebControl
 
             foreach (var item in Secondary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionSidebarSecondary>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             )))
             {
                 yield return item;
