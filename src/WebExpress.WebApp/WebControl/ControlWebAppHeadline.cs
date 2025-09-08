@@ -13,7 +13,7 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// Headline for an web app.
     /// </summary>
-    public class ControlWebAppHeadline : Control
+    public class ControlWebAppHeadline : Control, IControlWebAppHeadline
     {
         private readonly List<IControl> _prologue = [];
         private readonly List<IControl> _preferences = [];
@@ -49,7 +49,7 @@ namespace WebExpress.WebApp.WebControl
         /// <summary>
         /// Returns the more control.
         /// </summary>
-        public ControlWebAppHeadlineMore More { get; } = new ControlWebAppHeadlineMore("wx-content-main-headline-more")
+        public IControlWebAppHeadlineMore More { get; } = new ControlWebAppHeadlineMore("wx-content-main-headline-more")
         {
         };
 
@@ -66,90 +66,120 @@ namespace WebExpress.WebApp.WebControl
         /// Adds items to the prologue area.
         /// </summary>
         /// <param name="items">The items to add to the prologue area.</param>
-        public void AddPrologue(params IControl[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeadline AddPrologue(params IControl[] items)
         {
             _prologue.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the prologue area.
         /// </summary>
         /// <param name="item">The item to remove from the prologue area.</param>
-        public void RemovePrologue(IControl item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeadline RemovePrologue(IControl item)
         {
             _prologue.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the preferences area.
         /// </summary>
         /// <param name="items">The items to add to the preferences area.</param>
-        public void AddPreferences(params IControl[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeadline AddPreferences(params IControl[] items)
         {
             _preferences.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the preferences area.
         /// </summary>
         /// <param name="item">The item to remove from the preferences area.</param>
-        public void RemovePreference(IControl item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeadline RemovePreference(IControl item)
         {
             _preferences.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the primary area.
         /// </summary>
         /// <param name="items">The items to add to the primary area.</param>
-        public void AddPrimary(params IControl[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeadline AddPrimary(params IControl[] items)
         {
             _primary.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the primary area.
         /// </summary>
         /// <param name="item">The item to remove from the primary area.</param>
-        public void RemovePrimary(IControl item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeadline RemovePrimary(IControl item)
         {
             _primary.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the secondary area.
         /// </summary>
         /// <param name="items">The items to add to the secondary area.</param>
-        public void AddSecondary(params IControl[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeadline AddSecondary(params IControl[] items)
         {
             _secondary.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the secondary area.
         /// </summary>
         /// <param name="item">The item to remove from the secondary area.</param>
-        public void RemoveSecondary(IControl item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeadline RemoveSecondary(IControl item)
         {
             _secondary.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the metadata area.
         /// </summary>
         /// <param name="items">The items to add to the metadata area.</param>
-        public void AddMetadata(params IControl[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeadline AddMetadata(params IControl[] items)
         {
             _metadata.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the metadata area.
         /// </summary>
         /// <param name="item">The item to remove from the metadata area.</param>
-        public void RemoveMetadata(IControl item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeadline RemoveMetadata(IControl item)
         {
             _metadata.Remove(item);
+
+            return this;
         }
 
         /// <summary>
