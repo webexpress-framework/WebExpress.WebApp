@@ -58,7 +58,7 @@ namespace WebExpress.WebApp.WebSettingPage
             html.Head.ScriptLinks = HeaderScriptLinks?.Where(x => x != null).Select(x => x.ToString());
 
             // header
-            Header.AppTitle.Text = html.Head.Title;
+            Header.AppTitle.SetTitle(html.Head.Title);
             html.Body.Add(Header.Render(renderContext, this));
             html.Body.Add(Toast.Render(renderContext, this));
             html.Body.Add(Breadcrumb.Render(renderContext, this));

@@ -81,12 +81,31 @@ namespace WebExpress.WebApp.WWW.Setting.System
 
             var switchOnForm = new ControlModalFormConfirm("swichon_log")
             {
-                //        Header = this.I18N("webexpress.webapp", "setting.logfile.switchon.header"),
-                //        Content = new ControlFormItemStaticText() { Text = this.I18N("webexpress.webapp", "setting.logfile.switchon.description") },
-                //        SubmitButtonIcon = new PropertyIcon(TypeIcon.PowerOff),
-                //        SubmitButtonColor = new PropertyColorButton(TypeColorButton.Success),
-                //        SubmitButtonLabel = this.I18N("webexpress.webapp", "setting.logfile.switchon.label")
+                Header = I18N.Translate
+                (
+                    renderContext,
+                    "webexpress.webapp:setting.logfile.switchon.header"
+                ),
+                Content = new ControlFormItemStaticText()
+                {
+                    Text = I18N.Translate
+                    (
+                        renderContext,
+                        "webexpress.webapp:setting.logfile.switchon.description"
+                    )
+                }
             };
+
+            switchOnForm.AddPreferencesButton(new ControlFormItemButtonSubmit()
+            {
+                Icon = new IconPowerOff(),
+                Color = new PropertyColorButton(TypeColorButton.Success),
+                Text = I18N.Translate
+                (
+                    renderContext,
+                    "webexpress.webapp:setting.logfile.switchon.label"
+                )
+            });
 
             switchOnForm.Confirm += (s, e) =>
             {
@@ -96,7 +115,8 @@ namespace WebExpress.WebApp.WWW.Setting.System
 
             var info = new ControlTable()
             {
-                Striped = TypeStripedTable.Row
+                Striped = TypeStripedTable.Row,
+                SuppressHeaders = true
             }
                 .AddColumn("")
                 .AddColumn("")
@@ -154,7 +174,7 @@ namespace WebExpress.WebApp.WWW.Setting.System
                                     renderContext,
                                     "webexpress.webapp:setting.logfile.delete.label"
                                 ),
-                                //Modal = new PropertyModal(TypeModal.Modal, deleteForm),
+                                Modal = deleteForm.Id,
                                 Icon = new IconTrashAlt(),
                                 BackgroundColor = new PropertyColorButton(TypeColorButton.Danger)
                             })
@@ -184,7 +204,7 @@ namespace WebExpress.WebApp.WWW.Setting.System
                                     renderContext,
                                     "webexpress.webapp:setting.logfile.switchon.label"
                                 ),
-                                //Modal = new PropertyModal(TypeModal.Modal, switchOnForm),
+                                Modal = "#swichon_log",
                                 Icon = new IconPowerOff(),
                                 BackgroundColor = new PropertyColorButton(TypeColorButton.Success)
                             })

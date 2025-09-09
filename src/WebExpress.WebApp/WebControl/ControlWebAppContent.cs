@@ -7,17 +7,17 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// Represents the content control for a web application.
     /// </summary>
-    public class ControlWebAppContent : Control
+    public class ControlWebAppContent : Control, IControlWebAppContent
     {
         /// <summary>
         /// Returns the toolbar.
         /// </summary>
-        public ControlWebAppToolbar Toolbar { get; } = new ControlWebAppToolbar("wx-content-toolbar");
+        public IControlWebAppToolbar Toolbar { get; } = new ControlWebAppToolbar("wx-content-toolbar");
 
         /// <summary>
         /// Returns the main panel.
         /// </summary>
-        public ControlWebAppMain MainPanel { get; } = new ControlWebAppMain("wx-content-main")
+        public IControlWebAppMain MainPanel { get; } = new ControlWebAppMain("wx-content-main")
         {
             //BackgroundColor = new PropertyColorBackground(TypeColorBackground.Danger),
         };
@@ -25,7 +25,7 @@ namespace WebExpress.WebApp.WebControl
         /// <summary>
         /// Returns the page properties.
         /// </summary>
-        public ControlWebAppProperty Property { get; } = new ControlWebAppProperty("wx-content-property");
+        public IControlWebAppProperty Property { get; } = new ControlWebAppProperty("wx-content-property");
 
         /// <summary>
         /// Initializes a new instance of the class.

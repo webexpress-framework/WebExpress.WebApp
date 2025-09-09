@@ -49,18 +49,18 @@ namespace WebExpress.WebApp.WebPage
         /// <summary>
         /// Returns the sidebar control.
         /// </summary>
-        public ControlWebAppSidebar Sidebar { get; protected set; } = new ControlWebAppSidebar("wx-sidebar");
+        public IControlWebAppSidebar Sidebar { get; protected set; } = new ControlWebAppSidebar("wx-sidebar");
 
 
         /// <summary>
         /// Returns the content control.
         /// </summary>
-        public new ControlWebAppContent Content { get; protected set; } = new ControlWebAppContent("wx-content");
+        public new IControlWebAppContent Content { get; protected set; } = new ControlWebAppContent("wx-content");
 
         /// <summary>
         /// Returns the footer control.
         /// </summary>
-        public ControlWebAppFooter Footer { get; protected set; } = new ControlWebAppFooter("wx-footer");
+        public IControlWebAppFooter Footer { get; protected set; } = new ControlWebAppFooter("wx-footer");
 
         /// <summary>
         /// Returns the control for displaying notification popups via API.
@@ -121,7 +121,7 @@ namespace WebExpress.WebApp.WebPage
             html.Head.ScriptLinks = HeaderScriptLinks?.Where(x => x != null).Select(x => x.ToString());
 
             // header
-            Header.AppTitle.Text = html.Head.Title;
+            Header.AppTitle.SetTitle(html.Head.Title);
             if (Theme?.ThemeMode == ThemeMode.Dark)
             {
                 html.Body.AddUserAttribute("data-bs-theme", "dark");

@@ -12,7 +12,7 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// Represents a sidebar control for the web application.
     /// </summary>
-    public class ControlWebAppSidebar : Control
+    public class ControlWebAppSidebar : Control, IControlWebAppSidebar
     {
         private readonly List<IControl> _header = [];
         private readonly List<IControl> _preferences = [];
@@ -52,72 +52,96 @@ namespace WebExpress.WebApp.WebControl
         /// Adds items to the header area.
         /// </summary>
         /// <param name="items">The items to add to the header area.</param>
-        public void AddHeader(params IControl[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppSidebar AddHeader(params IControl[] items)
         {
             _header.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the header area.
         /// </summary>
         /// <param name="item">The item to remove from the header area.</param>
-        public void RemoveHeader(IControl item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppSidebar RemoveHeader(IControl item)
         {
             _header.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the preferences area.
         /// </summary>
         /// <param name="items">The items to add to the preferences area.</param>
-        public void AddPreferences(params IControl[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppSidebar AddPreferences(params IControl[] items)
         {
             _preferences.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the preferences area.
         /// </summary>
         /// <param name="item">The item to remove from the preferences area.</param>
-        public void RemovePreference(IControl item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppSidebar RemovePreference(IControl item)
         {
             _preferences.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the primary area.
         /// </summary>
         /// <param name="items">The items to add to the primary area.</param>
-        public void AddPrimary(params IControl[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppSidebar AddPrimary(params IControl[] items)
         {
             _primary.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the primary area.
         /// </summary>
         /// <param name="item">The item to remove from the primary area.</param>
-        public void RemovePrimary(IControl item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppSidebar RemovePrimary(IControl item)
         {
             _primary.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the secondary area.
         /// </summary>
         /// <param name="items">The items to add to the secondary area.</param>
-        public void AddSecondary(params IControl[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppSidebar AddSecondary(params IControl[] items)
         {
             _secondary.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the secondary area.
         /// </summary>
         /// <param name="item">The item to remove from the secondary area.</param>
-        public void RemoveSecondary(IControl item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppSidebar RemoveSecondary(IControl item)
         {
             _secondary.Remove(item);
+
+            return this;
         }
 
         /// <summary>

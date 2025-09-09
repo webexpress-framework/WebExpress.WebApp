@@ -12,7 +12,7 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// Represents a toolbar control for a web application.
     /// </summary>
-    public class ControlWebAppToolbar : ControlToolbar
+    public class ControlWebAppToolbar : ControlToolbar, IControlWebAppToolbar
     {
         private readonly List<IControlToolbarItem> _preferences = [];
         private readonly List<IControlToolbarItem> _primary = [];
@@ -47,54 +47,72 @@ namespace WebExpress.WebApp.WebControl
         /// Adds items to the preferences area.
         /// </summary>
         /// <param name="items">The items to add to the preferences area.</param>
-        public void AddPreferences(params IControlToolbarItem[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppToolbar AddPreferences(params IControlToolbarItem[] items)
         {
             _preferences.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the preferences area.
         /// </summary>
         /// <param name="item">The item to remove from the preferences area.</param>
-        public void RemovePreference(IControlToolbarItem item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppToolbar RemovePreference(IControlToolbarItem item)
         {
             _preferences.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the primary area.
         /// </summary>
         /// <param name="items">The items to add to the primary area.</param>
-        public void AddPrimary(params IControlToolbarItem[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppToolbar AddPrimary(params IControlToolbarItem[] items)
         {
             _primary.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the primary area.
         /// </summary>
         /// <param name="item">The item to remove from the primary area.</param>
-        public void RemovePrimary(IControlToolbarItem item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppToolbar RemovePrimary(IControlToolbarItem item)
         {
             _primary.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the secondary area.
         /// </summary>
         /// <param name="items">The items to add to the secondary area.</param>
-        public void AddSecondary(params IControlToolbarItem[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppToolbar AddSecondary(params IControlToolbarItem[] items)
         {
             _secondary.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the secondary area.
         /// </summary>
         /// <param name="item">The item to remove from the secondary area.</param>
-        public void RemoveSecondary(IControlToolbarItem item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppToolbar RemoveSecondary(IControlToolbarItem item)
         {
             _secondary.Remove(item);
+
+            return this;
         }
 
         /// <summary>

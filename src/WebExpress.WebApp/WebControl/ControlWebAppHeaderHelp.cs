@@ -14,7 +14,7 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// Help control for a WebApp.
     /// </summary>
-    public class ControlWebAppHeaderHelp : Control
+    public class ControlWebAppHeaderHelp : Control, IControlWebAppHeaderHelp
     {
         private readonly List<IControlDropdownItem> _preferences = [];
         private readonly List<IControlDropdownItem> _primary = [];
@@ -49,54 +49,72 @@ namespace WebExpress.WebApp.WebControl
         /// Adds items to the preferences area.
         /// </summary>
         /// <param name="items">The items to add to the preferences area.</param>
-        public void AddPreferences(params IControlDropdownItem[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderHelp AddPreferences(params IControlDropdownItem[] items)
         {
             _preferences.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the preferences area.
         /// </summary>
         /// <param name="item">The item to remove from the preferences area.</param>
-        public void RemovePreference(IControlDropdownItem item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderHelp RemovePreference(IControlDropdownItem item)
         {
             _preferences.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the primary area.
         /// </summary>
         /// <param name="items">The items to add to the primary area.</param>
-        public void AddPrimary(params IControlDropdownItem[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderHelp AddPrimary(params IControlDropdownItem[] items)
         {
             _primary.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the primary area.
         /// </summary>
         /// <param name="item">The item to remove from the primary area.</param>
-        public void RemovePrimary(IControlDropdownItem item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderHelp RemovePrimary(IControlDropdownItem item)
         {
             _primary.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the secondary area.
         /// </summary>
         /// <param name="items">The items to add to the secondary area.</param>
-        public void AddSecondary(params IControlDropdownItem[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderHelp AddSecondary(params IControlDropdownItem[] items)
         {
             _secondary.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the secondary area.
         /// </summary>
         /// <param name="item">The item to remove from the secondary area.</param>
-        public void RemoveSecondary(IControlDropdownItem item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderHelp RemoveSecondary(IControlDropdownItem item)
         {
             _secondary.Remove(item);
+
+            return this;
         }
 
         /// <summary>

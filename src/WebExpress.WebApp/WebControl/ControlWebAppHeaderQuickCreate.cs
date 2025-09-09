@@ -13,7 +13,7 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// Quick create control element for a WebApp.
     /// </summary>
-    public class ControlWebAppHeaderQuickCreate : Control
+    public class ControlWebAppHeaderQuickCreate : Control, IControlWebAppHeaderQuickCreate
     {
         private readonly List<IControlSplitButtonItem> _preferences = [];
         private readonly List<IControlSplitButtonItem> _primary = [];
@@ -48,54 +48,72 @@ namespace WebExpress.WebApp.WebControl
         /// Adds items to the preferences area.
         /// </summary>
         /// <param name="items">The items to add to the preferences area.</param>
-        public void AddPreferences(params IControlSplitButtonItem[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderQuickCreate AddPreferences(params IControlSplitButtonItem[] items)
         {
             _preferences.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the preferences area.
         /// </summary>
         /// <param name="item">The item to remove from the preferences area.</param>
-        public void RemovePreference(IControlSplitButtonItem item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderQuickCreate RemovePreference(IControlSplitButtonItem item)
         {
             _preferences.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the primary area.
         /// </summary>
         /// <param name="items">The items to add to the primary area.</param>
-        public void AddPrimary(params IControlSplitButtonItem[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderQuickCreate AddPrimary(params IControlSplitButtonItem[] items)
         {
             _primary.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the primary area.
         /// </summary>
         /// <param name="item">The item to remove from the primary area.</param>
-        public void RemovePrimary(IControlSplitButtonItem item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderQuickCreate RemovePrimary(IControlSplitButtonItem item)
         {
             _primary.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the secondary area.
         /// </summary>
         /// <param name="items">The items to add to the secondary area.</param>
-        public void AddSecondary(params IControlSplitButtonItem[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderQuickCreate AddSecondary(params IControlSplitButtonItem[] items)
         {
             _secondary.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the secondary area.
         /// </summary>
         /// <param name="item">The item to remove from the secondary area.</param>
-        public void RemoveSecondary(IControlSplitButtonItem item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderQuickCreate RemoveSecondary(IControlSplitButtonItem item)
         {
             _secondary.Remove(item);
+
+            return this;
         }
 
         /// <summary>
