@@ -70,8 +70,13 @@ setting.systeminformation.reboot.description=Starten Sie den Server neu. <b>Acht
 
 setting.category.general.name=Allgemeine Einstellungen
 setting.category.general.description=Allgemeine Einstellungen für die Webanwendung.
+setting.category.system.name=System
+settimg.category.system.description=Systembezogene Einstellungen für die Webanwendung.
+
 setting.group.general.name=Allgemein
 setting.group.general.description=Allgemeine Einstellungen für die Webanwendung.
+setting.group.system.name=System
+setting.group.system.description=Systembezogene Einstellungen für die Webanwendung.
 
 setting.tab.general.label=Allgemein
 setting.group.system.label=System

@@ -13,18 +13,17 @@ using WebExpress.WebUI.Internationalization;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebIcon;
 
-namespace WebExpress.WebApp.WWW.Setting.System
+namespace WebExpress.WebApp.WWW.Setting.System.Log
 {
     /// <summary>
     /// Logging settings page.
     /// </summary>
     [WebIcon<IconFileMedicalAlt>]
     [Title("webexpress.webapp:setting.titel.log.label")]
-    [SettingCategory<SettingCategoryGeneral>()]
-    [SettingGroup<SettingGroupGeneral>()]
+    [SettingGroup<SettingGroupSystem>()]
     [SettingSection(SettingSection.Secondary)]
     [Scope<IScopeAdmin>]
-    public sealed class Log : ISettingPage<VisualTreeWebAppSetting>, IScopeAdmin
+    public sealed class Index : ISettingPage<VisualTreeWebAppSetting>, IScopeAdmin
     {
         private readonly ILogManager _logManager;
 
@@ -32,7 +31,7 @@ namespace WebExpress.WebApp.WWW.Setting.System
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="logManager">The log manager.</param>
-        public Log(ILogManager logManager)
+        public Index(ILogManager logManager)
         {
             _logManager = logManager;
         }
@@ -57,7 +56,7 @@ namespace WebExpress.WebApp.WWW.Setting.System
                 file.Exists ? file.Length : 0
             );
 
-            var deleteForm = new ControlModalFormConfirmDelete("delte_log")
+            var deleteModal = new ControlModalFormConfirmDelete("delte-log")
             {
                 Header = I18N.Translate
                 (
@@ -74,12 +73,12 @@ namespace WebExpress.WebApp.WWW.Setting.System
                 }
             };
 
-            deleteForm.Confirm += (s, e) =>
+            deleteModal.Confirm += (s, e) =>
             {
                 File.Delete(log);
             };
 
-            var switchOnForm = new ControlModalFormConfirm("swichon_log")
+            var switchOnModal = new ControlModalFormConfirm("swich-on-log")
             {
                 Header = I18N.Translate
                 (
@@ -96,24 +95,25 @@ namespace WebExpress.WebApp.WWW.Setting.System
                 }
             };
 
-            switchOnForm.AddPreferencesButton(new ControlFormItemButtonSubmit()
+            switchOnModal.SubmitButtonColor = new PropertyColorButton(TypeColorButton.Success);
+            switchOnModal.SubmitButtonIcon = new IconPowerOff();
+            switchOnModal.SubmitButtonLabel = I18N.Translate
+            (
+                renderContext,
+                "webexpress.webapp:setting.logfile.switchon.label"
+            );
+
+            switchOnModal.Confirm += (s, e) =>
             {
-                Icon = new IconPowerOff(),
-                Color = new PropertyColorButton(TypeColorButton.Success),
-                Text = I18N.Translate
+                _logManager.DefaultLog.LogMode = LogMode.Override;
+                _logManager.DefaultLog.Info(I18N.Translate
                 (
                     renderContext,
-                    "webexpress.webapp:setting.logfile.switchon.label"
-                )
-            });
-
-            switchOnForm.Confirm += (s, e) =>
-            {
-                //        context.PluginContext.Host.Log.LogMode = LogMode.Override;
-                //        context.PluginContext.Host.Log.Info(this.I18N("webexpress.webapp", "setting.logfile.switchon.success"));
+                    "webexpress.webapp:setting.logfile.switchon.success"
+                ));
             };
 
-            var info = new ControlTable()
+            var infoTable = new ControlTable()
             {
                 Striped = TypeStripedTable.Row,
                 SuppressHeaders = true
@@ -174,7 +174,7 @@ namespace WebExpress.WebApp.WWW.Setting.System
                                     renderContext,
                                     "webexpress.webapp:setting.logfile.delete.label"
                                 ),
-                                Modal = deleteForm.Id,
+                                Modal = deleteModal.Id,
                                 Icon = new IconTrashAlt(),
                                 BackgroundColor = new PropertyColorButton(TypeColorButton.Danger)
                             })
@@ -204,7 +204,7 @@ namespace WebExpress.WebApp.WWW.Setting.System
                                     renderContext,
                                     "webexpress.webapp:setting.logfile.switchon.label"
                                 ),
-                                Modal = "#swichon_log",
+                                Modal = switchOnModal.Id,
                                 Icon = new IconPowerOff(),
                                 BackgroundColor = new PropertyColorButton(TypeColorButton.Success)
                             })
@@ -222,7 +222,9 @@ namespace WebExpress.WebApp.WWW.Setting.System
                     TextColor = new PropertyColorText(TypeColorText.Info),
                     Margin = new PropertySpacingMargin(PropertySpacing.Space.Two)
                 })
-               .AddPrimary(info);
+               .AddPrimary(infoTable)
+               .AddSecondary(deleteModal)
+               .AddSecondary(switchOnModal);
 
             if (file.Exists)
             {

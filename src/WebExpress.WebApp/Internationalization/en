@@ -85,8 +85,13 @@ setting.logfile.switchon.success=Logging has been enabled.
 
 setting.category.general.name=General settings
 setting.category.general.description=General settings for the web application.
+setting.category.system.name=System
+settimg.category.system.description=System-related settings for the web application.
+
 setting.group.general.name=General
 setting.group.general.description=General settings for the web application.
+setting.group.system.name=System
+setting.group.system.description=System-related settings for the web application.
 
 setting.tab.general.label=General
 setting.group.system.label=System

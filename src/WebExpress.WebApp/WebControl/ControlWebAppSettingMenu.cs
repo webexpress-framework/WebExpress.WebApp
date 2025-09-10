@@ -35,10 +35,17 @@ namespace WebExpress.WebApp.WebControl
             var appicationContext = renderContext.PageContext?.ApplicationContext;
             var settingPageContext = renderContext.PageContext as ISettingPageContext;
             var currentCategory = settingPageContext?.SettingGroup?.SettingCategory;
-            var groups = settinPageManager.GetSettingGroups(renderContext.PageContext?.ApplicationContext, currentCategory);
+            var groups = settinPageManager.GetSettingGroups
+            (
+                renderContext.PageContext?.ApplicationContext,
+                currentCategory
+            );
             var controls = new List<IControl>();
 
-            foreach (var group in groups.OrderBy(x => x))
+            foreach (var group in groups
+                .Where(x => settinPageManager.GetSettingPages(appicationContext, x).Any())
+                .OrderBy(x => x.Name)
+            )
             {
                 var settingPages = settinPageManager.GetSettingPages(appicationContext, group);
                 var listCtrl = new ControlList(null) { Layout = TypeLayoutList.Flush };

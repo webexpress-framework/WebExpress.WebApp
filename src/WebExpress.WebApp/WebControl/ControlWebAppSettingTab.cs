@@ -130,24 +130,31 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>A list of tab items.</returns>
         private IEnumerable<IControlNavigationItem> GetItems(IRenderControlContext renderContext)
         {
-            var settinPageManager = WebEx.ComponentHub.SettingPageManager;
+            var settingPageManager = WebEx.ComponentHub.SettingPageManager;
             var appicationContext = renderContext.PageContext?.ApplicationContext;
             var settingPageContext = renderContext.PageContext as ISettingPageContext;
-            var categories = settinPageManager?.GetSettingCategories(appicationContext)
+            var categories = settingPageManager?.GetSettingCategories(appicationContext)
+                .Where(x => settingPageManager.GetFirstSettingPage(appicationContext, x) != null)
                 .Select
                 (
                     x => new ControlNavigationItemLink()
                     {
                         Text = I18N.Translate(renderContext, x?.Name),
-                        Uri = settinPageManager.GetFirstSettingPage(appicationContext, x).Route.ToUri(),
+                        Uri = settingPageManager.GetFirstSettingPage(appicationContext, x)?
+                            .Route?
+                            .ToUri(),
                         Active = settingPageContext.SettingCategory == x ? TypeActive.Active : TypeActive.None
                     }
-                );
+                ).OrderBy(x => x.Title);
 
-            foreach (var item in Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlNavigationItemLink, SectionSettingTabPreferences>
+            foreach (var item in Preferences.Union
             (
-                renderContext?.PageContext
-            )))
+                WebEx.ComponentHub.FragmentManager
+                    .GetFragments<FragmentControlNavigationItemLink, SectionSettingTabPreferences>
+                (
+                    renderContext?.PageContext
+                ))
+            )
             {
                 yield return item;
             }
