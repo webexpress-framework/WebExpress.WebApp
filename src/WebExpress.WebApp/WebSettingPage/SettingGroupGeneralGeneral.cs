@@ -12,7 +12,7 @@ namespace WebExpress.WebApp.WebSettingPage
     [Description("webexpress.webapp:setting.group.general.description")]
     [SettingSection(SettingSection.Primary)]
     [SettingCategory<SettingCategoryGeneral>]
-    public sealed class SettingGroupGeneral : ISettingGroup
+    public sealed class SettingGroupGeneralGeneral : ISettingGroup
     {
 
     }

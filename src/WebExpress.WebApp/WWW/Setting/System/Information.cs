@@ -18,7 +18,7 @@ namespace WebExpress.WebApp.WWW.Setting.System
     /// </summary>
     [WebIcon<IconInfoCircle>]
     [Title("webexpress.webapp:setting.titel.systeminformation.label")]
-    [SettingGroup<SettingGroupSystem>()]
+    [SettingGroup<SettingGroupSystemGeneral>()]
     [SettingSection(SettingSection.Secondary)]
     [Scope<IScopeAdmin>]
     public sealed class Information : ISettingPage<VisualTreeWebAppSetting>, IScopeAdmin

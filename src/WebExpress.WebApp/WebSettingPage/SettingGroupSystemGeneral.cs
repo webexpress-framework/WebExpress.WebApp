@@ -9,10 +9,10 @@ namespace WebExpress.WebApp.WebSettingPage
     /// </summary>
     [WebIcon<IconGlobe>]
     [Name("webexpress.webapp:setting.group.system.name")]
-    [Description("webexpress.webapp:setting.group.system.description")]
+    [Description("webexpress.webapp:setting.group.general.description")]
     [SettingSection(SettingSection.Primary)]
     [SettingCategory<SettingCategorySystem>]
-    public sealed class SettingGroupSystem : ISettingGroup
+    public sealed class SettingGroupSystemGeneral : ISettingGroup
     {
 
     }

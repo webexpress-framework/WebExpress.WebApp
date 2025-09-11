@@ -20,7 +20,7 @@ namespace WebExpress.WebApp.WWW.Setting.System.Log
     /// </summary>
     [WebIcon<IconFileMedicalAlt>]
     [Title("webexpress.webapp:setting.titel.log.label")]
-    [SettingGroup<SettingGroupSystem>()]
+    [SettingGroup<SettingGroupSystemGeneral>()]
     [SettingSection(SettingSection.Secondary)]
     [Scope<IScopeAdmin>]
     public sealed class Index : ISettingPage<VisualTreeWebAppSetting>, IScopeAdmin
