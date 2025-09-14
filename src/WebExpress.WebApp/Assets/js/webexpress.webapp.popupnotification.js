@@ -1,7 +1,7 @@
 /**
  * Control for displaying popup notifications.
  * The following events are triggered:
- * - webexpress.webapp.close with parameter id.
+ * - webexpress.webui.Event.HIDE_EVENT with parameter id.
  */
 class PopupNotificationCtrl extends webexpress.webui.Ctrl {
     _interval = null;
@@ -59,7 +59,7 @@ class PopupNotificationCtrl extends webexpress.webui.Ctrl {
                         data.alert.dispatchEvent(new CustomEvent('close'));
                         this._activeNotifications.delete(data.id);
                         clearInterval(interval);
-                        this.trigger('webexpress.webapp.close', data.id);
+                        this._dispatch(webexpress.webui.Event.HIDE_EVENT, { message: data.id });
                     }
                 }, 333);
             }
@@ -137,7 +137,7 @@ class PopupNotificationCtrl extends webexpress.webui.Ctrl {
                         this._activeNotifications.delete(id);
                         clearInterval(interval);
                         fetch(this._restUri + "/" + id, { method: "DELETE", headers: { 'Accept': 'application/json' } });
-                        this.trigger('webexpress.webapp.close', id);
+                        this._dispatch(webexpress.webui.Event.HIDE_EVENT, { message: id });
                     });
 
                     alert.appendChild(button);
