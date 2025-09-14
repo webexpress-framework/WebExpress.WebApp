@@ -17,7 +17,7 @@ namespace WebExpress.WebApp.WWW.Api._1
     [Method(CrudMethod.GET)]
     [Method(CrudMethod.DELETE)]
     [IncludeSubPaths(true)]
-    public sealed class RestPopupNotification : IRestApi
+    public sealed class PopupNotification : IRestApi
     {
         private readonly IComponentHub _componentHub;
         private readonly IApplicationContext _applicationContext;
@@ -25,7 +25,9 @@ namespace WebExpress.WebApp.WWW.Api._1
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
-        public RestPopupNotification(IComponentHub componentHub, IApplicationContext applicationContext)
+        /// <param name="componentHub">The component hub.</param>
+        /// <param name="applicationContext">The application context.</param>
+        public PopupNotification(IComponentHub componentHub, IApplicationContext applicationContext)
         {
             _componentHub = componentHub;
             _applicationContext = applicationContext;

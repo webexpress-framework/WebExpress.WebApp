@@ -36,7 +36,7 @@ namespace WebExpress.WebApp.WebControl
                 Class = Css.Concatenate("wx-webapp-popupnotification", GetClasses()),
                 Style = GetStyles()
             }
-                .AddUserAttribute("data-uri", WebEx.ComponentHub.SitemapManager.GetUri<RestPopupNotification>(applicationContext).ToString())
+                .AddUserAttribute("data-uri", WebEx.ComponentHub.SitemapManager.GetUri<PopupNotification>(applicationContext).ToString())
                 .AddUserAttribute("data-intervall", "15000");
 
             return html;

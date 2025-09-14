@@ -1,67 +1,67 @@
-﻿//using System;
-//using WebExpress.WebCore.WebComponent;
-//using WebExpress.WebCore.WebHtml;
-//using WebExpress.WebCore.WebPage;
-//using WebExpress.WebUI.WebControl;
+﻿using System;
+using WebExpress.WebCore.WebHtml;
+using WebExpress.WebUI.WebControl;
+using WebExpress.WebUI.WebPage;
 
-//namespace WebExpress.WebApp.WebApiControl
-//{
-//    /// <summary>
-//    /// Dialog that contains the progress bar of a web task.
-//    /// </summary>
-//    public class ControlApiModalProgressTaskState : ControlModal
-//    {
-//        /// <summary>
-//        /// Returns or sets the progress bar.
-//        /// </summary>
-//        private ControlProgressBar ProgressBar { get; set; }
+namespace WebExpress.WebApp.WebControl
+{
+    /// <summary>
+    /// Dialog that contains the progress bar of a web task.
+    /// </summary>
+    public class ControlApiModalProgressTaskState : ControlModal
+    {
+        /// <summary>
+        /// Returns or sets the progress bar.
+        /// </summary>
+        private ControlProgress Progress { get; set; }
 
-//        /// <summary>
-//        /// Returns or sets the progress message.
-//        /// </summary>
-//        private ControlText Message { get; set; }
+        /// <summary>
+        /// Returns or sets the progress message.
+        /// </summary>
+        private ControlText Message { get; set; }
 
-//        /// <summary>
-//        /// Initializes a new instance of the class.
-//        /// </summary>
-//        /// <param name="id">The control id.</param>
-//        public ControlApiModalProgressTaskState(string id)
-//            : base(id ?? Guid.NewGuid().ToString())
-//        {
-//            ProgressBar = new ControlProgressBar($"progressbar_{Id}")
-//            {
-//                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two),
-//                Color = new PropertyColorProgress(TypeColorProgress.Primary),
-//                Format = TypeFormatProgress.Animated
-//            };
+        /// <summary>
+        /// Initializes a new instance of the class.
+        /// </summary>
+        /// <param name="id">The control id.</param>
+        public ControlApiModalProgressTaskState(string id)
+            : base(id ?? Guid.NewGuid().ToString())
+        {
+            Progress = new ControlProgress($"progressbar-{Id}")
+            {
+                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two),
+                Color = new PropertyColorProgress(TypeColorProgress.Primary),
+                Format = TypeFormatProgress.Animated
+            };
 
-//            Message = new ControlText($"message_{Id}")
-//            {
-//                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two),
-//                TextColor = new PropertyColorText(TypeColorText.Secondary)
-//            };
+            Message = new ControlText($"message-{Id}")
+            {
+                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two),
+                TextColor = new PropertyColorText(TypeColorText.Secondary)
+            };
 
-//            Fade = false;
-//            ShowIfCreated = true;
+            //Fade = false;
+            //ShowIfCreated = true;
 
-//            Content.Add(ProgressBar);
-//            Content.Add(Message);
-//        }
+            Add(Progress);
+            Add(Message);
+        }
 
-//        /// <summary>
-//        /// Convert to html.
-//        /// </summary>
-//        /// <param name="context">The context in which the control is rendered.</param>
-//        /// <returns>The control as html.</returns>
-//        public override IHtmlNode Render(RenderContext context)
-//        {
-//            var module = ComponentManager.ModuleManager.GetModule(context.ApplicationContext, typeof(Module));
-//            var code = $"updateTaskModal('{Id}', '{module?.ContextPath.Append("api/v1/taskstatus")}')";
+        /// <summary>
+        /// Converts the control to an HTML representation.
+        /// </summary>
+        /// <param name="renderContext">The context in which the control is rendered.</param>
+        /// <param name="visualTree">The visual tree representing the control's structure.</param>
+        /// <returns>An HTML node representing the rendered control.</returns>
+        public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
+        {
+            //var module = ComponentManager.ModuleManager.GetModule(context.ApplicationContext, typeof(Module));
+            //var code = $"updateTaskModal('{Id}', '{module?.ContextPath.Append("api/v1/taskstatus")}')";
 
 
-//            context.VisualTree.AddScript("webexpress.webapp:controlapimodalprogresstaskstate", code);
+            //renderContext.VisualTree.AddScript("webexpress.webapp:controlapimodalprogresstaskstate", code);
 
-//            return base.Render(context);
-//        }
-//    }
-//}
+            return base.Render(renderContext, visualTree);
+        }
+    }
+}
