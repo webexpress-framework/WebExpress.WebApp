@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Linq;
-using WebExpress.WebApp.WebControl;
+using WebExpress.WebApp.WebApiControl;
 using WebExpress.WebApp.WebScope;
 using WebExpress.WebApp.WebSettingPage;
 using WebExpress.WebCore.Internationalization;
@@ -61,7 +61,7 @@ namespace WebExpress.WebApp.WWW.Setting.System
             BackgroundColor = new PropertyColorButton(TypeColorButton.Primary),
             Icon = new IconUpload(),
             Modal = "plugin-upload",
-            //Active = TypeActive.Disabled
+            Active = TypeActive.Disabled
         };
 
         /// <summary>
@@ -75,9 +75,11 @@ namespace WebExpress.WebApp.WWW.Setting.System
         /// <summary>
         /// Progress control to monitor plugin initialization.
         /// </summary>
-        private ControlApiModalProgressTaskState ModalTaskUpdate { get; } = new ControlApiModalProgressTaskState(TaskId)
+        private ControlRestProgressTask ProgressTask { get; } = new ControlRestProgressTask(TaskId)
         {
-            Header = "webexpress.webapp:setting.plugin.upload.header"
+            Display = TypeDisplay.None,
+            ShowOnStart = true,
+            HideOnFinish = true
         };
 
         /// <summary>
@@ -258,15 +260,11 @@ namespace WebExpress.WebApp.WWW.Setting.System
             }
 
             visualTree.Content.MainPanel.Headline.AddSecondary(DownloadButton);
+            visualTree.Content.MainPanel.AddPreferences(ProgressTask);
             visualTree.Content.MainPanel.AddPrimary(Description);
             visualTree.Content.MainPanel.AddPrimary(Label);
             visualTree.Content.MainPanel.AddPrimary(pluginTable);
             visualTree.Content.MainPanel.AddSecondary(ModalUploadForm);
-
-            if (_componentHub.TaskManager.GetTask(TaskId) is Task task && task.State == TaskState.Run)
-            {
-                visualTree.Content.MainPanel.AddPreferences(ModalTaskUpdate);
-            }
         }
     }
 }

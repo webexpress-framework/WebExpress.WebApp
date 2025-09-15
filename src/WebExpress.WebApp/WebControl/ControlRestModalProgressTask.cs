@@ -8,7 +8,7 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// Dialog that contains the progress bar of a web task.
     /// </summary>
-    public class ControlApiModalProgressTaskState : ControlModal
+    public class ControlRestModalProgressTask : ControlModal
     {
         /// <summary>
         /// Returns or sets the progress bar.
@@ -24,7 +24,7 @@ namespace WebExpress.WebApp.WebControl
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The control id.</param>
-        public ControlApiModalProgressTaskState(string id)
+        public ControlRestModalProgressTask(string id)
             : base(id ?? Guid.NewGuid().ToString())
         {
             Progress = new ControlProgress($"progressbar-{Id}")

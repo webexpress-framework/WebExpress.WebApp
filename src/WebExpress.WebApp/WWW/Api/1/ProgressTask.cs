@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using System.Text.Json;
 using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebComponent;
 using WebExpress.WebCore.WebMessage;
@@ -12,7 +13,7 @@ namespace WebExpress.WebApp.WWW.Api.V1
     /// </summary>
     [Method(CrudMethod.GET)]
     [IncludeSubPaths(true)]
-    public sealed class TaskStatus : IRestApi
+    public sealed class ProgressTask : IRestApi
     {
         private readonly IComponentHub _componentHub;
 
@@ -20,7 +21,7 @@ namespace WebExpress.WebApp.WWW.Api.V1
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="componentHub">The component hub.</param>
-        public TaskStatus(IComponentHub componentHub)
+        public ProgressTask(IComponentHub componentHub)
         {
             _componentHub = componentHub;
         }
@@ -47,34 +48,21 @@ namespace WebExpress.WebApp.WWW.Api.V1
             if (_componentHub.TaskManager.ContainsTask(id))
             {
                 var task = _componentHub.TaskManager.GetTask(id);
+                var json = JsonSerializer.Serialize(new
+                {
+                    id,
+                    state = task.State,
+                    progress = task.Progress,
+                    message = task.Message
+                });
 
                 return new ResponseOK()
                 {
-                    Content = new object[]
-                    {
-                        new
-                        {
-                            Id = id,
-                            task.State,
-                            task.Progress,
-                            task.Message
-                        }
-                    }
+                    Content = json
                 }.AddHeaderContentType("application/json");
             }
 
-            return new ResponseOK()
-            {
-                Content = new object[]
-                    {
-                        new
-                        {
-                            Id = id,
-                            State = default(string),
-                            Progress = 0
-                        }
-                    }
-            }.AddHeaderContentType("application/json");
+            return new ResponseNotFound();
         }
 
         /// <summary>

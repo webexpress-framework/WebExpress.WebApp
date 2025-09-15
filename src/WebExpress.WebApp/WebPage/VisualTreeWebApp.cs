@@ -92,11 +92,11 @@ namespace WebExpress.WebApp.WebPage
             AddCssLink(Theme?.ThemeStyle.ToString() ?? RouteEndpoint.Combine(baseUri, "css/webexpress.webapp.theme.css"));
 
             AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/webexpress.webapp.js"));
-            AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/webexpress.webapp.popupnotification.js"));
-            AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/webexpress.webapp.selection.js"));
             AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/webexpress.webapp.modalform.js"));
+            AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/webexpress.webapp.popupnotification.js"));
+            AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/webexpress.webapp.progress.task.js"));
+            AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/webexpress.webapp.selection.js"));
             AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/webexpress.webapp.table.js"));
-            AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/webexpress.webapp.taskprogressbar.js"));
             AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/i18n/en.js"));
             AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/i18n/de.js"));
         }
