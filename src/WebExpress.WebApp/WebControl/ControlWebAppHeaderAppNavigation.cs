@@ -12,7 +12,7 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// Represents the header navigation control for the web application.
     /// </summary>
-    public class ControlWebAppHeaderAppNavigation : ControlPanelFlexbox, IControlWebAppHeaderAppNavigation
+    public class ControlWebAppHeaderAppNavigation : ControlPanelFlex, IControlWebAppHeaderAppNavigation
     {
         private readonly List<IControlNavigationItem> _preferences = [];
         private readonly List<IControlNavigationItem> _primary = [];

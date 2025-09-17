@@ -83,7 +83,7 @@
 //                    {
 //                        Text = group.Name
 //                    },
-//                    new ControlPanelFlexbox
+//                    new ControlPanelFlex
 //                    (
 //                        new ControlLink()
 //                        {

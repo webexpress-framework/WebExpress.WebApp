@@ -56,8 +56,8 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         public IControlWebAppHeaderAppNavigation AppNavigation { get; } = new ControlWebAppHeaderAppNavigation("wx-header-appnavigation")
         {
-            Layout = TypeLayoutFlexbox.Inline,
-            Justify = TypeJustifiedFlexbox.Start
+            Layout = TypeLayoutFlex.Inline,
+            Justify = TypeJustifiedFlex.Start
         };
 
         /// <summary>
@@ -108,7 +108,7 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            var content = new ControlPanelFlexbox
+            var content = new ControlPanelFlex
             (
                 null,
                 AppNavigator,
@@ -121,8 +121,8 @@ namespace WebExpress.WebApp.WebControl
                 Settings
             )
             {
-                Layout = TypeLayoutFlexbox.Default,
-                Align = TypeAlignFlexbox.Center
+                Layout = TypeLayoutFlex.Default,
+                Align = TypeAlignFlex.Center
             };
 
             return new HtmlElementSectionHeader(content.Render(renderContext, visualTree))

@@ -90,7 +90,7 @@
 //            };
 
 //            var panel = new ControlPanel(title, message) { Margin = new PropertySpacingMargin(PropertySpacing.Space.Three) };
-//            var flex = new ControlPanelFlexbox(statusCode, panel)
+//            var flex = new ControlPanelFlex(statusCode, panel)
 //            {
 //                Layout = TypeLayoutFlexbox.Inline,
 //                Justify = TypeJustifiedFlexbox.Start,

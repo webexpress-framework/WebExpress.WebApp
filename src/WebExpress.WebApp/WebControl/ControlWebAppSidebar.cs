@@ -155,7 +155,7 @@ namespace WebExpress.WebApp.WebControl
             var items = GetItems(renderContext);
 
             var sidebarCtlr = items.Any() ?
-            new ControlPanelFlexbox(Id, [.. items])
+            new ControlPanelFlex(Id, [.. items])
             {
                 Classes = ["wx-sidebar"],
                 //BackgroundColor = new PropertyColorButton(TypeColorButton.Dark),

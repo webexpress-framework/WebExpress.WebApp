@@ -217,53 +217,53 @@ namespace WebExpress.WebApp.WebControl
 
             return new HtmlElementSectionHeader
             (
-                new ControlPanelFlexbox
+                new ControlPanelFlex
                 (
                     null,
-                    prologue.Any() ? new ControlPanelFlexbox(null, [.. prologue])
+                    prologue.Any() ? new ControlPanelFlex(null, [.. prologue])
                     {
-                        Layout = TypeLayoutFlexbox.Default,
-                        Align = TypeAlignFlexbox.Center,
-                        Justify = TypeJustifiedFlexbox.Start
+                        Layout = TypeLayoutFlex.Default,
+                        Align = TypeAlignFlex.Center,
+                        Justify = TypeJustifiedFlex.Start
                     } : null,
                     new ControlText()
                     {
                         Text = I18N.Translate
                         (
-                            renderContext, 
+                            renderContext,
                             renderContext.PageContext?.PageTitle
                         ),
                         Format = TypeFormatText.H2,
                         Margin = new PropertySpacingMargin(PropertySpacing.Space.None, PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.Null)
                     },
-                    preferences.Any() ? new ControlPanelFlexbox(null, [.. preferences])
+                    preferences.Any() ? new ControlPanelFlex(null, [.. preferences])
                     {
-                        Layout = TypeLayoutFlexbox.Default,
-                        Align = TypeAlignFlexbox.Center,
-                        Justify = TypeJustifiedFlexbox.Start
+                        Layout = TypeLayoutFlex.Default,
+                        Align = TypeAlignFlex.Center,
+                        Justify = TypeJustifiedFlex.Start
                     } : null,
-                    primary.Any() ? new ControlPanelFlexbox(null, [.. primary])
+                    primary.Any() ? new ControlPanelFlex(null, [.. primary])
                     {
-                        Layout = TypeLayoutFlexbox.Default,
-                        Align = TypeAlignFlexbox.Center,
-                        Justify = TypeJustifiedFlexbox.Start
+                        Layout = TypeLayoutFlex.Default,
+                        Align = TypeAlignFlex.Center,
+                        Justify = TypeJustifiedFlex.Start
                     } : null,
-                    secondary.Any() ? new ControlPanelFlexbox(null, [.. secondary])
+                    secondary.Any() ? new ControlPanelFlex(null, [.. secondary])
                     {
-                        Layout = TypeLayoutFlexbox.Default,
-                        Align = TypeAlignFlexbox.Center,
-                        Justify = TypeJustifiedFlexbox.End
+                        Layout = TypeLayoutFlex.Default,
+                        Align = TypeAlignFlex.Center,
+                        Justify = TypeJustifiedFlex.End
                     } : null,
                     More
                 )
                 {
-                    Layout = TypeLayoutFlexbox.Default,
-                    Align = TypeAlignFlexbox.Center,
-                    Justify = TypeJustifiedFlexbox.Between
+                    Layout = TypeLayoutFlex.Default,
+                    Align = TypeAlignFlex.Center,
+                    Justify = TypeJustifiedFlex.Between
                 }.Render(renderContext, visualTree),
                 metadata.Any() ? new HtmlElementTextContentDiv
                 (
-                    metadata.Select(x => x.Render(renderContext, visualTree)).ToArray()
+                    [.. metadata.Select(x => x.Render(renderContext, visualTree))]
                 )
                 {
                     Class = Css.Concatenate("ms-2 me-2 mb-3 text-secondary"),

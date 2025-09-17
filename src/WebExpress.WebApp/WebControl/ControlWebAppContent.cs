@@ -48,10 +48,10 @@ namespace WebExpress.WebApp.WebControl
             (
                 Id,
                 Toolbar,
-                new ControlPanelFlexbox(null, MainPanel, Property)
+                new ControlPanelFlex(null, MainPanel, Property)
                 {
-                    Layout = TypeLayoutFlexbox.Default,
-                    Align = TypeAlignFlexbox.Stretch,
+                    Layout = TypeLayoutFlex.Default,
+                    Align = TypeAlignFlex.Stretch,
                     FlexGrow = TypeFlexGrow.Grow
                 }
             )
