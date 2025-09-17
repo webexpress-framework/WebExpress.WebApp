@@ -2,7 +2,6 @@
 using System.Linq;
 using WebExpress.WebApp.WebSection;
 using WebExpress.WebCore;
-using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebFragment;
@@ -162,7 +161,10 @@ namespace WebExpress.WebApp.WebControl
                 renderContext?.PageContext
             ));
 
-            yield return new ControlDropdownItemHeader(I18N.Translate(renderContext.Request, "webexpress.webapp:toolbar.more.title"));
+            yield return new ControlDropdownItemHeader()
+            {
+                Text = "webexpress.webapp:toolbar.more.title"
+            };
 
             foreach (var item in preferences)
             {

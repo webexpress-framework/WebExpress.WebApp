@@ -24,11 +24,6 @@ namespace WebExpress.WebApp.WebControl
         IEnumerable<IControl> Secondary { get; }
 
         /// <summary>
-        /// Returns the page properties.
-        /// </summary>
-        IControlWebAppProperty Property { get; }
-
-        /// <summary>
         /// Returns the headline control.
         /// </summary>
         IControlWebAppHeadline Headline { get; }

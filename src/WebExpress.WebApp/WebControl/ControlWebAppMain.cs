@@ -34,11 +34,6 @@ namespace WebExpress.WebApp.WebControl
         public IEnumerable<IControl> Secondary => _secondary;
 
         /// <summary>
-        /// Returns the page properties.
-        /// </summary>
-        public IControlWebAppProperty Property { get; } = new ControlWebAppProperty("wx-content-main-property");
-
-        /// <summary>
         /// Returns the headline control.
         /// </summary>
         public IControlWebAppHeadline Headline { get; } = new ControlWebAppHeadline("wx-content-main-headline");
@@ -162,8 +157,7 @@ namespace WebExpress.WebApp.WebControl
                         new ControlPanel(null, [.. secondary])
                     )
                     {
-                    },
-                    Property
+                    }
                 )
                 {
                 }
