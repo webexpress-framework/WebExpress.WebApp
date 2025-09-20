@@ -108,22 +108,19 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            var content = new ControlPanelFlex
-            (
-                null,
-                AppNavigator,
-                AppTitle,
-                AppNavigation,
-                QuickCreate,
-                new ControlPanel() { Margin = new PropertySpacingMargin(PropertySpacing.Space.Auto, PropertySpacing.Space.None) },
-                Help,
-                Notifications,
-                Settings
-            )
+            var content = new ControlPanelFlex()
             {
                 Layout = TypeLayoutFlex.Default,
                 Align = TypeAlignFlex.Center
-            };
+            }
+             .Add(AppNavigator)
+             .Add(AppTitle)
+             .Add(AppNavigation)
+             .Add(QuickCreate)
+             .Add(new ControlPanel() { Margin = new PropertySpacingMargin(PropertySpacing.Space.Auto, PropertySpacing.Space.None) })
+             .Add(Help)
+             .Add(Notifications)
+             .Add(Settings);
 
             return new HtmlElementSectionHeader(content.Render(renderContext, visualTree))
             {

@@ -32,4 +32,6 @@ main {
 }
 
 .wx-footer {
+    display: flex;
+    justify-content: space-between;
 }

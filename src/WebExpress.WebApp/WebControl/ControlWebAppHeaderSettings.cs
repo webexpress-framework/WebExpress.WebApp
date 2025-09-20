@@ -129,13 +129,20 @@ namespace WebExpress.WebApp.WebControl
             var items = GetItems(renderContext);
 
             var settingCtlr = items.Any()
-                ? new ControlDropdown(Id, [.. items])
+                ? new ControlDropdown(Id)
                 {
                     Icon = new IconCog(),
                     AlignmentMenu = TypeAlignmentDropdownMenu.Right,
                     Color = new PropertyColorButton(TypeColorButton.Dark),
-                    Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None)
+                    Margin = new PropertySpacingMargin
+                    (
+                        PropertySpacing.Space.Two,
+                        PropertySpacing.Space.None,
+                        PropertySpacing.Space.None,
+                        PropertySpacing.Space.None
+                    )
                 }
+                    .Add(items)
                 : null;
 
             return settingCtlr?.Render(renderContext, visualTree);
@@ -204,7 +211,10 @@ namespace WebExpress.WebApp.WebControl
 
             if (preferences.Any() || primary.Any() || secondary.Any() || preferenceCategories.Any())
             {
-                yield return new ControlDropdownItemHeader(I18N.Translate(renderContext.Request, "webexpress.webapp:header.setting.label"));
+                yield return new ControlDropdownItemHeader()
+                {
+                    Text = I18N.Translate(renderContext.Request, "webexpress.webapp:header.setting.label")
+                };
             }
 
             foreach (var item in preferenceCategories)

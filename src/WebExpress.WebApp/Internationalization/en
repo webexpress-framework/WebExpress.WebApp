@@ -12,6 +12,7 @@ identitymanager.moduleless=No module was specified.
 
 header.quickcreate.label=Create
 header.help.label=Help
+header.notification.label=Notifications
 header.setting.label=Settings
 header.setting.systeminformation.label=System information
 

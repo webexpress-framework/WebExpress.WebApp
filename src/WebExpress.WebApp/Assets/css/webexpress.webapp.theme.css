@@ -3,19 +3,23 @@
 }
 
 #wx-header-apptitle {
-    color: var(--bs-white);
+    color: var(--bs-body-bg);
 }
 
 #wx-header-appnavigation {
-    color: var(--bs-white);
+    color: var(--bs-body-bg);
 }
 
 #wx-header-appnavigation .nav-link {
-    color: var(--bs-white);
+    color: var(--bs-body-bg);
 }
     
 #wx-header-appnavigation .active {
     color: var(--bs-info);
+}
+
+#wx-header-notifications {
+    color: var(--bs-body-bg);
 }
 
 #wx-breadcrumb {

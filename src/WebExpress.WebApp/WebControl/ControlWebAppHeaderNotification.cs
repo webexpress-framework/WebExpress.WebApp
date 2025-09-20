@@ -39,7 +39,7 @@ namespace WebExpress.WebApp.WebControl
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The controls id.</param>
-        public ControlWebAppHeaderNotification(string id = null)
+        public ControlWebAppHeaderNotification(string id)
             : base(id)
         {
             Padding = new PropertySpacingPadding(PropertySpacing.Space.Null);
@@ -127,15 +127,22 @@ namespace WebExpress.WebApp.WebControl
         {
             var items = GetItems(renderContext);
 
-            var helpCtlr = items.Any() ?
-            new ControlDropdown(Id, [.. items])
-            {
-                Icon = new IconInfoCircle(),
-                AlignmentMenu = TypeAlignmentDropdownMenu.Right,
-                //BackgroundColor = new PropertyColorButton(TypeColorButton.Dark),
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None)
-            } :
-            null;
+            var helpCtlr = items.Any()
+                ? new ControlDropdown(Id)
+                {
+                    Icon = new IconBell(),
+                    AlignmentMenu = TypeAlignmentDropdownMenu.Right,
+                    Color = new PropertyColorButton(TypeColorButton.Dark),
+                    Margin = new PropertySpacingMargin
+                    (
+                        PropertySpacing.Space.Two,
+                        PropertySpacing.Space.None,
+                        PropertySpacing.Space.None,
+                        PropertySpacing.Space.None
+                    )
+                }
+                    .Add(items)
+                : null;
 
             return helpCtlr?.Render(renderContext, visualTree);
         }
@@ -162,9 +169,12 @@ namespace WebExpress.WebApp.WebControl
                 renderContext?.PageContext
             ));
 
-            if (preferences.Any() && primary.Any() && secondary.Any())
+            if (preferences.Any() || primary.Any() || secondary.Any())
             {
-                yield return new ControlDropdownItemHeader(I18N.Translate(renderContext.Request, "webexpress.webapp:header.notification.label"));
+                yield return new ControlDropdownItemHeader()
+                {
+                    Text = I18N.Translate(renderContext.Request, "webexpress.webapp:header.notification.label")
+                };
             }
 
             foreach (var item in preferences)

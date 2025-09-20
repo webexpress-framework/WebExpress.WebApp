@@ -124,10 +124,11 @@ namespace WebExpress.WebApp.WebControl
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
             var items = GetItems(renderContext);
+            var more = GetMore(renderContext);
 
-            Enable = items.Any();
+            Enable = items.Any() || more.Any();
 
-            return base.Render(renderContext, visualTree, items);
+            return base.Render(renderContext, visualTree, items, more);
         }
 
         /// <summary>
@@ -137,20 +138,128 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>A list of toolbar items.</returns>
         private IEnumerable<IControlToolbarItem> GetItems(IRenderControlContext renderContext)
         {
-            var preferences = Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlToolbarItemButton, SectionToolbarPreferences>
-            (
-                renderContext?.PageContext
-            ).Cast<ControlToolbarItemButton>());
+            var preferences = Preferences
+                .Concat(
+                    WebEx.ComponentHub.FragmentManager
+                        .GetFragments<IFragmentControlToolbarItem, SectionToolbarPreferences>(renderContext?.PageContext)
+                        .OfType<IControlToolbarItem>()
+                );
 
-            var primary = Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlToolbarItemButton, SectionToolbarPrimary>
-            (
-                renderContext?.PageContext
-            ).Union(Items).Cast<ControlToolbarItemButton>());
+            var primary = Preferences
+               .Concat(
+                   WebEx.ComponentHub.FragmentManager
+                       .GetFragments<IFragmentControlToolbarItem, SectionToolbarPrimary>(renderContext?.PageContext)
+                       .OfType<IControlToolbarItem>()
+               );
 
-            var secondary = Secondary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlToolbarItemButton, SectionToolbarSecondary>
+            var secondary = Preferences
+               .Concat(
+                   WebEx.ComponentHub.FragmentManager
+                       .GetFragments<IFragmentControlToolbarItem, SectionToolbarSecondary>(renderContext?.PageContext)
+                       .OfType<IControlToolbarItem>()
+               );
+
+            var preferencesLeft = preferences
+                .Where(x => x.Alignment == TypeToolbarItemAlignment.Default || x.Alignment == TypeToolbarItemAlignment.Left);
+            var preferencesRight = preferences
+                .Where(x => x.Alignment == TypeToolbarItemAlignment.Right);
+            var primaryLeft = primary
+                .Where(x => x.Alignment == TypeToolbarItemAlignment.Default || x.Alignment == TypeToolbarItemAlignment.Left);
+            var primaryRight = primary
+                .Where(x => x.Alignment == TypeToolbarItemAlignment.Right);
+            var secondaryLeft = secondary
+                .Where(x => x.Alignment == TypeToolbarItemAlignment.Default || x.Alignment == TypeToolbarItemAlignment.Left);
+            var secondaryRight = secondary
+                .Where(x => x.Alignment == TypeToolbarItemAlignment.Right);
+
+            // left
+            foreach (var item in preferencesLeft)
+            {
+                yield return item;
+            }
+
+            if (preferencesLeft.Any() && (primaryLeft.Any() || secondaryLeft.Any()))
+            {
+                yield return new ControlToolbarItemDivider();
+            }
+
+            foreach (var item in primaryLeft)
+            {
+                yield return item;
+            }
+
+            if (primaryLeft.Any() && secondaryLeft.Any())
+            {
+                yield return new ControlToolbarItemDivider();
+            }
+
+            foreach (var item in secondaryLeft)
+            {
+                yield return item;
+            }
+
+            // right
+            foreach (var item in preferencesRight)
+            {
+                yield return item;
+            }
+
+            if (preferencesRight.Any() && (primaryRight.Any() || secondaryRight.Any()))
+            {
+                yield return new ControlToolbarItemDivider()
+                {
+                    Alignment = TypeToolbarItemAlignment.Right
+                };
+            }
+
+            foreach (var item in primaryRight)
+            {
+                yield return item;
+            }
+
+            if (primaryRight.Any() && secondaryRight.Any())
+            {
+                yield return new ControlToolbarItemDivider()
+                {
+                    Alignment = TypeToolbarItemAlignment.Right
+                };
+            }
+
+            foreach (var item in secondaryRight)
+            {
+                yield return item;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves the more items to be displayed in the dropdown.
+        /// </summary>
+        /// <param name="renderContext">The context in which the control is rendered.</param>
+        /// <returns>A collection of dropdown items.</returns>
+        private IEnumerable<IControlDropdownItem> GetMore(IRenderControlContext renderContext)
+        {
+            var preferences = WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionToolbarMorePreferences>
             (
                 renderContext?.PageContext
-            ).Cast<ControlToolbarItemButton>());
+            );
+
+            var primary = More.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionToolbarMorePrimary>
+            (
+                renderContext?.PageContext
+            ));
+
+            var secondary = WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionToolbarMoreSecondary>
+            (
+                renderContext?.PageContext
+            );
+
+            if (preferences.Any() && (primary.Any() || secondary.Any()))
+            {
+                yield return new ControlDropdownItemHeader()
+                {
+                    Text = "webexpress.webapp:toolbar.more.title"
+                };
+            }
 
             foreach (var item in preferences)
             {
@@ -159,7 +268,7 @@ namespace WebExpress.WebApp.WebControl
 
             if (preferences.Any() && (primary.Any() || secondary.Any()))
             {
-                yield return new ControlToolbarItemDivider();
+                yield return new ControlDropdownItemDivider();
             }
 
             foreach (var item in primary)
@@ -169,7 +278,7 @@ namespace WebExpress.WebApp.WebControl
 
             if (primary.Any() && secondary.Any())
             {
-                yield return new ControlToolbarItemDivider();
+                yield return new ControlDropdownItemDivider();
             }
 
             foreach (var item in secondary)
