@@ -124,17 +124,19 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            var preferences = Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlSplitButtonItemLink, SectionAppQuickcreatePreferences>
+            var fragmentManager = WebEx.ComponentHub.FragmentManager;
+
+            var preferences = Preferences.Union(fragmentManager.GetFragments<FragmentControlSplitButtonItemLink, SectionAppQuickcreatePreferences>
             (
                 renderContext?.PageContext
             ));
 
-            var primary = Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlSplitButtonItemLink, SectionAppQuickcreatePrimary>
+            var primary = Primary.Union(fragmentManager.GetFragments<FragmentControlSplitButtonItemLink, SectionAppQuickcreatePrimary>
             (
                 renderContext?.PageContext
             ));
 
-            var secondary = Secondary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlSplitButtonItemLink, SectionAppQuickcreateSecondary>
+            var secondary = Secondary.Union(fragmentManager.GetFragments<FragmentControlSplitButtonItemLink, SectionAppQuickcreateSecondary>
             (
                 renderContext?.PageContext
             ));
@@ -146,24 +148,26 @@ namespace WebExpress.WebApp.WebControl
             var firstQuickcreate = quickcreateList.FirstOrDefault() as ControlSplitButtonItemLink;
             var nextQuickcreate = quickcreateList.Skip(1);
 
-            var quickcreate = nextQuickcreate.Any() ?
-            (IControl)new ControlSplitButtonLink(Id, [.. nextQuickcreate.Skip(1)])
-            {
-                Text = I18N.Translate(renderContext.Request?.Culture, "webexpress.webapp:header.quickcreate.label"),
-                Uri = firstQuickcreate?.Uri,
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Auto, PropertySpacing.Space.None),
-                OnClick = firstQuickcreate?.OnClick,
-                Modal = firstQuickcreate?.Modal
-            } :
-            Preferences.Any() ?
-            new ControlButtonLink(Id)
-            {
-                Text = I18N.Translate(renderContext.Request?.Culture, "webexpress.webapp:header.quickcreate.label"),
-                Uri = firstQuickcreate?.Uri,
-                OnClick = firstQuickcreate?.OnClick,
-                Modal = firstQuickcreate?.Modal
-            } :
-            null;
+            var quickcreate = nextQuickcreate.Any()
+                ? (IControl)new ControlSplitButtonLink(Id)
+                {
+                    Classes = ["btn-success"],
+                    Text = I18N.Translate(renderContext.Request?.Culture, "webexpress.webapp:header.quickcreate.label"),
+                    Uri = firstQuickcreate?.Uri,
+                    OnClick = firstQuickcreate?.OnClick,
+                    Modal = firstQuickcreate?.Modal
+                }
+                    .Add(nextQuickcreate)
+                : Preferences.Any()
+                ? new ControlButtonLink(Id)
+                {
+                    Classes = ["btn-success"],
+                    Text = I18N.Translate(renderContext.Request?.Culture, "webexpress.webapp:header.quickcreate.label"),
+                    Uri = firstQuickcreate?.Uri,
+                    OnClick = firstQuickcreate?.OnClick,
+                    Modal = firstQuickcreate?.Modal
+                }
+                : null;
 
             return quickcreate?.Render(renderContext, visualTree);
         }

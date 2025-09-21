@@ -56,8 +56,6 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         public IControlWebAppHeaderAppNavigation AppNavigation { get; } = new ControlWebAppHeaderAppNavigation("wx-header-appnavigation")
         {
-            Layout = TypeLayoutFlex.Inline,
-            Justify = TypeJustifiedFlex.Start
         };
 
         /// <summary>

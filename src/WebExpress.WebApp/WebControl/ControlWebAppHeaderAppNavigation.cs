@@ -12,7 +12,7 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// Represents the header navigation control for the web application.
     /// </summary>
-    public class ControlWebAppHeaderAppNavigation : ControlPanelFlex, IControlWebAppHeaderAppNavigation
+    public class ControlWebAppHeaderAppNavigation : ControlPanel, IControlWebAppHeaderAppNavigation
     {
         private readonly List<IControlNavigationItem> _preferences = [];
         private readonly List<IControlNavigationItem> _primary = [];
@@ -123,39 +123,51 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            var preferences = Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlNavigationItemLink, SectionAppNavigationPreferences>
+            var preferences = Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControlNavigationItem, SectionAppNavigationPreferences>
             (
                 renderContext?.PageContext
             ));
 
-            var primary = Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlNavigationItemLink, SectionAppNavigationPrimary>
+            var primary = Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControlNavigationItem, SectionAppNavigationPrimary>
             (
                 renderContext?.PageContext
             ));
 
-            var secondary = WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlNavigationItemLink, SectionAppNavigationSecondary>
+            var secondary = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControlNavigationItem, SectionAppNavigationSecondary>
             (
                 renderContext?.PageContext
             );
 
             return new HtmlElementTextContentDiv
             (
-                preferences.Any() ? new ControlNavigation("webexpress.webapp.header.appnavigation.preferences", [.. preferences])
-                {
-                    Layout = TypeLayoutTab.Default,
-                }.Render(renderContext, visualTree) : null,
-                primary.Any() ? new ControlNavigation("webexpress.webapp.header.appnavigation.primary", [.. primary])
-                {
-                    Layout = TypeLayoutTab.Default,
-                }.Render(renderContext, visualTree) : null,
-                secondary.Any() ? new ControlNavigation("webexpress.webapp.header.appnavigation.secondary", Secondary.Union(secondary).ToArray())
-                {
-                    Layout = TypeLayoutTab.Default,
-                }.Render(renderContext, visualTree) : null
+                preferences.Any()
+                    ? new ControlNavigation("webexpress.webapp.header.appnavigation.preferences")
+                    {
+                        Layout = TypeLayoutTab.Default,
+                    }
+                        .Add(preferences)
+                        .Render(renderContext, visualTree)
+                    : null,
+                primary.Any()
+                    ? new ControlNavigation("webexpress.webapp.header.appnavigation.primary")
+                    {
+                        Layout = TypeLayoutTab.Default,
+                    }
+                        .Add(primary)
+                        .Render(renderContext, visualTree)
+                    : null,
+                    secondary.Any()
+                    ? new ControlNavigation("webexpress.webapp.header.appnavigation.secondary")
+                    {
+                        Layout = TypeLayoutTab.Default,
+                    }
+                        .Add(Secondary.Union(secondary))
+                        .Render(renderContext, visualTree)
+                    : null
             )
             {
                 Id = Id,
-                Class = Css.Concatenate("", GetClasses()),
+                Class = Css.Concatenate("wx-appnavigation", GetClasses()),
                 Style = Style.Concatenate("", GetStyles()),
                 Role = Role
             };

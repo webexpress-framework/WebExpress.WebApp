@@ -2,6 +2,10 @@
     background: var(--bs-dark);
 }
 
+#wx-header-appnavigator {
+
+}
+
 #wx-header-apptitle {
     color: var(--bs-body-bg);
 }
@@ -20,6 +24,9 @@
 
 #wx-header-notifications {
     color: var(--bs-body-bg);
+}
+
+#wx-header-quickcreate {
 }
 
 #wx-breadcrumb {

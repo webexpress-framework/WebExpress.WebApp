@@ -6,6 +6,7 @@ using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebFragment;
+using WebExpress.WebUI.WebIcon;
 using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.WebControl
@@ -127,21 +128,18 @@ namespace WebExpress.WebApp.WebControl
             var application = renderContext?.PageContext?.ApplicationContext;
             var items = GetItems(renderContext);
 
-            var navigatorCtrl = items.Any() ?
-            (IControl)new ControlDropdown(Id, [.. items])
-            {
-                Image = application?.Icon.ToString(),
-                Height = 50,
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None),
-                Styles = ["padding: 0.5em;"]
-            } :
-            new ControlImage(Id)
-            {
-                Uri = application?.Icon.ToUri(),
-                Height = 50,
-                Padding = new PropertySpacingPadding(PropertySpacing.Space.Two),
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None)
-            };
+            var navigatorCtrl = items.Any()
+                ? (IControl)new ControlDropdown(Id)
+                {
+                    Classes = ["wx-appnavigator"],
+                    Icon = new ImageIcon(application?.Icon.ToUri(), new PropertySizeIcon(1, TypeSizeUnit.Em)),
+                }
+                    .Add(items)
+                : new ControlImage(Id)
+                {
+                    Classes = ["wx-appnavigator"],
+                    Uri = application?.Icon.ToUri()
+                };
 
             return navigatorCtrl?.Render(renderContext, visualTree);
         }
@@ -170,9 +168,12 @@ namespace WebExpress.WebApp.WebControl
                 renderContext?.PageContext
             ));
 
-            if (preferences.Any() && primary.Any() && secondary.Any())
+            if (preferences.Any() || primary.Any() || secondary.Any())
             {
-                yield return new ControlDropdownItemHeader(I18N.Translate(renderContext.Request, application?.ApplicationName));
+                yield return new ControlDropdownItemHeader()
+                {
+                    Text = I18N.Translate(renderContext.Request, application?.ApplicationName)
+                };
             }
 
             foreach (var item in preferences)

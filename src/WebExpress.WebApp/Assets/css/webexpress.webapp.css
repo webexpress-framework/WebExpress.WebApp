@@ -11,6 +11,30 @@ main {
     flex-grow: 1;
 }
 
+.wx-appnavigator {
+    height: 3vw;
+    min-height: 2em;
+    max-height: 3em;
+}
+
+.wx-appnavigator > button {
+    padding: 0;
+}
+
+.wx-appnavigator > button > img {
+    height: 3vw;
+    min-height: 2em;
+    max-height: 3em;
+}
+
+.wx-appnavigation {
+    font-size: clamp(0.8em, 1.3vw, 1em);
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 0.5em;
+}
+
 .wx-sidebar {
     overflow: auto;
     min-height: 100%;
