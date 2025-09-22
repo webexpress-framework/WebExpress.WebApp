@@ -29,6 +29,11 @@
 #wx-header-quickcreate {
 }
 
+#wx-toast {
+    background: var(--bs-warning);
+    color: var(--bs-body-color);
+}
+
 #wx-breadcrumb {
     background: var(--bs-light);
 }

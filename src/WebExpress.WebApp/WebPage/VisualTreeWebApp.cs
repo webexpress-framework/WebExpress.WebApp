@@ -29,7 +29,7 @@ namespace WebExpress.WebApp.WebPage
         /// <summary>
         /// Returns the area for the toast messages control.
         /// </summary>
-        public ControlPanelToast Toast { get; protected set; } = new ControlPanelToast("wx-toast");
+        public ControlWebAppToastNotfication Toast { get; protected set; } = new ControlWebAppToastNotfication("wx-toast");
 
         /// <summary>
         /// Returns the range for the path specification.
