@@ -14,8 +14,8 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the id property of the web app content control.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div class=""wx-content m-2"">*</div>")]
-        [InlineData("id", @"<div id=""id"" class=""wx-content m-2"">*</div>")]
+        [InlineData(null, @"<div class=""wx-content"">*</div>")]
+        [InlineData("id", @"<div id=""id"" class=""wx-content"">*</div>")]
         public void Id(string id, string expected)
         {
             // preconditions
