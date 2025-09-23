@@ -14,7 +14,7 @@
     color: var(--bs-body-bg);
 }
 
-#wx-header-appnavigation .nav-link {
+#wx-header-appnavigation {
     color: var(--bs-body-bg);
 }
     
@@ -22,11 +22,43 @@
     color: var(--bs-info);
 }
 
+#wx-header-appnavigation .wx-overflow-visible *:hover {
+    background: var(--bs-gray-800);
+}
+
+#wx-header-appnavigation .wx-overflow-more .btn:hover {
+    background: var(--bs-gray-800);
+}
+
+#wx-header-appnavigation .wx-overflow-more .btn:focus {
+    background: var(--bs-gray-800);
+}
+
+#wx-header-quickcreate {
+}
+
 #wx-header-notifications {
     color: var(--bs-body-bg);
 }
 
-#wx-header-quickcreate {
+#wx-header-notifications:hover {
+    background: var(--bs-gray-800);
+}
+
+#wx-header-help {
+    color: var(--bs-body-bg);
+}
+
+#wx-header-help:hover {
+    background: var(--bs-gray-800);
+}
+
+#wx-header-settings {
+    color: var(--bs-body-bg);
+}
+
+#wx-header-settings:hover {
+    background: var(--bs-gray-800);
 }
 
 #wx-toast {
@@ -82,8 +114,8 @@
     background: var(--bs-white);
 }
 
-#wx-content-main-property {
-    background: var(--bs-blue200);
+#wx-content-property {
+    background: aliceblue;
 }
 
 #wx-footer {

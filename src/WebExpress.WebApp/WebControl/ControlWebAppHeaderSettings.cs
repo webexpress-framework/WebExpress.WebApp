@@ -131,9 +131,9 @@ namespace WebExpress.WebApp.WebControl
             var settingCtlr = items.Any()
                 ? new ControlDropdown(Id)
                 {
+                    Classes = ["wx-app-dropdown"],
                     Icon = new IconCog(),
                     AlignmentMenu = TypeAlignmentDropdownMenu.Right,
-                    Color = new PropertyColorButton(TypeColorButton.Dark),
                     Margin = new PropertySpacingMargin
                     (
                         PropertySpacing.Space.Two,
@@ -164,7 +164,7 @@ namespace WebExpress.WebApp.WebControl
                 (
                     x => new ControlDropdownItemLink()
                     {
-                        Label = I18N.Translate(renderContext, x?.Name),
+                        Text = I18N.Translate(renderContext, x?.Name),
                         Uri = settinPageManager.GetFirstSettingPage(appicationContext, x)?.Route.ToUri(),
                         Icon = x.Icon
                     }
@@ -176,7 +176,7 @@ namespace WebExpress.WebApp.WebControl
                 (
                     x => new ControlDropdownItemLink()
                     {
-                        Label = I18N.Translate(renderContext, x?.Name),
+                        Text = I18N.Translate(renderContext, x?.Name),
                         Uri = settinPageManager.GetFirstSettingPage(appicationContext, x)?.Route.ToUri(),
                         Icon = x.Icon
                     }
@@ -188,7 +188,7 @@ namespace WebExpress.WebApp.WebControl
                 (
                     x => new ControlDropdownItemLink()
                     {
-                        Label = I18N.Translate(renderContext, x?.Name),
+                        Text = I18N.Translate(renderContext, x?.Name),
                         Uri = settinPageManager.GetFirstSettingPage(appicationContext, x)?.Route.ToUri(),
                         Icon = x.Icon
                     }

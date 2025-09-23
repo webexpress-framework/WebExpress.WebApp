@@ -130,9 +130,9 @@ namespace WebExpress.WebApp.WebControl
             var helpCtlr = items.Any()
                 ? new ControlDropdown(Id)
                 {
+                    Classes = ["wx-app-dropdown"],
                     Icon = new IconCircleQuestion(),
                     AlignmentMenu = TypeAlignmentDropdownMenu.Right,
-                    Color = new PropertyColorButton(TypeColorButton.Dark),
                     Margin = new PropertySpacingMargin
                     (
                         PropertySpacing.Space.Two,

@@ -32,7 +32,31 @@ main {
     display: flex;
     align-items: center;
     flex-wrap: nowrap;
-    gap: 0.5em;
+    flex: 1;
+    gap: clamp(0.2em, 0.5vw, 0.5em);
+}
+
+.wx-appnavigation > .wx-overflow-visible > * {
+    padding-left: clamp(0.2em, 1vw, 1em);
+    padding-right: clamp(0.2em, 1vw, 1em);
+    padding-top: 0.5em;
+    padding-bottom: 0.5em;
+    border-radius: 0.2em;
+    color: unset;
+}
+
+.wx-appnavigation > .wx-overflow-more > .btn {
+    color: unset;
+}
+
+.wx-app-dropdown {
+    border-radius: 0.2em;
+}
+
+.wx-app-dropdown > .btn {
+    color: unset;
+    border-radius: inherit;
+    border: unset;
 }
 
 .wx-toast {
@@ -52,6 +76,14 @@ main {
     min-height: 100%;
 }
 
+.wx-main-pane {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: flex-start;
+    overflow: auto;
+}
+
 .wx-proterty {
     overflow: auto;
     display: block;
@@ -61,10 +93,12 @@ main {
 }
 
 .wx-content {
-    flex: auto;
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
+    width: 100%;
+}
+
+.wx-proterty {
+    height: 100%;
+    padding: 0.5em;
 }
 
 .wx-footer {

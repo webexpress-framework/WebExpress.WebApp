@@ -19,7 +19,7 @@ namespace WebExpress.WebApp.Test
         public TestFragmentGeneral(IFragmentContext fragmentContext)
             : base(fragmentContext)
         {
-            Label = "Hello World";
+            Text = "Hello World";
         }
     }
 }

@@ -143,20 +143,15 @@ namespace WebExpress.WebApp.WebControl
                 return null;
             }
 
-            var propertyCtlr = (preferences.Any() || primary.Any() || secondary.Any()) ?
-            new ControlPanelFlex
-            (
-                Id,
-                new ControlPanel(null, [.. preferences]),
-                new ControlPanel(null, [.. primary]),
-                new ControlPanel(null, [.. secondary])
-            )
-            {
-                Classes = ["proterty"],
-                //BackgroundColor = new PropertyColorButton(TypeColorButton.Dark),
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None)
-            } :
-            null;
+            var propertyCtlr = (preferences.Any() || primary.Any() || secondary.Any())
+                ? new ControlPanelFlex(Id)
+                {
+                    Classes = ["wx-proterty"]
+                }
+                    .Add(preferences)
+                    .Add(primary)
+                    .Add(secondary)
+                : null;
 
             return propertyCtlr?.Render(renderContext, visualTree);
         }

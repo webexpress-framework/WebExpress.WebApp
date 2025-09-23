@@ -14,8 +14,8 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the id property of the web app header navigation control.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div class=""wx-appnavigation p-0"">*</div>")]
-        [InlineData("id", @"<div id=""id"" class=""wx-appnavigation p-0"">*</div>")]
+        [InlineData(null, @"<div class=""wx-webui-overflow wx-appnavigation p-0""></div>")]
+        [InlineData("id", @"<div id=""id"" class=""wx-webui-overflow wx-appnavigation p-0""></div>")]
         public void Id(string id, string expected)
         {
             // preconditions

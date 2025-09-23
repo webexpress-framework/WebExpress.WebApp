@@ -138,39 +138,15 @@ namespace WebExpress.WebApp.WebControl
                 renderContext?.PageContext
             );
 
-            return new HtmlElementTextContentDiv
-            (
-                preferences.Any()
-                    ? new ControlNavigation("webexpress.webapp.header.appnavigation.preferences")
-                    {
-                        Layout = TypeLayoutTab.Default,
-                    }
-                        .Add(preferences)
-                        .Render(renderContext, visualTree)
-                    : null,
-                primary.Any()
-                    ? new ControlNavigation("webexpress.webapp.header.appnavigation.primary")
-                    {
-                        Layout = TypeLayoutTab.Default,
-                    }
-                        .Add(primary)
-                        .Render(renderContext, visualTree)
-                    : null,
-                    secondary.Any()
-                    ? new ControlNavigation("webexpress.webapp.header.appnavigation.secondary")
-                    {
-                        Layout = TypeLayoutTab.Default,
-                    }
-                        .Add(Secondary.Union(secondary))
-                        .Render(renderContext, visualTree)
-                    : null
-            )
+            return new ControlPanelOverflow(Id)
             {
-                Id = Id,
-                Class = Css.Concatenate("wx-appnavigation", GetClasses()),
-                Style = Style.Concatenate("", GetStyles()),
-                Role = Role
-            };
+                Classes = [Css.Concatenate("wx-appnavigation", GetClasses())],
+                Styles = [GetStyles()]
+            }
+                .Add(preferences)
+                .Add(primary)
+                .Add(secondary)
+                .Render(renderContext, visualTree);
         }
     }
 }

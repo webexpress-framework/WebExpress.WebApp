@@ -253,7 +253,7 @@ namespace WebExpress.WebApp.WebControl
                 renderContext?.PageContext
             );
 
-            if (preferences.Any() && (primary.Any() || secondary.Any()))
+            if (preferences.Any() || primary.Any() || secondary.Any())
             {
                 yield return new ControlDropdownItemHeader()
                 {

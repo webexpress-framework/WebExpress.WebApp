@@ -44,21 +44,26 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            var contentCtlr = new ControlPanel
-            (
-                Id,
-                Toolbar,
-                new ControlPanelFlex(null, MainPanel, Property)
-                {
-                    Layout = TypeLayoutFlex.Default,
-                    Align = TypeAlignFlex.Stretch,
-                    FlexGrow = TypeFlexGrow.Grow
-                }
-            )
+
+            //if (Property)
+            var split = new ControlPanelSplit("wx-splitter-content")
             {
-                Classes = ["wx-content"],
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two)
-            };
+                Orientation = TypeOrientationSplit.Horizontal,
+                SidePanelInitialSize = 350,
+                SidePanelMinSize = 150,
+                Order = TypeSplitOrder.MainSide
+
+            }
+             .AddMainPanel(MainPanel)
+             .AddSidePanel(Property);
+
+
+            var contentCtlr = new ControlPanel(Id)
+            {
+                Classes = ["wx-content"]
+            }
+                .Add(Toolbar)
+                .Add(split);
 
             return contentCtlr?.Render(renderContext, visualTree);
         }
