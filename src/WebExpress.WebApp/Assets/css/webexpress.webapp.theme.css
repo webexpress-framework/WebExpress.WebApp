@@ -22,15 +22,11 @@
     color: var(--bs-info);
 }
 
-#wx-header-appnavigation .wx-overflow-visible *:hover {
+#wx-header-appnavigation > *:hover:not(.wx-overflow-menu:hover):not(.dropdown-menu) {
     background: var(--bs-gray-800);
 }
 
-#wx-header-appnavigation .wx-overflow-more .btn:hover {
-    background: var(--bs-gray-800);
-}
-
-#wx-header-appnavigation .wx-overflow-more .btn:focus {
+#wx-header-appnavigation > *:focus {
     background: var(--bs-gray-800);
 }
 

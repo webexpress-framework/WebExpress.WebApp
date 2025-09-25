@@ -36,7 +36,7 @@ main {
     gap: clamp(0.2em, 0.5vw, 0.5em);
 }
 
-.wx-appnavigation > .wx-overflow-visible > * {
+.wx-appnavigation > *:not(.wx-overflow-menu):not(.dropdown-menu) {
     padding-left: clamp(0.2em, 1vw, 1em);
     padding-right: clamp(0.2em, 1vw, 1em);
     padding-top: 0.5em;
@@ -45,7 +45,11 @@ main {
     color: unset;
 }
 
-.wx-appnavigation > .wx-overflow-more > .btn {
+.wx-appnavigation > .wx-overflow-menu:hover {
+    background: var(--bs-body-bg);
+}
+
+.wx-appnavigation > .wx-overflow-menu > .btn {
     color: unset;
 }
 
