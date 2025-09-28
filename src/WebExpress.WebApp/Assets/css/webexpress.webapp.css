@@ -76,7 +76,6 @@ main {
 }
 
 .wx-sidebar {
-    overflow: auto;
     min-height: 100%;
 }
 
