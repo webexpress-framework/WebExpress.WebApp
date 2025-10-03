@@ -39,12 +39,7 @@ namespace WebExpress.WebApp.WebPage
         /// <summary>
         /// Returns the area for prologue.
         /// </summary>
-        public ControlPanel Prologue { get; protected set; } = new ControlPanel("wx-prologue");
-
-        ///// <summary>
-        ///// Returns the range for the search options control.
-        ///// </summary>
-        //public ControlPanel SearchOptions { get; protected set; } = new ControlPanel("wx-searchoptions");
+        public ControlWebAppPrologue Prologue { get; protected set; } = new ControlWebAppPrologue("wx-prologue");
 
         /// <summary>
         /// Returns the sidebar control.
