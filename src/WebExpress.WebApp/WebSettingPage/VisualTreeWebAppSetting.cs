@@ -75,10 +75,15 @@ namespace WebExpress.WebApp.WebSettingPage
                 Border = new PropertyBorder(true),
                 Orientation = TypeOrientationSplit.Horizontal,
                 SidePanelInitialSize = 350,
-                SidePanelMinSize = 150
+                SidePanelMinSize = 45
             };
 
-            html.Body.Add(split.Render(renderContext, this));
+            html.Body.Add
+            (
+                split.Render(renderContext, this)
+                    .AddUserAttribute("data-wx-toggle", "split")
+                    .AddUserAttribute("data-wx-target", $"#wx-split-button-toggle")
+            );
             html.Body.Add(Footer.Render(renderContext, this));
             html.Body.Add(NotificationPopup.Render(renderContext, this));
 

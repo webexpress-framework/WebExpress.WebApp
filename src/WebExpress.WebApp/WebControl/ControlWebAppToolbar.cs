@@ -139,23 +139,35 @@ namespace WebExpress.WebApp.WebControl
         private IEnumerable<IControlToolbarItem> GetItems(IRenderControlContext renderContext)
         {
             var preferences = Preferences
-                .Concat(
+                .Concat
+                (
                     WebEx.ComponentHub.FragmentManager
-                        .GetFragments<IFragmentControlToolbarItem, SectionToolbarPreferences>(renderContext?.PageContext)
+                        .GetFragments<IFragmentControlToolbarItem, SectionToolbarPreferences>
+                        (
+                            renderContext?.PageContext
+                        )
                         .OfType<IControlToolbarItem>()
                 );
 
             var primary = Preferences
-               .Concat(
+               .Concat
+               (
                    WebEx.ComponentHub.FragmentManager
-                       .GetFragments<IFragmentControlToolbarItem, SectionToolbarPrimary>(renderContext?.PageContext)
+                       .GetFragments<IFragmentControlToolbarItem, SectionToolbarPrimary>
+                       (
+                            renderContext?.PageContext
+                       )
                        .OfType<IControlToolbarItem>()
                );
 
             var secondary = Preferences
-               .Concat(
+               .Concat
+               (
                    WebEx.ComponentHub.FragmentManager
-                       .GetFragments<IFragmentControlToolbarItem, SectionToolbarSecondary>(renderContext?.PageContext)
+                       .GetFragments<IFragmentControlToolbarItem, SectionToolbarSecondary>
+                       (
+                            renderContext?.PageContext
+                       )
                        .OfType<IControlToolbarItem>()
                );
 

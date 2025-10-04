@@ -14,30 +14,30 @@ namespace WebExpress.WebApp.WebControl
     /// </summary>
     public class ControlWebAppSidebar : Control, IControlWebAppSidebar
     {
-        private readonly List<IControl> _header = [];
-        private readonly List<IControl> _preferences = [];
-        private readonly List<IControl> _primary = [];
-        private readonly List<IControl> _secondary = [];
+        private readonly List<IControlSidebarItem> _header = [];
+        private readonly List<IControlSidebarItem> _preferences = [];
+        private readonly List<IControlSidebarItem> _primary = [];
+        private readonly List<IControlSidebarItem> _secondary = [];
 
         /// <summary>
         /// Returns the header area.
         /// </summary>
-        public IEnumerable<IControl> Header => _header;
+        public IEnumerable<IControlSidebarItem> Header => _header;
 
         /// <summary>
         /// Returns the preferences area.
         /// </summary>
-        public IEnumerable<IControl> Preferences => _preferences;
+        public IEnumerable<IControlSidebarItem> Preferences => _preferences;
 
         /// <summary>
         /// Returns the primary area.
         /// </summary>
-        public IEnumerable<IControl> Primary => _primary;
+        public IEnumerable<IControlSidebarItem> Primary => _primary;
 
         /// <summary>
         /// Returns the secondary area.
         /// </summary>
-        public IEnumerable<IControl> Secondary => _secondary;
+        public IEnumerable<IControlSidebarItem> Secondary => _secondary;
 
         /// <summary>
         /// Initializes a new instance of the class.
@@ -53,7 +53,7 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="items">The items to add to the header area.</param>
         /// <returns>The current instance for method chaining.</returns>
-        public IControlWebAppSidebar AddHeader(params IControl[] items)
+        public IControlWebAppSidebar AddHeader(params IControlSidebarItem[] items)
         {
             _header.AddRange(items);
 
@@ -65,7 +65,7 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="item">The item to remove from the header area.</param>
         /// <returns>The current instance for method chaining.</returns>
-        public IControlWebAppSidebar RemoveHeader(IControl item)
+        public IControlWebAppSidebar RemoveHeader(IControlSidebarItem item)
         {
             _header.Remove(item);
 
@@ -77,7 +77,7 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="items">The items to add to the preferences area.</param>
         /// <returns>The current instance for method chaining.</returns>
-        public IControlWebAppSidebar AddPreferences(params IControl[] items)
+        public IControlWebAppSidebar AddPreferences(params IControlSidebarItem[] items)
         {
             _preferences.AddRange(items);
 
@@ -89,7 +89,7 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="item">The item to remove from the preferences area.</param>
         /// <returns>The current instance for method chaining.</returns>
-        public IControlWebAppSidebar RemovePreference(IControl item)
+        public IControlWebAppSidebar RemovePreference(IControlSidebarItem item)
         {
             _preferences.Remove(item);
 
@@ -101,7 +101,7 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="items">The items to add to the primary area.</param>
         /// <returns>The current instance for method chaining.</returns>
-        public IControlWebAppSidebar AddPrimary(params IControl[] items)
+        public IControlWebAppSidebar AddPrimary(params IControlSidebarItem[] items)
         {
             _primary.AddRange(items);
 
@@ -113,7 +113,7 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="item">The item to remove from the primary area.</param>
         /// <returns>The current instance for method chaining.</returns>
-        public IControlWebAppSidebar RemovePrimary(IControl item)
+        public IControlWebAppSidebar RemovePrimary(IControlSidebarItem item)
         {
             _primary.Remove(item);
 
@@ -125,7 +125,7 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="items">The items to add to the secondary area.</param>
         /// <returns>The current instance for method chaining.</returns>
-        public IControlWebAppSidebar AddSecondary(params IControl[] items)
+        public IControlWebAppSidebar AddSecondary(params IControlSidebarItem[] items)
         {
             _secondary.AddRange(items);
 
@@ -137,7 +137,7 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="item">The item to remove from the secondary area.</param>
         /// <returns>The current instance for method chaining.</returns>
-        public IControlWebAppSidebar RemoveSecondary(IControl item)
+        public IControlWebAppSidebar RemoveSecondary(IControlSidebarItem item)
         {
             _secondary.Remove(item);
 
@@ -154,14 +154,19 @@ namespace WebExpress.WebApp.WebControl
         {
             var items = GetItems(renderContext);
 
-            var sidebarCtlr = items.Any() ?
-            new ControlPanelFlex(Id, [.. items])
-            {
-                Classes = ["wx-sidebar"],
-                //BackgroundColor = new PropertyColorButton(TypeColorButton.Dark),
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None)
-            } :
-            null;
+            var sidebarCtlr = items.Any()
+                ? new ControlSidebar(Id)
+                {
+                    Breakpoint = 80
+                }
+                    .Add(items)
+                    .Add(new ControlToolbarItemButtonSplitToggle("wx-split-button-toggle")
+                    {
+                        Alignment = TypeToolbarItemAlignment.Right,
+                        Overflow = TypeToolbarItemOverflow.Never,
+                        SpltterId = "wx-split"
+                    })
+                : null;
 
             return sidebarCtlr?.Render(renderContext, visualTree);
         }
@@ -171,36 +176,64 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="renderContext">The context in which the control is rendered.</param>
         /// <returns>A collection of dropdown items.</returns>
-        protected virtual IEnumerable<IControl> GetItems(IRenderControlContext renderContext)
+        protected virtual IEnumerable<IControlSidebarItem> GetItems(IRenderControlContext renderContext)
         {
-            foreach (var item in Header.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionSidebarHeader>
-            (
-                renderContext?.PageContext
-            )))
+            foreach (var item in Header
+                .Concat
+                (
+                    WebEx.ComponentHub.FragmentManager
+                        .GetFragments<IFragmentControlSidebarItem, SectionSidebarHeader>
+                        (
+                            renderContext?.PageContext
+                        )
+                        .OfType<IControlSidebarItem>()
+                )
+            )
             {
                 yield return item;
             }
 
-            foreach (var item in Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionSidebarPreferences>
-            (
-                renderContext?.PageContext
-            )))
+            foreach (var item in Preferences
+                .Concat
+                (
+                    WebEx.ComponentHub.FragmentManager
+                        .GetFragments<IFragmentControlSidebarItem, SectionSidebarPreferences>
+                        (
+                            renderContext?.PageContext
+                        )
+                        .OfType<IControlSidebarItem>()
+                )
+            )
             {
                 yield return item;
             }
 
-            foreach (var item in Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionSidebarPrimary>
-            (
-                renderContext?.PageContext
-            )))
+            foreach (var item in Primary
+                .Concat
+                (
+                    WebEx.ComponentHub.FragmentManager
+                        .GetFragments<IFragmentControlSidebarItem, SectionSidebarPrimary>
+                        (
+                            renderContext?.PageContext
+                        )
+                        .OfType<IControlSidebarItem>()
+                )
+            )
             {
                 yield return item;
             }
 
-            foreach (var item in Secondary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionSidebarSecondary>
-            (
-                renderContext?.PageContext
-            )))
+            foreach (var item in Secondary
+                .Concat
+                (
+                    WebEx.ComponentHub.FragmentManager
+                        .GetFragments<IFragmentControlSidebarItem, SectionSidebarSecondary>
+                        (
+                            renderContext?.PageContext
+                        )
+                        .OfType<IControlSidebarItem>()
+                )
+            )
             {
                 yield return item;
             }

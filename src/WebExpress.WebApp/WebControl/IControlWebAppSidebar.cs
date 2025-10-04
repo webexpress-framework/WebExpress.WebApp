@@ -11,77 +11,77 @@ namespace WebExpress.WebApp.WebControl
         /// <summary>
         /// Returns the header area.
         /// </summary>
-        IEnumerable<IControl> Header { get; }
+        IEnumerable<IControlSidebarItem> Header { get; }
 
         /// <summary>
         /// Returns the preferences area.
         /// </summary>
-        IEnumerable<IControl> Preferences { get; }
+        IEnumerable<IControlSidebarItem> Preferences { get; }
 
         /// <summary>
         /// Returns the primary area.
         /// </summary>
-        IEnumerable<IControl> Primary { get; }
+        IEnumerable<IControlSidebarItem> Primary { get; }
 
         /// <summary>
         /// Returns the secondary area.
         /// </summary>
-        IEnumerable<IControl> Secondary { get; }
+        IEnumerable<IControlSidebarItem> Secondary { get; }
 
         /// <summary>
         /// Adds items to the header area.
         /// </summary>
         /// <param name="items">The items to add to the header area.</param>
         /// <returns>The current instance for method chaining.</returns>
-        IControlWebAppSidebar AddHeader(params IControl[] items);
+        IControlWebAppSidebar AddHeader(params IControlSidebarItem[] items);
 
         /// <summary>
         /// Removes an item from the header area.
         /// </summary>
         /// <param name="item">The item to remove from the header area.</param>
         /// <returns>The current instance for method chaining.</returns>
-        IControlWebAppSidebar RemoveHeader(IControl item);
+        IControlWebAppSidebar RemoveHeader(IControlSidebarItem item);
 
         /// <summary>
         /// Adds items to the preferences area.
         /// </summary>
         /// <param name="items">The items to add to the preferences area.</param>
         /// <returns>The current instance for method chaining.</returns>
-        IControlWebAppSidebar AddPreferences(params IControl[] items);
+        IControlWebAppSidebar AddPreferences(params IControlSidebarItem[] items);
 
         /// <summary>
         /// Removes an item from the preferences area.
         /// </summary>
         /// <param name="item">The item to remove from the preferences area.</param>
         /// <returns>The current instance for method chaining.</returns>
-        IControlWebAppSidebar RemovePreference(IControl item);
+        IControlWebAppSidebar RemovePreference(IControlSidebarItem item);
 
         /// <summary>
         /// Adds items to the primary area.
         /// </summary>
         /// <param name="items">The items to add to the primary area.</param>
         /// <returns>The current instance for method chaining.</returns>
-        IControlWebAppSidebar AddPrimary(params IControl[] items);
+        IControlWebAppSidebar AddPrimary(params IControlSidebarItem[] items);
 
         /// <summary>
         /// Removes an item from the primary area.
         /// </summary>
         /// <param name="item">The item to remove from the primary area.</param>
         /// <returns>The current instance for method chaining.</returns>
-        IControlWebAppSidebar RemovePrimary(IControl item);
+        IControlWebAppSidebar RemovePrimary(IControlSidebarItem item);
 
         /// <summary>
         /// Adds items to the secondary area.
         /// </summary>
         /// <param name="items">The items to add to the secondary area.</param>
         /// <returns>The current instance for method chaining.</returns>
-        IControlWebAppSidebar AddSecondary(params IControl[] items);
+        IControlWebAppSidebar AddSecondary(params IControlSidebarItem[] items);
 
         /// <summary>
         /// Removes an item from the secondary area.
         /// </summary>
         /// <param name="item">The item to remove from the secondary area.</param>
         /// <returns>The current instance for method chaining.</returns>
-        IControlWebAppSidebar RemoveSecondary(IControl item);
+        IControlWebAppSidebar RemoveSecondary(IControlSidebarItem item);
     }
 }
