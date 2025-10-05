@@ -97,6 +97,7 @@ main {
 
 .wx-content {
     width: 100%;
+    flex-grow: 1;
 }
 
 .wx-proterty {
