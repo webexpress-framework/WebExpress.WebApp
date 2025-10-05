@@ -17,6 +17,9 @@ namespace WebExpress.WebApp.WebControl
         private readonly List<IControlToolbarItem> _preferences = [];
         private readonly List<IControlToolbarItem> _primary = [];
         private readonly List<IControlToolbarItem> _secondary = [];
+        private readonly List<IControlDropdownItem> _morePreferences = [];
+        private readonly List<IControlDropdownItem> _morePrimary = [];
+        private readonly List<IControlDropdownItem> _moreSecondary = [];
 
         /// <summary>
         /// Returns the preferences area.
@@ -32,6 +35,21 @@ namespace WebExpress.WebApp.WebControl
         /// Returns the secondary area.
         /// </summary>
         public IEnumerable<IControlToolbarItem> Secondary => _secondary;
+
+        /// <summary>
+        /// Returns the preferences area of the more menu.
+        /// </summary>
+        public IEnumerable<IControlDropdownItem> MorePreferences => _morePreferences;
+
+        /// <summary>
+        /// Returns the primary area of the more menu.
+        /// </summary>
+        public IEnumerable<IControlDropdownItem> MorePrimary => _morePrimary;
+
+        /// <summary>
+        /// Returns the secondary area of the more menu.
+        /// </summary>
+        public IEnumerable<IControlDropdownItem> MoreSecondary => _moreSecondary;
 
         /// <summary>
         /// Initializes a new instance of the class.
@@ -116,6 +134,78 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
+        /// Adds items to the preferences area of the more menu.
+        /// </summary>
+        /// <param name="items">The items to add to the preferences area.</param>
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppToolbar AddPreferences(params IControlDropdownItem[] items)
+        {
+            _morePreferences.AddRange(items);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Removes an item from the preferences area of the more menu.
+        /// </summary>
+        /// <param name="item">The item to remove from the preferences area.</param>
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppToolbar RemovePreference(IControlDropdownItem item)
+        {
+            _morePreferences.Remove(item);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Adds items to the primary area of the more menu.
+        /// </summary>
+        /// <param name="items">The items to add to the primary area.</param>
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppToolbar AddPrimary(params IControlDropdownItem[] items)
+        {
+            _morePrimary.AddRange(items);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Removes an item from the primary area of the more menu.
+        /// </summary>
+        /// <param name="item">The item to remove from the primary area.</param>
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppToolbar RemovePrimary(IControlDropdownItem item)
+        {
+            _morePrimary.Remove(item);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Adds items to the secondary area of the more menu.
+        /// </summary>
+        /// <param name="items">The items to add to the secondary area.</param>
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppToolbar AddSecondary(params IControlDropdownItem[] items)
+        {
+            _moreSecondary.AddRange(items);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Removes an item from the secondary area of the more menu.
+        /// </summary>
+        /// <param name="item">The item to remove from the secondary area.</param>
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppToolbar RemoveSecondary(IControlDropdownItem item)
+        {
+            _moreSecondary.Remove(item);
+
+            return this;
+        }
+
+        /// <summary>
         /// Converts the control to an HTML representation.
         /// </summary>
         /// <param name="renderContext">The context in which the control is rendered.</param>
@@ -149,7 +239,7 @@ namespace WebExpress.WebApp.WebControl
                         .OfType<IControlToolbarItem>()
                 );
 
-            var primary = Preferences
+            var primary = Primary
                .Concat
                (
                    WebEx.ComponentHub.FragmentManager
@@ -160,7 +250,7 @@ namespace WebExpress.WebApp.WebControl
                        .OfType<IControlToolbarItem>()
                );
 
-            var secondary = Preferences
+            var secondary = Secondary
                .Concat
                (
                    WebEx.ComponentHub.FragmentManager
@@ -250,20 +340,38 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>A collection of dropdown items.</returns>
         private IEnumerable<IControlDropdownItem> GetMore(IRenderControlContext renderContext)
         {
-            var preferences = WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionToolbarMorePreferences>
-            (
-                renderContext?.PageContext
-            );
+            var preferences = MorePreferences
+                .Concat
+                (
+                    WebEx.ComponentHub.FragmentManager
+                        .GetFragments<IFragmentControlDropdownItem, SectionToolbarMorePreferences>
+                        (
+                            renderContext?.PageContext
+                        )
+                        .OfType<IControlDropdownItem>()
+                );
 
-            var primary = More.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionToolbarMorePrimary>
-            (
-                renderContext?.PageContext
-            ));
+            var primary = MorePrimary
+               .Concat
+               (
+                   WebEx.ComponentHub.FragmentManager
+                       .GetFragments<IFragmentControlDropdownItem, SectionToolbarMorePrimary>
+                       (
+                            renderContext?.PageContext
+                       )
+                       .OfType<IControlDropdownItem>()
+               );
 
-            var secondary = WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionToolbarMoreSecondary>
-            (
-                renderContext?.PageContext
-            );
+            var secondary = MoreSecondary
+               .Concat
+               (
+                   WebEx.ComponentHub.FragmentManager
+                       .GetFragments<IFragmentControlDropdownItem, SectionToolbarMoreSecondary>
+                       (
+                            renderContext?.PageContext
+                       )
+                       .OfType<IControlDropdownItem>()
+               );
 
             if (preferences.Any() || primary.Any() || secondary.Any())
             {
