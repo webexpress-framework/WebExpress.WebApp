@@ -10,12 +10,16 @@
     color: var(--bs-body-bg);
 }
 
-#wx-header-appnavigation {
-    color: var(--bs-body-bg);
+[data-bs-theme="dark"] #wx-header-apptitle {
+    color: var(--bs-body-color);
 }
 
 #wx-header-appnavigation {
     color: var(--bs-body-bg);
+}
+
+[data-bs-theme="dark"] #wx-header-appnavigation {
+    color: var(--bs-body-color);
 }
     
 #wx-header-appnavigation .active {
@@ -63,27 +67,25 @@
 }
 
 #wx-breadcrumb {
-    background: var(--bs-light);
 }
 
 #wx-prologue {
-    background: var(--bs-light);
+
 }
 
 #wx-searchoptions {
-    background: var(--bs-light);
 }
 
 #wx-sidebar {
-    background: var(--bs-light);
+
 }
 
 #wx-settingtab {
-    background: var(--bs-light);
+
 }
 
 #wx-settingmenu {
-    background: var(--bs-light);
+
 }
 
 #wx-split-gutter {
@@ -103,7 +105,6 @@
 }
 
 #wx-content-main-headline {
-    background: var(--bs-white);
 }
 
 #wx-content-main-headline-more {
