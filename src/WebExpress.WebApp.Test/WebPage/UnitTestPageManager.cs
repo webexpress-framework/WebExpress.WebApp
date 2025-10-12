@@ -29,6 +29,7 @@ namespace WebExpress.WebApp.Test.WebPage
                 return;
             }
 
+            // validation
             Assert.Contains(id, page.Select(x => x.EndpointId?.ToString()));
         }
 
@@ -53,6 +54,7 @@ namespace WebExpress.WebApp.Test.WebPage
             var searchResult = componentHub.SitemapManager.SearchResource(new Uri(uri), searchContext);
             _ = componentHub.EndpointManager.HandleRequest(UnitTestControlFixture.CreateRequestMock(), searchResult.EndpointContext);
 
+            // validation
             Assert.Equal(id, searchResult?.EndpointContext?.EndpointId.ToString());
         }
     }

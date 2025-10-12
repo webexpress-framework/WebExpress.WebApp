@@ -80,20 +80,7 @@ namespace WebExpress.WebApp.WebPage
             Breadcrumb.Margin = new PropertySpacingMargin(PropertySpacing.Space.Null);
             Content.Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None);
 
-            AddCssLink(RouteEndpoint.Combine(baseUri, "css/webexpress.webapp.css"));
-            AddCssLink(RouteEndpoint.Combine(baseUri, "css/webexpress.webapp.popupnotification.css"));
-            AddCssLink(RouteEndpoint.Combine(baseUri, "css/webexpress.webapp.table.css"));
-            AddCssLink(RouteEndpoint.Combine(baseUri, "css/webexpress.webapp.taskprogressbar.css"));
             AddCssLink(Theme?.ThemeStyle.ToString() ?? RouteEndpoint.Combine(baseUri, "css/webexpress.webapp.theme.css"));
-
-            AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/webexpress.webapp.js"));
-            AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/webexpress.webapp.modalform.js"));
-            AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/webexpress.webapp.popupnotification.js"));
-            AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/webexpress.webapp.progress.task.js"));
-            AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/webexpress.webapp.selection.js"));
-            AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/webexpress.webapp.table.js"));
-            AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/i18n/en.js"));
-            AddHeaderScriptLink(RouteEndpoint.Combine(baseUri, "js/i18n/de.js"));
         }
 
         /// <summary>
