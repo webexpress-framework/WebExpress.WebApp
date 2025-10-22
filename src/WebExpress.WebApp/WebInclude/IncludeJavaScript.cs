@@ -11,6 +11,7 @@ namespace WebExpress.WebApp.WebInclude
     /// functionality of a web application.
     /// </remarks>
     [Asset("/assets/js/webexpress.webapp.js")]
+    [Asset("/assets/js/webexpress.webapp.dropdown.js")]
     [Asset("/assets/js/webexpress.webapp.modalform.js")]
     [Asset("/assets/js/webexpress.webapp.popupnotification.js")]
     [Asset("/assets/js/webexpress.webapp.progress.task.js")]
