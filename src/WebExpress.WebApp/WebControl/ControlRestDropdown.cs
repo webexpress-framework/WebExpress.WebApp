@@ -1,9 +1,7 @@
-﻿using System.Linq;
-using WebExpress.WebCore.Internationalization;
+﻿using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
-using WebExpress.WebUI.WebIcon;
 using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.WebApiControl
@@ -45,63 +43,13 @@ namespace WebExpress.WebApp.WebApiControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            var applicationContext = renderContext?.PageContext?.ApplicationContext;
-
-            // respect enabled state
-            if (!Enable)
-            {
-                return null;
-            }
-
-            var buttonCss = "";
-            var buttonStyle = "";
-            var menuCss = "";
-
-            if (Color != null)
-            {
-                buttonCss = Css.Concatenate(Color?.ToClass(Outline), buttonCss);
-                buttonStyle = Style.Concatenate(Color?.ToStyle(), buttonStyle);
-            }
-
-            if (Size != TypeSizeButton.Default)
-            {
-                buttonCss = Css.Concatenate(Size.ToClass(), buttonCss);
-            }
-
-            if (Block != TypeBlockButton.None)
-            {
-                buttonCss = Css.Concatenate(Block.ToClass(), buttonCss);
-            }
-
-            if (Toggle != TypeToggleDropdown.None)
-            {
-                buttonCss = Css.Concatenate(Toggle.ToClass(), buttonCss);
-            }
-
-            if (AlignmentMenu != TypeAlignmentDropdownMenu.Default)
-            {
-                menuCss = Css.Concatenate(AlignmentMenu.ToClass(), menuCss);
-            }
-
             // create host element for the remote dropdown controller
-            var html = new HtmlElementTextContentDiv()
-            {
-                Id = Id,
-                Class = Css.Concatenate("wx-webapp-dropdown", GetClasses()),
-                Style = GetStyles()
-            }
-                .AddUserAttribute("data-label", I18N.Translate(renderContext, Text))
-                .AddUserAttribute("data-icon", (Icon as Icon)?.Class)
-                .AddUserAttribute("data-image", (Icon as ImageIcon)?.Uri?.ToString())
-                .AddUserAttribute("data-buttonCss", buttonCss)
-                .AddUserAttribute("data-buttonStyle", buttonStyle)
-                .AddUserAttribute("data-menuCss", menuCss)
+            var html = base.Render(renderContext, visualTree)
+                .AddClass("wx-webapp-dropdown")
+                .RemoveClass("wx-webui-dropdown")
                 .AddUserAttribute("data-uri", RestUri?.ToString())
                 .AddUserAttribute("data-maxItems", MaxItems > 0 ? MaxItems.ToString() : null)
-                .AddUserAttribute("data-searchPlaceholder", I18N.Translate(renderContext, SearchPlaceholder))
-                .AddUserAttribute(Active == TypeActive.Active ? "active" : null)
-                .AddUserAttribute(Active == TypeActive.Disabled ? "disabled" : null)
-                .Add(Items.Select(x => x?.Render(renderContext, visualTree)));
+                .AddUserAttribute("data-searchPlaceholder", I18N.Translate(renderContext, SearchPlaceholder));
 
             return html;
         }

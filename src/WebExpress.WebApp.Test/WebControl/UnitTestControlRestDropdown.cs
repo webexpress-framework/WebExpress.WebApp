@@ -15,8 +15,8 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the id property of the REST dropdown control.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div class=""wx-webapp-dropdown""></div>")]
-        [InlineData("id", @"<div id=""id"" class=""wx-webapp-dropdown""></div>")]
+        [InlineData(null, @"<div class=""wx-webapp-dropdown"" role=""button""></div>")]
+        [InlineData("id", @"<div id=""id"" class=""wx-webapp-dropdown"" role=""button""></div>")]
         public void Id(string id, string expected)
         {
             // preconditions
@@ -39,8 +39,8 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the api property of the REST dropdown control.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div class=""wx-webapp-dropdown""></div>")]
-        [InlineData("https://example.com/api/data", @"<div class=""wx-webapp-dropdown"" data-uri=""https://example.com/api/data""></div>")]
+        [InlineData(null, @"<div class=""wx-webapp-dropdown"" role=""button""></div>")]
+        [InlineData("https://example.com/api/data", @"<div class=""wx-webapp-dropdown"" role=""button"" data-uri=""https://example.com/api/data""></div>")]
         public void RestUri(string uriString, string expected)
         {
             // preconditions
@@ -64,9 +64,9 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the max items property of the REST dropdown control.
         /// </summary>
         [Theory]
-        [InlineData(-1, @"<div class=""wx-webapp-dropdown""></div>")]
-        [InlineData(0, @"<div class=""wx-webapp-dropdown""></div>")]
-        [InlineData(5, @"<div class=""wx-webapp-dropdown"" data-maxItems=""5""></div>")]
+        [InlineData(-1, @"<div class=""wx-webapp-dropdown"" role=""button""></div>")]
+        [InlineData(0, @"<div class=""wx-webapp-dropdown"" role=""button""></div>")]
+        [InlineData(5, @"<div class=""wx-webapp-dropdown"" role=""button"" data-maxItems=""5""></div>")]
         public void MaxItems(int maxItems, string expected)
         {
             // preconditions
@@ -90,9 +90,9 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the search placeholder property of the REST dropdown control.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div class=""wx-webapp-dropdown""></div>")]
-        [InlineData("abc", @"<div class=""wx-webapp-dropdown"" data-searchPlaceholder=""abc""></div>")]
-        [InlineData("webexpress.webui:plugin.name", @"<div class=""wx-webapp-dropdown"" data-searchPlaceholder=""WebExpress.WebUI""></div>")]
+        [InlineData(null, @"<div class=""wx-webapp-dropdown"" role=""button""></div>")]
+        [InlineData("abc", @"<div class=""wx-webapp-dropdown"" role=""button"" data-searchPlaceholder=""abc""></div>")]
+        [InlineData("webexpress.webui:plugin.name", @"<div class=""wx-webapp-dropdown"" role=""button"" data-searchPlaceholder=""WebExpress.WebUI""></div>")]
         public void SearchPlaceholder(string searchPlaceholder, string expected)
         {
             // preconditions

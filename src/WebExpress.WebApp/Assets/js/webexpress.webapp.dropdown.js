@@ -271,9 +271,9 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
      */
     _mapApiItem(apiItem) {
         // choose field aliases defensively
-        const id = apiItem.id != null ? String(apiItem.id) : (apiItem.key != null ? String(apiItem.key) : null);
+        const id = apiItem.id || null;
         const uri = apiItem.uri || apiItem.url || "javascript:void(0);";
-        const content = apiItem.content || apiItem.name || apiItem.Text || apiItem.title || "";
+        const content = apiItem.content || apiItem.name || apiItem.text || apiItem.title || "";
         const icon = apiItem.icon || null;
         const image = apiItem.image || apiItem.img || null;
         const color = apiItem.color || null;

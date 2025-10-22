@@ -5,9 +5,9 @@ using WebExpress.WebIndex;
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Represents an item in a CRUD dropdown list for a REST API.
+    /// Represents an item in a CRUD selection control for a REST API.
     /// </summary>
-    public interface IRestApiCrudDropdownItem : IIndexItem
+    public interface IRestApiCrudSelectionItem : IIndexItem
     {
         /// <summary>
         /// Returns the display text of the item.
