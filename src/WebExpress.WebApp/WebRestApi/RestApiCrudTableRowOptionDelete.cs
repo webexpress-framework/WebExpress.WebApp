@@ -25,7 +25,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// Returns the label.
         /// </summary>
         [JsonPropertyName("content")]
-        public virtual string Label => I18N.Translate(Request, "webexpress.webapp:delete.label");
+        public virtual string Label => I18N.Translate(Request, "webexpress.webui:delete.label");
 
         /// <summary>
         /// Returns the icon.

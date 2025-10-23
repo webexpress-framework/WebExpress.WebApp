@@ -20,9 +20,11 @@ headline.more.title=More options
 toolbar.more.title=More options
 
 status.400.title=Bad Request
+status.400.description=The HTTP status code 400 indicates that the server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing). Possible causes for this include: <ul><li>Malformed request syntax.</li><li>Invalid request message framing.</li><li>Deceptive request routing.</li></ul>
 status.404.title=Resource not found
 status.404.description=The HTTP status code 404 means that the called resource cannot be found on the Web server. Either content has been removed or moved to a different URL. The following causes may be responsible for this: <ul><li>The URL is created incorrectly or incorrectly linked internally.</li><li>The URL was entered incorrectly.</li><li>The web server is not in operation.</li><li>The URL or content has been deleted or paged out.</li></ul>
 status.500.title=Internal Server Error
+status.500.description=The HTTP status code 500 indicates that an unexpected condition was encountered on the Web server and the request could not be fulfilled. This error can have various causes, such as: <ul><li>Errors in server-side scripts or applications.</li><li>Problems with server configuration.</li><li>Temporary overload of the server.</li></ul>
 
 pagesettingmanager.initialization=The settings page manager has been initialized.
 pagesettingmanager.register=A settings page has been added to the settings page manager.
@@ -30,24 +32,12 @@ pagesettingmanager.idless=A settings page from the plugin '{0}' does not have an
 pagesettingmanager.moduleless=The settings page '{0}' from the plugin '{1}' does not have a module assitation.
 pagesettingmanager.resourceless=No associated resource could be found for the settings page '{0}' from the plugin '{1}'.
 
-confirm.label=Confirm
-confirm.header=Get confirmation
-confirm.description=Are you sure you want to do that?
-
-fileupload.label=Upload
-fileupload.header=Upload document
-fileupload.file.label=Document
-fileupload.file.description=Please select a document from your local device.
-fileupload.file.validation.error.nofile=No file was specified.
-
-delete.label=Delete
-delete.header=Confirm Delete
-delete.description=Are you sure you want to delete?
-
 edit.label=Edit
 
 search.label=Search
 search.placeholder=Enter your search terms here.
+
+job.sessioncleaning.process=The job for session cleaning with the id '{0}' has been executed.
 
 setting.label=Settings:
 setting.systeminformation.group.server.label=Server info

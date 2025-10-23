@@ -36,7 +36,7 @@ main {
     gap: clamp(0.2em, 0.5vw, 0.5em);
 }
 
-.wx-appnavigation > *:not(.wx-overflow-menu):not(.dropdown-menu) {
+.wx-appnavigation > *:not(.wx-overflow-menu):not(.dropdown-menu):not(.wx-dropdown) {
     padding-left: clamp(0.2em, 1vw, 1em);
     padding-right: clamp(0.2em, 1vw, 1em);
     padding-top: 0.5em;
@@ -51,6 +51,22 @@ main {
 
 .wx-appnavigation > .wx-overflow-menu > .btn {
     color: unset;
+}
+
+.wx-appnavigation > .wx-dropdown {
+    padding: 0;
+}
+
+.wx-appnavigation > .wx-dropdown > button {
+    color: unset;
+}
+
+.wx-appnavigation > .wx-dropdown > .dropdown-menu[data-bs-popper] {
+    left: unset;
+}
+
+.wx-appnavigation .wx-overflow-menu-item {
+    color: rgba(var(--bs-link-color-rgb), var(--bs-link-opacity, 1));
 }
 
 .wx-app-dropdown {

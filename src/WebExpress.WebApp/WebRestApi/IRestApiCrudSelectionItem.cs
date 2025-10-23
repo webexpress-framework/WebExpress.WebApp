@@ -1,5 +1,4 @@
 ﻿using System.Text.Json.Serialization;
-using WebExpress.WebCore.WebUri;
 using WebExpress.WebIndex;
 
 namespace WebExpress.WebApp.WebRestApi
@@ -14,11 +13,5 @@ namespace WebExpress.WebApp.WebRestApi
         /// </summary>
         [JsonPropertyName("text")]
         string Text { get; }
-
-        /// <summary>
-        /// Returns the target url/uri for the item.
-        /// </summary>
-        [JsonPropertyName("uri")]
-        IUri Uri { get; }
     }
 }

@@ -76,7 +76,7 @@ namespace WebExpress.WebApp.WebPage
             Header.Fixed = TypeFixed.Top;
             Header.Styles = ["position: sticky; top: 0; z-index: 99;"];
 
-            Breadcrumb.Uri = pageContext?.Route.ToUri();
+            Breadcrumb.Uri = pageContext?.Route?.ToUri();
             Breadcrumb.Margin = new PropertySpacingMargin(PropertySpacing.Space.Null);
             Content.Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None);
 
