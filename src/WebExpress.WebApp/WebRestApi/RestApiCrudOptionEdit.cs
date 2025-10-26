@@ -5,9 +5,9 @@ using WebExpress.WebCore.WebMessage;
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Represents an "edit" option for a table row in a REST API CRUD operation.
+    /// Represents an "edit" option in a REST API.
     /// </summary>
-    public class RestApiCrudTableRowOptionEdit : RestApiCrudTableRowOption
+    public class RestApiCrudOptionEdit : RestApiCrudOption
     {
         /// <summary>
         /// Returns the type of the element, represented as a string.
@@ -49,7 +49,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="request">The request object associated with the current operation.</param>
-        public RestApiCrudTableRowOptionEdit(Request request)
+        public RestApiCrudOptionEdit(Request request)
             : base(request)
         {
         }

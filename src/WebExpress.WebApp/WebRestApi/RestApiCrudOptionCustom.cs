@@ -6,7 +6,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// <summary>
     /// Represents a customizable row option for a CRUD table in a REST API context.
     /// </summary>
-    public abstract class RestApiCrudTableRowOptionCustom : RestApiCrudTableRowOption
+    public abstract class RestApiCrudOptionCustom : RestApiCrudOption
     {
         /// <summary>
         /// Returns the type of the element, represented as a string.
@@ -49,7 +49,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="request">The request object associated with the current operation.</param>
-        public RestApiCrudTableRowOptionCustom(Request request)
+        public RestApiCrudOptionCustom(Request request)
             : base(request)
         {
         }

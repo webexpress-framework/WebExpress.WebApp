@@ -4,9 +4,9 @@ using WebExpress.WebCore.WebMessage;
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Represents a separator option for a CRUD table row in a REST API context.
+    /// Represents a separator option in a REST API.
     /// </summary>
-    public class RestApiCrudTableRowOptionSeperator : RestApiCrudTableRowOption
+    public class RestApiCrudOptionSeperator : RestApiCrudOption
     {
         /// <summary>
         /// Returns the type of the element, represented as a string.
@@ -18,7 +18,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="request">The request object associated with the current operation.</param>
-        public RestApiCrudTableRowOptionSeperator(Request request)
+        public RestApiCrudOptionSeperator(Request request)
             : base(request)
         {
         }

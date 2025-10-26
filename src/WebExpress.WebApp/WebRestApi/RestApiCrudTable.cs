@@ -64,7 +64,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// </summary>
         /// <param name="request">The request object containing the criteria for retrieving options. Cannot be null.</param>
         /// <param name="row">The row object for which options are being retrieved. Cannot be null.</param>
-        public virtual IEnumerable<RestApiCrudTableRowOption> GetOptions(Request request, TIndexItem row)
+        public virtual IEnumerable<RestApiCrudOption> GetOptions(Request request, TIndexItem row)
         {
             return [];
         }

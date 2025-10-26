@@ -25,7 +25,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// Returns or sets the options associated with the REST API CRUD row.
         /// </summary>
         [JsonPropertyName("options")]
-        public IEnumerable<RestApiCrudTableRowOption> Options { get; set; } = [];
+        public IEnumerable<RestApiCrudOption> Options { get; set; } = [];
 
         /// <summary>
         /// Initializes a new instance of the class.

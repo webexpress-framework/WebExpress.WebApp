@@ -5,9 +5,9 @@ using WebExpress.WebCore.WebMessage;
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Represents a separator option for a CRUD table row in a REST API context.
+    /// Represents a separator option in a REST API.
     /// </summary>
-    public class RestApiCrudTableRowOptionHeader : RestApiCrudTableRowOption
+    public class RestApiCrudOptionHeader : RestApiCrudOption
     {
         private string _label = "";
 
@@ -37,7 +37,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="request">The request object associated with the current operation.</param>
-        public RestApiCrudTableRowOptionHeader(Request request)
+        public RestApiCrudOptionHeader(Request request)
             : base(request)
         {
         }
