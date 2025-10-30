@@ -5,10 +5,10 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.Test.WebControl
 {
     /// <summary>
-    /// Tests the web app toast notfication control.
+    /// Tests the web app toast notification control.
     /// </summary>
     [Collection("NonParallelTests")]
-    public class UnitTestControlWebAppToastNotfication
+    public class UnitTestControlWebAppToastnotification
     {
         /// <summary>
         /// Tests the id property of the web app footer control.
@@ -23,7 +23,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
             var context = UnitTestControlFixture.CreateRenderContextMock(application);
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlWebAppToastNotfication(id)
+            var control = new ControlWebAppToastnotification(id)
             {
             };
 

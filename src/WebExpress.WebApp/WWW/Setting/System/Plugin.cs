@@ -42,7 +42,7 @@ namespace WebExpress.WebApp.WWW.Setting.System
         };
 
         /// <summary>
-        /// Retruns the help text control.
+        /// Returns the help text control.
         /// </summary>
         private ControlText Description { get; } = new ControlText()
         {

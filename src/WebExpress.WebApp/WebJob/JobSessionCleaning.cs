@@ -37,7 +37,7 @@ namespace WebExpress.WebApp.WebJob
                 throw new ArgumentNullException(nameof(sessionManager), "Parameter cannot be null or empty.");
             }
 
-            if (sessionManager == null)
+            if (logManager == null)
             {
                 throw new ArgumentNullException(nameof(logManager), "Parameter cannot be null or empty.");
             }
@@ -55,7 +55,7 @@ namespace WebExpress.WebApp.WebJob
             _sessionManager.CleanUp(_jobContext.ApplicationContext);
             _logManager.DefaultLog.Info
             (
-                message: I18N.Translate("webepress.webapp:job.sessioncleaning.process", _jobContext.JobId)
+                message: I18N.Translate("webexpress.webapp:job.sessioncleaning.process", _jobContext.JobId)
             );
         }
     }

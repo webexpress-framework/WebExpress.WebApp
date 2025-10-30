@@ -3,9 +3,9 @@
 namespace WebExpress.WebApp.WebSection
 {
     /// <summary>
-    /// Represents the section toast.notfication.primary.
+    /// Represents the section toast.notification.secondary.
     /// </summary>
-    public class SectionToastNotficationPrimary : ISection
+    public class SectionToastNotificationSecondary : ISection
     {
     }
 }

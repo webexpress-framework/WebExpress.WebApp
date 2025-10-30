@@ -10,10 +10,10 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Represents a control for managing web application toast notfication, 
+    /// Represents a control for managing web application toast notification, 
     /// including preferences, primary, and secondary areas.
     /// </summary>
-    public class ControlWebAppToastNotfication : Control, IControlWebAppProperty
+    public class ControlWebAppToastnotification : Control, IControlWebAppProperty
     {
         private readonly List<IControl> _preferences = [];
         private readonly List<IControl> _primary = [];
@@ -38,7 +38,7 @@ namespace WebExpress.WebApp.WebControl
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The control id.</param>
-        public ControlWebAppToastNotfication(string id = null)
+        public ControlWebAppToastnotification(string id = null)
             : base(id)
         {
         }
@@ -123,17 +123,17 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            var preferences = Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionToastNotficationPreferences>
+            var preferences = Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionToastNotificationPreferences>
             (
                 renderContext?.PageContext
             ));
 
-            var primary = Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionToastNotficationPrimary>
+            var primary = Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionToastNotificationPrimary>
             (
                 renderContext?.PageContext
             ));
 
-            var secondary = Secondary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionToastNotficationSecondary>
+            var secondary = Secondary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionToastNotificationSecondary>
             (
                 renderContext?.PageContext
             ));
