@@ -3,8 +3,8 @@
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
 		<Title>WebExpress.WebApp</Title>
-		<Version>0.0.9.0</Version>
-		<AssemblyVersion>0.0.9.0</AssemblyVersion>
+		<Version>0.0.10.0</Version>
+		<AssemblyVersion>0.0.10.0</AssemblyVersion>
 		<TargetFramework>net9.0</TargetFramework>
 		<RuntimeIdentifiers>any</RuntimeIdentifiers>
 		<RepositoryUrl>https://github.com/ReneSchwarzer/WebExpress.WebApp</RepositoryUrl>
@@ -14,7 +14,7 @@
 		<EnableDynamicLoading>true</EnableDynamicLoading>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<Description>Provide a business application template for the WebExpress web server.</Description>
-		<PackageVersion>0.0.9-alpha</PackageVersion>
+		<PackageVersion>0.0.10-alpha</PackageVersion>
 		<PackageProjectUrl>https://github.com/ReneSchwarzer/WebExpress</PackageProjectUrl>
 		<PackageIcon>icon.png</PackageIcon>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
@@ -47,8 +47,8 @@
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(Configuration)' != 'DebugLocal'">
-		<PackageReference Include="WebExpress.WebUI" Version="0.0.9-alpha" />
-		<PackageReference Include="WebExpress.WebIndex" Version="0.0.9-alpha" />
+		<PackageReference Include="WebExpress.WebUI" Version="0.0.10-alpha" />
+		<PackageReference Include="WebExpress.WebIndex" Version="0.0.10-alpha" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(Configuration)' == 'DebugLocal'">
