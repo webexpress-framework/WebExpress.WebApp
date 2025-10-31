@@ -36,16 +36,86 @@ jobs:
     - name: Add DocFX to PATH
       run: echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
+    - name: Clone WebExpress.WebCore
+      run: |
+        git clone --branch develop https://github.com/webexpress-framework/WebExpress.WebCore.git
+        mkdir -p packages
+        
+    - name: Create wwwroot directory for WebCore
+      run: mkdir -p WebExpress.WebCore/src/WebExpress.WebCore/wwwroot
+
+    - name: Build WebExpress.WebCore
+      run: |
+        dotnet build WebExpress.WebCore/src/WebExpress.WebCore/WebExpress.WebCore.csproj -c Release
+
+    - name: Pack WebExpress.WebCore
+      run: |
+        dotnet pack WebExpress.WebCore/src/WebExpress.WebCore/WebExpress.WebCore.csproj -c Release -o packages --no-build
+
+    - name: Create nuget.config
+      run: |
+        echo '<?xml version="1.0" encoding="utf-8"?>' > nuget.config
+        echo '<configuration>' >> nuget.config
+        echo '  <packageSources>' >> nuget.config
+        echo '    <add key="LocalPackages" value="packages" />' >> nuget.config
+        echo '    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />' >> nuget.config
+        echo '  </packageSources>' >> nuget.config
+        echo '</configuration>' >> nuget.config
+
+    - name: Clone WebExpress.WebIndex
+      run: |
+        git clone --branch develop https://github.com/webexpress-framework/WebExpress.WebIndex.git
+
+    - name: Build WebExpress.WebIndex
+      run: |
+        dotnet build WebExpress.WebIndex/src/WebExpress.WebIndex/WebExpress.WebIndex.csproj -c Release
+
+    - name: Pack WebExpress.WebIndex
+      run: |
+        dotnet pack WebExpress.WebIndex/src/WebExpress.WebIndex/WebExpress.WebIndex.csproj -c Release -o packages --no-build
+
+    - name: Clone WebExpress.WebUI
+      run: |
+        git clone --branch develop https://github.com/webexpress-framework/WebExpress.WebUI.git
+
+    - name: Restore WebExpress.WebUI
+      run: dotnet restore WebExpress.WebUI/src/WebExpress.WebUI/WebExpress.WebUI.csproj --configfile nuget.config
+
+    - name: Build WebExpress.WebUI
+      run: |
+        dotnet build WebExpress.WebUI/src/WebExpress.WebUI/WebExpress.WebUI.csproj -c Release
+
+    - name: Pack WebExpress.WebUI
+      run: |
+        dotnet pack WebExpress.WebUI/src/WebExpress.WebUI/WebExpress.WebUI.csproj -c Release -o packages --no-build
+
+    - name: Restore packages with local feed
+      run: dotnet restore ./src/WebExpress.WebApp/WebExpress.WebApp.csproj --configfile nuget.config
+
+    - name: Build WebExpress.WebApp
+      run: dotnet build ./src/WebExpress.WebApp/WebExpress.WebApp.csproj -c Release --no-restore
+
     - name: Generate documentation
       run: |
         cd docs 
         docfx metadata
         docfx build
 
+    - name: Generate API toc.yaml
+      run: |
+        echo "### YamlMime:TableOfContent" > docs/api/toc.yaml
+        echo "[" >> docs/api/toc.yaml
+        find docs/_site/api -maxdepth 1 -type f -name '*.html' | sort | while read file; do
+          name=$(basename "$file" .html)
+          echo "  { \"name\": \"$name\", \"href\": \"$name.html\" }," >> docs/api/toc.yaml
+        done
+        sed -i '$ s/},/}/' docs/api/toc.yaml
+        echo "]" >> docs/api/toc.yaml
+
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
       with:
-        path: '_site'
+        path: './docs/_site'
 
     - name: Deploy to GitHub Pages
       id: deployment

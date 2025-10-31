@@ -7,17 +7,17 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// Represents the content control for a web application.
     /// </summary>
-    public class ControlWebAppContent : Control
+    public class ControlWebAppContent : Control, IControlWebAppContent
     {
         /// <summary>
         /// Returns the toolbar.
         /// </summary>
-        public ControlWebAppToolbar Toolbar { get; } = new ControlWebAppToolbar("wx-content-toolbar");
+        public IControlWebAppToolbar Toolbar { get; } = new ControlWebAppToolbar("wx-content-toolbar");
 
         /// <summary>
         /// Returns the main panel.
         /// </summary>
-        public ControlWebAppMain MainPanel { get; } = new ControlWebAppMain("wx-content-main")
+        public IControlWebAppMain MainPanel { get; } = new ControlWebAppMain("wx-content-main")
         {
             //BackgroundColor = new PropertyColorBackground(TypeColorBackground.Danger),
         };
@@ -25,7 +25,7 @@ namespace WebExpress.WebApp.WebControl
         /// <summary>
         /// Returns the page properties.
         /// </summary>
-        public ControlWebAppProperty Property { get; } = new ControlWebAppProperty("wx-content-property");
+        public IControlWebAppProperty Property { get; } = new ControlWebAppProperty("wx-content-property");
 
         /// <summary>
         /// Initializes a new instance of the class.
@@ -44,21 +44,26 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            var contentCtlr = new ControlPanel
-            (
-                Id,
-                Toolbar,
-                new ControlPanelFlexbox(null, MainPanel, Property)
-                {
-                    Layout = TypeLayoutFlexbox.Default,
-                    Align = TypeAlignFlexbox.Stretch,
-                    FlexGrow = TypeFlexGrow.Grow
-                }
-            )
+
+            //if (Property)
+            var split = new ControlPanelSplit("wx-splitter-content")
             {
-                Classes = ["wx-content"],
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two)
-            };
+                Orientation = TypeOrientationSplit.Horizontal,
+                SidePanelInitialSize = 350,
+                SidePanelMinSize = 150,
+                Order = TypeSplitOrder.MainSide
+
+            }
+             .AddMainPanel(MainPanel)
+             .AddSidePanel(Property);
+
+
+            var contentCtlr = new ControlPanel(Id)
+            {
+                Classes = ["wx-content"]
+            }
+                .Add(Toolbar)
+                .Add(split);
 
             return contentCtlr?.Render(renderContext, visualTree);
         }

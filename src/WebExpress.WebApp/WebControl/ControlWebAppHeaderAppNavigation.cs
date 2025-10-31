@@ -12,7 +12,7 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// Represents the header navigation control for the web application.
     /// </summary>
-    public class ControlWebAppHeaderAppNavigation : ControlPanelFlexbox
+    public class ControlWebAppHeaderAppNavigation : ControlPanel, IControlWebAppHeaderAppNavigation
     {
         private readonly List<IControlNavigationItem> _preferences = [];
         private readonly List<IControlNavigationItem> _primary = [];
@@ -47,54 +47,72 @@ namespace WebExpress.WebApp.WebControl
         /// Adds items to the preferences area.
         /// </summary>
         /// <param name="items">The items to add to the preferences area.</param>
-        public void AddPreferences(params IControlNavigationItem[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderAppNavigation AddPreferences(params IControlNavigationItem[] items)
         {
             _preferences.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the preferences area.
         /// </summary>
         /// <param name="item">The item to remove from the preferences area.</param>
-        public void RemovePreference(IControlNavigationItem item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderAppNavigation RemovePreference(IControlNavigationItem item)
         {
             _preferences.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the primary area.
         /// </summary>
         /// <param name="items">The items to add to the primary area.</param>
-        public void AddPrimary(params IControlNavigationItem[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderAppNavigation AddPrimary(params IControlNavigationItem[] items)
         {
             _primary.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the primary area.
         /// </summary>
         /// <param name="item">The item to remove from the primary area.</param>
-        public void RemovePrimary(IControlNavigationItem item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderAppNavigation RemovePrimary(IControlNavigationItem item)
         {
             _primary.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the secondary area.
         /// </summary>
         /// <param name="items">The items to add to the secondary area.</param>
-        public void AddSecondary(params IControlNavigationItem[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderAppNavigation AddSecondary(params IControlNavigationItem[] items)
         {
             _secondary.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the secondary area.
         /// </summary>
         /// <param name="item">The item to remove from the secondary area.</param>
-        public void RemoveSecondary(IControlNavigationItem item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderAppNavigation RemoveSecondary(IControlNavigationItem item)
         {
             _secondary.Remove(item);
+
+            return this;
         }
 
         /// <summary>
@@ -105,45 +123,30 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            var preferences = Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlNavigationItemLink, SectionAppNavigationPreferences>
+            var preferences = Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControlNavigationItem, SectionAppNavigationPreferences>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
-            var primary = Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlNavigationItemLink, SectionAppNavigationPrimary>
+            var primary = Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControlNavigationItem, SectionAppNavigationPrimary>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
-            var secondary = WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlNavigationItemLink, SectionAppNavigationSecondary>
+            var secondary = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControlNavigationItem, SectionAppNavigationSecondary>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             );
 
-            return new HtmlElementTextContentDiv
-            (
-                preferences.Any() ? new ControlNavigation("webexpress.webapp.header.appnavigation.preferences", [.. preferences])
-                {
-                    Layout = TypeLayoutTab.Default,
-                }.Render(renderContext, visualTree) : null,
-                primary.Any() ? new ControlNavigation("webexpress.webapp.header.appnavigation.primary", [.. primary])
-                {
-                    Layout = TypeLayoutTab.Default,
-                }.Render(renderContext, visualTree) : null,
-                secondary.Any() ? new ControlNavigation("webexpress.webapp.header.appnavigation.secondary", Secondary.Union(secondary).ToArray())
-                {
-                    Layout = TypeLayoutTab.Default,
-                }.Render(renderContext, visualTree) : null
-            )
+            return new ControlPanelOverflow(Id)
             {
-                Id = Id,
-                Class = Css.Concatenate("", GetClasses()),
-                Style = Style.Concatenate("", GetStyles()),
-                Role = Role
-            };
+                Classes = [Css.Concatenate("wx-appnavigation", GetClasses())],
+                Styles = [GetStyles()]
+            }
+                .Add(preferences)
+                .Add(primary)
+                .Add(secondary)
+                .Render(renderContext, visualTree);
         }
     }
 }

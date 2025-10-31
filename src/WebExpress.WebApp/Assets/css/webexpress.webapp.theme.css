@@ -2,44 +2,90 @@
     background: var(--bs-dark);
 }
 
+#wx-header-appnavigator {
+
+}
+
 #wx-header-apptitle {
-    color: var(--bs-white);
+    color: var(--bs-body-bg);
+}
+
+[data-bs-theme="dark"] #wx-header-apptitle {
+    color: var(--bs-body-color);
 }
 
 #wx-header-appnavigation {
-    color: var(--bs-white);
+    color: var(--bs-body-bg);
 }
 
-#wx-header-appnavigation .nav-link {
-    color: var(--bs-white);
+[data-bs-theme="dark"] #wx-header-appnavigation {
+    color: var(--bs-body-color);
 }
     
 #wx-header-appnavigation .active {
     color: var(--bs-info);
 }
 
+#wx-header-appnavigation > *:hover:not(.wx-overflow-menu:hover):not(.dropdown-menu) {
+    background: var(--bs-gray-800);
+}
+
+#wx-header-appnavigation > *:focus {
+    background: var(--bs-gray-800);
+}
+
+#wx-header-quickcreate {
+}
+
+#wx-header-notifications {
+    color: var(--bs-body-bg);
+}
+
+#wx-header-notifications:hover {
+    background: var(--bs-gray-800);
+}
+
+#wx-header-help {
+    color: var(--bs-body-bg);
+}
+
+#wx-header-help:hover {
+    background: var(--bs-gray-800);
+}
+
+#wx-header-settings {
+    color: var(--bs-body-bg);
+}
+
+#wx-header-settings:hover {
+    background: var(--bs-gray-800);
+}
+
+#wx-toast {
+    background: var(--bs-warning);
+    color: var(--bs-body-color);
+}
+
 #wx-breadcrumb {
-    background: var(--bs-light);
 }
 
 #wx-prologue {
-    background: var(--bs-light);
+
 }
 
 #wx-searchoptions {
-    background: var(--bs-light);
 }
 
 #wx-sidebar {
-    background: var(--bs-light);
+
 }
 
 #wx-settingtab {
-    background: var(--bs-light);
+
 }
 
 #wx-settingmenu {
-    background: var(--bs-light);
+
 }
 
 #wx-split-gutter {
@@ -59,15 +105,14 @@
 }
 
 #wx-content-main-headline {
-    background: var(--bs-white);
 }
 
 #wx-content-main-headline-more {
     background: var(--bs-white);
 }
 
-#wx-content-main-property {
-    background: var(--bs-blue200);
+#wx-content-property {
+    background: aliceblue;
 }
 
 #wx-footer {

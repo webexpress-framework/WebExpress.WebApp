@@ -7,7 +7,7 @@ namespace WebExpress.WebApp.WebSettingPage
     /// <summary>
     /// Represents the general settings category for the web application.
     /// </summary>
-    [WebIcon<IconCog>]
+    [WebIcon<IconServer>]
     [Name("webexpress.webapp:setting.category.general.name")]
     [Description("webexpress.webapp:setting.category.general.description")]
     [SettingSection(SettingSection.Primary)]

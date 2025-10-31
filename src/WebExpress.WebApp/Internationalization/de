@@ -12,6 +12,7 @@ identitymanager.moduleless=Es wurde kein Modul angegeben.
 
 header.quickcreate.label=Erstellen
 header.help.label=Hilfe
+header.notification.label=Benachrichtigungen
 header.setting.label=Einstellungen
 header.setting.systeminformation.label=System Informationen
 
@@ -19,9 +20,11 @@ headline.more.title=Weitere Optionen
 toolbar.more.title=Weitere Optionen
 
 status.400.title=Fehlerhafte Anfrage
+status.400.description=Der HTTP-Statuscode 400 bedeutet, dass die Anfrage des Clients fehlerhaft war und vom Server nicht verarbeitet werden konnte. Dies kann verschiedene Ursachen haben, wie z.B. ungültige Syntax, fehlende Parameter oder ungültige Datenformate. Der Server konnte die Anfrage nicht verstehen und hat daher diesen Fehlercode zurückgegeben. Bitte überprüfen Sie die Anfrage und versuchen Sie es erneut.
 status.404.title=Ressource nicht gefunden
 status.404.description=Der HTTP-Statuscode 404 bedeutet, dass die aufgerufene Ressource auf dem Webserver nicht zu finden ist. Entweder wurden Inhalte der Webseite entfernt oder auf eine andere URL verlegt. Folgende Ursachen können hierfür verantwortlich sein: <ul><li>Die URL ist fehlerhaft angelegt oder falsch intern verlinkt.</li><li>Die URL wurde falsch eingegeben.</li><li>Der Webserver ist nicht in Betrieb.</li><li>Die URL oder die Inhalte wurden gelöscht oder ausgelagert.</li></ul>
 status.500.title=Interner Serverfehler
+status.500.description=Der HTTP-Statuscode 500 bedeutet, dass auf dem Webserver ein interner Fehler aufgetreten ist. Dies kann verschiedene Ursachen haben, wie z.B. Programmierfehler, Datenbankprobleme oder Konfigurationsfehler. Der Server konnte die Anfrage nicht verarbeiten und hat daher diesen Fehlercode zurückgegeben. Bitte versuchen Sie es später erneut oder wenden Sie sich an den Administrator der Webseite.
 
 pagesettingmanager.initialization=Der Einstellungsseitenmanager wurde initialisiert.
 pagesettingmanager.register=Eine Einsteuungsseite wurde dem Einstellungsseitenmanager hinzugefügt.
@@ -29,22 +32,12 @@ pagesettingmanager.idless=Eine Einstellungsseite aus dem Plugin '{0}' verfügt �
 pagesettingmanager.moduleless=Die Einstellungsseite '{0}' aus dem Plugin '{1}' verfügt über keine Modulzuordnung.
 pagesettingmanager.resourceless=Zu der Einstellungsseite '{0}' aus dem Plugin '{1}' konnte keine zugehörige Ressource ermittelt werden.
 
-confirm.label=Bestätigung
-confirm.header=Bestätigung einholen
-confirm.description=Sind Sie sicher das Sie das tun möchten?
-
-fileupload.label=Hochladen
-fileupload.header=Dokument hochladen
-fileupload.file.label=Dokument
-fileupload.file.description=Bitte wählen Sie ein Dokument von Ihrem lokalen Gerät aus.
-fileupload.file.validation.error.nofile=Es wurde keine Datei angegeben.
-
-delete.label=Löschen
-delete.header=Löschen bestätigen
-delete.description=Möchten Sie wirklich löschen?
+edit.label=Bearbeiten
 
 search.label=Suche
 search.placeholder=Geben Sie hier Ihre Suchbegriffe ein.
+
+job.sessioncleaning.process=Der Job zur Sitzungsbereinigung mit der Id '{0}'wurde ausgeführt.
 
 setting.label=Einstellungen:
 setting.systeminformation.group.server.label=Server Info
@@ -68,8 +61,13 @@ setting.systeminformation.reboot.description=Starten Sie den Server neu. <b>Acht
 
 setting.category.general.name=Allgemeine Einstellungen
 setting.category.general.description=Allgemeine Einstellungen für die Webanwendung.
+setting.category.system.name=System
+settimg.category.system.description=Systembezogene Einstellungen für die Webanwendung.
+
 setting.group.general.name=Allgemein
 setting.group.general.description=Allgemeine Einstellungen für die Webanwendung.
+setting.group.system.name=System
+setting.group.system.description=Systembezogene Einstellungen für die Webanwendung.
 
 setting.tab.general.label=Allgemein
 setting.group.system.label=System

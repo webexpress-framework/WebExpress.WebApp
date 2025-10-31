@@ -13,7 +13,7 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// Quick create control element for a WebApp.
     /// </summary>
-    public class ControlWebAppHeaderQuickCreate : Control
+    public class ControlWebAppHeaderQuickCreate : Control, IControlWebAppHeaderQuickCreate
     {
         private readonly List<IControlSplitButtonItem> _preferences = [];
         private readonly List<IControlSplitButtonItem> _primary = [];
@@ -48,54 +48,72 @@ namespace WebExpress.WebApp.WebControl
         /// Adds items to the preferences area.
         /// </summary>
         /// <param name="items">The items to add to the preferences area.</param>
-        public void AddPreferences(params IControlSplitButtonItem[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderQuickCreate AddPreferences(params IControlSplitButtonItem[] items)
         {
             _preferences.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the preferences area.
         /// </summary>
         /// <param name="item">The item to remove from the preferences area.</param>
-        public void RemovePreference(IControlSplitButtonItem item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderQuickCreate RemovePreference(IControlSplitButtonItem item)
         {
             _preferences.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the primary area.
         /// </summary>
         /// <param name="items">The items to add to the primary area.</param>
-        public void AddPrimary(params IControlSplitButtonItem[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderQuickCreate AddPrimary(params IControlSplitButtonItem[] items)
         {
             _primary.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the primary area.
         /// </summary>
         /// <param name="item">The item to remove from the primary area.</param>
-        public void RemovePrimary(IControlSplitButtonItem item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderQuickCreate RemovePrimary(IControlSplitButtonItem item)
         {
             _primary.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the secondary area.
         /// </summary>
         /// <param name="items">The items to add to the secondary area.</param>
-        public void AddSecondary(params IControlSplitButtonItem[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderQuickCreate AddSecondary(params IControlSplitButtonItem[] items)
         {
             _secondary.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the secondary area.
         /// </summary>
         /// <param name="item">The item to remove from the secondary area.</param>
-        public void RemoveSecondary(IControlSplitButtonItem item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderQuickCreate RemoveSecondary(IControlSplitButtonItem item)
         {
             _secondary.Remove(item);
+
+            return this;
         }
 
         /// <summary>
@@ -106,22 +124,21 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            var preferences = Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlSplitButtonItemLink, SectionAppQuickcreatePreferences>
+            var fragmentManager = WebEx.ComponentHub.FragmentManager;
+
+            var preferences = Preferences.Union(fragmentManager.GetFragments<FragmentControlSplitButtonItemLink, SectionAppQuickcreatePreferences>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
-            var primary = Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlSplitButtonItemLink, SectionAppQuickcreatePrimary>
+            var primary = Primary.Union(fragmentManager.GetFragments<FragmentControlSplitButtonItemLink, SectionAppQuickcreatePrimary>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
-            var secondary = Secondary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlSplitButtonItemLink, SectionAppQuickcreateSecondary>
+            var secondary = Secondary.Union(fragmentManager.GetFragments<FragmentControlSplitButtonItemLink, SectionAppQuickcreateSecondary>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
             var quickcreateList = preferences
@@ -131,24 +148,26 @@ namespace WebExpress.WebApp.WebControl
             var firstQuickcreate = quickcreateList.FirstOrDefault() as ControlSplitButtonItemLink;
             var nextQuickcreate = quickcreateList.Skip(1);
 
-            var quickcreate = nextQuickcreate.Any() ?
-            (IControl)new ControlSplitButtonLink(Id, nextQuickcreate.Skip(1).ToArray())
-            {
-                Text = I18N.Translate(renderContext.Request?.Culture, "webexpress.webapp:header.quickcreate.label"),
-                Uri = firstQuickcreate?.Uri,
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Auto, PropertySpacing.Space.None),
-                OnClick = firstQuickcreate?.OnClick,
-                Modal = firstQuickcreate?.Modal
-            } :
-            Preferences.Any() ?
-            new ControlButtonLink(Id)
-            {
-                Text = I18N.Translate(renderContext.Request?.Culture, "webexpress.webapp:header.quickcreate.label"),
-                Uri = firstQuickcreate?.Uri,
-                OnClick = firstQuickcreate?.OnClick,
-                Modal = firstQuickcreate?.Modal
-            } :
-            null;
+            var quickcreate = nextQuickcreate.Any()
+                ? (IControl)new ControlSplitButtonLink(Id)
+                {
+                    Classes = ["btn-success"],
+                    Text = I18N.Translate(renderContext.Request?.Culture, "webexpress.webapp:header.quickcreate.label"),
+                    Uri = firstQuickcreate?.Uri,
+                    OnClick = firstQuickcreate?.OnClick,
+                    Modal = firstQuickcreate?.Modal
+                }
+                    .Add(nextQuickcreate)
+                : Preferences.Any()
+                ? new ControlButtonLink(Id)
+                {
+                    Classes = ["btn-success"],
+                    Text = I18N.Translate(renderContext.Request?.Culture, "webexpress.webapp:header.quickcreate.label"),
+                    Uri = firstQuickcreate?.Uri,
+                    OnClick = firstQuickcreate?.OnClick,
+                    Modal = firstQuickcreate?.Modal
+                }
+                : null;
 
             return quickcreate?.Render(renderContext, visualTree);
         }

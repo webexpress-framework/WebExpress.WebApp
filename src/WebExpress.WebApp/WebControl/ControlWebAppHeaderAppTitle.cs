@@ -8,7 +8,7 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// App title for a web app.
     /// </summary>
-    public class ControlWebAppHeaderAppTitle : ControlLink
+    public class ControlWebAppHeaderAppTitle : ControlLink, IControlWebAppHeaderAppTitle
     {
         /// <summary>
         /// Initializes a new instance of the class.
@@ -18,6 +18,20 @@ namespace WebExpress.WebApp.WebControl
             : base(id)
         {
             Decoration = TypeTextDecoration.None;
+        }
+
+        /// <summary>
+        /// Sets the title of the web application header.
+        /// </summary>
+        /// <param name="title">
+        /// The title to display in the web application header. Cannot be null or empty.
+        /// </param>
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderAppTitle SetTitle(string title)
+        {
+            Title = title;
+
+            return this;
         }
 
         /// <summary>
@@ -39,7 +53,7 @@ namespace WebExpress.WebApp.WebControl
             return new HtmlElementTextSemanticsA(apptitle.Render(renderContext, visualTree))
             {
                 Id = Id,
-                Href = renderContext?.PageContext?.ApplicationContext?.ContextPath?.ToString(),
+                Href = renderContext?.PageContext?.ApplicationContext?.Route?.ToString(),
                 Class = Css.Concatenate("", GetClasses()),
                 Style = Style.Concatenate("", GetStyles()),
                 Role = Role

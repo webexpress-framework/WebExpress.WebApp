@@ -12,7 +12,7 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// Represents the main control panel for the web application.
     /// </summary>
-    public class ControlWebAppMain : Control
+    public class ControlWebAppMain : Control, IControlWebAppMain
     {
         private readonly List<IControl> _preferences = [];
         private readonly List<IControl> _primary = [];
@@ -34,14 +34,9 @@ namespace WebExpress.WebApp.WebControl
         public IEnumerable<IControl> Secondary => _secondary;
 
         /// <summary>
-        /// Returns the page properties.
-        /// </summary>
-        public ControlWebAppProperty Property { get; } = new ControlWebAppProperty("wx-content-main-property");
-
-        /// <summary>
         /// Returns the headline control.
         /// </summary>
-        public ControlWebAppHeadline Headline { get; } = new ControlWebAppHeadline("wx-content-main-headline");
+        public IControlWebAppHeadline Headline { get; } = new ControlWebAppHeadline("wx-content-main-headline");
 
         /// <summary>
         /// Initializes a new instance of the class.
@@ -56,54 +51,72 @@ namespace WebExpress.WebApp.WebControl
         /// Adds items to the preferences area.
         /// </summary>
         /// <param name="items">The items to add to the preferences area.</param>
-        public void AddPreferences(params IControl[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppMain AddPreferences(params IControl[] items)
         {
             _preferences.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the preferences area.
         /// </summary>
         /// <param name="item">The item to remove from the preferences area.</param>
-        public void RemovePreference(IControl item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppMain RemovePreference(IControl item)
         {
             _preferences.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the primary area.
         /// </summary>
         /// <param name="items">The items to add to the primary area.</param>
-        public void AddPrimary(params IControl[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppMain AddPrimary(params IControl[] items)
         {
             _primary.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the primary area.
         /// </summary>
         /// <param name="item">The item to remove from the primary area.</param>
-        public void RemovePrimary(IControl item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppMain RemovePrimary(IControl item)
         {
             _primary.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the secondary area.
         /// </summary>
         /// <param name="items">The items to add to the secondary area.</param>
-        public void AddSecondary(params IControl[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppMain AddSecondary(params IControl[] items)
         {
             _secondary.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the secondary area.
         /// </summary>
         /// <param name="item">The item to remove from the secondary area.</param>
-        public void RemoveSecondary(IControl item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppMain RemoveSecondary(IControl item)
         {
             _secondary.Remove(item);
+
+            return this;
         }
 
         /// <summary>
@@ -116,20 +129,17 @@ namespace WebExpress.WebApp.WebControl
         {
             var preferences = Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionContentPreferences>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
             var primary = Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionContentPrimary>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
             var secondary = Secondary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionContentSecondary>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
             var mainCtlr = new ControlPanelMain
@@ -147,8 +157,7 @@ namespace WebExpress.WebApp.WebControl
                         new ControlPanel(null, [.. secondary])
                     )
                     {
-                    },
-                    Property
+                    }
                 )
                 {
                 }

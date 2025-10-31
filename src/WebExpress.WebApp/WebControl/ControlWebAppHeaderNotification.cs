@@ -14,7 +14,7 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// Represents a control for displaying header notifications in the web application.
     /// </summary>
-    public class ControlWebAppHeaderNotification : Control
+    public class ControlWebAppHeaderNotification : Control, IControlWebAppHeaderNotification
     {
         private readonly List<IControlDropdownItem> _preferences = [];
         private readonly List<IControlDropdownItem> _primary = [];
@@ -39,7 +39,7 @@ namespace WebExpress.WebApp.WebControl
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The controls id.</param>
-        public ControlWebAppHeaderNotification(string id = null)
+        public ControlWebAppHeaderNotification(string id)
             : base(id)
         {
             Padding = new PropertySpacingPadding(PropertySpacing.Space.Null);
@@ -49,54 +49,72 @@ namespace WebExpress.WebApp.WebControl
         /// Adds items to the preferences area.
         /// </summary>
         /// <param name="items">The items to add to the preferences area.</param>
-        public void AddPreferences(params IControlDropdownItem[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderNotification AddPreferences(params IControlDropdownItem[] items)
         {
             _preferences.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the preferences area.
         /// </summary>
         /// <param name="item">The item to remove from the preferences area.</param>
-        public void RemovePreference(IControlDropdownItem item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderNotification RemovePreference(IControlDropdownItem item)
         {
             _preferences.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the primary area.
         /// </summary>
         /// <param name="items">The items to add to the primary area.</param>
-        public void AddPrimary(params IControlDropdownItem[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderNotification AddPrimary(params IControlDropdownItem[] items)
         {
             _primary.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the primary area.
         /// </summary>
         /// <param name="item">The item to remove from the primary area.</param>
-        public void RemovePrimary(IControlDropdownItem item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderNotification RemovePrimary(IControlDropdownItem item)
         {
             _primary.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the secondary area.
         /// </summary>
         /// <param name="items">The items to add to the secondary area.</param>
-        public void AddSecondary(params IControlDropdownItem[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderNotification AddSecondary(params IControlDropdownItem[] items)
         {
             _secondary.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the secondary area.
         /// </summary>
         /// <param name="item">The item to remove from the secondary area.</param>
-        public void RemoveSecondary(IControlDropdownItem item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderNotification RemoveSecondary(IControlDropdownItem item)
         {
             _secondary.Remove(item);
+
+            return this;
         }
 
         /// <summary>
@@ -109,15 +127,22 @@ namespace WebExpress.WebApp.WebControl
         {
             var items = GetItems(renderContext);
 
-            var helpCtlr = items.Any() ?
-            new ControlDropdown(Id, [.. items])
-            {
-                Icon = new IconInfoCircle(),
-                AlignmentMenu = TypeAlignmentDropdownMenu.Right,
-                //BackgroundColor = new PropertyColorButton(TypeColorButton.Dark),
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None)
-            } :
-            null;
+            var helpCtlr = items.Any()
+                ? new ControlDropdown(Id)
+                {
+                    Classes = ["wx-app-dropdown"],
+                    Icon = new IconBell(),
+                    AlignmentMenu = TypeAlignmentDropdownMenu.Right,
+                    Margin = new PropertySpacingMargin
+                    (
+                        PropertySpacing.Space.Two,
+                        PropertySpacing.Space.None,
+                        PropertySpacing.Space.None,
+                        PropertySpacing.Space.None
+                    )
+                }
+                    .Add(items)
+                : null;
 
             return helpCtlr?.Render(renderContext, visualTree);
         }
@@ -131,25 +156,25 @@ namespace WebExpress.WebApp.WebControl
         {
             var preferences = Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppNotificationPreferences>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
             var primary = Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppNotificationPrimary>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
             var secondary = Secondary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppNotificationSecondary>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
-            if (preferences.Any() && primary.Any() && secondary.Any())
+            if (preferences.Any() || primary.Any() || secondary.Any())
             {
-                yield return new ControlDropdownItemHeader(I18N.Translate(renderContext.Request, "webexpress.webapp:header.notification.label"));
+                yield return new ControlDropdownItemHeader()
+                {
+                    Text = I18N.Translate(renderContext.Request, "webexpress.webapp:header.notification.label")
+                };
             }
 
             foreach (var item in preferences)

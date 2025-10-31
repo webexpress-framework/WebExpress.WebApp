@@ -6,6 +6,7 @@ using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebFragment;
+using WebExpress.WebUI.WebIcon;
 using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.WebControl
@@ -13,7 +14,7 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// App navigator for a WebApp.
     /// </summary>
-    public class ControlWebAppHeaderAppNavigator : Control
+    public class ControlWebAppHeaderAppNavigator : Control, IControlWebAppHeaderAppNavigator
     {
         private readonly List<IControlDropdownItem> _preferences = [];
         private readonly List<IControlDropdownItem> _primary = [];
@@ -48,54 +49,72 @@ namespace WebExpress.WebApp.WebControl
         /// Adds items to the preferences area.
         /// </summary>
         /// <param name="items">The items to add to the preferences area.</param>
-        public void AddPreferences(params IControlDropdownItem[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderAppNavigator AddPreferences(params IControlDropdownItem[] items)
         {
             _preferences.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the preferences area.
         /// </summary>
         /// <param name="item">The item to remove from the preferences area.</param>
-        public void RemovePreference(IControlDropdownItem item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderAppNavigator RemovePreference(IControlDropdownItem item)
         {
             _preferences.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the primary area.
         /// </summary>
         /// <param name="items">The items to add to the primary area.</param>
-        public void AddPrimary(params IControlDropdownItem[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderAppNavigator AddPrimary(params IControlDropdownItem[] items)
         {
             _primary.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the primary area.
         /// </summary>
         /// <param name="item">The item to remove from the primary area.</param>
-        public void RemovePrimary(IControlDropdownItem item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderAppNavigator RemovePrimary(IControlDropdownItem item)
         {
             _primary.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the secondary area.
         /// </summary>
         /// <param name="items">The items to add to the secondary area.</param>
-        public void AddSecondary(params IControlDropdownItem[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderAppNavigator AddSecondary(params IControlDropdownItem[] items)
         {
             _secondary.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the secondary area.
         /// </summary>
         /// <param name="item">The item to remove from the secondary area.</param>
-        public void RemoveSecondary(IControlDropdownItem item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderAppNavigator RemoveSecondary(IControlDropdownItem item)
         {
             _secondary.Remove(item);
+
+            return this;
         }
 
         /// <summary>
@@ -109,21 +128,18 @@ namespace WebExpress.WebApp.WebControl
             var application = renderContext?.PageContext?.ApplicationContext;
             var items = GetItems(renderContext);
 
-            var navigatorCtrl = items.Any() ?
-            (IControl)new ControlDropdown(Id, [.. items])
-            {
-                Image = application?.Icon.ToString(),
-                Height = 50,
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None),
-                Styles = ["padding: 0.5em;"]
-            } :
-            new ControlImage(Id)
-            {
-                Uri = application?.Icon.ToUri(),
-                Height = 50,
-                Padding = new PropertySpacingPadding(PropertySpacing.Space.Two),
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None)
-            };
+            var navigatorCtrl = items.Any()
+                ? (IControl)new ControlDropdown(Id)
+                {
+                    Classes = ["wx-appnavigator"],
+                    Icon = new ImageIcon(application?.Icon.ToUri(), new PropertySizeIcon(1, TypeSizeUnit.Em)),
+                }
+                    .Add(items)
+                : new ControlImage(Id)
+                {
+                    Classes = ["wx-appnavigator"],
+                    Uri = application?.Icon.ToUri()
+                };
 
             return navigatorCtrl?.Render(renderContext, visualTree);
         }
@@ -139,25 +155,25 @@ namespace WebExpress.WebApp.WebControl
 
             var preferences = Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppPreferences>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
             var primary = Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppPrimary>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
             var secondary = Secondary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppSecondary>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
-            if (preferences.Any() && primary.Any() && secondary.Any())
+            if (preferences.Any() || primary.Any() || secondary.Any())
             {
-                yield return new ControlDropdownItemHeader(I18N.Translate(renderContext.Request, application?.ApplicationName));
+                yield return new ControlDropdownItemHeader()
+                {
+                    Text = I18N.Translate(renderContext.Request, application?.ApplicationName)
+                };
             }
 
             foreach (var item in preferences)

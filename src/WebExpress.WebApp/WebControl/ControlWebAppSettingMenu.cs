@@ -29,22 +29,27 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="renderContext">The context in which the control is rendered.</param>
         /// <returns>A collection of dropdown items.</returns>
-        protected override IEnumerable<IControl> GetItems(IRenderControlContext renderContext)
+        protected override IEnumerable<IControlSidebarItem> GetItems(IRenderControlContext renderContext)
         {
             var settinPageManager = WebEx.ComponentHub.SettingPageManager;
             var appicationContext = renderContext.PageContext?.ApplicationContext;
             var settingPageContext = renderContext.PageContext as ISettingPageContext;
             var currentCategory = settingPageContext?.SettingGroup?.SettingCategory;
-            var groups = settinPageManager.GetSettingGroups(renderContext.PageContext?.ApplicationContext, currentCategory);
-            var controls = new List<IControl>();
+            var groups = settinPageManager.GetSettingGroups
+            (
+                renderContext.PageContext?.ApplicationContext,
+                currentCategory
+            );
+            var controls = new List<IControlSidebarItem>();
 
-            foreach (var group in groups.OrderBy(x => x))
+            foreach (var group in groups
+                .Where(x => settinPageManager.GetSettingPages(appicationContext, x).Any())
+                .OrderBy(x => x.Name)
+            )
             {
                 var settingPages = settinPageManager.GetSettingPages(appicationContext, group);
-                var listCtrl = new ControlList(null) { Layout = TypeLayoutList.Flush };
 
-                controls.Add(new ControlText() { Text = group?.Name });
-                controls.Add(listCtrl);
+                controls.Add(new ControlSidebarItemHeader() { Text = group?.Name });
 
                 foreach (var page in settingPages
                     .Where(x => x.Section == SettingSection.Preferences)
@@ -52,10 +57,10 @@ namespace WebExpress.WebApp.WebControl
                 {
                     if (!page.Hide && (!page.Conditions.Any() || page.Conditions.All(x => x.Fulfillment(renderContext.Request))))
                     {
-                        listCtrl.Add(new ControlListItemLink()
+                        controls.Add(new ControlSidebarItemLink()
                         {
                             Text = page.PageTitle,
-                            Icon = page.Icon,
+                            Icon = page.PageIcon,
                             Uri = page?.Route.ToUri(),
                             Active = page == renderContext.PageContext ? TypeActive.Active : TypeActive.None
                         });
@@ -68,10 +73,10 @@ namespace WebExpress.WebApp.WebControl
                 {
                     if (!page.Hide && (!page.Conditions.Any() || page.Conditions.All(x => x.Fulfillment(renderContext.Request))))
                     {
-                        listCtrl.Add(new ControlListItemLink()
+                        controls.Add(new ControlSidebarItemLink()
                         {
                             Text = page.PageTitle,
-                            Icon = page.Icon,
+                            Icon = page.PageIcon,
                             Uri = page?.Route.ToUri(),
                             Active = page == renderContext.PageContext ? TypeActive.Active : TypeActive.None
                         });
@@ -84,10 +89,10 @@ namespace WebExpress.WebApp.WebControl
                 {
                     if (!page.Hide && (!page.Conditions.Any() || page.Conditions.All(x => x.Fulfillment(renderContext.Request))))
                     {
-                        listCtrl.Add(new ControlListItemLink()
+                        controls.Add(new ControlSidebarItemLink()
                         {
                             Text = page.PageTitle,
-                            Icon = page.Icon,
+                            Icon = page.PageIcon,
                             Uri = page?.Route.ToUri(),
                             Active = page == renderContext.PageContext ? TypeActive.Active : TypeActive.None
                         });
@@ -95,20 +100,32 @@ namespace WebExpress.WebApp.WebControl
                 }
             }
 
-            foreach (var item in Header.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionSidebarHeader>
-            (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
-            )))
+            foreach (var item in Header
+                .Concat
+                (
+                    WebEx.ComponentHub.FragmentManager
+                        .GetFragments<IFragmentControlSidebarItem, SectionSidebarHeader>
+                        (
+                            renderContext?.PageContext
+                        )
+                        .OfType<IControlSidebarItem>()
+                )
+            )
             {
                 yield return item;
             }
 
-            foreach (var item in Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionSidebarPreferences>
-            (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
-            )))
+            foreach (var item in Preferences
+                .Concat
+                (
+                    WebEx.ComponentHub.FragmentManager
+                        .GetFragments<IFragmentControlSidebarItem, SectionSidebarPreferences>
+                        (
+                            renderContext?.PageContext
+                        )
+                        .OfType<IControlSidebarItem>()
+                )
+            )
             {
                 yield return item;
             }
@@ -118,20 +135,32 @@ namespace WebExpress.WebApp.WebControl
                 yield return control;
             }
 
-            foreach (var item in Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionSidebarPrimary>
-            (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
-            )))
+            foreach (var item in Primary
+                .Concat
+                (
+                    WebEx.ComponentHub.FragmentManager
+                        .GetFragments<IFragmentControlSidebarItem, SectionSidebarPrimary>
+                        (
+                            renderContext?.PageContext
+                        )
+                        .OfType<IControlSidebarItem>()
+                )
+            )
             {
                 yield return item;
             }
 
-            foreach (var item in Secondary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionSidebarSecondary>
-            (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
-            )))
+            foreach (var item in Secondary
+                .Concat
+                (
+                    WebEx.ComponentHub.FragmentManager
+                        .GetFragments<IFragmentControlSidebarItem, SectionSidebarSecondary>
+                        (
+                            renderContext?.PageContext
+                        )
+                        .OfType<IControlSidebarItem>()
+                )
+            )
             {
                 yield return item;
             }

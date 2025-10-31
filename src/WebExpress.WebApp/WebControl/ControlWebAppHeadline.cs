@@ -13,7 +13,7 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// Headline for an web app.
     /// </summary>
-    public class ControlWebAppHeadline : Control
+    public class ControlWebAppHeadline : Control, IControlWebAppHeadline
     {
         private readonly List<IControl> _prologue = [];
         private readonly List<IControl> _preferences = [];
@@ -49,7 +49,7 @@ namespace WebExpress.WebApp.WebControl
         /// <summary>
         /// Returns the more control.
         /// </summary>
-        public ControlWebAppHeadlineMore More { get; } = new ControlWebAppHeadlineMore("wx-content-main-headline-more")
+        public IControlWebAppHeadlineMore More { get; } = new ControlWebAppHeadlineMore("wx-content-main-headline-more")
         {
         };
 
@@ -66,90 +66,120 @@ namespace WebExpress.WebApp.WebControl
         /// Adds items to the prologue area.
         /// </summary>
         /// <param name="items">The items to add to the prologue area.</param>
-        public void AddPrologue(params IControlToolbarItem[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeadline AddPrologue(params IControl[] items)
         {
             _prologue.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the prologue area.
         /// </summary>
         /// <param name="item">The item to remove from the prologue area.</param>
-        public void RemovePrologue(IControlToolbarItem item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeadline RemovePrologue(IControl item)
         {
             _prologue.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the preferences area.
         /// </summary>
         /// <param name="items">The items to add to the preferences area.</param>
-        public void AddPreferences(params IControlToolbarItem[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeadline AddPreferences(params IControl[] items)
         {
             _preferences.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the preferences area.
         /// </summary>
         /// <param name="item">The item to remove from the preferences area.</param>
-        public void RemovePreference(IControlToolbarItem item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeadline RemovePreference(IControl item)
         {
             _preferences.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the primary area.
         /// </summary>
         /// <param name="items">The items to add to the primary area.</param>
-        public void AddPrimary(params IControlToolbarItem[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeadline AddPrimary(params IControl[] items)
         {
             _primary.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the primary area.
         /// </summary>
         /// <param name="item">The item to remove from the primary area.</param>
-        public void RemovePrimary(IControlToolbarItem item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeadline RemovePrimary(IControl item)
         {
             _primary.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the secondary area.
         /// </summary>
         /// <param name="items">The items to add to the secondary area.</param>
-        public void AddSecondary(params IControlToolbarItem[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeadline AddSecondary(params IControl[] items)
         {
             _secondary.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the secondary area.
         /// </summary>
         /// <param name="item">The item to remove from the secondary area.</param>
-        public void RemoveSecondary(IControlToolbarItem item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeadline RemoveSecondary(IControl item)
         {
             _secondary.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the metadata area.
         /// </summary>
         /// <param name="items">The items to add to the metadata area.</param>
-        public void AddMetadata(params IControlToolbarItem[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeadline AddMetadata(params IControl[] items)
         {
             _metadata.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the metadata area.
         /// </summary>
         /// <param name="item">The item to remove from the metadata area.</param>
-        public void RemoveMetadata(IControlToolbarItem item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeadline RemoveMetadata(IControl item)
         {
             _metadata.Remove(item);
+
+            return this;
         }
 
         /// <summary>
@@ -162,80 +192,78 @@ namespace WebExpress.WebApp.WebControl
         {
             var prologue = Prologue.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionHeadlinePrologue>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
             var preferences = Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionHeadlinePreferences>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
             var primary = Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionHeadlinePrimary>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
             var secondary = Secondary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionHeadlineSecondary>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
             var metadata = Metadata.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionHeadlineMetadata>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
             return new HtmlElementSectionHeader
             (
-                new ControlPanelFlexbox
+                new ControlPanelFlex
                 (
                     null,
-                    prologue.Any() ? new ControlPanelFlexbox(null, [.. prologue])
+                    prologue.Any() ? new ControlPanelFlex(null, [.. prologue])
                     {
-                        Layout = TypeLayoutFlexbox.Default,
-                        Align = TypeAlignFlexbox.Center,
-                        Justify = TypeJustifiedFlexbox.Start
+                        Layout = TypeLayoutFlex.Default,
+                        Align = TypeAlignFlex.Center,
+                        Justify = TypeJustifiedFlex.Start
                     } : null,
                     new ControlText()
                     {
-                        Text = I18N.Translate(renderContext.Request?.Culture, renderContext.PageContext?.PageTitle),
+                        Text = I18N.Translate
+                        (
+                            renderContext,
+                            renderContext.PageContext?.PageTitle
+                        ),
                         Format = TypeFormatText.H2,
-                        Padding = new PropertySpacingPadding(PropertySpacing.Space.One),
                         Margin = new PropertySpacingMargin(PropertySpacing.Space.None, PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.Null)
                     },
-                    preferences.Any() ? new ControlPanelFlexbox(null, [.. preferences])
+                    preferences.Any() ? new ControlPanelFlex(null, [.. preferences])
                     {
-                        Layout = TypeLayoutFlexbox.Default,
-                        Align = TypeAlignFlexbox.Center,
-                        Justify = TypeJustifiedFlexbox.Start
+                        Layout = TypeLayoutFlex.Default,
+                        Align = TypeAlignFlex.Center,
+                        Justify = TypeJustifiedFlex.Start
                     } : null,
-                    primary.Any() ? new ControlPanelFlexbox(null, [.. primary])
+                    primary.Any() ? new ControlPanelFlex(null, [.. primary])
                     {
-                        Layout = TypeLayoutFlexbox.Default,
-                        Align = TypeAlignFlexbox.Center,
-                        Justify = TypeJustifiedFlexbox.Start
+                        Layout = TypeLayoutFlex.Default,
+                        Align = TypeAlignFlex.Center,
+                        Justify = TypeJustifiedFlex.Start
                     } : null,
-                    secondary.Any() ? new ControlPanelFlexbox(null, [.. secondary])
+                    secondary.Any() ? new ControlPanelFlex(null, [.. secondary])
                     {
-                        Layout = TypeLayoutFlexbox.Default,
-                        Align = TypeAlignFlexbox.Center,
-                        Justify = TypeJustifiedFlexbox.End
+                        Layout = TypeLayoutFlex.Default,
+                        Align = TypeAlignFlex.Center,
+                        Justify = TypeJustifiedFlex.End
                     } : null,
                     More
                 )
                 {
-                    Layout = TypeLayoutFlexbox.Default,
-                    Align = TypeAlignFlexbox.Center,
-                    Justify = TypeJustifiedFlexbox.Between
+                    Layout = TypeLayoutFlex.Default,
+                    Align = TypeAlignFlex.Center,
+                    Justify = TypeJustifiedFlex.Between
                 }.Render(renderContext, visualTree),
                 metadata.Any() ? new HtmlElementTextContentDiv
                 (
-                    metadata.Select(x => x.Render(renderContext, visualTree)).ToArray()
+                    [.. metadata.Select(x => x.Render(renderContext, visualTree))]
                 )
                 {
                     Class = Css.Concatenate("ms-2 me-2 mb-3 text-secondary"),

@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using WebExpress.WebApp.WebApiControl;
+﻿using System.Linq;
 using WebExpress.WebApp.WebControl;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebComponent;
@@ -8,7 +6,6 @@ using WebExpress.WebCore.WebEndpoint;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebPage;
 using WebExpress.WebCore.WebTheme;
-using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
@@ -32,7 +29,7 @@ namespace WebExpress.WebApp.WebPage
         /// <summary>
         /// Returns the area for the toast messages control.
         /// </summary>
-        public ControlPanelToast Toast { get; protected set; } = new ControlPanelToast("wx-toast");
+        public ControlWebAppToastnotification Toast { get; protected set; } = new ControlWebAppToastnotification("wx-toast");
 
         /// <summary>
         /// Returns the range for the path specification.
@@ -42,33 +39,28 @@ namespace WebExpress.WebApp.WebPage
         /// <summary>
         /// Returns the area for prologue.
         /// </summary>
-        public ControlPanel Prologue { get; protected set; } = new ControlPanel("wx-prologue");
-
-        ///// <summary>
-        ///// Returns the range for the search options control.
-        ///// </summary>
-        //public ControlPanel SearchOptions { get; protected set; } = new ControlPanel("wx-searchoptions");
+        public ControlWebAppPrologue Prologue { get; protected set; } = new ControlWebAppPrologue("wx-prologue");
 
         /// <summary>
         /// Returns the sidebar control.
         /// </summary>
-        public ControlWebAppSidebar Sidebar { get; protected set; } = new ControlWebAppSidebar("wx-sidebar");
+        public IControlWebAppSidebar Sidebar { get; protected set; } = new ControlWebAppSidebar("wx-sidebar");
 
 
         /// <summary>
         /// Returns the content control.
         /// </summary>
-        public new ControlWebAppContent Content { get; protected set; } = new ControlWebAppContent("wx-content");
+        public new IControlWebAppContent Content { get; protected set; } = new ControlWebAppContent("wx-content");
 
         /// <summary>
         /// Returns the footer control.
         /// </summary>
-        public ControlWebAppFooter Footer { get; protected set; } = new ControlWebAppFooter("wx-footer");
+        public IControlWebAppFooter Footer { get; protected set; } = new ControlWebAppFooter("wx-footer");
 
         /// <summary>
         /// Returns the control for displaying notification popups via API.
         /// </summary>
-        public ControlApiNotificationPopup NotificationPopup { get; protected set; } = new ControlApiNotificationPopup("wx-notificationpopup");
+        public ControlRestPopupNotification NotificationPopup { get; protected set; } = new ControlRestPopupNotification("wx-notificationpopup");
 
         /// <summary>
         /// Initializes a new instance of the class.
@@ -79,23 +71,16 @@ namespace WebExpress.WebApp.WebPage
             : base(componentHub, pageContext)
         {
             var applicationContext = pageContext?.ApplicationContext;
+            var baseUri = RouteEndpoint.Combine(applicationContext?.Route, "webexpress.webapp/assets");
 
             Header.Fixed = TypeFixed.Top;
-            Header.Styles = new List<string>(["position: sticky; top: 0; z-index: 99;"]);
+            Header.Styles = ["position: sticky; top: 0; z-index: 99;"];
 
-            Breadcrumb.Uri = pageContext?.Route.ToUri();
+            Breadcrumb.Uri = pageContext?.Route?.ToUri();
             Breadcrumb.Margin = new PropertySpacingMargin(PropertySpacing.Space.Null);
             Content.Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None);
 
-            AddCssLink(RouteEndpoint.Combine(applicationContext?.ContextPath, "/assets/css/webexpress.webapp.css"));
-            AddCssLink(RouteEndpoint.Combine(applicationContext?.ContextPath, "/assets/css/webexpress.webapp.popupnotification.css"));
-            AddCssLink(RouteEndpoint.Combine(applicationContext?.ContextPath, "/assets/css/webexpress.webapp.taskprogressbar.css"));
-            AddCssLink(Theme?.ThemeStyle.ToString() ?? RouteEndpoint.Combine(applicationContext?.ContextPath, "/assets/css/webexpress.webapp.theme.css"));
-            AddHeaderScriptLink(RouteEndpoint.Combine(applicationContext?.ContextPath, "assets/js/webexpress.webapp.js"));
-            AddHeaderScriptLink(RouteEndpoint.Combine(applicationContext?.ContextPath, "assets/js/webexpress.webapp.popupnotification.js"));
-            AddHeaderScriptLink(RouteEndpoint.Combine(applicationContext?.ContextPath, "assets/js/webexpress.webapp.selection.js"));
-            AddHeaderScriptLink(RouteEndpoint.Combine(applicationContext?.ContextPath, "assets/js/webexpress.webapp.table.js"));
-            AddHeaderScriptLink(RouteEndpoint.Combine(applicationContext?.ContextPath, "assets/js/webexpress.webapp.taskprogressbar.js"));
+            AddCssLink(Theme?.ThemeStyle.ToString() ?? RouteEndpoint.Combine(baseUri, "css/webexpress.webapp.theme.css"));
         }
 
         /// <summary>
@@ -110,6 +95,7 @@ namespace WebExpress.WebApp.WebPage
             var renderContext = new RenderControlContext(context.RenderContext);
             html.Head.Title = I18N.Translate(context.Request, Title);
             html.Head.Favicons = Favicons;
+            html.Head.Base = Base?.ToString();
             html.Head.Styles = Styles;
             html.Head.Meta = Meta;
             html.Head.Scripts = HeaderScripts;
@@ -117,7 +103,7 @@ namespace WebExpress.WebApp.WebPage
             html.Head.ScriptLinks = HeaderScriptLinks?.Where(x => x != null).Select(x => x.ToString());
 
             // header
-            Header.AppTitle.Text = html.Head.Title;
+            Header.AppTitle.SetTitle(html.Head.Title);
             if (Theme?.ThemeMode == ThemeMode.Dark)
             {
                 html.Body.AddUserAttribute("data-bs-theme", "dark");
@@ -136,11 +122,16 @@ namespace WebExpress.WebApp.WebPage
             {
                 Border = new PropertyBorder(true),
                 Orientation = TypeOrientationSplit.Horizontal,
-                Panel1InitialSize = 20,
-                Panel1MinSize = 150
+                SidePanelInitialSize = 350,
+                SidePanelMinSize = 45
             };
 
-            html.Body.Add(split.Render(renderContext, this));
+            html.Body.Add
+            (
+                split.Render(renderContext, this)
+                    .AddUserAttribute("data-wx-toggle", "split")
+                    .AddUserAttribute("data-wx-target", $"#wx-split-button-toggle")
+            );
             html.Body.Add(Footer.Render(renderContext, this));
             html.Body.Add(NotificationPopup.Render(renderContext, this));
 

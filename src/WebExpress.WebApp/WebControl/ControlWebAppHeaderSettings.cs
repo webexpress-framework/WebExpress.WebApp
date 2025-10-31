@@ -15,7 +15,7 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// Settings controls for a web app.
     /// </summary>
-    public class ControlWebAppHeaderSettings : Control
+    public class ControlWebAppHeaderSettings : Control, IControlWebAppHeaderSettings
     {
         private readonly List<IControlDropdownItem> _preferences = [];
         private readonly List<IControlDropdownItem> _primary = [];
@@ -50,54 +50,72 @@ namespace WebExpress.WebApp.WebControl
         /// Adds items to the preferences area.
         /// </summary>
         /// <param name="items">The items to add to the preferences area.</param>
-        public void AddPreferences(params IControlDropdownItem[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderSettings AddPreferences(params IControlDropdownItem[] items)
         {
             _preferences.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the preferences area.
         /// </summary>
         /// <param name="item">The item to remove from the preferences area.</param>
-        public void RemovePreference(IControlDropdownItem item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderSettings RemovePreference(IControlDropdownItem item)
         {
             _preferences.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the primary area.
         /// </summary>
         /// <param name="items">The items to add to the primary area.</param>
-        public void AddPrimary(params IControlDropdownItem[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderSettings AddPrimary(params IControlDropdownItem[] items)
         {
             _primary.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the primary area.
         /// </summary>
         /// <param name="item">The item to remove from the primary area.</param>
-        public void RemovePrimary(IControlDropdownItem item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderSettings RemovePrimary(IControlDropdownItem item)
         {
             _primary.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the secondary area.
         /// </summary>
         /// <param name="items">The items to add to the secondary area.</param>
-        public void AddSecondary(params IControlDropdownItem[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderSettings AddSecondary(params IControlDropdownItem[] items)
         {
             _secondary.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the secondary area.
         /// </summary>
         /// <param name="item">The item to remove from the secondary area.</param>
-        public void RemoveSecondary(IControlDropdownItem item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppHeaderSettings RemoveSecondary(IControlDropdownItem item)
         {
             _secondary.Remove(item);
+
+            return this;
         }
 
         /// <summary>
@@ -110,15 +128,22 @@ namespace WebExpress.WebApp.WebControl
         {
             var items = GetItems(renderContext);
 
-            var settingCtlr = items.Any() ?
-            new ControlDropdown(Id, [.. items])
-            {
-                Icon = new IconCog(),
-                AlignmentMenu = TypeAlignmentDropdownMenu.Right,
-                BackgroundColor = new PropertyColorButton(TypeColorButton.Dark),
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None)
-            } :
-            null;
+            var settingCtlr = items.Any()
+                ? new ControlDropdown(Id)
+                {
+                    Classes = ["wx-app-dropdown"],
+                    Icon = new IconCog(),
+                    AlignmentMenu = TypeAlignmentDropdownMenu.Right,
+                    Margin = new PropertySpacingMargin
+                    (
+                        PropertySpacing.Space.Two,
+                        PropertySpacing.Space.None,
+                        PropertySpacing.Space.None,
+                        PropertySpacing.Space.None
+                    )
+                }
+                    .Add(items)
+                : null;
 
             return settingCtlr?.Render(renderContext, visualTree);
         }
@@ -134,6 +159,7 @@ namespace WebExpress.WebApp.WebControl
             var appicationContext = renderContext.PageContext?.ApplicationContext;
             var preferenceCategories = settinPageManager?.GetSettingCategories(appicationContext)
                 .Where(x => x.Section == SettingSection.Preferences)
+                .Where(x => settinPageManager.GetSettingPages(appicationContext, x).Any())
                 .Select
                 (
                     x => new ControlDropdownItemLink()
@@ -145,6 +171,7 @@ namespace WebExpress.WebApp.WebControl
                 );
             var primaryCategories = settinPageManager?.GetSettingCategories(appicationContext)
                 .Where(x => x.Section == SettingSection.Primary)
+                .Where(x => settinPageManager.GetSettingPages(appicationContext, x).Any())
                 .Select
                 (
                     x => new ControlDropdownItemLink()
@@ -156,6 +183,7 @@ namespace WebExpress.WebApp.WebControl
                 );
             var secondaryCategories = settinPageManager?.GetSettingCategories(appicationContext)
                 .Where(x => x.Section == SettingSection.Secondary)
+                .Where(x => settinPageManager.GetSettingPages(appicationContext, x).Any())
                 .Select
                 (
                     x => new ControlDropdownItemLink()
@@ -168,25 +196,25 @@ namespace WebExpress.WebApp.WebControl
 
             var preferences = Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppSettingsPreferences>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
             var primary = Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppSettingsPrimary>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
             var secondary = Secondary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppSettingsSecondary>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
             if (preferences.Any() || primary.Any() || secondary.Any() || preferenceCategories.Any())
             {
-                yield return new ControlDropdownItemHeader(I18N.Translate(renderContext.Request, "webexpress.webapp:header.setting.label"));
+                yield return new ControlDropdownItemHeader()
+                {
+                    Text = I18N.Translate(renderContext.Request, "webexpress.webapp:header.setting.label")
+                };
             }
 
             foreach (var item in preferenceCategories)

@@ -47,6 +47,7 @@ namespace WebExpress.WebApp.WebSettingPage
             var renderContext = new RenderControlContext(context.RenderContext);
 
             Breadcrumb.Prefix = "webexpress.webapp:setting.label";
+            Breadcrumb.TakeLast = 1;
 
             html.Head.Title = I18N.Translate(context.Request, Title);
             html.Head.Favicons = Favicons;
@@ -57,7 +58,7 @@ namespace WebExpress.WebApp.WebSettingPage
             html.Head.ScriptLinks = HeaderScriptLinks?.Where(x => x != null).Select(x => x.ToString());
 
             // header
-            Header.AppTitle.Text = html.Head.Title;
+            Header.AppTitle.SetTitle(html.Head.Title);
             html.Body.Add(Header.Render(renderContext, this));
             html.Body.Add(Toast.Render(renderContext, this));
             html.Body.Add(Breadcrumb.Render(renderContext, this));
@@ -73,11 +74,16 @@ namespace WebExpress.WebApp.WebSettingPage
             {
                 Border = new PropertyBorder(true),
                 Orientation = TypeOrientationSplit.Horizontal,
-                Panel1InitialSize = 20,
-                Panel1MinSize = 150
+                SidePanelInitialSize = 350,
+                SidePanelMinSize = 45
             };
 
-            html.Body.Add(split.Render(renderContext, this));
+            html.Body.Add
+            (
+                split.Render(renderContext, this)
+                    .AddUserAttribute("data-wx-toggle", "split")
+                    .AddUserAttribute("data-wx-target", $"#wx-split-button-toggle")
+            );
             html.Body.Add(Footer.Render(renderContext, this));
             html.Body.Add(NotificationPopup.Render(renderContext, this));
 

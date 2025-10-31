@@ -14,14 +14,14 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the id property of the web app header navigation control.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div class=""p-0"">*</div>")]
-        [InlineData("id", @"<div id=""id"" class=""p-0"">*</div>")]
+        [InlineData(null, @"<div class=""wx-webui-overflow wx-appnavigation p-0""></div>")]
+        [InlineData("id", @"<div id=""id"" class=""wx-webui-overflow wx-appnavigation p-0""></div>")]
         public void Id(string id, string expected)
         {
             // preconditions
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
-            var context = UnitTestControlFixture.CrerateRenderContextMock(application);
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlWebAppHeaderAppNavigation(id)
             {

@@ -10,9 +10,10 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Represents a control for managing web application properties, including preferences, primary, and secondary areas.
+    /// Represents a control for managing web application properties, 
+    /// including preferences, primary, and secondary areas.
     /// </summary>
-    public class ControlWebAppProperty : Control
+    public class ControlWebAppProperty : Control, IControlWebAppProperty
     {
         private readonly List<IControl> _preferences = [];
         private readonly List<IControl> _primary = [];
@@ -46,54 +47,72 @@ namespace WebExpress.WebApp.WebControl
         /// Adds items to the preferences area.
         /// </summary>
         /// <param name="items">The items to add to the preferences area.</param>
-        public void AddPreferences(params IControl[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppProperty AddPreferences(params IControl[] items)
         {
             _preferences.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the preferences area.
         /// </summary>
         /// <param name="item">The item to remove from the preferences area.</param>
-        public void RemovePreference(IControl item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppProperty RemovePreference(IControl item)
         {
             _preferences.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the primary area.
         /// </summary>
         /// <param name="items">The items to add to the primary area.</param>
-        public void AddPrimary(params IControl[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppProperty AddPrimary(params IControl[] items)
         {
             _primary.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the primary area.
         /// </summary>
         /// <param name="item">The item to remove from the primary area.</param>
-        public void RemovePrimary(IControl item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppProperty RemovePrimary(IControl item)
         {
             _primary.Remove(item);
+
+            return this;
         }
 
         /// <summary>
         /// Adds items to the secondary area.
         /// </summary>
         /// <param name="items">The items to add to the secondary area.</param>
-        public void AddSecondary(params IControl[] items)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppProperty AddSecondary(params IControl[] items)
         {
             _secondary.AddRange(items);
+
+            return this;
         }
 
         /// <summary>
         /// Removes an item from the secondary area.
         /// </summary>
         /// <param name="item">The item to remove from the secondary area.</param>
-        public void RemoveSecondary(IControl item)
+        /// <returns>The current instance for method chaining.</returns>
+        public IControlWebAppProperty RemoveSecondary(IControl item)
         {
             _secondary.Remove(item);
+
+            return this;
         }
 
         /// <summary>
@@ -106,20 +125,17 @@ namespace WebExpress.WebApp.WebControl
         {
             var preferences = Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionPropertyPreferences>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
             var primary = Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionPropertyPrimary>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
             var secondary = Secondary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionPropertySecondary>
             (
-                renderContext?.PageContext?.ApplicationContext,
-                renderContext?.PageContext?.Scopes
+                renderContext?.PageContext
             ));
 
             if (!preferences.Any() && !primary.Any() && !secondary.Any())
@@ -127,20 +143,15 @@ namespace WebExpress.WebApp.WebControl
                 return null;
             }
 
-            var propertyCtlr = (preferences.Any() || primary.Any() || secondary.Any()) ?
-            new ControlPanelFlexbox
-            (
-                Id,
-                new ControlPanel(null, [.. preferences]),
-                new ControlPanel(null, [.. primary]),
-                new ControlPanel(null, [.. secondary])
-            )
-            {
-                Classes = ["proterty"],
-                //BackgroundColor = new PropertyColorButton(TypeColorButton.Dark),
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None)
-            } :
-            null;
+            var propertyCtlr = (preferences.Any() || primary.Any() || secondary.Any())
+                ? new ControlPanelFlex(Id)
+                {
+                    Classes = ["wx-proterty"]
+                }
+                    .Add(preferences)
+                    .Add(primary)
+                    .Add(secondary)
+                : null;
 
             return propertyCtlr?.Render(renderContext, visualTree);
         }

@@ -1,8 +1,8 @@
 ﻿using System.Runtime.CompilerServices;
 using WebExpress.WebCore.WebAttribute;
 
-[assembly: SystemPlugin()]
-[assembly: InternalsVisibleTo("WebExpress.WebUI.Test")]
+[assembly: SystemPlugin("WebExpress.WebUI")]
+[assembly: InternalsVisibleTo("WebExpress.WebApp.Test")]
 
 namespace WebExpress.WebApp
 {

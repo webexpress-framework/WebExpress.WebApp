@@ -20,7 +20,7 @@ namespace WebExpress.WebApp.Test.WebControl
         {
             // preconditions
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
-            var context = UnitTestControlFixture.CrerateRenderContextMock(componentHub?.ApplicationManager.Applications.FirstOrDefault());
+            var context = UnitTestControlFixture.CreateRenderContextMock(componentHub?.ApplicationManager.Applications.FirstOrDefault());
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlWebAppHeaderAppTitle(id)
             {

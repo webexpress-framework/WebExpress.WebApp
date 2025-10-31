@@ -14,14 +14,14 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the id property of the web app content control.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div class=""wx-content m-2"">*</div>")]
-        [InlineData("id", @"<div id=""id"" class=""wx-content m-2"">*</div>")]
+        [InlineData(null, @"<div class=""wx-content"">*</div>")]
+        [InlineData("id", @"<div id=""id"" class=""wx-content"">*</div>")]
         public void Id(string id, string expected)
         {
             // preconditions
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
-            var context = UnitTestControlFixture.CrerateRenderContextMock(application);
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlWebAppContent(id)
             {
@@ -30,6 +30,7 @@ namespace WebExpress.WebApp.Test.WebControl
             // test execution
             var html = control.Render(context, visualTree);
 
+            // validation
             AssertExtensions.EqualWithPlaceholders(expected, html);
         }
     }

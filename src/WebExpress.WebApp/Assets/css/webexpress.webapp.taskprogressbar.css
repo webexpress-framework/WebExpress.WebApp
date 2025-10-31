@@ -1,5 +1,5 @@
-.taskprogressbar {
+.wx-taskprogressbar {
 }
-    .taskprogressbar > .progress {
+    .wx-taskprogressbar > .progress {
         margin-bottom: 1em;
     }

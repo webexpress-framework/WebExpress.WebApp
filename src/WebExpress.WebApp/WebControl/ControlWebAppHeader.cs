@@ -8,7 +8,7 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// Header for a web app.
     /// </summary>
-    public class ControlWebAppHeader : Control
+    public class ControlWebAppHeader : Control, IControlWebAppHeader
     {
         /// <summary>
         /// Returns or sets the text color.
@@ -40,51 +40,49 @@ namespace WebExpress.WebApp.WebControl
         /// <summary>
         /// Returns or sets the application navigator.
         /// </summary>
-        public ControlWebAppHeaderAppNavigator AppNavigator { get; } = new ControlWebAppHeaderAppNavigator("wx-header-appnavigator")
+        public IControlWebAppHeaderAppNavigator AppNavigator { get; } = new ControlWebAppHeaderAppNavigator("wx-header-appnavigator")
         {
         };
 
         /// <summary>
         /// Returns or setss the name of the application.
         /// </summary>
-        public ControlWebAppHeaderAppTitle AppTitle { get; } = new ControlWebAppHeaderAppTitle("wx-header-apptitle")
+        public IControlWebAppHeaderAppTitle AppTitle { get; } = new ControlWebAppHeaderAppTitle("wx-header-apptitle")
         {
         };
 
         /// <summary>
         /// Returns or sets the navigation of the application.
         /// </summary>
-        public ControlWebAppHeaderAppNavigation AppNavigation { get; } = new ControlWebAppHeaderAppNavigation("wx-header-appnavigation")
+        public IControlWebAppHeaderAppNavigation AppNavigation { get; } = new ControlWebAppHeaderAppNavigation("wx-header-appnavigation")
         {
-            Layout = TypeLayoutFlexbox.Inline,
-            Justify = TypeJustifiedFlexbox.Start
         };
 
         /// <summary>
         /// Returns or sets the quick create.
         /// </summary>
-        public ControlWebAppHeaderQuickCreate QuickCreate { get; } = new ControlWebAppHeaderQuickCreate("wx-header-quickcreate")
+        public IControlWebAppHeaderQuickCreate QuickCreate { get; } = new ControlWebAppHeaderQuickCreate("wx-header-quickcreate")
         {
         };
 
         /// <summary>
         /// Returns or sets the navigation of the application helpers.
         /// </summary>
-        public ControlWebAppHeaderHelp Help { get; } = new ControlWebAppHeaderHelp("wx-header-help")
+        public IControlWebAppHeaderHelp Help { get; } = new ControlWebAppHeaderHelp("wx-header-help")
         {
         };
 
         /// <summary>
         /// Returns or sets the navigation of the application helpers.
         /// </summary>
-        public ControlWebAppHeaderNotification Notifications { get; } = new ControlWebAppHeaderNotification("wx-header-notifications")
+        public IControlWebAppHeaderNotification Notifications { get; } = new ControlWebAppHeaderNotification("wx-header-notifications")
         {
         };
 
         /// <summary>
         /// Returns or sets the navigation of the application settings.
         /// </summary>
-        public ControlWebAppHeaderSettings Settings { get; } = new ControlWebAppHeaderSettings("wx-header-settings")
+        public IControlWebAppHeaderSettings Settings { get; } = new ControlWebAppHeaderSettings("wx-header-settings")
         {
         };
 
@@ -108,22 +106,19 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            var content = new ControlPanelFlexbox
-            (
-                null,
-                AppNavigator,
-                AppTitle,
-                AppNavigation,
-                QuickCreate,
-                new ControlPanel() { Margin = new PropertySpacingMargin(PropertySpacing.Space.Auto, PropertySpacing.Space.None) },
-                Help,
-                Notifications,
-                Settings
-            )
+            var content = new ControlPanelFlex()
             {
-                Layout = TypeLayoutFlexbox.Default,
-                Align = TypeAlignFlexbox.Center
-            };
+                Layout = TypeLayoutFlex.Default,
+                Align = TypeAlignFlex.Center
+            }
+             .Add(AppNavigator)
+             .Add(AppTitle)
+             .Add(AppNavigation)
+             .Add(QuickCreate)
+             .Add(new ControlPanel() { Margin = new PropertySpacingMargin(PropertySpacing.Space.Auto, PropertySpacing.Space.None) })
+             .Add(Help)
+             .Add(Notifications)
+             .Add(Settings);
 
             return new HtmlElementSectionHeader(content.Render(renderContext, visualTree))
             {

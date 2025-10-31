@@ -11,9 +11,96 @@ main {
     flex-grow: 1;
 }
 
+.wx-appnavigator {
+    height: 3vw;
+    min-height: 2em;
+    max-height: 3em;
+}
+
+.wx-appnavigator > button {
+    padding: 0;
+}
+
+.wx-appnavigator > button > img {
+    height: 3vw;
+    min-height: 2em;
+    max-height: 3em;
+}
+
+.wx-appnavigation {
+    font-size: clamp(0.8em, 1.3vw, 1em);
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    flex: 1;
+    gap: clamp(0.2em, 0.5vw, 0.5em);
+}
+
+.wx-appnavigation > *:not(.wx-overflow-menu):not(.dropdown-menu):not(.wx-dropdown) {
+    padding-left: clamp(0.2em, 1vw, 1em);
+    padding-right: clamp(0.2em, 1vw, 1em);
+    padding-top: 0.5em;
+    padding-bottom: 0.5em;
+    border-radius: 0.2em;
+    color: unset;
+}
+
+.wx-appnavigation > .wx-overflow-menu:hover {
+    background: var(--bs-body-bg);
+}
+
+.wx-appnavigation > .wx-overflow-menu > .btn {
+    color: unset;
+}
+
+.wx-appnavigation > .wx-dropdown {
+    padding: 0;
+}
+
+.wx-appnavigation > .wx-dropdown > button {
+    color: unset;
+}
+
+.wx-appnavigation > .wx-dropdown > .dropdown-menu[data-bs-popper] {
+    left: unset;
+}
+
+.wx-appnavigation .wx-overflow-menu-item {
+    color: rgba(var(--bs-link-color-rgb), var(--bs-link-opacity, 1));
+}
+
+.wx-app-dropdown {
+    border-radius: 0.2em;
+}
+
+.wx-app-dropdown > .btn {
+    color: unset;
+    border-radius: inherit;
+    border: unset;
+}
+
+.wx-toast {
+    font-size: clamp(0.8em, 0.9vw, 1em);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: nowrap;
+    gap: 0.5em;
+    border-radius: 0;
+    margin: 0;
+    padding: clamp(0.2em, 0.3vw, 0.5em);
+}
+
 .wx-sidebar {
-    overflow: auto;
     min-height: 100%;
+}
+
+.wx-main-pane {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: flex-start;
+    overflow: auto;
 }
 
 .wx-proterty {
@@ -25,11 +112,16 @@ main {
 }
 
 .wx-content {
-    flex: auto;
-    display: flex;
-    flex-direction: column;
+    width: 100%;
     flex-grow: 1;
 }
 
+.wx-proterty {
+    height: 100%;
+    padding: 0.5em;
+}
+
 .wx-footer {
+    display: flex;
+    justify-content: space-between;
 }

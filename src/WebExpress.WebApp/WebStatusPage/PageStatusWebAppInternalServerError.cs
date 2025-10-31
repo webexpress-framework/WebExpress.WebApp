@@ -1,36 +1,25 @@
-﻿//using WebExpress.WebCore.Internationalization;
-//using WebExpress.WebCore.WebAttribute;
-//using WebExpress.WebCore.WebMessage;
-//using WebExpress.WebCore.WebResource;
+﻿using WebExpress.WebCore.WebAttribute;
+using WebExpress.WebCore.WebMessage;
+using WebExpress.WebCore.WebStatusPage;
 
-//namespace WebExpress.WebApp.WebStatusPage
-//{
-//    /// <summary>
-//    /// The status page 500.
-//    /// </summary>
-//    [StatusCode(500)]
-//    [Default]
-//    public sealed class PageStatusWebAppInternalServerError : PageStatusWebApp<ResponseInternalServerError>
-//    {
-//        /// <summary>
-//        /// Initializes a new instance of the class.
-//        /// </summary>
-//        public PageStatusWebAppInternalServerError()
-//        {
-
-//        }
-
-//        /// <summary>
-//        /// Initialization
-//        /// </summary>
-//        /// <param name="context">The context.</param>
-//        public override void Initialization(IResourceContext context)
-//        {
-//            base.Initialization(context);
-
-//            StatusTitle = this.I18N("webexpress.webapp", "status.500.title");
-
-//            Title = $"{StatusCode} - {StatusTitle}";
-//        }
-//    }
-//}
+namespace WebExpress.WebApp.WebStatusPage
+{
+    /// <summary>
+    /// The status page 500.
+    /// </summary>
+    [Title("webexpress.webapp:status.500.title")]
+    [Description("webexpress.webapp:status.500.description")]
+    [StatusResponse<ResponseInternalServerError>()]
+    public sealed class PageStatusWebAppInternalServerError : PageStatusWebApp
+    {
+        /// <summary>
+        /// Initializes a new instance of the class.
+        /// </summary>
+        /// <param name="statusPageContext">The context of the status page.</param>
+        /// <param name="statusMessage">The status message.</param>
+        private PageStatusWebAppInternalServerError(IStatusPageContext statusPageContext, StatusMessage statusMessage)
+            : base(statusPageContext, statusMessage)
+        {
+        }
+    }
+}

@@ -14,14 +14,14 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the id property of the web app header app navigator control.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div class=""dropdown mx-2"">*</div>")]
-        [InlineData("id", @"<div id=""id"" class=""dropdown mx-2"">*</div>")]
+        [InlineData(null, @"<div class=""wx-webui-dropdown wx-appnavigator"" role=""button"" data-image=""/server/app/assets/img/Logo.png""><div class=""wx-dropdown-header"" role=""heading"">TestApplication</div><div id=""webexpress.webapp.test.testfragmentsectionapppreferencesitem"" class=""wx-dropdown-item"">TestFragmentSectionAppPreferencesItem</div></div>")]
+        [InlineData("id", @"<div id=""id"" class=""wx-webui-dropdown wx-appnavigator"" role=""button"" data-image=""/server/app/assets/img/Logo.png""><div class=""wx-dropdown-header"" role=""heading"">TestApplication</div><div id=""webexpress.webapp.test.testfragmentsectionapppreferencesitem"" class=""wx-dropdown-item"">TestFragmentSectionAppPreferencesItem</div></div>")]
         public void Id(string id, string expected)
         {
             // preconditions
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
-            var context = UnitTestControlFixture.CrerateRenderContextMock(application);
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlWebAppHeaderAppNavigator(id)
             {

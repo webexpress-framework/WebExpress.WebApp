@@ -1,20 +1,20 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
+	<PropertyGroup>
 		<OutputType>Library</OutputType>
 		<Title>WebExpress.WebApp</Title>
-		<Version>0.0.8.0</Version>
-		<AssemblyVersion>0.0.8.0</AssemblyVersion>
+		<Version>0.0.9.0</Version>
+		<AssemblyVersion>0.0.9.0</AssemblyVersion>
 		<TargetFramework>net9.0</TargetFramework>
 		<RuntimeIdentifiers>any</RuntimeIdentifiers>
 		<RepositoryUrl>https://github.com/ReneSchwarzer/WebExpress.WebApp</RepositoryUrl>
-		<Authors>Rene_Schwarzer@hotmail.de</Authors>
+		<Authors>webexpress-framework@outlook.com</Authors>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
-		<Company>Rene_Schwarzer@hotmail.de</Company>
+		<Company>webexpress-framework@outlook.com</Company>
 		<EnableDynamicLoading>true</EnableDynamicLoading>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<Description>Provide a business application template for the WebExpress web server.</Description>
-		<PackageVersion>0.0.8-alpha</PackageVersion>
+		<PackageVersion>0.0.9-alpha</PackageVersion>
 		<PackageProjectUrl>https://github.com/ReneSchwarzer/WebExpress</PackageProjectUrl>
 		<PackageIcon>icon.png</PackageIcon>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
@@ -24,53 +24,37 @@
 		<IsPackable>true</IsPackable>
 	</PropertyGroup>
 
-  <ItemGroup>
-    <Compile Remove="WebAttribute\**" />
-    <EmbeddedResource Remove="WebAttribute\**" />
-    <None Remove="WebAttribute\**" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Remove="Assets\css\webexpress.webapp.theme.css" />
-  </ItemGroup>
+	<ItemGroup>
+		<EmbeddedResource Include="Assets/**/*.*">
+			<LogicalName>$(MSBuildProjectName).Assets.%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+		</EmbeddedResource>
+	</ItemGroup>
 
 	<ItemGroup>
-		<EmbeddedResource Include="Assets\css\webexpress.webapp.css" />
-		<EmbeddedResource Include="Assets\css\webexpress.webapp.popupnotification.css" />
-		<EmbeddedResource Include="Assets\css\webexpress.webapp.taskprogressbar.css" />
-		<EmbeddedResource Include="Assets\css\webexpress.webapp.theme.css" />
-		<EmbeddedResource Include="Assets\js\webexpress.webapp.popupnotification.js" />
-		<EmbeddedResource Include="Assets\js\webexpress.webapp.table.js" />
-		<EmbeddedResource Include="Assets\js\webexpress.webapp.selection.js" />
-		<EmbeddedResource Include="Assets\js\webexpress.webapp.js" />
-		<EmbeddedResource Include="Assets\js\webexpress.webapp.taskprogressbar.js" />
 		<EmbeddedResource Include="Internationalization\de" />
 		<EmbeddedResource Include="Internationalization\en" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<Resource Include="Assets\js\webexpress.webapp.js" />
+		<None Include="..\..\icon.png" Link="icon.png">
+			<PackagePath>\</PackagePath>
+			<Pack>True</Pack>
+		</None>
+		<None Include="..\..\README.md" Link="README.md">
+			<PackagePath>\</PackagePath>
+			<Pack>True</Pack>
+		</None>
 	</ItemGroup>
 
-	<ItemGroup>
-	  <None Include="..\..\icon.png" Link="icon.png">
-	    <PackagePath>\</PackagePath>
-	    <Pack>True</Pack>
-	  </None>
-	  <None Include="..\..\README.md" Link="README.md">
-	    <PackagePath>\</PackagePath>
-	    <Pack>True</Pack>
-	  </None>
+	<ItemGroup Condition="'$(Configuration)' != 'DebugLocal'">
+		<PackageReference Include="WebExpress.WebUI" Version="0.0.9-alpha" />
+		<PackageReference Include="WebExpress.WebIndex" Version="0.0.9-alpha" />
 	</ItemGroup>
 
-	<ItemGroup>
-	  <PackageReference Include="WebExpress.WebCore" Version="0.0.8-alpha" />
-	  <PackageReference Include="WebExpress.WebUI" Version="0.0.8-alpha" />
-	  <PackageReference Include="WebExpress.WebIndex" Version="0.0.8-alpha" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Folder Include="WebComponent\" />
+	<ItemGroup Condition="'$(Configuration)' == 'DebugLocal'">
+		<ProjectReference Include="..\..\..\WebExpress.WebCore\src\WebExpress.WebCore\WebExpress.WebCore.csproj" />
+		<ProjectReference Include="..\..\..\WebExpress.WebUI\src\WebExpress.WebUI\WebExpress.WebUI.csproj" />
+		<ProjectReference Include="..\..\..\WebExpress.WebIndex\src\WebExpress.WebIndex\WebExpress.WebIndex.csproj" />
 	</ItemGroup>
 
 </Project>
