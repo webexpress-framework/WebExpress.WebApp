@@ -4,9 +4,9 @@ using System.Text.Json.Serialization;
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Represents a lightweight DTO for dropdown entries returned by a REST endpoint.
+    /// Represents a lightweight DTO for selection entries returned by a REST endpoint.
     /// </summary>
-    public class RestApiCrudDropdownItem
+    public class RestApiCrudSelectionItem
     {
         /// <summary>
         /// Returns or sets the unique item identifier.

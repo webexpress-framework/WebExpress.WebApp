@@ -190,12 +190,55 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
             };
 
             if (this._httpMethod === "GET") {
+                // build query string and mark request as dropdown
+                const params = new URLSearchParams();
+
+                // keep original query param for compatibility
+                params.set(this._queryParam, term || "");
+
+                // provide canonical dropdown search param
+                params.set("q", term || "");
+
+                // mark dropdown mode explicitly
+                params.set("mode", "dropdown");
+
+                // support dropdown paging hints
+                if (typeof this._page === "number" && this._page >= 0) {
+                    params.set("page", String(this._page));
+                }
+                if (typeof this._pageSize === "number" && this._pageSize > 0) {
+                    // use pageSize if provided
+                    params.set("pageSize", String(this._pageSize));
+                } else if (typeof this._max === "number" && this._max > 0) {
+                    // use max synonym if configured
+                    params.set("max", String(this._max));
+                }
+
                 const hasQuery = url.includes("?");
-                const qp = encodeURIComponent(this._queryParam) + "=" + encodeURIComponent(term || "");
-                url = url + (hasQuery ? "&" : "?") + qp;
+                url = url + (hasQuery ? "&" : "?") + params.toString();
             } else if (this._httpMethod === "POST") {
+                // send json body and mark request as dropdown
                 init.headers["Content-Type"] = "application/json";
-                init.body = JSON.stringify({ [this._queryParam]: term || "" });
+                const body = {
+                    // keep original query param for compatibility
+                    [this._queryParam]: term || "",
+                    // canonical dropdown search param
+                    q: term || "",
+                    // explicit dropdown selector
+                    mode: "dropdown"
+                };
+
+                // support dropdown paging hints
+                if (typeof this._page === "number" && this._page >= 0) {
+                    body.page = this._page;
+                }
+                if (typeof this._pageSize === "number" && this._pageSize > 0) {
+                    body.pageSize = this._pageSize;
+                } else if (typeof this._max === "number" && this._max > 0) {
+                    body.max = this._max;
+                }
+
+                init.body = JSON.stringify(body);
             }
 
             const res = await fetch(url, init);

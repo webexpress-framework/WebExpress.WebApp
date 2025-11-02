@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using WebExpress.WebApp.Test.Fixture;
+using WebExpress.WebApp.WebFragment;
 using WebExpress.WebApp.WebScope;
 using WebExpress.WebApp.WebSection;
 using WebExpress.WebCore.WebApplication;
@@ -60,7 +61,8 @@ namespace WebExpress.WebApp.Test.WebFragment
         [InlineData(typeof(TestApplication), typeof(FragmentControlPanel), typeof(SectionContentSecondary), typeof(IScopeGeneral), 0, null)]
         [InlineData(typeof(TestApplication), typeof(FragmentControlPanel), typeof(SectionContentSecondary), typeof(IScope), 0, null)]
         [InlineData(typeof(TestApplication), typeof(FragmentControlPanel), typeof(SectionContentPrimary), typeof(TestPageB), 0, null)]
-
+        [InlineData(typeof(TestApplication), typeof(FragmentControlRestTable), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<div id=""webexpress-webapp-test-testfragmentcontrolresttable"" class=""wx-webapp-table""></div>")]
+        [InlineData(typeof(TestApplication), typeof(FragmentControlRestDropdown), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<div id=""webexpress-webapp-test-testfragmentcontrolrestdropdown"" class=""wx-webapp-dropdown"" role=""button""></div>")]
         public void GetFragments(Type applicationType, Type fragmentType, Type sectionType, Type scopeType, int count, string expected)
         {
             // preconditions

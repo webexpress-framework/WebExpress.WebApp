@@ -25,7 +25,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Returns or sets the title associated with the current object.
         /// </summary>
-        public string Title { get; set; }
+        public string Title { get; protected set; }
 
         /// <summary>
         /// Initializes a new instance of the class.

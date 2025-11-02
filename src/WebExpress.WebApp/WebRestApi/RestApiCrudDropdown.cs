@@ -2,10 +2,15 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Reflection;
+using WebExpress.WebApp.WebAttribute;
 using WebExpress.WebCore;
+using WebExpress.WebCore.Internationalization;
+using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
 using WebExpress.WebCore.WebStatusPage;
+using WebExpress.WebIndex;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -14,8 +19,38 @@ namespace WebExpress.WebApp.WebRestApi
     /// </summary>
     /// <typeparam name="TIndexItem">Type of the index item.</typeparam>
     public abstract class RestApiCrudDropdown<TIndexItem> : RestApiCrud<TIndexItem>
-        where TIndexItem : IRestApiCrudDropdownItem
+        where TIndexItem : IIndexItem
     {
+        private readonly PropertyInfo _cachedNameAttribute;
+        private readonly PropertyInfo _cachedUriAttribute;
+
+        /// <summary>
+        /// Returns or sets the title associated with the current object.
+        /// </summary>
+        public string Title { get; protected set; }
+
+        /// <summary>
+        /// Initializes a new instance of the class.
+        /// </summary>
+        public RestApiCrudDropdown()
+        {
+            // search for an attribute of type Title and return its value if present
+            Title = GetType().CustomAttributes
+                .Where(x => x?.AttributeType == typeof(TitleAttribute))
+                .Select(x => x.ConstructorArguments.FirstOrDefault().Value?.ToString())
+                .FirstOrDefault();
+
+            _cachedNameAttribute = typeof(TIndexItem)
+                .GetProperties()
+                .Where(prop => Attribute.IsDefined(prop, typeof(RestDropdownTextAttribute)))
+                .FirstOrDefault();
+
+            _cachedUriAttribute = typeof(TIndexItem)
+                .GetProperties()
+                .Where(prop => Attribute.IsDefined(prop, typeof(RestDropdownUriAttribute)))
+                .FirstOrDefault();
+        }
+
         /// <summary>
         /// Processes GET requests and returns a paged list of dropdown items.
         /// Supports search via 'q' or 'search', WQL via 'wql', paging via 'page' and 'pageSize' or 'max'.
@@ -80,9 +115,15 @@ namespace WebExpress.WebApp.WebRestApi
                     .Skip(pageSize * pageNumber)
                     .Take(pageSize);
 
-                var result = new RestApiCrudResult<IRestApiCrudDropdownItem>()
+                var result = new RestApiCrudDropdownResult<IIndexItem>()
                 {
-                    Data = pageItems.Select(x => x as IRestApiCrudDropdownItem),
+                    Title = I18N.Translate(request, Title),
+                    Items = pageItems.Select(x => new RestApiCrudDropdownItem
+                    {
+                        Id = x.Id,
+                        Text = _cachedNameAttribute?.GetValue(x)?.ToString() ?? x.Id.ToString(),
+                        Uri = _cachedUriAttribute?.GetValue(x)?.ToString()
+                    }),
                     Pagination = new RestApiPaginationInfo()
                     {
                         PageNumber = pageNumber,
