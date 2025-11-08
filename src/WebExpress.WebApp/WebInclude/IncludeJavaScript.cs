@@ -12,6 +12,7 @@ namespace WebExpress.WebApp.WebInclude
     /// </remarks>
     [Asset("/assets/js/webexpress.webapp.js")]
     [Asset("/assets/js/webexpress.webapp.dropdown.js")]
+    [Asset("/assets/js/webexpress.webapp.input.unique.js")]
     [Asset("/assets/js/webexpress.webapp.list.js")]
     [Asset("/assets/js/webexpress.webapp.modalform.js")]
     [Asset("/assets/js/webexpress.webapp.popupnotification.js")]

@@ -1,0 +1,52 @@
+﻿using System.Text;
+using System.Text.Json;
+using WebExpress.WebCore.WebMessage;
+using WebExpress.WebCore.WebRestApi;
+using WebExpress.WebIndex;
+
+namespace WebExpress.WebApp.WebRestApi
+{
+    /// <summary>
+    /// Represents the result of a REST API operation that includes a unique resource.
+    /// </summary>
+    /// <typeparam name="TIndexItem">
+    /// The type of the index item associated with the result.
+    /// </typeparam>
+    public class RestApiCrudUniqueResult<TIndexItem> : IRestApiResult
+         where TIndexItem : IIndexItem
+    {
+        private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
+
+        /// <summary>
+        /// Returns or sets the title associated with the object.
+        /// </summary>
+        public string Title { get; set; }
+
+        /// <summary>
+        /// Returns or sets a value indicating whether the resource is currently available.
+        /// </summary>
+        public bool Available { get; set; }
+
+        /// <summary>
+        /// Converts the current instance into a response object.
+        /// </summary>
+        /// <returns>A Response object representing the result of the conversion.</returns>
+        public virtual Response ToResponse()
+        {
+            var data = new
+            {
+                title = Title,
+                available = Available
+            };
+
+            var jsonData = JsonSerializer.Serialize(data, _jsonOptions);
+            var content = Encoding.UTF8.GetBytes(jsonData);
+
+            return new ResponseOK
+            {
+                Content = content
+            }
+            .AddHeaderContentType("application/json");
+        }
+    }
+}

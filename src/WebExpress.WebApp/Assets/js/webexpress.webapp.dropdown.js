@@ -199,9 +199,6 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
                 // provide canonical dropdown search param
                 params.set("q", term || "");
 
-                // mark dropdown mode explicitly
-                params.set("mode", "dropdown");
-
                 // support dropdown paging hints
                 if (typeof this._page === "number" && this._page >= 0) {
                     params.set("page", String(this._page));
@@ -224,8 +221,6 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
                     [this._queryParam]: term || "",
                     // canonical dropdown search param
                     q: term || "",
-                    // explicit dropdown selector
-                    mode: "dropdown"
                 };
 
                 // support dropdown paging hints
