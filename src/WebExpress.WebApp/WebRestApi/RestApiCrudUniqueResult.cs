@@ -2,18 +2,13 @@
 using System.Text.Json;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
-using WebExpress.WebIndex;
 
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
     /// Represents the result of a REST API operation that includes a unique resource.
     /// </summary>
-    /// <typeparam name="TIndexItem">
-    /// The type of the index item associated with the result.
-    /// </typeparam>
-    public class RestApiCrudUniqueResult<TIndexItem> : IRestApiResult
-         where TIndexItem : IIndexItem
+    public class RestApiCrudUniqueResult : IRestApiResult
     {
         private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 

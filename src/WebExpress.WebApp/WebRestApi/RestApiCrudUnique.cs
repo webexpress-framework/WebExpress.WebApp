@@ -2,8 +2,8 @@
 using System.Linq;
 using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebMessage;
+using WebExpress.WebCore.WebRestApi;
 using WebExpress.WebCore.WebStatusPage;
-using WebExpress.WebIndex;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -11,9 +11,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// Abstract class providing CRUD list responses for REST API.
     /// Produces a flat "items" array suitable for the ListCtrl frontend.
     /// </summary>
-    /// <typeparam name="TIndexItem">Type of the index item.</typeparam>
-    public abstract class RestApiCrudUnique<TIndexItem> : RestApiCrud<TIndexItem>
-        where TIndexItem : IIndexItem
+    public abstract class RestApiCrudUnique : IRestApi
     {
         /// <summary>
         /// Returns or sets the title associated with the current object.
@@ -33,12 +31,22 @@ namespace WebExpress.WebApp.WebRestApi
         }
 
         /// <summary>
+        /// Creates data.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns>The response containing the result of the operation.</returns>
+        public Response CreateData(Request request)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
         /// Processing of the resource that was called via the get request.
         /// Returns a list-shaped payload with items, title and pagination.
         /// </summary>
         /// <param name="request">The request.</param>
         /// <returns>The response containing the result of the operation.</returns>
-        public override Response GetData(Request request)
+        public virtual Response GetData(Request request)
         {
             // read value parameter
             var value = request.GetParameter("value")?.Value?.ToLower()
@@ -47,14 +55,14 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 if (string.IsNullOrEmpty(value))
                 {
-                    return new RestApiCrudUniqueResult<TIndexItem>()
+                    return new RestApiCrudUniqueResult()
                     {
                         Available = false
                     }
                         .ToResponse();
                 }
 
-                return new RestApiCrudUniqueResult<TIndexItem>()
+                return new RestApiCrudUniqueResult()
                 {
                     Available = CheckAvailable(value, request)
                 }
@@ -64,6 +72,26 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 return new ResponseBadRequest(new StatusMessage($"Error processing request.{ex}"));
             }
+        }
+
+        /// <summary>
+        /// Updates data.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns>The response containing the result of the operation.</returns>
+        public Response UpdateData(Request request)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Deletes data.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns>The response containing the result of the operation.</returns>
+        public Response DeleteData(Request request)
+        {
+            throw new NotImplementedException();
         }
 
         /// <summary>

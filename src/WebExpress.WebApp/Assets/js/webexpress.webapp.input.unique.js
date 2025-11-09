@@ -275,6 +275,11 @@ webexpress.webapp.InputUniqueCtrl = class extends webexpress.webui.Ctrl {
             if (this._method === "GET") {
                 // append query parameter for get requests
                 const urlObj = new URL(reqUrl, window.location.href);
+                if (this._element.id) { 
+                    urlObj.searchParams.set("id", this._element.id);
+                } else if (this._element.id) {
+                    urlObj.searchParams.set("name", this._fieldName);
+                }
                 urlObj.searchParams.set(this._param, value);
                 reqUrl = urlObj.toString();
             } else {
