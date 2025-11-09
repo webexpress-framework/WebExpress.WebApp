@@ -8,7 +8,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// <summary>
     /// Represents the result of a REST API operation that includes a unique resource.
     /// </summary>
-    public class RestApiCrudUniqueResult : IRestApiResult
+    public class RestApiUniqueResult : IRestApiResult
     {
         private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 

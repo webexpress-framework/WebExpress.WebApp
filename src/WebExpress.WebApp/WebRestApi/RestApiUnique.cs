@@ -11,7 +11,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// Abstract class providing CRUD list responses for REST API.
     /// Produces a flat "items" array suitable for the ListCtrl frontend.
     /// </summary>
-    public abstract class RestApiCrudUnique : IRestApi
+    public abstract class RestApiUnique : IRestApi
     {
         /// <summary>
         /// Returns or sets the title associated with the current object.
@@ -21,7 +21,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
-        protected RestApiCrudUnique()
+        protected RestApiUnique()
         {
             // read title attribute once
             Title = GetType().CustomAttributes
@@ -55,14 +55,14 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 if (string.IsNullOrEmpty(value))
                 {
-                    return new RestApiCrudUniqueResult()
+                    return new RestApiUniqueResult()
                     {
                         Available = false
                     }
                         .ToResponse();
                 }
 
-                return new RestApiCrudUniqueResult()
+                return new RestApiUniqueResult()
                 {
                     Available = CheckAvailable(value, request)
                 }
