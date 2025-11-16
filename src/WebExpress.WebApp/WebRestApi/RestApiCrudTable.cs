@@ -6,10 +6,13 @@ using WebExpress.WebApp.WebAttribute;
 using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebAttribute;
+using WebExpress.WebCore.WebIcon;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
 using WebExpress.WebCore.WebStatusPage;
+using WebExpress.WebCore.WebUri;
 using WebExpress.WebIndex;
+using WebExpress.WebUI.WebIcon;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -21,6 +24,8 @@ namespace WebExpress.WebApp.WebRestApi
         where TIndexItem : IIndexItem
     {
         private readonly Dictionary<PropertyInfo, RestApiCrudTableColumn> _cachedColumns;
+        private readonly PropertyInfo _cachedRowIconAttribute;
+        private readonly PropertyInfo _cachedRowUriAttribute;
 
         /// <summary>
         /// Returns or sets the title associated with the current object.
@@ -57,6 +62,16 @@ namespace WebExpress.WebApp.WebRestApi
                         };
                     }
                 );
+
+            _cachedRowIconAttribute = typeof(TIndexItem)
+                .GetProperties()
+                .Where(prop => Attribute.IsDefined(prop, typeof(RestTableRowIconAttribute)))
+                .FirstOrDefault();
+            
+            _cachedRowUriAttribute = typeof(TIndexItem)
+                .GetProperties()
+                .Where(prop => Attribute.IsDefined(prop, typeof(RestTableRowUriAttribute)))
+                .FirstOrDefault();
         }
 
         /// <summary>
@@ -115,16 +130,24 @@ namespace WebExpress.WebApp.WebRestApi
                     Rows = data
                         .Skip(pageNumber * pageSize)
                         .Take(pageSize)
-                        .Select(row => new RestApiCrudTableRow
+                        .Select(row =>
                         {
-                            Id = row.Id.ToString(),
-                            Cells = _cachedColumns
-                            .Where(x => x.Value.Visible)
-                            .Select(x => new RestApiCrudTableCell
+                            var icon = _cachedRowIconAttribute?.GetValue(row) as IIcon;
+                            var uri = _cachedRowUriAttribute?.GetValue(row) as IUri;
+                            return new RestApiCrudTableRow
                             {
-                                Text = x.Key.GetValue(row)?.ToString() ?? string.Empty
-                            }),
-                            Options = GetOptions(request, row)
+                                Id = row.Id.ToString(),
+                                Cells = _cachedColumns
+                                .Where(x => x.Value.Visible)
+                                .Select(x => new RestApiCrudTableCell
+                                {
+                                    Text = x.Key.GetValue(row)?.ToString() ?? string.Empty,
+                                }),
+                                Options = GetOptions(request, row),
+                                Icon = (icon is Icon) ? (icon as Icon).Class : null,
+                                Image = (icon is ImageIcon) ? (icon as ImageIcon).Uri?.ToString() : null,
+                                Uri = uri?.ToString()
+                            };
                         }),
                     Pagination = new RestApiPaginationInfo()
                     {

@@ -92,12 +92,7 @@ webexpress.webapp.InputUniqueCtrl = class extends webexpress.webui.Ctrl {
         this._input.setAttribute("autocomplete", "off");
         this._input.setAttribute("autocapitalize", "none");
         this._input.setAttribute("spellcheck", "false");
-
-        // hidden input for form submission
-        this._hidden = document.createElement("input");
-        this._hidden.type = "hidden";
-        this._hidden.name = this._fieldName;
-        this._hidden.value = this._currentValue;
+        this._input.name = this._fieldName;
 
         // status container
         this._container = document.createElement("span");
@@ -121,14 +116,11 @@ webexpress.webapp.InputUniqueCtrl = class extends webexpress.webui.Ctrl {
         this._container.appendChild(this._icon);
         this._container.appendChild(this._status);
         this._element.appendChild(this._input);
-        this._element.appendChild(this._hidden);
         this._element.appendChild(this._container);
 
         // input listeners
         this._onInputListener = () => {
-            // sync hidden value
             this._currentValue = this._input.value;
-            this._hidden.value = this._currentValue;
             // schedule check (debounced if configured)
             this._scheduleCheck(false);
         };
@@ -493,7 +485,6 @@ webexpress.webapp.InputUniqueCtrl = class extends webexpress.webui.Ctrl {
         }
         const newVal = typeof v === "string" ? v : "";
         this._input.value = newVal;
-        this._hidden.value = newVal;
         this._currentValue = newVal;
         // force scheduling to respect debounce logic
         this._scheduleCheck(true);
@@ -508,7 +499,6 @@ webexpress.webapp.InputUniqueCtrl = class extends webexpress.webui.Ctrl {
         }
         // restore initial value
         this._input.value = this._initialValue;
-        this._hidden.value = this._initialValue;
         this._currentValue = this._initialValue;
 
         // cancel pending timers and requests

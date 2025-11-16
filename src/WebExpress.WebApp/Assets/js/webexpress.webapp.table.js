@@ -167,11 +167,16 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrl {
                     if (Array.isArray(row.options)) {
                         this._hasOptions = true;
                         row.options.forEach(option => {
+                            const uri = option.uri || "";
+                            option.uri = "javascript:void(0)";
                             if (option.command === "edit") {
-                                option.action = () => this._editRow(row.id, this._columns, row.cells, option.uri);
+                                option.action = () => {
+                                    this._editRow(row.id, this._columns, row.cells, uri);
+                                }
                             } else if (option.command === "delete") {
-                                option.action = () => this._deleteRow(row.id);
-                                option.uri = "javascript:void(0);";
+                                option.action = () => {
+                                    this._deleteRow(row.id);
+                                }
                             }
                         });
                     }
@@ -252,6 +257,8 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrl {
                             let editorType = "default";
                             if (editorContainer.classList.contains("wx-webui-editor")) {
                                 editorType = "wx-webui-editor";
+                            } else if (editorContainer.classList.contains("wx-webapp-input-unique")) {
+                                editorType = "wx-webapp-input-unique";
                             } 
 
                             // handle various editors
@@ -259,9 +266,20 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrl {
                                 case "wx-webui-editor":
                                     editorContainer.innerHTML = value;
                                     break;
+                                case "wx-webapp-input-unique":
+                                    editorContainer.setAttribute("data-value", value);
+                                    break;
                                 default:
-                                    // fallback: set innerHTML directly
-                                    editorContainer.innerHTML = value;
+                                    {
+                                        const instance = webexpress.webui.Controller.getInstanceByElement(editorContainer);
+                                        if (instance) {
+                                            instance.value = value;
+                                        } else {
+                                            // fallback: set innerHTML directly
+                                            editorContainer.innerHTML = value;
+                                        }
+                                    }
+                                    
                             }
                         }
                     }

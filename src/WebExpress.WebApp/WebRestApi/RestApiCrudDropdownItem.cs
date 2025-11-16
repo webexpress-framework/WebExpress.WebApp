@@ -25,5 +25,17 @@ namespace WebExpress.WebApp.WebRestApi
         /// </summary>
         [JsonPropertyName("uri")]
         public string Uri { get; set; }
+
+        /// <summary>
+        /// Returns or sets the icon uri for the item.
+        /// </summary>
+        [JsonPropertyName("icon")]
+        public string Icon { get; set; }
+        
+        /// <summary>
+        /// Returns or sets the image icon uri for the item.
+        /// </summary>
+        [JsonPropertyName("image")]
+        public string Image { get; set; }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Serialization;
+using WebExpress.WebCore.WebIcon;
 
 namespace WebExpress.WebApp.WebRestApi
 {

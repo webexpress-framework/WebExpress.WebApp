@@ -7,10 +7,12 @@ using WebExpress.WebApp.WebAttribute;
 using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebAttribute;
+using WebExpress.WebCore.WebIcon;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
 using WebExpress.WebCore.WebStatusPage;
 using WebExpress.WebIndex;
+using WebExpress.WebUI.WebIcon;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -23,6 +25,7 @@ namespace WebExpress.WebApp.WebRestApi
     {
         private readonly PropertyInfo _cachedNameAttribute;
         private readonly PropertyInfo _cachedUriAttribute;
+        private readonly PropertyInfo _cachedIconAttribute;
 
         /// <summary>
         /// Returns or sets the title associated with the current object.
@@ -48,6 +51,11 @@ namespace WebExpress.WebApp.WebRestApi
             _cachedUriAttribute = typeof(TIndexItem)
                 .GetProperties()
                 .Where(prop => Attribute.IsDefined(prop, typeof(RestDropdownUriAttribute)))
+                .FirstOrDefault();
+            
+            _cachedIconAttribute = typeof(TIndexItem)
+                .GetProperties()
+                .Where(prop => Attribute.IsDefined(prop, typeof(RestDropdownIconAttribute)))
                 .FirstOrDefault();
         }
 
@@ -118,11 +126,16 @@ namespace WebExpress.WebApp.WebRestApi
                 var result = new RestApiCrudDropdownResult<IIndexItem>()
                 {
                     Title = I18N.Translate(request, Title),
-                    Items = pageItems.Select(x => new RestApiCrudDropdownItem
-                    {
-                        Id = x.Id,
-                        Text = _cachedNameAttribute?.GetValue(x)?.ToString() ?? x.Id.ToString(),
-                        Uri = _cachedUriAttribute?.GetValue(x)?.ToString()
+                    Items = pageItems.Select(x => {
+                        var icon = _cachedIconAttribute?.GetValue(x) as IIcon; 
+                        return new RestApiCrudDropdownItem
+                        {
+                            Id = x.Id,
+                            Text = _cachedNameAttribute?.GetValue(x)?.ToString() ?? x.Id.ToString(),
+                            Uri = _cachedUriAttribute?.GetValue(x)?.ToString(),
+                            Icon = (icon is Icon) ? (icon as Icon).Class : null,
+                            Image = (icon is ImageIcon) ? (icon as ImageIcon).Uri?.ToString() : null
+                        };
                     }),
                     Pagination = new RestApiPaginationInfo()
                     {

@@ -28,6 +28,24 @@ namespace WebExpress.WebApp.WebRestApi
         public IEnumerable<RestApiCrudOption> Options { get; set; } = [];
 
         /// <summary>
+        /// Returns or sets the icon.
+        /// </summary>
+        [JsonPropertyName("icon")]
+        public string Icon { get; set; }
+
+        /// <summary>
+        /// Returns or sets the image.
+        /// </summary>
+        [JsonPropertyName("image")]
+        public string Image { get; set; }
+
+        /// <summary>
+        /// Returns or sets the target uri for the item.
+        /// </summary>
+        [JsonPropertyName("uri")]
+        public string Uri { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         public RestApiCrudTableRow()
