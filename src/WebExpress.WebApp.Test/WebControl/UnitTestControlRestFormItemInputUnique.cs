@@ -1,6 +1,6 @@
 ﻿using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebApiControl;
-using WebExpress.WebCore.WebMessage;
+using WebExpress.WebCore.WebParameter;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
@@ -253,7 +253,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestFormItemInputUnique(null)
             {
-                RestUri = uriString != null ? new UriEndpoint(uriString) : null
+                RestUri = uriString is not null ? new UriEndpoint(uriString) : null
             };
 
             // test execution
@@ -382,7 +382,7 @@ namespace WebExpress.WebApp.Test.WebControl
                     x =>
                     {
                         x
-                        .Add(x.Value != null, "validation1", TypeInputValidity.Warning)
+                        .Add(x.Value is not null, "validation1", TypeInputValidity.Warning)
                         .Add(x.Value?.Text?.Length > 3, "validation2")
                         .Add(false, "validation3");
                         validated = true;

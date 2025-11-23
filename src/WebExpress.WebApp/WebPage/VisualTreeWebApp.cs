@@ -99,8 +99,8 @@ namespace WebExpress.WebApp.WebPage
             html.Head.Styles = Styles;
             html.Head.Meta = Meta;
             html.Head.Scripts = HeaderScripts;
-            html.Head.CssLinks = CssLinks.Where(x => x != null).Select(x => x.ToString());
-            html.Head.ScriptLinks = HeaderScriptLinks?.Where(x => x != null).Select(x => x.ToString());
+            html.Head.CssLinks = CssLinks.Where(x => x is not null).Select(x => x.ToString());
+            html.Head.ScriptLinks = HeaderScriptLinks?.Where(x => x is not null).Select(x => x.ToString());
 
             // header
             Header.AppTitle.SetTitle(html.Head.Title);
@@ -110,7 +110,7 @@ namespace WebExpress.WebApp.WebPage
             }
             html.Body.Add(Header.Render(renderContext, this));
             html.Body.Add(Toast.Render(renderContext, this));
-            html.Body.Add(Breadcrumb.Render(renderContext, this));
+            html.Body.Add(Breadcrumb.Render(renderContext, this, context.Request.Uri));
             html.Body.Add(Prologue.Render(renderContext, this));
 
             var split = new ControlPanelSplit

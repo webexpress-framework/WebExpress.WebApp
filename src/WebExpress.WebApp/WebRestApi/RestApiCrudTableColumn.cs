@@ -38,10 +38,16 @@ namespace WebExpress.WebApp.WebRestApi
         public uint? Width { get; set; }
 
         /// <summary>
-        /// Returns or sets the Javascript code that renders the data of the cell.
+        /// Returns or sets the editor type for the cell (e.g., 'text', 'password', 'template').
         /// </summary>
-        [JsonPropertyName("render")]
-        public string Render { get; set; }
+        [JsonPropertyName("editor")]
+        public string Editor { get; set; }
+
+        /// <summary>
+        /// Returns or sets the path to the template file for rendering the column.
+        /// </summary>
+        [JsonPropertyName("template")]
+        public string Template { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class.

@@ -71,7 +71,7 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>The current instance for method chaining.</returns>
         public virtual IControlRestTable Remove(IControlForm form)
         {
-            if (form == null)
+            if (form is null)
             {
                 return this;
             }

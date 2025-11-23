@@ -51,15 +51,36 @@ namespace WebExpress.WebApp.WebRestApi
                     prop =>
                     {
                         var name = prop.Name;
-                        var label = (RestTableColumnNameAttribute)Attribute.GetCustomAttribute(prop, typeof(RestTableColumnNameAttribute));
+                        var labelAttr = (RestTableColumnNameAttribute)Attribute.GetCustomAttribute(prop, typeof(RestTableColumnNameAttribute));
+                        var editorAttr = (RestTableColumnEditorAttribute)Attribute.GetCustomAttribute(prop, typeof(RestTableColumnEditorAttribute));
+                        var renderAttr = (RestTableColumnTemplateAttribute)Attribute.GetCustomAttribute(prop, typeof(RestTableColumnTemplateAttribute));
                         var isHidden = Attribute.IsDefined(prop, typeof(RestTableColumnHiddenAttribute));
 
-                        return new RestApiCrudTableColumn()
+                        var column = new RestApiCrudTableColumn()
                         {
                             Name = name,
-                            Label = label?.Name ?? name,
-                            Visible = !isHidden
+                            Label = labelAttr?.Name ?? name,
+                            Visible = !isHidden,
+                            Editor = null, // default to no editor
+                            Template = null
                         };
+
+                        // configure rendering for display
+                        if (renderAttr is not null)
+                        {
+                            if (renderAttr is not null)
+                            {
+                                column.Template = renderAttr.Template.ToString().ToLowerInvariant();
+                            }
+                        }
+
+                        // configure editor, which takes precedence for interaction
+                        if (editorAttr is not null)
+                        {
+                            column.Editor = editorAttr.Editor.ToString().ToLowerInvariant();
+                        }
+
+                        return column;
                     }
                 );
 
@@ -67,7 +88,7 @@ namespace WebExpress.WebApp.WebRestApi
                 .GetProperties()
                 .Where(prop => Attribute.IsDefined(prop, typeof(RestTableRowIconAttribute)))
                 .FirstOrDefault();
-            
+
             _cachedRowUriAttribute = typeof(TIndexItem)
                 .GetProperties()
                 .Where(prop => Attribute.IsDefined(prop, typeof(RestTableRowUriAttribute)))
@@ -93,7 +114,7 @@ namespace WebExpress.WebApp.WebRestApi
         {
             var pageNumber = Convert.ToInt32(request.GetParameter("page")?.Value ?? "0"); // current page number
             var pageSize = Convert.ToInt32(request.GetParameter("pageSize")?.Value ?? "50"); // number of items per page
-            var filter = request.GetParameter("search")?.Value ?? string.Empty;
+            var filter = request.GetParameter("filter")?.Value ?? string.Empty;
             var wql = request.GetParameter("wql")?.Value ?? null;
 
             try
@@ -113,14 +134,15 @@ namespace WebExpress.WebApp.WebRestApi
                 }
 
                 var columns = _cachedColumns
-                   .Where(x => x.Value.Visible)
                    .Select(x => new RestApiCrudTableColumn()
                    {
                        Name = x.Key.Name,
                        Label = I18N.Translate(request, x.Value.Label),
                        Icon = x.Value.Icon,
                        Visible = x.Value.Visible,
-                       Width = x.Value.Width
+                       Width = x.Value.Width,
+                       Editor = x.Value.Editor,
+                       Template = x.Value.Template
                    });
 
                 var result = new RestApiCrudTableResult()
@@ -138,7 +160,6 @@ namespace WebExpress.WebApp.WebRestApi
                             {
                                 Id = row.Id.ToString(),
                                 Cells = _cachedColumns
-                                .Where(x => x.Value.Visible)
                                 .Select(x => new RestApiCrudTableCell
                                 {
                                     Text = x.Key.GetValue(row)?.ToString() ?? string.Empty,

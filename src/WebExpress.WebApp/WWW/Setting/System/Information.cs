@@ -118,7 +118,8 @@ namespace WebExpress.WebApp.WWW.Setting.System
                 },
                 new ControlTableCellPanel().Add(new ControlText()
                 {
-                    Text = renderContext.Uri?.BasePath?.Display ?? renderContext.Uri?.Display,
+                    Text = renderContext.Uri?.BasePath?.GetDisplayText(renderContext)
+                        ?? renderContext.Uri?.GetDisplayText(renderContext),
                     Format = TypeFormatText.Code
                 })
             );

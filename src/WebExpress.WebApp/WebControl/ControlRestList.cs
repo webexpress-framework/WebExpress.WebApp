@@ -47,7 +47,7 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>The current instance for method chaining.</returns>
         public virtual IControlRestList Add(params IControlForm[] forms)
         {
-            if (forms != null)
+            if (forms is not null)
             {
                 _forms.AddRange(forms);
             }
@@ -62,7 +62,7 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>The current instance for method chaining.</returns>
         public virtual IControlRestList Add(IEnumerable<IControlForm> forms)
         {
-            if (forms != null)
+            if (forms is not null)
             {
                 _forms.AddRange(forms);
             }
@@ -77,7 +77,7 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>The current instance for method chaining.</returns>
         public virtual IControlRestList Remove(IControlForm form)
         {
-            if (form == null)
+            if (form is null)
             {
                 return this;
             }

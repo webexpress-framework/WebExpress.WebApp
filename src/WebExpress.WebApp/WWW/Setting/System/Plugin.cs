@@ -124,7 +124,7 @@ namespace WebExpress.WebApp.WWW.Setting.System
             // determine any installed package
             //var plugin = _componentHub.PluginManager.GetPluginByFileName(file.Value);
 
-            //if (plugin == null)
+            //if (plugin is null)
             //    //{
             //    //    var host = context.Host;
             //    //}

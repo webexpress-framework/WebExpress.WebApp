@@ -25,7 +25,7 @@ namespace WebExpress.WebApp.WebRestApi
         {
             // read title attribute once
             Title = GetType().CustomAttributes
-                .Where(x => x != null && x.AttributeType == typeof(TitleAttribute))
+                .Where(x => x is not null && x.AttributeType == typeof(TitleAttribute))
                 .Select(x => x.ConstructorArguments.FirstOrDefault().Value?.ToString())
                 .FirstOrDefault();
         }

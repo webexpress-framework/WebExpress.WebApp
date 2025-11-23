@@ -21,7 +21,7 @@ namespace WebExpress.WebApp.Test
         private TestApplication(IApplicationContext applicationContext)
         {
             // test the injection
-            if (applicationContext == null)
+            if (applicationContext is null)
             {
                 throw new ArgumentNullException(nameof(applicationContext), "Parameter cannot be null or empty.");
             }

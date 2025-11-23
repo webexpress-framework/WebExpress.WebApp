@@ -23,7 +23,7 @@ namespace WebExpress.WebApp.Test.WebTheme
             // test execution
             var themeContexts = componentHub.ThemeManager.GetThemes(application, themeType);
 
-            if (id == null)
+            if (id is null)
             {
                 Assert.Empty(themeContexts);
                 return;

@@ -34,7 +34,7 @@ namespace WebExpress.WebApp.WebRestApi
         {
             // read title attribute once
             Title = GetType().CustomAttributes
-                .Where(x => x != null && x.AttributeType == typeof(TitleAttribute))
+                .Where(x => x is not null && x.AttributeType == typeof(TitleAttribute))
                 .Select(x => x.ConstructorArguments.FirstOrDefault().Value?.ToString())
                 .FirstOrDefault();
         }
@@ -133,7 +133,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <returns>The resolved display text.</returns>
         protected virtual string ResolveItemText(TIndexItem row)
         {
-            if (row == null)
+            if (row is null)
             {
                 return string.Empty;
             }
@@ -149,12 +149,12 @@ namespace WebExpress.WebApp.WebRestApi
                     .FirstOrDefault(p => p.GetCustomAttributes(inherit: true)
                         .Any(a => string.Equals(a.GetType().Name, "RestListPrimaryAttribute", StringComparison.Ordinal)));
 
-            if (prop != null)
+            if (prop is not null)
             {
                 try
                 {
                     var value = prop.GetValue(row);
-                    if (value == null)
+                    if (value is null)
                     {
                         return string.Empty;
                     }

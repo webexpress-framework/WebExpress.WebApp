@@ -32,7 +32,7 @@ namespace WebExpress.WebApp.Test.WebFragment
             // test execution
             var fragment = componentHub.FragmentManager.GetFragments(application, fragmentType);
 
-            if (id == null)
+            if (id is null)
             {
                 Assert.Empty(fragment);
                 return;

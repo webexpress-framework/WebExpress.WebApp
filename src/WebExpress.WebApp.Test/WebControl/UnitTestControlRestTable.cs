@@ -50,7 +50,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestTable()
             {
-                RestUri = uriString != null ? new UriEndpoint(uriString) : null
+                RestUri = uriString is not null ? new UriEndpoint(uriString) : null
             };
 
             // test execution

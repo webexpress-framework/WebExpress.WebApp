@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using WebExpress.WebApp.WebControl;
 using WebExpress.WebApp.WebScope;
 using WebExpress.WebApp.WebSettingPage;
 using WebExpress.WebCore.Internationalization;
@@ -132,10 +131,9 @@ namespace WebExpress.WebApp.WWW.Setting.System.Log
                         },
                         new ControlTableCell()
                         {
-                            Text = log,
-                            //Format = TypeFormatText.Code
+                            Text = log
                         },
-                        downloadUri != null && file.Exists
+                        downloadUri is not null && file.Exists
                             ? new ControlTableCellPanel()
                                 .Add(new ControlButtonLink()
                                 {
