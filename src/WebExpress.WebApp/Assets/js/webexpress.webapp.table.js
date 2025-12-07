@@ -4,7 +4,7 @@
  * - webexpress.webui.Event.TABLE_SORT_EVENT
  * - webexpress.webui.Event.COLUMN_REORDER_EVENT
  */
-webexpress.webapp.TableCtrl = class extends webexpress.webui.EditTableCtrl {
+webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderable {
     /**
      * Helper to create DOM elements with a class list.
      * @param {string} tag - The HTML tag for the element.
