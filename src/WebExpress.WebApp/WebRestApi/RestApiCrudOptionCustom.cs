@@ -26,11 +26,10 @@ namespace WebExpress.WebApp.WebRestApi
         [JsonPropertyName("arg")]
         public virtual string CommandArg { get; set; }
 
-
         /// <summary>
         /// Returns the label.
         /// </summary>
-        [JsonPropertyName("content")]
+        [JsonPropertyName("text")]
         public virtual string Label { get; set; }
 
         /// <summary>

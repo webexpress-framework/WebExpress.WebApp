@@ -20,7 +20,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Returns or sets the label.
         /// </summary>
-        [JsonPropertyName("content")]
+        [JsonPropertyName("text")]
         public virtual string Label
         {
             get { return I18N.Translate(Request, _label); }

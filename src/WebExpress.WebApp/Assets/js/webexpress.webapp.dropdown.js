@@ -311,7 +311,7 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
         // choose field aliases defensively
         const id = apiItem.id || null;
         const uri = apiItem.uri || apiItem.url || "javascript:void(0);";
-        const content = apiItem.content || apiItem.name || apiItem.text || apiItem.title || "";
+        const text = apiItem.text || apiItem.name || apiItem.text || apiItem.title || "";
         const icon = apiItem.icon || null;
         const image = apiItem.image || apiItem.img || null;
         const color = apiItem.color || null;
@@ -342,7 +342,7 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
             uri: uri,
             image: image,
             icon: icon,
-            content: content,
+            text: text,
             color: color,
             disabled: disabled,
             data: dataTuples,
