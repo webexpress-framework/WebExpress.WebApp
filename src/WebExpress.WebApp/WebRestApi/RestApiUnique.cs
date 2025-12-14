@@ -31,25 +31,16 @@ namespace WebExpress.WebApp.WebRestApi
         }
 
         /// <summary>
-        /// Creates data.
-        /// </summary>
-        /// <param name="request">The request.</param>
-        /// <returns>The response containing the result of the operation.</returns>
-        public Response CreateData(Request request)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
         /// Processing of the resource that was called via the get request.
         /// Returns a list-shaped payload with items, title and pagination.
         /// </summary>
         /// <param name="request">The request.</param>
         /// <returns>The response containing the result of the operation.</returns>
+        [Method(RequestMethod.GET)]
         public virtual Response GetData(Request request)
         {
             // read value parameter
-            var value = request.GetParameter("value")?.Value?.ToLower()
+            var value = request.GetParameter("v")?.Value?.ToLower()
                          ?? string.Empty;
             try
             {
@@ -72,26 +63,6 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 return new ResponseBadRequest(new StatusMessage($"Error processing request.{ex}"));
             }
-        }
-
-        /// <summary>
-        /// Updates data.
-        /// </summary>
-        /// <param name="request">The request.</param>
-        /// <returns>The response containing the result of the operation.</returns>
-        public Response UpdateData(Request request)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Deletes data.
-        /// </summary>
-        /// <param name="request">The request.</param>
-        /// <returns>The response containing the result of the operation.</returns>
-        public Response DeleteData(Request request)
-        {
-            throw new NotImplementedException();
         }
 
         /// <summary>

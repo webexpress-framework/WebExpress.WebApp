@@ -7,7 +7,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// <summary>
     /// Represents an "edit" option in a REST API.
     /// </summary>
-    public class RestApiCrudOptionEdit : RestApiCrudOption
+    public class RestApiOptionEdit : RestApiOption
     {
         /// <summary>
         /// Returns the type of the element, represented as a string.
@@ -46,10 +46,16 @@ namespace WebExpress.WebApp.WebRestApi
         public virtual string Color => "text-primary";
 
         /// <summary>
+        /// Returns or sets the modal id.
+        /// </summary>
+        [JsonPropertyName("modal")]
+        public virtual string Modal { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="request">The request object associated with the current operation.</param>
-        public RestApiCrudOptionEdit(Request request)
+        public RestApiOptionEdit(Request request)
             : base(request)
         {
         }

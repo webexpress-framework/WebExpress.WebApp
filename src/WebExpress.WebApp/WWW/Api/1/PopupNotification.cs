@@ -6,7 +6,6 @@ using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebComponent;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
-using WebExpress.WebCore.WebStatusPage;
 using WebExpress.WebUI.WebNotification;
 
 namespace WebExpress.WebApp.WWW.Api._1
@@ -14,8 +13,7 @@ namespace WebExpress.WebApp.WWW.Api._1
     /// <summary>
     /// Returns the status and progress of a task (WebTask).
     /// </summary>
-    [Method(CrudMethod.GET)]
-    [Method(CrudMethod.DELETE)]
+    [Cache]
     [IncludeSubPaths(true)]
     public sealed class PopupNotification : IRestApi
     {
@@ -34,21 +32,12 @@ namespace WebExpress.WebApp.WWW.Api._1
         }
 
         /// <summary>
-        /// Creates data based on the provided request.
-        /// </summary>
-        /// <param name="request">The request containing the data to create.</param>
-        /// <returns>The response containing the result of the operation.</returns>
-        public Response CreateData(Request request)
-        {
-            return new ResponseBadRequest(new StatusMessage("Not implemented."));
-        }
-
-        /// <summary>
         /// Retrieves data based on the provided request.
         /// </summary>
         /// <param name="request">The request containing the criteria for data retrieval.</param>
         /// <returns>The response containing the result of the operation.</returns>
-        public Response GetData(Request request)
+        [Method(RequestMethod.GET)]
+        public Response Retrieve(Request request)
         {
             var notifications = _componentHub
                 .GetComponentManager<NotificationManager>()?
@@ -62,20 +51,11 @@ namespace WebExpress.WebApp.WWW.Api._1
         }
 
         /// <summary>
-        /// Updates data based on the provided request.
-        /// </summary>
-        /// <param name="request">The request containing the data to update.</param>
-        /// <returns>The response containing the result of the operation.</returns>
-        public Response UpdateData(Request request)
-        {
-            return new ResponseBadRequest(new StatusMessage("Not implemented."));
-        }
-
-        /// <summary>
         /// Deletes data based on the provided request.
         /// </summary>
         /// <param name="request">The request containing the data to delete.</param>
         /// <returns>The response containing the result of the operation.</returns>
+        [Method(RequestMethod.DELETE)]
         public Response DeleteData(Request request)
         {
             if (Guid.TryParse(request.Uri.PathSegments.Last()?.ToString(), out Guid id))

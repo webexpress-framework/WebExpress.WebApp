@@ -5,39 +5,45 @@ using WebExpress.WebCore.WebMessage;
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Represents a separator option in a REST API.
+    /// Represents a configuration option in a REST API.
     /// </summary>
-    public class RestApiCrudOptionHeader : RestApiCrudOption
+    public class RestApiOptionDelete : RestApiOption
     {
-        private string _label = "";
-
         /// <summary>
         /// Returns the type of the element, represented as a string.
         /// </summary>
         [JsonPropertyName("type")]
-        public virtual string Type => "header";
+        public virtual string Type => "item";
 
         /// <summary>
-        /// Returns or sets the label.
+        /// Returns or sets the command.
+        /// </summary>
+        [JsonPropertyName("command")]
+        public virtual string Command => "delete";
+
+        /// <summary>
+        /// Returns the label.
         /// </summary>
         [JsonPropertyName("text")]
-        public virtual string Label
-        {
-            get { return I18N.Translate(Request, _label); }
-            set { _label = value; }
-        }
+        public virtual string Label => I18N.Translate(Request, "webexpress.webui:delete.label");
 
         /// <summary>
         /// Returns the icon.
         /// </summary>
         [JsonPropertyName("icon")]
-        public virtual string Icon { get; set; }
+        public virtual string Icon => "fa fa-trash";
+
+        /// <summary>
+        /// Returns or sets the text color.
+        /// </summary>
+        [JsonPropertyName("color")]
+        public virtual string Color => "text-danger";
 
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="request">The request object associated with the current operation.</param>
-        public RestApiCrudOptionHeader(Request request)
+        public RestApiOptionDelete(Request request)
             : base(request)
         {
         }

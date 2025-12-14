@@ -201,14 +201,14 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
 
                 // support dropdown paging hints
                 if (typeof this._page === "number" && this._page >= 0) {
-                    params.set("page", String(this._page));
+                    params.set("p", String(this._page));
                 }
                 if (typeof this._pageSize === "number" && this._pageSize > 0) {
                     // use pageSize if provided
-                    params.set("pageSize", String(this._pageSize));
+                    params.set("s", String(this._pageSize));
                 } else if (typeof this._max === "number" && this._max > 0) {
                     // use max synonym if configured
-                    params.set("max", String(this._max));
+                    params.set("m", String(this._max));
                 }
 
                 const hasQuery = url.includes("?");
@@ -262,7 +262,7 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
             // dispatch "arrived" event (success) via internal dispatcher
             try {
                 const finishedAt = Date.now();
-                // Trigger event for external listeners
+                // trigger event for external listeners
                 this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
                     endpoint: this._apiEndpoint,
                     method: this._httpMethod,
@@ -283,7 +283,7 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
             // dispatch "arrived" event (error) via internal dispatcher
             try {
                 const finishedAt = Date.now();
-                // Trigger event for external listeners
+                // trigger event for external listeners
                 this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
                     endpoint: this._apiEndpoint,
                     method: this._httpMethod,

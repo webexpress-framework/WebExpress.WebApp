@@ -11,7 +11,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// Represents the result of a REST API operation that retrieves a paginated doropdown of items.
     /// </summary>
     /// <typeparam name="TIndexItem">The type of the items in the list.</typeparam>
-    public class RestApiCrudDropdownResult<TIndexItem> : IRestApiResult
+    public class RestApiDropdownResult<TIndexItem> : IRestApiResult
          where TIndexItem : IIndexItem
     {
         private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
@@ -24,7 +24,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Returns or sets the collection of items associated with the list.
         /// </summary>
-        public IEnumerable<RestApiCrudDropdownItem> Items { get; set; }
+        public IEnumerable<RestApiDropdownItem> Items { get; set; }
 
         /// <summary>
         /// Returns or sets the pagination information for the current API request.

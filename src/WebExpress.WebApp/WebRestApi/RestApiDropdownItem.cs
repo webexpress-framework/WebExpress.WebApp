@@ -6,7 +6,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// <summary>
     /// Represents a lightweight DTO for dropdown entries returned by a REST endpoint.
     /// </summary>
-    public class RestApiCrudDropdownItem
+    public class RestApiDropdownItem
     {
         /// <summary>
         /// Returns or sets the unique item identifier.
@@ -31,7 +31,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// </summary>
         [JsonPropertyName("icon")]
         public string Icon { get; set; }
-        
+
         /// <summary>
         /// Returns or sets the image icon uri for the item.
         /// </summary>

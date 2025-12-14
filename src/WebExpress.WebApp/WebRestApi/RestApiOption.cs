@@ -7,11 +7,11 @@ namespace WebExpress.WebApp.WebRestApi
     /// Represents a configuration option for a row in a REST API-based CRUD table.
     /// </summary>
     [JsonPolymorphic]
-    [JsonDerivedType(typeof(RestApiCrudOptionHeader), "RestApiCrudTableRowOptionHeader")]
-    [JsonDerivedType(typeof(RestApiCrudOptionSeperator), "RestApiCrudTableRowOptionSeperator")]
-    [JsonDerivedType(typeof(RestApiCrudOptionEdit), "RestApiCrudTableRowOptionEdit")]
-    [JsonDerivedType(typeof(RestApiCrudOptionDelete), "RestApiCrudTableRowOptionDelete")]
-    public class RestApiCrudOption
+    [JsonDerivedType(typeof(RestApiOptionHeader), "RestApiCrudTableRowOptionHeader")]
+    [JsonDerivedType(typeof(RestApiOptionSeperator), "RestApiCrudTableRowOptionSeperator")]
+    [JsonDerivedType(typeof(RestApiOptionEdit), "RestApiCrudTableRowOptionEdit")]
+    [JsonDerivedType(typeof(RestApiOptionDelete), "RestApiCrudTableRowOptionDelete")]
+    public class RestApiOption
     {
         /// <summary>
         /// Returns or sets the id.
@@ -29,7 +29,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="request">The request object associated with the current operation.</param>
-        public RestApiCrudOption(Request request)
+        public RestApiOption(Request request)
         {
             Request = request;
         }

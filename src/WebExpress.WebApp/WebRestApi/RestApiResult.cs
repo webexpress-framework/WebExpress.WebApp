@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Collections.Generic;
+using System.Text;
 using System.Text.Json;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
@@ -7,7 +8,7 @@ using WebExpress.WebIndex;
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Represents the result of a REST API CRUD operation.
+    /// Represents the result of a REST API operation, including data and pagination information.
     /// </summary>
     /// <remarks>
     /// This class provides a standardized structure for returning data and pagination 
@@ -17,7 +18,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// <typeparam name="TIndexItem">
     /// The type of items contained in the result. Must implement <see cref="IIndexItem"/>.
     /// </typeparam>
-    public class RestApiCrudResult<TIndexItem> : IRestApiResult
+    public class RestApiResult<TIndexItem> : IRestApiResult
         where TIndexItem : IIndexItem
     {
         private readonly JsonSerializerOptions _jsonOptions = new()
@@ -26,9 +27,14 @@ namespace WebExpress.WebApp.WebRestApi
         };
 
         /// <summary>
-        /// Returns or sets the item.
+        /// Returns or sets the collection of items.
         /// </summary>
-        public TIndexItem Data { get; set; }
+        public IEnumerable<TIndexItem> Data { get; set; }
+
+        /// <summary>
+        /// Returns or sets the pagination information for the current API request.
+        /// </summary>
+        public RestApiPaginationInfo Pagination { get; set; }
 
         /// <summary>
         /// Converts the current instance into a <see cref="Response"/> object.
@@ -36,7 +42,13 @@ namespace WebExpress.WebApp.WebRestApi
         /// <returns>A Response object representing the result of the conversion.</returns>
         public virtual Response ToResponse()
         {
-            var jsonData = JsonSerializer.Serialize(Data, _jsonOptions);
+            var data = new
+            {
+                data = Data,
+                pagination = Pagination
+            };
+
+            var jsonData = JsonSerializer.Serialize(data, _jsonOptions);
             var content = Encoding.UTF8.GetBytes(jsonData);
 
             return new ResponseOK

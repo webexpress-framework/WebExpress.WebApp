@@ -23,6 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\WebExpress.WebIndex\src\WebExpress.WebIndex\WebExpress.WebIndex.csproj" />
     <ProjectReference Include="..\WebExpress.WebApp\WebExpress.WebApp.csproj" />
   </ItemGroup>
 

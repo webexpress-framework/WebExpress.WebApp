@@ -1,0 +1,12 @@
+.restform-field-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.2em;
+    width: 100%;
+}
+
+.restform-field-marker {
+    flex: 0 0 4px;
+    background: var(--bs-danger);
+    align-self: stretch;
+}

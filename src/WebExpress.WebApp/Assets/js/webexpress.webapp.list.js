@@ -139,7 +139,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
         this._progressDiv.style.visibility = "visible";
 
         const filter = encodeURIComponent(this._filter ?? "");
-        const url = `${this._restUri}?search=${filter}&page=${this._page}`;
+        const url = `${this._restUri}?q=${filter}&p=${this._page}`;
 
         fetch(url)
             .then(res => {

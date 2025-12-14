@@ -206,7 +206,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
 
         const filter = encodeURIComponent(this._filter ?? "");
         const separator = this._restUri.includes("?") ? "&" : "?";
-        const url = `${this._restUri}${separator}filter=${filter}&page=${this._page}`;
+        const url = `${this._restUri}${separator}q=${filter}&p=${this._page}`;
 
         fetch(url)
             .then((res) => {
@@ -252,18 +252,17 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
 
                 this._rows = (response.rows || []).map((row) => {
                     if (!row.cells) { row.cells = []; }
-                    if (Array.isArray(row.options)) {
-                        row.options.forEach((option) => { option.uri = "javascript:void(0)"; });
-                    }
                     return row;
                 });
 
-                this._hasOptions = (this._options && this._options.length > 0) || 
-                                   this._rows.some((r) => r.options && r.options.length > 0);
+                this._hasOptions = (this._options && this._options.length > 0)
+                    || this._rows.some((r) => r.options && r.options.length > 0);
 
                 this.render();
 
-                if (this._progressDiv) { this._progressDiv.style.visibility = "hidden"; }
+                if (this._progressDiv) {
+                    this._progressDiv.style.visibility = "hidden";
+                }
             })
             .catch((error) => {
                 console.error("Request failed:", error);
@@ -454,7 +453,8 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
                 div.dataset.size = "btn-sm";
                 div.dataset.border = "false";
                 tdOpt.appendChild(div);
-                new webexpress.webui.DropdownCtrl(div).items = effectiveOptions;
+                const ctrl = new webexpress.webui.DropdownCtrl(div);
+                ctrl.items = effectiveOptions;
             }
             tr.appendChild(tdOpt);
         }

@@ -11,7 +11,7 @@ namespace WebExpress.WebApp.WWW.Api.V1
     /// <summary>
     /// Determines the status and progress of a task (WebTask).
     /// </summary>
-    [Method(CrudMethod.GET)]
+    //[Method(CrudMethod.GET)]
     [IncludeSubPaths(true)]
     public sealed class ProgressTask : IRestApi
     {

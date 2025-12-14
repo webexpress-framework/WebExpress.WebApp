@@ -11,7 +11,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// <typeparam name="TIndexItem">
     /// The type of the index item associated with this list item.
     /// </typeparam>
-    public class RestApiCrudListItem<TIndexItem>
+    public class RestApiListItem<TIndexItem>
         where TIndexItem : IIndexItem
     {
         /// <summary>
@@ -48,6 +48,6 @@ namespace WebExpress.WebApp.WebRestApi
         /// Returns or sets optional per-item options (edit/delete etc.).
         /// </summary>
         [JsonPropertyName("options")]
-        public IEnumerable<RestApiCrudOption> Options { get; set; }
+        public IEnumerable<RestApiOption> Options { get; set; }
     }
 }

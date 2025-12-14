@@ -12,15 +12,16 @@ using WebExpress.WebCore.WebRestApi;
 using WebExpress.WebCore.WebStatusPage;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebIndex;
+using WebExpress.WebIndex.Wql;
 using WebExpress.WebUI.WebIcon;
 
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Abstract class providing CRUD operations for REST API.
+    /// Abstract class providing table operations for REST API.
     /// </summary>
     /// <typeparam name="TIndexItem">Type of the index item.</typeparam>
-    public abstract class RestApiCrudTable<TIndexItem> : RestApiCrud<TIndexItem>
+    public abstract class RestApiTable<TIndexItem> : IRestApi
         where TIndexItem : IIndexItem
     {
         private readonly Dictionary<PropertyInfo, RestApiCrudTableColumn> _cachedColumns;
@@ -35,7 +36,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
-        public RestApiCrudTable()
+        public RestApiTable()
         {
             // search for an attribute of type Title and return its value if present
             Title = GetType().CustomAttributes
@@ -96,25 +97,18 @@ namespace WebExpress.WebApp.WebRestApi
         }
 
         /// <summary>
-        /// Retrieves a collection of options.
-        /// </summary>
-        /// <param name="request">The request object containing the criteria for retrieving options. Cannot be null.</param>
-        /// <param name="row">The row object for which options are being retrieved. Cannot be null.</param>
-        public virtual IEnumerable<RestApiCrudOption> GetOptions(Request request, TIndexItem row)
-        {
-            return [];
-        }
-
-        /// <summary>
         /// Processing of the resource that was called via the get request.
         /// </summary>
         /// <param name="request">The request.</param>
         /// <returns>The response containing the result of the operation.</returns>
-        public override Response GetData(Request request)
+        [Method(RequestMethod.GET)]
+        public Response Retrieve(Request request)
         {
-            var pageNumber = Convert.ToInt32(request.GetParameter("page")?.Value ?? "0"); // current page number
-            var pageSize = Convert.ToInt32(request.GetParameter("pageSize")?.Value ?? "50"); // number of items per page
-            var filter = request.GetParameter("filter")?.Value ?? string.Empty;
+            // current page number
+            var pageNumber = Convert.ToInt32(request.GetParameter("p")?.Value ?? "0");
+            // number of items per page
+            var pageSize = Convert.ToInt32(request.GetParameter("s")?.Value ?? "50");
+            var filter = request.GetParameter("q")?.Value ?? string.Empty;
             var wql = request.GetParameter("wql")?.Value ?? null;
 
             try
@@ -156,6 +150,7 @@ namespace WebExpress.WebApp.WebRestApi
                         {
                             var icon = _cachedRowIconAttribute?.GetValue(row) as IIcon;
                             var uri = _cachedRowUriAttribute?.GetValue(row) as IUri;
+
                             return new RestApiCrudTableRow
                             {
                                 Id = row.Id.ToString(),
@@ -184,6 +179,59 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 return new ResponseBadRequest(new StatusMessage($"Error processing request.{ex}"));
             }
+        }
+
+        /// <summary>
+        /// Retrieves a collection of options.
+        /// </summary>
+        /// <param name="request">The request object containing the criteria for retrieving options. Cannot be null.</param>
+        /// <param name="row">The row object for which options are being retrieved. Cannot be null.</param>
+        public virtual IEnumerable<RestApiOption> GetOptions(Request request, TIndexItem row)
+        {
+            return [];
+        }
+
+        /// <summary>
+        /// Retrieves a collection of index items that match the specified filter 
+        /// and request parameters.
+        /// </summary>
+        /// <param name="filter">
+        /// A string used to filter the results. The format and supported values 
+        /// depend on the implementation. Can be null or empty to indicate no filtering.
+        /// </param>
+        /// <param name="request">
+        /// An object containing additional parameters that influence the data 
+        /// retrieval operation. Cannot be null.
+        /// </param>
+        /// <returns>
+        /// An enumerable collection of index items of type TIndexItem that 
+        /// satisfy the filter and request criteria. The collection may be 
+        /// empty if no items match.
+        /// </returns>
+        public virtual IEnumerable<TIndexItem> GetData(string filter, Request request)
+        {
+            return [];
+        }
+
+        /// <summary>
+        /// Retrieves a collection of index items that match the specified WQL 
+        /// statement and request parameters.
+        /// </summary>
+        /// <param name="wqlStatement">
+        /// The WQL statement that defines the query criteria for selecting index 
+        /// items. Cannot be null.
+        /// </param>
+        /// <param name="request">
+        /// The request object containing additional parameters or options that 
+        /// influence the data retrieval. Cannot be null.
+        /// </param>
+        /// <returns>
+        /// An enumerable collection of index items that satisfy the query 
+        /// criteria. The collection is empty if no items match.
+        /// </returns>
+        public virtual IEnumerable<TIndexItem> GetData(IWqlStatement wqlStatement, Request request)
+        {
+            return [];
         }
     }
 }

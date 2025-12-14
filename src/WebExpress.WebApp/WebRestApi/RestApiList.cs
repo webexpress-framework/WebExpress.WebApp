@@ -11,6 +11,7 @@ using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
 using WebExpress.WebCore.WebStatusPage;
 using WebExpress.WebIndex;
+using WebExpress.WebIndex.Wql;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -19,7 +20,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// Produces a flat "items" array suitable for the ListCtrl frontend.
     /// </summary>
     /// <typeparam name="TIndexItem">Type of the index item.</typeparam>
-    public abstract class RestApiCrudList<TIndexItem> : RestApiCrud<TIndexItem>
+    public abstract class RestApiList<TIndexItem> : IRestApi
         where TIndexItem : IIndexItem
     {
         /// <summary>
@@ -30,7 +31,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
-        protected RestApiCrudList()
+        protected RestApiList()
         {
             // read title attribute once
             Title = GetType().CustomAttributes
@@ -44,7 +45,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// </summary>
         /// <param name="request">The request object containing the criteria for retrieving options. Cannot be null.</param>
         /// <param name="row">The row object for which options are being retrieved. Cannot be null.</param>
-        public virtual IEnumerable<RestApiCrudOption> GetOptions(Request request, TIndexItem row)
+        public virtual IEnumerable<RestApiOption> GetOptions(Request request, TIndexItem row)
         {
             // return empty by default
             return [];
@@ -56,14 +57,13 @@ namespace WebExpress.WebApp.WebRestApi
         /// </summary>
         /// <param name="request">The request.</param>
         /// <returns>The response containing the result of the operation.</returns>
-        public override Response GetData(Request request)
+        [Method(RequestMethod.GET)]
+        public Response Retrieve(Request request)
         {
             // read paging and filters; support both "filter" (frontend) and "search" (compat)
-            var pageNumber = Convert.ToInt32(request.GetParameter("page")?.Value ?? "0");
-            var pageSize = Convert.ToInt32(request.GetParameter("pageSize")?.Value ?? "50");
-            var filter = request.GetParameter("filter")?.Value
-                         ?? request.GetParameter("search")?.Value
-                         ?? string.Empty;
+            var pageNumber = Convert.ToInt32(request.GetParameter("p")?.Value ?? "0");
+            var pageSize = Convert.ToInt32(request.GetParameter("s")?.Value ?? "50");
+            var filter = request.GetParameter("q")?.Value ?? string.Empty;
             var wql = request.GetParameter("wql")?.Value ?? null;
 
             try
@@ -91,7 +91,7 @@ namespace WebExpress.WebApp.WebRestApi
                 // map to list items
                 var items = pageSlice.Select(row =>
                 {
-                    var item = new RestApiCrudListItem<TIndexItem>()
+                    var item = new RestApiListItem<TIndexItem>()
                     {
                         Id = row.Id.ToString(),
                         Text = ResolveItemText(row),
@@ -104,7 +104,7 @@ namespace WebExpress.WebApp.WebRestApi
                     return item;
                 });
 
-                var result = new RestApiCrudListResult<TIndexItem>()
+                var result = new RestApiListResult<TIndexItem>()
                 {
                     Title = I18N.Translate(request, Title),
                     Items = items,
@@ -176,6 +176,49 @@ namespace WebExpress.WebApp.WebRestApi
 
             // ultimate fallback when no primary attribute is present
             return row.ToString() ?? string.Empty;
+        }
+
+        /// <summary>
+        /// Retrieves a collection of index items that match the specified filter 
+        /// and request parameters.
+        /// </summary>
+        /// <param name="filter">
+        /// A string used to filter the results. The format and supported values 
+        /// depend on the implementation. Can be null or empty to indicate no filtering.
+        /// </param>
+        /// <param name="request">
+        /// An object containing additional parameters that influence the data 
+        /// retrieval operation. Cannot be null.
+        /// </param>
+        /// <returns>
+        /// An enumerable collection of index items of type TIndexItem that 
+        /// satisfy the filter and request criteria. The collection may be 
+        /// empty if no items match.
+        /// </returns>
+        public virtual IEnumerable<TIndexItem> GetData(string filter, Request request)
+        {
+            return [];
+        }
+
+        /// <summary>
+        /// Retrieves a collection of index items that match the specified WQL 
+        /// statement and request parameters.
+        /// </summary>
+        /// <param name="wqlStatement">
+        /// The WQL statement that defines the query criteria for selecting index 
+        /// items. Cannot be null.
+        /// </param>
+        /// <param name="request">
+        /// The request object containing additional parameters or options that 
+        /// influence the data retrieval. Cannot be null.
+        /// </param>
+        /// <returns>
+        /// An enumerable collection of index items that satisfy the query 
+        /// criteria. The collection is empty if no items match.
+        /// </returns>
+        public virtual IEnumerable<TIndexItem> GetData(IWqlStatement wqlStatement, Request request)
+        {
+            return [];
         }
     }
 }
