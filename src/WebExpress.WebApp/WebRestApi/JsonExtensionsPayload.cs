@@ -30,7 +30,7 @@ namespace WebExpress.WebApp.WebRestApi
             switch (element.ValueKind)
             {
                 case JsonValueKind.Object:
-                    var dict = new Payload();
+                    var dict = new RestApiCrudFormData();
                     foreach (var prop in element.EnumerateObject())
                     {
                         dict[prop.Name] = ToPayload(prop.Value);

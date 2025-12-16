@@ -7,7 +7,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// Represents a row definition for a REST API-based CRUD table, including metadata such as label, icon, width, and
     /// rendering logic.
     /// </summary>
-    public class RestApiCrudTableRow
+    public class RestApiTableRow
     {
         /// <summary>
         /// Returns or sets the id.
@@ -19,7 +19,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// Returns or sets the cells.
         /// </summary>
         [JsonPropertyName("cells")]
-        public IEnumerable<RestApiCrudTableCell> Cells { get; set; } = [];
+        public IEnumerable<RestApiTableCell> Cells { get; set; } = [];
 
         /// <summary>
         /// Returns or sets the options associated with the REST API CRUD row.
@@ -48,7 +48,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
-        public RestApiCrudTableRow()
+        public RestApiTableRow()
         {
         }
     }

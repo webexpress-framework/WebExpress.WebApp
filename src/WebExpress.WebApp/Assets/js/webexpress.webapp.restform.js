@@ -1,10 +1,7 @@
-/**
+﻿/**
  * REST form controller
  *
- * Replaces a traditional form POST with a JSON REST request, performs client-side validation,
- * shows field markers (vertical bar left of control) inside a flex container and aggregates messages
- * in the form error area. Provides hooks and events for success / error states and supports loading
- * initial data.
+ * Replaces a traditional form POST with a JSON REST request, performs client-side validation.
  *
  * Dispatched Events:
  * - webexpress.webui.Event.DATA_REQUESTED_EVENT
@@ -86,6 +83,11 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
         // map field element -> { marker, wrapper, message }
         this._fieldErrorMap = new Map();
 
+        // confirmation html (extracted from <confirm> element inside form)
+        this._confirmHtml = null;
+        this._confirmContainer = null;
+        this._confirmTimer = null;
+
         // bind handlers
         this._onSubmitBound = this._onSubmit.bind(this);
 
@@ -100,8 +102,14 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
         // attach submit listener in capture phase to intercept submit before other handlers
         this._element.addEventListener("submit", this._onSubmitBound, true);
 
-        // create container for global form errors
+        // create container for form errors
         this._ensureFormErrorContainer();
+
+        // init confirm element if provided inside the form
+        this._initConfirm();
+        
+        // create container for form confirm message 
+        this._ensureFormConfirmContainer();
 
         // auto-load data if endpoint is configured and mode is edit
         if (this.options.api && this.mode === "edit") {
@@ -145,8 +153,120 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Load data from configured endpoint and populate the form.
-     * @returns {Promise<void>}
+     * If a <confirm> element is present inside the form its innerHTML will be used as the default success message.
+     */
+    _initConfirm() {
+        // find a <confirm> element inside the form
+        const el = this._element.querySelector("confirm");
+        if (el) {
+            // extract html and remove the original element from dom
+            this._confirmHtml = String(el.innerHTML);
+            this._element.removeChild(el);
+        }
+    }
+    
+    /**
+     * Initialize confirmation element.
+     */
+    _ensureFormConfirmContainer() {
+        // create a hidden container for showing confirmations
+        this._confirmContainer = document.createElement("div");
+        this._confirmContainer.className = "restform-confirm alert alert-success";
+        this._confirmContainer.style.display = "none";
+
+        const headerEl = this._element.querySelector(".modal-body");
+        if (headerEl) {
+            if (this._confirmContainer.parentNode !== headerEl) {
+                if (this._confirmContainer.parentNode) {
+                    this._confirmContainer.parentNode.removeChild(cont);
+                }
+                headerEl.insertBefore(this._confirmContainer, headerEl.firstChild);
+            }
+        } else {
+            if (this._confirmContainer.parentNode !== this._element) {
+                if (this._confirmContainer.parentNode) {
+                    this._confirmContainer.parentNode.removeChild(this._confirmContainer);
+                }
+                if (this._element.firstChild) {
+                    this._element.insertBefore(this._confirmContainer, this._element.firstChild);
+                } else {
+                    this._element.appendChild(this._confirmContainer);
+                }
+            }
+        }
+    }
+
+    /**
+     * Displays the confirmation message inside the form.
+     * If a custom message is provided, it overrides the stored confirmation HTML.
+     * Any existing hide‑timer is cleared before showing the confirmation container.
+     *
+     * @param {string|null} message Optional override message. If omitted, the stored confirmation HTML is used.
+     * @returns {void} This method updates the confirmation container in place.
+     */
+    _showConfirm(message) {
+        // determine message html
+        const html = (typeof message === "string" && message) ? message : this._confirmHtml;
+        if (!html || !this._confirmContainer) {
+            return;
+        }
+
+        // clear existing timer if any
+        if (this._confirmTimer !== null) {
+            window.clearTimeout(this._confirmTimer);
+            this._confirmTimer = null;
+        }
+
+        // set html and display container
+        this._confirmContainer.innerHTML = String(html);
+        this._confirmContainer.style.display = "block";
+    }
+
+    /**
+     * Closes the modal that contains this form, if any.
+     * Detects the nearest ancestor with the `modal` class and attempts to
+     * close it using the Bootstrap Modal API.
+     */
+    _closeEnclosingModal() {
+        if (!this._element) {
+            return;
+        }
+
+        // find modal element (closest ancestor with class 'modal')
+        var modal = (this._element.classList && this._element.classList.contains("modal")) 
+            ? this._element : (this._element.closest ? this._element.closest(".modal") : null);
+        if (!modal) {
+            return;
+        }
+
+        // try bootstrap API
+        try {
+            if (window.bootstrap && typeof window.bootstrap.Modal === "function") {
+                var inst = null;
+                if (typeof window.bootstrap.Modal.getInstance === "function") {
+                    inst = window.bootstrap.Modal.getInstance(modal);
+                }
+                if (!inst) {
+                    inst = new window.bootstrap.Modal(modal);
+                }
+                if (inst && typeof inst.hide === "function") {
+                    inst.hide();
+                    return;
+                }
+            }
+        } catch (e) {
+        }
+    }
+
+    /**
+     * Loads data from the configured API endpoint and populates the form.
+     * Dispatches lifecycle events for request start, data arrival, and task
+     * completion. If an `id` option is provided, it is appended as a query
+     * parameter. Successful responses populate the form and trigger optional
+     * success hooks.
+     * Errors during the request or population phase are caught and forwarded
+     * to the form's error handler.
+     * @returns {Promise<void>} A Promise that resolves once the load operation has completed, regardless of success or failure. The Promise rejects only if an unexpected exception escapes the internal error handling.
      */
     async load() {
         if (this._loading || !this.options.api) {
@@ -199,9 +319,14 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Populate form fields with data object.
-     * keys in data object must match name attributes of fields.
-     * @param {Object} data Key-value pairs to set.
+     * Populates form fields using values from a data object.
+     * Each key in the data object must match the `name` attribute of one or
+     * more form controls. Supports radios, checkboxes, multi‑selects, and
+     * custom controller widgets.
+     * Fields that cannot be populated (e.g., file inputs or missing fields)
+     * are silently skipped.
+     * @param {Object} data Key‑value pairs used to populate the form.
+     * @returns {void} This method does not return a value; it updates the form in place.
      */
     _populate(data) {
         if (!data || typeof data !== "object") {
@@ -252,8 +377,12 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Submit event handler: validate and send.
-     * @param {Event} ev submit event
+     * Handles the form's submit event by preventing the browser's default
+     * submission, optionally validating the form, and triggering the
+     * asynchronous submit workflow.
+     * If validation is enabled and fails, the first invalid field is focused
+     * and the submission is aborted.
+     * @param {Event} ev The submit event dispatched by the browser.
      */
     _onSubmit(ev) {
         ev.preventDefault();
@@ -278,9 +407,10 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Validate the form using HTML5 validity and additional rules.
-     * markers are shown as a vertical bar left of the control; messages are aggregated.
-     * @returns {boolean}
+     * Validates the form using native HTML5 validity checks and additional
+     * custom rules (email format, pattern attributes, numeric ranges,
+     * minlength/maxlength constraints).
+     * @returns {boolean} True if all fields pass validation; false if any validation rule fails. When false, field markers and aggregated messages are displayed to guide the user.
      */
     validate() {
         this.clearErrors();
@@ -370,8 +500,11 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Build payload from form fields.
-     * @returns {Object}
+     * Builds a plain JavaScript object representing the form payload.
+     * Each enabled form control contributes a key/value pair based on its
+     * name and current value. Special handling is applied for checkboxes,
+     * radio groups, multi-select fields, and custom controller widgets.
+     * @returns {Object} A payload object where each property corresponds to a form field name and its normalized value. File inputs are skipped.
      */
     _buildPayload() {
         const data = {};
@@ -425,8 +558,12 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Submit the form payload to the configured REST API.
-     * @returns {Promise<void>}
+     * Submits the form payload to the configured REST API.
+     * If the server responds with `hideForm: true`, the form is hidden and a
+     * confirmation view is shown. If no confirmation content is available 
+     * at all, the form remains visible and any enclosing modal (if present) 
+     * is closed.
+     * @returns {Promise<void>} A Promise that resolves when the submission process has completed. The Promise rejects if the request fails or an unexpected error occurs.
      */
     async submit() {
         if (this._submitting) {
@@ -563,7 +700,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
             const resp = await fetch(requestUrl, init);
 
             let json = null;
-            const contentType = resp.headers.get("content-type") || "";
+            const contentType = (resp && resp.headers && typeof resp.headers.get === "function") ? (resp.headers.get("content-type") || "") : "";
             if (contentType.indexOf("application/json") !== -1) {
                 try {
                     json = await resp.json();
@@ -590,6 +727,29 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
                 }
                 this._dispatch(webexpress.webui.Event.UPLOAD_SUCCESS_EVENT, { response: json, status: resp.status, form: this._element });
                 this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, { type: "submit", data: json });
+
+                // determine possible server-provided confirmation content
+                // check for explicit confirmHtml (full html) first, then confirmMessage/message
+                const confirmHtmlFromServer = json && (json.confirmHtml || (json.data && json.data.confirmHtml)) ? (json.confirmHtml || json.data.confirmHtml) : null;
+                const serverMsg = json && (json.confirmMessage || json.message || (json.data && json.data.message)) ? (json.confirmMessage || json.message || json.data.message) : null;
+
+                try {
+                    // if server asks to hide the form, prefer confirmHtmlFromServer, then the form's <confirm>, then serverMsg
+                    if (json && json.hideForm === true) {
+                        this._closeEnclosingModal();
+                    } else {
+                        // non-hideForm: prefer server confirmHtml, then serverMsg, then form's confirm block
+                        if (confirmHtmlFromServer) {
+                            this._showConfirm(String(confirmHtmlFromServer));
+                        } else if (serverMsg) {
+                            this._showConfirm(String(serverMsg));
+                        } else if (this._confirmHtml) {
+                            this._showConfirm(null);
+                        }
+                    }
+                } catch (e) {
+                    // ignore confirm display errors
+                }
             } else if (resp.status === 400) {
                 if (Array.isArray(json)) {
                     this._applyServerArrayErrors(json);
@@ -640,8 +800,10 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Set form submitting state: disable controls and mark class.
-     * @param {boolean} state
+     * Sets the submitting state of the form.
+     * When enabled, all form controls are disabled and a CSS class is applied
+     * to indicate that the form is currently being submitted.
+     * @param {boolean} state True to activate submitting mode; false to restore interactivity.
      */
     _setSubmitting(state) {
         this._submitting = !!state;
@@ -661,9 +823,11 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Apply server-side field errors (errors map).
-     * messages are aggregated; matching fields receive a marker.
-     * @param {Object} errors map of fieldName -> message
+     * Applies server‑side field errors provided as a key‑value map.
+     * Each entry maps a field name to its error message. Matching fields
+     * receive a visual error marker, while all messages are added to the
+     * aggregated form‑level error display.
+     * @param {Object} errors A map of fieldName → message returned by the server.
      */
     _applyServerFieldErrors(errors) {
         this.clearErrors();
@@ -683,9 +847,9 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Apply server validation errors represented as an array.
-     * expected: [{ code, message, field }, ...]
-     * @param {Array} errorsArray
+     * Applies server‑side validation errors provided as an array of objects.
+     * Each error may contain a message and an optional field identifier.
+     * @param {Array} errorsArray The array of validation error objects returned by the server.
      */
     _applyServerArrayErrors(errorsArray) {
         this.clearErrors();
@@ -716,9 +880,13 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Find field by name or id with case-insensitive matching and simple normalizations.
-     * @param {string} raw field name from server
-     * @returns {HTMLElement|null}
+     * Attempts to locate a form field by name or id using several
+     * fallback strategies, including case‑insensitive comparison
+     * and simple name normalizations.
+     * This is used to match server‑side field identifiers to actual
+     * form controls, even when naming conventions differ slightly.
+     * @param {string} raw The raw field name provided by the server.
+     * @returns {HTMLElement|null} The matching form control, or null if none is found.
      */
     _findFieldByName(raw) {
         if (!raw) {
@@ -764,10 +932,11 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Show a field marker (vertical bar left of element) inside a flex wrapper and store it for clearing later.
-     * does not create per-field helper text; messages shown aggregated.
-     * @param {HTMLElement} field
-     * @param {string} message
+     * Displays a visual error marker for a specific form field.
+     * Wraps the field in a flex container, inserts a vertical marker,
+     * and stores all created elements so the error state can be cleared later.
+     * @param {HTMLElement} field The form field to mark as invalid.
+     * @param {string} message The error message associated with the field.
      */
     _showFieldError(field, message) {
         if (!field || !(field instanceof HTMLElement)) {
@@ -811,8 +980,11 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Display aggregated messages in the form-level error container with intro text.
-     * @param {Array<string>} messages
+     * Renders a list of aggregated error messages in the form‑level
+     * error container, including a localized introductory text.
+     * Ensures the container exists, removes duplicate messages,
+     * and escapes all content before inserting it into the DOM.
+     * @param {Array<string>} messages The error messages to display.
      */
     _displayAggregatedErrors(messages) {
         if (!Array.isArray(messages) || messages.length === 0) {
@@ -839,9 +1011,11 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Programmatically set a field error (marker + aggregated message).
-     * @param {string} fieldName
-     * @param {string} message
+     * Sets an error state for a specific form field.
+     * Displays the field‑level error marker and adds the message
+     * to the aggregated error list shown in the form.
+     * @param {string} fieldName The name attribute of the field to mark as invalid.
+     * @param {string} message The error message to display.
      */
     setFieldError(fieldName, message) {
         const field = this._element.querySelector(`[name="${CSS.escape(fieldName)}"]`);
@@ -899,18 +1073,10 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Dispatch a custom DOM event from the form root.
-     * @param {string} name
-     * @param {Object} detail
-     */
-    _dispatch(name, detail) {
-        const ev = new CustomEvent(name, { detail: detail || {}, bubbles: true, cancelable: false });
-        this._element.dispatchEvent(ev);
-    }
-
-    /**
-     * Dispatch an error event and show a generic message in the form area.
-     * @param {Error} error
+     * Handles an error by displaying a message in the form area
+     * and dispatching an error event for external listeners.
+     * If the error has no message, a generic localized fallback is used.
+     * @param {Error} error The error that occurred during form processing.
      */
     _dispatchError(error) {
         try {
@@ -941,9 +1107,11 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Escape string for safe insertion into innerHTML.
-     * @param {string} str
-     * @returns {string}
+     * Escapes a string so it can be safely inserted into innerHTML.
+     * Converts special characters to their corresponding HTML entities
+     * to prevent HTML injection.
+     * @param {string} str The raw string to escape.
+     * @returns {string} The escaped, HTML‑safe string.
      */
     _escapeHtml(str) {
         return str.replace(/[&<>"']/g, function (m) {

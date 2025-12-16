@@ -6,7 +6,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// <summary>
     /// Represents a lightweight DTO for selection entries returned by a REST endpoint.
     /// </summary>
-    public class RestApiCrudSelectionItem
+    public class RestApiSelectionItem
     {
         /// <summary>
         /// Returns or sets the unique item identifier.

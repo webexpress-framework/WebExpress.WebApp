@@ -5,7 +5,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// <summary>
     /// Represents a column in a REST CRUD resource.
     /// </summary>
-    public class RestApiCrudTableColumn
+    public class RestApiTableColumn
     {
         /// <summary>
         /// Returns or sets the name of the associated property of the item that corresponds to the column.
@@ -52,7 +52,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
-        public RestApiCrudTableColumn()
+        public RestApiTableColumn()
         {
         }
     }

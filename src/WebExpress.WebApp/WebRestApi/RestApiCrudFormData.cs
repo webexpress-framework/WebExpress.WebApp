@@ -10,7 +10,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// any type, indexed by string keys. This is useful for scenarios where flexible, schema-less 
     /// data is required, such as passing metadata or extensible properties between components.
     /// </remarks>
-    public class Payload : Dictionary<string, object>
+    public class RestApiCrudFormData : Dictionary<string, object>
     {
     }
 }

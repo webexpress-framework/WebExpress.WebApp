@@ -34,10 +34,28 @@ namespace WebExpress.WebApp.WebRestApi
         public virtual string Icon => "fa fa-trash";
 
         /// <summary>
+        /// Returns the edit form uri.
+        /// </summary>
+        [JsonPropertyName("uri")]
+        public virtual string Uri { get; set; }
+
+        /// <summary>
         /// Returns or sets the text color.
         /// </summary>
         [JsonPropertyName("color")]
         public virtual string Color => "text-danger";
+
+        /// <summary>
+        /// Returns or sets the modal id.
+        /// </summary>
+        [JsonPropertyName("modal")]
+        public virtual string Modal { get; set; }
+
+        /// <summary>
+        /// Returns the method.
+        /// </summary>
+        [JsonPropertyName("method")]
+        public virtual string Method => "DELETE";
 
         /// <summary>
         /// Initializes a new instance of the class.

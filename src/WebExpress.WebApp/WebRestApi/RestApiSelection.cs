@@ -117,10 +117,10 @@ namespace WebExpress.WebApp.WebRestApi
                     .Skip(pageSize * pageNumber)
                     .Take(pageSize);
 
-                var result = new RestApiCrudSelectionResult<IIndexItem>()
+                var result = new RestApiSelectionResult<IIndexItem>()
                 {
                     Title = I18N.Translate(request, Title),
-                    Items = pageItems.Select(x => new RestApiCrudSelectionItem
+                    Items = pageItems.Select(x => new RestApiSelectionItem
                     {
                         Id = x.Id,
                         Text = _cachedNameAttribute?.GetValue(x)?.ToString() ?? x.Id.ToString(),

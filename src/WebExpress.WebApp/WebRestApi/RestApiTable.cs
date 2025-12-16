@@ -24,7 +24,7 @@ namespace WebExpress.WebApp.WebRestApi
     public abstract class RestApiTable<TIndexItem> : IRestApi
         where TIndexItem : IIndexItem
     {
-        private readonly Dictionary<PropertyInfo, RestApiCrudTableColumn> _cachedColumns;
+        private readonly Dictionary<PropertyInfo, RestApiTableColumn> _cachedColumns;
         private readonly PropertyInfo _cachedRowIconAttribute;
         private readonly PropertyInfo _cachedRowUriAttribute;
 
@@ -57,7 +57,7 @@ namespace WebExpress.WebApp.WebRestApi
                         var renderAttr = (RestTableColumnTemplateAttribute)Attribute.GetCustomAttribute(prop, typeof(RestTableColumnTemplateAttribute));
                         var isHidden = Attribute.IsDefined(prop, typeof(RestTableColumnHiddenAttribute));
 
-                        var column = new RestApiCrudTableColumn()
+                        var column = new RestApiTableColumn()
                         {
                             Name = name,
                             Label = labelAttr?.Name ?? name,
@@ -128,7 +128,7 @@ namespace WebExpress.WebApp.WebRestApi
                 }
 
                 var columns = _cachedColumns
-                   .Select(x => new RestApiCrudTableColumn()
+                   .Select(x => new RestApiTableColumn()
                    {
                        Name = x.Key.Name,
                        Label = I18N.Translate(request, x.Value.Label),
@@ -139,7 +139,7 @@ namespace WebExpress.WebApp.WebRestApi
                        Template = x.Value.Template
                    });
 
-                var result = new RestApiCrudTableResult()
+                var result = new RestApiTableResult()
                 {
                     Title = I18N.Translate(request, Title),
                     Columns = columns,
@@ -151,11 +151,11 @@ namespace WebExpress.WebApp.WebRestApi
                             var icon = _cachedRowIconAttribute?.GetValue(row) as IIcon;
                             var uri = _cachedRowUriAttribute?.GetValue(row) as IUri;
 
-                            return new RestApiCrudTableRow
+                            return new RestApiTableRow
                             {
                                 Id = row.Id.ToString(),
                                 Cells = _cachedColumns
-                                .Select(x => new RestApiCrudTableCell
+                                .Select(x => new RestApiTableCell
                                 {
                                     Text = x.Key.GetValue(row)?.ToString() ?? string.Empty,
                                 }),

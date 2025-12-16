@@ -17,7 +17,10 @@ namespace WebExpress.WebApp.WebRestApi
     public abstract class RestApiCrud<TIndexItem> : IRestApiCrud<TIndexItem>
         where TIndexItem : IIndexItem
     {
-        JsonSerializerOptions options = new JsonSerializerOptions() { PropertyNameCaseInsensitive = true };
+        private readonly JsonSerializerOptions _options = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
 
         /// <summary>
         /// Returns the collection of indexed items.
@@ -31,8 +34,15 @@ namespace WebExpress.WebApp.WebRestApi
         [Method(RequestMethod.POST)]
         public virtual Response CreateData(Request request)
         {
+            var payload = GetPayload(request);
+            if (payload is null)
+            {
+                return new ResponseBadRequest(new StatusMessage("Invalid or empty JSON payload."))
+                    .AddHeaderContentType("application/json");
+            }
+
             // validate request for creation; item is null for new resources
-            var validationResult = ValidateData(default(TIndexItem), null, request);
+            var validationResult = ValidateData(default, payload, request);
             if (!validationResult.IsValid)
             {
                 return new ResponseBadRequest()
@@ -44,18 +54,12 @@ namespace WebExpress.WebApp.WebRestApi
 
             try
             {
-                // persist creation - derived class implements actual persistence and returns created item
-                var created = PersistCreateData(null, request);
+                var result = CreateData(payload, request);
 
-                if (created == null)
+                if (result is null)
                 {
                     return new ResponseBadRequest(new StatusMessage("Creation failed."));
                 }
-
-                var result = new RestApiCrudResult<TIndexItem>()
-                {
-                    Data = created
-                };
 
                 return result.ToResponse();
             }
@@ -73,7 +77,26 @@ namespace WebExpress.WebApp.WebRestApi
         [Method(RequestMethod.GET)]
         public virtual Response Retrieve(Request request)
         {
+            // extract 'id' parameter if present
             var id = request.GetParameter("id")?.Value ?? string.Empty;
+            // current page number
+            var pageNumber = Convert.ToInt32(request.GetParameter("p")?.Value ?? "0");
+            // number of items per page
+            var pageSize = Convert.ToInt32(request.GetParameter("s")?.Value ?? "50");
+
+            if (string.IsNullOrEmpty(id))
+            {
+                var data = Data;
+
+                // return all items
+                return new RestApiCrudResultRetrieveMany<TIndexItem>()
+                {
+                    Data = data
+                        .Skip(pageNumber * pageSize)
+                        .Take(pageSize)
+                }
+                    .ToResponse();
+            }
 
             try
             {
@@ -81,7 +104,7 @@ namespace WebExpress.WebApp.WebRestApi
                     .Where(x => x.Id.ToString().Equals(id, StringComparison.OrdinalIgnoreCase))
                     .FirstOrDefault();
 
-                var result = new RestApiCrudResult<TIndexItem>()
+                var result = new RestApiCrudResultRetrieve<TIndexItem>()
                 {
                     Data = data
                 };
@@ -117,30 +140,9 @@ namespace WebExpress.WebApp.WebRestApi
                 return new ResponseNotFound(new StatusMessage($"Item with id '{id}' not found."));
             }
 
-            // parse JSON payload into a dynamic Payload structure
-            var payload = default(Payload);
-
-            if (request.Content is not null)
-            {
-                try
-                {
-                    // deserialize raw JSON into a JsonElement first
-                    var root = JsonSerializer.Deserialize<JsonElement>(request.Content, options);
-
-                    // convert JsonElement → Payload (recursive)
-                    payload = root.ToPayload() as Payload;
-                }
-                catch (JsonException)
-                {
-                    // JSON is malformed or cannot be parsed
-                    return new ResponseBadRequest(new StatusMessage("Invalid JSON payload."))
-                        .AddHeaderContentType("application/json");
-                }
-            }
-
+            var payload = GetPayload(request);
             if (payload is null)
             {
-                // payload is missing or empty
                 return new ResponseBadRequest(new StatusMessage("Invalid or empty JSON payload."))
                     .AddHeaderContentType("application/json");
             }
@@ -159,8 +161,9 @@ namespace WebExpress.WebApp.WebRestApi
             // apply the update (implemented by derived classes)
             try
             {
-                UpdateData(existingItem, payload, request);
-                return new ResponseOK();
+                var result = UpdateData(existingItem, payload, request);
+
+                return result?.ToResponse();
             }
             catch (Exception ex)
             {
@@ -187,7 +190,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <returns>
         /// An IRestApiValidationResult indicating validation success or errors.
         /// </returns>
-        public virtual IRestApiValidationResult ValidateData(TIndexItem existingItem, Payload payload, Request request)
+        public virtual IRestApiValidationResult ValidateData(TIndexItem existingItem, RestApiCrudFormData payload, Request request)
         {
             // default: no validation errors
             return new RestApiValidationResult();
@@ -195,21 +198,26 @@ namespace WebExpress.WebApp.WebRestApi
 
         /// <summary>
         /// Persists the newly created resource.
-        /// Override in derived classes to implement actual persistence and return the created item.
+        /// Override this method in derived classes to implement the actual
+        /// persistence logic and return a result describing the creation.
         /// </summary>
         /// <param name="payload">
-        /// The dynamic payload containing updated fields.
+        /// The dynamic payload containing the fields required to create the resource.
         /// </param>
         /// <param name="request">
-        /// The HTTP request providing additional context.
+        /// The HTTP request providing additional context for the creation process.
         /// </param>
         /// <returns>
-        /// The created item or null on failure.
+        /// A result object containing information about the create operation,
+        /// including the created resource.
         /// </returns>
-        protected virtual TIndexItem PersistCreateData(Payload payload, Request request)
+
+        protected virtual IRestApiCrudResultCreate CreateData(RestApiCrudFormData payload, Request request)
         {
-            // default: not implemented - derived classes must override
-            throw new NotImplementedException("PersistCreateData must be implemented in the derived class to create the resource.");
+            return new RestApiCrudResultCreate()
+            {
+                HideForm = true
+            };
         }
 
         /// <summary>
@@ -225,9 +233,12 @@ namespace WebExpress.WebApp.WebRestApi
         /// <param name="request">
         /// The HTTP request providing additional context.
         /// </param>
-        public virtual void UpdateData(TIndexItem existingItem, Payload payload, Request request)
+        public virtual IRestApiCrudResultUpdate UpdateData(TIndexItem existingItem, RestApiCrudFormData payload, Request request)
         {
-            // default: no-op - derived classes should override
+            return new RestApiCrudResultUpdate()
+            {
+                HideForm = true
+            };
         }
 
         /// <summary>
@@ -245,15 +256,16 @@ namespace WebExpress.WebApp.WebRestApi
             }
 
             var item = Data.FirstOrDefault(x => x.Id.ToString().Equals(id, StringComparison.OrdinalIgnoreCase));
-            if (item == null)
+            if (item is null)
             {
                 return new ResponseNotFound(new StatusMessage($"Item with id '{id}' not found."));
             }
 
             try
             {
-                DeleteData(id, request);
-                return new ResponseOK();
+                var result = DeleteData(item, request);
+
+                return result.ToResponse();
             }
             catch (Exception ex)
             {
@@ -262,14 +274,69 @@ namespace WebExpress.WebApp.WebRestApi
         }
 
         /// <summary>
-        /// Deletes data.
+        /// Deletes the specified resource.
+        /// Override this method in derived classes to implement the actual
+        /// deletion logic.
         /// </summary>
-        /// <param name="id">The id of the data to delete.</param>
-        /// <param name="request">The request.</param>
-        public virtual void DeleteData(string id, Request request)
+        /// <param name="existingItem">
+        /// The currently persisted item that is to be deleted.
+        /// </param>
+        /// <param name="request">
+        /// The HTTP request providing additional context for the delete operation.
+        /// </param>
+        /// <returns>
+        /// A result object containing information about the delete operation.
+        /// </returns>
+        public virtual IRestApiCrudResultDelete DeleteData(TIndexItem existingItem, Request request)
         {
-            // default: not implemented - derived classes must override to perform deletion
-            throw new NotImplementedException();
+            return new RestApiCrudResultDelete()
+            {
+                HideForm = true
+            };
+        }
+
+        /// <summary>
+        /// Parses the JSON content of the specified request into a Payload 
+        /// object, returning an error response if the payload is invalid 
+        /// or missing.
+        /// </summary>
+        /// <param name="request">
+        /// The request containing the JSON content to be parsed into a 
+        /// Payload object. The Content property should contain a valid 
+        /// JSON string.
+        /// </param>
+        /// <returns>
+        /// A Payload object representing the parsed JSON content if 
+        /// successful; otherwise null.
+        /// </returns>
+        private RestApiCrudFormData GetPayload(Request request)
+        {
+            // parse JSON payload into a dynamic Payload structure
+            var payload = default(RestApiCrudFormData);
+            if (request.Content is not null)
+            {
+                try
+                {
+                    // deserialize raw JSON into a JsonElement first
+                    var root = JsonSerializer.Deserialize<JsonElement>(request.Content, _options);
+
+                    // convert JsonElement → Payload (recursive)
+                    payload = root.ToPayload() as RestApiCrudFormData;
+                }
+                catch (JsonException)
+                {
+                    // JSON is malformed or cannot be parsed
+                    return null;
+                }
+            }
+
+            if (payload is null)
+            {
+                // payload is missing or empty
+                return null;
+            }
+
+            return payload;
         }
     }
 }
