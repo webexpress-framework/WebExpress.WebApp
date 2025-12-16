@@ -144,6 +144,32 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
+        /// Tests the mode property of the rest form control.
+        /// </summary>
+        [Theory]
+        [InlineData(TypeRestFormMode.Default, @"<form id=""*"" class=""wx-webapp-restform"">*</form>")]
+        [InlineData(TypeRestFormMode.New, @"<form id=""*"" class=""wx-webapp-restform"" data-mode=""new"">*</form>")]
+        [InlineData(TypeRestFormMode.Edit, @"<form id=""*"" class=""wx-webapp-restform"" data-mode=""edit"">*</form>")]
+        [InlineData(TypeRestFormMode.Delete, @"<form id=""*"" class=""wx-webapp-restform"" data-mode=""delete"">*</form>")]
+        public void Mode(TypeRestFormMode mode, string expected)
+        {
+            // preconditions
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlRestForm(null)
+            {
+                Mode = mode
+            };
+
+            // test execution
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
+
+        /// <summary>
         /// Tests the form layout property of the rest form control.
         /// </summary>
         [Theory]

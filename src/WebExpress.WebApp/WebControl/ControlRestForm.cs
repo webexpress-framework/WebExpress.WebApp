@@ -11,11 +11,15 @@ using WebExpress.WebUI.WebSection;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Represents a control form that retrieves and displays data from 
+    /// Represents a form that retrieves and displays data from 
     /// a RESTful resource specified by a URI.
     /// </summary>
     public class ControlRestForm : ControlForm
     {
+        /// <summary>
+        /// Returns or sets the mode that determines how the form behaves 
+        /// or is rendered.
+        /// </summary>
         public TypeRestFormMode Mode { get; set; } = TypeRestFormMode.Default;
 
         /// <summary>
@@ -99,6 +103,7 @@ namespace WebExpress.WebApp.WebControl
                 Style = GetStyles(),
                 Role = Role
             }
+                .AddUserAttribute("data-method", Method.ToString())
                 .AddUserAttribute("data-mode", Mode.ToMode())
                 .AddUserAttribute("data-id", id?.ToString())
                 .AddUserAttribute("data-uri", Uri?.ToString());

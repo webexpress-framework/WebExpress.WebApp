@@ -57,7 +57,9 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
 
         // explicit mode via data-mode can override auto-detection
         if (ds.mode) {
-            this.mode = ds.mode.toLowerCase() === "edit" ? "edit" : "new";
+            const m = ds.mode.toLowerCase();
+            const allowed = new Set(["new", "edit", "delete"]);
+            this.mode = allowed.has(m) ? m : "new";
         } else {
             this.mode = this.options.id ? "edit" : "new";
         }

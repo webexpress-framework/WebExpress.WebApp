@@ -21,7 +21,12 @@
         /// <summary>
         /// Represents an operation to edit an existing entity or resource.
         /// </summary>
-        Edit
+        Edit,
+
+        /// <summary>
+        /// Represents a delete operation or action.
+        /// </summary>
+        Delete
     }
 
     /// <summary>
@@ -40,6 +45,7 @@
             {
                 TypeRestFormMode.New => "new",
                 TypeRestFormMode.Edit => "edit",
+                TypeRestFormMode.Delete => "delete",
                 _ => ""
             };
         }

@@ -52,12 +52,6 @@ namespace WebExpress.WebApp.WebRestApi
         public virtual string Modal { get; set; }
 
         /// <summary>
-        /// Returns the method.
-        /// </summary>
-        [JsonPropertyName("method")]
-        public virtual string Method => "DELETE";
-
-        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="request">The request object associated with the current operation.</param>
