@@ -1,9 +1,8 @@
-﻿/**
- * REST form controller
+/**
+ * REST form controller. Replaces a traditional form POST with a JSON REST request, performs 
+ * client-side validation.
  *
- * Replaces a traditional form POST with a JSON REST request, performs client-side validation.
- *
- * Dispatched Events:
+ * The following events are triggered:
  * - webexpress.webui.Event.DATA_REQUESTED_EVENT
  * - webexpress.webui.Event.TASK_START_EVENT
  * - webexpress.webui.Event.TASK_FINISH_EVENT
