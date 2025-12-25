@@ -1,6 +1,4 @@
-﻿using WebExpress.WebApp.WWW.Api._1;
-using WebExpress.WebCore;
-using WebExpress.WebCore.WebHtml;
+﻿using WebExpress.WebCore.WebHtml;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
@@ -30,16 +28,18 @@ namespace WebExpress.WebApp.WebControl
         {
             var applicationContext = renderContext?.PageContext?.ApplicationContext;
 
-            var html = new HtmlElementTextContentDiv()
-            {
-                Id = Id,
-                Class = Css.Concatenate("wx-webapp-popupnotification", GetClasses()),
-                Style = GetStyles()
-            }
-                .AddUserAttribute("data-uri", WebEx.ComponentHub.SitemapManager.GetUri<PopupNotification>(applicationContext).ToString())
-                .AddUserAttribute("data-intervall", "15000");
+            //var html = new HtmlElementTextContentDiv()
+            //{
+            //    Id = Id,
+            //    Class = Css.Concatenate("wx-webapp-popupnotification", GetClasses()),
+            //    Style = GetStyles()
+            //}
+            //    .AddUserAttribute("data-uri", WebEx.ComponentHub.SitemapManager.GetUri<PopupNotification>(applicationContext).ToString())
+            //    .AddUserAttribute("data-intervall", "15000");
 
-            return html;
+            //return html;
+
+            return null;
         }
     }
 }

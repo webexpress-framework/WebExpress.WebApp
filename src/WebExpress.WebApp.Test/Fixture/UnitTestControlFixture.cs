@@ -97,7 +97,7 @@ namespace WebExpress.WebApp.Test.Fixture
         /// <param name="content">The content of the request.</param>
         /// <param name="uri">The URI of the request.</param>
         /// <returns>A fake request for testing.</returns>
-        public static Request CreateRequestMock(string content = "", string uri = "")
+        public static IRequest CreateRequestMock(string content = "", string uri = "")
         {
             var context = CreateHttpContextMock(content);
 

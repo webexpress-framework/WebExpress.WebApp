@@ -31,7 +31,7 @@ namespace WebExpress.WebApp.WWW.Setting.System.Log
         /// </summary>
         /// <param name="request">The request.</param>
         /// <returns>The response.</returns>
-        public override Response Process(Request request)
+        public override IResponse Process(IRequest request)
         {
             if (!File.Exists(_logManager.DefaultLog.Filename))
             {
