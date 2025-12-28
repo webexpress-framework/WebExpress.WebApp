@@ -22,6 +22,14 @@ namespace WebExpress.WebApp.WebPage
         public IThemeContext Theme { get; set; }
 
         /// <summary>
+        /// Returns the HTML element that contains the URI of the message queue used by the application.
+        /// </summary>
+        public HtmlElementTextContentDiv MessageQueueUri { get; } = new HtmlElementTextContentDiv()
+        {
+            Id = "webepress-webapp-message-queue"
+        };
+
+        /// <summary>
         /// Returns header control.
         /// </summary>
         public ControlWebAppHeader Header { get; } = new ControlWebAppHeader("wx-header");
@@ -72,6 +80,9 @@ namespace WebExpress.WebApp.WebPage
         {
             var applicationContext = pageContext?.ApplicationContext;
             var baseUri = RouteEndpoint.Combine(applicationContext?.Route, "webexpress.webapp/assets");
+            var messageQueueUri = componentHub.SitemapManager.GetUri<WWW.Ws.MessageQueue>(pageContext.ApplicationContext);
+
+            MessageQueueUri.AddUserAttribute("data-wx-message-queue-url", messageQueueUri?.ToString() ?? string.Empty);
 
             Header.Fixed = TypeFixed.Top;
             Header.Styles = ["position: sticky; top: 0; z-index: 99;"];
@@ -108,6 +119,7 @@ namespace WebExpress.WebApp.WebPage
             {
                 html.Body.AddUserAttribute("data-bs-theme", "dark");
             }
+            html.Body.Add(MessageQueueUri);
             html.Body.Add(Header.Render(renderContext, this));
             html.Body.Add(Toast.Render(renderContext, this));
             html.Body.Add(Breadcrumb.Render(renderContext, this, context.Request.Uri));
