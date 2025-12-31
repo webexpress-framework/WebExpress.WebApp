@@ -593,7 +593,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
             }
         }
 
-        let method = (this.mode === "edit") ? "PUT" : "POST";
+        const method = this.options.method;
 
         const init = {
             method: method,
@@ -736,7 +736,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
 
                 try {
                     // if server asks to hide the form, prefer confirmHtmlFromServer, then the form's <confirm>, then serverMsg
-                    if (json && json.hideForm === true) {
+                    if (json && (!json.message || json.hideForm === true)) {
                         this._closeEnclosingModal();
                     } else {
                         // non-hideForm: prefer server confirmHtml, then serverMsg, then form's confirm block

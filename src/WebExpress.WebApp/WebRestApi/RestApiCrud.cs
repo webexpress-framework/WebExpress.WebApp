@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using WebExpress.WebApp.WebMessageQueue;
+using WebExpress.WebCore;
 using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
@@ -32,7 +34,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// Handles HTTP POST and validates inputs before persisting.
         /// </summary>
         [Method(RequestMethod.POST)]
-        public virtual Response CreateData(Request request)
+        public virtual IResponse Create(IRequest request)
         {
             var payload = GetPayload(request);
             if (payload is null)
@@ -42,7 +44,7 @@ namespace WebExpress.WebApp.WebRestApi
             }
 
             // validate request for creation; item is null for new resources
-            var validationResult = ValidateData(default, payload, request);
+            var validationResult = Validate(default, payload, request);
             if (!validationResult.IsValid)
             {
                 return new ResponseBadRequest()
@@ -54,7 +56,7 @@ namespace WebExpress.WebApp.WebRestApi
 
             try
             {
-                var result = CreateData(payload, request);
+                var result = Create(payload, request);
 
                 if (result is null)
                 {
@@ -75,7 +77,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <param name="request">The request.</param>
         /// <returns>The response containing the result of the operation.</returns>
         [Method(RequestMethod.GET)]
-        public virtual Response Retrieve(Request request)
+        public virtual IResponse Retrieve(IRequest request)
         {
             // extract 'id' parameter if present
             var id = request.GetParameter("id")?.Value ?? string.Empty;
@@ -122,7 +124,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// Handles HTTP PUT and validates inputs before applying the update.
         /// </summary>
         [Method(RequestMethod.PUT)]
-        public virtual Response UpdateData(Request request)
+        public virtual IResponse Update(IRequest request)
         {
             // extract and validate the 'id' parameter
             var id = request.GetParameter("id")?.Value;
@@ -148,7 +150,7 @@ namespace WebExpress.WebApp.WebRestApi
             }
 
             // validate the update request using the existing item and the payload
-            var validation = ValidateData(existingItem, payload, request);
+            var validation = Validate(existingItem, payload, request);
             if (!validation.IsValid)
             {
                 // Validation failed → return structured error response
@@ -161,7 +163,7 @@ namespace WebExpress.WebApp.WebRestApi
             // apply the update (implemented by derived classes)
             try
             {
-                var result = UpdateData(existingItem, payload, request);
+                var result = Update(existingItem, payload, request);
 
                 return result?.ToResponse();
             }
@@ -190,7 +192,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <returns>
         /// An IRestApiValidationResult indicating validation success or errors.
         /// </returns>
-        public virtual IRestApiValidationResult ValidateData(TIndexItem existingItem, RestApiCrudFormData payload, Request request)
+        public virtual IRestApiValidationResult Validate(TIndexItem existingItem, RestApiCrudFormData payload, IRequest request)
         {
             // default: no validation errors
             return new RestApiValidationResult();
@@ -212,7 +214,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// including the created resource.
         /// </returns>
 
-        protected virtual IRestApiCrudResultCreate CreateData(RestApiCrudFormData payload, Request request)
+        protected virtual IRestApiCrudResultCreate Create(RestApiCrudFormData payload, IRequest request)
         {
             return new RestApiCrudResultCreate()
             {
@@ -233,7 +235,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <param name="request">
         /// The HTTP request providing additional context.
         /// </param>
-        public virtual IRestApiCrudResultUpdate UpdateData(TIndexItem existingItem, RestApiCrudFormData payload, Request request)
+        public virtual IRestApiCrudResultUpdate Update(TIndexItem existingItem, RestApiCrudFormData payload, IRequest request)
         {
             return new RestApiCrudResultUpdate()
             {
@@ -247,7 +249,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <param name="request">The request.</param>
         /// <returns>The response containing the result of the operation.</returns>
         [Method(RequestMethod.DELETE)]
-        public virtual Response DeleteData(Request request)
+        public virtual IResponse Delete(IRequest request)
         {
             var id = request.GetParameter("id")?.Value;
             if (string.IsNullOrEmpty(id))
@@ -263,7 +265,12 @@ namespace WebExpress.WebApp.WebRestApi
 
             try
             {
-                var result = DeleteData(item, request);
+                var result = Delete(item, request);
+
+                var messageQueueManager = WebEx.ComponentHub.GetComponentManager<MessageQueueManager>();
+                var message = new Message("update");
+
+                messageQueueManager.SendMessage(message);
 
                 return result.ToResponse();
             }
@@ -287,7 +294,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <returns>
         /// A result object containing information about the delete operation.
         /// </returns>
-        public virtual IRestApiCrudResultDelete DeleteData(TIndexItem existingItem, Request request)
+        public virtual IRestApiCrudResultDelete Delete(TIndexItem existingItem, IRequest request)
         {
             return new RestApiCrudResultDelete()
             {
@@ -309,16 +316,16 @@ namespace WebExpress.WebApp.WebRestApi
         /// A Payload object representing the parsed JSON content if 
         /// successful; otherwise null.
         /// </returns>
-        private RestApiCrudFormData GetPayload(Request request)
+        private RestApiCrudFormData GetPayload(IRequest request)
         {
             // parse JSON payload into a dynamic Payload structure
             var payload = default(RestApiCrudFormData);
-            if (request.Content is not null)
+            if (request is Request r && r.Content is not null)
             {
                 try
                 {
                     // deserialize raw JSON into a JsonElement first
-                    var root = JsonSerializer.Deserialize<JsonElement>(request.Content, _options);
+                    var root = JsonSerializer.Deserialize<JsonElement>(r.Content, _options);
 
                     // convert JsonElement → Payload (recursive)
                     payload = root.ToPayload() as RestApiCrudFormData;

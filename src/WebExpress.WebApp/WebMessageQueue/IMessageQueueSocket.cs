@@ -1,4 +1,5 @@
-﻿using WebExpress.WebCore.WebSocket;
+﻿using System.Threading.Tasks;
+using WebExpress.WebCore.WebSocket;
 
 namespace WebExpress.WebApp.WebMessageQueue
 {
@@ -7,6 +8,11 @@ namespace WebExpress.WebApp.WebMessageQueue
     /// </summary>
     public interface IMessageQueueSocket : ISocket
     {
-
+        /// <summary>
+        /// Sends the specified message to its intended recipient or destination.
+        /// </summary>
+        /// <param name="message">The message to send. Cannot be null.</param>
+        /// <returns>A task that represents the asynchronous send operation.</returns>
+        Task Send(IMessage message);
     }
 }

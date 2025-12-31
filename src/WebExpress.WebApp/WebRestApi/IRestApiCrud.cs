@@ -6,36 +6,48 @@ using WebExpress.WebIndex;
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Abstract class providing CRUD operations for REST API.
+    /// Defines a contract for RESTful CRUD (Create, Read, Update, Delete) operations on 
+    /// a collection of indexed items.
     /// </summary>
-    /// <typeparam name="TIndexItem">Type of the index item.</typeparam>
+    /// <typeparam name="TIndexItem">
+    /// The type of items in the collection, which must implement the <see cref="IIndexItem"/> 
+    /// interface.
+    /// </typeparam>
     public interface IRestApiCrud<TIndexItem> : IRestApi
         where TIndexItem : IIndexItem
     {
         /// <summary>
         /// Returns the collection of indexed items.
         /// </summary>
-        public IEnumerable<TIndexItem> Data { get; }
+        IEnumerable<TIndexItem> Data { get; }
 
         /// <summary>
         /// Creates data.
         /// </summary>
         /// <param name="request">The request.</param>
         /// <returns>The response containing the result of the operation.</returns>
-        public Response CreateData(Request request);
+        IResponse Create(IRequest request);
 
         /// <summary>
         /// Processing of the resource that was called via the get request.
         /// </summary>
         /// <param name="request">The request.</param>
         /// <returns>The response containing the result of the operation.</returns>
-        public Response Retrieve(Request request);
+        IResponse Retrieve(IRequest request);
+
+        /// <summary>
+        /// Updates data (EDIT).
+        /// Handles HTTP PUT and validates inputs before applying the update.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns>The response containing the result of the operation.</returns>
+        IResponse Update(IRequest request);
 
         /// <summary>
         /// Deletes data.
         /// </summary>
         /// <param name="request">The request.</param>
         /// <returns>The response containing the result of the operation.</returns>
-        public Response DeleteData(Request request);
+        public IResponse Delete(IRequest request);
     }
 }

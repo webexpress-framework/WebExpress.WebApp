@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using WebExpress.WebApp.WebMessageQueue.Model;
 using WebExpress.WebCore;
@@ -150,28 +149,33 @@ namespace WebExpress.WebApp.WebMessageQueue
         {
             ArgumentNullException.ThrowIfNull(message);
 
-            if (_subscribers.TryGetValue(message.Type, out var list))
+            foreach (var connection in _connections)
             {
-                // kopie erstellen, um konkurrierende listenänderungen zu vermeiden
-                List<Action<IMessage>> handlers;
-                lock (list)
-                {
-                    handlers = [.. list];
-                }
-
-                foreach (var handler in handlers)
-                {
-                    try
-                    {
-                        handler(message);
-                    }
-                    catch (Exception ex)
-                    {
-                        // exceptions im handler dürfen nicht den gesamtprozess crashen
-                        _httpServerContext.Log?.Error($"Exception in message handler: {ex}");
-                    }
-                }
+                connection.Value.Send(message);
             }
+
+            //if (_subscribers.TryGetValue(message.Type, out var list))
+            //{
+            //    // kopie erstellen, um konkurrierende listenänderungen zu vermeiden
+            //    List<Action<IMessage>> handlers;
+            //    lock (list)
+            //    {
+            //        handlers = [.. list];
+            //    }
+
+            //    foreach (var handler in handlers)
+            //    {
+            //        try
+            //        {
+            //            handler(message);
+            //        }
+            //        catch (Exception ex)
+            //        {
+            //            // exceptions im handler dürfen nicht den gesamtprozess crashen
+            //            _httpServerContext.Log?.Error($"Exception in message handler: {ex}");
+            //        }
+            //    }
+            //}
         }
 
         /// <summary>

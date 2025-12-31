@@ -71,6 +71,16 @@ namespace WebExpress.WebApp.WebMessageQueue
         }
 
         /// <summary>
+        /// Sends the specified message to its intended recipient or destination.
+        /// </summary>
+        /// <param name="message">The message to send. Cannot be null.</param>
+        /// <returns>A task that represents the asynchronous send operation.</returns>
+        public async Task Send(IMessage message)
+        {
+            await _socketConnection?.SendTextAsync(message.ToJson());
+        }
+
+        /// <summary>
         /// Releases all resources used by the current instance.
         /// </summary>
         public virtual void Dispose()
