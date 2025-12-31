@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Threading;
 using System.Threading.Tasks;
 using WebExpress.WebCore.WebSocket;
-using WebExpress.WebCore.WebSocket.Protocol;
 
 namespace WebExpress.WebApp.WebMessageQueue
 {
@@ -15,6 +13,7 @@ namespace WebExpress.WebApp.WebMessageQueue
         private readonly Guid _connectionId;
         private readonly ISocketContext _socketContext;
         private readonly IMessageQueueManager _messageQueueManager;
+        private ISocketConnection _socketConnection;
 
         /// <summary>
         /// Initializes a new instance of the MessageQueueSocket class using the specified 
@@ -39,65 +38,36 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// <summary>
         /// Handles logic to be executed when a new connection is established asynchronously.
         /// </summary>
-        /// <param name="connectMessage">
-        /// An optional message containing information about the connection request. May be 
-        /// null if no message is provided.
-        /// </param>
-        /// <param name="cancellationToken">
-        /// A cancellation token that can be used to cancel the asynchronous operation.
-        /// </param>
+        /// <param name="socketConnection">The socket connection.</param>
         /// <returns>
         /// A task that represents the asynchronous operation.
         /// </returns>
-        public virtual async Task OnConnectedAsync(ISocketMessage connectMessage = null, CancellationToken cancellationToken = default)
+        public virtual async Task OnConnectedAsync(ISocketConnection socketConnection)
         {
+            _socketConnection = socketConnection;
             _messageQueueManager?.Register(_connectionId, this);
+
+            _socketConnection.Disconnected += OnDisconnected;
+            _socketConnection.TextMessageReceived += OnTextMessageReceived;
         }
 
         /// <summary>
-        /// Handles an incoming socket message asynchronously. Override this method to 
-        /// implement custom message processing logic.
+        /// Handles logic to be performed when the socket connection is closed.
         /// </summary>
-        /// <param name="message">
-        /// The message received from the socket to be processed. Cannot be null.
+        /// <param name="obj">
+        /// Information about the reason and context for the socket closure.
         /// </param>
-        /// <param name="cancellationToken">
-        /// A cancellation token that can be used to cancel the asynchronous operation.
-        /// </param>
-        /// <returns>
-        /// A task that represents the asynchronous message handling operation.
-        /// </returns>
-        public virtual async Task OnReceiveAsync(ISocketMessage message, CancellationToken cancellationToken = default)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Handles an error that occurs during asynchronous processing.
-        /// </summary>
-        /// <param name="exception">
-        /// The exception that was thrown during processing. Cannot be null.
-        /// </param>
-        /// <returns>
-        /// A task that represents the asynchronous error handling operation.
-        /// </returns>
-        public virtual async Task OnErrorAsync(Exception exception)
-        {
-        }
-
-        /// <summary>
-        /// Invoked when a connection is disconnected. Override this method to perform 
-        /// operations when a client disconnects from the socket.
-        /// </summary>
-        /// <param name="closeInfo">
-        /// Information about the reason and context for the disconnection.
-        /// </param>
-        /// <returns>
-        /// A task that represents the asynchronous operation.
-        /// </returns>
-        public virtual async Task OnDisconnectedAsync(SocketCloseInfo closeInfo)
+        private void OnDisconnected(SocketCloseInfo obj)
         {
             _messageQueueManager?.Unregister(_connectionId);
+        }
+
+        /// <summary>
+        /// Handles an incoming text message received by the component.
+        /// </summary>
+        /// <param name="obj">The text message content to process. Cannot be null.</param>
+        private void OnTextMessageReceived(string obj)
+        {
         }
 
         /// <summary>
@@ -105,6 +75,8 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// </summary>
         public virtual void Dispose()
         {
+            _messageQueueManager?.Unregister(_connectionId);
+
             GC.SuppressFinalize(this);
         }
     }

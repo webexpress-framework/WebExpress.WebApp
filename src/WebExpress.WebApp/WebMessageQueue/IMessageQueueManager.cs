@@ -1,6 +1,5 @@
 ﻿using System;
 using WebExpress.WebCore.WebComponent;
-using WebExpress.WebCore.WebSocket.Protocol;
 
 namespace WebExpress.WebApp.WebMessageQueue
 {
@@ -32,7 +31,7 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// The delegate to invoke when a message of the specified type is received.
         /// </param>
         /// <returns>The current instance for method chaining.</returns>
-        IMessageQueueManager Register(string messageType, Action<ISocketMessage> handler);
+        IMessageQueueManager Register(string messageType, Action<IMessage> handler);
 
         /// <summary>
         /// Unregisters a previously registered socket instance.
@@ -57,13 +56,13 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// The delegate to remove from the list of handlers for the specified message type. 
         /// </param>
         /// <returns>The current instance for method chaining.</returns>
-        IMessageQueueManager Unregister(string messageType, Action<ISocketMessage> handler);
+        IMessageQueueManager Unregister(string messageType, Action<IMessage> handler);
 
         /// <summary>
         /// Sends the specified message through the socket connection.
         /// </summary>
         /// <param name="message">The message to send.</param>
         /// <returns>The current instance for method chaining.</returns>
-        IMessageQueueManager SendMessage(ISocketMessage message);
+        IMessageQueueManager SendMessage(IMessage message);
     }
 }

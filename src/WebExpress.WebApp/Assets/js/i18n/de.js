@@ -33,5 +33,12 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "error.missing_id": "Fehlender Parameter 'id'.",
     "error.not_found": "Eintrag nicht gefunden.",
     "error.update_failed": "Fehler beim Aktualisieren der Ressource: {message}",
-    "error.delete_failed": "Fehler beim Löschen der Ressource: {message}"
+    "error.delete_failed": "Fehler beim Löschen der Ressource: {message}",
+
+    // status
+    "status.online": "Online",
+    "status.connecting": "Verbindung wird aufgebaut",
+    "status.error": "Fehler",
+    "status.offline": "Offline"
+
 });

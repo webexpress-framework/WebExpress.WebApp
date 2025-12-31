@@ -5,7 +5,6 @@ using WebExpress.WebApp.WebMessageQueue.Model;
 using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebComponent;
-using WebExpress.WebCore.WebSocket.Protocol;
 
 namespace WebExpress.WebApp.WebMessageQueue
 {
@@ -68,7 +67,7 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// The delegate to invoke when a message of the specified type is received.
         /// </param>
         /// <returns>The current instance for method chaining.</returns>
-        public IMessageQueueManager Register(string messageType, Action<ISocketMessage> handler)
+        public IMessageQueueManager Register(string messageType, Action<IMessage> handler)
         {
             ArgumentNullException.ThrowIfNull(handler);
             _subscribers.AddOrUpdate
@@ -118,7 +117,7 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// The delegate to remove from the list of handlers for the specified message type. 
         /// </param>
         /// <returns>The current instance for method chaining.</returns>
-        public IMessageQueueManager Unregister(string messageType, Action<ISocketMessage> handler)
+        public IMessageQueueManager Unregister(string messageType, Action<IMessage> handler)
         {
             if (_subscribers.TryGetValue(messageType, out var list))
             {
@@ -136,7 +135,7 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// </summary>
         /// <param name="message">The message to send.</param>
         /// <returns>The current instance for method chaining.</returns>
-        public IMessageQueueManager SendMessage(ISocketMessage message)
+        public IMessageQueueManager SendMessage(IMessage message)
         {
             ProcessMessage(message);
 
@@ -147,14 +146,14 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// Invokes all registered handlers for the specified socket message type.
         /// </summary>
         /// <param name="message">The socket message to process. Cannot be null.</param>
-        private void ProcessMessage(ISocketMessage message)
+        private void ProcessMessage(IMessage message)
         {
             ArgumentNullException.ThrowIfNull(message);
 
             if (_subscribers.TryGetValue(message.Type, out var list))
             {
                 // kopie erstellen, um konkurrierende listenänderungen zu vermeiden
-                List<Action<ISocketMessage>> handlers;
+                List<Action<IMessage>> handlers;
                 lock (list)
                 {
                     handlers = [.. list];

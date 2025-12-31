@@ -10,8 +10,8 @@ webexpress.webapp.InputCascadingCtrl = class extends webexpress.webui.InputCasca
         // call base constructor (will parse any declarative DOM and render briefly)
         super(element);
 
-        // read api base from host attributes; prefer data-api then data-api-base
-        this._apiBase = element.getAttribute("data-api") || element.getAttribute("data-api-base") || null;
+        // read api base from host attributes; prefer data-uri
+        this._apiBase = element.getAttribute("data-uri") || null;
         // cache for fetched nodes keyed by parent id (use "__root__" for root)
         this._remoteCache = {};
         // flag if remote mode is enabled
