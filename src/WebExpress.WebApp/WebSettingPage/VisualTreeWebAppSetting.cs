@@ -59,6 +59,7 @@ namespace WebExpress.WebApp.WebSettingPage
 
             // header
             Header.AppTitle.SetTitle(html.Head.Title);
+            html.Body.Add(MessageQueueUri);
             html.Body.Add(Header.Render(renderContext, this));
             html.Body.Add(Toast.Render(renderContext, this));
             html.Body.Add(Breadcrumb.Render(renderContext, this));

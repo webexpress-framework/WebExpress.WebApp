@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json.Serialization;
 
 namespace WebExpress.WebApp.WebMessageQueue
@@ -51,12 +50,6 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// </summary>
         [JsonPropertyName("sender")]
         public string Sender { get; }
-
-        /// <summary>
-        /// Returns the optional list of target identifiers associated with this message.
-        /// The collection is immutable and never <c>null</c>.
-        /// </summary>
-        public IEnumerable<string> Targets { get; }
 
         /// <summary>
         /// Returns the UTC timestamp indicating when the message instance was created.
@@ -122,53 +115,11 @@ namespace WebExpress.WebApp.WebMessageQueue
             ConnectionId = connectionId;
             Sender = sender;
 
-            Targets = targets != null
-                ? targets.ToArray()
-                : Array.Empty<string>();
-
             Timestamp = timestamp ?? DateTime.UtcNow;
 
             Meta = meta != null
                 ? new Dictionary<string, string>(meta)
-                : new Dictionary<string, string>();
-        }
-
-        /// <summary>
-        /// Creates a new <see cref="Message"/> instance with the same values as the
-        /// current instance, but with the specified metadata key/value pair added
-        /// or replaced.
-        /// </summary>
-        /// <param name="key">The metadata key to add or update.</param>
-        /// <param name="value">The metadata value to assign.</param>
-        /// <returns>
-        /// A new <see cref="Message"/> instance containing the updated metadata.
-        /// </returns>
-        /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="key"/> is <c>null</c>.
-        /// </exception>
-        public Message WithMeta(string key, string value)
-        {
-            if (key == null)
-            {
-                throw new ArgumentNullException(nameof(key));
-            }
-
-            var newMeta = new Dictionary<string, string>(Meta)
-            {
-                [key] = value
-            };
-
-            return new Message(
-                Type,
-                MessageId,
-                ApplicationId,
-                SocketId,
-                ConnectionId,
-                Sender,
-                Targets,
-                Timestamp,
-                newMeta
-            );
+                : [];
         }
     }
 }

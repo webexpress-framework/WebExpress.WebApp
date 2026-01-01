@@ -5,6 +5,7 @@ using System.Text.Json;
 using WebExpress.WebApp.WebMessageQueue;
 using WebExpress.WebCore;
 using WebExpress.WebCore.WebAttribute;
+using WebExpress.WebCore.WebDomain;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
 using WebExpress.WebCore.WebStatusPage;
@@ -17,7 +18,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// </summary>
     /// <typeparam name="TIndexItem">Type of the index item.</typeparam>
     public abstract class RestApiCrud<TIndexItem> : IRestApiCrud<TIndexItem>
-        where TIndexItem : IIndexItem
+        where TIndexItem : IIndexItem, IDomain
     {
         private readonly JsonSerializerOptions _options = new()
         {
@@ -269,8 +270,9 @@ namespace WebExpress.WebApp.WebRestApi
 
                 var messageQueueManager = WebEx.ComponentHub.GetComponentManager<MessageQueueManager>();
                 var message = new Message("update");
+                var address = new AddressDomain<TIndexItem>();
 
-                messageQueueManager.SendMessage(message);
+                _ = messageQueueManager.SendAsync(address, message);
 
                 return result.ToResponse();
             }

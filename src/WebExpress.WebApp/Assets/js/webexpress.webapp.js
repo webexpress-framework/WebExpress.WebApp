@@ -47,8 +47,9 @@ webexpress.webapp.MessageQueue = new class {
      * Opens a single WebSocket connection to the specified URL.
      * If a connection already exists, it is closed before a new one is opened.
      * @param {string} url - The WebSocket URL to connect to.
+     * @param {Array<string>} domains - Domains for connection (optional).
      */
-    connect(url) {
+    connect(url, domains) {
         if (this._ws) {
             this._ws.close();
             this._ws = null;
@@ -60,11 +61,20 @@ webexpress.webapp.MessageQueue = new class {
             return;
         }
 
+        let finalUrl = this._wsUrl;
+
+        if (Array.isArray(domains) && domains.length > 0) {
+            const encoded = encodeURIComponent(domains.join(";"));
+
+            // check if URL already has query parameters
+            finalUrl += (finalUrl.includes("?") ? "&" : "?") + "domains=" + encoded;
+        }
+
         this._setStatus("connecting");
         this._lastError = null;
 
         try {
-            this._ws = new WebSocket(this._wsUrl);
+            this._ws = new WebSocket(finalUrl, "wxmsg");
         } catch (e) {
             this._setStatus("error");
             this._lastError = e && e.message ? e.message : "WebSocket connection error";
@@ -133,15 +143,15 @@ webexpress.webapp.MessageQueue = new class {
     _scheduleReconnect() {
         if (!this._shouldReconnect) return;
 
-        const delay = this._reconnectDelay;
-        console.info(`WebSocket reconnect in ${delay}ms...`);
+        //const delay = this._reconnectDelay;
+        //console.info(`WebSocket reconnect in ${delay}ms...`);
 
-        setTimeout(() => {
-            this.connect();
-        }, delay);
+        //setTimeout(() => {
+        //    this.connect();
+        //}, delay);
 
         // exponential backoff
-        this._reconnectDelay = Math.min(this._reconnectDelay * 2, this._reconnectMax);
+        //this._reconnectDelay = Math.min(this._reconnectDelay * 2, this._reconnectMax);
     }
 
 
@@ -237,8 +247,12 @@ document.addEventListener("DOMContentLoaded", function () {
     // get the URL from the data attribute
     const mqElement = document.getElementById("webepress-webapp-message-queue");
     const uri = mqElement ? mqElement.dataset.wxMessageQueueUrl : null;
+    const raw = mqElement?.dataset.wxDomains ?? null;
+    const domains = raw
+        ? raw.split(";").map(x => x.trim()).filter(x => x.length > 0)
+        : [];
 
     if (uri) {
-        webexpress.webapp.MessageQueue.connect(uri);
+        webexpress.webapp.MessageQueue.connect(uri, domains);
     }
 });

@@ -40,11 +40,6 @@ namespace WebExpress.WebApp.WebMessageQueue
         string Sender { get; }
 
         /// <summary>
-        /// Optional list of target identifiers.
-        /// </summary>
-        IEnumerable<string> Targets { get; }
-
-        /// <summary>
         /// Timestamp in UTC when the message was created.
         /// </summary>
         DateTime Timestamp { get; }

@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
+using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebSocket;
 
 namespace WebExpress.WebApp.WebMessageQueue
@@ -13,7 +15,42 @@ namespace WebExpress.WebApp.WebMessageQueue
         private readonly Guid _connectionId;
         private readonly ISocketContext _socketContext;
         private readonly IMessageQueueManager _messageQueueManager;
+        private readonly IRequest _request;
         private ISocketConnection _socketConnection;
+
+        /// <summary>
+        /// Returns the client session associated with the current context.
+        /// </summary>
+        public IClientSession ClientSession => new ClientSession()
+        {
+            Method = _request.Method,
+            Uri = _request?.Uri,
+            Session = _request.Session,
+            Header = _request.Header,
+            RemoteEndPoint = _request.RemoteEndPoint,
+            Culture = _request.Culture,
+            Parameters = _request.Parameters,
+            SupportedSubProtocol = _socketContext.SupportedSubProtocol,
+            ConnectionId = _connectionId,
+            EndpointId = _socketContext.EndpointId,
+            PluginContext = _socketContext.PluginContext,
+            ApplicationContext = _socketContext.ApplicationContext
+        };
+
+        /// <summary>
+        /// Returns the unique identifier for the current connection.
+        /// </summary>
+        public Guid ConnectionId => _connectionId;
+
+        /// <summary>
+        /// Returns the context associated with the underlying socket connection.
+        /// </summary>
+        public ISocketContext SocketContext => _socketContext;
+
+        /// <summary>
+        /// Returns the request associated with the current operation.
+        /// </summary>
+        public IRequest Request => _request;
 
         /// <summary>
         /// Initializes a new instance of the MessageQueueSocket class using the specified 
@@ -28,11 +65,13 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// <param name="messageQueueManager">
         /// The message queue manager responsible for handling message queuing and delivery.
         /// </param>
-        public MessageQueueSocket(Guid connectionId, ISocketContext socketContext, IMessageQueueManager messageQueueManager)
+        /// <param name="request">The request.</param>
+        public MessageQueueSocket(Guid connectionId, ISocketContext socketContext, IMessageQueueManager messageQueueManager, IRequest request)
         {
             _connectionId = connectionId;
             _socketContext = socketContext;
             _messageQueueManager = messageQueueManager;
+            _request = request;
         }
 
         /// <summary>
@@ -74,10 +113,11 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// Sends the specified message to its intended recipient or destination.
         /// </summary>
         /// <param name="message">The message to send. Cannot be null.</param>
+        /// <param name="cancellationToken">A token that propagates notification of request cancellation.</param>
         /// <returns>A task that represents the asynchronous send operation.</returns>
-        public async Task Send(IMessage message)
+        public async Task SendAsync(IMessage message, CancellationToken cancellationToken = default)
         {
-            await _socketConnection?.SendTextAsync(message.ToJson());
+            await _socketConnection?.SendTextAsync(message.ToJson(), cancellationToken);
         }
 
         /// <summary>

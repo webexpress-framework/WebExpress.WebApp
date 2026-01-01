@@ -82,7 +82,9 @@ namespace WebExpress.WebApp.WebPage
             var baseUri = RouteEndpoint.Combine(applicationContext?.Route, "webexpress.webapp/assets");
             var messageQueueUri = componentHub.SitemapManager.GetUri<WWW.Ws.MessageQueue>(pageContext.ApplicationContext);
 
-            MessageQueueUri.AddUserAttribute("data-wx-message-queue-url", messageQueueUri?.ToString() ?? string.Empty);
+            MessageQueueUri
+                .AddUserAttribute("data-wx-message-queue-url", messageQueueUri?.ToString() ?? string.Empty)
+                .AddUserAttribute("data-wx-domains", string.Join(";", pageContext.Domains.Select(x => x.Name.ToLower())));
 
             Header.Fixed = TypeFixed.Top;
             Header.Styles = ["position: sticky; top: 0; z-index: 99;"];

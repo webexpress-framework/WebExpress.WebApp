@@ -1,5 +1,7 @@
 ﻿using System;
 using WebExpress.WebApp.WebMessageQueue;
+using WebExpress.WebCore.WebAttribute;
+using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebSocket;
 
 namespace WebExpress.WebApp.WWW.Ws
@@ -8,6 +10,7 @@ namespace WebExpress.WebApp.WWW.Ws
     /// Represents a message queue socket for sending and receiving messages within 
     /// a messaging infrastructure.
     /// </summary>
+    [SubProtocol("wxmsg")]
     public sealed class MessageQueue : MessageQueueSocket
     {
         /// <summary>
@@ -25,8 +28,9 @@ namespace WebExpress.WebApp.WWW.Ws
         /// The message queue manager responsible for handling message queue 
         /// operations. Cannot be null.
         /// </param>
-        public MessageQueue(Guid connectionId, ISocketContext socketContext, IMessageQueueManager messageQueueManager)
-            : base(connectionId, socketContext, messageQueueManager)
+        /// <param name="request">The request.</param>
+        public MessageQueue(Guid connectionId, ISocketContext socketContext, IMessageQueueManager messageQueueManager, IRequest request)
+            : base(connectionId, socketContext, messageQueueManager, request)
         {
         }
     }

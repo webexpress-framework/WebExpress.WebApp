@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 using WebExpress.WebCore.WebComponent;
 
 namespace WebExpress.WebApp.WebMessageQueue
@@ -59,10 +61,23 @@ namespace WebExpress.WebApp.WebMessageQueue
         IMessageQueueManager Unregister(string messageType, Action<IMessage> handler);
 
         /// <summary>
-        /// Sends the specified message through the socket connection.
+        /// Sends a message from the server to all client sessions that match the 
+        /// specified address. The MessageQueueManager evaluates the address, selects 
+        /// the appropriate WebSocket sessions and forwards the serialized message 
+        /// through the active connections.
         /// </summary>
-        /// <param name="message">The message to send.</param>
-        /// <returns>The current instance for method chaining.</returns>
-        IMessageQueueManager SendMessage(IMessage message);
+        /// <param name="address">
+        /// The addressing rule that determines which client sessions receive the message.
+        /// </param>
+        /// <param name="message">
+        /// The message instance that is sent to the selected clients.
+        /// </param>
+        /// <param name="cancellationToken">
+        /// A token that propagates notification of request cancellation.
+        /// </param>
+        /// <returns>
+        /// The current instance to support method chaining.
+        /// </returns>
+        Task<IMessageQueueManager> SendAsync(IAddress address, IMessage message, CancellationToken cancellationToken = default);
     }
 }

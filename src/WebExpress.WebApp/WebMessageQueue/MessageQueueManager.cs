@@ -1,5 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Text;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using WebExpress.WebApp.WebMessageQueue.Model;
 using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
@@ -130,52 +135,64 @@ namespace WebExpress.WebApp.WebMessageQueue
         }
 
         /// <summary>
-        /// Sends the specified message through the socket connection.
+        /// Sends a message from the server to all client sessions that match the 
+        /// specified address. The MessageQueueManager evaluates the address, selects 
+        /// the appropriate WebSocket sessions and forwards the serialized message 
+        /// through the active connections.
         /// </summary>
-        /// <param name="message">The message to send.</param>
-        /// <returns>The current instance for method chaining.</returns>
-        public IMessageQueueManager SendMessage(IMessage message)
+        /// <param name="address">
+        /// The addressing rule that determines which client sessions receive the message.
+        /// </param>
+        /// <param name="message">
+        /// The message instance that is sent to the selected clients.
+        /// </param>
+        /// <param name="cancellationToken">
+        /// A token that propagates notification of request cancellation.
+        /// </param>
+        /// <returns>
+        /// The current instance to support method chaining.
+        /// </returns>
+        public async Task<IMessageQueueManager> SendAsync(IAddress address, IMessage message, CancellationToken cancellationToken = default)
         {
-            ProcessMessage(message);
-
-            return this;
-        }
-
-        /// <summary>
-        /// Invokes all registered handlers for the specified socket message type.
-        /// </summary>
-        /// <param name="message">The socket message to process. Cannot be null.</param>
-        private void ProcessMessage(IMessage message)
-        {
+            ArgumentNullException.ThrowIfNull(address);
             ArgumentNullException.ThrowIfNull(message);
 
-            foreach (var connection in _connections)
+            // Serialize the message
+            var json = JsonSerializer.Serialize(message);
+            var buffer = Encoding.UTF8.GetBytes(json);
+            var segment = new ArraySegment<byte>(buffer);
+
+            var closedSessions = new List<Guid>();
+
+            foreach (var entry in _connections)
             {
-                connection.Value.Send(message);
+                var sessionId = entry.Key;
+                var session = entry.Value;
+
+                // Skip sessions that do not match the address
+                if (!address.Matches(session?.ClientSession))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    await session.SendAsync(message, cancellationToken);
+                }
+                catch
+                {
+                    // Mark failed sessions for cleanup
+                    closedSessions.Add(sessionId);
+                }
             }
 
-            //if (_subscribers.TryGetValue(message.Type, out var list))
-            //{
-            //    // kopie erstellen, um konkurrierende listenänderungen zu vermeiden
-            //    List<Action<IMessage>> handlers;
-            //    lock (list)
-            //    {
-            //        handlers = [.. list];
-            //    }
+            // Remove closed or failed sessions
+            foreach (var id in closedSessions)
+            {
+                _connections.TryRemove(id, out _);
+            }
 
-            //    foreach (var handler in handlers)
-            //    {
-            //        try
-            //        {
-            //            handler(message);
-            //        }
-            //        catch (Exception ex)
-            //        {
-            //            // exceptions im handler dürfen nicht den gesamtprozess crashen
-            //            _httpServerContext.Log?.Error($"Exception in message handler: {ex}");
-            //        }
-            //    }
-            //}
+            return this;
         }
 
         /// <summary>
