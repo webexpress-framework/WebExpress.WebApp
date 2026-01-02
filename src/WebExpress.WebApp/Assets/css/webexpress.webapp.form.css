@@ -10,3 +10,10 @@
     background: var(--bs-danger);
     align-self: stretch;
 }
+
+.restform-prolog-container {
+    margin-bottom: 1em;
+    padding: 0.5em;
+    background: var(--bs-light);
+    border-radius: 0.25em;
+}

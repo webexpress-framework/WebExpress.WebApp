@@ -9,6 +9,13 @@ namespace WebExpress.WebApp.WebMessageQueue
     /// </summary>
     public static class MessageExtensions
     {
+        private static readonly JsonSerializerOptions _jsonOptions = new()
+        {
+            WriteIndented = false,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
+
         /// <summary>
         /// Serializes the message instance into a JSON string using
         /// <see cref="System.Text.Json"/> with default serialization options.
@@ -24,18 +31,9 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// </exception>
         public static string ToJson(this IMessage message)
         {
-            if (message == null)
-            {
-                throw new ArgumentNullException(nameof(message));
-            }
+            ArgumentNullException.ThrowIfNull(message);
 
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = false,
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-            };
-
-            return JsonSerializer.Serialize(message, options);
+            return JsonSerializer.Serialize(message, _jsonOptions);
         }
     }
 }

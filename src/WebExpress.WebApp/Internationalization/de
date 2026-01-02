@@ -2,8 +2,12 @@
 plugin.name=WebExpress.WebApp
 plugin.description=Stellt Basiskomponenten einer Webanwendung bereit.
 
-module.name=WebExpress.WebApp
-module.description=Stellt Basiskomponenten einer Webanwendung bereit.
+confirmation.title=Bestätigung
+confirmation.description=Möchten Sie diese Aktion wirklich durchführen?
+confirmation.delete.label=Löschen
+confirmation.delete.success=Die Löschaktion wurde erfolgreich durchgeführt.
+confirmation.delete.confirm=Möchten Sie das ausgewählte Element '{0}' wirklich löschen?
+confirmation.cancel.label=Abbrechen
 
 indexmanager.initialization=Der Index-Manager wurde initialisiert.
 

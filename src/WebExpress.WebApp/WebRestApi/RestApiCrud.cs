@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using WebExpress.WebApp.WebMessageQueue;
 using WebExpress.WebCore;
+using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebDomain;
 using WebExpress.WebCore.WebMessage;
@@ -28,7 +29,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Returns the collection of indexed items.
         /// </summary>
-        public IEnumerable<TIndexItem> Data { get; protected set; } = [];
+        //public IEnumerable<TIndexItem> Data { get; protected set; } = [];
 
         /// <summary>
         /// Creates data (NEW).
@@ -52,7 +53,7 @@ namespace WebExpress.WebApp.WebRestApi
                 {
                     Content = validationResult.ToJson()
                 }
-                .AddHeaderContentType("application/json");
+                    .AddHeaderContentType("application/json");
             }
 
             try
@@ -80,44 +81,131 @@ namespace WebExpress.WebApp.WebRestApi
         [Method(RequestMethod.GET)]
         public virtual IResponse Retrieve(IRequest request)
         {
-            // extract 'id' parameter if present
-            var id = request.GetParameter("id")?.Value ?? string.Empty;
-            // current page number
-            var pageNumber = Convert.ToInt32(request.GetParameter("p")?.Value ?? "0");
-            // number of items per page
-            var pageSize = Convert.ToInt32(request.GetParameter("s")?.Value ?? "50");
-
-            if (string.IsNullOrEmpty(id))
-            {
-                var data = Data;
-
-                // return all items
-                return new RestApiCrudResultRetrieveMany<TIndexItem>()
-                {
-                    Data = data
-                        .Skip(pageNumber * pageSize)
-                        .Take(pageSize)
-                }
-                    .ToResponse();
-            }
-
             try
             {
-                var data = Data
-                    .Where(x => x.Id.ToString().Equals(id, StringComparison.OrdinalIgnoreCase))
-                    .FirstOrDefault();
-
-                var result = new RestApiCrudResultRetrieve<TIndexItem>()
+                // extract 'id' parameter if present
+                var id = request.GetParameter("id")?.Value ?? string.Empty;
+                // current page number
+                var pageNumber = Convert.ToInt32(request.GetParameter("p")?.Value ?? "0");
+                // number of items per page
+                var pageSize = Convert.ToInt32(request.GetParameter("s")?.Value ?? "50");
+                var modeParam = request.GetParameter("mode")?.Value ?? "default";
+                var mode = modeParam switch
                 {
-                    Data = data
+                    "new" => RestApiCrudMode.Create,
+                    "edit" => RestApiCrudMode.Update,
+                    "delete" => RestApiCrudMode.Delete,
+                    _ => RestApiCrudMode.Default
                 };
 
-                return result.ToResponse();
+                if (string.IsNullOrEmpty(id) && mode == RestApiCrudMode.Create)
+                {
+                    var result = RetrieveForCreate(request);
+
+                    return result.ToResponse();
+                }
+                else if (!string.IsNullOrEmpty(id) && mode == RestApiCrudMode.Update)
+                {
+                    var result = RetrieveForUpdate(id, request);
+
+                    return result.ToResponse();
+                }
+                else if (!string.IsNullOrEmpty(id) && mode == RestApiCrudMode.Delete)
+                {
+                    var result = RetrieveForDelete(id, request);
+
+                    return result.ToResponse();
+                }
+                else if (string.IsNullOrEmpty(id))
+                {
+                    var data = Retrieve();
+
+                    // return all items
+                    return new RestApiCrudResultRetrieveMany<TIndexItem>()
+                    {
+                        Data = data
+                            .Skip(pageNumber * pageSize)
+                            .Take(pageSize)
+                    }
+                        .ToResponse();
+                }
+                else
+                {
+                    return new ResponseBadRequest(new StatusMessage($"Error processing request."));
+                }
             }
             catch (Exception ex)
             {
                 return new ResponseBadRequest(new StatusMessage($"Error processing request.{ex}"));
             }
+        }
+
+        /// <summary>
+        /// Retrieves a collection of index items of type TIndexItem.
+        /// </summary>
+        /// <returns>
+        /// An enumerable collection of TIndexItem objects. The collection is empty if 
+        /// no items are available.
+        /// </returns>
+        public abstract IEnumerable<TIndexItem> Retrieve();
+
+        /// <summary>
+        /// Retrieves a result object containing default values and metadata for 
+        /// creating a new item.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns>
+        /// A result instance representing the data and metadata required
+        /// to initialize a new item for creation.
+        /// </returns>
+        public virtual RestApiCrudResultRetrieve<TIndexItem> RetrieveForCreate(IRequest request)
+        {
+            return new RestApiCrudResultRetrieve<TIndexItem>()
+            {
+            };
+        }
+
+        /// <summary>
+        /// Retrieves an item by its identifier for update operations.
+        /// </summary>
+        /// <param name="id">
+        /// The identifier of the item to retrieve. The comparison is case-insensitive.
+        /// </param>
+        /// <param name="request">The request.</param>
+        /// <returns>
+        /// A result instance representing the data and metadata required
+        /// to initialize a new item for creation.
+        /// </returns>
+        public virtual RestApiCrudResultRetrieve<TIndexItem> RetrieveForUpdate(string id, IRequest request)
+        {
+            var data = Retrieve()
+                    .Where(x => x.Id.ToString().Equals(id, StringComparison.OrdinalIgnoreCase))
+                    .FirstOrDefault();
+
+            return new RestApiCrudResultRetrieve<TIndexItem>()
+            {
+                Data = data
+            };
+        }
+
+        /// <summary>
+        /// Retrieves the item identified by the specified ID for the purpose of confirming 
+        /// or preparing a delete operation.
+        /// </summary>
+        /// <param name="id">
+        /// The unique identifier of the item to retrieve for deletion. Cannot be null or empty.
+        /// </param>
+        /// <param name="request">The request.</param>
+        /// <returns>
+        /// A result instance representing the data and metadata required
+        /// to initialize a new item for creation.
+        /// </returns>
+        public virtual RestApiCrudResultRetrieve<TIndexItem> RetrieveForDelete(string id, IRequest request)
+        {
+            return new RestApiCrudResultRetrieve<TIndexItem>()
+            {
+                Prolog = I18N.Translate(request, "webexpress.webapp:confirmation.delete.confirm", id)
+            };
         }
 
         /// <summary>
@@ -135,7 +223,7 @@ namespace WebExpress.WebApp.WebRestApi
             }
 
             // locate the existing item by ID
-            var existingItem = Data.FirstOrDefault(x =>
+            var existingItem = Retrieve().FirstOrDefault(x =>
                 x.Id.ToString().Equals(id, StringComparison.OrdinalIgnoreCase));
 
             if (existingItem == null)
@@ -165,6 +253,16 @@ namespace WebExpress.WebApp.WebRestApi
             try
             {
                 var result = Update(existingItem, payload, request);
+
+                if (existingItem is IDomain domain)
+                {
+                    var messageQueueManager = WebEx.ComponentHub
+                        .GetComponentManager<MessageQueueManager>();
+                    var message = new Message("update");
+                    var address = new AddressDomain(domain);
+
+                    _ = messageQueueManager.SendAsync(address, message);
+                }
 
                 return result?.ToResponse();
             }
@@ -214,7 +312,6 @@ namespace WebExpress.WebApp.WebRestApi
         /// A result object containing information about the create operation,
         /// including the created resource.
         /// </returns>
-
         protected virtual IRestApiCrudResultCreate Create(RestApiCrudFormData payload, IRequest request)
         {
             return new RestApiCrudResultCreate()
@@ -258,7 +355,7 @@ namespace WebExpress.WebApp.WebRestApi
                 return new ResponseBadRequest(new StatusMessage("Missing 'id' parameter."));
             }
 
-            var item = Data.FirstOrDefault
+            var item = Retrieve().FirstOrDefault
             (
                 x => x.Id.ToString()
                     .Equals(id, StringComparison.OrdinalIgnoreCase)

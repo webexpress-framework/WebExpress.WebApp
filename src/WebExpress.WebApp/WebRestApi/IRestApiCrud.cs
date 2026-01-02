@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using WebExpress.WebCore.WebMessage;
+﻿using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
 using WebExpress.WebIndex;
 
@@ -16,11 +15,6 @@ namespace WebExpress.WebApp.WebRestApi
     public interface IRestApiCrud<TIndexItem> : IRestApi
         where TIndexItem : IIndexItem
     {
-        /// <summary>
-        /// Returns the collection of indexed items.
-        /// </summary>
-        IEnumerable<TIndexItem> Data { get; }
-
         /// <summary>
         /// Creates data.
         /// </summary>

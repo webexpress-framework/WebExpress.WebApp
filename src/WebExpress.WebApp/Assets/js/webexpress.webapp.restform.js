@@ -103,18 +103,37 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
         // attach submit listener in capture phase to intercept submit before other handlers
         this._element.addEventListener("submit", this._onSubmitBound, true);
 
-        // create container for form errors
-        this._ensureFormErrorContainer();
-
         // init confirm element if provided inside the form
         this._initConfirm();
         
-        // create container for form confirm message 
+        // create container for form prolog and confirm message 
+        this._ensureFormPrologContainer();
         this._ensureFormConfirmContainer();
 
-        // auto-load data if endpoint is configured and mode is edit
-        if (this.options.api && this.mode === "edit") {
-            this.load();
+        // create container for form errors
+        this._ensureFormErrorContainer();
+
+        const headerEl = this._element.querySelector(".modal-body");
+        const main = headerEl.querySelector("main");
+        if (this.mode == "delete") {
+            main.style.display = "none";
+        } else {
+            main.style.display = "block";
+        }
+
+        this.load();
+    }
+
+    /**
+     * If a <confirm> element is present inside the form its innerHTML will be used as the default success message.
+     */
+    _initConfirm() {
+        // find a <confirm> element inside the form
+        const el = this._element.querySelector("confirm");
+        if (el) {
+            // extract html and remove the original element from dom
+            this._confirmHtml = String(el.innerHTML);
+            this._element.removeChild(el);
         }
     }
 
@@ -154,16 +173,39 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * If a <confirm> element is present inside the form its innerHTML will be used as the default success message.
+     * Ensures that a container element for the prolog (HTML block above the form fields)
+     * exists inside the form. The prolog is typically inserted directly after the
+     * form error container, or at the beginning of the form if the error container does not exist.
+     * This method assigns the container to this._formPrologContainer.
      */
-    _initConfirm() {
-        // find a <confirm> element inside the form
-        const el = this._element.querySelector("confirm");
-        if (el) {
-            // extract html and remove the original element from dom
-            this._confirmHtml = String(el.innerHTML);
-            this._element.removeChild(el);
+    _ensureFormPrologContainer() {
+        let prologCont = this._element.querySelector(".restform-prolog-container");
+        if (!prologCont) {
+            prologCont = document.createElement("div");
+            prologCont.className = "restform-prolog-container";
+            prologCont.style.display = "none";
         }
+        const headerEl = this._element.querySelector(".modal-body");
+        if (headerEl) {
+            if (prologCont.parentNode !== headerEl) {
+                if (prologCont.parentNode) {
+                    prologCont.parentNode.removeChild(cont);
+                }
+                headerEl.insertBefore(prologCont, headerEl.firstChild);
+            }
+        } else {
+            if (prologCont.parentNode !== this._element) {
+                if (prologCont.parentNode) {
+                    prologCont.parentNode.removeChild(cont);
+                }
+                if (this._element.firstChild) {
+                    this._element.insertBefore(prologCont, this._element.firstChild);
+                } else {
+                    this._element.appendChild(prologCont);
+                }
+            }
+        }
+        this._formPrologContainer = prologCont;
     }
     
     /**
@@ -260,7 +302,26 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Loads data from the configured API endpoint and populates the form.
+     * Displays a prolog HTML string inside the form, above the input fields.
+     * If prologHtml is falsy, the container is hidden or cleared.
+     * The content is inserted as HTML and is expected to be trusted (provided by the server).
+     * 
+     * @param {string|null} prologHtml The HTML string to display as prolog or null/empty for no display.
+     */
+    _displayProlog(prologHtml) {
+        this._formPrologContainer.innerHTML = prologHtml ? String(prologHtml) : "";
+        if (prologHtml) {
+            this._formPrologContainer.style.display = "";
+        } else {
+            this._formPrologContainer.style.display = "none";
+        }
+    }
+
+    /**
+     * Loads form data and the prolog string from the backend API depending on the current mode.
+     * For mode "edit", loads and populates the form and optionally a prolog message.
+     * For mode "new", loads possible default values for the form and optionally a prolog message.
+     * For mode "delete", loads only a prolog confirmation message; all form fields are hidden after load.
      * Dispatches lifecycle events for request start, data arrival, and task
      * completion. If an `id` option is provided, it is appended as a query
      * parameter. Successful responses populate the form and trigger optional
@@ -273,7 +334,6 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
         if (this._loading || !this.options.api) {
             return;
         }
-
         this._loading = true;
         this._setSubmitting(true);
 
@@ -282,9 +342,12 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
 
         try {
             let url = this.options.api;
-            if (this.options.id) {
-                url = url + (url.includes("?") ? "&" : "?") + "id=" + encodeURIComponent(String(this.options.id));
+            // append id for edit and delete modes
+            if ((this.options.id || this.mode === "delete") && (this.mode === "edit" || this.mode === "delete")) {
+                url = url + (url.includes("?") ? "&" : "?") + "id=" + encodeURIComponent(String(this.options.id || ""));
             }
+            // always append mode for backend clarity
+            url = url + (url.includes("?") ? "&" : "?") + "mode=" + encodeURIComponent(this.mode);
 
             const resp = await fetch(url, {
                 method: "GET",
@@ -293,19 +356,29 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
             });
 
             if (resp.ok) {
-                const data = await resp.json();
-                this._populate(data);
+                // accept JSON: {data:..., prolog: "..."} or field values directly
+                const json = await resp.json();
+                // compatible extraction of form data and prolog:
+                let formData = (json && typeof json === "object" && "data" in json) ? json.data : json;
+                let prolog = (json && typeof json === "object" && "prolog" in json && typeof json.prolog === "string")
+                    ? json.prolog : null;
 
-                if (typeof this.options.onLoadSuccess === "function") {
-                    try {
-                        this.options.onLoadSuccess(data, resp);
-                    } catch (e) {
-                        // swallow hook errors
+                // display prolog (trusted HTML from server)
+                this._displayProlog(prolog);
+
+                if (this.mode === "new" || this.mode === "edit") {
+                    // only populate if there is meaningful data
+                    if (formData && typeof formData === "object" && Object.keys(formData).length > 0) {
+                        this._populate(formData);
                     }
                 }
 
-                this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, { data: data, status: resp.status });
-                this._dispatch(webexpress.webui.Event.CHANGE_VALUE_EVENT, { source: "load", data: data });
+                if (typeof this.options.onLoadSuccess === "function") {
+                    try { this.options.onLoadSuccess(json, resp); } catch (e) { }
+                }
+
+                this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, { data: json, status: resp.status });
+                this._dispatch(webexpress.webui.Event.CHANGE_VALUE_EVENT, { source: "load", data: json });
             } else {
                 const msg = this._i18n("webexpress.webapp:error.load_failed", { status: resp.status });
                 throw new Error(msg);
@@ -335,7 +408,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
         }
 
         for (const [name, value] of Object.entries(data)) {
-            const fieldOrList = this._element.elements.namedItem(name);
+            const fieldOrList = this._findFieldByName(name);
             if (!fieldOrList) {
                 continue;
             }
@@ -363,6 +436,9 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
                 const el = fieldOrList;
                 if (el.type === "checkbox") {
                     el.checked = !!value;
+                } else if (el.type === "hidden") {
+                    el.value = value != null ? String(value) : "";
+                    el.dispatchEvent(new Event("change", { bubbles: true }));
                 } else if (el instanceof HTMLSelectElement && el.multiple) {
                     const values = Array.isArray(value) ? value.map(String) : [String(value)];
                     for (const opt of Array.from(el.options)) {

@@ -116,8 +116,11 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
             if (data.sender && data.sender === this._paginationDiv) {
                 this._page = data.page;
                 this._receiveData();
-                window.scrollTo(0, element.offsetTop);
             }
+        });
+
+        document.addEventListener(webexpress.webapp.Event.UPDATE_EVENT, (event) => {
+            this._receiveData();
         });
     }
 

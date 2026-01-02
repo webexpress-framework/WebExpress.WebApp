@@ -14,15 +14,21 @@ namespace WebExpress.WebApp.WebRestApi
     public class RestApiCrudResultRetrieve<TIndexItem> : RestApiCrudResult
         where TIndexItem : IIndexItem
     {
-        private readonly JsonSerializerOptions _jsonOptions = new()
+        private static readonly JsonSerializerOptions _jsonOptions = new()
         {
-            WriteIndented = true
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
 
         /// <summary>
         /// Returns or sets the item.
         /// </summary>
         public TIndexItem Data { get; set; }
+
+        /// <summary>
+        /// Returns or sets the prolog for the item.
+        /// </summary>
+        public string Prolog { get; set; }
 
         /// <summary>
         /// Converts the current instance into a <see cref="Response"/> object.
@@ -32,7 +38,21 @@ namespace WebExpress.WebApp.WebRestApi
         /// </returns>
         public override Response ToResponse()
         {
-            var jsonData = JsonSerializer.Serialize(Data, _jsonOptions);
+            string jsonData;
+
+            if (string.IsNullOrWhiteSpace(Prolog))
+            {
+                jsonData = JsonSerializer.Serialize(Data, _jsonOptions);
+            }
+            else
+            {
+                jsonData = JsonSerializer.Serialize(new
+                {
+                    data = Data,
+                    prolog = Prolog
+                }, _jsonOptions);
+            }
+
             var content = Encoding.UTF8.GetBytes(jsonData);
 
             return new ResponseOK

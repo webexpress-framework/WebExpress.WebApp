@@ -11,7 +11,7 @@ public sealed class AddressDomain : IAddress
     /// <summary>
     /// Returns the domain associated with the current context.
     /// </summary>
-    public IDomain Domain { get; }
+    public string Domain { get; }
 
     /// <summary>
     /// Initializes a new instance of the class with the specified domain.
@@ -21,7 +21,7 @@ public sealed class AddressDomain : IAddress
     /// </param>
     public AddressDomain(IDomain domain)
     {
-        Domain = domain;
+        Domain = domain.GetType().FullName.ToLower();
     }
 
     /// <summary>
@@ -36,9 +36,7 @@ public sealed class AddressDomain : IAddress
     /// </returns>
     public bool Matches(IClientSession session)
     {
-        var domain = Domain?.GetType().Name.ToLower();
-
-        return session?.Domains.Contains(domain) ?? false;
+        return session?.Domains.Contains(Domain) ?? false;
     }
 }
 

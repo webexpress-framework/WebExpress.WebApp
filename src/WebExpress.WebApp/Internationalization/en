@@ -2,8 +2,12 @@
 plugin.name=WebExpress.WebApp
 plugin.description=Provides basic components of a web application.
 
-module.name=WebExpress.WebApp
-module.description=Provides basic components of a web application.
+confirmation.title=Confirmation
+confirmation.description=Are you sure you want to perform this action?
+confirmation.delete.label=Delete
+confirmation.delete.success=The item has been deleted.
+confirmation.delete.confirm=Do you really want to delete the selected item '{0}'?
+confirmation.cancel.label=Cancel
 
 indexmanager.initialization=The index manager has been initialized.
 

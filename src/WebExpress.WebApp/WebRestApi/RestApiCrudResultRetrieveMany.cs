@@ -16,9 +16,10 @@ namespace WebExpress.WebApp.WebRestApi
     public class RestApiCrudResultRetrieveMany<TIndexItem> : RestApiCrudResult
         where TIndexItem : IIndexItem
     {
-        private readonly JsonSerializerOptions _jsonOptions = new()
+        private static readonly JsonSerializerOptions _jsonOptions = new()
         {
-            WriteIndented = true
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
 
         /// <summary>

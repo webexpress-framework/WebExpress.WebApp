@@ -10,9 +10,10 @@ namespace WebExpress.WebApp.WebRestApi
     /// </summary>
     public class RestApiCrudResultCreate : RestApiCrudResult, IRestApiCrudResultCreate
     {
-        private readonly JsonSerializerOptions _jsonOptions = new()
+        private static readonly JsonSerializerOptions _jsonOptions = new()
         {
-            WriteIndented = true
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
 
         /// <summary>

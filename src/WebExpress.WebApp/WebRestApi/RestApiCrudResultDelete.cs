@@ -10,9 +10,10 @@ namespace WebExpress.WebApp.WebRestApi
     /// </summary>
     public class RestApiCrudResultDelete : RestApiCrudResult, IRestApiCrudResultDelete
     {
-        private readonly JsonSerializerOptions _jsonOptions = new()
+        private static readonly JsonSerializerOptions _jsonOptions = new()
         {
-            WriteIndented = true
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
 
         /// <summary>

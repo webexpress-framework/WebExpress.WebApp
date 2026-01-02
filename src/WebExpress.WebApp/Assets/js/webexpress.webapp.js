@@ -104,6 +104,13 @@ webexpress.webapp.MessageQueue = new class {
                     // exceptions in listeners are ignored for robust broadcasting
                 }
             }
+
+            if (payload && typeof payload === "object" && payload.type === "update") {
+                const updateEvent = new CustomEvent(webexpress.webapp.Event.UPDATE_EVENT, {
+                    detail: { payload }
+                });
+                document.dispatchEvent(updateEvent);
+            }
         });
 
         this._ws.addEventListener("close", (evt) => {
@@ -239,6 +246,7 @@ webexpress.webapp.MessageQueue = new class {
 webexpress.webapp.Event = class {
     // Event triggered when the status of the MessageQueue changes
     static CHANGE_STATUS_EVENT = "webexpress.webapp.Event.CHANGE_STATUS_EVENT";
+    static UPDATE_EVENT = "webexpress.webapp.Event.UPDATE_EVENT";
 }
     
 // initialize the WebSocket connection after the DOM is fully loaded    
