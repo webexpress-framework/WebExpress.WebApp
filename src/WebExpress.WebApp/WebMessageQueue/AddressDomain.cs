@@ -1,5 +1,46 @@
-﻿using WebExpress.WebApp.WebMessageQueue;
+﻿using System;
+using System.Linq;
+using WebExpress.WebApp.WebMessageQueue;
 using WebExpress.WebCore.WebDomain;
+
+/// <summary>
+/// Represents an address that is associated with a specific domain.
+/// </summary>
+public sealed class AddressDomain : IAddress
+{
+    /// <summary>
+    /// Returns the domain associated with the current context.
+    /// </summary>
+    public IDomain Domain { get; }
+
+    /// <summary>
+    /// Initializes a new instance of the class with the specified domain.
+    /// </summary>
+    /// <param name="domain">
+    /// The domain to associate with this AddressDomain instance. Cannot be null.
+    /// </param>
+    public AddressDomain(IDomain domain)
+    {
+        Domain = domain;
+    }
+
+    /// <summary>
+    /// Determines whether the specified client session includes the domain associated 
+    /// with this instance.
+    /// </summary>
+    /// <param name="session">
+    /// The client session to check for the presence of the domain. Cannot be null.
+    /// </param>
+    /// <returns>
+    /// True if the session contains the domain; otherwise, false.
+    /// </returns>
+    public bool Matches(IClientSession session)
+    {
+        var domain = Domain?.GetType().Name.ToLower();
+
+        return session?.Domains.Contains(domain) ?? false;
+    }
+}
 
 /// <summary>
 /// Represents an addressing rule that selects all client sessions
@@ -32,6 +73,8 @@ public sealed class AddressDomain<TDomain> : IAddress
     /// </returns>
     public bool Matches(IClientSession session)
     {
-        return true;
+        var domain = typeof(TDomain).Name.ToLower();
+
+        return session?.Domains.Contains(domain) ?? false;
     }
 }

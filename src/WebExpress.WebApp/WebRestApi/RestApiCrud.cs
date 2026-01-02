@@ -18,7 +18,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// </summary>
     /// <typeparam name="TIndexItem">Type of the index item.</typeparam>
     public abstract class RestApiCrud<TIndexItem> : IRestApiCrud<TIndexItem>
-        where TIndexItem : IIndexItem, IDomain
+        where TIndexItem : IIndexItem
     {
         private readonly JsonSerializerOptions _options = new()
         {
@@ -258,7 +258,12 @@ namespace WebExpress.WebApp.WebRestApi
                 return new ResponseBadRequest(new StatusMessage("Missing 'id' parameter."));
             }
 
-            var item = Data.FirstOrDefault(x => x.Id.ToString().Equals(id, StringComparison.OrdinalIgnoreCase));
+            var item = Data.FirstOrDefault
+            (
+                x => x.Id.ToString()
+                    .Equals(id, StringComparison.OrdinalIgnoreCase)
+            );
+
             if (item is null)
             {
                 return new ResponseNotFound(new StatusMessage($"Item with id '{id}' not found."));
@@ -268,17 +273,24 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 var result = Delete(item, request);
 
-                var messageQueueManager = WebEx.ComponentHub.GetComponentManager<MessageQueueManager>();
-                var message = new Message("update");
-                var address = new AddressDomain<TIndexItem>();
+                if (item is IDomain domain)
+                {
+                    var messageQueueManager = WebEx.ComponentHub
+                        .GetComponentManager<MessageQueueManager>();
+                    var message = new Message("update");
+                    var address = new AddressDomain(domain);
 
-                _ = messageQueueManager.SendAsync(address, message);
+                    _ = messageQueueManager.SendAsync(address, message);
+                }
 
                 return result.ToResponse();
             }
             catch (Exception ex)
             {
-                return new ResponseBadRequest(new StatusMessage($"Error deleting resource: {ex.Message}"));
+                return new ResponseBadRequest
+                (
+                    new StatusMessage($"Error deleting resource: {ex.Message}")
+                );
             }
         }
 

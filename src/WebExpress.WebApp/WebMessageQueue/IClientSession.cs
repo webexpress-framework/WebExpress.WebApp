@@ -76,5 +76,10 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// Returns the corresponding application context.
         /// </summary>
         IApplicationContext ApplicationContext { get; }
+
+        /// <summary>
+        /// Returns the collection of domain names associated with the current context.
+        /// </summary>
+        IEnumerable<string> Domains { get; }
     }
 }

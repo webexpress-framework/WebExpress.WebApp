@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using WebExpress.WebApp.WebControl;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebComponent;
@@ -71,6 +73,12 @@ namespace WebExpress.WebApp.WebPage
         public ControlRestPopupNotification NotificationPopup { get; protected set; } = new ControlRestPopupNotification("wx-notificationpopup");
 
         /// <summary>
+        /// Returns or sets a delegate that returns the collection of domain names associated with 
+        /// the current context.
+        /// </summary>
+        public Func<IEnumerable<string>> Domains { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="componentHub">The component hub.</param>
@@ -80,11 +88,13 @@ namespace WebExpress.WebApp.WebPage
         {
             var applicationContext = pageContext?.ApplicationContext;
             var baseUri = RouteEndpoint.Combine(applicationContext?.Route, "webexpress.webapp/assets");
-            var messageQueueUri = componentHub.SitemapManager.GetUri<WWW.Ws.MessageQueue>(pageContext.ApplicationContext);
+            var messageQueueUri = componentHub.SitemapManager
+                .GetUri<WWW.Ws.MessageQueue>(pageContext.ApplicationContext);
+            var domains = Domains?.Invoke() ?? pageContext.Domains.Select(x => x.Name.ToLower());
 
             MessageQueueUri
-                .AddUserAttribute("data-wx-message-queue-url", messageQueueUri?.ToString() ?? string.Empty)
-                .AddUserAttribute("data-wx-domains", string.Join(";", pageContext.Domains.Select(x => x.Name.ToLower())));
+                .AddUserAttribute("data-wx-message-queue-url", messageQueueUri?.ToString())
+                .AddUserAttribute("data-wx-domains", string.Join(";", domains));
 
             Header.Fixed = TypeFixed.Top;
             Header.Styles = ["position: sticky; top: 0; z-index: 99;"];

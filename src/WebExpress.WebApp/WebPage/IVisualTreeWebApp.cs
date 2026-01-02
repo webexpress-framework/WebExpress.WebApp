@@ -1,4 +1,6 @@
-﻿using WebExpress.WebApp.WebControl;
+﻿using System;
+using System.Collections.Generic;
+using WebExpress.WebApp.WebControl;
 using WebExpress.WebCore.WebTheme;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
@@ -55,5 +57,11 @@ namespace WebExpress.WebApp.WebPage
         /// Returns the control for displaying notification popups via API.
         /// </summary>
         ControlRestPopupNotification NotificationPopup { get; }
+
+        /// <summary>
+        /// Returns a delegate that returns the collection of domain names associated with 
+        /// the current context.
+        /// </summary>
+        Func<IEnumerable<string>> Domains { get; }
     }
 }

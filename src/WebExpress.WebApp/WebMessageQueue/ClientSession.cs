@@ -78,6 +78,11 @@ namespace WebExpress.WebApp.WebMessageQueue
         public IApplicationContext ApplicationContext { get; set; }
 
         /// <summary>
+        /// Returns or sets the collection of domain names associated with the current context.
+        /// </summary>
+        public IEnumerable<string> Domains { get; set; }
+
+        /// <summary>
         /// Creates a new client session instance.
         /// </summary>
         public ClientSession()

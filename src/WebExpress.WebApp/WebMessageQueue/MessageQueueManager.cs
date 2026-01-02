@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Text;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using WebExpress.WebApp.WebMessageQueue.Model;
@@ -157,11 +155,6 @@ namespace WebExpress.WebApp.WebMessageQueue
             ArgumentNullException.ThrowIfNull(address);
             ArgumentNullException.ThrowIfNull(message);
 
-            // Serialize the message
-            var json = JsonSerializer.Serialize(message);
-            var buffer = Encoding.UTF8.GetBytes(json);
-            var segment = new ArraySegment<byte>(buffer);
-
             var closedSessions = new List<Guid>();
 
             foreach (var entry in _connections)
@@ -169,7 +162,7 @@ namespace WebExpress.WebApp.WebMessageQueue
                 var sessionId = entry.Key;
                 var session = entry.Value;
 
-                // Skip sessions that do not match the address
+                // skip sessions that do not match the address
                 if (!address.Matches(session?.ClientSession))
                 {
                     continue;
@@ -181,12 +174,12 @@ namespace WebExpress.WebApp.WebMessageQueue
                 }
                 catch
                 {
-                    // Mark failed sessions for cleanup
+                    // mark failed sessions for cleanup
                     closedSessions.Add(sessionId);
                 }
             }
 
-            // Remove closed or failed sessions
+            // remove closed or failed sessions
             foreach (var id in closedSessions)
             {
                 _connections.TryRemove(id, out _);

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using WebExpress.WebCore.WebMessage;
@@ -34,7 +35,8 @@ namespace WebExpress.WebApp.WebMessageQueue
             ConnectionId = _connectionId,
             EndpointId = _socketContext.EndpointId,
             PluginContext = _socketContext.PluginContext,
-            ApplicationContext = _socketContext.ApplicationContext
+            ApplicationContext = _socketContext.ApplicationContext,
+            Domains = _request.Parameters.FirstOrDefault()?.Value?.Split(';') ?? []
         };
 
         /// <summary>
