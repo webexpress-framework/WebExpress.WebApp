@@ -9,11 +9,11 @@ namespace WebExpress.WebApp.WebRestApi
     public abstract class RestApiCrudResult : IRestApiResult
     {
         /// <summary>
-        /// Converts the current instance into a <see cref="Response"/> object.
+        /// Converts the current instance into a <see cref="IResponse"/> object.
         /// </summary>
         /// <returns>
         /// A Response object representing the result of the conversion.
         /// </returns>
-        public abstract Response ToResponse();
+        public abstract IResponse ToResponse();
     }
 }

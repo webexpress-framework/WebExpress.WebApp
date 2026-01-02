@@ -18,7 +18,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="request">The request object associated with the current operation.</param>
-        public RestApiOptionSeperator(Request request)
+        public RestApiOptionSeperator(IRequest request)
             : base(request)
         {
         }

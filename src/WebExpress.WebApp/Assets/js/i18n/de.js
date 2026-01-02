@@ -35,6 +35,9 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "error.update_failed": "Fehler beim Aktualisieren der Ressource: {message}",
     "error.delete_failed": "Fehler beim Löschen der Ressource: {message}",
 
+    "delete.confirmation.prompt": "Bitte geben Sie {item} ein, um die Löschaktion zu bestätigen.",
+    "delete.confirmation.mismatch": "Der Wert stimmt nicht überein. Bitte überprüfen Sie Ihre Eingabe.",
+
     // status
     "status.online": "Online",
     "status.connecting": "Verbindung wird aufgebaut",

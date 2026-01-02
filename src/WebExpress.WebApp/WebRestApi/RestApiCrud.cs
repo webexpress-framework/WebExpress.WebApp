@@ -27,11 +27,6 @@ namespace WebExpress.WebApp.WebRestApi
         };
 
         /// <summary>
-        /// Returns the collection of indexed items.
-        /// </summary>
-        //public IEnumerable<TIndexItem> Data { get; protected set; } = [];
-
-        /// <summary>
         /// Creates data (NEW).
         /// Handles HTTP POST and validates inputs before persisting.
         /// </summary>
@@ -162,6 +157,7 @@ namespace WebExpress.WebApp.WebRestApi
         {
             return new RestApiCrudResultRetrieve<TIndexItem>()
             {
+                Title = I18N.Translate(request, "webexpress.webapp:create.title")
             };
         }
 
@@ -184,6 +180,7 @@ namespace WebExpress.WebApp.WebRestApi
 
             return new RestApiCrudResultRetrieve<TIndexItem>()
             {
+                Title = I18N.Translate(request, "webexpress.webapp:edit.title"),
                 Data = data
             };
         }
@@ -200,11 +197,12 @@ namespace WebExpress.WebApp.WebRestApi
         /// A result instance representing the data and metadata required
         /// to initialize a new item for creation.
         /// </returns>
-        public virtual RestApiCrudResultRetrieve<TIndexItem> RetrieveForDelete(string id, IRequest request)
+        public virtual RestApiCrudResultRetrieveDelete<TIndexItem> RetrieveForDelete(string id, IRequest request)
         {
-            return new RestApiCrudResultRetrieve<TIndexItem>()
+            return new RestApiCrudResultRetrieveDelete<TIndexItem>()
             {
-                Prolog = I18N.Translate(request, "webexpress.webapp:confirmation.delete.confirm", id)
+                Title = I18N.Translate(request, "webexpress.webapp:delete.title"),
+                ConfirmItem = id
             };
         }
 
@@ -409,7 +407,6 @@ namespace WebExpress.WebApp.WebRestApi
         {
             return new RestApiCrudResultDelete()
             {
-                HideForm = true
             };
         }
 

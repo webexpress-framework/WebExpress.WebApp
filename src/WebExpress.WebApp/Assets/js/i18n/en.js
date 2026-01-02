@@ -35,6 +35,9 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "error.update_failed": "Error updating resource: {message}",
     "error.delete_failed": "Error deleting resource: {message}",
 
+    "delete.confirmation.prompt": "Please type {item} to confirm deletion.", 
+    "delete.confirmation.mismatch": "The value does not match. Please check your input.",
+
     // status
     "status.online": "Online",
     "status.connecting": "Connecting...",

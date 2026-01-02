@@ -45,7 +45,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// </summary>
         /// <param name="request">The request object containing the criteria for retrieving options. Cannot be null.</param>
         /// <param name="row">The row object for which options are being retrieved. Cannot be null.</param>
-        public virtual IEnumerable<RestApiOption> GetOptions(Request request, TIndexItem row)
+        public virtual IEnumerable<RestApiOption> GetOptions(IRequest request, TIndexItem row)
         {
             // return empty by default
             return [];
@@ -58,7 +58,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <param name="request">The request.</param>
         /// <returns>The response containing the result of the operation.</returns>
         [Method(RequestMethod.GET)]
-        public Response Retrieve(Request request)
+        public IResponse Retrieve(IRequest request)
         {
             // read paging and filters; support both "filter" (frontend) and "search" (compat)
             var pageNumber = Convert.ToInt32(request.GetParameter("p")?.Value ?? "0");
@@ -195,7 +195,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// satisfy the filter and request criteria. The collection may be 
         /// empty if no items match.
         /// </returns>
-        public virtual IEnumerable<TIndexItem> GetData(string filter, Request request)
+        public virtual IEnumerable<TIndexItem> GetData(string filter, IRequest request)
         {
             return [];
         }
@@ -216,7 +216,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// An enumerable collection of index items that satisfy the query 
         /// criteria. The collection is empty if no items match.
         /// </returns>
-        public virtual IEnumerable<TIndexItem> GetData(IWqlStatement wqlStatement, Request request)
+        public virtual IEnumerable<TIndexItem> GetData(IWqlStatement wqlStatement, IRequest request)
         {
             return [];
         }

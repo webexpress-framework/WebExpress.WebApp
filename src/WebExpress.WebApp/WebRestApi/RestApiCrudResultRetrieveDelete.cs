@@ -6,12 +6,12 @@ using WebExpress.WebIndex;
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Represents the retrieve (single) result of a REST API CRUD operation.
+    /// Represents the retrieve (single) result for deletion of a REST API CRUD operation.
     /// </summary>
     /// <typeparam name="TIndexItem">
     /// The type of items contained in the result. Must implement <see cref="IIndexItem"/>.
     /// </typeparam>
-    public class RestApiCrudResultRetrieve<TIndexItem> : RestApiCrudResult
+    public class RestApiCrudResultRetrieveDelete<TIndexItem> : RestApiCrudResultRetrieve<TIndexItem>
         where TIndexItem : IIndexItem
     {
         private static readonly JsonSerializerOptions _jsonOptions = new()
@@ -21,19 +21,9 @@ namespace WebExpress.WebApp.WebRestApi
         };
 
         /// <summary>
-        /// Returns or sets the item.
+        /// Returns or sets the confirmation item for the delete prompt.
         /// </summary>
-        public TIndexItem Data { get; set; }
-
-        /// <summary>
-        /// Returns or sets the title.
-        /// </summary>
-        public string Title { get; set; }
-
-        /// <summary>
-        /// Returns or sets the prolog for the item.
-        /// </summary>
-        public string Prolog { get; set; }
+        public string ConfirmItem { get; set; }
 
         /// <summary>
         /// Converts the current instance into a <see cref="Response"/> object.
@@ -41,13 +31,14 @@ namespace WebExpress.WebApp.WebRestApi
         /// <returns>
         /// A Response object representing the result of the conversion.
         /// </returns>
-        public override IResponse ToResponse()
+        public override Response ToResponse()
         {
             var jsonData = JsonSerializer.Serialize(new
             {
                 data = Data,
                 title = Title,
                 prolog = Prolog,
+                confirmItem = ConfirmItem
             }, _jsonOptions);
 
             var content = Encoding.UTF8.GetBytes(jsonData);

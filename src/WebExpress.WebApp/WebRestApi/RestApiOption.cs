@@ -23,13 +23,13 @@ namespace WebExpress.WebApp.WebRestApi
         /// Returns the request object associated with the current operation.
         /// </summary>
         [JsonIgnore]
-        protected Request Request { get; }
+        protected IRequest Request { get; }
 
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="request">The request object associated with the current operation.</param>
-        public RestApiOption(Request request)
+        public RestApiOption(IRequest request)
         {
             Request = request;
         }

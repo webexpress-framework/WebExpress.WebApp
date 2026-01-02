@@ -28,7 +28,7 @@ namespace WebExpress.WebApp.Test
         /// satisfy the filter and request criteria. The collection may be 
         /// empty if no items match.
         /// </returns>
-        public override IEnumerable<TestData> GetData(string filter, Request request)
+        public override IEnumerable<TestData> GetData(string filter, IRequest request)
         {
             throw new NotImplementedException();
         }
@@ -49,7 +49,7 @@ namespace WebExpress.WebApp.Test
         /// An enumerable collection of index items that satisfy the query 
         /// criteria. The collection is empty if no items match.
         /// </returns>
-        public override IEnumerable<TestData> GetData(IWqlStatement wqlStatement, Request request)
+        public override IEnumerable<TestData> GetData(IWqlStatement wqlStatement, IRequest request)
         {
             throw new NotImplementedException();
         }

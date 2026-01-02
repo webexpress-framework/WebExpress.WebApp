@@ -356,18 +356,29 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
             });
 
             if (resp.ok) {
-                // accept JSON: {data:..., prolog: "..."} or field values directly
                 const json = await resp.json();
-                // compatible extraction of form data and prolog:
                 let formData = (json && typeof json === "object" && "data" in json) ? json.data : json;
                 let prolog = (json && typeof json === "object" && "prolog" in json && typeof json.prolog === "string")
                     ? json.prolog : null;
+                let title = (json && typeof json === "object" && "title" in json && typeof json.title === "string")
+                    ? json.title
+                    : null;
 
-                // display prolog (trusted HTML from server)
-                this._displayProlog(prolog);
+                this._setHeaderTitle(title);
+
+                // extract expected confirmation item, e.g. {…, confirmItem: 'Max Mustermann'}
+                if (this.mode === "delete" && json && typeof json === "object" && "confirmItem" in json) {
+                    this._confirmItem = json.confirmItem;
+                }
+
+                // display prolog and delete confirmation
+                if (this.mode === "delete") {
+                    this._displayDeletePromt(this._confirmItem);
+                } else {
+                    this._displayProlog(prolog);
+                }
 
                 if (this.mode === "new" || this.mode === "edit") {
-                    // only populate if there is meaningful data
                     if (formData && typeof formData === "object" && Object.keys(formData).length > 0) {
                         this._populate(formData);
                     }
@@ -885,11 +896,16 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
     _setSubmitting(state) {
         this._submitting = !!state;
         const elements = Array.from(this._element.elements);
+        const submitBtn = this._element.querySelector('[type="submit"], button[name="submit"]');
+
         for (const el of elements) {
             if (state) {
                 el.setAttribute("disabled", "disabled");
             } else {
-                el.removeAttribute("disabled");
+                if (el == submitBtn && this.mode === "delete" && this._confirmItem) {
+                } else {
+                    el.removeAttribute("disabled");
+                }
             }
         }
         if (state) {
@@ -1163,6 +1179,133 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
             // ignore ui errors
         }
         this._dispatch(webexpress.webui.Event.UPLOAD_ERROR_EVENT, { error: error, form: this._element });
+    }
+
+    /**
+     * Displays a prolog HTML string inside the form, above the input fields,
+     * and, for delete mode, optionally shows a required confirmation input.
+     * Only when the required name is entered correctly will the submit button be enabled.
+     * @param {string|null} confirmItem The name value that must be entered to enable submit (delete mode only).
+     */
+    _displayDeletePromt(confirmItem) {
+        // Only for delete mode and if confirmItem is given, show confirmation input
+        if (this.mode === "delete" && confirmItem) {
+            // Create wrapper div for confirmation input, or reuse existing one
+            let confirmDiv = this._formPrologContainer.querySelector(".restform-delete-confirm");
+            if (!confirmDiv) {
+                confirmDiv = document.createElement("div");
+                confirmDiv.className = "restform-delete-confirm";
+                this._formPrologContainer.appendChild(confirmDiv);
+            } else {
+                confirmDiv.innerHTML = "";
+            }
+
+            // Info prompt
+            const prompt = document.createElement("div");
+            prompt.className = "restform-delete-confirm-prompt";
+            prompt.innerHTML = this._i18n("webexpress.webapp:delete.confirmation.prompt")
+                .replace("{item}", `<strong>${this._escapeHtml(confirmItem)}</strong>`);
+
+            // Input
+            const input = document.createElement("input");
+            input.type = "text";
+            input.className = "form-control";
+            input.placeholder = confirmItem;
+            input.autocomplete = "off";
+
+            // Direct error message if wrong/empty
+            const errorDiv = document.createElement("div");
+            errorDiv.className = "text-danger";
+            errorDiv.style.display = "none";
+            
+            // Find submit button(s)
+            const submitBtn = this._element.querySelector('[type="submit"], button[name="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+            }
+
+            // Listening: check input on every change (case sensitive, can be changed)
+            input.addEventListener("input", () => {
+                const v = input.value.trim();
+                if (v === confirmItem) {
+                    errorDiv.style.display = "none";
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                    }
+                } else {
+                    // don't show error for empty input, only for wrong input
+                    if (v.length > 0) {
+                        errorDiv.textContent = this
+                            ._i18n("webexpress.webapp:delete.confirmation.mismatch");
+
+                        errorDiv.style.display = "";
+                    } else {
+                        errorDiv.style.display = "none";
+                    }
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                    }
+                }
+            });
+
+            // Build and show
+            confirmDiv.appendChild(prompt);
+            confirmDiv.appendChild(input);
+            confirmDiv.appendChild(errorDiv);
+
+            // Always start locked
+            if (submitBtn) {
+                submitBtn.disabled = true;
+            }
+
+            // Insert after prolog, before .modal-footer if present
+            const headerEl = this._element.querySelector(".modal-body");
+            headerEl.insertBefore(confirmDiv, this._formPrologContainer.nextSibling);
+        } else {
+            // Hide confirm block, remove disabled from submit
+            const submitBtn = this._element.querySelector('[type="submit"], button[name="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+            }
+        }
+    }
+
+    /**
+     * Sets the title of the form in the modal header, if a title string is provided.
+     * If no .modal-title exists, it will be created in the .modal-header if possible.
+     * @param {string|null} title The title to display, or null/empty string to clear it.
+     */
+    _setHeaderTitle(title) {
+        if (!title) {
+            return;
+        }
+
+        // Try to find the modal header/title elements
+        const headerEl = this._element.querySelector('.modal-header');
+        let titleEl = this._element.querySelector('.modal-title');
+
+        if (!headerEl) {
+            // Fallback: do nothing if no header
+            return;
+        }
+
+        // If there is no .modal-title, create one
+        if (!titleEl) {
+            titleEl = document.createElement('h5');
+            titleEl.className = 'modal-title';
+            // Insert as first child in header
+            if (headerEl.firstChild) {
+                headerEl.insertBefore(titleEl, headerEl.firstChild);
+            } else {
+                headerEl.appendChild(titleEl);
+            }
+        }
+
+        // Set or clear the text
+        if (title && title.length) {
+            titleEl.textContent = title;
+            titleEl.style.display = '';
+        }
     }
 
     /**

@@ -2,6 +2,10 @@
 plugin.name=WebExpress.WebApp
 plugin.description=Stellt Basiskomponenten einer Webanwendung bereit.
 
+create.title=Erstellen
+edit.title=Bearbeiten
+delete.title=Löschen
+
 confirmation.title=Bestätigung
 confirmation.description=Möchten Sie diese Aktion wirklich durchführen?
 confirmation.delete.label=Löschen

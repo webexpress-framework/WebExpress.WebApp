@@ -35,7 +35,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// Converts the current instance into a response object.
         /// </summary>
         /// <returns>A Response object representing the result of the conversion.</returns>
-        public virtual Response ToResponse()
+        public virtual IResponse ToResponse()
         {
             var data = new
             {

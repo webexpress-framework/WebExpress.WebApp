@@ -59,7 +59,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <param name="request">The request.</param>
         /// <returns>The response containing dropdown items and pagination.</returns>
         [Method(RequestMethod.GET)]
-        public Response Retrieve(Request request)
+        public IResponse Retrieve(IRequest request)
         {
             // default page size aligned with dropdown max entries
             var defaultPageSize = 25;
@@ -159,7 +159,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// satisfy the filter and request criteria. The collection may be 
         /// empty if no items match.
         /// </returns>
-        public virtual IEnumerable<TIndexItem> GetData(string filter, Request request)
+        public virtual IEnumerable<TIndexItem> GetData(string filter, IRequest request)
         {
             return [];
         }
@@ -180,7 +180,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// An enumerable collection of index items that satisfy the query 
         /// criteria. The collection is empty if no items match.
         /// </returns>
-        public virtual IEnumerable<TIndexItem> GetData(IWqlStatement wqlStatement, Request request)
+        public virtual IEnumerable<TIndexItem> GetData(IWqlStatement wqlStatement, IRequest request)
         {
             return [];
         }

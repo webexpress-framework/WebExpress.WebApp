@@ -37,7 +37,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <param name="request">The request.</param>
         /// <returns>The response containing the result of the operation.</returns>
         [Method(RequestMethod.GET)]
-        public virtual Response GetData(Request request)
+        public virtual IResponse GetData(Request request)
         {
             // read value parameter
             var value = request.GetParameter("v")?.Value?.ToLower()

@@ -17,3 +17,10 @@
     background: var(--bs-light);
     border-radius: 0.25em;
 }
+
+.restform-delete-confirm {
+    margin: 0.5em;
+    display: inline-flex;
+    flex-direction: column;
+    gap: 0.2em;
+}

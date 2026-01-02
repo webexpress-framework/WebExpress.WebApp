@@ -17,11 +17,5 @@ namespace WebExpress.WebApp.WebRestApi
         /// create operation.
         /// </summary>
         string Message { get; }
-
-        /// <summary>
-        /// Returns a value indicating whether the form should 
-        /// be hidden from view.
-        /// </summary>
-        bool HideForm { get; }
     }
 }
