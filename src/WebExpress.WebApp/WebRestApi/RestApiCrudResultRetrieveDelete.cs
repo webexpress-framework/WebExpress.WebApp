@@ -11,7 +11,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// <typeparam name="TIndexItem">
     /// The type of items contained in the result. Must implement <see cref="IIndexItem"/>.
     /// </typeparam>
-    public class RestApiCrudResultRetrieveDelete<TIndexItem> : RestApiCrudResultRetrieve<TIndexItem>
+    public class RestApiCrudResultRetrieveDelete<TIndexItem> : RestApiCrudResultRetrieve<TIndexItem>, IRestApiCrudResultRetrieveDelete<TIndexItem>
         where TIndexItem : IIndexItem
     {
         private static readonly JsonSerializerOptions _jsonOptions = new()

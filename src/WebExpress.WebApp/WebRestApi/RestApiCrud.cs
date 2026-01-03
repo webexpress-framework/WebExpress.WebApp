@@ -153,7 +153,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// A result instance representing the data and metadata required
         /// to initialize a new item for creation.
         /// </returns>
-        public virtual RestApiCrudResultRetrieve<TIndexItem> RetrieveForCreate(IRequest request)
+        public virtual IRestApiCrudResultRetrieve<TIndexItem> RetrieveForCreate(IRequest request)
         {
             return new RestApiCrudResultRetrieve<TIndexItem>()
             {
@@ -172,7 +172,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// A result instance representing the data and metadata required
         /// to initialize a new item for creation.
         /// </returns>
-        public virtual RestApiCrudResultRetrieve<TIndexItem> RetrieveForUpdate(string id, IRequest request)
+        public virtual IRestApiCrudResultRetrieve<TIndexItem> RetrieveForUpdate(string id, IRequest request)
         {
             var data = Retrieve()
                     .Where(x => x.Id.ToString().Equals(id, StringComparison.OrdinalIgnoreCase))
@@ -197,7 +197,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// A result instance representing the data and metadata required
         /// to initialize a new item for creation.
         /// </returns>
-        public virtual RestApiCrudResultRetrieveDelete<TIndexItem> RetrieveForDelete(string id, IRequest request)
+        public virtual IRestApiCrudResultRetrieveDelete<TIndexItem> RetrieveForDelete(string id, IRequest request)
         {
             return new RestApiCrudResultRetrieveDelete<TIndexItem>()
             {
