@@ -2,6 +2,7 @@
 using System.Text.Json;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebIndex;
+using WebExpress.WebUI.WebControl;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -36,6 +37,12 @@ namespace WebExpress.WebApp.WebRestApi
         public string Prolog { get; set; }
 
         /// <summary>
+        /// Returns the size of the modal. 
+        /// This property is only relevant when the result is displayed in a modal window.
+        /// </summary>
+        public TypeModalSize ModalSize { get; set; }
+
+        /// <summary>
         /// Converts the current instance into a <see cref="Response"/> object.
         /// </summary>
         /// <returns>
@@ -48,6 +55,7 @@ namespace WebExpress.WebApp.WebRestApi
                 data = Data,
                 title = Title,
                 prolog = Prolog,
+                modalSize = ModalSize.ToClass()
             }, _jsonOptions);
 
             var content = Encoding.UTF8.GetBytes(jsonData);

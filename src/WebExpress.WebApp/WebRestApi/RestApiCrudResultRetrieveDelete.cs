@@ -2,6 +2,7 @@
 using System.Text.Json;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebIndex;
+using WebExpress.WebUI.WebControl;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -38,7 +39,8 @@ namespace WebExpress.WebApp.WebRestApi
                 data = Data,
                 title = Title,
                 prolog = Prolog,
-                confirmItem = ConfirmItem
+                confirmItem = ConfirmItem,
+                modalSize = ModalSize.ToClass()
             }, _jsonOptions);
 
             var content = Encoding.UTF8.GetBytes(jsonData);

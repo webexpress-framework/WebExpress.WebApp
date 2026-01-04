@@ -481,6 +481,21 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
         const wrap = document.createElement("div");
         wrap.className = "wx-cell-content";
 
+        // icon or image from row, only at the very start of first visible cell
+        if (isFirstVisible) {
+            if (row.icon) {
+                const i = document.createElement("i");
+                i.className = row.icon;
+                wrap.appendChild(i);
+            } else if (row.image) {
+                const img = document.createElement("img");
+                img.className = "wx-icon";
+                img.src = row.image;
+                img.alt = "";
+                wrap.appendChild(img);
+            }
+        }
+
         if (cell.image) {
             const img = document.createElement("img");
             img.className = "wx-icon";

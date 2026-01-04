@@ -1,5 +1,6 @@
 ﻿using WebExpress.WebCore.WebRestApi;
 using WebExpress.WebIndex;
+using WebExpress.WebUI.WebControl;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -26,5 +27,11 @@ namespace WebExpress.WebApp.WebRestApi
         /// Returns or sets the prolog for the item.
         /// </summary>
         string Prolog { get; }
+
+        /// <summary>
+        /// Returns the size of the modal. 
+        /// This property is only relevant when the result is displayed in a modal window.
+        /// </summary>
+        TypeModalSize ModalSize { get; }
     }
 }

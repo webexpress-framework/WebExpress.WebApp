@@ -11,6 +11,7 @@ using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
 using WebExpress.WebCore.WebStatusPage;
 using WebExpress.WebIndex;
+using WebExpress.WebUI.WebControl;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -157,7 +158,8 @@ namespace WebExpress.WebApp.WebRestApi
         {
             return new RestApiCrudResultRetrieve<TIndexItem>()
             {
-                Title = I18N.Translate(request, "webexpress.webapp:create.title")
+                Title = I18N.Translate(request, "webexpress.webapp:create.title"),
+                ModalSize = TypeModalSize.Large
             };
         }
 
@@ -181,6 +183,7 @@ namespace WebExpress.WebApp.WebRestApi
             return new RestApiCrudResultRetrieve<TIndexItem>()
             {
                 Title = I18N.Translate(request, "webexpress.webapp:edit.title"),
+                ModalSize = TypeModalSize.ExtraLarge,
                 Data = data
             };
         }
@@ -202,6 +205,7 @@ namespace WebExpress.WebApp.WebRestApi
             return new RestApiCrudResultRetrieveDelete<TIndexItem>()
             {
                 Title = I18N.Translate(request, "webexpress.webapp:delete.title"),
+                ModalSize = TypeModalSize.Default,
                 ConfirmItem = id
             };
         }
