@@ -1,16 +1,69 @@
 ﻿using WebExpress.WebApp.Test.Model;
 using WebExpress.WebApp.WebRestApi;
 using WebExpress.WebCore.WebMessage;
+using WebExpress.WebIndex;
 using WebExpress.WebIndex.Wql;
 
 namespace WebExpress.WebApp.Test
 {
     /// <summary>
+    /// Represents a read-only table of test index items for use with REST API scenarios.
+    /// </summary>
+    public sealed class TestRestApiTable : TestRestApiTable<TestIndexItem>
+    {
+        public TestRestApiTable(IEnumerable<TestIndexItem> data, string title = "tab_title")
+            : base(data, title)
+        {
+        }
+    }
+
+    /// <summary>
     /// Provides a test implementation of a REST API table for retrieving 
     /// index items using filter strings or WQL statements.
     /// </summary>
-    public sealed class TestRestApiTable : RestApiTable<TestData>
+    public class TestRestApiTable<TIndexItem> : RestApiTable<TIndexItem>
+        where TIndexItem : IIndexItem
     {
+        private readonly IEnumerable<TIndexItem> _testData;
+
+        /// <summary>
+        /// Initializes a new instance of the class with the specified data and optional table title.
+        /// </summary>
+        /// <param name="data">
+        /// The collection of TestIndexItem objects to be displayed in the table. Cannot be null.
+        /// </param>
+        /// <param name="title">
+        /// The title of the table. If not specified, defaults to "tab_title".
+        /// </param>
+        public TestRestApiTable(IEnumerable<TIndexItem> data, string title = "tab_title")
+        {
+            _testData = data;
+            Title = title;
+        }
+
+        /// <summary>
+        /// Returns a collection of available REST API options for the specified 
+        /// request and data row.
+        /// </summary>
+        /// <param name="request">
+        /// The request context for which to generate API options. Cannot be null.
+        /// </param>
+        /// <param name="row">
+        /// The data row representing the item for which options are generated. Cannot be null.
+        /// </param>
+        /// <returns>
+        /// An enumerable collection of <see cref="RestApiOption"/> objects representing the 
+        /// available actions for the given request and row. The collection will contain at 
+        /// least one option if actions are available; otherwise, it may be empty.
+        /// </returns>
+        public override IEnumerable<RestApiOption> GetOptions(IRequest request, TIndexItem row)
+        {
+            return
+            [
+                new RestApiOptionEdit(request) { }
+            ];
+        }
+
         /// <summary>
         /// Retrieves a collection of index items that match the specified filter 
         /// and request parameters.
@@ -28,9 +81,9 @@ namespace WebExpress.WebApp.Test
         /// satisfy the filter and request criteria. The collection may be 
         /// empty if no items match.
         /// </returns>
-        public override IEnumerable<TestData> GetData(string filter, IRequest request)
+        public override IEnumerable<TIndexItem> GetData(string filter, IRequest request)
         {
-            throw new NotImplementedException();
+            return _testData;
         }
 
         /// <summary>
@@ -49,9 +102,9 @@ namespace WebExpress.WebApp.Test
         /// An enumerable collection of index items that satisfy the query 
         /// criteria. The collection is empty if no items match.
         /// </returns>
-        public override IEnumerable<TestData> GetData(IWqlStatement wqlStatement, IRequest request)
+        public override IEnumerable<TIndexItem> GetData(IWqlStatement wqlStatement, IRequest request)
         {
-            throw new NotImplementedException();
+            return _testData;
         }
     }
 }

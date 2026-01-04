@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -53,8 +54,15 @@ namespace WebExpress.WebApp.WebRestApi
                     {
                         var name = prop.Name;
                         var labelAttr = (RestTableColumnNameAttribute)Attribute.GetCustomAttribute(prop, typeof(RestTableColumnNameAttribute));
-                        var editorAttr = (RestTableColumnEditorAttribute)Attribute.GetCustomAttribute(prop, typeof(RestTableColumnEditorAttribute));
-                        var renderAttr = (RestTableColumnTemplateAttribute)Attribute.GetCustomAttribute(prop, typeof(RestTableColumnTemplateAttribute));
+                        var templateAttr = prop
+                            .GetCustomAttributes(inherit: true)
+                            .FirstOrDefault
+                            (
+                                a =>
+                                typeof(IRestTableColumnTemplate)
+                                    .IsAssignableFrom(a.GetType())
+                            );
+
                         var isHidden = Attribute.IsDefined(prop, typeof(RestTableColumnHiddenAttribute));
 
                         var column = new RestApiTableColumn()
@@ -62,23 +70,13 @@ namespace WebExpress.WebApp.WebRestApi
                             Name = name,
                             Label = labelAttr?.Name ?? name,
                             Visible = !isHidden,
-                            Editor = null, // default to no editor
                             Template = null
                         };
 
                         // configure rendering for display
-                        if (renderAttr is not null)
+                        if (templateAttr is IRestTableColumnTemplate template)
                         {
-                            if (renderAttr is not null)
-                            {
-                                column.Template = renderAttr.Template.ToString().ToLowerInvariant();
-                            }
-                        }
-
-                        // configure editor, which takes precedence for interaction
-                        if (editorAttr is not null)
-                        {
-                            column.Editor = editorAttr.Editor.ToString().ToLowerInvariant();
+                            column.Template = template;
                         }
 
                         return column;
@@ -135,7 +133,6 @@ namespace WebExpress.WebApp.WebRestApi
                        Icon = x.Value.Icon,
                        Visible = x.Value.Visible,
                        Width = x.Value.Width,
-                       Editor = x.Value.Editor,
                        Template = x.Value.Template
                    });
 
@@ -154,10 +151,31 @@ namespace WebExpress.WebApp.WebRestApi
                             return new RestApiTableRow
                             {
                                 Id = row.Id.ToString(),
-                                Cells = _cachedColumns
-                                .Select(x => new RestApiTableCell
+                                Cells = _cachedColumns.Select(x =>
                                 {
-                                    Text = x.Key.GetValue(row)?.ToString() ?? string.Empty,
+                                    // check if property has a RestTableJoinAttribute
+                                    var value = x.Key.GetValue(row);
+                                    var text = string.Empty;
+
+                                    // join logic handling
+                                    if (x.Key.GetCustomAttributes(typeof(RestTableJoinAttribute), false).FirstOrDefault() is RestTableJoinAttribute joinAttr && value is IEnumerable enumerableValue && value is not string)
+                                    {
+                                        var enumerable = enumerableValue.Cast<object>();
+                                        var separator = joinAttr.Separator.ToString();
+                                        text = string.Join(separator, enumerable.Select
+                                        (
+                                            item => item?.ToString() ?? string.Empty)
+                                        );
+                                    }
+                                    else
+                                    {
+                                        text = value?.ToString() ?? string.Empty;
+                                    }
+
+                                    return new RestApiTableCell
+                                    {
+                                        Text = text
+                                    };
                                 }),
                                 Options = GetOptions(request, row),
                                 Icon = (icon is Icon) ? (icon as Icon).Class : null,

@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Serialization;
+using WebExpress.WebApp.WebAttribute;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -38,16 +39,10 @@ namespace WebExpress.WebApp.WebRestApi
         public uint? Width { get; set; }
 
         /// <summary>
-        /// Returns or sets the editor type for the cell (e.g., 'text', 'password', 'template').
-        /// </summary>
-        [JsonPropertyName("editor")]
-        public string Editor { get; set; }
-
-        /// <summary>
         /// Returns or sets the path to the template file for rendering the column.
         /// </summary>
         [JsonPropertyName("template")]
-        public string Template { get; set; }
+        public IRestTableColumnTemplate Template { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class.
