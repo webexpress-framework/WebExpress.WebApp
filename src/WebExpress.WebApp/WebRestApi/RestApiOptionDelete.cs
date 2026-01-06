@@ -1,6 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebMessage;
+using WebExpress.WebUI.WebControl;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -46,10 +47,10 @@ namespace WebExpress.WebApp.WebRestApi
         public virtual string Color => "text-danger";
 
         /// <summary>
-        /// Returns or sets the modal id.
+        /// Returns or sets the modal dialog content to be displayed.
         /// </summary>
         [JsonPropertyName("modal")]
-        public virtual string Modal { get; set; }
+        public virtual IModalTarget Modal { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class.

@@ -172,7 +172,7 @@ namespace WebExpress.WebApp.WWW.Setting.System.Log
                                     renderContext,
                                     "webexpress.webapp:setting.logfile.delete.label"
                                 ),
-                                Modal = deleteModal.Id,
+                                Modal = new ModalTarget(deleteModal.Id),
                                 Icon = new IconTrashAlt(),
                                 BackgroundColor = new PropertyColorButton(TypeColorButton.Danger)
                             })
@@ -202,7 +202,7 @@ namespace WebExpress.WebApp.WWW.Setting.System.Log
                                     renderContext,
                                     "webexpress.webapp:setting.logfile.switchon.label"
                                 ),
-                                Modal = switchOnModal.Id,
+                                Modal = new ModalTarget(switchOnModal?.Id),
                                 Icon = new IconPowerOff(),
                                 BackgroundColor = new PropertyColorButton(TypeColorButton.Success)
                             })

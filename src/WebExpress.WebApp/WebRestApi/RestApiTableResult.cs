@@ -12,7 +12,11 @@ namespace WebExpress.WebApp.WebRestApi
     /// </summary>
     public class RestApiTableResult : IRestApiResult
     {
-        private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
+        private readonly JsonSerializerOptions _jsonOptions = new()
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
 
         /// <summary>
         /// Returns or sets the title associated with the object.
