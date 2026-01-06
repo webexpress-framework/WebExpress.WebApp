@@ -234,39 +234,6 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Sets the size of the modal dialog if the form resides within one.
-     * Removes existing size classes if no size is specified.
-     * @param {string|null} size The bootstrap modal size class suffix (e.g. 'lg', 'xl', 'sm') or full class.
-     */
-    _setModalSize(size) {
-        if (!this._element) {
-            return;
-        }
-        const modal = this._element.closest(".modal");
-        if (!modal) {
-            return;
-        }
-        const dialog = modal.querySelector(".modal-dialog");
-        if (!dialog) {
-            return;
-        }
-
-        // cleanup existing sizes
-        dialog.classList.remove("modal-sm", "modal-lg", "modal-xl", "modal-fullscreen");
-
-        if (!size) {
-            return;
-        }
-
-        // normalize and add new size
-        const cssClass = size.startsWith("modal-") ? size : `modal-${size}`;
-        const allowed = ["modal-sm", "modal-lg", "modal-xl", "modal-fullscreen"];
-        if (allowed.includes(cssClass)) {
-            dialog.classList.add(cssClass);
-        }
-    }
-
-    /**
      * Loads data (including prolog/title/confirm) from the backend depending on the current mode.
      * @returns {Promise<void>} Promise resolving when loading is complete.
      */
@@ -302,8 +269,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
             const formData = dataObj.data || (Object.keys(dataObj).length ? dataObj : null);
 
             this._setHeaderTitle(dataObj.title || null);
-            this._setModalSize(dataObj.modalSize || null);
-
+  
             // Priority to confirmItem if present (works for delete OR critical edits)
             if (dataObj.confirmItem) {
                 this._displayDeletePromt(dataObj.confirmItem);
