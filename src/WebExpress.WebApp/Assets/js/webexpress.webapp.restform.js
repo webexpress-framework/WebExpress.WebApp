@@ -338,7 +338,9 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
             if (el.type === "checkbox") {
                 el.checked = !!value;
             } else if (el.type === "hidden") {
-                el.value = value != null ? String(value) : "";
+                el.value = value != null
+                    ? (Array.isArray(value) ? value.join(";") : String(value))
+                    : "";
                 el.dispatchEvent(new Event("change", { bubbles: true }));
             } else if (el instanceof HTMLSelectElement && el.multiple) {
                 const values = (Array.isArray(value) ? value : [value]).map(String);
