@@ -101,7 +101,7 @@ namespace WebExpress.WebApp.WebPage
 
             Breadcrumb.Uri = pageContext?.Route?.ToUri();
             Breadcrumb.Margin = new PropertySpacingMargin(PropertySpacing.Space.Null);
-            Content.Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None);
+            (Content as ControlWebAppContent).Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None);
 
             AddCssLink(Theme?.ThemeStyle.ToString() ?? RouteEndpoint.Combine(baseUri, "css/webexpress.webapp.theme.css"));
         }
