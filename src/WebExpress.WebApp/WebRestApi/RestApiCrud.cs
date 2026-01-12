@@ -33,15 +33,15 @@ namespace WebExpress.WebApp.WebRestApi
         [Method(RequestMethod.POST)]
         public virtual IResponse Create(IRequest request)
         {
-            var payload = GetPayload(request);
-            if (payload is null)
+            var fieldMap = GetFieldMap(request);
+            if (fieldMap is null)
             {
                 return new ResponseBadRequest(new StatusMessage("Invalid or empty JSON payload."))
                     .AddHeaderContentType("application/json");
             }
 
             // validate request for creation; item is null for new resources
-            var validationResult = Validate(default, payload, request);
+            var validationResult = Validate(default, fieldMap, request);
             if (!validationResult.IsValid)
             {
                 return new ResponseBadRequest()
@@ -53,7 +53,7 @@ namespace WebExpress.WebApp.WebRestApi
 
             try
             {
-                var result = Create(payload, request);
+                var result = Create(fieldMap, request);
 
                 if (result is null)
                 {
@@ -211,6 +211,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// Handles HTTP PUT and validates inputs before applying the update.
         /// </summary>
         [Method(RequestMethod.PUT)]
+        [Method(RequestMethod.PATCH)]
         public virtual IResponse Update(IRequest request)
         {
             // extract and validate the 'id' parameter
@@ -229,15 +230,15 @@ namespace WebExpress.WebApp.WebRestApi
                 return new ResponseNotFound(new StatusMessage($"Item with id '{id}' not found."));
             }
 
-            var payload = GetPayload(request);
-            if (payload is null)
+            var fieldMap = GetFieldMap(request);
+            if (fieldMap is null)
             {
                 return new ResponseBadRequest(new StatusMessage("Invalid or empty JSON payload."))
                     .AddHeaderContentType("application/json");
             }
 
             // validate the update request using the existing item and the payload
-            var validation = Validate(existingItem, payload, request);
+            var validation = Validate(existingItem, fieldMap, request);
             if (!validation.IsValid)
             {
                 // Validation failed → return structured error response
@@ -250,7 +251,7 @@ namespace WebExpress.WebApp.WebRestApi
             // apply the update (implemented by derived classes)
             try
             {
-                var result = Update(existingItem, payload, request);
+                var result = Update(existingItem, fieldMap, request);
 
                 if (existingItem is IDomain domain)
                 {
@@ -280,7 +281,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <param name="existingItem">
         /// The currently persisted item (null for create).
         /// </param>
-        /// <param name="payload">
+        /// <param name="fieldMap">
         /// The dynamic payload containing updated fields.
         /// </param>
         /// <param name="request">
@@ -289,7 +290,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <returns>
         /// An IRestApiValidationResult indicating validation success or errors.
         /// </returns>
-        public virtual IRestApiValidationResult Validate(TIndexItem existingItem, RestApiCrudFormData payload, IRequest request)
+        public virtual IRestApiValidationResult Validate(TIndexItem existingItem, RestApiCrudFormData fieldMap, IRequest request)
         {
             // default: no validation errors
             return new RestApiValidationResult();
@@ -300,7 +301,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// Override this method in derived classes to implement the actual
         /// persistence logic and return a result describing the creation.
         /// </summary>
-        /// <param name="payload">
+        /// <param name="fieldMap">
         /// The dynamic payload containing the fields required to create the resource.
         /// </param>
         /// <param name="request">
@@ -310,7 +311,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// A result object containing information about the create operation,
         /// including the created resource.
         /// </returns>
-        protected virtual IRestApiCrudResultCreate Create(RestApiCrudFormData payload, IRequest request)
+        protected virtual IRestApiCrudResultCreate Create(RestApiCrudFormData fieldMap, IRequest request)
         {
             return new RestApiCrudResultCreate()
             {
@@ -331,11 +332,12 @@ namespace WebExpress.WebApp.WebRestApi
         /// <param name="request">
         /// The HTTP request providing additional context.
         /// </param>
-        public virtual IRestApiCrudResultUpdate Update(TIndexItem existingItem, RestApiCrudFormData payload, IRequest request)
+        public virtual IRestApiCrudResultUpdate Update(TIndexItem existingItem, RestApiCrudFormData fieldMap, IRequest request)
         {
+            fieldMap.BindTo(existingItem);
+
             return new RestApiCrudResultUpdate()
             {
-                HideForm = true
             };
         }
 
@@ -424,11 +426,18 @@ namespace WebExpress.WebApp.WebRestApi
         /// A Payload object representing the parsed JSON content if 
         /// successful; otherwise null.
         /// </returns>
-        private RestApiCrudFormData GetPayload(IRequest request)
+        private RestApiCrudFormData GetFieldMap(IRequest request)
         {
             // parse JSON payload into a dynamic Payload structure
-            var payload = default(RestApiCrudFormData);
-            if (request is Request r && r.Content is not null)
+            var fieldMap = default(RestApiCrudFormData);
+            var r = request as Request;
+
+            if (r?.Content is null)
+            {
+                return null;
+            }
+
+            if (request.Header.ContentType?.Contains("application/json", StringComparison.OrdinalIgnoreCase) == true)
             {
                 try
                 {
@@ -436,7 +445,7 @@ namespace WebExpress.WebApp.WebRestApi
                     var root = JsonSerializer.Deserialize<JsonElement>(r.Content, _options);
 
                     // convert JsonElement → Payload (recursive)
-                    payload = root.ToPayload() as RestApiCrudFormData;
+                    fieldMap = root.ToFieldMap() as RestApiCrudFormData;
                 }
                 catch (JsonException)
                 {
@@ -444,14 +453,23 @@ namespace WebExpress.WebApp.WebRestApi
                     return null;
                 }
             }
+            else if (request.Header.ContentType?.Contains("multipart/form-data", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                fieldMap = [];
 
-            if (payload is null)
+                foreach (var parameter in request.Parameters)
+                {
+                    fieldMap[parameter.Key] = parameter.Value;
+                }
+            }
+
+            if (fieldMap is null)
             {
                 // payload is missing or empty
                 return null;
             }
 
-            return payload;
+            return fieldMap;
         }
     }
 }

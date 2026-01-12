@@ -180,7 +180,8 @@ namespace WebExpress.WebApp.WebRestApi
                                 Options = GetOptions(request, row),
                                 Icon = (icon is Icon) ? (icon as Icon).Class : null,
                                 Image = (icon is ImageIcon) ? (icon as ImageIcon).Uri?.ToString() : null,
-                                Uri = uri?.ToString()
+                                Uri = uri?.ToString(),
+                                RestApi = GetRestApi(request, row)?.ToString()
                             };
                         }),
                     Pagination = new RestApiPaginationInfo()
@@ -207,6 +208,24 @@ namespace WebExpress.WebApp.WebRestApi
         public virtual IEnumerable<RestApiOption> GetOptions(IRequest request, TIndexItem row)
         {
             return [];
+        }
+
+        /// <summary>
+        /// Gets the REST API endpoint URI associated with the specified request and index item.
+        /// </summary>
+        /// <param name="request">
+        /// The request for which to retrieve the REST API endpoint.
+        /// </param>
+        /// <param name="row">
+        /// The index item that provides context for determining the appropriate REST API endpoint.
+        /// </param>
+        /// <returns>
+        /// An <see cref="IUri"/> representing the REST API endpoint for the given request 
+        /// and index item, or null if no endpoint is available.
+        /// </returns>
+        public virtual IUri GetRestApi(IRequest request, TIndexItem row)
+        {
+            return null;
         }
 
         /// <summary>

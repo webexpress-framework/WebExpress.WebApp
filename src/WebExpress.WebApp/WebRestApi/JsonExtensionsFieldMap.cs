@@ -10,7 +10,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// System.Text.Json.JsonElement instances into commonly used .NET types, such as dictionaries, lists, and primitive
     /// values. It is intended to simplify working with dynamic or loosely-typed JSON data in .NET
     /// applications.</remarks>
-    public static class JsonExtensionsPayload
+    public static class JsonExtensionsFieldMap
     {
         /// <summary>
         /// Converts a <see cref="JsonElement"/> to a corresponding .NET object representation suitable for use as a
@@ -25,7 +25,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// cref="double"/> for numbers, a <see cref="bool"/> for booleans, or <see langword="null"/> for null or
         /// undefined values.
         /// </returns>
-        public static object ToPayload(this JsonElement element)
+        public static object ToFieldMap(this JsonElement element)
         {
             switch (element.ValueKind)
             {
@@ -33,7 +33,7 @@ namespace WebExpress.WebApp.WebRestApi
                     var dict = new RestApiCrudFormData();
                     foreach (var prop in element.EnumerateObject())
                     {
-                        dict[prop.Name] = ToPayload(prop.Value);
+                        dict[prop.Name] = ToFieldMap(prop.Value);
                     }
                     return dict;
 
@@ -41,7 +41,7 @@ namespace WebExpress.WebApp.WebRestApi
                     var list = new List<object>();
                     foreach (var item in element.EnumerateArray())
                     {
-                        list.Add(ToPayload(item));
+                        list.Add(ToFieldMap(item));
                     }
                     return list;
 

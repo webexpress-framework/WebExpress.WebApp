@@ -520,7 +520,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
                 const val = (cell.text !== undefined && cell.text !== null) ? cell.text : (cell.value || "");
 
                 try {
-                    const result = renderer.fn(val, cell, row, opts);
+                    const result = renderer.fn(val, this, row, cell, colDef.name, opts);
                     if (result instanceof Node) {
                         wrap.appendChild(result);
                     } else {

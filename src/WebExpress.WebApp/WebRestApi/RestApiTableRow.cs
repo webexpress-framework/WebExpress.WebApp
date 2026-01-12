@@ -46,6 +46,12 @@ namespace WebExpress.WebApp.WebRestApi
         public string Uri { get; set; }
 
         /// <summary>
+        /// Returns or sets the uri for the rest api (edit).
+        /// </summary>
+        [JsonPropertyName("restApi")]
+        public string RestApi { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         public RestApiTableRow()
