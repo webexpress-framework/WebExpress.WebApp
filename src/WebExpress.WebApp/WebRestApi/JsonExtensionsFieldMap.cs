@@ -33,7 +33,7 @@ namespace WebExpress.WebApp.WebRestApi
                     var dict = new RestApiCrudFormData();
                     foreach (var prop in element.EnumerateObject())
                     {
-                        dict[prop.Name] = ToFieldMap(prop.Value);
+                        dict[prop.Name.ToLower()] = ToFieldMap(prop.Value);
                     }
                     return dict;
 

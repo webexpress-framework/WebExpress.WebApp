@@ -1,6 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 using System.Reflection;
+using WebExpress.WebApp.WebAttribute;
+using WebExpress.WebCore.WebRestApi;
+using WebExpress.WebIndex;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -10,6 +15,65 @@ namespace WebExpress.WebApp.WebRestApi
     /// </summary>
     public static class RestApiCrudFormDataExtensions
     {
+        /// <summary>
+        /// Validates the key-value pairs against the validation attributes applied 
+        /// to the properties of the specified type.
+        /// </summary>
+        /// <typeparam name="TIndeItem">
+        /// The target type whose property validation attributes should be applied.
+        /// </typeparam>
+        /// <param name="fieldMap">
+        /// The RestApiCrudFormData instance containing the payload for validation.
+        /// </param>
+        /// <param name="culture">The culture.</param>
+        /// <returns>
+        /// A RestApiValidationResult containing validation errors for each property/field.
+        /// </returns>
+        public static IRestApiValidationResult Validate<TIndeItem>(this RestApiCrudFormData fieldMap, CultureInfo culture)
+             where TIndeItem : IIndexItem
+        {
+            var result = new RestApiValidationResult();
+            var properties = typeof(TIndeItem).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+            // always use braces for control structures
+            foreach (var kv in fieldMap)
+            {
+                // find the target property by name (case insensitive)
+                var property = properties.FirstOrDefault
+                (
+                    p =>
+                    string.Equals(p.Name, kv.Key, StringComparison.OrdinalIgnoreCase)
+                );
+
+                if (property == null)
+                {
+                    // property not found, skip value
+                    continue;
+                }
+
+                var attributes = property.GetCustomAttributes(true)
+                    .OfType<IValidation>()
+                    .ToList();
+
+                if (attributes.Count == 0)
+                {
+                    continue;
+                }
+
+                object value = kv.Value;
+
+                foreach (var validation in attributes)
+                {
+                    if (!validation.IsValid(value, culture, out string errorMessage))
+                    {
+                        result.Add(errorMessage ?? $"Validation failed for '{property.Name}'.", property.Name);
+                    }
+                }
+            }
+
+            return result;
+        }
+
         /// <summary>
         /// Populates the writable public properties of the specified target object 
         /// with values from the given form data payload, matching by property name.

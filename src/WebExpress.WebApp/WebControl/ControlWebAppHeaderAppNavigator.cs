@@ -172,7 +172,7 @@ namespace WebExpress.WebApp.WebControl
             {
                 yield return new ControlDropdownItemHeader()
                 {
-                    Text = I18N.Translate(renderContext.Request, application?.ApplicationName)
+                    Text = I18N.Translate(renderContext, application?.ApplicationName)
                 };
             }
 

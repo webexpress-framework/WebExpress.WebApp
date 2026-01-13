@@ -292,8 +292,9 @@ namespace WebExpress.WebApp.WebRestApi
         /// </returns>
         public virtual IRestApiValidationResult Validate(TIndexItem existingItem, RestApiCrudFormData fieldMap, IRequest request)
         {
-            // default: no validation errors
-            return new RestApiValidationResult();
+            var result = fieldMap.Validate<TIndexItem>(request.Culture);
+
+            return result;
         }
 
         /// <summary>
@@ -313,10 +314,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// </returns>
         protected virtual IRestApiCrudResultCreate Create(RestApiCrudFormData fieldMap, IRequest request)
         {
-            return new RestApiCrudResultCreate()
-            {
-                HideForm = true
-            };
+            return new RestApiCrudResultCreate();
         }
 
         /// <summary>
@@ -459,7 +457,7 @@ namespace WebExpress.WebApp.WebRestApi
 
                 foreach (var parameter in request.Parameters)
                 {
-                    fieldMap[parameter.Key] = parameter.Value;
+                    fieldMap[parameter.Key.ToLower()] = parameter.Value;
                 }
             }
 

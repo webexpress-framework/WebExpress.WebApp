@@ -13,6 +13,27 @@ confirmation.delete.success=The item has been deleted.
 confirmation.delete.confirm=Do you really want to delete the selected item '{0}'?
 confirmation.cancel.label=Cancel
 
+validation.allowedvalues=The value must be one of the allowed values.
+validation.contains=The text must contain the required substring.
+validation.daterange=The date must be within the allowed range.
+validation.email=The input must be a valid email address.
+validation.endswith=The text must end with the required suffix.
+validation.exactlength=The string must have the required length.
+validation.futuredate=The date must be in the future.
+validation.ipaddress=The input must be a valid IP address.
+validation.maxitems=The number of items must not exceed the maximum value.
+validation.maxlength=The text must not exceed the maximum length.
+validation.minitems=The number of items must meet the minimum required value.
+validation.minlength=The text must at least meet the minimum length.
+validation.notcontains=The text must not contain the disallowed substring.
+validation.notequal=The value must not be equal to the disallowed value.
+validation.pastdate=The date must be in the past.
+validation.range=The value must be within the allowed range.
+validation.regex=The text does not match the required pattern.
+validation.required=The field must not be empty.
+validation.startswith=The text must start with the required prefix.
+validation.url=The input must be a valid URL.
+
 indexmanager.initialization=The index manager has been initialized.
 
 identitymanager.initialization=The identity manager has been initialized.

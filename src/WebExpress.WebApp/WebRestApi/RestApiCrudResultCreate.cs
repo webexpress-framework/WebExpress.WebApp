@@ -30,13 +30,6 @@ namespace WebExpress.WebApp.WebRestApi
         public string Message { get; set; }
 
         /// <summary>
-        /// Returns or sets a value indicating whether the form should 
-        /// be hidden from view.
-        /// </summary>
-        [JsonPropertyName("hideForm")]
-        public bool HideForm { get; set; }
-
-        /// <summary>
         /// Converts the current instance into a <see cref="Response"/> object.
         /// </summary>
         /// <returns>A Response object representing the result of the conversion.</returns>

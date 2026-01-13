@@ -13,6 +13,27 @@ confirmation.delete.success=Die Löschaktion wurde erfolgreich durchgeführt.
 confirmation.delete.confirm=Möchten Sie das ausgewählte Element '{0}' wirklich löschen?
 confirmation.cancel.label=Abbrechen
 
+validation.allowedvalues=Der Wert muss einer der erlaubten Werte sein.
+validation.contains=Der Text muss die geforderte Teilzeichenkette enthalten.
+validation.daterange=Das Datum muss im erlaubten Bereich liegen.
+validation.email=Die Eingabe muss eine gültige E-Mail-Adresse sein.
+validation.endswith=Der Text muss mit der geforderten Zeichenkette enden.
+validation.exactlength=Die Zeichenkette muss die erforderliche Länge haben.
+validation.futuredate=Das Datum muss in der Zukunft liegen.
+validation.ipaddress=Die Angabe muss eine gültige IP-Adresse sein.
+validation.maxitems=Die Anzahl der Elemente darf den Maximalwert nicht überschreiten.
+validation.maxlength=Der Text darf die maximale Länge nicht überschreiten.
+validation.minitems=Die Anzahl der Elemente muss mindestens den Minimalwert erreichen.
+validation.minlength=Der Text muss mindestens die Mindestlänge haben.
+validation.notcontains=Der Text darf die unzulässige Teilzeichenkette nicht enthalten.
+validation.notequal=Der Wert darf nicht dem unzulässigen Wert entsprechen.
+validation.pastdate=Das Datum muss in der Vergangenheit liegen.
+validation.range=Der Wert muss im erlaubten Bereich liegen.
+validation.regex=Der Text entspricht nicht dem erforderlichen Muster.
+validation.required=Das Feld darf nicht leer sein.
+validation.startswith=Der Text muss mit der geforderten Zeichenkette beginnen.
+validation.url=Die Angabe muss eine gültige URL sein.
+
 indexmanager.initialization=Der Index-Manager wurde initialisiert.
 
 identitymanager.initialization=Der Identitätsmanager wurde initialisiert.
