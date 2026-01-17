@@ -52,7 +52,6 @@ namespace WebExpress.WebApp.Test.Model
         /// <summary>
         /// Returns or sets the URI associated with the table row.
         /// </summary>
-        [RestTableRowUri]
         public IUri Uri { get; set; }
     }
 }

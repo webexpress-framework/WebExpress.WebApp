@@ -27,7 +27,6 @@ namespace WebExpress.WebApp.WebRestApi
     {
         private readonly Dictionary<PropertyInfo, RestApiTableColumn> _cachedColumns;
         private readonly PropertyInfo _cachedRowIconAttribute;
-        private readonly PropertyInfo _cachedRowUriAttribute;
 
         /// <summary>
         /// Returns or sets the title associated with the current object.
@@ -87,11 +86,6 @@ namespace WebExpress.WebApp.WebRestApi
                 .GetProperties()
                 .Where(prop => Attribute.IsDefined(prop, typeof(RestTableRowIconAttribute)))
                 .FirstOrDefault();
-
-            _cachedRowUriAttribute = typeof(TIndexItem)
-                .GetProperties()
-                .Where(prop => Attribute.IsDefined(prop, typeof(RestTableRowUriAttribute)))
-                .FirstOrDefault();
         }
 
         /// <summary>
@@ -146,7 +140,6 @@ namespace WebExpress.WebApp.WebRestApi
                         .Select(row =>
                         {
                             var icon = _cachedRowIconAttribute?.GetValue(row) as IIcon;
-                            var uri = _cachedRowUriAttribute?.GetValue(row) as IUri;
 
                             return new RestApiTableRow
                             {
@@ -180,7 +173,7 @@ namespace WebExpress.WebApp.WebRestApi
                                 Options = GetOptions(request, row),
                                 Icon = (icon is Icon) ? (icon as Icon).Class : null,
                                 Image = (icon is ImageIcon) ? (icon as ImageIcon).Uri?.ToString() : null,
-                                Uri = uri?.ToString(),
+                                Uri = GetUri(request, row)?.ToString(),
                                 RestApi = GetRestApi(request, row)?.ToString()
                             };
                         }),
@@ -208,6 +201,23 @@ namespace WebExpress.WebApp.WebRestApi
         public virtual IEnumerable<RestApiOption> GetOptions(IRequest request, TIndexItem row)
         {
             return [];
+        }
+
+        /// <summary>
+        /// Gets the URI associated with the specified request and index item.
+        /// </summary>
+        /// <param name="request">
+        /// The request for which to retrieve the URI. Cannot be null.
+        /// </param>
+        /// <param name="row">
+        /// The index item that provides context for generating the URI. Cannot be null.
+        /// </param>
+        /// <returns>
+        /// An object representing the URI for the given request and index item, or null if no URI is available.
+        /// </returns>
+        public virtual IUri GetUri(IRequest request, TIndexItem row)
+        {
+            return null;
         }
 
         /// <summary>
