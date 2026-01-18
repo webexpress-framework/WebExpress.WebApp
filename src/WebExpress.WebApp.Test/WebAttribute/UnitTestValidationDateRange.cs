@@ -21,7 +21,7 @@ namespace WebExpress.WebApp.Test.WebAttribute
         [InlineData("2040-01-01", false)]
         public void IsValid(string dateString, bool expected)
         {
-            // preconditions
+            // arrange
             var attr = new ValidateDateRangeAttribute(
                 message: "invalid",
                 min: "2020-01-01",
@@ -30,7 +30,7 @@ namespace WebExpress.WebApp.Test.WebAttribute
 
             var date = DateTime.Parse(dateString);
 
-            // test execution
+            // act
             var result = attr.IsValid(date, CultureInfo.InvariantCulture, out var error);
 
             // validation

@@ -19,10 +19,10 @@ namespace WebExpress.WebApp.Test.WebAttribute
         [InlineData("abc", 4, false)]
         public void IsValid(string value, int min, bool expected)
         {
-            // preconditions
+            // arrange
             var attr = new ValidateMinLengthAttribute(min, "too short");
 
-            // test execution
+            // act
             var result = attr.IsValid(value, CultureInfo.InvariantCulture, out var error);
 
             // validation

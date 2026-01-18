@@ -21,10 +21,10 @@ namespace WebExpress.WebApp.Test.WebAttribute
         [InlineData(20, 1, 10, false)]
         public void IsValid(double value, double min, double max, bool expected)
         {
-            // preconditions
+            // arrange
             var attr = new ValidateRangeAttribute(min, max, "out of range");
 
-            // test execution
+            // act
             var result = attr.IsValid(value, CultureInfo.InvariantCulture, out var error);
 
             // validation

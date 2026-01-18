@@ -18,7 +18,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData("id", @"<header id=""id"" style=""display: block;"">*</header>")]
         public void Id(string id, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
             var context = UnitTestControlFixture.CreateRenderContextMock(application);
@@ -27,7 +27,7 @@ namespace WebExpress.WebApp.Test.WebControl
             {
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
             AssertExtensions.EqualWithPlaceholders(expected, html);

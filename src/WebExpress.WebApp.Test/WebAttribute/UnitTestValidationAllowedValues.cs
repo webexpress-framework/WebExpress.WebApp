@@ -20,10 +20,10 @@ namespace WebExpress.WebApp.Test.WebAttribute
         [InlineData(5, false)]
         public void IsValid(int value, bool expected)
         {
-            // preconditions
+            // arrange
             var attr = new ValidateAllowedValuesAttribute("not allowed", 1, 2, 3);
 
-            // test execution
+            // act
             var result = attr.IsValid(value, CultureInfo.InvariantCulture, out var error);
 
             // validation

@@ -25,11 +25,11 @@ namespace WebExpress.WebApp.Test.WebFragment
         [InlineData(typeof(TestApplication), typeof(TestFragmentPageA), "webexpress.webapp.test.testfragmentpagea")]
         public void Id(Type applicationType, Type fragmentType, string id)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var application = componentHub.ApplicationManager.GetApplications(applicationType).FirstOrDefault();
 
-            // test execution
+            // act
             var fragment = componentHub.FragmentManager.GetFragments(application, fragmentType);
 
             if (id is null)
@@ -68,7 +68,7 @@ namespace WebExpress.WebApp.Test.WebFragment
         [InlineData(typeof(TestApplication), typeof(TestFragmentControlRestFormDelete), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<form id=""webexpress-webapp-test-testfragmentcontrolrestformdelete"" class=""wx-webapp-restform"" data-method=""POST"" data-mode=""new""><main><div></div></main><div><button type=""submit"" class=""btn me-2 btn-success""><i class=""fas fa-plus me-2""></i>New  </button></div></form>")]
         public void GetFragments(Type applicationType, Type fragmentType, Type sectionType, Type scopeType, int count, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var application = componentHub.ApplicationManager.GetApplications(applicationType).FirstOrDefault();
             var renderContext = UnitTestControlFixture.CreateRenderContextMock(application, [scopeType]);
@@ -93,7 +93,7 @@ namespace WebExpress.WebApp.Test.WebFragment
                 renderContext?.PageContext?.Scopes
             };
 
-            // test execution
+            // act
             // invoke the method using reflection
             var preferences = (IEnumerable<object>)getFragmentsMethod.MakeGenericMethod(fragmentType, sectionType)
                 .Invoke(componentHub.FragmentManager, parameters);
@@ -115,13 +115,13 @@ namespace WebExpress.WebApp.Test.WebFragment
         [InlineData(typeof(TestApplication), typeof(SectionContentPrimary), typeof(IScope), null)]
         public void Render(Type applicationType, Type sectionType, Type scopeType, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var application = componentHub.ApplicationManager.GetApplications(applicationType).FirstOrDefault();
             var renderContext = UnitTestControlFixture.CreateRenderContextMock(application, [scopeType]);
             var visualTree = new VisualTreeControl(componentHub, renderContext.PageContext);
 
-            // test execution
+            // act
             var html = componentHub.FragmentManager.Render(renderContext, visualTree, sectionType);
 
             Assert.NotNull(html);

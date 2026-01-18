@@ -21,7 +21,7 @@ namespace WebExpress.WebApp.Test.WebAttribute
         [InlineData(0, false)]
         public void IsValid(int count, bool expected)
         {
-            // preconditions
+            // arrange
             var attr = new ValidateMinItemsAttribute(2, "too few");
 
             var list = new List<int>();
@@ -30,7 +30,7 @@ namespace WebExpress.WebApp.Test.WebAttribute
                 list.Add(i);
             }
 
-            // test execution
+            // act
             var result = attr.IsValid(list, CultureInfo.InvariantCulture, out var error);
 
             // validation

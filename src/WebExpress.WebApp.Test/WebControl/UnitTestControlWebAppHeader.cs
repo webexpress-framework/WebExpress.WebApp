@@ -19,7 +19,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData("id", @"<header id=""id"" class=""navbar p-0 fixed-top"" style=""display: block; position: sticky; top: 0; z-index: 99;"">*</header>")]
         public void Id(string id, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
@@ -27,7 +27,7 @@ namespace WebExpress.WebApp.Test.WebControl
             {
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
             AssertExtensions.EqualWithPlaceholders(expected, html);
@@ -49,7 +49,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData(TypeColorNavbar.Transparent, @"<header class=""navbar p-0 fixed-top navbar-transparent"" style=""display: block; position: sticky; top: 0; z-index: 99;"">*</header>")]
         public void TextColor(TypeColorNavbar textColor, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
@@ -58,7 +58,7 @@ namespace WebExpress.WebApp.Test.WebControl
                 TextColor = new PropertyColorNavbar(textColor)
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
             AssertExtensions.EqualWithPlaceholders(expected, html);
@@ -73,7 +73,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData(TypeFixed.Bottom, @"<header class=""navbar p-0 fixed-bottom"" style=""display: block; position: sticky; top: 0; z-index: 99;"">*</header>")]
         public void Fixed(TypeFixed fixedProperty, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
@@ -82,7 +82,7 @@ namespace WebExpress.WebApp.Test.WebControl
                 Fixed = fixedProperty
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
             AssertExtensions.EqualWithPlaceholders(expected, html);
@@ -96,7 +96,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData(TypeSticky.Top, @"<header class=""navbar p-0 fixed-top sticky-top"" style=""display: block; position: sticky; top: 0; z-index: 99;"">*</div></header>")]
         public void Sticky(TypeSticky sticky, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
@@ -105,7 +105,7 @@ namespace WebExpress.WebApp.Test.WebControl
                 Sticky = sticky
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
             AssertExtensions.EqualWithPlaceholders(expected, html);

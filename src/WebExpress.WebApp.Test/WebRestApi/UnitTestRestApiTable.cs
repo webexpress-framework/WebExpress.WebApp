@@ -17,7 +17,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
         [Fact]
         public void SetTitle()
         {
-            // test execution
+            // act
             var table = new TestRestApiTable([], "my title");
 
             // vallidation
@@ -31,7 +31,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
         [Fact]
         public void Retrieve()
         {
-            // preconditions
+            // arrange
             var item = new TestIndexItem
             {
                 Id = Guid.NewGuid(),
@@ -44,7 +44,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             var table = new TestRestApiTable<TestIndexItem>([item], "Title");
             var request = UnitTestControlFixture.CreateRequestMock();
 
-            // test execution
+            // act
             var result = table.Retrieve(request);
 
             // vallidation
@@ -120,7 +120,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
         [Fact]
         public void TemplateTag()
         {
-            // preconditions
+            // arrange
             var item = new TestIndexItemTemplateTag
             {
                 Id = Guid.NewGuid()
@@ -128,7 +128,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             var table = new TestRestApiTable<TestIndexItemTemplateTag>([item], "Title");
             var request = UnitTestControlFixture.CreateRequestMock();
 
-            // test execution
+            // act
             var result = table.Retrieve(request);
 
             // vallidation

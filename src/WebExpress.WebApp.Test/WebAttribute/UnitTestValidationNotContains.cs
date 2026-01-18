@@ -18,10 +18,10 @@ namespace WebExpress.WebApp.Test.WebAttribute
         [InlineData("badword", "bad", false)]
         public void IsValid(string value, string substring, bool expected)
         {
-            // preconditions
+            // arrange
             var attr = new ValidateNotContainsAttribute(substring, "invalid");
 
-            // test execution
+            // act
             var result = attr.IsValid(value, CultureInfo.InvariantCulture, out var error);
 
             // validation

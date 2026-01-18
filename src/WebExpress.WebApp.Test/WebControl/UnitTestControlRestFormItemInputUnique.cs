@@ -21,7 +21,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData("id", @"<div id=""id"" class=""wx-webapp-input-unique"" name=""id""></div>")]
         public void Id(string id, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var form = new ControlForm();
             var context = new RenderControlFormContext(UnitTestControlFixture.CreateRenderContextMock(), form);
@@ -30,7 +30,7 @@ namespace WebExpress.WebApp.Test.WebControl
             {
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
             // validation
@@ -44,7 +44,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData(@"<div id=""*"" class=""wx-webapp-input-unique"" name=""*""></div>")]
         public void AutoId(string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var form = new ControlForm();
             var context = new RenderControlFormContext(UnitTestControlFixture.CreateRenderContextMock(), form);
@@ -53,7 +53,7 @@ namespace WebExpress.WebApp.Test.WebControl
             {
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
             // validation
@@ -68,7 +68,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData("abc", @"<div class=""wx-webapp-input-unique"" name=""abc""></div>")]
         public void Name(string name, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var form = new ControlForm();
             var context = new RenderControlFormContext(UnitTestControlFixture.CreateRenderContextMock(), form);
@@ -78,7 +78,7 @@ namespace WebExpress.WebApp.Test.WebControl
                 Name = name
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
             // validation
@@ -93,7 +93,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData("abc", @"<div class=""wx-webapp-input-unique""></div>")]
         public void Description(string description, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var form = new ControlForm();
             var context = new RenderControlFormContext(UnitTestControlFixture.CreateRenderContextMock(), form);
@@ -103,7 +103,7 @@ namespace WebExpress.WebApp.Test.WebControl
                 Description = description
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
             // validation
@@ -119,7 +119,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData("webexpress.webui:plugin.name", @"<div class=""wx-webapp-input-unique"" placeholder=""WebExpress.WebUI""></div>")]
         public void Placeholder(string placeholder, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var form = new ControlForm();
             var context = new RenderControlFormContext(UnitTestControlFixture.CreateRenderContextMock(), form);
@@ -129,7 +129,7 @@ namespace WebExpress.WebApp.Test.WebControl
                 Placeholder = placeholder
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
             // validation
@@ -145,7 +145,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData(10u, @"<div class=""wx-webapp-input-unique"" data-minlength=""10""></div>")]
         public void MinLength(uint? minLength, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var form = new ControlForm();
             var context = new RenderControlFormContext(UnitTestControlFixture.CreateRenderContextMock(), form);
@@ -155,7 +155,7 @@ namespace WebExpress.WebApp.Test.WebControl
                 MinLength = minLength
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
             // validation
@@ -171,7 +171,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData(10u, @"<div class=""wx-webapp-input-unique""></div>")]
         public void MaxLength(uint? maxLength, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var form = new ControlForm();
             var context = new RenderControlFormContext(UnitTestControlFixture.CreateRenderContextMock(), form);
@@ -181,7 +181,7 @@ namespace WebExpress.WebApp.Test.WebControl
                 MaxLength = maxLength
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
             // validation
@@ -196,7 +196,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData(true, @"<div class=""wx-webapp-input-unique""></div>")]
         public void Required(bool required, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var form = new ControlForm();
             var context = new RenderControlFormContext(UnitTestControlFixture.CreateRenderContextMock(), form);
@@ -206,7 +206,7 @@ namespace WebExpress.WebApp.Test.WebControl
                 Required = required
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
             // validation
@@ -221,7 +221,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData("abc.*", @"<div class=""wx-webapp-input-unique""></div>")]
         public void Pattern(string pattern, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var form = new ControlForm();
             var context = new RenderControlFormContext(UnitTestControlFixture.CreateRenderContextMock(), form);
@@ -231,7 +231,7 @@ namespace WebExpress.WebApp.Test.WebControl
                 Pattern = pattern
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
             // validation
@@ -246,7 +246,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData("https://example.com/api/data", @"<div class=""wx-webapp-input-unique"" data-uri=""https://example.com/api/data""></div>")]
         public void RestUri(string uriString, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var form = new ControlForm();
             var context = new RenderControlFormContext(UnitTestControlFixture.CreateRenderContextMock(), form);
@@ -256,7 +256,7 @@ namespace WebExpress.WebApp.Test.WebControl
                 RestUri = uriString is not null ? new UriEndpoint(uriString) : null
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
             // validation
@@ -271,7 +271,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData("abc", @"*<div class=""wx-webapp-input-unique"" data-value=""abc"">*")]
         public void ValueForm(string value, string expected)
         {
-            // preconditions
+            // arrange
             var initialized = false;
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
@@ -284,7 +284,7 @@ namespace WebExpress.WebApp.Test.WebControl
                     initialized = true;
                 });
 
-            // test execution
+            // act
             var html = form.Render(context, visualTree);
 
             // validation
@@ -300,7 +300,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData("abc", @"*<div class=""wx-webapp-input-unique"" data-value=""abc"">*")]
         public void ValueItem(string value, string expected)
         {
-            // preconditions
+            // arrange
             var initialized = false;
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
@@ -313,7 +313,7 @@ namespace WebExpress.WebApp.Test.WebControl
                 });
             var form = new ControlForm().Add(control);
 
-            // test execution
+            // act
             var html = form.Render(context, visualTree);
 
             // validation
@@ -329,7 +329,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData("abc", @"*<div id=""text-box"" class=""wx-webapp-input-unique"" name=""text-box"" data-value=""abc""></div>*")]
         public void ValidateForm(string value, string expected)
         {
-            // preconditions
+            // arrange
             var validated = false;
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
@@ -355,7 +355,7 @@ namespace WebExpress.WebApp.Test.WebControl
             context.Request.AddParameter(new Parameter(form.Id, context.Request?.Session.Id.ToString(), ParameterScope.Parameter));
             context.Request.AddParameter(new Parameter("text-box", value, ParameterScope.Parameter));
 
-            // test execution
+            // act
             var html = form.Render(context, visualTree);
 
             // validation
@@ -371,7 +371,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData("abc", @"*<div id=""text-box"" class=""wx-webapp-input-unique"" name=""text-box"" data-value=""abc""></div>*")]
         public void ValidateItem(string value, string expected)
         {
-            // preconditions
+            // arrange
             var validated = false;
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
@@ -394,7 +394,7 @@ namespace WebExpress.WebApp.Test.WebControl
             context.Request.AddParameter(new Parameter(form.Id, context.Request?.Session.Id.ToString(), ParameterScope.Parameter));
             context.Request.AddParameter(new Parameter("text-box", value, ParameterScope.Parameter));
 
-            // test execution
+            // act
             var html = form.Render(context, visualTree);
 
             // validation
@@ -410,7 +410,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData("abc", @"*<div id=""text-box"" class=""wx-webapp-input-unique"" name=""text-box"" data-value=""abc""></div>*")]
         public void ProcessForm(string value, string expected)
         {
-            // preconditions
+            // arrange
             var processed = false;
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
@@ -433,7 +433,7 @@ namespace WebExpress.WebApp.Test.WebControl
             context.Request.AddParameter(new Parameter(form.Id, context.Request?.Session.Id.ToString(), ParameterScope.Parameter));
             context.Request.AddParameter(new Parameter("text-box", value, ParameterScope.Parameter));
 
-            // test execution
+            // act
             var html = form.Render(context, visualTree);
 
             // validation
@@ -449,7 +449,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData("abc", @"*<div id=""text-box"" class=""wx-webapp-input-unique"" name=""text-box"" data-value=""abc""></div>*")]
         public void ProcessItem(string value, string expected)
         {
-            // preconditions
+            // arrange
             var processed = false;
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
@@ -463,7 +463,7 @@ namespace WebExpress.WebApp.Test.WebControl
             context.Request.AddParameter(new Parameter(form.Id, context.Request?.Session.Id.ToString(), ParameterScope.Parameter));
             context.Request.AddParameter(new Parameter("text-box", value, ParameterScope.Parameter));
 
-            // test execution
+            // act
             var html = form.Render(context, visualTree);
 
             // validation

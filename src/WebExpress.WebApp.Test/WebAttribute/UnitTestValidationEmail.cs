@@ -19,10 +19,10 @@ namespace WebExpress.WebApp.Test.WebAttribute
         [InlineData("a@b", false)]
         public void IsValid(string value, bool expected)
         {
-            // preconditions
+            // arrange
             var attr = new ValidateEmailAttribute("invalid email");
 
-            // test execution
+            // act
             var result = attr.IsValid(value, CultureInfo.InvariantCulture, out var error);
 
             // validation

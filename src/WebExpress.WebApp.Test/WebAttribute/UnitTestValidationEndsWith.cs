@@ -18,10 +18,10 @@ namespace WebExpress.WebApp.Test.WebAttribute
         [InlineData("start", "end", false)]
         public void IsValid(string value, string suffix, bool expected)
         {
-            // preconditions
+            // arrange
             var attr = new ValidateEndsWithAttribute(suffix, "invalid");
 
-            // test execution
+            // act
             var result = attr.IsValid(value, CultureInfo.InvariantCulture, out var error);
 
             // validation

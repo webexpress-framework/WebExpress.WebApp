@@ -22,10 +22,10 @@ namespace WebExpress.WebApp.Test.WebAttribute
         [InlineData(null, false)]
         public void IsValid(object value, bool expected)
         {
-            // preconditions
+            // arrange
             var attr = new ValidateRequiredAttribute("required");
 
-            // test execution
+            // act
             var result = attr.IsValid(value, CultureInfo.InvariantCulture, out var error);
 
             // validation

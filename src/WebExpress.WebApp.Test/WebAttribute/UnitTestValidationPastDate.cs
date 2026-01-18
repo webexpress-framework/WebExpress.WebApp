@@ -18,11 +18,11 @@ namespace WebExpress.WebApp.Test.WebAttribute
         [InlineData(1, false)]
         public void IsValid(int offsetDays, bool expected)
         {
-            // preconditions
+            // arrange
             var attr = new ValidatePastDateAttribute("not past");
             var date = DateTime.UtcNow.AddDays(offsetDays);
 
-            // test execution
+            // act
             var result = attr.IsValid(date, CultureInfo.InvariantCulture, out var error);
 
             // validation

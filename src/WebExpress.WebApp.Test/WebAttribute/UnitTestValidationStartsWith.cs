@@ -18,10 +18,10 @@ namespace WebExpress.WebApp.Test.WebAttribute
         [InlineData("xyz", "pre", false)]
         public void IsValid(string value, string prefix, bool expected)
         {
-            // preconditions
+            // arrange
             var attr = new ValidateStartsWithAttribute(prefix, "invalid");
 
-            // test execution
+            // act
             var result = attr.IsValid(value, CultureInfo.InvariantCulture, out var error);
 
             // validation

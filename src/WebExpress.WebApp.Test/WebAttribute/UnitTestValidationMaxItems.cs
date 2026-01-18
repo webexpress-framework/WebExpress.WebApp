@@ -21,7 +21,7 @@ namespace WebExpress.WebApp.Test.WebAttribute
         [InlineData(3, false)]
         public void IsValid(int count, bool expected)
         {
-            // preconditions
+            // arrange
             var attr = new ValidateMaxItemsAttribute(2, "too many");
 
             var list = new List<int>();
@@ -30,7 +30,7 @@ namespace WebExpress.WebApp.Test.WebAttribute
                 list.Add(i);
             }
 
-            // test execution
+            // act
             var result = attr.IsValid(list, CultureInfo.InvariantCulture, out var error);
 
             // validation

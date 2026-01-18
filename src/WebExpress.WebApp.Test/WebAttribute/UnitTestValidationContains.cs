@@ -18,10 +18,10 @@ namespace WebExpress.WebApp.Test.WebAttribute
         [InlineData("xyz", "mid", false)]
         public void IsValid(string value, string substring, bool expected)
         {
-            // preconditions
+            // arrange
             var attr = new ValidateContainsAttribute(substring, "invalid");
 
-            // test execution
+            // act
             var result = attr.IsValid(value, CultureInfo.InvariantCulture, out var error);
 
             // validation

@@ -19,10 +19,10 @@ namespace WebExpress.WebApp.Test.WebAttribute
         [InlineData("abcd", 3, false)]
         public void IsValid(string value, int max, bool expected)
         {
-            // preconditions
+            // arrange
             var attr = new ValidateMaxLengthAttribute(max, "too long");
 
-            // test execution
+            // act
             var result = attr.IsValid(value, CultureInfo.InvariantCulture, out var error);
 
             // validation

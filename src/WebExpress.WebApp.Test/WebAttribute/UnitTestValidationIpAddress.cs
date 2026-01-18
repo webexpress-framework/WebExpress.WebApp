@@ -24,10 +24,10 @@ namespace WebExpress.WebApp.Test.WebAttribute
         [InlineData("", false)]
         public void IsValid(string value, bool expected)
         {
-            // preconditions
+            // arrange
             var attr = new ValidateIpAddressAttribute("invalid ip");
 
-            // test execution
+            // act
             var result = attr.IsValid(value, CultureInfo.InvariantCulture, out var error);
 
             // validation
