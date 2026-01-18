@@ -45,7 +45,7 @@ namespace WebExpress.WebApp.WebRestApi
                     string.Equals(p.Name, kv.Key, StringComparison.OrdinalIgnoreCase)
                 );
 
-                if (property == null)
+                if (property is null)
                 {
                     // property not found, skip value
                     continue;
@@ -108,7 +108,7 @@ namespace WebExpress.WebApp.WebRestApi
                     continue;
                 }
 
-                if (rawValue == null)
+                if (rawValue is null)
                 {
                     prop.SetValue(target, null);
                     continue;

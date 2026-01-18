@@ -8,6 +8,7 @@ using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebDomain;
 using WebExpress.WebCore.WebMessage;
+using WebExpress.WebCore.WebParameter;
 using WebExpress.WebCore.WebRestApi;
 using WebExpress.WebCore.WebStatusPage;
 using WebExpress.WebIndex;
@@ -53,11 +54,21 @@ namespace WebExpress.WebApp.WebRestApi
 
             try
             {
-                var result = Create(fieldMap, request);
+                var result = Create(fieldMap, request, out TIndexItem newItem);
 
                 if (result is null)
                 {
                     return new ResponseBadRequest(new StatusMessage("Creation failed."));
+                }
+
+                if (newItem is IDomain domain)
+                {
+                    var messageQueueManager = WebEx.ComponentHub
+                        .GetComponentManager<MessageQueueManager>();
+                    var message = new Message("update");
+                    var address = new AddressDomain(domain);
+
+                    _ = messageQueueManager.SendAsync(address, message);
                 }
 
                 return result.ToResponse();
@@ -79,7 +90,7 @@ namespace WebExpress.WebApp.WebRestApi
             try
             {
                 // extract 'id' parameter if present
-                var id = request.GetParameter("id")?.Value ?? string.Empty;
+                var id = request.GetParameter<ParameterGuid>()?.Value ?? string.Empty;
                 // current page number
                 var pageNumber = Convert.ToInt32(request.GetParameter("p")?.Value ?? "0");
                 // number of items per page
@@ -142,7 +153,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// An enumerable collection of TIndexItem objects. The collection is empty if 
         /// no items are available.
         /// </returns>
-        public abstract IEnumerable<TIndexItem> Retrieve();
+        protected abstract IEnumerable<TIndexItem> Retrieve();
 
         /// <summary>
         /// Retrieves a result object containing default values and metadata for 
@@ -153,7 +164,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// A result instance representing the data and metadata required
         /// to initialize a new item for creation.
         /// </returns>
-        public virtual IRestApiCrudResultRetrieve<TIndexItem> RetrieveForCreate(IRequest request)
+        protected virtual IRestApiCrudResultRetrieve<TIndexItem> RetrieveForCreate(IRequest request)
         {
             return new RestApiCrudResultRetrieve<TIndexItem>()
             {
@@ -172,7 +183,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// A result instance representing the data and metadata required
         /// to initialize a new item for creation.
         /// </returns>
-        public virtual IRestApiCrudResultRetrieve<TIndexItem> RetrieveForUpdate(string id, IRequest request)
+        protected virtual IRestApiCrudResultRetrieve<TIndexItem> RetrieveForUpdate(string id, IRequest request)
         {
             var data = Retrieve()
                     .Where(x => x.Id.ToString().Equals(id, StringComparison.OrdinalIgnoreCase))
@@ -197,7 +208,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// A result instance representing the data and metadata required
         /// to initialize a new item for creation.
         /// </returns>
-        public virtual IRestApiCrudResultRetrieveDelete<TIndexItem> RetrieveForDelete(string id, IRequest request)
+        protected virtual IRestApiCrudResultRetrieveDelete<TIndexItem> RetrieveForDelete(string id, IRequest request)
         {
             return new RestApiCrudResultRetrieveDelete<TIndexItem>()
             {
@@ -290,7 +301,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <returns>
         /// An IRestApiValidationResult indicating validation success or errors.
         /// </returns>
-        public virtual IRestApiValidationResult Validate(TIndexItem existingItem, RestApiCrudFormData fieldMap, IRequest request)
+        protected virtual IRestApiValidationResult Validate(TIndexItem existingItem, RestApiCrudFormData fieldMap, IRequest request)
         {
             var result = fieldMap.Validate<TIndexItem>(request.Culture);
 
@@ -308,12 +319,17 @@ namespace WebExpress.WebApp.WebRestApi
         /// <param name="request">
         /// The HTTP request providing additional context for the creation process.
         /// </param>
-        /// <returns>
+        /// <param name="newItem">
+        /// When the method returns, contains the newly created index item,
+        /// or the default value if creation was not successful.
+        /// </param>
         /// A result object containing information about the create operation,
         /// including the created resource.
         /// </returns>
-        protected virtual IRestApiCrudResultCreate Create(RestApiCrudFormData fieldMap, IRequest request)
+        protected virtual IRestApiCrudResultCreate Create(RestApiCrudFormData fieldMap, IRequest request, out TIndexItem newItem)
         {
+            newItem = default;
+
             return new RestApiCrudResultCreate();
         }
 
@@ -330,7 +346,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <param name="request">
         /// The HTTP request providing additional context.
         /// </param>
-        public virtual IRestApiCrudResultUpdate Update(TIndexItem existingItem, RestApiCrudFormData fieldMap, IRequest request)
+        protected virtual IRestApiCrudResultUpdate Update(TIndexItem existingItem, RestApiCrudFormData fieldMap, IRequest request)
         {
             fieldMap.BindTo(existingItem);
 
@@ -403,7 +419,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <returns>
         /// A result object containing information about the delete operation.
         /// </returns>
-        public virtual IRestApiCrudResultDelete Delete(TIndexItem existingItem, IRequest request)
+        protected virtual IRestApiCrudResultDelete Delete(TIndexItem existingItem, IRequest request)
         {
             return new RestApiCrudResultDelete()
             {

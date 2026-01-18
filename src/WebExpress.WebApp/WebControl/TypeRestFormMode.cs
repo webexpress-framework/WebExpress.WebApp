@@ -16,7 +16,7 @@
         /// Initializes a new instance of the class or creates a new object, depending on the context.
         /// </summary>
         /// <remarks>This member is typically used to indicate the creation of a new instance or object.</remarks>
-        New,
+        Add,
 
         /// <summary>
         /// Represents an operation to edit an existing entity or resource.
@@ -43,7 +43,7 @@
         {
             return mode switch
             {
-                TypeRestFormMode.New => "new",
+                TypeRestFormMode.Add => "new",
                 TypeRestFormMode.Edit => "edit",
                 TypeRestFormMode.Delete => "delete",
                 _ => ""

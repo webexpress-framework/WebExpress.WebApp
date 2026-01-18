@@ -148,7 +148,7 @@ namespace WebExpress.WebApp.Test.WebControl
         /// </summary>
         [Theory]
         [InlineData(TypeRestFormMode.Default, @"<form id=""*"" class=""wx-webapp-restform"" *>*</form>")]
-        [InlineData(TypeRestFormMode.New, @"<form id=""*"" class=""wx-webapp-restform"" * data-mode=""new"">*</form>")]
+        [InlineData(TypeRestFormMode.Add, @"<form id=""*"" class=""wx-webapp-restform"" * data-mode=""new"">*</form>")]
         [InlineData(TypeRestFormMode.Edit, @"<form id=""*"" class=""wx-webapp-restform"" * data-mode=""edit"">*</form>")]
         [InlineData(TypeRestFormMode.Delete, @"<form id=""*"" class=""wx-webapp-restform"" * data-mode=""delete"">*</form>")]
         public void Mode(TypeRestFormMode mode, string expected)

@@ -8,7 +8,7 @@ namespace WebExpress.WebApp.WebControl
     /// Represents a new form that retrieves and displays data from 
     /// a RESTful resource specified by a URI.
     /// </summary>
-    public class ControlRestFormNew : ControlRestForm
+    public class ControlRestFormAdd : ControlRestForm
     {
         /// <summary>
         /// Returns the submit button control for the form.
@@ -24,10 +24,10 @@ namespace WebExpress.WebApp.WebControl
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The control id.</param>
-        public ControlRestFormNew(string id = null)
+        public ControlRestFormAdd(string id = null)
             : base(id)
         {
-            Mode = TypeRestFormMode.New;
+            Mode = TypeRestFormMode.Add;
             Method = RequestMethod.POST;
 
             AddPrimaryButton(Submit);

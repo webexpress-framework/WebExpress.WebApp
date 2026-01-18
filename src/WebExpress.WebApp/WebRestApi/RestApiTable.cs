@@ -174,7 +174,7 @@ namespace WebExpress.WebApp.WebRestApi
                                 Icon = (icon is Icon) ? (icon as Icon).Class : null,
                                 Image = (icon is ImageIcon) ? (icon as ImageIcon).Uri?.ToString() : null,
                                 Uri = GetUri(request, row)?.ToString(),
-                                RestApi = GetRestApi(request, row)?.ToString()
+                                RestApi = GetRestApiForInlineEdit(request, row)?.ToString()
                             };
                         }),
                     Pagination = new RestApiPaginationInfo()
@@ -221,19 +221,21 @@ namespace WebExpress.WebApp.WebRestApi
         }
 
         /// <summary>
-        /// Gets the REST API endpoint URI associated with the specified request and index item.
+        /// Retrieves the REST API URI required for performing inline edits
+        /// on the specified index item within the given request context.
         /// </summary>
         /// <param name="request">
-        /// The request for which to retrieve the REST API endpoint.
+        /// The request that provides the operational context for resolving
+        /// the appropriate REST API URI.
         /// </param>
         /// <param name="row">
-        /// The index item that provides context for determining the appropriate REST API endpoint.
+        /// The index item for which the inline‑edit REST API URI should be determined.
         /// </param>
         /// <returns>
-        /// An <see cref="IUri"/> representing the REST API endpoint for the given request 
-        /// and index item, or null if no endpoint is available.
+        /// An <see cref="IUri"/> representing the REST API endpoint used for
+        /// inline editing, or <c>null</c> if no suitable endpoint is available.
         /// </returns>
-        public virtual IUri GetRestApi(IRequest request, TIndexItem row)
+        public virtual IUri GetRestApiForInlineEdit(IRequest request, TIndexItem row)
         {
             return null;
         }
