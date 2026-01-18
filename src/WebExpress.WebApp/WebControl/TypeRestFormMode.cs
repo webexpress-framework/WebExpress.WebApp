@@ -19,6 +19,11 @@
         Add,
 
         /// <summary>
+        /// Creates a new object that is a copy of the current instance.
+        /// </summary>
+        Clone,
+
+        /// <summary>
         /// Represents an operation to edit an existing entity or resource.
         /// </summary>
         Edit,
@@ -44,6 +49,7 @@
             return mode switch
             {
                 TypeRestFormMode.Add => "new",
+                TypeRestFormMode.Clone => "new",
                 TypeRestFormMode.Edit => "edit",
                 TypeRestFormMode.Delete => "delete",
                 _ => ""

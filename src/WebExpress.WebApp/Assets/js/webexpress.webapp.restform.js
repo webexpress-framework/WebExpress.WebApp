@@ -249,7 +249,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
 
         try {
             let url = new URL(this.options.api, window.location.origin);
-            if ((this.options.id || this.mode === "delete") && ["edit", "delete"].includes(this.mode)) {
+            if (this.options.id) {
                 url.searchParams.append("id", String(this.options.id || ""));
             }
             url.searchParams.append("mode", this.mode);
@@ -277,7 +277,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
                 this._displayProlog(dataObj.prolog);
             }
 
-            if (["new", "edit"].includes(this.mode) && formData && typeof formData === "object") {
+            if (formData && typeof formData === "object") {
                 this._populate(formData);
             }
 

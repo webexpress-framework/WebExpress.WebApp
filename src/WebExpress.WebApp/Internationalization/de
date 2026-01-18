@@ -4,6 +4,7 @@ plugin.description=Stellt Basiskomponenten einer Webanwendung bereit.
 
 create.title=Erstellen
 edit.title=Bearbeiten
+clone.title=Klonen
 delete.title=Löschen
 
 confirmation.title=Bestätigung
@@ -62,6 +63,7 @@ pagesettingmanager.moduleless=Die Einstellungsseite '{0}' aus dem Plugin '{1}' v
 pagesettingmanager.resourceless=Zu der Einstellungsseite '{0}' aus dem Plugin '{1}' konnte keine zugehörige Ressource ermittelt werden.
 
 edit.label=Bearbeiten
+clone.label=Klonen
 
 search.label=Suche
 search.placeholder=Geben Sie hier Ihre Suchbegriffe ein.

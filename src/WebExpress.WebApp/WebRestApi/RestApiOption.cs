@@ -10,6 +10,7 @@ namespace WebExpress.WebApp.WebRestApi
     [JsonDerivedType(typeof(RestApiOptionHeader), "RestApiCrudTableRowOptionHeader")]
     [JsonDerivedType(typeof(RestApiOptionSeperator), "RestApiCrudTableRowOptionSeperator")]
     [JsonDerivedType(typeof(RestApiOptionEdit), "RestApiCrudTableRowOptionEdit")]
+    [JsonDerivedType(typeof(RestApiOptionClone), "RestApiCrudTableRowOptionClone")]
     [JsonDerivedType(typeof(RestApiOptionDelete), "RestApiCrudTableRowOptionDelete")]
     public class RestApiOption
     {

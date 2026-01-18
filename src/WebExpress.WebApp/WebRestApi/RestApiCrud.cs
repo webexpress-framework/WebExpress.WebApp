@@ -34,6 +34,7 @@ namespace WebExpress.WebApp.WebRestApi
         [Method(RequestMethod.POST)]
         public virtual IResponse Create(IRequest request)
         {
+            // parse and validate incoming JSON
             var fieldMap = GetFieldMap(request);
             if (fieldMap is null)
             {
@@ -41,30 +42,45 @@ namespace WebExpress.WebApp.WebRestApi
                     .AddHeaderContentType("application/json");
             }
 
-            // validate request for creation; item is null for new resources
-            var validationResult = Validate(default, fieldMap, request);
+            // optional id parameter (used for clone operations)
+            var id = request.GetParameter<ParameterGuid>()?.Value;
+
+            // retrieve existing item if id is provided
+            var existingItem = id is not null
+                ? Retrieve().FirstOrDefault(x =>
+                    x.Id.ToString().Equals(id, StringComparison.OrdinalIgnoreCase))
+                : default;
+
+            // validate request (existingitem is null for new resources)
+            var validationResult = Validate(existingItem, fieldMap, request);
             if (!validationResult.IsValid)
             {
-                return new ResponseBadRequest()
+                return new ResponseBadRequest
                 {
                     Content = validationResult.ToJson()
                 }
-                    .AddHeaderContentType("application/json");
+                .AddHeaderContentType("application/json");
             }
 
             try
             {
-                var result = Create(fieldMap, request, out TIndexItem newItem);
+                // create or clone the resource
+                var newItem = default(TIndexItem);
+                var result = id is null
+                    ? Create(fieldMap, request, out newItem)
+                    : Clone(existingItem, fieldMap, request, out newItem);
 
                 if (result is null)
                 {
                     return new ResponseBadRequest(new StatusMessage("Creation failed."));
                 }
 
+                // notify domain listeners
                 if (newItem is IDomain domain)
                 {
                     var messageQueueManager = WebEx.ComponentHub
                         .GetComponentManager<MessageQueueManager>();
+
                     var message = new Message("update");
                     var address = new AddressDomain(domain);
 
@@ -75,7 +91,9 @@ namespace WebExpress.WebApp.WebRestApi
             }
             catch (Exception ex)
             {
-                return new ResponseBadRequest(new StatusMessage($"Error creating resource: {ex.Message}"));
+                return new ResponseBadRequest(
+                    new StatusMessage($"Error creating resource: {ex.Message}")
+                );
             }
         }
 
@@ -98,7 +116,9 @@ namespace WebExpress.WebApp.WebRestApi
                 var modeParam = request.GetParameter("mode")?.Value ?? "default";
                 var mode = modeParam switch
                 {
-                    "new" => RestApiCrudMode.Create,
+                    "new" => string.IsNullOrWhiteSpace(id)
+                        ? RestApiCrudMode.Create
+                        : RestApiCrudMode.Clone,
                     "edit" => RestApiCrudMode.Update,
                     "delete" => RestApiCrudMode.Delete,
                     _ => RestApiCrudMode.Default
@@ -107,6 +127,12 @@ namespace WebExpress.WebApp.WebRestApi
                 if (string.IsNullOrEmpty(id) && mode == RestApiCrudMode.Create)
                 {
                     var result = RetrieveForCreate(request);
+
+                    return result.ToResponse();
+                }
+                else if (!string.IsNullOrEmpty(id) && mode == RestApiCrudMode.Clone)
+                {
+                    var result = RetrieveForClone(id, request);
 
                     return result.ToResponse();
                 }
@@ -173,6 +199,31 @@ namespace WebExpress.WebApp.WebRestApi
         }
 
         /// <summary>
+        /// Retrieves a result object containing default values and metadata for 
+        /// cloning a item.
+        /// </summary>
+        /// <param name="id">
+        /// The identifier of the item to retrieve. The comparison is case-insensitive.
+        /// </param>
+        /// <param name="request">The request.</param>
+        /// <returns>
+        /// A result instance representing the data and metadata required
+        /// to initialize a new item for creation.
+        /// </returns>
+        protected virtual IRestApiCrudResultRetrieve<TIndexItem> RetrieveForClone(string id, IRequest request)
+        {
+            var data = Retrieve()
+                .Where(x => x.Id.ToString().Equals(id, StringComparison.OrdinalIgnoreCase))
+                .FirstOrDefault();
+
+            return new RestApiCrudResultRetrieve<TIndexItem>()
+            {
+                Title = I18N.Translate(request, "webexpress.webapp:clone.title"),
+                Data = data
+            };
+        }
+
+        /// <summary>
         /// Retrieves an item by its identifier for update operations.
         /// </summary>
         /// <param name="id">
@@ -186,8 +237,8 @@ namespace WebExpress.WebApp.WebRestApi
         protected virtual IRestApiCrudResultRetrieve<TIndexItem> RetrieveForUpdate(string id, IRequest request)
         {
             var data = Retrieve()
-                    .Where(x => x.Id.ToString().Equals(id, StringComparison.OrdinalIgnoreCase))
-                    .FirstOrDefault();
+                .Where(x => x.Id.ToString().Equals(id, StringComparison.OrdinalIgnoreCase))
+                .FirstOrDefault();
 
             return new RestApiCrudResultRetrieve<TIndexItem>()
             {
@@ -226,7 +277,7 @@ namespace WebExpress.WebApp.WebRestApi
         public virtual IResponse Update(IRequest request)
         {
             // extract and validate the 'id' parameter
-            var id = request.GetParameter("id")?.Value;
+            var id = request.GetParameter<ParameterGuid>()?.Value;
             if (string.IsNullOrEmpty(id))
             {
                 return new ResponseBadRequest(new StatusMessage("Missing 'id' parameter."));
@@ -334,11 +385,39 @@ namespace WebExpress.WebApp.WebRestApi
         }
 
         /// <summary>
+        /// Persists the cloned resource.
+        /// Override this method in derived classes to implement the actual
+        /// persistence logic and return a result describing the creation.
+        /// </summary>
+        /// <param name="existingItem">
+        /// The currently persisted item.
+        /// </param>
+        /// <param name="fieldMap">
+        /// The dynamic payload containing the fields required to create the resource.
+        /// </param>
+        /// <param name="request">
+        /// The HTTP request providing additional context for the creation process.
+        /// </param>
+        /// <param name="newItem">
+        /// When the method returns, contains the newly created index item,
+        /// or the default value if creation was not successful.
+        /// </param>
+        /// A result object containing information about the create operation,
+        /// including the created resource.
+        /// </returns>
+        protected virtual IRestApiCrudResultCreate Clone(TIndexItem existingItem, RestApiCrudFormData fieldMap, IRequest request, out TIndexItem newItem)
+        {
+            newItem = default;
+
+            return new RestApiCrudResultCreate();
+        }
+
+        /// <summary>
         /// Updates the data record.
         /// Derived classes should implement actual update logic here.
         /// </summary>
         /// <param name="existingItem">
-        /// The currently persisted item (null for create).
+        /// The currently persisted item.
         /// </param>
         /// <param name="payload">
         /// The dynamic payload containing updated fields.

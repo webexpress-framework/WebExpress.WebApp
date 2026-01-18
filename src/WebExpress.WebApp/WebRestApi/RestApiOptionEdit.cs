@@ -6,7 +6,7 @@ using WebExpress.WebUI.WebControl;
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Represents an "edit" option in a REST API.
+    /// Represents an edit option in a REST API.
     /// </summary>
     public class RestApiOptionEdit : RestApiOption
     {

@@ -6,23 +6,27 @@
     public enum RestApiCrudMode
     {
         /// <summary>
-        /// Default mode
+        /// Default mode with no specific CRUD behavior assigned.
         /// </summary>
         Default,
         /// <summary>
-        /// Create mode
+        /// Creates a new resource.
         /// </summary>
         Create,
         /// <summary>
-        /// Retrieve mode
+        /// Creates a new resource by cloning an existing one.
+        /// </summary>
+        Clone,
+        /// <summary>
+        /// Retrieves an existing resource.
         /// </summary>
         Retrieve,
         /// <summary>
-        /// Update mode
+        /// Updates an existing resource.
         /// </summary>
         Update,
         /// <summary>
-        /// Delete mode
+        /// Deletes an existing resource.
         /// </summary>
         Delete
     }
