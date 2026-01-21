@@ -66,7 +66,9 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
     _initRestUi(element) {
         const createDiv = (cls) => {
             const d = document.createElement("div");
-            if (cls) { d.className = cls; }
+            if (cls) {
+                d.className = cls;
+            }
             return d;
         };
 
@@ -137,7 +139,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
                      newIndex: detail.toIndex
                  });
             } else {
-                 const colOrder = this._columns.map((c) => c.id);
+                 const colOrder = this._columns.map((c) => { return c.id; });
                  this._sendCommand("reorder-columns", { order: colOrder });
             }
         });
@@ -164,10 +166,11 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
         });
         
         element.addEventListener(webexpress.webui.Event.TABLE_SORT_EVENT, (e) => {
-            if (e.detail && e.detail.columnId) {
+            const detail = e.detail || {};
+            if (detail.columnId) {
                 this._sendCommand("sort", {
-                    columnId: e.detail.columnId,
-                    direction: e.detail.direction
+                    columnId: detail.columnId,
+                    direction: detail.sortDirection
                 });
                 this._receiveData(); 
             }
@@ -188,8 +191,12 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
         document.addEventListener("input", (e) => {
             const t = e.target;
             const matches = (node) => {
-                if (!node) { return false; }
-                if (node.matches?.(".wx-columns-search input, [data-column-search], [data-role='wx-column-search']")) { return true; }
+                if (!node) {
+                    return false;
+                }
+                if (node.matches?.(".wx-columns-search input, [data-column-search], [data-role='wx-column-search']")) {
+                    return true;
+                }
                 return false;
             };
             if (matches(t)) {
@@ -199,13 +206,15 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
     }
 
     /**
-	 * Fetches table data from the configured REST endpoint, including columns,
-	 * rows, pagination metadata, and optional title/status information.
-	 * Updates the internal state accordingly and triggers a full re-render.
-	 * A progress indicator is shown while the request is in progress.
-	 */
+     * Fetches table data from the configured REST endpoint, including columns,
+     * rows, pagination metadata, and optional title/status information.
+     * Updates the internal state accordingly and triggers a full re-render.
+     * A progress indicator is shown while the request is in progress.
+     */
     _receiveData() {
-        if (this._progressDiv) { this._progressDiv.style.visibility = "visible"; }
+        if (this._progressDiv) {
+            this._progressDiv.style.visibility = "visible";
+        }
 
         const filter = encodeURIComponent(this._filter ?? "");
         const separator = this._restUri.includes("?") ? "&" : "?";
@@ -213,34 +222,56 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
 
         fetch(url)
             .then((res) => {
-                if (!res.ok) { throw new Error("Request failed"); }
+                if (!res.ok) {
+                    throw new Error("Request failed");
+                }
                 return res.json();
             })
             .then((response) => {
-                const page = response.pagination.page ?? 0;
-                const pageSize = response.pagination.pageSize ?? 50;
-                const total = response.pagination.total ?? 0;
+                const page = response.pagination?.page ?? 0;
+                const pageSize = response.pagination?.pageSize ?? 50;
+                const total = response.pagination?.total ?? 0;
                 const totalPages = Math.ceil(total / pageSize);
                 const startIndex = page * pageSize + 1;
                 const endIndex = Math.min(startIndex + pageSize - 1, total);
 
-                this._columns = (response.columns || []).map((c, idx) => ({
-                    id: c.id || `col_${idx}`,
-                    label: c.label || c.id,
-                    name: c.name || null,
-                    visible: typeof c.visible === "boolean" ? c.visible : true,
-                    sort: c.sort || null, 
-                    width: c.width || null,
-                    minWidth: c.minWidth || null,
-                    resizable: typeof c.resizable === "boolean" ? c.resizable : true,
-                    icon: c.icon || null,
-                    image: c.image || null,
-                    color: c.color || null,
-                    template: (c.template && typeof c.template === "object") ? c.template : null
-                }));
+                this._columns = (response.columns || []).map((c, idx) => {
+                    // correct parsing of template structure
+                    let rType = c.rendererType || null;
+                    let rOpts = c.rendererOptions || {};
 
-                if (this._titleDiv) { this._titleDiv.textContent = response.title || ""; }
-                if (this._statusDiv) { this._statusDiv.textContent = `${startIndex} - ${endIndex} / ${total}`; }
+                    if (c.template && typeof c.template === "object") {
+                        rType = c.template.type;
+                        rOpts = c.template.options || {};
+                        // propagate editable flag if present in template
+                        if (c.template.editable) {
+                            rOpts.editable = c.template.editable;
+                        }
+                    }
+
+                    return {
+                        id: c.id || `col_${idx}`,
+                        label: c.label || c.id,
+                        name: c.name || null,
+                        visible: typeof c.visible === "boolean" ? c.visible : true,
+                        sort: c.sort || null, 
+                        width: c.width || null,
+                        minWidth: c.minWidth || null,
+                        resizable: typeof c.resizable === "boolean" ? c.resizable : true,
+                        icon: c.icon || null,
+                        image: c.image || null,
+                        color: c.color || null,
+                        rendererType: rType,
+                        rendererOptions: rOpts
+                    };
+                });
+
+                if (this._titleDiv) {
+                    this._titleDiv.textContent = response.title || "";
+                }
+                if (this._statusDiv) {
+                    this._statusDiv.textContent = `${startIndex} - ${endIndex} / ${total}`;
+                }
 
                 this._element.dispatchEvent(new CustomEvent(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
                     detail: { id: this._element.id, response: response }
@@ -254,37 +285,46 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
                 this._table.classList.remove("placeholder-glow");
 
                 this._rows = (response.rows || []).map((row) => {
-                    if (!row.cells) { row.cells = []; }
+                    if (!row.cells) {
+                        row.cells = [];
+                    }
                     return row;
                 });
 
                 this._hasOptions = (this._options && this._options.length > 0)
-                    || this._rows.some((r) => r.options && r.options.length > 0);
+                    || this._rows.some((r) => { return r.options && r.options.length > 0; });
 
-                this.render();
-
-                if (this._progressDiv) {
-                    this._progressDiv.style.visibility = "hidden";
-                }
+                requestAnimationFrame(() => {
+                    this.render();
+                    if (this._progressDiv) {
+                        this._progressDiv.style.visibility = "hidden";
+                    }
+                });
             })
             .catch((error) => {
                 console.error("Request failed:", error);
-                if (this._progressDiv) { this._progressDiv.style.visibility = "hidden"; }
+                if (this._progressDiv) {
+                    this._progressDiv.style.visibility = "hidden";
+                }
             });
     }
 
     /**
-	 * Sends a command to the configured REST endpoint using a PUT request.
-	 * Displays a progress indicator while the request is in flight and hides
-	 * it once the operation completes. Errors are logged to the console.
-	 *
-	 * @param {string} command - The command name to execute on the server.
-	 * @param {Object} params - Additional parameters to include in the request payload.
-	 */
+     * Sends a command to the configured REST endpoint using a PUT request.
+     * Displays a progress indicator while the request is in flight and hides
+     * it once the operation completes. Errors are logged to the console.
+     *
+     * @param {string} command - The command name to execute on the server.
+     * @param {Object} params - Additional parameters to include in the request payload.
+     */
     _sendCommand(command, params) {
-        if (!this._restUri) { return; }
+        if (!this._restUri) {
+            return;
+        }
         
-        if (this._progressDiv) { this._progressDiv.style.visibility = "visible"; }
+        if (this._progressDiv) {
+            this._progressDiv.style.visibility = "visible";
+        }
 
         const payload = Object.assign({ command: command }, params);
 
@@ -294,66 +334,97 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
             body: JSON.stringify(payload)
         })
         .then((res) => {
-            if (!res.ok) { throw new Error("Update failed"); }
+            if (!res.ok) {
+                throw new Error("Update failed");
+            }
         })
         .catch((err) => {
             console.error(`Failed to execute command '${command}':`, err);
         })
         .finally(() => {
-            if (this._progressDiv) { this._progressDiv.style.visibility = "hidden"; }
+            if (this._progressDiv) {
+                this._progressDiv.style.visibility = "hidden";
+            }
         });
     }
 
     /**
-	 * Debounces remote column search requests. Ensures that the search
-	 * operation is only triggered after the user stops typing for a short
-	 * period, reducing unnecessary network calls.
-	 *
-	 * @param {string} term - The search term entered by the user.
-	 */
+     * Debounces remote column search requests. Ensures that the search
+     * operation is only triggered after the user stops typing for a short
+     * period, reducing unnecessary network calls.
+     *
+     * @param {string} term - The search term entered by the user.
+     */
     _searchColumnsDebounced(term) {
-        if (this._columnSearchTimer) { clearTimeout(this._columnSearchTimer); }
-        this._columnSearchTimer = setTimeout(() => { this._searchColumns(term); }, 250);
+        if (this._columnSearchTimer) {
+            clearTimeout(this._columnSearchTimer);
+        }
+        this._columnSearchTimer = setTimeout(() => {
+            this._searchColumns(term);
+        }, 250);
     }
 
    /**
-	 * Performs a remote column search against the configured REST endpoint.
-	 * The server is expected to return a list of column definitions, which
-	 * are merged into the existing column set. Newly discovered columns are
-	 * added, while existing ones are updated without overriding visibility.
-	 *
-	 * @param {string} term - The search term entered by the user.
-	 */
+    * Performs a remote column search against the configured REST endpoint.
+    * The server is expected to return a list of column definitions, which
+    * are merged into the existing column set. Newly discovered columns are
+    * added, while existing ones are updated without overriding visibility.
+    *
+    * @param {string} term - The search term entered by the user.
+    */
     _searchColumns(term) {
-        if (!this._restUri) { return; }
+        if (!this._restUri) {
+            return;
+        }
         const q = term.trim();
-        if (!q) { return; }
+        if (!q) {
+            return;
+        }
 
         const separator = this._restUri.includes("?") ? "&" : "?";
         const url = `${this._restUri}${separator}columnSearch=${encodeURIComponent(q)}&columnsOnly=true`;
 
         fetch(url)
             .then((res) => {
-                if (!res.ok) { throw new Error("Column search failed"); }
+                if (!res.ok) {
+                    throw new Error("Column search failed");
+                }
                 return res.json();
             })
             .then((resp) => {
-                const fetched = (resp.columns || []).map((c, idx) => ({
-                    id: c.id || `col_search_${idx}`,
-                    label: c.label || c.id || `Column ${idx + 1}`,
-                    name: c.name || null,
-                    visible: typeof c.visible === "boolean" ? c.visible : false,
-                    sort: c.sort || null,
-                    width: c.width || null,
-                    minWidth: c.minWidth || null,
-                    resizable: typeof c.resizable === "boolean" ? c.resizable : true,
-                    icon: c.icon || null,
-                    image: c.image || null,
-                    color: c.color || null,
-                    template: (c.template && typeof c.template === "object") ? c.template : null
-                }));
+                const fetched = (resp.columns || []).map((c, idx) => {
+                    // same template logic as in receiveData
+                    let rType = c.rendererType || null;
+                    let rOpts = c.rendererOptions || {};
 
-                const byId = new Map(this._columns.map((c) => [c.id, c]));
+                    if (c.template && typeof c.template === "object") {
+                        rType = c.template.type;
+                        rOpts = c.template.options || {};
+                        if (c.template.editable) {
+                            rOpts.editable = c.template.editable;
+                        }
+                    }
+
+                    return {
+                        id: c.id || `col_search_${idx}`,
+                        label: c.label || c.id || `Column ${idx + 1}`,
+                        name: c.name || null,
+                        visible: typeof c.visible === "boolean" ? c.visible : false,
+                        sort: c.sort || null,
+                        width: c.width || null,
+                        minWidth: c.minWidth || null,
+                        resizable: typeof c.resizable === "boolean" ? c.resizable : true,
+                        icon: c.icon || null,
+                        image: c.image || null,
+                        color: c.color || null,
+                        rendererType: rType,
+                        rendererOptions: rOpts
+                    };
+                });
+
+                const byId = new Map(this._columns.map((c) => {
+                    return [c.id, c];
+                }));
                 fetched.forEach((col) => {
                     const existing = byId.get(col.id);
                     if (existing) {
@@ -368,7 +439,9 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
                 this.render();
 
                 if (this._columnsSidebarPanel && typeof this._columnsSidebarPanel.isShown === "function" && this._columnsSidebarPanel.isShown()) {
-                    if (typeof this._columnsSidebarPanel.show === "function") { this._columnsSidebarPanel.show(); }
+                    if (typeof this._columnsSidebarPanel.show === "function") {
+                        this._columnsSidebarPanel.show();
+                    }
                 }
             })
             .catch((err) => {
@@ -377,15 +450,15 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
     }
 
     /**
-	 * Renders a single row into the provided document fragment, including
-	 * drag handles, cells, action menus, and optional tree toggles.
-	 *
-	 * @param {Object} row - The row definition containing cells, styling, and metadata.
-	 * @param {number} depth - The hierarchical depth of the row (for tree mode).
-	 * @param {DocumentFragment} fragment - The fragment to append the rendered row to.
-	 * @param {Set<string>} [changedIds] - Optional set of row keys that changed since the last render.
-	 * @param {Set<string>} [newIds] - Optional set of newly added row keys.
-	 */
+     * Renders a single row into the provided document fragment, including
+     * drag handles, cells, action menus, and optional tree toggles.
+     *
+     * @param {Object} row - The row definition containing cells, styling, and metadata.
+     * @param {number} depth - The hierarchical depth of the row (for tree mode).
+     * @param {DocumentFragment} fragment - The fragment to append the rendered row to.
+     * @param {Set<string>} [changedIds] - Optional set of row keys that changed since the last render.
+     * @param {Set<string>} [newIds] - Optional set of newly added row keys.
+     */
     _addRow(row, depth, fragment, changedIds, newIds) {
         const tr = document.createElement("div");
         tr.className = "wx-grid-row";
@@ -393,11 +466,15 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
         
         this._addClasses(tr, row.color);
         this._addClasses(tr, row.class);
-        if (row.style) { tr.style.cssText = row.style; }
+        if (row.style) {
+            tr.style.cssText = row.style;
+        }
 
         const key = this._getRowKey(row);
         if (key) {
-            if (changedIds && changedIds.has(key)) { tr.classList.add("wx-change-flash"); }
+            if (changedIds && changedIds.has(key)) {
+                tr.classList.add("wx-change-flash");
+            }
         }
 
         tr._dataRowRef = row;
@@ -420,7 +497,9 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
 
         for (let i = 0; i < len; i++) {
             const colDef = this._columns[i];
-            if (!colDef.visible) { continue; }
+            if (!colDef.visible) {
+                continue;
+            }
 
             const td = document.createElement("div");
             td.className = "wx-grid-cell";
@@ -434,7 +513,9 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
             if (cell) {
                 this._addClasses(td, cell.color);
                 this._addClasses(td, cell.class);
-                if (cell.style) { td.style.cssText += (td.style.cssText ? "; " : "") + cell.style; }
+                if (cell.style) {
+                    td.style.cssText += (td.style.cssText ? "; " : "") + cell.style;
+                }
 
                 const wrap = this._renderCell(row, colDef, cell, isFirstVisible);
                 td.appendChild(wrap);
@@ -462,21 +543,23 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
             tr.appendChild(tdOpt);
         }
 
-        if (this._isTree) { this._injectTreeToggle(tr, row, depth); }
+        if (this._isTree) {
+            this._injectTreeToggle(tr, row, depth);
+        }
 
         fragment.appendChild(tr);
     }
 
     /**
-	 * Renders the content of a single table cell, including icons, images,
-	 * template-based renderers, and optional hyperlink wrapping.
-	 *
-	 * @param {Object} row - The row object containing metadata and cell values.
-	 * @param {Object} colDef - The column definition, including template configuration.
-	 * @param {Object} cell - The cell data (text, value, icon, image, uri, etc.).
-	 * @param {boolean} isFirstVisible - Indicates whether this is the first visible column in the row.
-	 * @returns {HTMLElement} The rendered cell content wrapper.
-	 */
+     * Renders the content of a single table cell, including icons, images,
+     * template-based renderers, and optional hyperlink wrapping.
+     *
+     * @param {Object} row - The row object containing metadata and cell values.
+     * @param {Object} colDef - The column definition, including template configuration.
+     * @param {Object} cell - The cell data (text, value, icon, image, uri, etc.).
+     * @param {boolean} isFirstVisible - Indicates whether this is the first visible column in the row.
+     * @returns {HTMLElement} The rendered cell content wrapper.
+     */
     _renderCell(row, colDef, cell, isFirstVisible) {
         const wrap = document.createElement("div");
         wrap.className = "wx-cell-content";
@@ -509,29 +592,31 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
             wrap.appendChild(i);
         }
 
-        if (colDef.template && typeof colDef.template === "object") {
-            const tplConfig = colDef.template;
-            const type = tplConfig.type;
-            const renderer = webexpress.webui.TableTemplates.get(type);
+        // use rendererType from colDef which is mapped from response in _receiveData
+        const renderType = cell.type || colDef.rendererType;
+        
+        if (renderType) {
+            const renderer = webexpress.webui.TableTemplates.get(renderType);
 
             if (renderer) {
-                const opts = Object.assign({}, renderer.options, tplConfig.options || {});
-                if (tplConfig.editable) { opts.editable = tplConfig.editable; }
+                const opts = Object.assign({}, renderer.options, colDef.rendererOptions || {});
+                
                 const val = (cell.text !== undefined && cell.text !== null) ? cell.text : (cell.value || "");
 
                 try {
-                    const result = renderer.fn(val, this, row, cell, colDef.name, opts);
+                    // call with correct signature: (val, table, row, cell, name, opts)
+                    const result = renderer.fn(val, this, row, cell, colDef.name || colDef.id, opts);
                     if (result instanceof Node) {
                         wrap.appendChild(result);
                     } else {
                         wrap.textContent = String(result ?? "");
                     }
                 } catch (e) {
-                    console.error(`Error in table renderer '${type}':`, e);
+                    console.error(`Error in table renderer '${renderType}':`, e);
                     wrap.textContent = val;
                 }
             } else {
-                console.warn(`Table renderer type '${type}' not found.`);
+                console.warn(`Table renderer type '${renderType}' not found.`);
                 wrap.textContent = (cell.text !== undefined && cell.text !== null) ? cell.text : (cell.value || "");
             }
         } else {
@@ -550,7 +635,9 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
             const a = document.createElement("a");
             a.href = hrefToUse;
             a.className = "wx-link";
-            if (targetToUse) { a.target = targetToUse; }
+            if (targetToUse) {
+                a.target = targetToUse;
+            }
             a.rel = "noopener noreferrer";
             
             while (wrap.firstChild) {
@@ -563,5 +650,5 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
     }
 };
 
-// Register the class in the controller
+// register the class in the controller
 webexpress.webui.Controller.registerClass("wx-webapp-table", webexpress.webapp.TableCtrl);
