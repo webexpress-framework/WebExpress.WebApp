@@ -577,7 +577,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
                 }
             }
 
-            if (["PUT", "PATCH"].includes(method) && this.mode === "edit" && this.options.id) {
+            if (this.options.id) {
                 if (!urlObj.searchParams.has("id")) {
                     urlObj.searchParams.append("id", String(this.options.id));
                     requestUrl = urlObj.toString();
