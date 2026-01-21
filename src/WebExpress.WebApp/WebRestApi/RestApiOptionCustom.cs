@@ -1,12 +1,13 @@
 ﻿using System.Text.Json.Serialization;
 using WebExpress.WebCore.WebMessage;
+using WebExpress.WebUI.WebControl;
 
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
     /// Represents a customizable row option for a CRUD table in a REST API context.
     /// </summary>
-    public abstract class RestApiOptionCustom : RestApiOption
+    public class RestApiOptionCustom : RestApiOption
     {
         /// <summary>
         /// Returns the type of the element, represented as a string.
@@ -39,16 +40,28 @@ namespace WebExpress.WebApp.WebRestApi
         public virtual string Icon { get; set; }
 
         /// <summary>
+        /// Returns the edit form uri.
+        /// </summary>
+        [JsonPropertyName("uri")]
+        public virtual string Uri { get; set; }
+
+        /// <summary>
         /// Returns or sets the text color.
         /// </summary>
         [JsonPropertyName("color")]
         public virtual string Color { get; set; }
 
         /// <summary>
+        /// Returns or sets the modal dialog content to be displayed.
+        /// </summary>
+        [JsonPropertyName("modal")]
+        public virtual IModalTarget Modal { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="request">The request object associated with the current operation.</param>
-        public RestApiOptionCustom(Request request)
+        public RestApiOptionCustom(IRequest request)
             : base(request)
         {
         }
