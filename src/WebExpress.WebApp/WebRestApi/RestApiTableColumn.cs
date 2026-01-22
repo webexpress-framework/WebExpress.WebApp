@@ -9,6 +9,12 @@ namespace WebExpress.WebApp.WebRestApi
     public class RestApiTableColumn
     {
         /// <summary>
+        /// returns or sets the unique identifier for the entity.
+        /// </summary>
+        [JsonPropertyName("id")]
+        public string Id { get; set; }
+
+        /// <summary>
         /// Returns or sets the name of the associated property of the item that corresponds to the column.
         /// </summary>
         [JsonPropertyName("name")]

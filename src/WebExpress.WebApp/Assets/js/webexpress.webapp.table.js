@@ -24,7 +24,11 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
     _hasOptions = false;
 
     _columnSearchTimer = null;
-    
+
+    _orderBy = null;      // sort column id ('o')
+    _orderDir = null;     // sort direction ('d')
+    _pageSize = 50;       // page size ('limit'), default 50
+
     // placeholder data for loading state
     _previewColumns = [
         { label: "Loading...", width: null, visible: true },
@@ -53,8 +57,18 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
         this._columns = this._previewColumns;
         this._rows = this._previewBody;
         this._table.classList.add("placeholder-glow");
-        
+
         this.render();
+
+        // set up sort event handler to use 'o'/'d' as state
+        document.addEventListener(webexpress.webui.Event.TABLE_SORT_EVENT, (e) => {
+            const detail = e.detail || {};
+            if (detail.columnId) {
+                this._orderBy = detail.columnId;
+                this._orderDir = detail.sortDirection;
+                this._receiveData();
+            }
+        });
 
         this._receiveData();
     }
@@ -132,84 +146,70 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
      */
     _initPersistenceListeners(element) {
         element.addEventListener(webexpress.webui.Event.COLUMN_REORDER_EVENT, (e) => {
-            const detail = e.detail || {};
-            if (detail.columnId && typeof detail.toIndex === "number") {
-                 this._sendCommand("reorder-columns", {
-                     columnId: detail.columnId,
-                     newIndex: detail.toIndex
-                 });
-            } else {
-                 const colOrder = this._columns.map((c) => { return c.id; });
-                 this._sendCommand("reorder-columns", { order: colOrder });
-            }
+            // Send visible column ids in order as 'c' per spec. Only IDs, not names/labels.
+            const colOrder = this._columns
+                .filter((c) => c.visible)
+                .map((c) => c.id)
+                .join(",");
+            this._sendStateToServer({ c: colOrder });
         });
 
         element.addEventListener(webexpress.webui.Event.COLUMN_VISIBILITY_EVENT, (e) => {
-             const detail = e.detail || {};
-             if (detail.columnId) {
-                 this._sendCommand("toggle-visibility", {
-                     columnId: detail.columnId,
-                     visible: detail.visible
-                 });
-             }
+            // Also send the full new visible column ids as 'c' per spec after any vis toggle.
+            const colOrder = this._columns
+                .filter((c) => c.visible)
+                .map((c) => c.id)
+                .join(",");
+            this._sendStateToServer({ c: colOrder });
         });
 
         element.addEventListener(webexpress.webui.Event.ROW_REORDER_EVENT, (e) => {
-            const detail = e.detail || {};
-            if (detail.rowId && typeof detail.toIndex === "number") {
-                this._sendCommand("reorder-rows", {
-                    rowId: detail.rowId,
-                    newIndex: detail.toIndex,
-                    parentId: detail.parentId || null
-                });
-            }
-        });
-        
-        element.addEventListener(webexpress.webui.Event.TABLE_SORT_EVENT, (e) => {
-            const detail = e.detail || {};
-            if (detail.columnId) {
-                this._sendCommand("sort", {
-                    columnId: detail.columnId,
-                    direction: detail.sortDirection
-                });
-                this._receiveData(); 
-            }
+            // Send current row ids in order as 'r' per spec. Only IDs.
+            const rowOrder = this._rows.map((r) => r.id).join(",");
+            this._sendStateToServer({ r: rowOrder });
         });
 
-        const searchHandler = (event) => {
-            const detail = event.detail || {};
-            const term = detail.term ?? detail.query ?? detail.value ?? detail.search;
-            if (term !== undefined && term !== null) {
-                this._searchColumnsDebounced(String(term));
-            }
-        };
-
-        element.addEventListener(webexpress.webui.Event.COLUMN_SEARCH_EVENT, searchHandler);
-        document.addEventListener(webexpress.webui.Event.COLUMN_SEARCH_EVENT, searchHandler);
-        window.addEventListener(webexpress.webui.Event.COLUMN_SEARCH_EVENT, searchHandler, true);
-
-        document.addEventListener("input", (e) => {
-            const t = e.target;
-            const matches = (node) => {
-                if (!node) {
-                    return false;
-                }
-                if (node.matches?.(".wx-columns-search input, [data-column-search], [data-role='wx-column-search']")) {
-                    return true;
-                }
-                return false;
-            };
-            if (matches(t)) {
-                this._searchColumnsDebounced(t.value || "");
-            }
-        }, true);
+        // Sort event triggers a reload with o/d parameters, not persisted via server PUT/POST.
     }
 
     /**
-     * Fetches table data from the configured REST endpoint, including columns,
-     * rows, pagination metadata, and optional title/status information.
-     * Updates the internal state accordingly and triggers a full re-render.
-     * A progress indicator is shown while the request is in progress.
+     * Sends the current column or row state (with ids) to the server using PUT, per REST-API conventions.
+     * Only the relevant property is sent: { c: "..."} or { r: "..." }.
+     * Always uses only ids and only sends changed order.
+     * @param {Object} stateObj Eg {c: "..."} or {r: "..."}
+     */
+    _sendStateToServer(stateObj) {
+        if (!this._restUri) {
+            return;
+        }
+
+        if (this._progressDiv) {
+            this._progressDiv.style.visibility = "visible";
+        }
+
+        fetch(this._restUri, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(stateObj)
+        })
+        .then((res) => {
+            if (!res.ok) {
+                throw new Error("Update failed");
+            }
+        })
+        .catch((err) => {
+            console.error(`Failed to update table state:`, err);
+        })
+        .finally(() => {
+            if (this._progressDiv) {
+                this._progressDiv.style.visibility = "hidden";
+            }
+        });
+    }
+
+    /**
+     * Fetches table data from the configured REST endpoint using correct new API parameters.
+     * Uses only IDs and correct param names for sort (o/d), page (p), pagesize (limit), filter (q).
      */
     _receiveData() {
         if (this._progressDiv) {
@@ -218,7 +218,14 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
 
         const filter = encodeURIComponent(this._filter ?? "");
         const separator = this._restUri.includes("?") ? "&" : "?";
-        const url = `${this._restUri}${separator}q=${filter}&p=${this._page}`;
+        let url = `${this._restUri}${separator}q=${filter}&p=${this._page}&limit=${this._pageSize}`;
+
+        if (this._orderBy) {
+            url += `&o=${encodeURIComponent(this._orderBy)}`;
+            if (this._orderDir) {
+                url += `&d=${encodeURIComponent(this._orderDir)}`;
+            }
+        }
 
         fetch(url)
             .then((res) => {
@@ -254,7 +261,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
                         label: c.label || c.id,
                         name: c.name || null,
                         visible: typeof c.visible === "boolean" ? c.visible : true,
-                        sort: c.sort || null, 
+                        sort: null, // always reset, will set below
                         width: c.width || null,
                         minWidth: c.minWidth || null,
                         resizable: typeof c.resizable === "boolean" ? c.resizable : true,
@@ -265,6 +272,17 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
                         rendererOptions: rOpts
                     };
                 });
+
+                // sort indicator handling (for header arrow)
+                for (const col of this._columns) {
+                    col.sort = null;
+                }
+                if (this._orderBy) {
+                    const targetCol = this._columns.find(c => c.id === this._orderBy);
+                    if (targetCol) {
+                        targetCol.sort = this._orderDir || "asc";
+                    }
+                }
 
                 if (this._titleDiv) {
                     this._titleDiv.textContent = response.title || "";
@@ -310,45 +328,6 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
     }
 
     /**
-     * Sends a command to the configured REST endpoint using a PUT request.
-     * Displays a progress indicator while the request is in flight and hides
-     * it once the operation completes. Errors are logged to the console.
-     *
-     * @param {string} command - The command name to execute on the server.
-     * @param {Object} params - Additional parameters to include in the request payload.
-     */
-    _sendCommand(command, params) {
-        if (!this._restUri) {
-            return;
-        }
-        
-        if (this._progressDiv) {
-            this._progressDiv.style.visibility = "visible";
-        }
-
-        const payload = Object.assign({ command: command }, params);
-
-        fetch(this._restUri, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        })
-        .then((res) => {
-            if (!res.ok) {
-                throw new Error("Update failed");
-            }
-        })
-        .catch((err) => {
-            console.error(`Failed to execute command '${command}':`, err);
-        })
-        .finally(() => {
-            if (this._progressDiv) {
-                this._progressDiv.style.visibility = "hidden";
-            }
-        });
-    }
-
-    /**
      * Debounces remote column search requests. Ensures that the search
      * operation is only triggered after the user stops typing for a short
      * period, reducing unnecessary network calls.
@@ -364,14 +343,14 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
         }, 250);
     }
 
-   /**
-    * Performs a remote column search against the configured REST endpoint.
-    * The server is expected to return a list of column definitions, which
-    * are merged into the existing column set. Newly discovered columns are
-    * added, while existing ones are updated without overriding visibility.
-    *
-    * @param {string} term - The search term entered by the user.
-    */
+    /**
+     * Performs a remote column search against the configured REST endpoint.
+     * The server is expected to return a list of column definitions, which
+     * are merged into the existing column set. Newly discovered columns are
+     * added, while existing ones are updated without overriding visibility.
+     *
+     * @param {string} term - The search term entered by the user.
+     */
     _searchColumns(term) {
         if (!this._restUri) {
             return;
@@ -393,7 +372,6 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
             })
             .then((resp) => {
                 const fetched = (resp.columns || []).map((c, idx) => {
-                    // same template logic as in receiveData
                     let rType = c.rendererType || null;
                     let rOpts = c.rendererOptions || {};
 
@@ -410,7 +388,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
                         label: c.label || c.id || `Column ${idx + 1}`,
                         name: c.name || null,
                         visible: typeof c.visible === "boolean" ? c.visible : false,
-                        sort: c.sort || null,
+                        sort: null,
                         width: c.width || null,
                         minWidth: c.minWidth || null,
                         resizable: typeof c.resizable === "boolean" ? c.resizable : true,
@@ -463,7 +441,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
         const tr = document.createElement("div");
         tr.className = "wx-grid-row";
         tr.setAttribute("role", "row");
-        
+
         this._addClasses(tr, row.color);
         this._addClasses(tr, row.class);
         if (row.style) {
@@ -530,7 +508,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
             const tdOpt = document.createElement("div");
             tdOpt.className = "wx-grid-cell wx-table-actions";
             tdOpt.setAttribute("role", "gridcell");
-            
+
             if (effectiveOptions && effectiveOptions.length > 0) {
                 const div = document.createElement("div");
                 div.dataset.icon = "fas fa-cog";
@@ -564,7 +542,6 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
         const wrap = document.createElement("div");
         wrap.className = "wx-cell-content";
 
-        // icon or image from row, only at the very start of first visible cell
         if (isFirstVisible) {
             if (row.icon) {
                 const i = document.createElement("i");
@@ -592,19 +569,17 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
             wrap.appendChild(i);
         }
 
-        // use rendererType from colDef which is mapped from response in _receiveData
         const renderType = cell.type || colDef.rendererType;
-        
+
         if (renderType) {
             const renderer = webexpress.webui.TableTemplates.get(renderType);
 
             if (renderer) {
                 const opts = Object.assign({}, renderer.options, colDef.rendererOptions || {});
-                
+
                 const val = (cell.text !== undefined && cell.text !== null) ? cell.text : (cell.value || "");
 
                 try {
-                    // call with correct signature: (val, table, row, cell, name, opts)
                     const result = renderer.fn(val, this, row, cell, colDef.name || colDef.id, opts);
                     if (result instanceof Node) {
                         wrap.appendChild(result);
@@ -639,7 +614,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
                 a.target = targetToUse;
             }
             a.rel = "noopener noreferrer";
-            
+
             while (wrap.firstChild) {
                 a.appendChild(wrap.firstChild);
             }

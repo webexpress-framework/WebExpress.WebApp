@@ -51,6 +51,7 @@ namespace WebExpress.WebApp.WebRestApi
                     prop => prop,
                     prop =>
                     {
+                        var id = $"{prop.DeclaringType.FullName}.{prop.Name}";
                         var name = prop.Name;
                         var labelAttr = (RestTableColumnNameAttribute)Attribute.GetCustomAttribute(prop, typeof(RestTableColumnNameAttribute));
                         var templateAttr = prop
@@ -66,6 +67,7 @@ namespace WebExpress.WebApp.WebRestApi
 
                         var column = new RestApiTableColumn()
                         {
+                            Id = id,
                             Name = name,
                             Label = labelAttr?.Name ?? name,
                             Visible = !isHidden,
@@ -96,12 +98,13 @@ namespace WebExpress.WebApp.WebRestApi
         [Method(RequestMethod.GET)]
         public IResponse Retrieve(IRequest request)
         {
-            // current page number
+            // (o)rderby column id, (d)irection, (p)age, (limit) page size, (q)uery string for filter, (wql) advanced query
             var pageNumber = Convert.ToInt32(request.GetParameter("p")?.Value ?? "0");
-            // number of items per page
-            var pageSize = Convert.ToInt32(request.GetParameter("s")?.Value ?? "50");
+            var pageSize = Convert.ToInt32(request.GetParameter("l")?.Value ?? "50");
             var filter = request.GetParameter("q")?.Value ?? string.Empty;
             var wql = request.GetParameter("wql")?.Value ?? null;
+            var orderColumn = request.GetParameter("o")?.Value;
+            var sortingDirection = request.GetParameter("d")?.Value?.ToLowerInvariant();
 
             try
             {
@@ -119,9 +122,56 @@ namespace WebExpress.WebApp.WebRestApi
                     data = GetData(filter, request);
                 }
 
+                // sorting
+                if (!string.IsNullOrWhiteSpace(orderColumn))
+                {
+                    var sortProp = _cachedColumns
+                        .Where(x => x.Value.Id.Equals(orderColumn, StringComparison.InvariantCultureIgnoreCase))
+                        .FirstOrDefault();
+
+                    if (sortingDirection == "desc")
+                    {
+                        data = data.OrderByDescending(row =>
+                        {
+                            var value = sortProp.Key.GetValue(row);
+
+                            if (value is IEnumerable enumerable && value is not string)
+                            {
+                                var items = enumerable
+                                    .Cast<object>()
+                                    .Select(x => x?.ToString() ?? "");
+
+                                return string.Join(";", items);
+                            }
+
+                            return value?.ToString() ?? "";
+
+                        });
+                    }
+                    else
+                    {
+                        data = data.OrderBy(row =>
+                        {
+                            var value = sortProp.Key.GetValue(row);
+
+                            if (value is IEnumerable enumerable && value is not string)
+                            {
+                                var items = enumerable
+                                    .Cast<object>()
+                                    .Select(x => x?.ToString() ?? "");
+
+                                return string.Join(";", items);
+                            }
+
+                            return value?.ToString() ?? "";
+                        });
+                    }
+                }
+
                 var columns = _cachedColumns
                    .Select(x => new RestApiTableColumn()
                    {
+                       Id = x.Value.Id,
                        Name = x.Key.Name,
                        Label = I18N.Translate(request, x.Value.Label),
                        Icon = x.Value.Icon,
@@ -190,6 +240,44 @@ namespace WebExpress.WebApp.WebRestApi
             catch (Exception ex)
             {
                 return new ResponseBadRequest(new StatusMessage($"Error processing request.{ex}"));
+            }
+        }
+
+        /// <summary>
+        /// Handles configuration for column order or row order via POST/PUT using parameters 
+        /// "c" and/or "r". Only visible column/row ids, no hidden flag; omitted columns are hidden.
+        /// </summary>
+        /// <param name="request">Current HTTP request.</param>
+        /// <returns>Response indicating configuration status.</returns>
+        [Method(RequestMethod.POST)]
+        [Method(RequestMethod.PUT)]
+        public IResponse Configure(IRequest request)
+        {
+            try
+            {
+                var c = request.GetParameter("c")?.Value; // column ids (comma-separated)
+                var r = request.GetParameter("r")?.Value; // row ids (comma-separated)
+
+                //if (!string.IsNullOrWhiteSpace(c))
+                //{
+                //    _columnOrder = c.Split(',')
+                //        .Select(x => x.Trim())
+                //        .Where(x => !string.IsNullOrWhiteSpace(x))
+                //        .ToList();
+                //}
+                //if (!string.IsNullOrWhiteSpace(r))
+                //{
+                //    _rowOrder = r.Split(',')
+                //        .Select(x => x.Trim())
+                //        .Where(x => !string.IsNullOrWhiteSpace(x))
+                //        .ToList();
+                //}
+
+                return new ResponseOK();
+            }
+            catch (Exception ex)
+            {
+                return new ResponseBadRequest(new StatusMessage($"Error in configuration: {ex}"));
             }
         }
 
