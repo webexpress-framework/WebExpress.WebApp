@@ -11,6 +11,7 @@ using WebExpress.WebCore.WebIcon;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
 using WebExpress.WebCore.WebStatusPage;
+using WebExpress.WebCore.WebUri;
 using WebExpress.WebIndex;
 using WebExpress.WebIndex.Wql;
 using WebExpress.WebUI.WebIcon;
@@ -25,7 +26,6 @@ namespace WebExpress.WebApp.WebRestApi
         where TIndexItem : IIndexItem
     {
         private readonly PropertyInfo _cachedNameAttribute;
-        private readonly PropertyInfo _cachedUriAttribute;
         private readonly PropertyInfo _cachedIconAttribute;
 
         /// <summary>
@@ -47,11 +47,6 @@ namespace WebExpress.WebApp.WebRestApi
             _cachedNameAttribute = typeof(TIndexItem)
                 .GetProperties()
                 .Where(prop => Attribute.IsDefined(prop, typeof(RestDropdownTextAttribute)))
-                .FirstOrDefault();
-
-            _cachedUriAttribute = typeof(TIndexItem)
-                .GetProperties()
-                .Where(prop => Attribute.IsDefined(prop, typeof(RestDropdownUriAttribute)))
                 .FirstOrDefault();
 
             _cachedIconAttribute = typeof(TIndexItem)
@@ -137,7 +132,7 @@ namespace WebExpress.WebApp.WebRestApi
                         {
                             Id = x.Id,
                             Text = _cachedNameAttribute?.GetValue(x)?.ToString() ?? x.Id.ToString(),
-                            Uri = _cachedUriAttribute?.GetValue(x)?.ToString(),
+                            Uri = GetUri(request, x)?.ToString(),
                             Icon = (icon is Icon) ? (icon as Icon).Class : null,
                             Image = (icon is ImageIcon) ? (icon as ImageIcon).Uri?.ToString() : null
                         };
@@ -156,6 +151,23 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 return new ResponseBadRequest(new StatusMessage($"Error processing request. {ex}"));
             }
+        }
+
+        /// <summary>
+        /// Gets the URI associated with the specified request and index item.
+        /// </summary>
+        /// <param name="request">
+        /// The request for which to retrieve the URI. Cannot be null.
+        /// </param>
+        /// <param name="item">
+        /// The index item that provides context for generating the URI. Cannot be null.
+        /// </param>
+        /// <returns>
+        /// An object representing the URI for the given request and index item, or null if no URI is available.
+        /// </returns>
+        public virtual IUri GetUri(IRequest request, TIndexItem item)
+        {
+            return null;
         }
 
         /// <summary>

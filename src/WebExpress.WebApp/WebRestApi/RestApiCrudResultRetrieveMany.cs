@@ -19,13 +19,24 @@ namespace WebExpress.WebApp.WebRestApi
         private static readonly JsonSerializerOptions _jsonOptions = new()
         {
             WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            Converters =
+            {
+                new JsonImageIconConverter()
+            }
         };
 
         /// <summary>
         /// Returns or sets the collection of retrieved items.
         /// </summary>
         public IEnumerable<TIndexItem> Data { get; set; }
+
+        /// <summary>
+        /// Initializes a new instance of the class.
+        /// </summary>
+        public RestApiCrudResultRetrieveMany()
+        {
+        }
 
         /// <summary>
         /// Converts the current instance into a <see cref="Response"/> object.

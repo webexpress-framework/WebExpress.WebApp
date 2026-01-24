@@ -13,7 +13,11 @@ namespace WebExpress.WebApp.WebRestApi
         private static readonly JsonSerializerOptions _jsonOptions = new()
         {
             WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            Converters =
+            {
+                new JsonImageIconConverter()
+            }
         };
 
         /// <summary>
@@ -28,6 +32,13 @@ namespace WebExpress.WebApp.WebRestApi
         /// </summary>
         [JsonPropertyName("message")]
         public string Message { get; set; }
+
+        /// <summary>
+        /// Initializes a new instance of the class.
+        /// </summary>
+        public RestApiCrudResultCreate()
+        {
+        }
 
         /// <summary>
         /// Converts the current instance into a <see cref="Response"/> object.
