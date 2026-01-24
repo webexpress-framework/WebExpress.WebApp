@@ -14,6 +14,7 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/js/webexpress.webapp.js")]
     [Asset("/assets/js/webexpress.webapp.dropdown.js")]
     [Asset("/assets/js/webexpress.webapp.input.selection.js")]
+    [Asset("/assets/js/webexpress.webapp.input.tile.js")]
     [Asset("/assets/js/webexpress.webapp.input.unique.js")]
     [Asset("/assets/js/webexpress.webapp.list.js")]
     [Asset("/assets/js/webexpress.webapp.message.queue.status.js")]
