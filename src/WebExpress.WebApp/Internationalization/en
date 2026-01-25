@@ -3,9 +3,13 @@ plugin.name=WebExpress.WebApp
 plugin.description=Provides basic components of a web application.
 
 create.title=Create item
+create.label=Create
 edit.title=Edit item
+edit.label=Edit
 clone.title=Clone item
+clone.label=Clone
 delete.title=Delete item
+delete.label=Delete
 
 confirmation.title=Confirmation
 confirmation.description=Are you sure you want to perform this action?
@@ -61,9 +65,6 @@ pagesettingmanager.register=A settings page has been added to the settings page 
 pagesettingmanager.idless=A settings page from the plugin '{0}' does not have an id.
 pagesettingmanager.moduleless=The settings page '{0}' from the plugin '{1}' does not have a module assitation.
 pagesettingmanager.resourceless=No associated resource could be found for the settings page '{0}' from the plugin '{1}'.
-
-edit.label=Edit
-clone.label=Clone
 
 search.label=Search
 search.placeholder=Enter your search terms here.

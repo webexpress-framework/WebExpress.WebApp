@@ -1,12 +1,5 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
-using WebExpress.WebApp.WebSection;
-using WebExpress.WebCore;
-using WebExpress.WebCore.Internationalization;
-using WebExpress.WebCore.WebHtml;
 using WebExpress.WebUI.WebControl;
-using WebExpress.WebUI.WebFragment;
-using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.WebControl
 {
@@ -15,6 +8,11 @@ namespace WebExpress.WebApp.WebControl
     /// </summary>
     public interface IControlWebAppHeadline : IControl
     {
+        /// <summary>
+        /// Returns or set the title.
+        /// </summary>
+        string Title { get; set; }
+
         /// <summary>
         /// Returns the prologue area.
         /// </summary>

@@ -3,9 +3,13 @@ plugin.name=WebExpress.WebApp
 plugin.description=Stellt Basiskomponenten einer Webanwendung bereit.
 
 create.title=Erstellen
+create.label=Erstellen
 edit.title=Bearbeiten
+edit.label=Bearbeiten
 clone.title=Klonen
+clone.label=Klonen
 delete.title=Löschen
+delete.label=Löschen
 
 confirmation.title=Bestätigung
 confirmation.description=Möchten Sie diese Aktion wirklich durchführen?
@@ -61,9 +65,6 @@ pagesettingmanager.register=Eine Einsteuungsseite wurde dem Einstellungsseitenma
 pagesettingmanager.idless=Eine Einstellungsseite aus dem Plugin '{0}' verfügt über keine Id.
 pagesettingmanager.moduleless=Die Einstellungsseite '{0}' aus dem Plugin '{1}' verfügt über keine Modulzuordnung.
 pagesettingmanager.resourceless=Zu der Einstellungsseite '{0}' aus dem Plugin '{1}' konnte keine zugehörige Ressource ermittelt werden.
-
-edit.label=Bearbeiten
-clone.label=Klonen
 
 search.label=Suche
 search.placeholder=Geben Sie hier Ihre Suchbegriffe ein.

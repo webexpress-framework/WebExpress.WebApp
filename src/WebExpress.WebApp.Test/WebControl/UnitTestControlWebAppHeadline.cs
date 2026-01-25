@@ -32,5 +32,30 @@ namespace WebExpress.WebApp.Test.WebControl
 
             AssertExtensions.EqualWithPlaceholders(expected, html);
         }
+
+        /// <summary>
+        /// Tests the title property of the web app headline control.
+        /// </summary>
+        [Theory]
+        [InlineData(null, @"<header style=""display: block;"">*<h2 class=""me-2 mb-0""></h2>*</header>")]
+        [InlineData("title", @"<header style=""display: block;"">*<h2 class=""me-2 mb-0"">title</h2>*</header>")]
+        [InlineData("webexpress.webui:plugin.name", @"<header style=""display: block;"">*<h2 class=""me-2 mb-0"">WebExpress.WebUI</h2>*</header>")]
+        public void Tiltle(string title, string expected)
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlWebAppHeadline()
+            {
+                Title = title
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
     }
 }
