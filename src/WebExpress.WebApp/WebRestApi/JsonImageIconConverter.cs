@@ -2,7 +2,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using WebExpress.WebCore.WebIcon;
-using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebIcon;
 
 namespace WebExpress.WebApp.WebRestApi
@@ -34,11 +33,11 @@ namespace WebExpress.WebApp.WebRestApi
         /// </exception>
         public override ImageIcon Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            // JSON enthält nur einen String → direkt in ImageIcon umwandeln
+            // JSON contains only a string → convert directly into an ImageIcon
             if (reader.TokenType == JsonTokenType.String)
             {
                 var uri = reader.GetString();
-                return new ImageIcon(new UriEndpoint(uri));
+                return ImageIcon.FromString(uri);
             }
 
             throw new JsonException("Expected string for ImageIcon");
