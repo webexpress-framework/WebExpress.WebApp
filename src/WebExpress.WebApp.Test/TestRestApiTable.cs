@@ -2,6 +2,7 @@
 using WebExpress.WebApp.WebRestApi;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebIndex;
+using WebExpress.WebIndex.Queries;
 using WebExpress.WebIndex.Wql;
 
 namespace WebExpress.WebApp.Test
@@ -11,6 +12,16 @@ namespace WebExpress.WebApp.Test
     /// </summary>
     public sealed class TestRestApiTable : TestRestApiTable<TestIndexItem>
     {
+        /// <summary>
+        /// Initializes a new instance of the TestRestApiTable class with the specified data 
+        /// and table title.
+        /// </summary>
+        /// <param name="data">
+        /// The collection of TestIndexItem objects to be displayed in the table. Cannot be null.
+        /// </param>
+        /// <param name="title">
+        /// The title to display for the table. If not specified, defaults to "tab_title".
+        /// </param>
         public TestRestApiTable(IEnumerable<TestIndexItem> data, string title = "tab_title")
             : base(data, title)
         {
@@ -45,18 +56,18 @@ namespace WebExpress.WebApp.Test
         /// Returns a collection of available REST API options for the specified 
         /// request and data row.
         /// </summary>
-        /// <param name="request">
-        /// The request context for which to generate API options. Cannot be null.
-        /// </param>
         /// <param name="row">
         /// The data row representing the item for which options are generated. Cannot be null.
+        /// </param>
+        /// <param name="request">
+        /// The request context for which to generate API options. Cannot be null.
         /// </param>
         /// <returns>
         /// An enumerable collection of <see cref="RestApiOption"/> objects representing the 
         /// available actions for the given request and row. The collection will contain at 
         /// least one option if actions are available; otherwise, it may be empty.
         /// </returns>
-        public override IEnumerable<RestApiOption> GetOptions(IRequest request, TIndexItem row)
+        public override IEnumerable<RestApiOption> GetOptions(TIndexItem row, IRequest request)
         {
             return
             [
@@ -65,46 +76,67 @@ namespace WebExpress.WebApp.Test
         }
 
         /// <summary>
-        /// Retrieves a collection of index items that match the specified filter 
-        /// and request parameters.
+        /// Retrieves a queryable collection of index items that match the specified query criteria.
         /// </summary>
-        /// <param name="filter">
-        /// A string used to filter the results. The format and supported values 
-        /// depend on the implementation. Can be null or empty to indicate no filtering.
-        /// </param>
-        /// <param name="request">
-        /// An object containing additional parameters that influence the data 
-        /// retrieval operation. Cannot be null.
+        /// <param name="query">
+        /// An object containing the query parameters used to filter and select index items. Cannot 
+        /// be null.
         /// </param>
         /// <returns>
-        /// An enumerable collection of index items of type TIndexItem that 
-        /// satisfy the filter and request criteria. The collection may be 
-        /// empty if no items match.
+        /// A collection representing the filtered set of index items. 
+        /// The collection may be empty if no items match the query.
         /// </returns>
-        public override IEnumerable<TIndexItem> GetData(string filter, IRequest request)
+        protected override IEnumerable<TIndexItem> Retrieve(IQuery<TIndexItem> query)
         {
-            return _testData;
+            return query.Apply(_testData.AsQueryable());
         }
 
         /// <summary>
-        /// Retrieves a collection of index items that match the specified WQL 
-        /// statement and request parameters.
+        /// Applies filtering criteria to the specified query based on the provided WQL statement.
         /// </summary>
         /// <param name="wqlStatement">
-        /// The WQL statement that defines the query criteria for selecting index 
-        /// items. Cannot be null.
+        /// The WQL statement that defines the filtering conditions to apply to the query. Cannot 
+        /// be null.
+        /// </param>
+        /// <param name="query">
+        /// The query object to which the filtering criteria will be applied. Cannot be null.
         /// </param>
         /// <param name="request">
-        /// The request object containing additional parameters or options that 
-        /// influence the data retrieval. Cannot be null.
+        /// The request that provides the operational context for resolving
+        /// the appropriate REST API URI.
         /// </param>
         /// <returns>
-        /// An enumerable collection of index items that satisfy the query 
-        /// criteria. The collection is empty if no items match.
+        /// A new query representing the result of applying the WQL filter to the input 
+        /// query. The returned query may be further composed or executed to retrieve 
+        /// filtered results.
         /// </returns>
-        public override IEnumerable<TIndexItem> GetData(IWqlStatement wqlStatement, IRequest request)
+        public override IQuery<TIndexItem> Filter(IWqlStatement wqlStatement, IQuery<TIndexItem> query, IRequest request)
         {
-            return _testData;
+            return query;
+        }
+
+        /// <summary>
+        /// Applies the specified filter criteria to the given query object.
+        /// </summary>
+        /// <param name="filter">
+        /// A string representing the filter expression to apply. The format and supported 
+        /// operators depend on the implementation.
+        /// </param>
+        /// <param name="query">
+        /// The query object to which the filter will be applied.
+        /// </param>
+        /// <param name="request">
+        /// The request that provides the operational context for resolving
+        /// the appropriate REST API URI.
+        /// </param>
+        /// <returns>
+        /// A new query representing the result of applying the WQL filter to the input 
+        /// query. The returned query may be further composed or executed to retrieve 
+        /// filtered results.
+        /// </returns>
+        public override IQuery<TIndexItem> Filter(string filter, IQuery<TIndexItem> query, IRequest request)
+        {
+            return query;
         }
     }
 }

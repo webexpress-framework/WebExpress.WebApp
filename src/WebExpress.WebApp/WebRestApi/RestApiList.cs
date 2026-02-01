@@ -11,6 +11,7 @@ using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
 using WebExpress.WebCore.WebStatusPage;
 using WebExpress.WebIndex;
+using WebExpress.WebIndex.Queries;
 using WebExpress.WebIndex.Wql;
 
 namespace WebExpress.WebApp.WebRestApi
@@ -43,9 +44,13 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Retrieves a collection of options for a list item (e.g. edit/delete).
         /// </summary>
-        /// <param name="request">The request object containing the criteria for retrieving options. Cannot be null.</param>
-        /// <param name="row">The row object for which options are being retrieved. Cannot be null.</param>
-        public virtual IEnumerable<RestApiOption> GetOptions(IRequest request, TIndexItem row)
+        /// <param name="row">
+        /// The row object for which options are being retrieved. Cannot be null.
+        /// </param>
+        /// <param name="request">
+        /// The request object containing the criteria for retrieving options. Cannot be null.
+        /// </param>
+        public virtual IEnumerable<RestApiOption> GetOptions(TIndexItem row, IRequest request)
         {
             // return empty by default
             return [];
@@ -62,47 +67,38 @@ namespace WebExpress.WebApp.WebRestApi
         {
             // read paging and filters; support both "filter" (frontend) and "search" (compat)
             var pageNumber = Convert.ToInt32(request.GetParameter("p")?.Value ?? "0");
-            var pageSize = Convert.ToInt32(request.GetParameter("s")?.Value ?? "50");
+            var pageSize = Convert.ToInt32(request.GetParameter("l")?.Value ?? "50");
             var filter = request.GetParameter("q")?.Value ?? string.Empty;
             var wql = request.GetParameter("wql")?.Value ?? null;
+            var query = new Query<TIndexItem>() as IQuery<TIndexItem>;
 
             try
             {
-                IEnumerable<TIndexItem> data = [];
-
                 if (!string.IsNullOrWhiteSpace(wql))
                 {
                     var wqlStatement = WebEx.ComponentHub.GetComponentManager<WebIndex.IndexManager>()?
                         .Retrieve<TIndexItem>(wql);
 
-                    data = GetData(wqlStatement, request);
+                    query = Filter(wqlStatement, query, request);
                 }
                 else
                 {
-                    data = GetData(filter, request);
+                    query = Filter(filter, query, request);
                 }
 
-                // page slice
-                var pageSlice = data
-                    .Skip(pageNumber * pageSize)
-                    .Take(pageSize)
-                    .ToArray();
+                // paging 
+                query = query.WithPaging(pageNumber * pageSize, pageSize);
 
-                // map to list items
-                var items = pageSlice.Select(row =>
-                {
-                    var item = new RestApiListItem<TIndexItem>()
+                var items = Retrieve(query)
+                    .Select(row => new RestApiListItem<TIndexItem>()
                     {
                         Id = row.Id.ToString(),
                         Text = ResolveItemText(row),
                         Item = row,
-                        // icon/image could be derived by convention or additional attributes if available
                         Icon = null,
                         Image = null,
-                        Options = GetOptions(request, row)
-                    };
-                    return item;
-                });
+                        Options = GetOptions(row, request)
+                    });
 
                 var result = new RestApiListResult<TIndexItem>()
                 {
@@ -112,7 +108,7 @@ namespace WebExpress.WebApp.WebRestApi
                     {
                         PageNumber = pageNumber,
                         PageSize = pageSize,
-                        TotalCount = data.Count()
+                        TotalCount = items.Count()
                     }
                 };
 
@@ -179,46 +175,64 @@ namespace WebExpress.WebApp.WebRestApi
         }
 
         /// <summary>
-        /// Retrieves a collection of index items that match the specified filter 
-        /// and request parameters.
+        /// Retrieves a queryable collection of index items that match the specified query criteria.
         /// </summary>
-        /// <param name="filter">
-        /// A string used to filter the results. The format and supported values 
-        /// depend on the implementation. Can be null or empty to indicate no filtering.
-        /// </param>
-        /// <param name="request">
-        /// An object containing additional parameters that influence the data 
-        /// retrieval operation. Cannot be null.
+        /// <param name="query">
+        /// An object containing the query parameters used to filter and select index items. Cannot 
+        /// be null.
         /// </param>
         /// <returns>
-        /// An enumerable collection of index items of type TIndexItem that 
-        /// satisfy the filter and request criteria. The collection may be 
-        /// empty if no items match.
+        /// A collection representing the filtered set of index items. 
+        /// The collection may be empty if no items match the query.
         /// </returns>
-        public virtual IEnumerable<TIndexItem> GetData(string filter, IRequest request)
+        protected abstract IEnumerable<TIndexItem> Retrieve(IQuery<TIndexItem> query);
+
+        /// <summary>
+        /// Applies filtering criteria to the specified query based on the provided WQL statement.
+        /// </summary>
+        /// <param name="wqlStatement">
+        /// The WQL statement that defines the filtering conditions to apply to the query. Cannot 
+        /// be null.
+        /// </param>
+        /// <param name="query">
+        /// The query object to which the filtering criteria will be applied. Cannot be null.
+        /// </param>
+        /// <param name="request">
+        /// The request that provides the operational context for resolving
+        /// the appropriate REST API URI.
+        /// </param>
+        /// <returns>
+        /// A new query representing the result of applying the WQL filter to the input 
+        /// query. The returned query may be further composed or executed to retrieve 
+        /// filtered results.
+        /// </returns>
+        public virtual IQuery<TIndexItem> Filter(IWqlStatement wqlStatement, IQuery<TIndexItem> query, IRequest request)
         {
-            return [];
+            return query;
         }
 
         /// <summary>
-        /// Retrieves a collection of index items that match the specified WQL 
-        /// statement and request parameters.
+        /// Applies the specified filter criteria to the given query object.
         /// </summary>
-        /// <param name="wqlStatement">
-        /// The WQL statement that defines the query criteria for selecting index 
-        /// items. Cannot be null.
+        /// <param name="filter">
+        /// A string representing the filter expression to apply. The format and supported 
+        /// operators depend on the implementation.
+        /// </param>
+        /// <param name="query">
+        /// The query object to which the filter will be applied.
         /// </param>
         /// <param name="request">
-        /// The request object containing additional parameters or options that 
-        /// influence the data retrieval. Cannot be null.
+        /// The request that provides the operational context for resolving
+        /// the appropriate REST API URI.
         /// </param>
         /// <returns>
-        /// An enumerable collection of index items that satisfy the query 
-        /// criteria. The collection is empty if no items match.
+        /// A new query representing the result of applying the WQL filter to the input 
+        /// query. The returned query may be further composed or executed to retrieve 
+        /// filtered results.
         /// </returns>
-        public virtual IEnumerable<TIndexItem> GetData(IWqlStatement wqlStatement, IRequest request)
+        public virtual IQuery<TIndexItem> Filter(string filter, IQuery<TIndexItem> query, IRequest request)
         {
-            return [];
+            return query;
         }
     }
 }

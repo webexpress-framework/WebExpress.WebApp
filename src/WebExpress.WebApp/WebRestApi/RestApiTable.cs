@@ -13,6 +13,7 @@ using WebExpress.WebCore.WebRestApi;
 using WebExpress.WebCore.WebStatusPage;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebIndex;
+using WebExpress.WebIndex.Queries;
 using WebExpress.WebIndex.Wql;
 using WebExpress.WebUI.WebIcon;
 
@@ -105,21 +106,20 @@ namespace WebExpress.WebApp.WebRestApi
             var wql = request.GetParameter("wql")?.Value ?? null;
             var orderColumn = request.GetParameter("o")?.Value;
             var sortingDirection = request.GetParameter("d")?.Value?.ToLowerInvariant();
+            var query = new Query<TIndexItem>() as IQuery<TIndexItem>;
 
             try
             {
-                IEnumerable<TIndexItem> data = [];
-
                 if (!string.IsNullOrWhiteSpace(wql))
                 {
                     var wqlStatement = WebEx.ComponentHub.GetComponentManager<WebIndex.IndexManager>()?
                         .Retrieve<TIndexItem>(wql);
 
-                    data = GetData(wqlStatement, request);
+                    query = Filter(wqlStatement, query, request);
                 }
                 else
                 {
-                    data = GetData(filter, request);
+                    query = Filter(filter, query, request);
                 }
 
                 // sorting
@@ -131,42 +131,24 @@ namespace WebExpress.WebApp.WebRestApi
 
                     if (sortingDirection == "desc")
                     {
-                        data = data.OrderByDescending(row =>
-                        {
-                            var value = sortProp.Key.GetValue(row);
-
-                            if (value is IEnumerable enumerable && value is not string)
-                            {
-                                var items = enumerable
-                                    .Cast<object>()
-                                    .Select(x => x?.ToString() ?? "");
-
-                                return string.Join(";", items);
-                            }
-
-                            return value?.ToString() ?? "";
-
-                        });
+                        query = query.OrderByDesc
+                        (
+                            item =>
+                            ConvertSortValue(sortProp.Key.GetValue(item))
+                        );
                     }
                     else
                     {
-                        data = data.OrderBy(row =>
-                        {
-                            var value = sortProp.Key.GetValue(row);
-
-                            if (value is IEnumerable enumerable && value is not string)
-                            {
-                                var items = enumerable
-                                    .Cast<object>()
-                                    .Select(x => x?.ToString() ?? "");
-
-                                return string.Join(";", items);
-                            }
-
-                            return value?.ToString() ?? "";
-                        });
+                        query = query.OrderByAsc
+                        (
+                            item =>
+                            ConvertSortValue(sortProp.Key.GetValue(item))
+                        );
                     }
                 }
+
+                // paging 
+                query = query.WithPaging(pageNumber * pageSize, pageSize);
 
                 var columns = _cachedColumns
                    .Select(x => new RestApiTableColumn()
@@ -180,13 +162,13 @@ namespace WebExpress.WebApp.WebRestApi
                        Template = x.Value.Template
                    });
 
+                var rows = Retrieve(query);
+
                 var result = new RestApiTableResult()
                 {
                     Title = I18N.Translate(request, Title),
                     Columns = columns,
-                    Rows = data
-                        .Skip(pageNumber * pageSize)
-                        .Take(pageSize)
+                    Rows = rows
                         .Select(row =>
                         {
                             var icon = _cachedRowIconAttribute?.GetValue(row) as IIcon;
@@ -220,18 +202,22 @@ namespace WebExpress.WebApp.WebRestApi
                                         Text = text
                                     };
                                 }),
-                                Options = GetOptions(request, row),
-                                Icon = (icon is Icon) ? (icon as Icon).Class : null,
-                                Image = (icon is ImageIcon) ? (icon as ImageIcon).Uri?.ToString() : null,
-                                Uri = GetUri(request, row)?.ToString(),
-                                RestApi = GetRestApiForInlineEdit(request, row)?.ToString()
+                                Options = GetOptions(row, request),
+                                Icon = (icon is Icon)
+                                    ? (icon as Icon).Class
+                                    : null,
+                                Image = (icon is ImageIcon)
+                                    ? (icon as ImageIcon).Uri?.ToString()
+                                    : null,
+                                Uri = GetUri(row, request)?.ToString(),
+                                RestApi = GetRestApiForInlineEdit(row, request)?.ToString()
                             };
                         }),
                     Pagination = new RestApiPaginationInfo()
                     {
                         PageNumber = pageNumber,
                         PageSize = pageSize,
-                        TotalCount = data.Count()
+                        TotalCount = rows.Count()
                     }
                 };
 
@@ -284,9 +270,13 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Retrieves a collection of options.
         /// </summary>
-        /// <param name="request">The request object containing the criteria for retrieving options. Cannot be null.</param>
-        /// <param name="row">The row object for which options are being retrieved. Cannot be null.</param>
-        public virtual IEnumerable<RestApiOption> GetOptions(IRequest request, TIndexItem row)
+        /// <param name="row">
+        /// The row object for which options are being retrieved. Cannot be null.
+        /// </param>
+        /// <param name="request">
+        /// The request object containing the criteria for retrieving options. Cannot be null.
+        /// </param>
+        public virtual IEnumerable<RestApiOption> GetOptions(TIndexItem row, IRequest request)
         {
             return [];
         }
@@ -294,16 +284,16 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Gets the URI associated with the specified request and index item.
         /// </summary>
-        /// <param name="request">
-        /// The request for which to retrieve the URI. Cannot be null.
-        /// </param>
         /// <param name="row">
         /// The index item that provides context for generating the URI. Cannot be null.
+        /// </param>
+        /// <param name="request">
+        /// The request for which to retrieve the URI. Cannot be null.
         /// </param>
         /// <returns>
         /// An object representing the URI for the given request and index item, or null if no URI is available.
         /// </returns>
-        public virtual IUri GetUri(IRequest request, TIndexItem row)
+        public virtual IUri GetUri(TIndexItem row, IRequest request)
         {
             return null;
         }
@@ -312,63 +302,109 @@ namespace WebExpress.WebApp.WebRestApi
         /// Retrieves the REST API URI required for performing inline edits
         /// on the specified index item within the given request context.
         /// </summary>
+        /// <param name="row">
+        /// The index item for which the inline‑edit REST API URI should be determined.
+        /// </param>
         /// <param name="request">
         /// The request that provides the operational context for resolving
         /// the appropriate REST API URI.
-        /// </param>
-        /// <param name="row">
-        /// The index item for which the inline‑edit REST API URI should be determined.
         /// </param>
         /// <returns>
         /// An <see cref="IUri"/> representing the REST API endpoint used for
         /// inline editing, or <c>null</c> if no suitable endpoint is available.
         /// </returns>
-        public virtual IUri GetRestApiForInlineEdit(IRequest request, TIndexItem row)
+        public virtual IUri GetRestApiForInlineEdit(TIndexItem row, IRequest request)
         {
             return null;
         }
 
         /// <summary>
-        /// Retrieves a collection of index items that match the specified filter 
-        /// and request parameters.
+        /// Retrieves a queryable collection of index items that match the specified query criteria.
         /// </summary>
-        /// <param name="filter">
-        /// A string used to filter the results. The format and supported values 
-        /// depend on the implementation. Can be null or empty to indicate no filtering.
-        /// </param>
-        /// <param name="request">
-        /// An object containing additional parameters that influence the data 
-        /// retrieval operation. Cannot be null.
+        /// <param name="query">
+        /// An object containing the query parameters used to filter and select index items. Cannot 
+        /// be null.
         /// </param>
         /// <returns>
-        /// An enumerable collection of index items of type TIndexItem that 
-        /// satisfy the filter and request criteria. The collection may be 
-        /// empty if no items match.
+        /// A collection representing the filtered set of index items. 
+        /// The collection may be empty if no items match the query.
         /// </returns>
-        public virtual IEnumerable<TIndexItem> GetData(string filter, IRequest request)
+        protected abstract IEnumerable<TIndexItem> Retrieve(IQuery<TIndexItem> query);
+
+        /// <summary>
+        /// Applies filtering criteria to the specified query based on the provided WQL statement.
+        /// </summary>
+        /// <param name="wqlStatement">
+        /// The WQL statement that defines the filtering conditions to apply to the query. Cannot 
+        /// be null.
+        /// </param>
+        /// <param name="query">
+        /// The query object to which the filtering criteria will be applied. Cannot be null.
+        /// </param>
+        /// <param name="request">
+        /// The request that provides the operational context for resolving
+        /// the appropriate REST API URI.
+        /// </param>
+        /// <returns>
+        /// A new query representing the result of applying the WQL filter to the input 
+        /// query. The returned query may be further composed or executed to retrieve 
+        /// filtered results.
+        /// </returns>
+        public virtual IQuery<TIndexItem> Filter(IWqlStatement wqlStatement, IQuery<TIndexItem> query, IRequest request)
         {
-            return [];
+            return query;
         }
 
         /// <summary>
-        /// Retrieves a collection of index items that match the specified WQL 
-        /// statement and request parameters.
+        /// Applies the specified filter criteria to the given query object.
         /// </summary>
-        /// <param name="wqlStatement">
-        /// The WQL statement that defines the query criteria for selecting index 
-        /// items. Cannot be null.
+        /// <param name="filter">
+        /// A string representing the filter expression to apply. The format and supported 
+        /// operators depend on the implementation.
+        /// </param>
+        /// <param name="query">
+        /// The query object to which the filter will be applied.
         /// </param>
         /// <param name="request">
-        /// The request object containing additional parameters or options that 
-        /// influence the data retrieval. Cannot be null.
+        /// The request that provides the operational context for resolving
+        /// the appropriate REST API URI.
         /// </param>
         /// <returns>
-        /// An enumerable collection of index items that satisfy the query 
-        /// criteria. The collection is empty if no items match.
+        /// A new query representing the result of applying the WQL filter to the input 
+        /// query. The returned query may be further composed or executed to retrieve 
+        /// filtered results.
         /// </returns>
-        public virtual IEnumerable<TIndexItem> GetData(IWqlStatement wqlStatement, IRequest request)
+        public virtual IQuery<TIndexItem> Filter(string filter, IQuery<TIndexItem> query, IRequest request)
         {
-            return [];
+            return query;
+        }
+
+        /// <summary>
+        /// Converts the specified value to its string representation for sorting purposes. If 
+        /// the value is a collection (excluding strings), its elements are concatenated into
+        /// a single string separated by semicolons.
+        /// </summary>
+        /// <param name="value">
+        /// The value to convert. If the value is an enumerable collection (other than a string), 
+        /// each element will be converted to a string and joined with semicolons; otherwise, the 
+        /// value's string representation is returned.
+        /// </param>
+        /// <returns>
+        /// A string representation of the value suitable for sorting. Returns an empty string if 
+        /// the value is null.
+        /// </returns>
+        private static string ConvertSortValue(object value)
+        {
+            if (value is IEnumerable enumerable && value is not string)
+            {
+                var items = enumerable
+                    .Cast<object>()
+                    .Select(x => x?.ToString() ?? "");
+
+                return string.Join(";", items);
+            }
+
+            return value?.ToString() ?? "";
         }
     }
 }
