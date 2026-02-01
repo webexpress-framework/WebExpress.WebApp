@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using WebExpress.WebApp.WebAttribute;
@@ -11,6 +10,7 @@ using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
 using WebExpress.WebCore.WebStatusPage;
 using WebExpress.WebIndex;
+using WebExpress.WebIndex.Queries;
 using WebExpress.WebIndex.Wql;
 
 namespace WebExpress.WebApp.WebRestApi
@@ -63,64 +63,37 @@ namespace WebExpress.WebApp.WebRestApi
         {
             // default page size aligned with dropdown max entries
             var defaultPageSize = 25;
-
-            // accept both 'q' and 'search' to align with common dropdown conventions
-            var filter = request.GetParameter("q")?.Value
-                         ?? request.GetParameter("s")?.Value
-                         ?? string.Empty;
-
+            var pageNumber = Convert.ToInt32(request.GetParameter("p")?.Value ?? "0");
+            var pageSize = Convert.ToInt32(request.GetParameter("l")?.Value ?? "50");
+            var filter = request.GetParameter("q")?.Value ?? string.Empty;
             var wql = request.GetParameter("wql")?.Value ?? null;
-
-            // page number parsing with safe default
-            var pageRaw = request.GetParameter("p")?.Value;
-            var pageNumber = 0;
-            if (!string.IsNullOrWhiteSpace(pageRaw))
-            {
-                if (int.TryParse(pageRaw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var pn))
-                {
-                    pageNumber = Math.Max(0, pn);
-                }
-            }
-
-            // support 'pageSize' and 'max' (synonym) with a default of 25
-            var pageSize = defaultPageSize;
-            var pageSizeRaw = request.GetParameter("s")?.Value ?? request.GetParameter("m")?.Value;
-            if (!string.IsNullOrWhiteSpace(pageSizeRaw))
-            {
-                if (int.TryParse(pageSizeRaw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ps))
-                {
-                    pageSize = Math.Max(1, ps);
-                }
-            }
+            var query = new Query<TIndexItem>();
 
             try
             {
-                IEnumerable<TIndexItem> source = [];
-
                 if (!string.IsNullOrWhiteSpace(wql))
                 {
-                    // evaluate wql if provided
-                    var wqlStatement = WebEx.ComponentHub.GetComponentManager<WebIndex.IndexManager>()?
+                    var wqlStatement = WebEx.ComponentHub
+                        .GetComponentManager<WebIndex.IndexManager>()?
                         .Retrieve<TIndexItem>(wql);
 
-                    source = GetData(wqlStatement, request) ?? [];
+                    Filter(wqlStatement, query, request);
                 }
                 else
                 {
-                    // fallback to textual filtering
-                    source = GetData(filter, request) ?? [];
+                    Filter(filter, query, request);
                 }
 
                 // apply paging
-                var total = source.Count();
-                var pageItems = source
-                    .Skip(pageSize * pageNumber)
-                    .Take(pageSize);
+                query.WithPaging(pageNumber * pageSize, pageSize);
+
+                using var context = CreateContext();
+                var items = Retrieve(query, context);
 
                 var result = new RestApiSelectionResult<IIndexItem>()
                 {
                     Title = I18N.Translate(request, Title),
-                    Items = pageItems.Select(x => new RestApiSelectionItem
+                    Items = items.Select(x => new RestApiSelectionItem
                     {
                         Id = x.Id,
                         Text = _cachedNameAttribute?.GetValue(x)?.ToString() ?? x.Id.ToString(),
@@ -130,7 +103,7 @@ namespace WebExpress.WebApp.WebRestApi
                     {
                         PageNumber = pageNumber,
                         PageSize = pageSize,
-                        TotalCount = total
+                        TotalCount = items.Count()
                     }
                 };
 
@@ -143,46 +116,67 @@ namespace WebExpress.WebApp.WebRestApi
         }
 
         /// <summary>
-        /// Retrieves a collection of index items that match the specified filter 
-        /// and request parameters.
+        /// Creates a new instance of an object that implements the IQueryContext interface.
         /// </summary>
-        /// <param name="filter">
-        /// A string used to filter the results. The format and supported values 
-        /// depend on the implementation. Can be null or empty to indicate no filtering.
-        /// </param>
-        /// <param name="request">
-        /// An object containing additional parameters that influence the data 
-        /// retrieval operation. Cannot be null.
-        /// </param>
         /// <returns>
-        /// An enumerable collection of index items of type TIndexItem that 
-        /// satisfy the filter and request criteria. The collection may be 
-        /// empty if no items match.
+        /// An IQueryContext instance that can be used to execute queries.
         /// </returns>
-        public virtual IEnumerable<TIndexItem> GetData(string filter, IRequest request)
+        protected virtual IQueryContext CreateContext()
         {
-            return [];
+            return new DefaultQueryContext();
         }
 
         /// <summary>
-        /// Retrieves a collection of index items that match the specified WQL 
-        /// statement and request parameters.
+        /// Retrieves a queryable collection of index items that match the specified query criteria.
         /// </summary>
-        /// <param name="wqlStatement">
-        /// The WQL statement that defines the query criteria for selecting index 
-        /// items. Cannot be null.
+        /// <param name="query">
+        /// An object containing the query parameters used to filter and select index items. Cannot 
+        /// be null.
         /// </param>
-        /// <param name="request">
-        /// The request object containing additional parameters or options that 
-        /// influence the data retrieval. Cannot be null.
+        /// <param name="context">
+        /// The context in which the query is executed. Provides additional information or constraints 
+        /// for the retrieval operation. Cannot be null.
         /// </param>
         /// <returns>
-        /// An enumerable collection of index items that satisfy the query 
-        /// criteria. The collection is empty if no items match.
+        /// A collection representing the filtered set of index items. 
+        /// The collection may be empty if no items match the query.
         /// </returns>
-        public virtual IEnumerable<TIndexItem> GetData(IWqlStatement wqlStatement, IRequest request)
+        protected abstract IEnumerable<TIndexItem> Retrieve(IQuery<TIndexItem> query, IQueryContext context);
+
+        /// <summary>
+        /// Applies filtering criteria to the specified query based on the provided WQL statement.
+        /// </summary>
+        /// <param name="wqlStatement">
+        /// The WQL statement that defines the filtering conditions to apply to the query. Cannot 
+        /// be null.
+        /// </param>
+        /// <param name="query">
+        /// The query object to which the filtering criteria will be applied. Cannot be null.
+        /// </param>
+        /// <param name="request">
+        /// The request that provides the operational context for resolving
+        /// the appropriate REST API URI.
+        /// </param>
+        protected virtual void Filter(IWqlStatement wqlStatement, IQuery<TIndexItem> query, IRequest request)
         {
-            return [];
+        }
+
+        /// <summary>
+        /// Applies the specified filter criteria to the given query object.
+        /// </summary>
+        /// <param name="filter">
+        /// A string representing the filter expression to apply. The format and supported 
+        /// operators depend on the implementation.
+        /// </param>
+        /// <param name="query">
+        /// The query object to which the filter will be applied.
+        /// </param>
+        /// <param name="request">
+        /// The request that provides the operational context for resolving
+        /// the appropriate REST API URI.
+        /// </param>
+        protected virtual void Filter(string filter, IQuery<TIndexItem> query, IRequest request)
+        {
         }
     }
 }

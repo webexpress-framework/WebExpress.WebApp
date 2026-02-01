@@ -80,17 +80,18 @@ namespace WebExpress.WebApp.WebRestApi
                     var wqlStatement = WebEx.ComponentHub.GetComponentManager<WebIndex.IndexManager>()?
                         .Retrieve<TIndexItem>(wql);
 
-                    query = Filter(wqlStatement, query, request);
+                    Filter(wqlStatement, query, request);
                 }
                 else
                 {
-                    query = Filter(filter, query, request);
+                    Filter(filter, query, request);
                 }
 
                 // apply paging
-                query = query.WithPaging(pageNumber * pageSize, pageSize);
+                query.WithPaging(pageNumber * pageSize, pageSize);
 
-                var items = Retrieve(query);
+                using var context = CreateContext();
+                var items = Retrieve(query, context);
 
                 var result = new RestApiDropdownResult<IIndexItem>()
                 {
@@ -141,17 +142,32 @@ namespace WebExpress.WebApp.WebRestApi
         }
 
         /// <summary>
+        /// Creates a new instance of an object that implements the IQueryContext interface.
+        /// </summary>
+        /// <returns>
+        /// An IQueryContext instance that can be used to execute queries.
+        /// </returns>
+        protected virtual IQueryContext CreateContext()
+        {
+            return new DefaultQueryContext();
+        }
+
+        /// <summary>
         /// Retrieves a queryable collection of index items that match the specified query criteria.
         /// </summary>
         /// <param name="query">
         /// An object containing the query parameters used to filter and select index items. Cannot 
         /// be null.
         /// </param>
+        /// <param name="context">
+        /// The context in which the query is executed. Provides additional information or constraints 
+        /// for the retrieval operation. Cannot be null.
+        /// </param>
         /// <returns>
         /// A collection representing the filtered set of index items. 
         /// The collection may be empty if no items match the query.
         /// </returns>
-        protected abstract IEnumerable<TIndexItem> Retrieve(IQuery<TIndexItem> query);
+        protected abstract IEnumerable<TIndexItem> Retrieve(IQuery<TIndexItem> query, IQueryContext context);
 
         /// <summary>
         /// Applies filtering criteria to the specified query based on the provided WQL statement.
@@ -172,7 +188,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// query. The returned query may be further composed or executed to retrieve 
         /// filtered results.
         /// </returns>
-        public virtual IQuery<TIndexItem> Filter(IWqlStatement wqlStatement, IQuery<TIndexItem> query, IRequest request)
+        protected virtual IQuery<TIndexItem> Filter(IWqlStatement wqlStatement, IQuery<TIndexItem> query, IRequest request)
         {
             return query;
         }
@@ -191,14 +207,8 @@ namespace WebExpress.WebApp.WebRestApi
         /// The request that provides the operational context for resolving
         /// the appropriate REST API URI.
         /// </param>
-        /// <returns>
-        /// A new query representing the result of applying the WQL filter to the input 
-        /// query. The returned query may be further composed or executed to retrieve 
-        /// filtered results.
-        /// </returns>
-        public virtual IQuery<TIndexItem> Filter(string filter, IQuery<TIndexItem> query, IRequest request)
+        protected virtual void Filter(string filter, IQuery<TIndexItem> query, IRequest request)
         {
-            return query;
         }
     }
 }

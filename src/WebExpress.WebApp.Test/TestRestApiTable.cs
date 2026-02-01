@@ -82,11 +82,15 @@ namespace WebExpress.WebApp.Test
         /// An object containing the query parameters used to filter and select index items. Cannot 
         /// be null.
         /// </param>
+        /// <param name="context">
+        /// The context in which the query is executed. Provides additional information or constraints 
+        /// for the retrieval operation. Cannot be null.
+        /// </param>
         /// <returns>
         /// A collection representing the filtered set of index items. 
         /// The collection may be empty if no items match the query.
         /// </returns>
-        protected override IEnumerable<TIndexItem> Retrieve(IQuery<TIndexItem> query)
+        protected override IEnumerable<TIndexItem> Retrieve(IQuery<TIndexItem> query, IQueryContext context)
         {
             return query.Apply(_testData.AsQueryable());
         }
@@ -105,14 +109,8 @@ namespace WebExpress.WebApp.Test
         /// The request that provides the operational context for resolving
         /// the appropriate REST API URI.
         /// </param>
-        /// <returns>
-        /// A new query representing the result of applying the WQL filter to the input 
-        /// query. The returned query may be further composed or executed to retrieve 
-        /// filtered results.
-        /// </returns>
-        public override IQuery<TIndexItem> Filter(IWqlStatement wqlStatement, IQuery<TIndexItem> query, IRequest request)
+        protected override void Filter(IWqlStatement wqlStatement, IQuery<TIndexItem> query, IRequest request)
         {
-            return query;
         }
 
         /// <summary>
@@ -129,14 +127,8 @@ namespace WebExpress.WebApp.Test
         /// The request that provides the operational context for resolving
         /// the appropriate REST API URI.
         /// </param>
-        /// <returns>
-        /// A new query representing the result of applying the WQL filter to the input 
-        /// query. The returned query may be further composed or executed to retrieve 
-        /// filtered results.
-        /// </returns>
-        public override IQuery<TIndexItem> Filter(string filter, IQuery<TIndexItem> query, IRequest request)
+        protected override void Filter(string filter, IQuery<TIndexItem> query, IRequest request)
         {
-            return query;
         }
     }
 }

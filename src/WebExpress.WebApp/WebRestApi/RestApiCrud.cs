@@ -45,16 +45,17 @@ namespace WebExpress.WebApp.WebRestApi
 
             // optional id parameter (used for clone operations)
             var id = request.GetParameter<ParameterGuid>()?.Value;
-            var query = new Query<TIndexItem>() as IQuery<TIndexItem>;
+            var query = new Query<TIndexItem>();
 
             if (!string.IsNullOrWhiteSpace(id))
             {
-                query = query.WhereEqualsIgnoreCase(x => x.Id.ToString(), id);
+                query.WhereEqualsIgnoreCase(x => x.Id.ToString(), id);
             }
 
             // retrieve existing item if id is provided
+            using var context = CreateContext();
             var existingItem = id is not null
-                ? Retrieve(query).FirstOrDefault()
+                ? Retrieve(query, context).FirstOrDefault()
                 : default;
 
             // validate request (existingitem is null for new resources)
@@ -129,11 +130,11 @@ namespace WebExpress.WebApp.WebRestApi
                     "delete" => RestApiCrudMode.Delete,
                     _ => RestApiCrudMode.Default
                 };
-                var query = new Query<TIndexItem>() as IQuery<TIndexItem>;
+                var query = new Query<TIndexItem>();
 
                 if (!string.IsNullOrWhiteSpace(id))
                 {
-                    query = query.WhereEqualsIgnoreCase(x => x.Id.ToString(), id);
+                    query.WhereEqualsIgnoreCase(x => x.Id.ToString(), id);
                 }
 
                 if (string.IsNullOrEmpty(id) && mode == RestApiCrudMode.Create)
@@ -165,7 +166,8 @@ namespace WebExpress.WebApp.WebRestApi
                     // paging
                     query.WithPaging(pageNumber * pageSize, pageSize);
 
-                    var data = Retrieve(query);
+                    using var context = CreateContext();
+                    var data = Retrieve(query, context);
 
                     // return all items
                     return new RestApiCrudResultRetrieveMany<TIndexItem>()
@@ -186,17 +188,31 @@ namespace WebExpress.WebApp.WebRestApi
         }
 
         /// <summary>
+        /// Creates a new instance of an object that implements the IQueryContext interface.
+        /// </summary>
+        /// <returns>
+        /// An IQueryContext instance that can be used to execute queries.
+        /// </returns>
+        protected virtual IQueryContext CreateContext()
+        {
+            return new DefaultQueryContext();
+        }
+
+        /// <summary>
         /// Retrieves a queryable collection of index items that match the specified query criteria.
         /// </summary>
         /// <param name="query">
         /// An object containing the query parameters used to filter and select index items. Cannot 
         /// be null.
         /// </param>
+        /// <param name="context">
+        /// The context in which the query is executed. Provides additional information or constraints 
+        /// for the retrieval operation. Cannot be null.</param>
         /// <returns>
         /// A collection representing the filtered set of index items. 
         /// The collection may be empty if no items match the query.
         /// </returns>
-        protected abstract IEnumerable<TIndexItem> Retrieve(IQuery<TIndexItem> query);
+        protected abstract IEnumerable<TIndexItem> Retrieve(IQuery<TIndexItem> query, IQueryContext context);
 
         /// <summary>
         /// Retrieves a result object containing default values and metadata for 
@@ -230,7 +246,8 @@ namespace WebExpress.WebApp.WebRestApi
         /// </returns>
         protected virtual IRestApiCrudResultRetrieve<TIndexItem> RetrieveForClone(IQuery<TIndexItem> query, IRequest request)
         {
-            var data = Retrieve(query)
+            using var context = CreateContext();
+            var data = Retrieve(query, context)
                 .FirstOrDefault();
 
             return new RestApiCrudResultRetrieve<TIndexItem>()
@@ -254,7 +271,8 @@ namespace WebExpress.WebApp.WebRestApi
         /// </returns>
         protected virtual IRestApiCrudResultRetrieve<TIndexItem> RetrieveForUpdate(IQuery<TIndexItem> query, IRequest request)
         {
-            var data = Retrieve(query)
+            using var context = CreateContext();
+            var data = Retrieve(query, context)
                 .FirstOrDefault();
 
             return new RestApiCrudResultRetrieve<TIndexItem>()
@@ -279,7 +297,8 @@ namespace WebExpress.WebApp.WebRestApi
         /// </returns>
         protected virtual IRestApiCrudResultRetrieveDelete<TIndexItem> RetrieveForDelete(IQuery<TIndexItem> query, IRequest request)
         {
-            var data = Retrieve(query)
+            using var context = CreateContext();
+            var data = Retrieve(query, context)
                 .FirstOrDefault();
 
             return new RestApiCrudResultRetrieveDelete<TIndexItem>()
@@ -309,7 +328,8 @@ namespace WebExpress.WebApp.WebRestApi
                 .WhereEquals(x => x.Id.ToString(), id);
 
             // locate the existing item by Id
-            var existingItem = Retrieve(query).FirstOrDefault();
+            using var context = CreateContext();
+            var existingItem = Retrieve(query, context).FirstOrDefault();
 
             if (existingItem == null)
             {
@@ -475,7 +495,8 @@ namespace WebExpress.WebApp.WebRestApi
             var query = new Query<TIndexItem>()
                 .WhereEquals(x => x.Id.ToString(), id);
 
-            var item = Retrieve(query).FirstOrDefault();
+            using var context = CreateContext();
+            var item = Retrieve(query, context).FirstOrDefault();
 
             if (item is null)
             {
