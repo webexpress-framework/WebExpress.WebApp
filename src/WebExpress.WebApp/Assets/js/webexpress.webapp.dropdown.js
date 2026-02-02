@@ -202,7 +202,7 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
                     params.set("p", String(this._page));
                 }
                 if (typeof this._pageSize === "number" && this._pageSize > 0) {
-                    params.set("s", String(this._pageSize));
+                    params.set("l", String(this._pageSize));
                 } else if (typeof this._max === "number" && this._max > 0) {
                     params.set("m", String(this._max));
                 }

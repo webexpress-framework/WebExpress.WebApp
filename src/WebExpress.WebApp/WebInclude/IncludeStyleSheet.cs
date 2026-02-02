@@ -15,6 +15,7 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/css/webexpress.webapp.popupnotification.css")]
     [Asset("/assets/css/webexpress.webapp.table.css")]
     [Asset("/assets/css/webexpress.webapp.taskprogressbar.css")]
+    [Asset("/assets/css/webexpress.webapp.wql.css")]
     public sealed class IncludeStyleSheet : IInclude
     {
 

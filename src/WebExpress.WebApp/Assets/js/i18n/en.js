@@ -42,5 +42,28 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "status.online": "Online",
     "status.connecting": "Connecting...",
     "status.error": "Error",
-    "status.offline": "Offline"
+    "status.offline": "Offline",
+    
+    // wql
+    "wql.placeholder": "wql",
+    "wql.status.initializing": "Initializing...",
+    "wql.status.ready": "Ready.",
+    "wql.status.sent": "Valid query sent.",
+    "wql.error.history.unavailable": "History unavailable.",
+    "wql.error.unknown": "Unknown error",
+    "wql.error.network": "Network error during validation.",
+    "wql.error.label": "Error",
+    "wql.no.suggestions": "No suggestions.",
+    "wql.type.input": "Input",
+    "wql.type.attribute": "Attribute",
+    "wql.type.operator": "Operator",
+    "wql.type.parameter": "Value",
+    "wql.type.set.parameter": "List Value",
+    "wql.type.parenthesis.open": "Start List",
+    "wql.type.set.next": "Separator",
+    "wql.type.after.parameter": "Option/Logic",
+    "wql.type.logical.operator": "Logic",
+    "wql.type.number": "Number",
+    "wql.tab.label": "Press <span class=\"wx-wql-key\">Tab</span> for <b>{0}</b>",
+    "wql.cursor.label": "Use <span class=\"wx-wql-key ms-5\">↑/↓</span> to navigate (<span class=\"text-muted\">{0}</span>)"
 });

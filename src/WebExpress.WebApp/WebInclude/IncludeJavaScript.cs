@@ -23,6 +23,7 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/js/webexpress.webapp.progress.task.js")]
     [Asset("/assets/js/webexpress.webapp.restform.js")]
     [Asset("/assets/js/webexpress.webapp.table.js")]
+    [Asset("/assets/js/webexpress.webapp.wql.prompt.js")]
     [Asset("/assets/js/i18n/en.js")]
     [Asset("/assets/js/i18n/de.js")]
     public sealed class IncludeJavaScript : IInclude

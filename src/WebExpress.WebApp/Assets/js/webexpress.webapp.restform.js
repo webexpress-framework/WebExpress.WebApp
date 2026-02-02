@@ -272,7 +272,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
   
             // Priority to confirmItem if present (works for delete OR critical edits)
             if (dataObj.confirmItem) {
-                this._displayDeletePromt(dataObj.confirmItem);
+                this._displayDeletePrompt(dataObj.confirmItem);
             } else {
                 this._displayProlog(dataObj.prolog);
             }
@@ -908,7 +908,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
      * Position: 4th (after prolog).
      * @param {string|null} confirmItem The required text for enabling submit.
      */
-    _displayDeletePromt(confirmItem) {
+    _displayDeletePrompt(confirmItem) {
         // store state for _setSubmitting logic
         this._confirmItem = confirmItem;
         this._confirmInput = null;

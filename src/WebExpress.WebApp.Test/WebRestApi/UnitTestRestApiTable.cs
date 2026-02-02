@@ -85,7 +85,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             var rows = root.GetProperty("rows").EnumerateArray().ToList();
             Assert.Single(rows);
 
-            Assert.NotNull(rows[0].GetProperty("id").GetString()); // die id ist ein GUID-String
+            Assert.NotNull(rows[0].GetProperty("id").GetString());
             var cells = rows[0].GetProperty("cells").EnumerateArray().ToList();
             Assert.Equal(4, cells.Count);
 

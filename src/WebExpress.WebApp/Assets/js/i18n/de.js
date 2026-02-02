@@ -42,6 +42,29 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "status.online": "Online",
     "status.connecting": "Verbindung wird aufgebaut",
     "status.error": "Fehler",
-    "status.offline": "Offline"
+    "status.offline": "Offline",
+
+    // wql
+    "wql.placeholder": "wql",
+    "wql.status.initializing": "Initialisiere...",
+    "wql.status.ready": "Bereit.",
+    "wql.status.sent": "Gültige Abfrage gesendet.",
+    "wql.error.history.unavailable": "Verlauf nicht verfügbar.",
+    "wql.error.unknown": "Unbekannter Fehler",
+    "wql.error.network": "Netzwerkfehler bei der Validierung.",
+    "wql.error.label": "Fehler",
+    "wql.no.suggestions": "Keine Vorschläge.",
+    "wql.type.input": "Eingabe",
+    "wql.type.attribute": "Attribut",
+    "wql.type.operator": "Operator",
+    "wql.type.parameter": "Wert",
+    "wql.type.set.parameter": "Listenwert",
+    "wql.type.parenthesis.open": "Listenstart",
+    "wql.type.set.next": "Trennzeichen",
+    "wql.type.after.parameter": "Option/Logik",
+    "wql.type.logical.operator": "Logik",
+    "wql.type.number": "Zahl",
+    "wql.tab.label": "<span class=\"wx-wql-key\">Tab</span> für <b>{0}</b>",
+    "wql.cursor.label": "<span class=\"wx-wql-key ms-5\">↑/↓</span> für (<span class=\"text-muted\">{0}</span>)"
 
 });
