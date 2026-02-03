@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using WebExpress.WebCore.WebAttribute;
@@ -23,9 +22,6 @@ namespace WebExpress.WebApp.WebRestApi
         // parser instance for WQL operations
         //private static readonly WqlParser<TIndexItem> parser = new ();
 
-        // history storage for queries
-        private static readonly List<string> queryHistory = new List<string>();
-
         // available attributes derived from TIndexItem properties
         private static readonly string[] availableAttributes = typeof(TIndexItem).GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Where(p => p.CanRead)
@@ -47,17 +43,21 @@ namespace WebExpress.WebApp.WebRestApi
         {
             // extract path segments to determine endpoint
             var path = request.Uri;
+            var last = path.PathSegments.LastOrDefault()?.Value;
             //var queryParams = HttpUtility.ParseQueryString(request.Uri.Query);
 
             // handle history endpoint
-            if (path.Contains("/history"))
+            if (last?.Equals("history") ?? false)
             {
-                //return new ResponseJson(JsonSerializer.Serialize(new { history = queryHistory }));
-                return new ResponseOK();
+                return new RestApiWqlPromptHistoryResult()
+                {
+                    History = GetHistory(request)
+                }
+                    .ToResponse();
             }
 
             // handle parse endpoint
-            if (path.Contains("/parse"))
+            if (last?.Equals("parse") ?? false)
             {
                 //var text = request.GetParameter("text")?.Value ?? "";
                 //var cursorPos = int.TryParse(queryParams["cursorPos"], out var pos) ? pos : 0;
@@ -67,7 +67,7 @@ namespace WebExpress.WebApp.WebRestApi
             }
 
             // handle suggestions endpoint
-            if (path.Contains("/suggestions"))
+            if (last?.Equals("suggestions") ?? false)
             {
                 //var type = queryParams["type"];
                 //var prefix = (queryParams["prefix"] ?? "").ToLower();
@@ -78,7 +78,7 @@ namespace WebExpress.WebApp.WebRestApi
             }
 
             // handle validate endpoint
-            if (path.Contains("/validate"))
+            if (last?.Equals("validate") ?? false)
             {
                 //var queryText = queryParams["query"] ?? "";
                 //var error = parser.Validate(queryText);
@@ -95,110 +95,22 @@ namespace WebExpress.WebApp.WebRestApi
         }
 
         /// <summary>
-        /// Gets suggestions based on type, prefix, and attribute.
+        /// Retrieves a collection of historical entries associated with the specified request.
         /// </summary>
-        /// <param name="type">The type of suggestion.</param>
-        /// <param name="prefix">The prefix to filter by.</param>
-        /// <param name="attribute">The attribute for parameter suggestions.</param>
-        /// <returns>List of suggestion items.</returns>
-        private List<string> GetSuggestions(string type, string prefix, string attribute)
+        /// <remarks>
+        /// Override this method in a derived class to provide custom history retrieval
+        /// logic.
+        /// </remarks>
+        /// <param name="request">
+        /// The request for which to retrieve history. Cannot be null.
+        /// </param>
+        /// <returns>
+        /// An enumerable collection of strings representing the history entries for the 
+        /// specified request. The collection is empty if no history is available.
+        /// </returns>
+        protected virtual IEnumerable<string> GetHistory(IRequest request)
         {
-            var items = new List<string>();
-
-            switch (type)
-            {
-                case "attribute":
-                    items = availableAttributes.ToList();
-                    break;
-
-                case "operator":
-                    items = operators.ToList();
-                    break;
-
-                case "parameter":
-                case "set_parameter":
-                case "parenthesis_open":
-                    // for parameters, suggest based on attribute type or known values
-                    // this is simplified; in full implementation, query index for unique values
-                    items = GetAttributeValues(attribute);
-                    break;
-
-                case "after_parameter":
-                    items = new List<string> { "and", "or", "~", ":", "order by", "take", "skip" };
-                    break;
-
-                case "logical_operator":
-                    items = new List<string> { "and", "or", "order by", "take", "skip" };
-                    break;
-
-                case "set_next":
-                    items = new List<string> { ",", ")" };
-                    break;
-
-                case "set_operator":
-                    items = new List<string> { "in", "not in" };
-                    break;
-
-                case "order_direction":
-                    items = new List<string> { "asc", "desc" };
-                    break;
-
-                case "number":
-                    items = new List<string> { "1", "5", "10", "100" };
-                    break;
-
-                default:
-                    items = new List<string>();
-                    break;
-            }
-
-            // filter by prefix
-            if (!string.IsNullOrEmpty(prefix))
-            {
-                if (new[] { "~", ":", ",", ")", "(" }.Contains(prefix))
-                {
-                    items = items.Where(i => i.StartsWith(prefix)).ToList();
-                }
-                else
-                {
-                    items = items.Where(i => i.ToLower().StartsWith(prefix)).ToList();
-                }
-            }
-
-            return items;
-        }
-
-        /// <summary>
-        /// Gets possible values for a given attribute from the index or known types.
-        /// </summary>
-        /// <param name="attribute">The attribute name.</param>
-        /// <returns>List of possible values.</returns>
-        private List<string> GetAttributeValues(string attribute)
-        {
-            // simplified: in real implementation, query the index for distinct values
-            // for now, return generic examples or type-based suggestions
-            var property = typeof(TIndexItem).GetProperty(attribute, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
-            if (property != null)
-            {
-                var type = property.PropertyType;
-                if (type == typeof(string))
-                {
-                    return new List<string> { "example1", "example2", "value" };
-                }
-                else if (type.IsEnum)
-                {
-                    return Enum.GetNames(type).ToList();
-                }
-                else if (type == typeof(bool))
-                {
-                    return new List<string> { "true", "false" };
-                }
-                else if (type == typeof(int) || type == typeof(long))
-                {
-                    return new List<string> { "1", "10", "100" };
-                }
-            }
-            return new List<string> { "value1", "value2" };
+            return [];
         }
     }
 }

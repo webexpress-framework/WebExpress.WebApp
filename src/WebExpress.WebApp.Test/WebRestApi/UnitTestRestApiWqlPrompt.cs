@@ -14,12 +14,12 @@ namespace WebExpress.WebApp.Test.WebRestApi
         /// and simple fields.
         /// </summary>
         [Fact]
-        public void Retrieve()
+        public void RetrieveHistory()
         {
             // arrange
             _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var wqlApi = new TestRestApiWqlPrompt<TestIndexItem>();
-            var request = UnitTestControlFixture.CreateRequestMock();
+            var request = UnitTestControlFixture.CreateRequestMock(uri: "/api/history");
 
             // act
             var result = wqlApi.Retrieve(request);
