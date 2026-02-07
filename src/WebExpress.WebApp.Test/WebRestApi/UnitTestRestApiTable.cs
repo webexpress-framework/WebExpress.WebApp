@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Text;
+using System.Text.Json;
 using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.Test.Model;
 
@@ -51,7 +52,8 @@ namespace WebExpress.WebApp.Test.WebRestApi
             Assert.NotNull(result);
             Assert.Equal(200, result.Status);
 
-            using var doc = JsonDocument.Parse((byte[])result.Content);
+            var json = Encoding.UTF8.GetString((byte[])result.Content);
+            using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
 
             Assert.Equal("Title", root.GetProperty("title").GetString());
@@ -89,10 +91,13 @@ namespace WebExpress.WebApp.Test.WebRestApi
             var cells = rows[0].GetProperty("cells").EnumerateArray().ToList();
             Assert.Equal(4, cells.Count);
 
-            Assert.Equal("A1", cells[0].GetProperty("text").GetString());
-            Assert.Equal("Anna;Bob", cells[1].GetProperty("text").GetString());
-            Assert.Equal("Active", cells[2].GetProperty("text").GetString());
-            Assert.Equal("hidden desc", cells[3].GetProperty("text").GetString());
+            Assert.Equal("A1", cells[0].GetProperty("content").GetString());
+            var array = cells[1].GetProperty("content").EnumerateArray().ToList();
+            Assert.Equal(2, array.Count);
+            Assert.Equal("Anna", array[0].GetString());
+            Assert.Equal("Bob", array[1].GetString());
+            Assert.Equal("Active", cells[2].GetProperty("content").GetString());
+            Assert.Equal("hidden desc", cells[3].GetProperty("content").GetString());
 
             var options = rows[0].GetProperty("options").EnumerateArray().ToList();
             Assert.Single(options);
@@ -106,7 +111,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             Assert.Equal("fa fa-pen", option.GetProperty("icon").GetString());
             Assert.Equal("text-primary", option.GetProperty("color").GetString());
             Assert.Null(option.GetProperty("modal").GetString());
-            Assert.Null(option.GetProperty("id").GetString());
+            Assert.NotNull(option.GetProperty("id").GetString());
 
             Assert.True(rows[0].TryGetProperty("icon", out var iconElement) && iconElement.ValueKind == JsonValueKind.Null);
             Assert.True(rows[0].TryGetProperty("image", out var imageElement) && imageElement.ValueKind == JsonValueKind.Null);

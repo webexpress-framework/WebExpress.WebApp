@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System;
+using System.Text.Json.Serialization;
 using WebExpress.WebCore.WebMessage;
 
 namespace WebExpress.WebApp.WebRestApi
@@ -34,6 +35,7 @@ namespace WebExpress.WebApp.WebRestApi
         public RestApiOption(IRequest request)
         {
             Request = request;
+            Id = Guid.NewGuid().ToString("N")[..8];
         }
     }
 }

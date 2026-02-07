@@ -13,11 +13,7 @@ namespace WebExpress.WebApp.WebRestApi
         private static readonly JsonSerializerOptions _jsonOptions = new()
         {
             WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            Converters =
-            {
-                new JsonImageIconConverter()
-            }
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
 
         /// <summary>

@@ -1,5 +1,4 @@
 ﻿using System.Text.Json.Serialization;
-using WebExpress.WebCore.WebIcon;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -9,10 +8,10 @@ namespace WebExpress.WebApp.WebRestApi
     public class RestApiTableCell
     {
         /// <summary>
-        /// Returns or sets the id.
+        /// Returns or sets the content.
         /// </summary>
-        [JsonPropertyName("text")]
-        public string Text { get; set; }
+        [JsonPropertyName("content")]
+        public object Content { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class.

@@ -2,7 +2,6 @@
 using System.Text;
 using System.Text.Json;
 using WebExpress.WebCore.WebMessage;
-using WebExpress.WebIndex;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -10,26 +9,18 @@ namespace WebExpress.WebApp.WebRestApi
     /// Represents the retrieve (many) result of a REST API retrieve operation
     /// that returns a collection of items.
     /// </summary>
-    /// <typeparam name="TIndexItem">
-    /// The type of the returned items. Must implement <see cref="IIndexItem"/>.
-    /// </typeparam>
-    public class RestApiCrudResultRetrieveMany<TIndexItem> : RestApiCrudResult
-        where TIndexItem : IIndexItem
+    public class RestApiCrudResultRetrieveMany : RestApiCrudResult
     {
         private static readonly JsonSerializerOptions _jsonOptions = new()
         {
             WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            Converters =
-            {
-                new JsonImageIconConverter()
-            }
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
 
         /// <summary>
         /// Returns or sets the collection of retrieved items.
         /// </summary>
-        public IEnumerable<TIndexItem> Data { get; set; }
+        public IEnumerable<object> Data { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class.

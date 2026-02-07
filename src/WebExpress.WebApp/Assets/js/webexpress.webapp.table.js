@@ -36,9 +36,9 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
         { label: "Loading...", width: null, visible: true }
     ];
     _previewBody = [
-        { cells: [{ text: "..." }, { text: "..." }, { text: "..." }] },
-        { cells: [{ text: "..." }, { text: "..." }, { text: "..." }] },
-        { cells: [{ text: "..." }, { text: "..." }, { text: "..." }] }
+        { cells: [{ content: "..." }, { content: "..." }, { content: "..." }] },
+        { cells: [{ content: "..." }, { content: "..." }, { content: "..." }] },
+        { cells: [{ content: "..." }, { content: "..." }, { content: "..." }] }
     ];
 
     /**
@@ -577,7 +577,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
             if (renderer) {
                 const opts = Object.assign({}, renderer.options, colDef.rendererOptions || {});
 
-                const val = (cell.text !== undefined && cell.text !== null) ? cell.text : (cell.value || "");
+                const val = (cell.content !== undefined && cell.content !== null) ? cell.content : (cell.value || "");
 
                 try {
                     const result = renderer.fn(val, this, row, cell, colDef.name || colDef.id, opts);
@@ -592,10 +592,10 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
                 }
             } else {
                 console.warn(`Table renderer type '${renderType}' not found.`);
-                wrap.textContent = (cell.text !== undefined && cell.text !== null) ? cell.text : (cell.value || "");
+                wrap.textContent = (cell.content !== undefined && cell.content !== null) ? cell.content : (cell.value || "");
             }
         } else {
-            wrap.appendChild(document.createTextNode(cell.text || ""));
+            wrap.appendChild(document.createTextNode(cell.content || ""));
         }
 
         const cellHref = cell.uri || null;

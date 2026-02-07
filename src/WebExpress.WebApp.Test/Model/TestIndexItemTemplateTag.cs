@@ -21,7 +21,6 @@ namespace WebExpress.WebApp.Test.Model
         /// </summary>
         [RestTableColumnName("Tags1")]
         [RestApiTableColumnTemplateTag(true)]
-        [RestTableJoin(';')]
         public IEnumerable<string> Tags1 { get; set; }
 
         /// <summary>
@@ -29,7 +28,6 @@ namespace WebExpress.WebApp.Test.Model
         /// </summary>
         [RestTableColumnName("Tags2")]
         [RestApiTableColumnTemplateTag(color: TypeColorTag.Warning)]
-        [RestTableJoin(';')]
         public IEnumerable<string> Tags2 { get; set; }
 
         /// <summary>
@@ -37,7 +35,6 @@ namespace WebExpress.WebApp.Test.Model
         /// </summary>
         [RestTableColumnName("Tags3")]
         [RestApiTableColumnTemplateTag(placeholder: "hello webexpress")]
-        [RestTableJoin(';')]
         public IEnumerable<string> Tags3 { get; set; }
     }
 }

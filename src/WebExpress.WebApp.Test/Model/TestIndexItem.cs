@@ -27,7 +27,6 @@ namespace WebExpress.WebApp.Test.Model
         /// Returns or sets the collection of names associated with the current entity.
         /// </summary>
         [RestTableColumnName("Names")]
-        [RestTableJoin(';')]
         public IEnumerable<string> Names { get; set; }
 
         /// <summary>

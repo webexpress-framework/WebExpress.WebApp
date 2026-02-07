@@ -1,33 +1,24 @@
 ﻿using System.Text;
 using System.Text.Json;
 using WebExpress.WebCore.WebMessage;
-using WebExpress.WebIndex;
 
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
     /// Represents the retrieve (single) result of a REST API CRUD operation.
     /// </summary>
-    /// <typeparam name="TIndexItem">
-    /// The type of items contained in the result. Must implement <see cref="IIndexItem"/>.
-    /// </typeparam>
-    public class RestApiCrudResultRetrieve<TIndexItem> : RestApiCrudResult, IRestApiCrudResultRetrieve<TIndexItem>
-        where TIndexItem : IIndexItem
+    public class RestApiCrudResultRetrieve : RestApiCrudResult, IRestApiCrudResultRetrieve
     {
         private static readonly JsonSerializerOptions _jsonOptions = new()
         {
             WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            Converters =
-            {
-                new JsonImageIconConverter()
-            }
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
 
         /// <summary>
         /// Returns or sets the item.
         /// </summary>
-        public TIndexItem Data { get; set; }
+        public object Data { get; set; }
 
         /// <summary>
         /// Returns or sets the title.

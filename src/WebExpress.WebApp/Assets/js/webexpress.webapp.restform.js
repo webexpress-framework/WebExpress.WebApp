@@ -327,10 +327,12 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
                 continue;
             }
 
-            // handle single elements
+            // handle elements
             const el = fieldOrList;
-            const ctrl = webexpress.webui.Controller.getInstanceByElement(el);
-            if (ctrl && typeof ctrl.value !== "undefined") {
+            const ctrl = webexpress.webui.Controller.getClosestInstance(el);
+
+            // ensure the controller is not the form itself and supports value assignment
+            if (ctrl && ctrl !== this && typeof ctrl.value !== "undefined") {
                 ctrl.value = value;
                 continue;
             }

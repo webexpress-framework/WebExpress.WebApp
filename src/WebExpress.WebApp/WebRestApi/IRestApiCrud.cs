@@ -1,6 +1,5 @@
 ﻿using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
-using WebExpress.WebIndex;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -8,12 +7,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// Defines a contract for RESTful CRUD (Create, Read, Update, Delete) operations on 
     /// a collection of indexed items.
     /// </summary>
-    /// <typeparam name="TIndexItem">
-    /// The type of items in the collection, which must implement the <see cref="IIndexItem"/> 
-    /// interface.
-    /// </typeparam>
-    public interface IRestApiCrud<TIndexItem> : IRestApi
-        where TIndexItem : IIndexItem
+    public interface IRestApiCrud : IRestApi
     {
         /// <summary>
         /// Creates data.

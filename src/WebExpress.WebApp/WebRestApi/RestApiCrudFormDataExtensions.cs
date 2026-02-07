@@ -96,13 +96,15 @@ namespace WebExpress.WebApp.WebRestApi
 
             foreach (var prop in properties)
             {
+                // skip properties that cannot be written to
                 if (!prop.CanWrite)
                 {
                     continue;
                 }
 
-                var key = prop.Name.ToLower();
+                var key = prop.Name.ToLowerInvariant();
 
+                // skip if the field is not present in the payload
                 if (!fieldMap.TryGetValue(key, out var rawValue))
                 {
                     continue;
@@ -116,11 +118,39 @@ namespace WebExpress.WebApp.WebRestApi
 
                 try
                 {
-                    object convertedValue = ConvertValue(rawValue, prop.PropertyType);
+                    // check for a generic RestConverterAttribute<TConverter>
+                    var converterAttr = prop
+                        .GetCustomAttributes(inherit: true)
+                        .FirstOrDefault(a =>
+                            a.GetType().IsGenericType &&
+                            a.GetType().GetGenericTypeDefinition() == typeof(RestConverterAttribute<>));
+
+                    if (converterAttr != null)
+                    {
+                        // extract the converter type from the attribute
+                        var converterType = (Type)converterAttr
+                            .GetType()
+                            .GetProperty(nameof(RestConverterAttribute<IRestValueConverter>.ConverterType))
+                            .GetValue(converterAttr);
+
+                        // instantiate the converter
+                        var converter = (IRestValueConverter)Activator.CreateInstance(converterType);
+
+                        // convert the raw value into the target type
+                        var converted = converter.FromRaw(rawValue, prop.PropertyType);
+
+                        // assign the converted value
+                        prop.SetValue(target, converted);
+                        continue;
+                    }
+
+                    // fallback
+                    var convertedValue = ConvertValue(rawValue, prop.PropertyType);
                     prop.SetValue(target, convertedValue);
                 }
                 catch
                 {
+                    // ignore
                 }
             }
         }
@@ -141,7 +171,11 @@ namespace WebExpress.WebApp.WebRestApi
         /// </returns>
         private static object ConvertValue(object value, Type targetType)
         {
-            if (typeof(IEnumerable<string>).IsAssignableFrom(targetType))
+            if (targetType == typeof(string))
+            {
+                return value;
+            }
+            else if (targetType.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>)))
             {
                 if (value is string s)
                 {

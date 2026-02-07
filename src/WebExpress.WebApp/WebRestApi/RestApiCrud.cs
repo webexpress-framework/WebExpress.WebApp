@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text.Json;
+using WebExpress.WebApp.WebAttribute;
 using WebExpress.WebApp.WebMessageQueue;
 using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
@@ -20,7 +22,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// Abstract class providing CRUD operations for REST API.
     /// </summary>
     /// <typeparam name="TIndexItem">Type of the index item.</typeparam>
-    public abstract class RestApiCrud<TIndexItem> : IRestApiCrud<TIndexItem>
+    public abstract class RestApiCrud<TIndexItem> : IRestApiCrud
         where TIndexItem : IIndexItem
     {
         private readonly JsonSerializerOptions _options = new()
@@ -170,9 +172,9 @@ namespace WebExpress.WebApp.WebRestApi
                     var data = Retrieve(query, context);
 
                     // return all items
-                    return new RestApiCrudResultRetrieveMany<TIndexItem>()
+                    return new RestApiCrudResultRetrieveMany()
                     {
-                        Data = data
+                        Data = data.Select(x => ConvertToJson(x))
                     }
                         .ToResponse();
                 }
@@ -223,11 +225,29 @@ namespace WebExpress.WebApp.WebRestApi
         /// A result instance representing the data and metadata required
         /// to initialize a new item for creation.
         /// </returns>
-        protected virtual IRestApiCrudResultRetrieve<TIndexItem> RetrieveForCreate(IRequest request)
+        protected virtual IRestApiCrudResultRetrieve RetrieveForCreate(IRequest request)
         {
-            return new RestApiCrudResultRetrieve<TIndexItem>()
+            return RetrieveForCreate(request, null);
+        }
+
+        /// <summary>
+        /// Retrieves the result object used to initialize a create operation in the REST API workflow.
+        /// </summary>
+        /// <param name="request">
+        /// The current request context containing information about the HTTP request and user 
+        /// environment.
+        /// </param>
+        /// <param name="title">
+        /// An optional title to use for the result. If null, a default localized title is provided.
+        /// </param>
+        /// <returns>
+        /// An <see cref="IRestApiCrudResultRetrieve"/> instance configured for the create operation.
+        /// </returns>
+        protected virtual IRestApiCrudResultRetrieve RetrieveForCreate(IRequest request, string title)
+        {
+            return new RestApiCrudResultRetrieve()
             {
-                Title = I18N.Translate(request, "webexpress.webapp:create.title")
+                Title = I18N.Translate(request, title ?? "webexpress.webapp:create.title")
             };
         }
 
@@ -244,16 +264,37 @@ namespace WebExpress.WebApp.WebRestApi
         /// A result instance representing the data and metadata required
         /// to initialize a new item for creation.
         /// </returns>
-        protected virtual IRestApiCrudResultRetrieve<TIndexItem> RetrieveForClone(IQuery<TIndexItem> query, IRequest request)
+        protected virtual IRestApiCrudResultRetrieve RetrieveForClone(IQuery<TIndexItem> query, IRequest request)
         {
             using var context = CreateContext();
             var data = Retrieve(query, context)
                 .FirstOrDefault();
 
-            return new RestApiCrudResultRetrieve<TIndexItem>()
+            return RetrieveForClone(request, data);
+        }
+
+        /// <summary>
+        /// Creates a result object for retrieving data intended to be used as the basis for a 
+        /// clone operation.
+        /// </summary>
+        /// <param name="request">
+        /// The current request context, used for localization and other request-specific information.
+        /// </param>
+        /// <param name="data">
+        /// The data item to be included in the result as the source for cloning.
+        /// </param>
+        /// <param name="title">
+        /// An optional title to display for the clone operation. If null, a default localized title is used.
+        /// </param>
+        /// <returns>
+        /// A result object containing the serialized data and a localized title for the clone operation.
+        /// </returns>
+        protected virtual IRestApiCrudResultRetrieve RetrieveForClone(IRequest request, TIndexItem data, string title = null)
+        {
+            return new RestApiCrudResultRetrieve()
             {
-                Title = I18N.Translate(request, "webexpress.webapp:clone.title"),
-                Data = data
+                Title = I18N.Translate(request, title ?? "webexpress.webapp:clone.title"),
+                Data = ConvertToJson(data)
             };
         }
 
@@ -269,16 +310,39 @@ namespace WebExpress.WebApp.WebRestApi
         /// A result instance representing the data and metadata required
         /// to initialize a new item for creation.
         /// </returns>
-        protected virtual IRestApiCrudResultRetrieve<TIndexItem> RetrieveForUpdate(IQuery<TIndexItem> query, IRequest request)
+        protected virtual IRestApiCrudResultRetrieve RetrieveForUpdate(IQuery<TIndexItem> query, IRequest request)
         {
             using var context = CreateContext();
             var data = Retrieve(query, context)
                 .FirstOrDefault();
 
-            return new RestApiCrudResultRetrieve<TIndexItem>()
+            return RetrieveForUpdate(request, data);
+        }
+
+        /// <summary>
+        /// Retrieves the specified item for update operations, preparing it for editing in the 
+        /// API response.
+        /// </summary>
+        /// <param name="request">
+        /// The current request context containing information about the API call. Cannot be null.
+        /// </param>
+        /// <param name="data">
+        /// The item to be retrieved and prepared for update. Represents the data to be edited.
+        /// </param>
+        /// <param name="title">
+        /// An optional title to use for the update operation. If null, a default localized title 
+        /// is used.
+        /// </param>
+        /// <returns>
+        /// A result object containing the item data and title, formatted for use in an 
+        /// update (edit) operation.
+        /// </returns>
+        protected virtual IRestApiCrudResultRetrieve RetrieveForUpdate(IRequest request, TIndexItem data, string title = null)
+        {
+            return new RestApiCrudResultRetrieve()
             {
-                Title = I18N.Translate(request, "webexpress.webapp:edit.title"),
-                Data = data
+                Title = I18N.Translate(request, title ?? "webexpress.webapp:edit.title"),
+                Data = ConvertToJson(data)
             };
         }
 
@@ -295,17 +359,45 @@ namespace WebExpress.WebApp.WebRestApi
         /// A result instance representing the data and metadata required
         /// to initialize a new item for creation.
         /// </returns>
-        protected virtual IRestApiCrudResultRetrieveDelete<TIndexItem> RetrieveForDelete(IQuery<TIndexItem> query, IRequest request)
+        protected virtual IRestApiCrudResultRetrieveDelete RetrieveForDelete(IQuery<TIndexItem> query, IRequest request)
         {
             using var context = CreateContext();
             var data = Retrieve(query, context)
                 .FirstOrDefault();
 
-            return new RestApiCrudResultRetrieveDelete<TIndexItem>()
+            return RetrieveForDelete(request, data, null, data.Id.ToString());
+        }
+
+        /// <summary>
+        /// Retrieves the specified item for delete operations, preparing the data and confirmation 
+        /// details for the client.
+        /// </summary>
+        /// <param name="request">
+        /// The current request context. Provides localization and user information for the 
+        /// operation. Cannot be null.
+        /// </param>
+        /// <param name="data">
+        /// The item to be retrieved and prepared for delete. Represents the data that will 
+        /// be sent to the client.
+        /// </param>
+        /// <param name="title">
+        /// An optional title to display for the delete operation. If null, a default localized 
+        /// title is used.
+        /// </param>
+        /// <param name="confirm">
+        /// The confirmation message to display to the user before proceeding with the delete.
+        /// </param>
+        /// <returns>
+        /// An object containing the prepared data, title, and confirmation message for 
+        /// the delete operation.
+        /// </returns>
+        protected virtual IRestApiCrudResultRetrieveDelete RetrieveForDelete(IRequest request, TIndexItem data, string title = null, string confirm = null)
+        {
+            return new RestApiCrudResultRetrieveDelete()
             {
-                Data = data,
-                Title = I18N.Translate(request, "webexpress.webapp:delete.title"),
-                ConfirmItem = data.Id.ToString(),
+                Title = I18N.Translate(request, title ?? "webexpress.webapp:delete.title"),
+                Data = ConvertToJson(data),
+                ConfirmItem = confirm,
             };
         }
 
@@ -547,6 +639,69 @@ namespace WebExpress.WebApp.WebRestApi
             return new RestApiCrudResultDelete()
             {
             };
+        }
+
+        /// <summary>
+        /// Converts the specified index item to a dictionary representation suitable for JSON 
+        /// serialization.
+        /// </summary>
+        /// <param name="source">
+        /// The index item to convert. Cannot be null.
+        /// </param>
+        /// <returns>
+        /// A dictionary containing the public property names and their corresponding values from the source object,
+        /// suitable for JSON serialization; or null if the source is null.
+        /// </returns>
+        private static IDictionary<string, object> ConvertToJson(TIndexItem source)
+        {
+            if (source == null)
+            {
+                return null;
+            }
+
+            var result = new Dictionary<string, object>();
+            var type = source.GetType();
+
+            foreach (var prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            {
+                if (!prop.CanRead)
+                {
+                    continue;
+                }
+
+                var value = prop.GetValue(source);
+
+                // look for RestConverter<T>
+                var converterAttr = prop
+                    .GetCustomAttributes(inherit: true)
+                    .FirstOrDefault
+                    (
+                        a =>
+                        a.GetType().IsGenericType &&
+                        a.GetType().GetGenericTypeDefinition() == typeof(RestConverterAttribute<>)
+                    );
+
+                if (converterAttr != null)
+                {
+                    var converterType = (Type)converterAttr
+                        .GetType()
+                        .GetProperty(nameof(RestConverterAttribute<IRestValueConverter>.ConverterType))
+                        .GetValue(converterAttr);
+
+                    var converter = (IRestValueConverter)Activator.CreateInstance(converterType);
+
+                    // convert to raw representation
+                    var raw = converter.ToRaw(value, prop.PropertyType);
+
+                    result[prop.Name] = raw;
+                    continue;
+                }
+
+                // fallback
+                result[prop.Name] = value;
+            }
+
+            return result;
         }
 
         /// <summary>

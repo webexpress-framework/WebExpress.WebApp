@@ -181,28 +181,12 @@ namespace WebExpress.WebApp.WebRestApi
                                 Id = row.Id.ToString(),
                                 Cells = _cachedColumns.Select(x =>
                                 {
-                                    // check if property has a RestTableJoinAttribute
                                     var value = x.Key.GetValue(row);
-                                    var text = string.Empty;
-
-                                    // join logic handling
-                                    if (x.Key.GetCustomAttributes(typeof(RestTableJoinAttribute), false).FirstOrDefault() is RestTableJoinAttribute joinAttr && value is IEnumerable enumerableValue && value is not string)
-                                    {
-                                        var enumerable = enumerableValue.Cast<object>();
-                                        var separator = joinAttr.Separator.ToString();
-                                        text = string.Join(separator, enumerable.Select
-                                        (
-                                            item => item?.ToString() ?? string.Empty)
-                                        );
-                                    }
-                                    else
-                                    {
-                                        text = value?.ToString() ?? string.Empty;
-                                    }
+                                    var text = ConvertToCellValue(value, x.Key);
 
                                     return new RestApiTableCell
                                     {
-                                        Text = text
+                                        Content = text
                                     };
                                 }),
                                 Options = GetOptions(row, request),
@@ -411,6 +395,69 @@ namespace WebExpress.WebApp.WebRestApi
             }
 
             return value?.ToString() ?? "";
+        }
+
+        /// <summary>
+        /// Converts the specified value to a cell-compatible object, returning a string, 
+        /// an array of strings, or null as appropriate.
+        /// </summary>
+        /// <param name="value">
+        /// The value to convert. Can be a string, an enumerable of strings or objects, or any 
+        /// other object.
+        /// </param>
+        /// <returns>
+        /// A string if the value is a string; an array of strings if the value is an enumerable; 
+        /// otherwise, the string representation of the value. Returns null if the input value 
+        /// is null.
+        /// </returns>
+        private static object ConvertToCellValue(object value, PropertyInfo prop)
+        {
+            if (value == null)
+            {
+                return null;
+            }
+
+            // check for RestConverter<T>
+            var converterAttr = prop
+                .GetCustomAttributes(inherit: true)
+                .FirstOrDefault
+                (
+                    a =>
+                    a.GetType().IsGenericType &&
+                    a.GetType().GetGenericTypeDefinition() == typeof(RestConverterAttribute<>)
+                );
+
+            if (converterAttr != null)
+            {
+                var converterType = (Type)converterAttr
+                    .GetType()
+                    .GetProperty(nameof(RestConverterAttribute<IRestValueConverter>.ConverterType))
+                    .GetValue(converterAttr);
+
+                var converter = (IRestValueConverter)Activator.CreateInstance(converterType);
+
+                // convert to raw representation for table cells
+                return converter.ToRaw(value, prop.PropertyType);
+            }
+
+            // no converter
+            if (value is string s)
+            {
+                return s;
+            }
+
+            if (value is IEnumerable<string> stringEnum)
+            {
+                return stringEnum.ToArray();
+            }
+
+            if (value is IEnumerable<object> objEnum)
+            {
+                return objEnum.ToArray();
+            }
+
+            // fallback
+            return value.ToString();
         }
     }
 }

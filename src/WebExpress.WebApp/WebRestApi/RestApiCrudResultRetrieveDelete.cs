@@ -1,18 +1,13 @@
 ﻿using System.Text;
 using System.Text.Json;
 using WebExpress.WebCore.WebMessage;
-using WebExpress.WebIndex;
 
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
     /// Represents the retrieve (single) result for deletion of a REST API CRUD operation.
     /// </summary>
-    /// <typeparam name="TIndexItem">
-    /// The type of items contained in the result. Must implement <see cref="IIndexItem"/>.
-    /// </typeparam>
-    public class RestApiCrudResultRetrieveDelete<TIndexItem> : RestApiCrudResultRetrieve<TIndexItem>, IRestApiCrudResultRetrieveDelete<TIndexItem>
-        where TIndexItem : IIndexItem
+    public class RestApiCrudResultRetrieveDelete : RestApiCrudResultRetrieve, IRestApiCrudResultRetrieveDelete
     {
         private static readonly JsonSerializerOptions _jsonOptions = new()
         {

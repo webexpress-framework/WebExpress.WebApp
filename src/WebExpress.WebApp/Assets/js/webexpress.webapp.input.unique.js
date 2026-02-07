@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Unique input control that validates a text value against a remote API for uniqueness.
  * The initial value is not validated until it changes. An optional debounce can be 
  * configured via data-debounce (milliseconds).
@@ -18,7 +18,7 @@ webexpress.webapp.InputUniqueCtrl = class extends webexpress.webui.Ctrl {
         // read configuration from attributes
         const el = this._element;
         this._fieldName = el.getAttribute("name") || "unique";
-        this._initialValue = el.getAttribute("data-value") || "";
+        this._initialValue = el.getAttribute("data-value") || null;
         this._url = el.getAttribute("data-uri") || el.getAttribute("data-url") || "";
         this._method = (el.getAttribute("data-method") || "GET").toUpperCase();
         this._param = el.getAttribute("data-param") || "v";
@@ -36,7 +36,7 @@ webexpress.webapp.InputUniqueCtrl = class extends webexpress.webui.Ctrl {
         this._debounceMs = parseInt(el.getAttribute("data-debounce") || "0", 10);
 
         // internal state initialization
-        this._currentValue = this._initialValue;
+        this._currentValue = this._initialValue ?? "";
         this._abortController = null;
         this._pendingTimer = null;
         this._destroyed = false;
@@ -484,10 +484,23 @@ webexpress.webapp.InputUniqueCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
         const newVal = typeof v === "string" ? v : "";
+
+        // if unchanged → do nothing
+        if (newVal === this._currentValue) {
+            return;
+        }
+
+        if (!this._initialValue) {
+            this._initialValue = newVal;
+        }
+        
         this._input.value = newVal;
         this._currentValue = newVal;
-        // force scheduling to respect debounce logic
-        this._scheduleCheck(true);
+
+        if (this._currentValue !== this._initialValue) {
+            // force scheduling to respect debounce logic
+            this._scheduleCheck(true);
+        }
     }
 
     /**
