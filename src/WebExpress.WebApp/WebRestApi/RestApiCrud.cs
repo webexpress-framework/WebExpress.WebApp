@@ -417,7 +417,7 @@ namespace WebExpress.WebApp.WebRestApi
             }
 
             var query = new Query<TIndexItem>()
-                .WhereEquals(x => x.Id.ToString(), id);
+                .WhereEquals(x => x.Id, Guid.Parse(id));
 
             // locate the existing item by Id
             using var context = CreateContext();
