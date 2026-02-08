@@ -165,7 +165,7 @@ namespace WebExpress.WebApp.WebRestApi
                    });
 
                 using var context = CreateContext();
-                var rows = Retrieve(query, context);
+                var rows = Retrieve(query, context, request) ?? [];
 
                 var result = new RestApiTableResult()
                 {
@@ -327,11 +327,15 @@ namespace WebExpress.WebApp.WebRestApi
         /// The context in which the query is executed. Provides additional information or constraints 
         /// for the retrieval operation. Cannot be null.
         /// </param>
+        /// <param name="request">
+        /// The request that provides the operational context for resolving
+        /// the appropriate REST API URI.
+        /// </param>
         /// <returns>
         /// A collection representing the filtered set of index items. 
         /// The collection may be empty if no items match the query.
         /// </returns>
-        protected abstract IEnumerable<TIndexItem> Retrieve(IQuery<TIndexItem> query, IQueryContext context);
+        protected abstract IEnumerable<TIndexItem> Retrieve(IQuery<TIndexItem> query, IQueryContext context, IRequest request);
 
         /// <summary>
         /// Applies filtering criteria to the specified query based on the provided WQL statement.
