@@ -11,7 +11,7 @@ using WebExpress.WebCore.WebSettingPage;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebIcon;
 
-namespace WebExpress.WebApp.WWW.Setting.System
+namespace WebExpress.WebApp.WWW.Settings.System
 {
     /// <summary>
     /// Settings page with system information.
@@ -85,7 +85,6 @@ namespace WebExpress.WebApp.WWW.Setting.System
                     })
                 );
 
-            // zusätzliche Zeilen gemäß neuer API hinzufügen (Umstellung der alten Kommentare)
             serverTable.AddRow
             (
                 new ControlTableCell()

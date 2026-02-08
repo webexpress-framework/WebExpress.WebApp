@@ -10,7 +10,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// System.Text.Json.JsonElement instances into commonly used .NET types, such as dictionaries, lists, and primitive
     /// values. It is intended to simplify working with dynamic or loosely-typed JSON data in .NET
     /// applications.</remarks>
-    public static class JsonExtensionsFieldMap
+    internal static class JsonExtensionsFieldMap
     {
         /// <summary>
         /// Converts a <see cref="JsonElement"/> to a corresponding .NET object representation suitable for use as a

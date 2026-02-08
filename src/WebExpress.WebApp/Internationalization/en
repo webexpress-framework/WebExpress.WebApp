@@ -201,3 +201,8 @@ setting.usermanager.user.edit.groups.label=Groups:
 setting.usermanager.user.edit.groups.description=Assign the desired groups to the user.
 setting.usermanager.user.edit.groups.available=Available groups
 setting.usermanager.user.edit.groups.selected=Selected groups
+
+setting.sitemap.title=Sitemap
+setting.sitemap.label=Sitemap
+setting.sitemap.notavailable=The sitemap is not available. Please make sure that the sitemap module is installed and activated.
+setting.sitemap.description=The sitemap provides an overview of the structure of the web application. It lists all available pages and their relationships to each other. This allows users to quickly navigate to the desired page and get an overview of the content offered by the web application.

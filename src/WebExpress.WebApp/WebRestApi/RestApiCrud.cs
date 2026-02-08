@@ -51,7 +51,7 @@ namespace WebExpress.WebApp.WebRestApi
 
             if (!string.IsNullOrWhiteSpace(id))
             {
-                query.WhereEqualsIgnoreCase(x => x.Id.ToString(), id);
+                query.WhereEquals(x => x.Id, Guid.Parse(id));
             }
 
             // retrieve existing item if id is provided
@@ -136,7 +136,7 @@ namespace WebExpress.WebApp.WebRestApi
 
                 if (!string.IsNullOrWhiteSpace(id))
                 {
-                    query.WhereEqualsIgnoreCase(x => x.Id.ToString(), id);
+                    query.WhereEquals(x => x.Id, Guid.Parse(id));
                 }
 
                 if (string.IsNullOrEmpty(id) && mode == RestApiCrudMode.Create)
@@ -585,7 +585,7 @@ namespace WebExpress.WebApp.WebRestApi
             }
 
             var query = new Query<TIndexItem>()
-                .WhereEquals(x => x.Id.ToString(), id);
+                .WhereEquals(x => x.Id, Guid.Parse(id));
 
             using var context = CreateContext();
             var item = Retrieve(query, context).FirstOrDefault();

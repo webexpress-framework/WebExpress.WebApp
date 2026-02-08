@@ -201,3 +201,7 @@ setting.usermanager.user.edit.groups.label=Gruppen:
 setting.usermanager.user.edit.groups.description=Ordnen Sie die gewünschten Gruppen dem Benutzer zu.
 setting.usermanager.user.edit.groups.available=Verfügbare Gruppen
 setting.usermanager.user.edit.groups.selected=Ausgewählte Gruppen
+
+setting.sitemap.title=Sitemap
+setting.sitemap.label=Sitemap
+setting.sitemap.description=Hier können Sie die Sitemap der Webanwendung einsehen. Die Sitemap stellt die Struktur der Webseite dar und zeigt alle verfügbaren Seiten und deren Hierarchie an. Sie können die Sitemap verwenden, um schnell zu bestimmten Seiten zu navigieren oder um einen Überblick über die gesamte Webseite zu erhalten.

@@ -12,7 +12,7 @@ using WebExpress.WebCore.WebTask;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebIcon;
 
-namespace WebExpress.WebApp.WWW.Setting.System
+namespace WebExpress.WebApp.WWW.Settings.System
 {
     /// <summary>
     /// Settings page with information about the active plugins.
