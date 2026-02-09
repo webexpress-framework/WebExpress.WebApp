@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using WebExpress.WebApp.WebControl;
+using WebExpress.WebApp.WebSection;
+using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebComponent;
 using WebExpress.WebCore.WebEndpoint;
@@ -9,6 +11,7 @@ using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebPage;
 using WebExpress.WebCore.WebTheme;
 using WebExpress.WebUI.WebControl;
+using WebExpress.WebUI.WebFragment;
 using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.WebPage
@@ -116,6 +119,8 @@ namespace WebExpress.WebApp.WebPage
             var html = new HtmlElementRootHtml();
             var body = new HtmlElementSectionBody();
             var renderContext = new RenderControlContext(context.RenderContext);
+
+            // head
             html.Head.Title = I18N.Translate(context.Request, Title);
             html.Head.Favicons = Favicons;
             html.Head.Base = Base?.ToString();
@@ -125,17 +130,29 @@ namespace WebExpress.WebApp.WebPage
             html.Head.CssLinks = CssLinks.Where(x => x is not null).Select(x => x.ToString());
             html.Head.ScriptLinks = HeaderScriptLinks?.Where(x => x is not null).Select(x => x.ToString());
 
-            // header
+            // body
             Header.AppTitle.SetTitle(html.Head.Title);
             if (Theme?.ThemeMode == ThemeMode.Dark)
             {
                 html.Body.AddUserAttribute("data-bs-theme", "dark");
             }
+
+            var preferences = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionBodyPreferences>
+            (
+                renderContext?.PageContext
+            );
+            html.Body.Add(preferences.Select(x => x.Render(renderContext, this)));
             html.Body.Add(MessageQueueUri);
             html.Body.Add(Header.Render(renderContext, this));
             html.Body.Add(Toast.Render(renderContext, this));
             html.Body.Add(Breadcrumb.Render(renderContext, this, context.Request.Uri));
             html.Body.Add(Prologue.Render(renderContext, this));
+
+            var primary = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionBodyPrimary>
+            (
+                renderContext?.PageContext
+            );
+            html.Body.Add(primary.Select(x => x.Render(renderContext, this)));
 
             var split = new ControlPanelSplit
             (
@@ -160,6 +177,13 @@ namespace WebExpress.WebApp.WebPage
             html.Body.Add(NotificationPopup.Render(renderContext, this));
 
             html.Body.Scripts = [.. Scripts.Values];
+
+            var secondary = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionBodySecondary>
+            (
+                renderContext?.PageContext
+            );
+
+            html.Body.Add(secondary.Select(x => x.Render(renderContext, this)));
 
             return html;
         }
