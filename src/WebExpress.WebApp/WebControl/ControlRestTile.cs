@@ -8,9 +8,9 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Represents a control panel for API list interactions.
+    /// Represents a control panel for API tile interactions.
     /// </summary>
-    public class ControlRestList : ControlPanel, IControlRestList
+    public class ControlRestTile : ControlPanel, IControlRestTile
     {
         private readonly List<ControlRestListOptionItem> _optionItems = [];
 
@@ -23,7 +23,7 @@ namespace WebExpress.WebApp.WebControl
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The control id.</param>
-        public ControlRestList(string id = null)
+        public ControlRestTile(string id = null)
             : base(id ?? Guid.NewGuid().ToString())
         {
         }
@@ -39,7 +39,7 @@ namespace WebExpress.WebApp.WebControl
             var html = new HtmlElementTextContentDiv()
             {
                 Id = Id,
-                Class = Css.Concatenate("wx-webapp-list", GetClasses()),
+                Class = Css.Concatenate("wx-webapp-tile", GetClasses()),
                 Style = GetStyles()
             }
                 .AddUserAttribute("data-uri", RestUri?.ToString());

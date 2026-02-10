@@ -6,20 +6,20 @@ using WebExpress.WebApp.Test.Model;
 namespace WebExpress.WebApp.Test.WebRestApi
 {
     /// <summary>
-    /// Provides unit tests for verifying the behavior of the RestApiTable class.
+    /// Provides unit tests for verifying the behavior of the RestApiTile class.
     /// </summary>
     [Collection("NonParallelTests")]
-    public class UnitTestRestApiTable
+    public class UnitTestRestApiTile
     {
         /// <summary>
-        /// Tests that the table title is set correctly when a new instance of the 
-        /// RestApiTable is created.
+        /// Tests that the tile title is set correctly when a new instance of the 
+        /// RestApiTile is created.
         /// </summary>
         [Fact]
         public void SetTitle()
         {
             // act
-            var table = new TestRestApiTable([], "my title");
+            var table = new TestRestApiTile([], "my title");
 
             // vallidation
             Assert.Equal("my title", table.Title);
@@ -42,11 +42,11 @@ namespace WebExpress.WebApp.Test.WebRestApi
                 Description = "hidden desc"
             };
             _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
-            var table = new TestRestApiTable<TestIndexItem>([item], "Title");
+            var tile = new TestRestApiTile<TestIndexItem>([item], "Title");
             var request = UnitTestControlFixture.CreateRequestMock();
 
             // act
-            var result = table.Retrieve(request);
+            var result = tile.Retrieve(request);
 
             // vallidation
             Assert.NotNull(result);
@@ -116,61 +116,6 @@ namespace WebExpress.WebApp.Test.WebRestApi
             Assert.True(rows[0].TryGetProperty("icon", out var iconElement) && iconElement.ValueKind == JsonValueKind.Null);
             Assert.True(rows[0].TryGetProperty("image", out var imageElement) && imageElement.ValueKind == JsonValueKind.Null);
             Assert.True(rows[0].TryGetProperty("uri", out var uriElement) && uriElement.ValueKind == JsonValueKind.Null);
-        }
-
-        /// <summary>
-        /// Verifies that the template tag functionality correctly retrieves and 
-        /// validates table column data in a REST API scenario.
-        /// </summary>
-        [Fact]
-        public void TemplateTag()
-        {
-            // arrange
-            var item = new TestIndexItemTemplateTag
-            {
-                Id = Guid.NewGuid()
-            };
-            var table = new TestRestApiTable<TestIndexItemTemplateTag>([item], "Title");
-            var request = UnitTestControlFixture.CreateRequestMock();
-
-            // act
-            var result = table.Retrieve(request);
-
-            // vallidation
-            Assert.NotNull(result);
-            Assert.Equal(200, result.Status);
-
-            using var doc = JsonDocument.Parse((byte[])result.Content);
-            var root = doc.RootElement;
-
-            var columns = root.GetProperty("columns").EnumerateArray().ToList();
-            Assert.Equal(3, columns.Count);
-
-            //var buf = columns[0].GetRawText();
-
-            var template = columns[0].GetProperty("template");
-            Assert.Equal("tag", template.GetProperty("type").GetString());
-
-            var options = template.GetProperty("options");
-            Assert.True(options.GetProperty("editable").GetBoolean());
-            Assert.Equal("", options.GetProperty("colorCss").GetString());
-            Assert.Equal(JsonValueKind.Null, options.GetProperty("placeholder").ValueKind);
-
-            template = columns[1].GetProperty("template");
-            Assert.Equal("tag", template.GetProperty("type").GetString());
-
-            options = template.GetProperty("options");
-            Assert.False(options.GetProperty("editable").GetBoolean());
-            Assert.Equal("wx-tag-warning", options.GetProperty("colorCss").GetString());
-            Assert.Equal(JsonValueKind.Null, options.GetProperty("placeholder").ValueKind);
-
-            template = columns[2].GetProperty("template");
-            Assert.Equal("tag", template.GetProperty("type").GetString());
-
-            options = template.GetProperty("options");
-            Assert.False(options.GetProperty("editable").GetBoolean());
-            Assert.Equal("", options.GetProperty("colorCss").GetString());
-            Assert.Equal("hello webexpress", options.GetProperty("placeholder").GetString());
         }
     }
 }

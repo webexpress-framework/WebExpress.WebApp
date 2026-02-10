@@ -10,26 +10,14 @@
 webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderable {
 
     _restUri = "";
-    _titleDiv = null;
-    _progressDiv = null;
-    _filterDiv = null;
-    _statusDiv = null;
-    _paginationDiv = null;
-
-    _filterCtrl = null;
-    _paginationCtrl = null;
-
-    _filter = null;
+    _orderBy = null;      // current sort column id
+    _orderDir = null;     // current sort direction ('asc'/'desc')
+    
+    _filter = "";
     _page = 0;
-    _hasOptions = false;
+    _pageSize = 50;
 
-    _columnSearchTimer = null;
-
-    _orderBy = null;      // sort column id ('o')
-    _orderDir = null;     // sort direction ('d')
-    _pageSize = 50;       // page size ('limit'), default 50
-
-    // placeholder data for loading state
+    // placeholder data for initial state
     _previewColumns = [
         { label: "Loading...", width: null, visible: true },
         { label: "Loading...", width: null, visible: true },
@@ -51,170 +39,50 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
         this._restUri = element.dataset.uri || "";
         element.removeAttribute("data-uri");
 
-        this._initRestUi(element);
         this._initPersistenceListeners(element);
 
+        // set initial placeholder state
         this._columns = this._previewColumns;
         this._rows = this._previewBody;
         this._table.classList.add("placeholder-glow");
 
         this.render();
 
-        // set up sort event handler to use 'o'/'d' as state
+        // setup sort event listener
         document.addEventListener(webexpress.webui.Event.TABLE_SORT_EVENT, (e) => {
             const detail = e.detail || {};
-            if (detail.columnId) {
+            // filter: Respond only if this specific table triggered the sort
+            if (detail.columnId && (!detail.id || detail.id === this._element.id)) {
                 this._orderBy = detail.columnId;
                 this._orderDir = detail.sortDirection;
-                this._receiveData();
+                
+                // if standalone (REST URI present), reload internally
+                if (this._restUri) {
+                    this._receiveData();
+                } else {
+                    // dispatch a specific request event for external controllers (ViewCtrl)
+                    this._element.dispatchEvent(new CustomEvent("wx-req-sort", {
+                        bubbles: true,
+                        detail: { 
+                            orderBy: this._orderBy, 
+                            orderDir: this._orderDir 
+                        }
+                    }));
+                }
             }
         });
 
-        this._receiveData();
-    }
-
-    /**
-     * Initializes the REST specific UI elements (toolbar, statusbar).
-     * @param {HTMLElement} element Host element.
-     */
-    _initRestUi(element) {
-        const createDiv = (cls) => {
-            const d = document.createElement("div");
-            if (cls) {
-                d.className = cls;
-            }
-            return d;
-        };
-
-        this._titleDiv = document.createElement("h3");
-        this._titleDiv.className = "me-auto";
-
-        this._filterDiv = createDiv("col-3");
-
-        const toolbar = createDiv("wx-toolbar");
-        toolbar.appendChild(this._titleDiv);
-        toolbar.appendChild(this._filterDiv);
-
-        this._progressDiv = createDiv("progress");
-        this._progressDiv.setAttribute("role", "status");
-        this._progressDiv.style.height = "0.5em";
-        
-        const bar = createDiv("progress-bar progress-bar-striped progress-bar-animated");
-        bar.style.width = "100%";
-        this._progressDiv.appendChild(bar);
-
-        element.insertBefore(toolbar, this._table);
-        element.insertBefore(this._progressDiv, this._table);
-
-        this._statusDiv = document.createElement("span");
-        this._paginationDiv = createDiv("justify-content-end");
-
-        const statusbar = createDiv("wx-table-statusbar");
-        statusbar.appendChild(this._statusDiv);
-        statusbar.appendChild(this._paginationDiv);
-
-        element.appendChild(statusbar);
-
-        this._filterCtrl = new webexpress.webui.SearchCtrl(this._filterDiv);
-        this._paginationCtrl = new webexpress.webui.PaginationCtrl(this._paginationDiv);
-
-        document.addEventListener(webexpress.webui.Event.CHANGE_FILTER_EVENT, (event) => {
-            const data = event.detail || {};
-            if (data.sender && data.sender === this._filterDiv) {
-                this._filter = data.value;
-                this._page = 0;
-                this._receiveData();
-            }
-        });
-
-        document.addEventListener(webexpress.webui.Event.CHANGE_PAGE_EVENT, (event) => {
-            const data = event.detail || {};
-            if (data.sender && data.sender === this._paginationDiv) {
-                this._page = data.page;
-                this._receiveData();
-            }
-        });
-
-        document.addEventListener(webexpress.webapp.Event.UPDATE_EVENT, (event) => {
+        // trigger initial fetch if configured as standalone
+        if (this._restUri) {
             this._receiveData();
-        });
-    }
-
-    /**
-     * Initializes listeners for layout changes to persist them via REST.
-     * @param {HTMLElement} element Host element.
-     */
-    _initPersistenceListeners(element) {
-        element.addEventListener(webexpress.webui.Event.COLUMN_REORDER_EVENT, (e) => {
-            // Send visible column ids in order as 'c' per spec. Only IDs, not names/labels.
-            const colOrder = this._columns
-                .filter((c) => c.visible)
-                .map((c) => c.id)
-                .join(",");
-            this._sendStateToServer({ c: colOrder });
-        });
-
-        element.addEventListener(webexpress.webui.Event.COLUMN_VISIBILITY_EVENT, (e) => {
-            // Also send the full new visible column ids as 'c' per spec after any vis toggle.
-            const colOrder = this._columns
-                .filter((c) => c.visible)
-                .map((c) => c.id)
-                .join(",");
-            this._sendStateToServer({ c: colOrder });
-        });
-
-        element.addEventListener(webexpress.webui.Event.ROW_REORDER_EVENT, (e) => {
-            // Send current row ids in order as 'r' per spec. Only IDs.
-            const rowOrder = this._rows.map((r) => r.id).join(",");
-            this._sendStateToServer({ r: rowOrder });
-        });
-
-        // Sort event triggers a reload with o/d parameters, not persisted via server PUT/POST.
-    }
-
-    /**
-     * Sends the current column or row state (with ids) to the server using PUT, per REST-API conventions.
-     * Only the relevant property is sent: { c: "..."} or { r: "..." }.
-     * Always uses only ids and only sends changed order.
-     * @param {Object} stateObj Eg {c: "..."} or {r: "..."}
-     */
-    _sendStateToServer(stateObj) {
-        if (!this._restUri) {
-            return;
         }
-
-        if (this._progressDiv) {
-            this._progressDiv.style.visibility = "visible";
-        }
-
-        fetch(this._restUri, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(stateObj)
-        })
-        .then((res) => {
-            if (!res.ok) {
-                throw new Error("Update failed");
-            }
-        })
-        .catch((err) => {
-            console.error(`Failed to update table state:`, err);
-        })
-        .finally(() => {
-            if (this._progressDiv) {
-                this._progressDiv.style.visibility = "hidden";
-            }
-        });
     }
 
     /**
-     * Fetches table data from the configured REST endpoint using correct new API parameters.
-     * Uses only IDs and correct param names for sort (o/d), page (p), pagesize (limit), filter (q).
+     * Fetches data from the configured REST endpoint (Standalone Mode).
      */
     _receiveData() {
-        if (this._progressDiv) {
-            this._progressDiv.style.visibility = "visible";
-        }
+        if (!this._restUri) return;
 
         const filter = encodeURIComponent(this._filter ?? "");
         const separator = this._restUri.includes("?") ? "&" : "?";
@@ -229,213 +97,135 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
 
         fetch(url)
             .then((res) => {
-                if (!res.ok) {
-                    throw new Error("Request failed");
-                }
+                if (!res.ok) throw new Error("Request failed");
                 return res.json();
             })
             .then((response) => {
-                const page = response.pagination?.page ?? 0;
-                const pageSize = response.pagination?.pageSize ?? 50;
-                const total = response.pagination?.total ?? 0;
-                const totalPages = Math.ceil(total / pageSize);
-                const startIndex = page * pageSize + 1;
-                const endIndex = Math.min(startIndex + pageSize - 1, total);
-
-                this._columns = (response.columns || []).map((c, idx) => {
-                    // correct parsing of template structure
-                    let rType = c.rendererType || null;
-                    let rOpts = c.rendererOptions || {};
-
-                    if (c.template && typeof c.template === "object") {
-                        rType = c.template.type;
-                        rOpts = c.template.options || {};
-                        // propagate editable flag if present in template
-                        if (c.template.editable) {
-                            rOpts.editable = c.template.editable;
-                        }
-                    }
-
-                    return {
-                        id: c.id || `col_${idx}`,
-                        label: c.label || c.id,
-                        name: c.name || null,
-                        visible: typeof c.visible === "boolean" ? c.visible : true,
-                        sort: null, // always reset, will set below
-                        width: c.width || null,
-                        minWidth: c.minWidth || null,
-                        resizable: typeof c.resizable === "boolean" ? c.resizable : true,
-                        icon: c.icon || null,
-                        image: c.image || null,
-                        color: c.color || null,
-                        rendererType: rType,
-                        rendererOptions: rOpts
-                    };
-                });
-
-                // sort indicator handling (for header arrow)
-                for (const col of this._columns) {
-                    col.sort = null;
-                }
-                if (this._orderBy) {
-                    const targetCol = this._columns.find(c => c.id === this._orderBy);
-                    if (targetCol) {
-                        targetCol.sort = this._orderDir || "asc";
-                    }
-                }
-
-                if (this._titleDiv) {
-                    this._titleDiv.textContent = response.title || "";
-                }
-                if (this._statusDiv) {
-                    this._statusDiv.textContent = `${startIndex} - ${endIndex} / ${total}`;
-                }
-
+                this.updateData(response);
+                
+                // dispatch event so other components (e.g. external paginator) can update
                 this._element.dispatchEvent(new CustomEvent(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
                     detail: { id: this._element.id, response: response }
                 }));
-
-                if (this._paginationCtrl) {
-                    this._paginationCtrl.total = totalPages;
-                    this._paginationCtrl.page = page;
-                }
-
-                this._table.classList.remove("placeholder-glow");
-
-                this._rows = (response.rows || []).map((row) => {
-                    if (!row.cells) {
-                        row.cells = [];
-                    }
-                    return row;
-                });
-
-                this._hasOptions = (this._options && this._options.length > 0)
-                    || this._rows.some((r) => { return r.options && r.options.length > 0; });
-
-                requestAnimationFrame(() => {
-                    this.render();
-                    if (this._progressDiv) {
-                        this._progressDiv.style.visibility = "hidden";
-                    }
-                });
             })
             .catch((error) => {
-                console.error("Request failed:", error);
-                if (this._progressDiv) {
-                    this._progressDiv.style.visibility = "hidden";
-                }
+                console.error("TableCtrl Request failed:", error);
             });
     }
 
     /**
-     * Debounces remote column search requests. Ensures that the search
-     * operation is only triggered after the user stops typing for a short
-     * period, reducing unnecessary network calls.
-     *
-     * @param {string} term - The search term entered by the user.
+     * Public API to update the table with new data.
+     * Used by _receiveData (internal) or ViewCtrl (external).
+     * @param {Object} response - The API response object containing 'rows' and 'columns'.
      */
-    _searchColumnsDebounced(term) {
-        if (this._columnSearchTimer) {
-            clearTimeout(this._columnSearchTimer);
+    updateData(response) {
+        if (!response) return;
+
+        // process Columns
+        this._columns = (response.columns || []).map((c, idx) => {
+            // correct parsing of template structure
+            let rType = c.rendererType || null;
+            let rOpts = c.rendererOptions || {};
+
+            if (c.template && typeof c.template === "object") {
+                rType = c.template.type;
+                rOpts = c.template.options || {};
+                if (c.template.editable) {
+                    rOpts.editable = c.template.editable;
+                }
+            }
+
+            return {
+                id: c.id || `col_${idx}`,
+                label: c.label || c.id,
+                name: c.name || null,
+                visible: typeof c.visible === "boolean" ? c.visible : true,
+                sort: null, // reset, applied below
+                width: c.width || null,
+                minWidth: c.minWidth || null,
+                resizable: typeof c.resizable === "boolean" ? c.resizable : true,
+                icon: c.icon || null,
+                image: c.image || null,
+                color: c.color || null,
+                rendererType: rType,
+                rendererOptions: rOpts
+            };
+        });
+
+        // apply current sort state to columns so arrows render correctly
+        if (this._orderBy) {
+            const targetCol = this._columns.find(c => c.id === this._orderBy);
+            if (targetCol) {
+                targetCol.sort = this._orderDir || "asc";
+            }
         }
-        this._columnSearchTimer = setTimeout(() => {
-            this._searchColumns(term);
-        }, 250);
+
+        // process Rows
+        this._rows = (response.rows || []).map((row) => {
+            if (!row.cells) {
+                row.cells = [];
+            }
+            return row;
+        });
+
+        // determine if options column is needed
+        this._hasOptions = (this._options && this._options.length > 0)
+            || this._rows.some((r) => { return r.options && r.options.length > 0; });
+
+        // remove loading state and render
+        this._table.classList.remove("placeholder-glow");
+        this.render();
     }
 
     /**
-     * Performs a remote column search against the configured REST endpoint.
-     * The server is expected to return a list of column definitions, which
-     * are merged into the existing column set. Newly discovered columns are
-     * added, while existing ones are updated without overriding visibility.
-     *
-     * @param {string} term - The search term entered by the user.
+     * Initializes listeners for layout changes (column reorder/visibility).
+     * @param {HTMLElement} element Host element.
      */
-    _searchColumns(term) {
-        if (!this._restUri) {
-            return;
-        }
-        const q = term.trim();
-        if (!q) {
-            return;
-        }
+    _initPersistenceListeners(element) {
+       
+        const notifyStateChange = (type) => {
+            const colOrder = this._columns
+                .filter((c) => c.visible)
+                .map((c) => c.id)
+                .join(",");
+            
+            const rowOrder = this._rows.map((r) => r.id).join(",");
 
-        const separator = this._restUri.includes("?") ? "&" : "?";
-        const url = `${this._restUri}${separator}columnSearch=${encodeURIComponent(q)}&columnsOnly=true`;
-
-        fetch(url)
-            .then((res) => {
-                if (!res.ok) {
-                    throw new Error("Column search failed");
+            // notify parent controller or listener
+            this._element.dispatchEvent(new CustomEvent("wx-req-update-state", {
+                bubbles: true,
+                detail: {
+                    type: type,
+                    columnOrder: colOrder,
+                    rowOrder: rowOrder
                 }
-                return res.json();
-            })
-            .then((resp) => {
-                const fetched = (resp.columns || []).map((c, idx) => {
-                    let rType = c.rendererType || null;
-                    let rOpts = c.rendererOptions || {};
+            }));
+            
+            if (this._restUri) {
+                this._sendStateToServer(type === "row-reorder" ? { r: rowOrder } : { c: colOrder });
+            }
+        };
 
-                    if (c.template && typeof c.template === "object") {
-                        rType = c.template.type;
-                        rOpts = c.template.options || {};
-                        if (c.template.editable) {
-                            rOpts.editable = c.template.editable;
-                        }
-                    }
-
-                    return {
-                        id: c.id || `col_search_${idx}`,
-                        label: c.label || c.id || `Column ${idx + 1}`,
-                        name: c.name || null,
-                        visible: typeof c.visible === "boolean" ? c.visible : false,
-                        sort: null,
-                        width: c.width || null,
-                        minWidth: c.minWidth || null,
-                        resizable: typeof c.resizable === "boolean" ? c.resizable : true,
-                        icon: c.icon || null,
-                        image: c.image || null,
-                        color: c.color || null,
-                        rendererType: rType,
-                        rendererOptions: rOpts
-                    };
-                });
-
-                const byId = new Map(this._columns.map((c) => {
-                    return [c.id, c];
-                }));
-                fetched.forEach((col) => {
-                    const existing = byId.get(col.id);
-                    if (existing) {
-                        const keepVisible = typeof existing.visible === "boolean" ? existing.visible : col.visible;
-                        Object.assign(existing, col, { visible: keepVisible });
-                    } else {
-                        this._columns.push(col);
-                        byId.set(col.id, col);
-                    }
-                });
-
-                this.render();
-
-                if (this._columnsSidebarPanel && typeof this._columnsSidebarPanel.isShown === "function" && this._columnsSidebarPanel.isShown()) {
-                    if (typeof this._columnsSidebarPanel.show === "function") {
-                        this._columnsSidebarPanel.show();
-                    }
-                }
-            })
-            .catch((err) => {
-                console.error("Column search failed:", err);
-            });
+        element.addEventListener(webexpress.webui.Event.COLUMN_REORDER_EVENT, () => notifyStateChange("column-reorder"));
+        element.addEventListener(webexpress.webui.Event.COLUMN_VISIBILITY_EVENT, () => notifyStateChange("column-visibility"));
+        element.addEventListener(webexpress.webui.Event.ROW_REORDER_EVENT, () => notifyStateChange("row-reorder"));
     }
 
     /**
-     * Renders a single row into the provided document fragment, including
-     * drag handles, cells, action menus, and optional tree toggles.
-     *
-     * @param {Object} row - The row definition containing cells, styling, and metadata.
-     * @param {number} depth - The hierarchical depth of the row (for tree mode).
-     * @param {DocumentFragment} fragment - The fragment to append the rendered row to.
-     * @param {Set<string>} [changedIds] - Optional set of row keys that changed since the last render.
-     * @param {Set<string>} [newIds] - Optional set of newly added row keys.
+     * Sends state update to server (Standalone mode).
+     */
+    _sendStateToServer(stateObj) {
+        if (!this._restUri) return;
+        
+        fetch(this._restUri, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(stateObj)
+        }).catch(err => console.error("Update state failed", err));
+    }
+
+    /**
+     * Renders a single row into the provided document fragment.
      */
     _addRow(row, depth, fragment, changedIds, newIds) {
         const tr = document.createElement("div");
@@ -529,14 +319,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
     }
 
     /**
-     * Renders the content of a single table cell, including icons, images,
-     * template-based renderers, and optional hyperlink wrapping.
-     *
-     * @param {Object} row - The row object containing metadata and cell values.
-     * @param {Object} colDef - The column definition, including template configuration.
-     * @param {Object} cell - The cell data (text, value, icon, image, uri, etc.).
-     * @param {boolean} isFirstVisible - Indicates whether this is the first visible column in the row.
-     * @returns {HTMLElement} The rendered cell content wrapper.
+     * Renders cell content.
      */
     _renderCell(row, colDef, cell, isFirstVisible) {
         const wrap = document.createElement("div");
@@ -576,7 +359,6 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
 
             if (renderer) {
                 const opts = Object.assign({}, renderer.options, colDef.rendererOptions || {});
-
                 const val = (cell.content !== undefined && cell.content !== null) ? cell.content : (cell.value || "");
 
                 try {
