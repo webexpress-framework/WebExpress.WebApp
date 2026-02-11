@@ -155,7 +155,7 @@ namespace WebExpress.WebApp.WebControl
                     Text = I18N.Translate(renderContext, "webexpress.webapp:header.quickcreate.label"),
                     Uri = firstQuickcreate?.Uri,
                     OnClick = firstQuickcreate?.OnClick,
-                    Modal = firstQuickcreate?.Modal
+                    PrimaryAction = firstQuickcreate?.PrimaryAction
                 }
                     .Add(nextQuickcreate)
                 : Preferences.Any()
@@ -165,7 +165,7 @@ namespace WebExpress.WebApp.WebControl
                     Text = I18N.Translate(renderContext, "webexpress.webapp:header.quickcreate.label"),
                     Uri = firstQuickcreate?.Uri,
                     OnClick = firstQuickcreate?.OnClick,
-                    Modal = firstQuickcreate?.Modal
+                    PrimaryAction = firstQuickcreate?.PrimaryAction
                 }
                 : null;
 

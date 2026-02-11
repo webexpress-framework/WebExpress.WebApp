@@ -47,10 +47,16 @@ namespace WebExpress.WebApp.WebRestApi
         public virtual string Color => "text-primary";
 
         /// <summary>
-        /// Returns or sets the modal dialog content to be displayed.
+        /// Returns or sets the primary action, typically invoked on a single click.
         /// </summary>
-        [JsonPropertyName("modal")]
-        public virtual IModalTarget Modal { get; set; }
+        [JsonPropertyName("primaryaction")]
+        public virtual IAction PrimaryAction { get; set; }
+
+        /// <summary>
+        /// Returns or sets the secondary action, typically invoked on a double‑click.
+        /// </summary>
+        [JsonPropertyName("secondaryaction")]
+        public virtual IAction SecondaryAction { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class.

@@ -110,7 +110,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             Assert.Equal("Edit", option.GetProperty("text").GetString());
             Assert.Equal("fa fa-pen", option.GetProperty("icon").GetString());
             Assert.Equal("text-primary", option.GetProperty("color").GetString());
-            Assert.Null(option.GetProperty("modal").GetString());
+            Assert.Null(option.GetProperty("primaryaction").GetString());
             Assert.NotNull(option.GetProperty("id").GetString());
 
             Assert.True(rows[0].TryGetProperty("icon", out var iconElement) && iconElement.ValueKind == JsonValueKind.Null);

@@ -59,7 +59,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
             Margin = new PropertySpacingMargin(PropertySpacing.Space.Two),
             BackgroundColor = new PropertyColorButton(TypeColorButton.Primary),
             Icon = new IconUpload(),
-            Modal = new ModalTarget("plugin-upload"),
+            PrimaryAction = new ActionModal("plugin-upload"),
             Active = TypeActive.Disabled
         };
 

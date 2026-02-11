@@ -23,7 +23,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Returns or sets the primary display text.
         /// </summary>
-        [JsonPropertyName("text")]
+        [JsonPropertyName("content")]
         public string Text { get; set; }
 
         /// <summary>

@@ -1,12 +1,17 @@
 ﻿/**
  * A composite controller combining a Table (Master) and a Frame (Detail)
  * separated by a resizable Splitter.
+ * Layout: Table (Left/Main) | Splitter | Detail Frame (Right/Side)
  */
 webexpress.webapp.TableDetailsCtrl = class extends webexpress.webui.Ctrl {
 
     _tableCtrl = null;
     _frameCtrl = null;
     _splitCtrl = null;
+    
+    // Internal references
+    _mainPane = null;
+    _sidePane = null;
 
     /**
      * Constructor.
@@ -15,188 +20,166 @@ webexpress.webapp.TableDetailsCtrl = class extends webexpress.webui.Ctrl {
     constructor(element) {
         super(element);
 
-        // extract configuration from data attributes
+        // 1. Extract configuration
         const config = {
             uri: element.dataset.uri || "",
-            splitSize: element.dataset.splitSize || "50%",
-            minSide: element.dataset.minSide || "300",
+            splitSize: element.dataset.splitSize || "40%", // Default width of detail view
+            minSide: element.dataset.minSide || "300px",
             phText: element.dataset.placeholderText || "Please select a record.",
             phIcon: element.dataset.placeholderIcon || "fas fa-arrow-left"
         };
 
-        // clean up attributes to keep the DOM clean
-        element.removeAttribute("data-uri");
-        element.removeAttribute("data-split-size");
-        element.removeAttribute("data-min-side");
-        element.removeAttribute("data-placeholder-text");
-        element.removeAttribute("data-placeholder-icon");
+        // 2. Clean up attributes
+        ["data-uri", "data-split-size", "data-min-side", "data-placeholder-text", "data-placeholder-icon"]
+            .forEach(attr => element.removeAttribute(attr));
 
-        // build internal dom structure
+        // 3. Build Layout Synchronously
         this._buildLayout(element, config);
 
-        // initialize child controllers
-        this._initControllers();
-
-        // setup event listeners
-        this._setupInteraction();
+        // 4. Initialize Controllers
+        // We use requestAnimationFrame to ensure the DOM is painted and dimensions are calculated
+        // before the SplitCtrl and TableCtrl start their work.
+        requestAnimationFrame(() => {
+            this._setupInteraction();
+        });
     }
 
     /**
-     * Constructs the DOM structure required for the SplitCtrl.
-     * Creates a main pane for the table and a side pane for the frame.
+     * Constructs the DOM structure for a Horizontal Split (Left-Right).
      * @param {HTMLElement} host - The container element.
      * @param {Object} config - Configuration object.
      */
     _buildLayout(host, config) {
-        // configure split control attributes on host
-        host.setAttribute("data-orientation", "horizontal");
-        host.setAttribute("data-order", "main-side");
-        host.setAttribute("data-size", config.splitSize);
-        host.setAttribute("data-min-side", config.minSide);
-        host.classList.add("wx-split-container"); 
-
-        // ensure host has explicit height for split calculation
-        if (!host.style.height) {
-            host.style.height = "100%";
-        }
-
-        // create main pane (table wrapper)
-        const mainPane = document.createElement("div");
-        mainPane.className = "wx-main-pane h-100 overflow-hidden";
+        // clear host and setup container
+        host.innerHTML = "";
         
-        const tableHost = document.createElement("div");
-        tableHost.className = "wx-webapp-table h-100";
-        if (config.uri) {
-            tableHost.dataset.uri = config.uri;
-        }
-        mainPane.appendChild(tableHost);
-
-        // create side pane (detail frame wrapper)
-        const sidePane = document.createElement("div");
-        sidePane.className = "wx-side-pane h-100 border-start bg-white";
-
-        const frameHost = document.createElement("div");
-        frameHost.className = "wx-webui-frame h-100 p-3 overflow-auto";
-        frameHost.dataset.autoload = "false"; 
+        // data attributes for the SplitCtrl logic
+        host.dataset.orientation = "horizontal";
+        host.dataset.minSide="200";
         
-        // render placeholder state
-        frameHost.innerHTML = `
-            <div class="d-flex h-100 align-items-center justify-content-center text-muted user-select-none">
-                <div class="text-center">
-                    <i class="${config.phIcon} fa-2x mb-3"></i><br>
-                    <span>${config.phText}</span>
-                </div>
-            </div>
-        `;
+        this._sidePane = document.createElement("div");
+        this._sidePane.className = "wx-side-pane";
+        this._sidePane.style.width = config.splitSize;
+        this._sidePane.style.minWidth = config.minSide;
+        this._table = document.createElement("div");
+        this._table.className = "wx-webapp-table overflow-hidden";
+        this._table.dataset.uri = config.uri;
+        this._sidePane.appendChild(this._table);
+        
+        host.appendChild(this._sidePane);
 
-        sidePane.appendChild(frameHost);
+        this._mainPane = document.createElement("div");
+        this._mainPane.className = "wx-main-pane";
+        const frameDiv = document.createElement("div");
+        frameDiv.className = "wx-webui-frame";
+        frameDiv.dataset.autoload = "false";
+        
+        const wrapper = document.createElement("div");
+        wrapper.className = "d-flex h-100 align-items-center justify-content-center text-muted user-select-none";
+        const inner = document.createElement("div");
+        inner.className = "text-center";
+        const icon = document.createElement("i");
+        icon.className = `${config.phIcon} fa-2x mb-3`;
+        const br = document.createElement("br");
+        const text = document.createElement("span");
+        text.textContent = config.phText;
 
-        // 3. append panes to host (SplitCtrl handles the divider)
-        host.appendChild(mainPane);
-        host.appendChild(sidePane);
+        inner.appendChild(icon);
+        inner.appendChild(br);
+        inner.appendChild(text);
 
-        // store references for controller initialization
-        this._tableHost = tableHost;
-        this._frameHost = frameHost;
+        wrapper.appendChild(inner);
+
+        frameDiv.innerHTML = "";
+        frameDiv.appendChild(wrapper);
+
+        this._mainPane.appendChild(frameDiv);
+        
+        host.appendChild(this._mainPane);
+        
+        this._splitCtrl = new webexpress.webui.SplitCtrl(host);
     }
 
     /**
-     * Initializes the child controllers (Table, Frame, Split).
-     */
-    _initControllers() {
-        // initialize table controller
-        if (webexpress.webapp.TableCtrl) {
-            this._tableCtrl = new webexpress.webapp.TableCtrl(this._tableHost);
-        } else {
-            console.error("TableDetailsCtrl: 'webexpress.webapp.TableCtrl' not found.");
-        }
-
-        // initialize frame controller
-        if (webexpress.webui.FrameCtrl) {
-            this._frameCtrl = new webexpress.webui.FrameCtrl(this._frameHost);
-        } else {
-            console.error("TableDetailsCtrl: 'webexpress.webui.FrameCtrl' not found.");
-        }
-
-        // initialize split controller on the main host
-        if (webexpress.webui.SplitCtrl) {
-            this._splitCtrl = new webexpress.webui.SplitCtrl(this._element);
-        } else {
-            console.error("TableDetailsCtrl: 'webexpress.webui.SplitCtrl' not found.");
-        }
-    }
-
-    /**
-     * Sets up event listeners to link the Table selection to the Frame.
+     * Sets up interaction listeners (Table Click -> Frame Update).
      */
     _setupInteraction() {
-        if (!this._tableCtrl || !this._frameCtrl) {
-            return;
-        }
+        
+        document.addEventListener(webexpress.webui.Event?.SELECT_ROW_EVENT, (e) => {
+            if (e.detail && e.detail.row) {
+                this._handleRowSelect(e.detail.row);
+            }
+        });
+        
+        
+        if (!this._tableCtrl) return;
 
-        // access the dom element of the table controller
-        // fallback to _element if public getter is missing in base class
-        const tableEl = this._tableCtrl.element || this._tableCtrl._element;
+        // Get the interactive element from the table controller
+        const tableElement = this._tableCtrl._element || this._tableCtrl.element;
+        if (!tableElement) return;
 
-        if (tableEl) {
-            // listen for generic click events to detect row selection
-            tableEl.addEventListener(webexpress.webui.Event.CLICK_EVENT, (e) => this._handleTableClick(e));
-            
-            // support potential specific row select event
-            tableEl.addEventListener("wx-row-select", (e) => this._handleTableClick(e));
-        }
+        // 1. Listen for the specific SELECT_ROW_EVENT from TableCtrl
+        const selectEventName = webexpress.webui.Event?.SELECT_ROW_EVENT || "wx-select-row";
+        
+        tableElement.addEventListener(selectEventName, (e) => {
+            // The event detail contains { row: object, rowId: string, ... }
+            if (e.detail && e.detail.row) {
+                this._handleRowSelect(e.detail.row);
+            }
+        });
+
+        // 2. Fallback: Listen for generic item select (e.g. from ListCtrl if swapped)
+        tableElement.addEventListener("wx-select-item", (e) => {
+             if (e.detail && e.detail.item) {
+                 this._handleRowSelect(e.detail.item);
+             }
+        });
     }
 
     /**
-     * Handles clicks from the table to update the frame.
-     * @param {CustomEvent} e - The event object.
+     * Handles row selection logic.
+     * @param {Object} rowData - The data object of the selected row.
      */
-    _handleTableClick(e) {
-        const data = e.detail?.data;
+    _handleRowSelect(rowData) {
+        if (!rowData) return;
 
-        if (!data) {
-            return;
-        }
+        // Determine target URI: 'detailUri' (specific) takes precedence over 'uri' (self)
+        const targetUri = rowData.detailUri || rowData.uri;
 
-        // ignore clicks on interactive elements inside the row (buttons, links, inputs)
-        // preventing the detail view update when user intends to perform a row action
-        if (e.detail.originalEvent) {
-            const target = e.detail.originalEvent.target;
-            if (target && target.closest("a, button, input, select, .wx-table-actions")) {
-                return;
-            }
-        }
-
-        // resolve the uri to load: 'detailUri' takes precedence over 'uri'
-        const targetUri = data.detailUri || data.uri;
-
-        if (targetUri) {
+        if (targetUri && this._frameCtrl) {
+            // Load detail view
             this._frameCtrl.setUri(targetUri, true);
 
-            // if split view is collapsed (e.g. on mobile), expand it automatically
-            if (this._splitCtrl && this._splitCtrl._sidePaneCollapsed) {
+            // If we are on mobile or the split is collapsed, expand the side pane
+            if (this._splitCtrl) {
+                // Check if the split control has a method to ensure visibility
                 if (typeof this._splitCtrl.expandSidePane === "function") {
                     this._splitCtrl.expandSidePane();
+                } else if (typeof this._splitCtrl.setSizes === "function") {
+                    // Fallback: Reset sizes if side pane is hidden (width ~0)
+                    const sideWidth = this._sidePane.getBoundingClientRect().width;
+                    if (sideWidth < 50) {
+                        this._splitCtrl.setSizes([60, 40]); // Example ratio
+                    }
                 }
             }
         }
     }
 
     /**
-     * Refreshes both the table and the frame.
+     * Refreshes both master and detail views.
      */
     refresh() {
-        // refresh table
+        // Refresh Table
         if (this._tableCtrl) {
             if (typeof this._tableCtrl.refresh === "function") {
                 this._tableCtrl.refresh();
             } else if (typeof this._tableCtrl._receiveData === "function") {
-                // fallback to protected method if public refresh is missing
-                this._tableCtrl._receiveData();
+                this._tableCtrl._receiveData(); // Access protected method if necessary
             }
         }
 
-        // refresh frame
+        // Refresh Detail Frame
         if (this._frameCtrl && typeof this._frameCtrl.refresh === "function") {
             this._frameCtrl.refresh();
         }

@@ -103,8 +103,8 @@ namespace WebExpress.WebApp.WebSettingPage
             html.Body.Add
             (
                 split.Render(renderContext, this)
-                    .AddUserAttribute("data-wx-toggle", "split")
-                    .AddUserAttribute("data-wx-target", $"#wx-split-button-toggle")
+                    .AddUserAttribute("data-wx-primary-action", "split")
+                    .AddUserAttribute("data-wx-primary-target", $"#wx-split-button-toggle")
             );
             html.Body.Add(Footer.Render(renderContext, this));
             html.Body.Add(NotificationPopup.Render(renderContext, this));
