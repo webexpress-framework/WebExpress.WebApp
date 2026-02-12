@@ -137,7 +137,9 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
      * Fetches data from the configured REST endpoint (Standalone Mode).
      */
     _receiveData() {
-        if (!this._restUri) return;
+        if (!this._restUri) {
+            return;
+        }
 
         // Cancel previous request if pending
         if (this._abortController) {
@@ -175,7 +177,9 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
 
         fetch(fetchUrl, { signal: this._abortController.signal })
             .then((res) => {
-                if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+                if (!res.ok) {
+                    throw new Error(`Request failed: ${res.status}`);
+                }
                 return res.json();
             })
             .then((response) => {
@@ -189,7 +193,9 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
                 this._abortController = null;
             })
             .catch((error) => {
-                if (error.name === 'AbortError') return; // Ignore aborts
+                if (error.name === 'AbortError') {
+                    return; // Ignore aborts
+                }
                 
                 console.error("TableCtrl Request failed:", error);
                 this._toggleProgress(false);
@@ -203,7 +209,9 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
      * @param {Object} response - The API response object containing 'rows' and 'columns'.
      */
     updateData(response) {
-        if (!response) return;
+        if (!response) {
+            return;
+        }
 
         // Process Columns
         this._columns = (response.columns || []).map((c, idx) => {
@@ -245,12 +253,41 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
         }
 
         // Process Rows
-        this._rows = (response.rows || []).map((row) => {
-            if (!row.cells) {
-                row.cells = [];
+        // normalize rows recursively to include new action properties and setup parent links
+        const normalizeRow = (r, parent = null) => {
+            const row = {
+                id: r.id || null,
+                class: r.class || null,
+                style: r.style || null,
+                color: r.color || null,
+                image: r.image || null,
+                icon: r.icon || null,
+                uri: r.uri || r.url || null,
+                target: r.target || null,
+                
+                // map extended action properties
+                primaryAction: r.primaryAction || null,
+                primaryTarget: r.primaryTarget || null,
+                primaryUri: r.primaryUri || null,
+                secondaryAction: r.secondaryAction || null,
+                secondaryTarget: r.secondaryTarget || null,
+                secondaryUri: r.secondaryUri || null,
+
+                cells: r.cells || [],
+                options: r.options || null,
+                children: [],
+                parent: parent,
+                expanded: typeof r.expanded === "boolean" ? r.expanded : true
+            };
+
+            if (r.children && Array.isArray(r.children)) {
+                row.children = r.children.map(child => normalizeRow(child, row));
             }
+
             return row;
-        });
+        };
+
+        this._rows = (response.rows || []).map(r => normalizeRow(r, null));
 
         // Determine if options column is needed
         this._hasOptions = (this._options && this._options.length > 0)
@@ -296,7 +333,9 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
      * @param {Object} stateObj - State object containing 'r' (rows) or 'c' (columns).
      */
     _sendStateToServer(stateObj) {
-        if (!this._restUri) return;
+        if (!this._restUri) {
+            return;
+        }
         
         fetch(this._restUri, {
             method: "PUT",

@@ -74,7 +74,7 @@ webexpress.webapp.InputTileCtrl = class extends webexpress.webui.InputTileCtrl {
             }
         });
 
-        // Click-outside closes dropdown
+        // click-outside closes dropdown
         window.addEventListener("mousedown", e => {
             if (this._dropdownVisible &&
                 !this._dropdownDiv.contains(e.target) &&
@@ -93,48 +93,46 @@ webexpress.webapp.InputTileCtrl = class extends webexpress.webui.InputTileCtrl {
      * Shows the dropdown with the search input.
      */
     _showDropdown() {
-    if (!this._filterCtrl) {
-        this._dropdownDiv.innerHTML = "";
-        this._filterCtrl = new webexpress.webui.SearchCtrl(this._dropdownDiv);
-    }
-    this._dropdownDiv.style.display = "block";
-    this._dropdownVisible = true;
-
-    // polling: warte, bis das input im DOM auftaucht; dann binde events!
-    const bindInputHandler = () => {
-        const inp = this._dropdownDiv.querySelector("input");
-        if (!inp) {
-            setTimeout(bindInputHandler, 10);
-            return;
+        if (!this._filterCtrl) {
+            this._dropdownDiv.innerHTML = "";
+            this._filterCtrl = new webexpress.webui.SearchCtrl(this._dropdownDiv);
         }
-        if (this._filter) {
-            inp.value = this._filter;
-        }
-        inp.focus();
-        // ZUERST alle vorherigen Handler entfernen (geht mit cloneNode)
-        const cleanInput = inp.cloneNode(true);
-        inp.parentNode.replaceChild(cleanInput, inp);
+        this._dropdownDiv.style.display = "block";
+        this._dropdownVisible = true;
 
-        cleanInput.addEventListener("keydown", e => {
-            if (e.key === "Enter") {
-                this._filter = cleanInput.value;
-                this._hideDropdown();
-                this._receiveData();
+        const bindInputHandler = () => {
+            const inp = this._dropdownDiv.querySelector("input");
+            if (!inp) {
+                setTimeout(bindInputHandler, 10);
+                return;
             }
-            if (e.key === "Escape") {
-                this._hideDropdown();
+            if (this._filter) {
+                inp.value = this._filter;
             }
-        });
-        cleanInput.addEventListener("blur", () => {
-            setTimeout(() => {
-                if (!this._searchBtn.matches(":hover")) {
+            inp.focus();
+            const cleanInput = inp.cloneNode(true);
+            inp.parentNode.replaceChild(cleanInput, inp);
+
+            cleanInput.addEventListener("keydown", e => {
+                if (e.key === "Enter") {
+                    this._filter = cleanInput.value;
+                    this._hideDropdown();
+                    this._receiveData();
+                }
+                if (e.key === "Escape") {
                     this._hideDropdown();
                 }
-            }, 160);
-        });
-    };
-    bindInputHandler();
-}
+            });
+            cleanInput.addEventListener("blur", () => {
+                setTimeout(() => {
+                    if (!this._searchBtn.matches(":hover")) {
+                        this._hideDropdown();
+                    }
+                }, 160);
+            });
+        };
+        bindInputHandler();
+    }
 
     /**
      * Hides the search dropdown.
@@ -195,7 +193,15 @@ webexpress.webapp.InputTileCtrl = class extends webexpress.webui.InputTileCtrl {
                     image: t.image ?? null,
                     colorCss: t.colorCss ?? t.color ?? null,
                     colorStyle: t.colorStyle ?? null,
-                    visible: t.visible !== false
+                    visible: t.visible !== false,
+                    
+                    // map action attributes from API response
+                    primaryAction: t.primaryAction || null,
+                    primaryTarget: t.primaryTarget || null,
+                    primaryUri: t.primaryUri || null,
+                    secondaryAction: t.secondaryAction || null,
+                    secondaryTarget: t.secondaryTarget || null,
+                    secondaryUri: t.secondaryUri || null
                 }));
                 this._progressDiv.style.visibility = "hidden";
                 this._loading = false;

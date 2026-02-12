@@ -204,6 +204,14 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
                             objectId: it.objectId || null,
                             item: it.item || null // raw item data for forms
                         },
+                        // action attributes
+                        primaryAction: it.primaryAction || null,
+                        primaryTarget: it.primaryTarget || null,
+                        primaryUri: it.primaryUri || null,
+                        secondaryAction: it.secondaryAction || null,
+                        secondaryTarget: it.secondaryTarget || null,
+                        secondaryUri: it.secondaryUri || null,
+                        
                         options: Array.isArray(it.options) ? it.options : null
                     });
                 }
@@ -222,6 +230,15 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
                     color: row?.color ?? null,
                     editable: false,
                     content: { content: firstText },
+                    
+                    // action attributes
+                    primaryAction: row.primaryAction || null,
+                    primaryTarget: row.primaryTarget || null,
+                    primaryUri: row.primaryUri || null,
+                    secondaryAction: row.secondaryAction || null,
+                    secondaryTarget: row.secondaryTarget || null,
+                    secondaryUri: row.secondaryUri || null,
+
                     options: Array.isArray(row?.options) ? row.options : null
                 });
             }

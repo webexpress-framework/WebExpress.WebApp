@@ -2,7 +2,6 @@
  * A rest tile control extending the standard tile controller with REST-API integration.
  * Fetches tile data from a REST endpoint.
  * Supports server-side sorting, filtering, and persisting order/visibility via PUT requests.
- *
  * The following events are triggered:
  * - webexpress.webui.Event.DATA_ARRIVED_EVENT
  */
@@ -100,6 +99,15 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
                 colorCss: item.colorCss || item.color || null,
                 colorStyle: item.colorStyle || item.style || null,
                 visible: typeof item.visible === "boolean" ? item.visible : true,
+                
+                // action attributes mapping from API response
+                primaryAction: item.primaryAction || null,
+                primaryTarget: item.primaryTarget || null,
+                primaryUri: item.primaryUri || null,
+                secondaryAction: item.secondaryAction || null,
+                secondaryTarget: item.secondaryTarget || null,
+                secondaryUri: item.secondaryUri || null,
+
                 // internal cache fields for search
                 _lc_id: null,
                 _lc_label: null

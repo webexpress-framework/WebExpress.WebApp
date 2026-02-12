@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -197,7 +196,8 @@ namespace WebExpress.WebApp.WebRestApi
                                     ? (icon as ImageIcon).Uri?.ToString()
                                     : null,
                                 Uri = GetUri(row, request)?.ToString(),
-                                RestApi = GetRestApiForInlineEdit(row, request)?.ToString()
+                                RestApi = GetRestApiForInlineEdit(row, request)?.ToString(),
+                                //DataWxPrimaryAction = row.
                             };
                         }),
                     Pagination = new RestApiPaginationInfo()

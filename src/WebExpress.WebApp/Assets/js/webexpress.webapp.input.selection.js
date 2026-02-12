@@ -181,8 +181,16 @@ webexpress.webapp.InputSelectionCtrl = class extends webexpress.webui.InputSelec
                 return res.json();
             })
             .then((response) => {
-                // update items and options (expects response.data as array)
-                this._allItems = Array.isArray(response && response.data) ? response.data : [];
+                // FIX: Handle flexible response formats ({data: []} OR {items: []} OR [])
+                let rawData = [];
+                if (Array.isArray(response)) {
+                    rawData = response;
+                } else if (response) {
+                    if (Array.isArray(response.items)) rawData = response.items;
+                    else if (Array.isArray(response.data)) rawData = response.data;
+                }
+
+                this._allItems = rawData;
                 const limitedItems = this._allItems.slice(0, this._maxItems);
                 this.options = limitedItems.map((x) => {
                     return this._mapApiItem(x);
@@ -272,6 +280,7 @@ webexpress.webapp.InputSelectionCtrl = class extends webexpress.webui.InputSelec
 
         return {
             id: id,
+            value: id,
             label: content,
             content: content,
             uri: uri,
@@ -281,7 +290,15 @@ webexpress.webapp.InputSelectionCtrl = class extends webexpress.webui.InputSelec
             disabled: disabled,
             data: dataTuples,
             aria: ariaTuples,
-            role: role
+            role: role,
+            
+            // Action attributes mapping
+            primaryAction: apiItem.primaryAction || null,
+            primaryTarget: apiItem.primaryTarget || null,
+            primaryUri: apiItem.primaryUri || null,
+            secondaryAction: apiItem.secondaryAction || null,
+            secondaryTarget: apiItem.secondaryTarget || null,
+            secondaryUri: apiItem.secondaryUri || null
         };
     }
 
