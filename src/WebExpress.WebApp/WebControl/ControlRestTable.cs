@@ -18,6 +18,24 @@ namespace WebExpress.WebApp.WebControl
         public IUri RestUri { get; set; }
 
         /// <summary>
+        /// Specifies that the table operates in infinite‑scroll mode, where
+        /// paging has no predefined endpoint and more data can always be requested.
+        /// </summary>
+        public bool Infinite { get; set; }
+
+        /// <summary>
+        /// Retruns or sets the number of items to display on each page in a 
+        /// paginated collection.
+        /// </summary>
+        public uint PageSize { get; set; }
+
+        /// <summary>
+        /// Returns or sets the binding interface used to perform search 
+        /// operations.
+        /// </summary>
+        public IBindSearch Bind { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The control id.</param>
@@ -50,7 +68,11 @@ namespace WebExpress.WebApp.WebControl
                 Class = Css.Concatenate("wx-webapp-table", GetClasses()),
                 Style = GetStyles()
             }
-                .AddUserAttribute("data-uri", uri?.ToString());
+                .AddUserAttribute("data-uri", uri?.ToString())
+                .AddUserAttribute("data-infinite", Infinite ? "true" : null)
+                .AddUserAttribute("data-page-size", PageSize > 0 ? PageSize.ToString() : null);
+
+            Bind?.ApplyUserAttributes(html, "search");
 
             return new HtmlList(html, Content.Select
             (

@@ -10,7 +10,7 @@ namespace WebExpress.WebApp.WebControl
     /// Represents a control for composing and editing WQL expressions with REST-based suggestions, 
     /// syntax validation, and history navigation.
     /// </summary>
-    public class ControlRestWqlPrompt : Control
+    public class ControlRestWqlPrompt : Control, IControlRestWqlPrompt
     {
         /// <summary>
         /// Returns or sets the uri that determines the data.

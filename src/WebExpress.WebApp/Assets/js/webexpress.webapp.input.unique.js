@@ -558,5 +558,5 @@ webexpress.webapp.InputUniqueCtrl = class extends webexpress.webui.Ctrl {
     }
 };
 
-// controller registration
+// register the class in the controller
 webexpress.webui.Controller.registerClass("wx-webapp-input-unique", webexpress.webapp.InputUniqueCtrl);

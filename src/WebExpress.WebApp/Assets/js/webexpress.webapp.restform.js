@@ -1048,4 +1048,5 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
     }
 };
 
+// register the class in the controller
 webexpress.webui.Controller.registerClass("wx-webapp-restform", webexpress.webapp.RestFormCtrl);

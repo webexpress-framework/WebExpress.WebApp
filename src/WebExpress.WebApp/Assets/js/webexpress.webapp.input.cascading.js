@@ -147,5 +147,5 @@ webexpress.webapp.InputCascadingCtrl = class extends webexpress.webui.InputCasca
     }
 };
 
-// register control class
+// register the class in the controller
 webexpress.webui.Controller.registerClass("wx-webapp-input-cascading", webexpress.webapp.InputCascadingCtrl);

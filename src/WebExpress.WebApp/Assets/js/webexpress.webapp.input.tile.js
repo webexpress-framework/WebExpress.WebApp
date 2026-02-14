@@ -258,5 +258,5 @@ webexpress.webapp.InputTileCtrl = class extends webexpress.webui.InputTileCtrl {
     }
 };
 
-// register controller class
+// register the class in the controller
 webexpress.webui.Controller.registerClass("wx-webapp-input-tile", webexpress.webapp.InputTileCtrl);

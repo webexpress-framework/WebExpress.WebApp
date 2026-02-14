@@ -363,5 +363,5 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
     }
 };
 
-// register class
+// register the class in the controller
 webexpress.webui.Controller.registerClass("wx-webapp-list", webexpress.webapp.ListCtrl);

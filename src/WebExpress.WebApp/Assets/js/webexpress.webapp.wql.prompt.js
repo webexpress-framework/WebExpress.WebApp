@@ -521,4 +521,5 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
     }
 };
 
+// register the class in the controller
 webexpress.webui.Controller.registerClass("wx-webapp-wql-prompt", webexpress.webapp.WqlPromptCtrl);

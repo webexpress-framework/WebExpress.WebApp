@@ -4,13 +4,14 @@ using WebExpress.WebUI.WebControl;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Interface for controlling API interactions.
+    /// Represents a control for composing and editing WQL expressions with REST-based suggestions, 
+    /// syntax validation, and history navigation.
     /// </summary>
-    public interface IControlRest : IControl
+    public interface IControlRestWqlPrompt : IControl
     {
         /// <summary>
         /// Returns the uri that determines the data.
         /// </summary>
-        public IUri RestUri { get; }
+        IUri RestUri { get; }
     }
 }

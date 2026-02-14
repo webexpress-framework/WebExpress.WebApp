@@ -347,5 +347,5 @@ webexpress.webapp.InputSelectionCtrl = class extends webexpress.webui.InputSelec
     }
 };
 
-// Register the class in the controller
+// register the class in the controller
 webexpress.webui.Controller.registerClass("wx-webapp-input-selection", webexpress.webapp.InputSelectionCtrl);

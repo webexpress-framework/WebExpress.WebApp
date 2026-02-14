@@ -211,5 +211,5 @@ class PopupNotificationCtrl extends webexpress.webui.Ctrl {
     }
 }
 
-// Register the class in the controller
+// register the class in the controller
 webexpress.webui.Controller.registerClass("wx-webapp-popupnotification", PopupNotificationCtrl);

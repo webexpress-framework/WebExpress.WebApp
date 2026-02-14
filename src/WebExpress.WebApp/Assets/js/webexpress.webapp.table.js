@@ -29,6 +29,11 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
     _observer = null;
     _scrollTimer = null;
 
+    // pager & info
+    _pagerElement = null;
+    _pagerCtrl = null;
+    _infoDiv = null;
+
     // placeholder data shown while initial load is in progress
     _previewColumns = [
         { label: "Loading...", width: null, visible: true },
@@ -60,6 +65,9 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
 
         if (element.dataset.pageSize) {
             this._pageSize = parseInt(element.dataset.pageSize, 10);
+            if (isNaN(this._pageSize) || this._pageSize <= 0) {
+                this._pageSize = 50;
+            }
         }
 
         this._setupProgressBar(element);
@@ -68,7 +76,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
             this._createSentinel();
         }
 
-        if (typeof this._initPersistenceListeners === 'function') {
+        if (typeof this._initPersistenceListeners === "function") {
             this._initPersistenceListeners(element);
         }
 
@@ -79,6 +87,9 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
         this.render();
 
         this._initEvents();
+
+        // initialize pager and info area (either bind to existing host or create one)
+        this._initPager(element);
 
         if (this._restUri) {
             this._receiveData(false);
@@ -144,6 +155,130 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
     }
 
     /**
+     * Initialize or bind a pagination control and an information area.
+     * If an element with class "wx-webui-pagination" exists inside the host,
+     * it is used. Otherwise a pager element is created and an instance of
+     * PaginationCtrl is constructed. An info line showing totals is appended.
+     * @param {HTMLElement} host - the host element to search/attach pager to
+     */
+    _initPager(host) {
+        // find existing pager element inside host
+        let pager = host.querySelector(".wx-webui-pagination");
+        if (!pager) {
+            // create a pager host element and append it after the table
+            pager = document.createElement("ul");
+            pager.className = "wx-webui-pagination";
+            pager.style.marginTop = "0.5rem";
+            // append after table for consistent placement
+            if (this._table && this._table.parentNode === host) {
+                host.insertBefore(pager, this._table.nextSibling);
+            } else {
+                host.appendChild(pager);
+            }
+        }
+
+        this._pagerElement = pager;
+
+        // ensure pager host has dataset values used by PaginationCtrl constructor
+        // set page and total as the number of pages (not total records)
+        const initialTotalPages = Math.max(1, Math.ceil((this._totalRecords || 0) / this._pageSize));
+        this._pagerElement.dataset.page = String(this._page);
+        this._pagerElement.dataset.total = String(initialTotalPages);
+
+        try {
+            // create an instance of the pagination control
+            // the PaginationCtrl constructor handles rendering
+            this._pagerCtrl = new webexpress.webui.PaginationCtrl(this._pagerElement);
+        } catch (err) {
+            // in case the pager class is not available yet, log and continue
+            console.error("Failed to initialize PaginationCtrl:", err);
+            this._pagerCtrl = null;
+        }
+
+        // create info div to show totals and current page details
+        this._infoDiv = document.createElement("div");
+        this._infoDiv.className = "wx-table-info text-muted small";
+        this._infoDiv.style.marginTop = "0.25rem";
+        this._infoDiv.textContent = ""; // initially empty
+        // append info as sibling after pager for clarity and to avoid pager.render clearing it
+        if (this._pagerElement && this._pagerElement.parentNode) {
+            this._pagerElement.parentNode.insertBefore(this._infoDiv, this._pagerElement.nextSibling);
+        } else {
+            host.appendChild(this._infoDiv);
+        }
+
+        // initialize info/pager display
+        this._syncPagerAndInfo(false, 0);
+    }
+
+    /**
+     * Update pager control and info area after data changed.
+     * This updates pager state silently (without firing CHANGE_PAGE_EVENT)
+     * and refreshes the textual information about totals and current page.
+     * @param {boolean} append whether the latest data was appended
+     * @param {number} fetchedCount number of rows returned by the last fetch (optional)
+     */
+    _syncPagerAndInfo(append, fetchedCount) {
+        const total = Number(this._totalRecords) || 0;
+        let totalPages = 1;
+        if (this._pageSize > 0) {
+            totalPages = Math.max(1, Math.ceil(total / this._pageSize));
+        }
+
+        // clamp current page to available range
+        if (this._page < 0) {
+            this._page = 0;
+        }
+        if (this._page >= totalPages) {
+            this._page = totalPages - 1;
+        }
+
+        const currentPage = this._page;
+
+        // compute items shown for the current page
+        let itemsOnPage = 0;
+        if (this._isInfinite) {
+            // for infinite mode, if append happened use fetchedCount, otherwise derive from rows
+            if (append) {
+                itemsOnPage = typeof fetchedCount === "number" ? fetchedCount : 0;
+            } else {
+                // estimate items in current page (may be <= pageSize)
+                const startIndex = currentPage * this._pageSize;
+                itemsOnPage = Math.max(0, Math.min(this._rows.length - startIndex, this._pageSize));
+            }
+        } else {
+            // non-infinite: rows correspond to the current page (enforced by slicing)
+            itemsOnPage = Array.isArray(this._rows) ? this._rows.length : 0;
+        }
+
+        // update pager host dataset so constructor/other code can read it if needed
+        if (this._pagerElement) {
+            this._pagerElement.dataset.page = String(currentPage);
+            this._pagerElement.dataset.total = String(totalPages);
+        }
+
+        // update pager control silently if available
+        if (this._pagerCtrl && typeof this._pagerCtrl.updateState === "function") {
+            // updateState will not dispatch CHANGE_PAGE_EVENT
+            this._pagerCtrl.updateState(currentPage, totalPages);
+        } else if (this._pagerCtrl) {
+            // fall back: set properties directly (may dispatch events depending on implementation)
+            try {
+                this._pagerCtrl.total = totalPages;
+                // set page after total to avoid clamping issues in setter
+                this._pagerCtrl.page = currentPage;
+            } catch (e) {
+                // ignore errors when setting fallback properties
+            }
+        }
+
+        // update textual info
+        if (this._infoDiv) {
+            this._infoDiv.textContent = "Seite " + (currentPage + 1) + " von " + totalPages + " — " + itemsOnPage + " von " + total + " Einträgen";
+        }
+    }
+
+    /**
      * Create the intersection-observer sentinel element used for infinite scroll.
      * The sentinel is visually hidden but occupies layout space to trigger the observer.
      */
@@ -161,7 +296,9 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
      * A short timeout is used to avoid excessive recalculation on fast scroll events.
      */
     _onScroll() {
-        if (this._scrollTimer) return;
+        if (this._scrollTimer) {
+            return;
+        }
         this._scrollTimer = setTimeout(() => {
             this._scrollTimer = null;
             this._calculateCurrentPage();
@@ -173,14 +310,18 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
      * Dispatches a "wx-update-pagination" event with the calculated page and total pages.
      */
     _calculateCurrentPage() {
-        if (!this._rows.length || this._pageSize <= 0) return;
+        if (!this._rows.length || this._pageSize <= 0) {
+            return;
+        }
 
         // simple estimation based on scroll position and average row height
         const scrollTop = this._body.scrollTop;
         const totalHeight = this._body.scrollHeight;
         const clientHeight = this._body.clientHeight;
 
-        if (totalHeight === 0) return;
+        if (totalHeight === 0) {
+            return;
+        }
 
         // calculate visible percentage or index
         const avgRowHeight = totalHeight / this._rows.length;
@@ -206,7 +347,19 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
      */
     _handleExternalPageChange(targetPage) {
         if (!this._isInfinite) {
-            this._page = targetPage;
+            // clamp requested page into range
+            const totalPages = Math.max(1, Math.ceil(this._totalRecords / this._pageSize));
+            let page = Number(targetPage) || 0;
+            if (page < 0) { page = 0; }
+            if (page >= totalPages) { page = totalPages - 1; }
+            this._page = page;
+
+            // immediate visual feedback while new page loads
+            // update info immediately so user sees the new page selection
+            if (this._infoDiv) {
+                this._infoDiv.textContent = "Page " + (this._page + 1) + " of " + totalPages + " — loading…";
+            }
+
             this._receiveData(false);
             return;
         }
@@ -259,7 +412,9 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
      * @param {boolean} show - true to show the progress indicator, false to hide.
      */
     _toggleProgress(show) {
-        if (this._progressDiv) this._progressDiv.style.visibility = show ? "visible" : "hidden";
+        if (this._progressDiv) {
+            this._progressDiv.style.visibility = show ? "visible" : "hidden";
+        }
         this._isLoading = show;
         if (show && this._rows.length === 0) {
             this._table.classList.add("placeholder-glow");
@@ -276,19 +431,29 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
      * @param {boolean} [append=false] - if true, new rows are appended to existing rows.
      */
     _receiveData(append = false) {
-        if (!this._restUri) return;
-        if (this._isLoading && append) return;
+        // abort if no uri or if already loading an append
+        if (!this._restUri) {
+            return;
+        }
+        if (this._isLoading && append) {
+            return;
+        }
 
-        if (this._abortController) this._abortController.abort();
+        // abort previous request if present
+        if (this._abortController) {
+            this._abortController.abort();
+        }
         this._abortController = new AbortController();
 
         this._toggleProgress(true);
 
+        // detach sentinel while loading to avoid duplicate triggers
         if (this._isInfinite && this._sentinel && this._observer) {
             this._observer.unobserve(this._sentinel);
             this._sentinel.remove();
         }
 
+        // build request url with fallback for relative uris
         const base = window.location.origin;
         let urlObj;
         try {
@@ -297,51 +462,108 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
             urlObj = new URL(this._restUri, document.baseURI);
         }
 
+        // set query parameters
         urlObj.searchParams.set("q", this._filter || "");
         urlObj.searchParams.set("p", this._page);
-        urlObj.searchParams.set("limit", this._pageSize);
+        urlObj.searchParams.set("l", this._pageSize);
 
         if (this._orderBy) {
             urlObj.searchParams.set("o", this._orderBy);
-            if (this._orderDir) urlObj.searchParams.set("d", this._orderDir);
+            if (this._orderDir) {
+                urlObj.searchParams.set("d", this._orderDir);
+            }
         }
 
         const fetchUrl = this._restUri.startsWith("http") ? urlObj.href : (urlObj.pathname + urlObj.search);
 
         fetch(fetchUrl, { signal: this._abortController.signal })
             .then((res) => {
-                if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+                if (!res.ok) {
+                    throw new Error("Request failed: " + res.status);
+                }
                 return res.json();
             })
             .then((response) => {
-                this._totalRecords = response.total || response.count || 0;
-                const newRows = response.rows || [];
+                // try multiple possible fields for total (be tolerant)
+                const totalFromResponse = response.total
+                    ?? response.count
+                    ?? response.totalCount
+                    ?? response.total_records
+                    ?? response.pagination?.totalCount
+                    ?? response.pagination?.TotalCount
+                    ?? null;
+
+                // determine number of rows actually returned
+                const receivedRows = Array.isArray(response.rows) ? response.rows.length : 0;
+
+                // set or infer totalRecords
+                if (totalFromResponse !== null) {
+                    this._totalRecords = Number(totalFromResponse) || 0;
+                } else {
+                    // infer total when server did not provide it
+                    if (append) {
+                        this._totalRecords = Number(this._totalRecords || 0) + receivedRows;
+                    } else {
+                        // infer as pages before this page + received rows
+                        this._totalRecords = (this._page * this._pageSize) + receivedRows;
+                    }
+                }
+
+                // compute total pages and clamp current page
+                const totalPages = Math.max(1, Math.ceil(this._totalRecords / this._pageSize));
+                if (this._page >= totalPages) {
+                    this._page = totalPages - 1;
+                }
+
+                // normalize rows and apply client-side cap for non-infinite mode
+                let newRows = response.rows || [];
+                if (!this._isInfinite && Array.isArray(newRows) && newRows.length > this._pageSize) {
+                    // slice to configured page size to keep UI consistent
+                    newRows = newRows.slice(0, this._pageSize);
+                }
+
+                // mark end when fewer rows than page size are returned
                 if (newRows.length < this._pageSize || newRows.length === 0) {
                     this._allDataLoaded = true;
                 }
 
-                this.updateData(response, append);
+                // ensure the response passed to updateData reflects any slicing
+                const responseForUpdate = Object.assign({}, response, { rows: newRows });
 
+                // integrate received data into table structures (render or append)
+                this.updateData(responseForUpdate, append);
+
+                // notify listeners that data arrived
                 this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
-                    detail: { id: this._element.id, response: response, page: this._page, isAppend: append }
+                    detail: { id: this._element.id, response: responseForUpdate, page: this._page, isAppend: append }
                 });
-                
+
+                // emit pagination update with computed totalPages
                 this._dispatch(webexpress.webui.Event.UPDATE_PAGINATION_EVENT, {
-                    detail: { page: this._page, total: Math.ceil(this._totalRecords / this._pageSize) }
+                    detail: { page: this._page, total: totalPages }
                 });
+
+                // sync pager and info in a microtask so render() completes first
+                setTimeout(() => {
+                    this._syncPagerAndInfo(append, newRows.length);
+                }, 0);
 
                 this._toggleProgress(false);
                 this._abortController = null;
             })
             .catch((error) => {
-                if (error.name === 'AbortError') return; 
+                // ignore aborts as they are expected on rapid requests
+                if (error.name === "AbortError") {
+                    return;
+                }
                 console.error("TableCtrl Request failed:", error);
+
                 this._toggleProgress(false);
                 this._abortController = null;
                 this._isLoading = false;
 
+                // reattach sentinel if needed so infinite loading can continue
                 if (this._isInfinite && !this._allDataLoaded && this._sentinel && this._observer) {
-                    // reattach sentinel so intersection observer can trigger further loads
                     this._body.appendChild(this._sentinel);
                     this._observer.observe(this._sentinel);
                 }
@@ -357,7 +579,9 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
      * @param {boolean} [append=false] - whether to append rows instead of replacing.
      */
     updateData(response, append = false) {
-        if (!response) return;
+        if (!response) {
+            return;
+        }
 
         if (!append || !this._columns || this._columns === this._previewColumns) {
             this._columns = (response.columns || []).map((c, idx) => {
@@ -366,7 +590,9 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
                 if (c.template && typeof c.template === "object") {
                     rType = c.template.type;
                     rOpts = c.template.options || {};
-                    if (c.template.editable) rOpts.editable = c.template.editable;
+                    if (c.template.editable) {
+                        rOpts.editable = c.template.editable;
+                    }
                 }
                 return {
                     id: c.id || `col_${idx}`,
@@ -385,8 +611,10 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
                 };
             });
             if (this._orderBy) {
-                const targetCol = this._columns.find(c => c.id === this._orderBy);
-                if (targetCol) targetCol.sort = this._orderDir || "asc";
+                const targetCol = this._columns.find((c) => c.id === this._orderBy);
+                if (targetCol) {
+                    targetCol.sort = this._orderDir || "asc";
+                }
             }
         }
 
@@ -419,12 +647,20 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
                 expanded: typeof r.expanded === "boolean" ? r.expanded : true
             };
             if (r.children && Array.isArray(r.children)) {
-                row.children = r.children.map(child => normalizeRow(child, row));
+                row.children = r.children.map((child) => normalizeRow(child, row));
             }
             return row;
         };
 
-        const newRows = (response.rows || []).map(r => normalizeRow(r, null));
+        // normalize incoming rows
+        let newRows = (response.rows || []).map((r) => normalizeRow(r, null));
+
+        // if server returned more rows than requested and we're not in infinite mode,
+        // cap the displayed rows to the configured page size to keep UI consistent.
+        if (!this._isInfinite && newRows.length > this._pageSize) {
+            // slice to first pageSize entries
+            newRows = newRows.slice(0, this._pageSize);
+        }
 
         if (append) {
             this._rows = this._rows.concat(newRows);
@@ -437,6 +673,8 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
 
         if (append) {
             this._appendRows(newRows);
+            // sync pager and info after appending
+            this._syncPagerAndInfo(true, newRows.length);
         } else {
             this.render();
             // attach sentinel only after render is complete and layout is stable
@@ -446,6 +684,8 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
                     this._observer.observe(this._sentinel);
                 }, 200);
             }
+            // sync pager and info after full render
+            this._syncPagerAndInfo(false, newRows.length);
         }
     }
 
@@ -503,7 +743,9 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
                 bubbles: true,
                 detail: { type: type, columnOrder: colOrder, rowOrder: rowOrder }
             }));
-            if (this._restUri) this._sendStateToServer(type === "row-reorder" ? { r: rowOrder } : { c: colOrder });
+            if (this._restUri) {
+                this._sendStateToServer(type === "row-reorder" ? { r: rowOrder } : { c: colOrder });
+            }
         };
         element.addEventListener(webexpress.webui.Event.COLUMN_REORDER_EVENT, () => notifyStateChange("column-reorder"));
         element.addEventListener(webexpress.webui.Event.COLUMN_VISIBILITY_EVENT, () => notifyStateChange("column-visibility"));
@@ -516,14 +758,16 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
      * @param {Object} stateObj - JSON-serializable object representing the state.
      */
     _sendStateToServer(stateObj) {
-        if (!this._restUri) return;
+        if (!this._restUri) {
+            return;
+        }
         fetch(this._restUri, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(stateObj)
-        }).catch(err => console.error("Update state failed", err));
+        }).catch((err) => console.error("Update state failed", err));
     }
-    
+
     /**
      * Sets the search filter and reloads the first page (without modifying order or paging settings).
      * @param {string} pattern - Search pattern (optional, defaults to empty string)
@@ -537,4 +781,5 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
     }
 };
 
+// register the class in the controller
 webexpress.webui.Controller.registerClass("wx-webapp-table", webexpress.webapp.TableCtrl);

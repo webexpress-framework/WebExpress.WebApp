@@ -1,0 +1,36 @@
+.wx-search-advanced {
+}
+
+.wx-search-advanced-wrapper {
+    display: flex;
+    gap: 0.5em;
+    align-items: flex-start;
+}
+
+.wx-search-advanced-input-area {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.wx-search-advanced-basic {
+    width: 100%;
+}
+
+.wx-search-advanced-wql {
+    width: 100%;
+}
+
+.wx-search-advanced-content {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5em;
+    flex: 0 0 auto;
+}
+
+.wx-search-advanced-wrapper > .wx-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5em;
+}

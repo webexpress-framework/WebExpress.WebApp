@@ -60,5 +60,54 @@ namespace WebExpress.WebApp.Test.WebControl
             AssertExtensions.EqualWithPlaceholders(expected, html);
         }
 
+        /// <summary>
+        /// Tests the infinite property of the API table control.
+        /// </summary>
+        [Theory]
+        [InlineData(false, @"<div id=""*"" class=""wx-webapp-table""></div>")]
+        [InlineData(true, @"<div id=""*"" class=""wx-webapp-table"" data-infinite=""true""></div>")]
+        public void Infinite(bool infinite, string expected)
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlRestTable(null)
+            {
+                Infinite = infinite
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
+
+        /// <summary>
+        /// Tests the page size property of the API table control.
+        /// </summary>
+        [Theory]
+        [InlineData(0, @"<div id=""*"" class=""wx-webapp-table""></div>")]
+        [InlineData(10, @"<div id=""*"" class=""wx-webapp-table"" data-page-size=""10""></div>")]
+        public void PageSize(uint pageSize, string expected)
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlRestTable()
+            {
+                PageSize = pageSize
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
     }
 }
