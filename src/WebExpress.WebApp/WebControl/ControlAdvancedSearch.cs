@@ -15,7 +15,7 @@ namespace WebExpress.WebApp.WebControl
     /// prompt, normalizes their payloads and re-emits a unified
     /// webexpress.webui.Event.CHANGE_FILTER_EVENT.
     /// </summary>
-    public class ControlSearch : Control, IControlSearch
+    public class ControlAdvancedSearch : Control, IControlSearch
     {
         private readonly List<IControl> _content = [];
 
@@ -33,7 +33,7 @@ namespace WebExpress.WebApp.WebControl
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The control id.</param>
-        public ControlSearch(string id = null)
+        public ControlAdvancedSearch(string id = null)
             : base(id ?? RandomId.Create())
         {
         }

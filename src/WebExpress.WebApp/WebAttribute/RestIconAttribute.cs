@@ -6,12 +6,12 @@ namespace WebExpress.WebApp.WebAttribute
     /// Specifies the icon attribute of the corresponding dropdown in a REST API for the decorated class.
     /// </summary>
     [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
-    public class RestDropdownIconAttribute : Attribute
+    public class RestIconAttribute : Attribute
     {
         /// <summary>
         /// Specifies the icon attribute of a dropdown in a REST API response.
         /// </summary>
-        public RestDropdownIconAttribute()
+        public RestIconAttribute()
         {
         }
     }

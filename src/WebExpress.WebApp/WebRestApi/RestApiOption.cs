@@ -1,5 +1,6 @@
-﻿using System;
+﻿using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebMessage;
 
 namespace WebExpress.WebApp.WebRestApi
@@ -35,7 +36,25 @@ namespace WebExpress.WebApp.WebRestApi
         public RestApiOption(IRequest request)
         {
             Request = request;
-            Id = Guid.NewGuid().ToString("N")[..8];
+            Id = RandomId.Create();
+        }
+
+        /// <summary>
+        /// Returns a string that represents the current object, formatted 
+        /// according to the specified action type.
+        /// </summary>
+        /// <returns>
+        /// A string representation of the current object, formatted based 
+        /// on the provided action type.
+        /// </returns>
+        public virtual Dictionary<string, object> ToJson()
+        {
+            var json = new Dictionary<string, object>
+            {
+                { "id", Id }
+            };
+
+            return json;
         }
     }
 }

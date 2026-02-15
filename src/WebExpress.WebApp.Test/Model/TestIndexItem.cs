@@ -14,7 +14,7 @@ namespace WebExpress.WebApp.Test.Model
         /// <summary>
         /// Returns or sets the unique identifier of the current entity.
         /// </summary>
-        [RestTableColumnHidden]
+        [RestHidden]
         public Guid Id { get; set; }
 
         /// <summary>
@@ -39,13 +39,13 @@ namespace WebExpress.WebApp.Test.Model
         /// Returns or sets the description of the current entity.
         /// </summary>
         [RestTableColumnName("Description")]
-        [RestTableColumnHidden]
+        [RestHidden]
         public string Description { get; set; }
 
         /// <summary>
         /// Returns or sets the icon associated with the table row.
         /// </summary>
-        [RestTableRowIcon]
+        [RestIcon]
         public IIcon Icon { get; set; }
 
         /// <summary>

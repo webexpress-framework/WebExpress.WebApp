@@ -43,12 +43,12 @@ namespace WebExpress.WebApp.WebRestApi
 
             _cachedNameAttribute = typeof(TIndexItem)
                 .GetProperties()
-                .Where(prop => Attribute.IsDefined(prop, typeof(RestSelectionTextAttribute)))
+                .Where(prop => Attribute.IsDefined(prop, typeof(RestTextAttribute)))
                 .FirstOrDefault();
 
             _cachedUriAttribute = typeof(TIndexItem)
                 .GetProperties()
-                .Where(prop => Attribute.IsDefined(prop, typeof(RestDropdownUriAttribute)))
+                .Where(prop => Attribute.IsDefined(prop, typeof(RestUriAttribute)))
                 .FirstOrDefault();
         }
 

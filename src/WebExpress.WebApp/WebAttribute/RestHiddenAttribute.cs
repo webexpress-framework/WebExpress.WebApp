@@ -6,12 +6,12 @@ namespace WebExpress.WebApp.WebAttribute
     /// Indicates that a property should be excluded from the table column representation in a REST API response.
     /// </summary>
     [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
-    public class RestTableColumnHiddenAttribute : Attribute
+    public class RestHiddenAttribute : Attribute
     {
         /// <summary>
         /// Specifies the name of a table column in a REST API response.
         /// </summary>
-        public RestTableColumnHiddenAttribute()
+        public RestHiddenAttribute()
         {
         }
     }

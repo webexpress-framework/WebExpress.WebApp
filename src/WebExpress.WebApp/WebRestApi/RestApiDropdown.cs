@@ -25,7 +25,7 @@ namespace WebExpress.WebApp.WebRestApi
     public abstract class RestApiDropdown<TIndexItem> : IRestApi
         where TIndexItem : IIndexItem
     {
-        private readonly PropertyInfo _cachedNameAttribute;
+        private readonly PropertyInfo _cachedTextAttribute;
         private readonly PropertyInfo _cachedIconAttribute;
 
         /// <summary>
@@ -44,14 +44,14 @@ namespace WebExpress.WebApp.WebRestApi
                 .Select(x => x.ConstructorArguments.FirstOrDefault().Value?.ToString())
                 .FirstOrDefault();
 
-            _cachedNameAttribute = typeof(TIndexItem)
+            _cachedTextAttribute = typeof(TIndexItem)
                 .GetProperties()
-                .Where(prop => Attribute.IsDefined(prop, typeof(RestDropdownTextAttribute)))
+                .Where(prop => Attribute.IsDefined(prop, typeof(RestTextAttribute)))
                 .FirstOrDefault();
 
             _cachedIconAttribute = typeof(TIndexItem)
                 .GetProperties()
-                .Where(prop => Attribute.IsDefined(prop, typeof(RestDropdownIconAttribute)))
+                .Where(prop => Attribute.IsDefined(prop, typeof(RestIconAttribute)))
                 .FirstOrDefault();
         }
 
@@ -71,7 +71,7 @@ namespace WebExpress.WebApp.WebRestApi
             var pageSize = Convert.ToInt32(request.GetParameter("l")?.Value ?? defaultPageSize);
             var filter = request.GetParameter("q")?.Value ?? string.Empty;
             var wql = request.GetParameter("wql")?.Value ?? null;
-            var query = new Query<TIndexItem>() as IQuery<TIndexItem>;
+            var query = new Query<TIndexItem>();
 
             try
             {
@@ -96,14 +96,14 @@ namespace WebExpress.WebApp.WebRestApi
                 var result = new RestApiDropdownResult<IIndexItem>()
                 {
                     Title = I18N.Translate(request, Title),
-                    Items = items.Select(x =>
+                    Items = items.Select(item =>
                     {
-                        var icon = _cachedIconAttribute?.GetValue(x) as IIcon;
+                        var icon = _cachedIconAttribute?.GetValue(item) as IIcon;
                         return new RestApiDropdownItem
                         {
-                            Id = x.Id,
-                            Text = _cachedNameAttribute?.GetValue(x)?.ToString() ?? x.Id.ToString(),
-                            Uri = GetUri(x, request)?.ToString(),
+                            Id = item.Id,
+                            Text = _cachedTextAttribute?.GetValue(item)?.ToString() ?? item.Id.ToString(),
+                            Uri = GetUri(item, request)?.ToString(),
                             Icon = (icon is Icon) ? (icon as Icon).Class : null,
                             Image = (icon is ImageIcon) ? (icon as ImageIcon).Uri?.ToString() : null
                         };

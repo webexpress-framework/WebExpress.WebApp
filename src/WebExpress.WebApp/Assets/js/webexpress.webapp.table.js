@@ -274,7 +274,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
 
         // update textual info
         if (this._infoDiv) {
-            this._infoDiv.textContent = "Seite " + (currentPage + 1) + " von " + totalPages + " — " + itemsOnPage + " von " + total + " Einträgen";
+            this._infoDiv.textContent = "Page " + (currentPage + 1) + " of " + totalPages + " / " + itemsOnPage + " of " + total + " items";
         }
     }
 
@@ -635,11 +635,8 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
                 uri: r.uri || r.url || null,
                 target: r.target || null,
                 primaryAction: r.primaryAction || null,
-                primaryTarget: r.primaryTarget || null,
-                primaryUri: r.primaryUri || null,
                 secondaryAction: r.secondaryAction || null,
-                secondaryTarget: r.secondaryTarget || null,
-                secondaryUri: r.secondaryUri || null,
+                bind: r.bind || null,
                 cells: r.cells || [],
                 options: r.options || null,
                 children: [],

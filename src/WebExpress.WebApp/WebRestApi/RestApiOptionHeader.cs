@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Collections.Generic;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebMessage;
 
@@ -14,14 +14,12 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Returns the type of the element, represented as a string.
         /// </summary>
-        [JsonPropertyName("type")]
         public virtual string Type => "header";
 
         /// <summary>
-        /// Returns or sets the label.
+        /// Returns or sets the text.
         /// </summary>
-        [JsonPropertyName("text")]
-        public virtual string Label
+        public virtual string Text
         {
             get { return I18N.Translate(Request, _label); }
             set { _label = value; }
@@ -30,7 +28,6 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Returns the icon.
         /// </summary>
-        [JsonPropertyName("icon")]
         public virtual string Icon { get; set; }
 
         /// <summary>
@@ -40,6 +37,28 @@ namespace WebExpress.WebApp.WebRestApi
         public RestApiOptionHeader(IRequest request)
             : base(request)
         {
+        }
+
+        /// <summary>
+        /// Returns a string that represents the current object, formatted 
+        /// according to the specified action type.
+        /// </summary>
+        /// <returns>
+        /// A string representation of the current object, formatted based 
+        /// on the provided action type.
+        /// </returns>
+        public override Dictionary<string, object> ToJson()
+        {
+            var json = base.ToJson();
+            json["type"] = Type;
+            json["text"] = Text;
+
+            if (!string.IsNullOrWhiteSpace(Icon))
+            {
+                json["icon"] = Icon;
+            }
+
+            return json;
         }
     }
 }

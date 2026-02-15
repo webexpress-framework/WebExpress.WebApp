@@ -1,18 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using WebExpress.WebApp.WebAttribute;
 using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebAttribute;
+using WebExpress.WebCore.WebIcon;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
 using WebExpress.WebCore.WebStatusPage;
+using WebExpress.WebCore.WebUri;
 using WebExpress.WebIndex;
 using WebExpress.WebIndex.Queries;
 using WebExpress.WebIndex.Wql;
+using WebExpress.WebUI.WebIcon;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -24,6 +26,10 @@ namespace WebExpress.WebApp.WebRestApi
     public abstract class RestApiTile<TIndexItem> : IRestApi
         where TIndexItem : IIndexItem
     {
+        private readonly PropertyInfo _cachedTextAttribute;
+        private readonly PropertyInfo _cachedDescriptionAttribute;
+        private readonly PropertyInfo _cachedIconAttribute;
+
         /// <summary>
         /// Returns or sets the title associated with the current object.
         /// </summary>
@@ -38,6 +44,21 @@ namespace WebExpress.WebApp.WebRestApi
             Title = GetType().CustomAttributes
                 .Where(x => x is not null && x.AttributeType == typeof(TitleAttribute))
                 .Select(x => x.ConstructorArguments.FirstOrDefault().Value?.ToString())
+                .FirstOrDefault();
+
+            _cachedTextAttribute = typeof(TIndexItem)
+                .GetProperties()
+                .Where(prop => Attribute.IsDefined(prop, typeof(RestTextAttribute)))
+                .FirstOrDefault();
+
+            _cachedDescriptionAttribute = typeof(TIndexItem)
+                .GetProperties()
+                .Where(prop => Attribute.IsDefined(prop, typeof(RestTextAttribute)))
+                .FirstOrDefault();
+
+            _cachedIconAttribute = typeof(TIndexItem)
+                .GetProperties()
+                .Where(prop => Attribute.IsDefined(prop, typeof(RestIconAttribute)))
                 .FirstOrDefault();
         }
 
@@ -91,14 +112,21 @@ namespace WebExpress.WebApp.WebRestApi
 
                 using var context = CreateContext();
                 var items = Retrieve(query, context, request)
-                    .Select(row => new RestApiTileItem<TIndexItem>()
+                    .Select(item =>
                     {
-                        Id = row.Id.ToString(),
-                        Text = ResolveItemText(row),
-                        Item = row,
-                        Icon = null,
-                        Image = null,
-                        Options = GetOptions(row, request)
+                        var icon = _cachedIconAttribute?.GetValue(item) as IIcon;
+
+                        return new RestApiTileItem<TIndexItem>()
+                        {
+                            Id = item.Id.ToString(),
+                            Text = _cachedTextAttribute?.GetValue(item)?.ToString() ?? item.Id.ToString(),
+                            Content = _cachedDescriptionAttribute?.GetValue(item)?.ToString(),
+                            Uri = GetUri(item, request)?.ToString(),
+                            Item = item,
+                            Icon = (icon is Icon) ? (icon as Icon).Class : null,
+                            Image = (icon is ImageIcon) ? (icon as ImageIcon).Uri?.ToString() : null,
+                            Options = GetOptions(item, request)
+                        };
                     });
 
                 var result = new RestApiTileResult<TIndexItem>()
@@ -122,57 +150,20 @@ namespace WebExpress.WebApp.WebRestApi
         }
 
         /// <summary>
-        /// Resolves the primary display text for the given item by locating the property
-        /// annotated with RestListPrimaryTextAttribute (or the alias name "RestListPrimaryAttribute")
-        /// and returning its string representation. Falls back to row.ToString() when no attribute is present.
+        /// Gets the URI associated with the specified request and index item.
         /// </summary>
-        /// <param name="row">The item to resolve.</param>
-        /// <returns>The resolved display text.</returns>
-        protected virtual string ResolveItemText(TIndexItem row)
+        /// <param name="item">
+        /// The index item that provides context for generating the URI. Cannot be null.
+        /// </param>
+        /// <param name="request">
+        /// The request for which to retrieve the URI. Cannot be null.
+        /// </param>
+        /// <returns>
+        /// An object representing the URI for the given request and index item, or null if no URI is available.
+        /// </returns>
+        public virtual IUri GetUri(TIndexItem item, IRequest request)
         {
-            if (row is null)
-            {
-                return string.Empty;
-            }
-
-            var instanceType = row.GetType();
-            var primaryAttrType = typeof(RestListPrimaryAttribute);
-
-            // try to find a property explicitly marked with RestListPrimaryTextAttribute
-            var prop = instanceType
-                .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .FirstOrDefault(p => Attribute.IsDefined(p, primaryAttrType)) ?? instanceType
-                    .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                    .FirstOrDefault(p => p.GetCustomAttributes(inherit: true)
-                        .Any(a => string.Equals(a.GetType().Name, "RestListPrimaryAttribute", StringComparison.Ordinal)));
-
-            if (prop is not null)
-            {
-                try
-                {
-                    var value = prop.GetValue(row);
-                    if (value is null)
-                    {
-                        return string.Empty;
-                    }
-
-                    if (value is IFormattable formattable)
-                    {
-                        // format using current culture to respect localization
-                        return formattable.ToString(null, CultureInfo.CurrentCulture);
-                    }
-
-                    return value.ToString() ?? string.Empty;
-                }
-                catch
-                {
-                    // be defensive: if reflection or getter throws, fall back to safe default
-                    return string.Empty;
-                }
-            }
-
-            // ultimate fallback when no primary attribute is present
-            return row.ToString() ?? string.Empty;
+            return null;
         }
 
         /// <summary>

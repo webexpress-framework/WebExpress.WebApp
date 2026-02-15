@@ -25,7 +25,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// Returns or sets the options associated with the REST API CRUD row.
         /// </summary>
         [JsonPropertyName("options")]
-        public IEnumerable<RestApiOption> Options { get; set; } = [];
+        public IEnumerable<IDictionary<string, object>> Options { get; set; } = [];
 
         /// <summary>
         /// Returns or sets the icon.
@@ -54,50 +54,21 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Returns or sets the primary action.
         /// </summary>
-        [JsonPropertyName("data-wx-primary-action")]
-        public string DataWxPrimaryAction { get; set; }
-
-        /// <summary>
-        /// Returns or sets the primary target.
-        /// </summary>
-        [JsonPropertyName("data-wx-primary-target")]
-        public string DataWxPrimaryTarget { get; set; }
-
-        /// <summary>
-        /// Returns or sets the primary URI.
-        /// </summary>
-        [JsonPropertyName("data-wx-primary-uri")]
-        public string DataWxPrimaryUri { get; set; }
-
-        /// <summary>
-        /// Returns or sets the primary size.
-        /// </summary>
-        [JsonPropertyName("data-wx-primary-size")]
-        public string DataWxPrimarySize { get; set; }
+        [JsonPropertyName("primaryAction")]
+        public IDictionary<string, object> PrimaryAction { get; set; }
 
         /// <summary>
         /// Returns or sets the secondary action.
         /// </summary>
-        [JsonPropertyName("data-wx-secondary-action")]
-        public string DataWxSecondaryAction { get; set; }
+        [JsonPropertyName("secondaryAction")]
+        public IDictionary<string, object> SecondaryAction { get; set; }
 
         /// <summary>
-        /// Returns or sets the secondary target.
+        /// Returns or sets the data source identifier used for binding 
+        /// operations.
         /// </summary>
-        [JsonPropertyName("data-wx-secondary-target")]
-        public string DataWxSecondaryTarget { get; set; }
-
-        /// <summary>
-        /// Returns or sets the secondary URI .
-        /// </summary>
-        [JsonPropertyName("data-wx-secondary-uri")]
-        public string DataWxSecondaryUri { get; set; }
-
-        /// <summary>
-        /// Returns or sets the secondary size.
-        /// </summary>
-        [JsonPropertyName("data-wx-secondary-size")]
-        public string DataWxSecondarySize { get; set; }
+        [JsonPropertyName("bind")]
+        public IDictionary<string, object> Bind { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class.

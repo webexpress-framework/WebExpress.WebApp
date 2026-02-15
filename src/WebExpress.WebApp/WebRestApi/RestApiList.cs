@@ -136,7 +136,7 @@ namespace WebExpress.WebApp.WebRestApi
             }
 
             var instanceType = row.GetType();
-            var primaryAttrType = typeof(RestListPrimaryAttribute);
+            var primaryAttrType = typeof(RestTextAttribute);
 
             // try to find a property explicitly marked with RestListPrimaryTextAttribute
             var prop = instanceType

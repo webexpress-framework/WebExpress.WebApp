@@ -27,6 +27,18 @@ namespace WebExpress.WebApp.WebRestApi
         public string Text { get; set; }
 
         /// <summary>
+        /// Returns or sets the content.
+        /// </summary>
+        [JsonPropertyName("content")]
+        public string Content { get; set; }
+
+        /// <summary>
+        /// Returns or sets the target uri for the item.
+        /// </summary>
+        [JsonPropertyName("uri")]
+        public string Uri { get; set; }
+
+        /// <summary>
         /// Returns or sets an optional icon css class.
         /// </summary>
         [JsonPropertyName("icon")]

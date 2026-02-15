@@ -15,6 +15,7 @@ using WebExpress.WebCore.WebUri;
 using WebExpress.WebIndex;
 using WebExpress.WebIndex.Queries;
 using WebExpress.WebIndex.Wql;
+using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebIcon;
 
 namespace WebExpress.WebApp.WebRestApi
@@ -64,7 +65,7 @@ namespace WebExpress.WebApp.WebRestApi
                                     .IsAssignableFrom(a.GetType())
                             );
 
-                        var isHidden = Attribute.IsDefined(prop, typeof(RestTableColumnHiddenAttribute));
+                        var isHidden = Attribute.IsDefined(prop, typeof(RestHiddenAttribute));
 
                         var column = new RestApiTableColumn()
                         {
@@ -87,7 +88,7 @@ namespace WebExpress.WebApp.WebRestApi
 
             _cachedRowIconAttribute = typeof(TIndexItem)
                 .GetProperties()
-                .Where(prop => Attribute.IsDefined(prop, typeof(RestTableRowIconAttribute)))
+                .Where(prop => Attribute.IsDefined(prop, typeof(RestIconAttribute)))
                 .FirstOrDefault();
         }
 
@@ -174,6 +175,7 @@ namespace WebExpress.WebApp.WebRestApi
                         .Select(row =>
                         {
                             var icon = _cachedRowIconAttribute?.GetValue(row) as IIcon;
+                            var options = GetOptions(row, request);
 
                             return new RestApiTableRow
                             {
@@ -188,7 +190,7 @@ namespace WebExpress.WebApp.WebRestApi
                                         Content = text
                                     };
                                 }),
-                                Options = GetOptions(row, request),
+                                Options = options.Select(o => o.ToJson()),
                                 Icon = (icon is Icon)
                                     ? (icon as Icon).Class
                                     : null,
@@ -197,7 +199,9 @@ namespace WebExpress.WebApp.WebRestApi
                                     : null,
                                 Uri = GetUri(row, request)?.ToString(),
                                 RestApi = GetRestApiForInlineEdit(row, request)?.ToString(),
-                                //DataWxPrimaryAction = row.
+                                PrimaryAction = GetPrimaryAction(row, request)?.ToJson(),
+                                SecondaryAction = GetSecondaryAction(row, request)?.ToJson(),
+                                Bind = GetBind(row, request)?.ToJson()
                             };
                         }),
                     Pagination = new RestApiPaginationInfo()
@@ -301,6 +305,67 @@ namespace WebExpress.WebApp.WebRestApi
         /// inline editing, or <c>null</c> if no suitable endpoint is available.
         /// </returns>
         public virtual IUri GetRestApiForInlineEdit(TIndexItem row, IRequest request)
+        {
+            return null;
+        }
+
+        /// <summary>
+        /// Retrieves the primary action associated with the specified 
+        /// row item.
+        /// </summary>
+        /// <param name="row">
+        /// The index item for which the inline‑edit REST API URI should be determined.
+        /// </param>
+        /// <param name="request">
+        /// The request that provides the operational context for resolving
+        /// the appropriate REST API URI.
+        /// </param>
+        /// <returns>
+        /// An <see cref="IAction"/> representing the primary action for the specified 
+        /// row item, or null if no action is available.
+        /// </returns>
+        public virtual IAction GetPrimaryAction(TIndexItem row, IRequest request)
+        {
+            return null;
+        }
+
+        /// <summary>
+        /// Retrieves the secundary action associated with the specified 
+        /// row item.
+        /// </summary>
+        /// <param name="row">
+        /// The index item for which the inline‑edit REST API URI should be determined.
+        /// </param>
+        /// <param name="request">
+        /// The request that provides the operational context for resolving
+        /// the appropriate REST API URI.
+        /// </param>
+        /// <returns>
+        /// An <see cref="IAction"/> representing the primary action for the specified 
+        /// row item, or null if no action is available.
+        /// </returns>
+        public virtual IAction GetSecondaryAction(TIndexItem row, IRequest request)
+        {
+            return null;
+        }
+
+        /// <summary>
+        /// Retrieves the binding object associated with the specified index 
+        /// item and request context.
+        /// </summary>
+        /// <param name="row">
+        /// The index item for which the inline‑edit REST API URI should be determined.
+        /// </param>
+        /// <param name="request">
+        /// The request that provides the operational context for resolving
+        /// the appropriate REST API URI.
+        /// </param>
+        /// <returns>
+        /// An instance of <see cref="IBind"/> representing the binding for 
+        /// the specified index item and request, or null if no binding is 
+        /// found.
+        /// </returns>
+        public virtual IBind GetBind(TIndexItem row, IRequest request)
         {
             return null;
         }

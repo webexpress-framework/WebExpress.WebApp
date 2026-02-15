@@ -103,14 +103,12 @@ namespace WebExpress.WebApp.Test.WebRestApi
             Assert.Single(options);
 
             var option = options[0];
-            Assert.Equal("RestApiCrudTableRowOptionEdit", option.GetProperty("$type").GetString());
             Assert.Equal("item", option.GetProperty("type").GetString());
             Assert.Equal("edit", option.GetProperty("command").GetString());
             Assert.Null(option.GetProperty("uri").GetString());
             Assert.Equal("Edit", option.GetProperty("text").GetString());
             Assert.Equal("fa fa-pen", option.GetProperty("icon").GetString());
             Assert.Equal("text-primary", option.GetProperty("color").GetString());
-            Assert.Null(option.GetProperty("primaryaction").GetString());
             Assert.NotNull(option.GetProperty("id").GetString());
 
             Assert.True(rows[0].TryGetProperty("icon", out var iconElement) && iconElement.ValueKind == JsonValueKind.Null);

@@ -13,7 +13,7 @@ namespace WebExpress.WebApp.Test.Model
         /// <summary>
         /// Returns or sets the unique identifier of the current entity.
         /// </summary>
-        [RestTableColumnHidden]
+        [RestHidden]
         public Guid Id { get; set; }
 
         /// <summary>

@@ -5,6 +5,7 @@ using WebExpress.WebApp.WebSettingPage;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebEndpoint;
+using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebPage;
 using WebExpress.WebCore.WebSettingPage;
 using WebExpress.WebCore.WebSitemap;
@@ -101,7 +102,7 @@ namespace WebExpress.WebApp.WWW.Settings.Info
                     if (child == null)
                     {
                         // create new segment node
-                        child = new ControlTreeItem(Guid.NewGuid().ToString("N"))
+                        child = new ControlTreeItem(RandomId.Create())
                         {
                             Text = seg,
                             Expand = true
