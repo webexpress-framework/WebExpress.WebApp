@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
@@ -40,7 +39,7 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="id">The control id.</param>
         public ControlRestTable(string id = null)
-            : base(id ?? Guid.NewGuid().ToString())
+            : base(id ?? RandomId.Create())
         {
         }
 

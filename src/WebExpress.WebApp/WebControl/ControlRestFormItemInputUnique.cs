@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebUri;
@@ -47,22 +46,8 @@ namespace WebExpress.WebApp.WebApiControl
         /// <summary>
         /// Initializes a new instance of the class with an automatically assigned ID.
         /// </summary>
-        /// <param name="instance">
-        /// The name of the calling member. This is automatically provided by the compiler.
-        /// </param>
-        /// <param name="file">
-        /// The file path of the source file where this instance is created. This is automatically provided by the compiler.
-        /// </param>
-        /// <param name="line">
-        /// The line number in the source file where this instance is created. This is automatically provided by the compiler.
-        /// </param>
-        public ControlRestFormItemInputUnique
-        (
-            [CallerMemberName] string instance = null,
-            [CallerFilePath] string file = null,
-            [CallerLineNumber] int? line = null
-        )
-            : base($"unique_{instance}_{file}_{line}".GetHashCode().ToString("X"))
+        public ControlRestFormItemInputUnique()
+            : base(DeterministicId.Create())
         {
         }
 

@@ -1,5 +1,4 @@
-﻿using System;
-using WebExpress.WebCore.WebHtml;
+﻿using WebExpress.WebCore.WebHtml;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
@@ -25,7 +24,7 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="id">The control id.</param>
         public ControlRestModalProgressTask(string id)
-            : base(id ?? Guid.NewGuid().ToString())
+            : base(id ?? RandomId.Create())
         {
             Progress = new ControlProgress($"progressbar-{Id}")
             {

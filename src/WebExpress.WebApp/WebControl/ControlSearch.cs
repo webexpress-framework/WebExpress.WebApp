@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebUri;
@@ -35,7 +34,7 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="id">The control id.</param>
         public ControlSearch(string id = null)
-            : base(id ?? Guid.NewGuid().ToString())
+            : base(id ?? RandomId.Create())
         {
         }
 

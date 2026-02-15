@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using WebExpress.WebCore;
 using WebExpress.WebCore.WebHtml;
@@ -27,7 +26,7 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="id">The control id.</param>
         public ControlRestForm(string id = null)
-            : base(id ?? Guid.NewGuid().ToString())
+            : base(id ?? RandomId.Create())
         {
         }
 

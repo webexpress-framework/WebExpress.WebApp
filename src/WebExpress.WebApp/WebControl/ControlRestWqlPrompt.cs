@@ -1,5 +1,4 @@
-﻿using System;
-using WebExpress.WebCore.WebHtml;
+﻿using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
@@ -22,7 +21,7 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="id">The control id.</param>
         public ControlRestWqlPrompt(string id = null)
-            : base(id ?? Guid.NewGuid().ToString())
+            : base(id ?? RandomId.Create())
         {
         }
 
