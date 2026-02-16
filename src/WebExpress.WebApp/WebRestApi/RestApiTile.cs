@@ -14,6 +14,7 @@ using WebExpress.WebCore.WebUri;
 using WebExpress.WebIndex;
 using WebExpress.WebIndex.Queries;
 using WebExpress.WebIndex.Wql;
+using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebIcon;
 
 namespace WebExpress.WebApp.WebRestApi
@@ -63,21 +64,6 @@ namespace WebExpress.WebApp.WebRestApi
         }
 
         /// <summary>
-        /// Retrieves a collection of options for a list item (e.g. edit/delete).
-        /// </summary>
-        /// <param name="row">
-        /// The row object for which options are being retrieved. Cannot be null.
-        /// </param>
-        /// <param name="request">
-        /// The request object containing the criteria for retrieving options. Cannot be null.
-        /// </param>
-        public virtual IEnumerable<RestApiOption> GetOptions(TIndexItem row, IRequest request)
-        {
-            // return empty by default
-            return [];
-        }
-
-        /// <summary>
         /// Processing of the resource that was called via the get request.
         /// Returns a list-shaped payload with items, title and pagination.
         /// </summary>
@@ -115,6 +101,7 @@ namespace WebExpress.WebApp.WebRestApi
                     .Select(item =>
                     {
                         var icon = _cachedIconAttribute?.GetValue(item) as IIcon;
+                        var options = GetOptions(item, request);
 
                         return new RestApiTileItem<TIndexItem>()
                         {
@@ -125,7 +112,10 @@ namespace WebExpress.WebApp.WebRestApi
                             Item = item,
                             Icon = (icon is Icon) ? (icon as Icon).Class : null,
                             Image = (icon is ImageIcon) ? (icon as ImageIcon).Uri?.ToString() : null,
-                            Options = GetOptions(item, request)
+                            Options = options.Select(o => o.ToJson()),
+                            PrimaryAction = GetPrimaryAction(item, request)?.ToJson(),
+                            SecondaryAction = GetSecondaryAction(item, request)?.ToJson(),
+                            Bind = GetBind(item, request)?.ToJson()
                         };
                     });
 
@@ -150,6 +140,21 @@ namespace WebExpress.WebApp.WebRestApi
         }
 
         /// <summary>
+        /// Retrieves a collection of options for a list item (e.g. edit/delete).
+        /// </summary>
+        /// <param name="item">
+        /// The row object for which options are being retrieved. Cannot be null.
+        /// </param>
+        /// <param name="request">
+        /// The request object containing the criteria for retrieving options. Cannot be null.
+        /// </param>
+        public virtual IEnumerable<RestApiOption> GetOptions(TIndexItem item, IRequest request)
+        {
+            // return empty by default
+            return [];
+        }
+
+        /// <summary>
         /// Gets the URI associated with the specified request and index item.
         /// </summary>
         /// <param name="item">
@@ -162,6 +167,67 @@ namespace WebExpress.WebApp.WebRestApi
         /// An object representing the URI for the given request and index item, or null if no URI is available.
         /// </returns>
         public virtual IUri GetUri(TIndexItem item, IRequest request)
+        {
+            return null;
+        }
+
+        /// <summary>
+        /// Retrieves the primary action associated with the specified 
+        /// row item.
+        /// </summary>
+        /// <param name="item">
+        /// The index item for which the inline‑edit REST API URI should be determined.
+        /// </param>
+        /// <param name="request">
+        /// The request that provides the operational context for resolving
+        /// the appropriate REST API URI.
+        /// </param>
+        /// <returns>
+        /// An <see cref="IAction"/> representing the primary action for the specified 
+        /// row item, or null if no action is available.
+        /// </returns>
+        public virtual IAction GetPrimaryAction(TIndexItem item, IRequest request)
+        {
+            return null;
+        }
+
+        /// <summary>
+        /// Retrieves the secundary action associated with the specified 
+        /// row item.
+        /// </summary>
+        /// <param name="item">
+        /// The index item for which the inline‑edit REST API URI should be determined.
+        /// </param>
+        /// <param name="request">
+        /// The request that provides the operational context for resolving
+        /// the appropriate REST API URI.
+        /// </param>
+        /// <returns>
+        /// An <see cref="IAction"/> representing the primary action for the specified 
+        /// row item, or null if no action is available.
+        /// </returns>
+        public virtual IAction GetSecondaryAction(TIndexItem item, IRequest request)
+        {
+            return null;
+        }
+
+        /// <summary>
+        /// Retrieves the binding object associated with the specified index 
+        /// item and request context.
+        /// </summary>
+        /// <param name="item">
+        /// The index item for which the inline‑edit REST API URI should be determined.
+        /// </param>
+        /// <param name="request">
+        /// The request that provides the operational context for resolving
+        /// the appropriate REST API URI.
+        /// </param>
+        /// <returns>
+        /// An instance of <see cref="IBind"/> representing the binding for 
+        /// the specified index item and request, or null if no binding is 
+        /// found.
+        /// </returns>
+        public virtual IBind GetBind(TIndexItem item, IRequest request)
         {
             return null;
         }

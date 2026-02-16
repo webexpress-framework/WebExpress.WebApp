@@ -99,14 +99,9 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
                 colorCss: item.colorCss || item.color || null,
                 colorStyle: item.colorStyle || item.style || null,
                 visible: typeof item.visible === "boolean" ? item.visible : true,
-                
-                // action attributes mapping from API response
                 primaryAction: item.primaryAction || null,
-                primaryTarget: item.primaryTarget || null,
-                primaryUri: item.primaryUri || null,
                 secondaryAction: item.secondaryAction || null,
-                secondaryTarget: item.secondaryTarget || null,
-                secondaryUri: item.secondaryUri || null,
+                bind: item.bind || null,
 
                 // internal cache fields for search
                 _lc_id: null,

@@ -60,6 +60,26 @@ namespace WebExpress.WebApp.WebRestApi
         /// Returns or sets optional per-item options (edit/delete etc.).
         /// </summary>
         [JsonPropertyName("options")]
-        public IEnumerable<RestApiOption> Options { get; set; }
+        public IEnumerable<IDictionary<string, object>> Options { get; set; }
+
+        /// <summary>
+        /// Returns or sets the primary action.
+        /// </summary>
+        [JsonPropertyName("primaryAction")]
+        public IDictionary<string, object> PrimaryAction { get; set; }
+
+        /// <summary>
+        /// Returns or sets the secondary action.
+        /// </summary>
+        [JsonPropertyName("secondaryAction")]
+        public IDictionary<string, object> SecondaryAction { get; set; }
+
+        /// <summary>
+        /// Returns or sets the data source identifier used for binding 
+        /// operations.
+        /// </summary>
+        [JsonPropertyName("bind")]
+        public IDictionary<string, object> Bind { get; set; }
+
     }
 }

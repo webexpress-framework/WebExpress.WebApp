@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebMessage;
+using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 
 namespace WebExpress.WebApp.WebRestApi
@@ -23,7 +24,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Returns the edit form uri.
         /// </summary>
-        public virtual string Uri { get; set; }
+        public virtual IUri Uri { get; set; }
 
         /// <summary>
         /// Returns the text.
@@ -73,7 +74,7 @@ namespace WebExpress.WebApp.WebRestApi
 
             json["type"] = Type;
             json["command"] = Command;
-            json["uri"] = Uri;
+            json["uri"] = Uri?.ToString();
             json["text"] = Text;
             json["icon"] = Icon;
             json["color"] = Color;
