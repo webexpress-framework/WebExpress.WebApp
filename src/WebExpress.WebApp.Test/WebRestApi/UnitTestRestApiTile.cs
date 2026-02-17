@@ -105,7 +105,6 @@ namespace WebExpress.WebApp.Test.WebRestApi
             var option = options[0];
             Assert.Equal("item", option.GetProperty("type").GetString());
             Assert.Equal("edit", option.GetProperty("command").GetString());
-            Assert.Null(option.GetProperty("uri").GetString());
             Assert.Equal("Edit", option.GetProperty("text").GetString());
             Assert.Equal("fa fa-pen", option.GetProperty("icon").GetString());
             Assert.Equal("text-primary", option.GetProperty("color").GetString());

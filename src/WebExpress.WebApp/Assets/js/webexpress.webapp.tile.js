@@ -102,6 +102,7 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
                 primaryAction: item.primaryAction || null,
                 secondaryAction: item.secondaryAction || null,
                 bind: item.bind || null,
+                options: Array.isArray(item.options) ? item.options : null,
 
                 // internal cache fields for search
                 _lc_id: null,

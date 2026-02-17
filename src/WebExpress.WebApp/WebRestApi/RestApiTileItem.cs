@@ -80,6 +80,5 @@ namespace WebExpress.WebApp.WebRestApi
         /// </summary>
         [JsonPropertyName("bind")]
         public IDictionary<string, object> Bind { get; set; }
-
     }
 }

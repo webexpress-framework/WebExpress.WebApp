@@ -74,10 +74,14 @@ namespace WebExpress.WebApp.WebRestApi
 
             json["type"] = Type;
             json["command"] = Command;
-            json["uri"] = Uri?.ToString();
             json["text"] = Text;
             json["icon"] = Icon;
             json["color"] = Color;
+
+            if (Uri is not null)
+            {
+                json["uri"] = Uri.ToString();
+            }
 
             if (PrimaryAction != null)
             {

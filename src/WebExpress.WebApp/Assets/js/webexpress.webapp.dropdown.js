@@ -70,7 +70,7 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
      * @returns {HTMLElement} The constructed LI element containing the link/button.
      */
     _createMenuItem(item) {
-        // Handle dividers and headers
+        // handle dividers and headers
         if (item.type === "divider") {
             const li = document.createElement("li");
             li.className = "dropdown-divider";
@@ -85,7 +85,7 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
             return li;
         }
 
-        // Standard Item
+        // standard Item
         const li = document.createElement("li");
         const a = document.createElement("a");
         a.className = "dropdown-item";
@@ -94,15 +94,20 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
             a.id = item.id;
         }
 
-        // --- ACTION ATTRIBUTES (CRITICAL FIX) ---
-        if (item.primaryAction) a.dataset.wxPrimaryAction = item.primaryAction;
-        if (item.primaryTarget) a.dataset.wxPrimaryTarget = item.primaryTarget;
-        if (item.primaryUri) a.dataset.wxPrimaryUri = item.primaryUri;
-        
-        if (item.secondaryAction) a.dataset.wxSecondaryAction = item.secondaryAction;
-        if (item.secondaryTarget) a.dataset.wxSecondaryTarget = item.secondaryTarget;
-        if (item.secondaryUri) a.dataset.wxSecondaryUri = item.secondaryUri;
-        // ----------------------------------------
+        // apply action attributes to the card element
+        if (item.primaryAction) {
+            for (const [key, value] of Object.entries(item.primaryAction)) {
+                const htmlName = `data-wx-primary-${key.toLowerCase()}`;
+                a.setAttribute(htmlName, value);
+            }
+        }
+
+        if (item.secondaryAction) {
+            for (const [key, value] of Object.entries(item.secondaryAction)) {
+                const htmlName = `data-wx-secondary-${key.toLowerCase()}`;
+                a.setAttribute(htmlName, value);
+            }
+        }
 
         if (item.color) {
             a.classList.add(item.color);
@@ -112,7 +117,7 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
             a.setAttribute("aria-disabled", "true");
         }
 
-        // Add Icon
+        // add Icon
         if (item.icon) {
             const i = document.createElement("i");
             i.className = item.icon;
@@ -127,23 +132,23 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
             a.appendChild(img);
         }
 
-        // Add Text
+        // add Text
         const span = document.createElement("span");
         span.textContent = item.text || item.content || item.label || "";
         a.appendChild(span);
 
-        // Add custom data attributes
+        // add custom data attributes
         if (Array.isArray(item.data)) {
             item.data.forEach(([key, val]) => a.setAttribute(key, val));
         }
 
-        // Add click listener from base class logic logic
+        // add click listener from base class logic logic
         a.addEventListener("click", (e) => {
-            // Re-use logic from base class if available, or implement standard behavior
+            // re-use logic from base class if available, or implement standard behavior
             if (typeof this._handleItemClick === "function") {
                 this._handleItemClick(e, item, a);
             } else {
-                // Fallback implementation
+                // fallback implementation
                 if (item.disabled) {
                     e.preventDefault();
                     return;
@@ -151,8 +156,6 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
                 this._dispatch(webexpress.webui.Event.CHANGE_VALUE_EVENT, { value: item.id, item: item });
                 
                 const hasAction = a.dataset.wxPrimaryAction || a.dataset.wxSecondaryAction;
-                // Close dropdown unless it's a pure action that might need the UI open (usually we close)
-                this.hide();
             }
         });
 
@@ -377,7 +380,7 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
                     error: String(err && err.message ? err.message : err)
                 });
             } catch (e) {
-                // noop
+                // ignore
             }
 
             console.error("failed to fetch dropdown data:", err);
@@ -399,14 +402,6 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
         const color = apiItem.color || null;
         const disabled = Boolean(apiItem.disabled);
         const role = apiItem.role || null;
-
-        // Parse Action Attributes
-        const primaryAction = apiItem.primaryAction || null;
-        const primaryTarget = apiItem.primaryTarget || null;
-        const primaryUri = apiItem.primaryUri || null;
-        const secondaryAction = apiItem.secondaryAction || null;
-        const secondaryTarget = apiItem.secondaryTarget || null;
-        const secondaryUri = apiItem.secondaryUri || null;
 
         const dataTuples = [];
         if (apiItem.data && typeof apiItem.data === "object") {
@@ -436,13 +431,10 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
             aria: ariaTuples,
             role: role,
             
-            // Action attributes to be used by _createMenuItem
-            primaryAction: primaryAction,
-            primaryTarget: primaryTarget,
-            primaryUri: primaryUri,
-            secondaryAction: secondaryAction,
-            secondaryTarget: secondaryTarget,
-            secondaryUri: secondaryUri
+            // action attributes to be used by _createMenuItem
+            primaryAction: apiItem.primaryAction || null,
+            secondaryAction: apiItem.secondaryAction || null,
+            bind: apiItem.bind || null
         };
     }
 

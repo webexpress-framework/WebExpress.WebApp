@@ -77,7 +77,11 @@ namespace WebExpress.WebApp.WebRestApi
             var json = base.ToJson();
             json["type"] = Type;
             json["command"] = Command;
-            json["uri"] = Uri?.ToString();
+
+            if (Uri is not null)
+            {
+                json["uri"] = Uri.ToString();
+            }
 
             if (!string.IsNullOrWhiteSpace(CommandArg))
             {

@@ -202,16 +202,13 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
                             target: it.target || null,
                             modal: it.modal || null,
                             objectId: it.objectId || null,
-                            item: it.item || null // raw item data for forms
+                            item: it.item || null // item data for forms
                         },
                         // action attributes
                         primaryAction: it.primaryAction || null,
-                        primaryTarget: it.primaryTarget || null,
-                        primaryUri: it.primaryUri || null,
                         secondaryAction: it.secondaryAction || null,
-                        secondaryTarget: it.secondaryTarget || null,
-                        secondaryUri: it.secondaryUri || null,
-                        
+                        bind: it.bind || null,
+
                         options: Array.isArray(it.options) ? it.options : null
                     });
                 }
@@ -221,25 +218,22 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
 
         // fallback: transform table-like rows
         if (Array.isArray(response?.rows)) {
-            for (const row of response.rows) {
-                const firstText = Array.isArray(row?.cells) && row.cells.length ? (row.cells[0]?.content ?? "") : "";
+            for (const item of response.rows) {
+                const firstText = Array.isArray(item?.cells) && item.cells.length ? (item.cells[0]?.content ?? "") : "";
                 result.push({
-                    id: row?.id ?? null,
-                    class: row?.class ?? null,
-                    style: row?.style ?? null,
-                    color: row?.color ?? null,
+                    id: item?.id ?? null,
+                    class: item?.class ?? null,
+                    style: item?.style ?? null,
+                    color: item?.color ?? null,
                     editable: false,
                     content: { content: firstText },
                     
                     // action attributes
-                    primaryAction: row.primaryAction || null,
-                    primaryTarget: row.primaryTarget || null,
-                    primaryUri: row.primaryUri || null,
-                    secondaryAction: row.secondaryAction || null,
-                    secondaryTarget: row.secondaryTarget || null,
-                    secondaryUri: row.secondaryUri || null,
+                    primaryAction: item.primaryAction || null,
+                    secondaryAction: item.secondaryAction || null,
+                    bind: item.bind || null,
 
-                    options: Array.isArray(row?.options) ? row.options : null
+                    options: Array.isArray(item?.options) ? item.options : null
                 });
             }
             return result;
