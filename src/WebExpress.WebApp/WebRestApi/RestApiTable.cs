@@ -107,7 +107,7 @@ namespace WebExpress.WebApp.WebRestApi
             var wql = request.GetParameter("wql")?.Value ?? null;
             var orderColumn = request.GetParameter("o")?.Value;
             var sortingDirection = request.GetParameter("d")?.Value?.ToLowerInvariant();
-            var query = new Query<TIndexItem>();
+            var query = new Query<TIndexItem>() as IQuery<TIndexItem>;
 
             try
             {
@@ -117,11 +117,11 @@ namespace WebExpress.WebApp.WebRestApi
                         .GetComponentManager<WebIndex.IndexManager>()?
                         .Retrieve<TIndexItem>(wql);
 
-                    Filter(wqlStatement, query, request);
+                    query = Filter(wqlStatement, query, request);
                 }
                 else
                 {
-                    Filter(filter, query, request);
+                    query = Filter(filter, query, request);
                 }
 
                 // sorting
@@ -133,7 +133,7 @@ namespace WebExpress.WebApp.WebRestApi
 
                     if (sortingDirection == "desc")
                     {
-                        query.OrderByDesc
+                        query = query.OrderByDesc
                         (
                             item =>
                             ConvertSortValue(sortProp.Key.GetValue(item))
@@ -141,7 +141,7 @@ namespace WebExpress.WebApp.WebRestApi
                     }
                     else
                     {
-                        query.OrderByAsc
+                        query = query.OrderByAsc
                         (
                             item =>
                             ConvertSortValue(sortProp.Key.GetValue(item))
@@ -150,7 +150,7 @@ namespace WebExpress.WebApp.WebRestApi
                 }
 
                 // paging 
-                query.WithPaging(pageNumber * pageSize, pageSize);
+                query = query.WithPaging(pageNumber * pageSize, pageSize);
 
                 var columns = _cachedColumns
                    .Select(x => new RestApiTableColumn()
@@ -416,8 +416,13 @@ namespace WebExpress.WebApp.WebRestApi
         /// The request that provides the operational context for resolving
         /// the appropriate REST API URI.
         /// </param>
-        protected virtual void Filter(IWqlStatement wqlStatement, IQuery<TIndexItem> query, IRequest request)
+        /// <returns>
+        /// A query representing the filtered set of items that match the criteria defined by 
+        /// the WQL statement.
+        /// </returns>
+        protected virtual IQuery<TIndexItem> Filter(IWqlStatement<TIndexItem> wqlStatement, IQuery<TIndexItem> query, IRequest request)
         {
+            return query;
         }
 
         /// <summary>
@@ -434,8 +439,13 @@ namespace WebExpress.WebApp.WebRestApi
         /// The request that provides the operational context for resolving
         /// the appropriate REST API URI.
         /// </param>
-        protected virtual void Filter(string filter, IQuery<TIndexItem> query, IRequest request)
+        /// <returns>
+        /// A query representing the filtered set of items that match the criteria defined by 
+        /// the filter statement.
+        /// </returns>
+        protected virtual IQuery<TIndexItem> Filter(string filter, IQuery<TIndexItem> query, IRequest request)
         {
+            return query;
         }
 
         /// <summary>

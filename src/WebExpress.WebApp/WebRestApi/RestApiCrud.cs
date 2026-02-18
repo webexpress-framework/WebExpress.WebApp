@@ -47,7 +47,7 @@ namespace WebExpress.WebApp.WebRestApi
 
             // optional id parameter (used for clone operations)
             var id = request.GetParameter<ParameterGuid>()?.Value;
-            var query = new Query<TIndexItem>();
+            var query = new Query<TIndexItem>() as IQuery<TIndexItem>; ;
 
             if (!string.IsNullOrWhiteSpace(id))
             {
@@ -132,7 +132,7 @@ namespace WebExpress.WebApp.WebRestApi
                     "delete" => RestApiCrudMode.Delete,
                     _ => RestApiCrudMode.Default
                 };
-                var query = new Query<TIndexItem>();
+                var query = new Query<TIndexItem>() as IQuery<TIndexItem>; ;
 
                 if (!string.IsNullOrWhiteSpace(id))
                 {
@@ -166,7 +166,7 @@ namespace WebExpress.WebApp.WebRestApi
                 else if (string.IsNullOrEmpty(id))
                 {
                     // paging
-                    query.WithPaging(pageNumber * pageSize, pageSize);
+                    query = query.WithPaging(pageNumber * pageSize, pageSize);
 
                     using var context = CreateContext();
                     var data = Retrieve(query, context, request);

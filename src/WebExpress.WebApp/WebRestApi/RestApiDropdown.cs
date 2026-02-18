@@ -71,7 +71,7 @@ namespace WebExpress.WebApp.WebRestApi
             var pageSize = Convert.ToInt32(request.GetParameter("l")?.Value ?? defaultPageSize);
             var filter = request.GetParameter("q")?.Value ?? string.Empty;
             var wql = request.GetParameter("wql")?.Value ?? null;
-            var query = new Query<TIndexItem>();
+            var query = new Query<TIndexItem>() as IQuery<TIndexItem>;;
 
             try
             {
@@ -80,15 +80,15 @@ namespace WebExpress.WebApp.WebRestApi
                     var wqlStatement = WebEx.ComponentHub.GetComponentManager<WebIndex.IndexManager>()?
                         .Retrieve<TIndexItem>(wql);
 
-                    Filter(wqlStatement, query, request);
+                    query = Filter(wqlStatement, query, request);
                 }
                 else
                 {
-                    Filter(filter, query, request);
+                    query = Filter(filter, query, request);
                 }
 
                 // apply paging
-                query.WithPaging(pageNumber * pageSize, pageSize);
+                query = query.WithPaging(pageNumber * pageSize, pageSize);
 
                 using var context = CreateContext();
                 var items = Retrieve(query, context, request);
@@ -191,7 +191,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// query. The returned query may be further composed or executed to retrieve 
         /// filtered results.
         /// </returns>
-        protected virtual IQuery<TIndexItem> Filter(IWqlStatement wqlStatement, IQuery<TIndexItem> query, IRequest request)
+        protected virtual IQuery<TIndexItem> Filter(IWqlStatement<TIndexItem> wqlStatement, IQuery<TIndexItem> query, IRequest request)
         {
             return query;
         }
@@ -210,8 +210,13 @@ namespace WebExpress.WebApp.WebRestApi
         /// The request that provides the operational context for resolving
         /// the appropriate REST API URI.
         /// </param>
-        protected virtual void Filter(string filter, IQuery<TIndexItem> query, IRequest request)
+        /// <returns>
+        /// A query representing the filtered set of items that match the criteria defined by 
+        /// the filter statement.
+        /// </returns>
+        protected virtual IQuery<TIndexItem> Filter(string filter, IQuery<TIndexItem> query, IRequest request)
         {
+            return query;
         }
     }
 }

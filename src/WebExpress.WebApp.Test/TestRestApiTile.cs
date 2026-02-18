@@ -112,8 +112,13 @@ namespace WebExpress.WebApp.Test
         /// The request that provides the operational context for resolving
         /// the appropriate REST API URI.
         /// </param>
-        protected override void Filter(IWqlStatement wqlStatement, IQuery<TIndexItem> query, IRequest request)
+        /// <returns>
+        /// A query representing the filtered set of items that match the criteria defined by 
+        /// the WQL statement.
+        /// </returns>
+        protected override IQuery<TIndexItem> Filter(IWqlStatement<TIndexItem> wqlStatement, IQuery<TIndexItem> query, IRequest request)
         {
+            return query;
         }
 
         /// <summary>
@@ -130,8 +135,13 @@ namespace WebExpress.WebApp.Test
         /// The request that provides the operational context for resolving
         /// the appropriate REST API URI.
         /// </param>
-        protected override void Filter(string filter, IQuery<TIndexItem> query, IRequest request)
+        /// <returns>
+        /// A query representing the filtered set of items that match the criteria defined by 
+        /// the filter statement.
+        /// </returns>
+        protected override IQuery<TIndexItem> Filter(string filter, IQuery<TIndexItem> query, IRequest request)
         {
+            return query;
         }
     }
 }
