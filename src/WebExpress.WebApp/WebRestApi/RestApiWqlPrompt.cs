@@ -21,14 +21,10 @@ namespace WebExpress.WebApp.WebRestApi
     {
         // parser instance for WQL operations
         //private static readonly WqlParser<TIndexItem> parser = new ();
-
-        // available attributes derived from TIndexItem properties
         private static readonly string[] availableAttributes = typeof(TIndexItem).GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Where(p => p.CanRead)
             .Select(p => p.Name.ToLower())
             .ToArray();
-
-        // operators supported in WQL
         private static readonly string[] operators = { "=", "!=", ">", "<", ">=", "<=", "~", "is", "is not", "in", "not in" };
 
         /// <summary>
@@ -38,8 +34,21 @@ namespace WebExpress.WebApp.WebRestApi
         {
         }
 
+        /// <summary>
+        /// Processes an incoming HTTP GET request and routes it to the appropriate 
+        /// REST API endpoint based on the request URI.
+        /// </summary>
+        /// <param name="request">
+        /// The request object containing details of the incoming HTTP request, including 
+        /// the URI and any associated parameters. Cannot be null.</param>
+        /// <returns>
+        /// An IResponse object representing the result of the request processing. The 
+        /// response varies depending on the endpoint accessed and may include history
+        /// data, parsing results, suggestions, validation feedback, or a
+        /// generic success response.
+        /// </returns>
         [Method(RequestMethod.GET)]
-        public IResponse Retrieve(IRequest request)
+        public IResponse Get(IRequest request)
         {
             // extract path segments to determine endpoint
             var path = request.Uri;
@@ -56,16 +65,6 @@ namespace WebExpress.WebApp.WebRestApi
                     .ToResponse();
             }
 
-            // handle parse endpoint
-            if (last?.Equals("parse") ?? false)
-            {
-                //var text = request.GetParameter("text")?.Value ?? "";
-                //var cursorPos = int.TryParse(queryParams["cursorPos"], out var pos) ? pos : 0;
-                //var context = parser.DetermineContext(text, cursorPos);
-                //return new ResponseJson(JsonSerializer.Serialize(new { context = context }));
-                return new ResponseOK();
-            }
-
             // handle suggestions endpoint
             if (last?.Equals("suggestions") ?? false)
             {
@@ -75,6 +74,42 @@ namespace WebExpress.WebApp.WebRestApi
 
                 //var items = GetSuggestions(type, prefix, attribute);
                 //return new ResponseJson(JsonSerializer.Serialize(new { items = items }));
+            }
+
+            // default response
+            return new ResponseOK();
+        }
+
+        /// <summary>
+        /// Processes an HTTP POST request and returns a response based on the request's 
+        /// URI path segment.
+        /// </summary>
+        /// <param name="request">
+        /// The HTTP request to process. Must not be null. The request's URI determines 
+        /// which endpoint is handled.
+        /// </param>
+        /// <returns>
+        /// An object that implements the IResponse interface, representing the result 
+        /// of the request. Returns a successful response for recognized endpoints or a 
+        /// default response otherwise.
+        /// </returns>
+        [Method(RequestMethod.POST)]
+        public IResponse Post(IRequest request)
+        {
+            // extract path segments to determine endpoint
+            var path = request.Uri;
+            var last = path.PathSegments.LastOrDefault()?.Value;
+            //var queryParams = HttpUtility.ParseQueryString(request.Uri.Query);
+
+            // handle parse endpoint
+            if (last?.Equals("parse") ?? false)
+            {
+                //var text = request.GetParameter("text")?.Value ?? "";
+                //var cursorPos = int.TryParse(queryParams["cursorPos"], out var pos) ? pos : 0;
+                //var context = parser.DetermineContext(text, cursorPos);
+                //return new ResponseJson(JsonSerializer.Serialize(new { context = context }));
+                return new RestApiWqlPromptParseResult()
+                    .ToResponse();
             }
 
             // handle validate endpoint
@@ -88,11 +123,14 @@ namespace WebExpress.WebApp.WebRestApi
                 //    queryHistory.Add(queryText);
                 //}
                 //return new ResponseJson(JsonSerializer.Serialize(new { valid = valid, error = error }));
+                return new RestApiWqlPromptValidateResult()
+                    .ToResponse();
             }
 
             // default response
-            return new ResponseOK();
+            return new ResponseBadRequest();
         }
+
 
         /// <summary>
         /// Retrieves a collection of historical entries associated with the specified request.

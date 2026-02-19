@@ -22,7 +22,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             var request = UnitTestControlFixture.CreateRequestMock(uri: "/api/history");
 
             // act
-            var result = wqlApi.Retrieve(request);
+            var result = wqlApi.Get(request);
 
             // vallidation
             Assert.NotNull(result);

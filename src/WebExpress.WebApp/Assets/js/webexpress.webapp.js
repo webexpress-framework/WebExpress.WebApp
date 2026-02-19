@@ -248,8 +248,6 @@ webexpress.webapp.Event = class {
     static CHANGE_STATUS_EVENT = "webexpress.webapp.change.status";
     // Event triggered when UI components require a general update
     static UPDATE_EVENT = "webexpress.webapp.update";
-    // Event triggered when a WQL filter expression changes
-    static WQL_FILTER_EVENT = "webexpress.webapp.wql.filter";
 }
     
 // initialize the WebSocket connection after the DOM is fully loaded    

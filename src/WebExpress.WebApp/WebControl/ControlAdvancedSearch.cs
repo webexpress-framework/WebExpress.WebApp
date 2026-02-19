@@ -82,13 +82,27 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
+            return Render(renderContext, visualTree, RestUri, [.. Content]);
+        }
+
+        /// <summary>
+        /// Converts the control to an HTML representation.
+        /// </summary>
+        /// <param name="renderContext">The context in which the control is rendered.</param>
+        /// <param name="visualTree">The visual tree.</param>
+        /// <param name="uri">The URI that determines the data.</param>
+        /// <param name="controls">The controls to render within the search control.</param>
+        /// <returns>An HTML node representing the rendered control.</returns>
+        public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IUri uri, params IControl[] controls)
+        {
             var html = new HtmlElementTextContentDiv()
             {
                 Id = Id,
                 Class = Css.Concatenate("wx-webapp-search", GetClasses()),
                 Style = GetStyles()
             }
-                .Add(_content.Select(x => x.Render(renderContext, visualTree)));
+                .AddUserAttribute("data-uri", uri?.ToString())
+                .Add(controls.Select(x => x.Render(renderContext, visualTree)));
 
             return html;
         }

@@ -9,7 +9,7 @@
  * - Clear button and Multi-line support (Ctrl+Enter).
  * - Unified Hint/Error display with styled keyboard shortcuts.
  * The following events are triggered:
- * - webexpress.webui.Event.CHANGE_FILTER_EVENT
+ * - webexpress.webui.Event.WQL_FILTER_EVENT
  */
 webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
     
@@ -192,13 +192,13 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
                 body: JSON.stringify({ text, cursorPos })
             });
 
-            if (parseResp.ok) {
-                const parseData = await parseResp.json();
-                this._currentContext = parseData.context; 
+            if (!parseResp.ok) throw new Error("Parse request failed");
             
-                await this._fetchSuggestions(this._currentContext);
-                this._updateHint();
-            }
+            const parseData = await parseResp.body.json();
+            this._currentContext = parseData.context; 
+            
+            await this._fetchSuggestions(this._currentContext);
+            this._updateHint();
         } catch (e) {
             console.error("[WQL] Context refresh error:", e);
         }
@@ -378,30 +378,28 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
             number: "webexpress.webapp:wql.type.number"
         };
 
-        const type = this._currentContext?.type;
-        if (type) {
-            let label = this._i18n(typeKeys[type]);
-            if (!label) label = type || this._i18n("webexpress.webapp:wql.type.input") || "Input";
+        const type = this._currentContext ? this._currentContext.type : "";
+        let label = this._i18n(typeKeys[type]);
+        if (!label) label = type || this._i18n("webexpress.webapp:wql.type.input") || "Input";
 
-            if (this._suggestions.length === 0) { 
-                const noSuggestions = this._i18n("webexpress.webapp:wql.no.suggestions") || "No suggestions.";
-                this._setHintHtml(`${label}: ${noSuggestions}`);
-                return;
-            }
-
-            const selected = this._suggestions[this._tabCycleIndex];
-            const others = this._suggestions.filter((_, i) => i !== this._tabCycleIndex).slice(0, 9);
-        
-            // suggestion display with key hint
-            let html = `${label}: ${this._i18n("webexpress.webapp:wql.tab.label").replace("{0}", this._escapeHtml(selected))}`;
-        
-            if (others.length > 0) {
-                html += ` ${this._i18n("webexpress.webapp:wql.cursor.label").replace("{0}", others.map(
-                    o => `<b>${this._escapeHtml(o)}</b>`).join(", "))}`;
-            }
-        
-            this._setHintHtml(html);
+        if (this._suggestions.length === 0) { 
+            const noSuggestions = this._i18n("webexpress.webapp:wql.no.suggestions") || "No suggestions.";
+            this._setHintHtml(`${label}: ${noSuggestions}`);
+            return;
         }
+
+        const selected = this._suggestions[this._tabCycleIndex];
+        const others = this._suggestions.filter((_, i) => i !== this._tabCycleIndex).slice(0, 9);
+        
+        // suggestion display with key hint
+        let html = `${label}: ${this._i18n("webexpress.webapp:wql.tab.label").replace("{0}", this._escapeHtml(selected))}`;
+        
+        if (others.length > 0) {
+            html += ` ${this._i18n("webexpress.webapp:wql.cursor.label").replace("{0}", others.map(
+                o => `<b>${this._escapeHtml(o)}</b>`).join(", "))}`;
+        }
+        
+        this._setHintHtml(html);
     }
 
     /**
@@ -455,8 +453,12 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
                 this._setHintHtml(sentMsg);
                 this._setValidState();
 
-                // trigger event for external listeners
-                this._dispatch(webexpress.webui.Event.CHANGE_FILTER_EVENT, { value: text });
+                if (typeof this._dispatch === 'function') {
+                    this._dispatch("wql-submit", { query: text });
+                } else {
+                    // trigger event for external listeners
+                    this._dispatch(webexpress.webapp.Event.WQL_FILTER_EVENT, { query: text });
+                }
             } else {
                 const unknownError = this._i18n("webexpress.webapp:wql.error.unknown") || "Unknown error";
                 this._setInvalidState(res.error || unknownError);

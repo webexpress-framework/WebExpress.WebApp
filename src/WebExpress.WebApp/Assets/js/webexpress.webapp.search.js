@@ -20,6 +20,13 @@ webexpress.webapp.SearchCtrl = class extends webexpress.webui.Ctrl {
             this._initialMode = element.dataset.initial;
         }
 
+        this._uri = this._element.dataset.uri || null;
+
+        // clean up the dom element and set base classes for styling
+        element.textContent = "";
+        element.removeAttribute("data-uri");
+        element.removeAttribute("data-initial");
+
         // hosts and children
         this._basicHost = null;
         this._wqlHost = null;
@@ -120,10 +127,8 @@ webexpress.webapp.SearchCtrl = class extends webexpress.webui.Ctrl {
         // wql wrapper and dataset uri
         const wqlWrapper = document.createElement("div");
         wqlWrapper.className = "wx-webapp-wql-host";
-        if (this._element.dataset.wqlUri) {
-            wqlWrapper.dataset.uri = this._element.dataset.wqlUri;
-        } else if (this._element.dataset.uri) {
-            wqlWrapper.dataset.uri = this._element.dataset.uri;
+        if (this._uri) {
+            wqlWrapper.dataset.uri = this._uri;
         }
         // ensure wql wrapper fills width
         wqlWrapper.style.width = "100%";
