@@ -1,10 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
 using WebExpress.WebIndex;
+using WebExpress.WebIndex.Wql;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -76,6 +78,25 @@ namespace WebExpress.WebApp.WebRestApi
                 //return new ResponseJson(JsonSerializer.Serialize(new { items = items }));
             }
 
+            // handle analyze endpoint
+            if (last?.Equals("analyze") ?? false)
+            {
+                var wql = request.GetParameter("wql")?.Value ?? "";
+                var cursorPosition = request.GetParameter("c")?.Value ?? "0";
+                var ila = GetLookahead(wql, request);
+                var pos = Convert.ToInt32(cursorPosition);
+                var currentToken = ila.Items
+                   .Where(x => x.Token.Offset <= pos && pos <= x.Token.Offset + x.Token.Length)
+                   .FirstOrDefault();
+
+                return new RestApiWqlPromptParseResult()
+                {
+                    Lookahead = ila,
+                    CurrentExpressionType = currentToken?.ExpreesionType ?? WqlExpressionType.None
+                }
+                    .ToResponse();
+            }
+
             // default response
             return new ResponseOK();
         }
@@ -99,18 +120,6 @@ namespace WebExpress.WebApp.WebRestApi
             // extract path segments to determine endpoint
             var path = request.Uri;
             var last = path.PathSegments.LastOrDefault()?.Value;
-            //var queryParams = HttpUtility.ParseQueryString(request.Uri.Query);
-
-            // handle parse endpoint
-            if (last?.Equals("parse") ?? false)
-            {
-                //var text = request.GetParameter("text")?.Value ?? "";
-                //var cursorPos = int.TryParse(queryParams["cursorPos"], out var pos) ? pos : 0;
-                //var context = parser.DetermineContext(text, cursorPos);
-                //return new ResponseJson(JsonSerializer.Serialize(new { context = context }));
-                return new RestApiWqlPromptParseResult()
-                    .ToResponse();
-            }
 
             // handle validate endpoint
             if (last?.Equals("validate") ?? false)
@@ -149,6 +158,28 @@ namespace WebExpress.WebApp.WebRestApi
         protected virtual IEnumerable<string> GetHistory(IRequest request)
         {
             return [];
+        }
+
+        /// <summary>
+        /// Analyzes the specified WQL query and returns lookahead information that 
+        /// describes the query's structure and expected elements.
+        /// </summary>
+        /// <param name="wql">
+        /// The WQL query string to analyze. This parameter must not be null or empty.
+        /// </param>
+        /// <param name="request">
+        /// The request context used for analysis. This parameter cannot be null.
+        /// </param>
+        /// <returns>
+        /// An instance of IWqlLookahead containing information about the parsed WQL 
+        /// query.
+        /// </returns>
+        protected virtual IWqlLookahead GetLookahead(string wql, IRequest request)
+        {
+            var parser = new WqlParser<TIndexItem>();
+            var ila = parser.Analyze(wql);
+
+            return ila;
         }
     }
 }

@@ -1,7 +1,10 @@
-﻿using System.Text;
+﻿using System.Linq;
+using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
+using WebExpress.WebIndex.Wql;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -13,8 +16,19 @@ namespace WebExpress.WebApp.WebRestApi
         private readonly JsonSerializerOptions _jsonOptions = new()
         {
             WriteIndented = true,
-            PropertyNameCaseInsensitive = true
+            PropertyNameCaseInsensitive = true,
+            Converters = { new JsonStringEnumConverter() }
         };
+
+        /// <summary>
+        /// Returns or sets the lookahead configuration used for query execution.
+        /// </summary>
+        public IWqlLookahead Lookahead { get; set; }
+
+        /// <summary>
+        /// Returns or sets the type of WQL expression currently being processed.
+        /// </summary>
+        public WqlExpressionType CurrentExpressionType { get; set; }
 
         /// <summary>
         /// Converts the current instance into a response object.
@@ -24,7 +38,16 @@ namespace WebExpress.WebApp.WebRestApi
         {
             var data = new
             {
-                status = ""
+                tokens = Lookahead.Items.Select(x => new
+                {
+                    type = x.ExpreesionType,
+                    offset = x.Token.Offset,
+                    length = x.Token.Length,
+                    value = x.Token.Value
+                }),
+                isValidSoFar = Lookahead.IsValidSoFar,
+                lastExpressionType = Lookahead.LastExpressionType,
+                currentExpressionType = CurrentExpressionType
             };
 
             var jsonData = JsonSerializer.Serialize(data, _jsonOptions);

@@ -185,16 +185,27 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         const text = this._input.value;
         const cursorPos = this._input.selectionStart;
 
+        // build request url with fallback for relative uris
+        const base = window.location.origin;
+        let urlObj;
         try {
-            const parseResp = await fetch(this._apiUri + "/parse", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text, cursorPos })
-            });
+            urlObj = new URL(this._apiUri + "/analyze", base);
+        } catch (e) {
+            urlObj = new URL(this._apiUri + "/analyze", document.baseURI);
+        }
 
-            if (parseResp.ok) {
-                const parseData = await parseResp.json();
-                this._currentContext = parseData.context; 
+        // set query parameters
+        urlObj.searchParams.set("wql", text);
+        urlObj.searchParams.set("c", cursorPos);
+
+        const fetchUrl = this._apiUri.startsWith("http") ? urlObj.href : (urlObj.pathname + urlObj.search);
+
+        try {
+            const analyzeResp = await fetch(fetchUrl);
+
+            if (analyzeResp.ok) {
+                const analyzeData = await analyzeResp.json();
+                this._currentContext = analyzeData.context; 
             
                 await this._fetchSuggestions(this._currentContext);
                 this._updateHint();
