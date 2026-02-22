@@ -50,7 +50,6 @@ webexpress.webapp.SearchCtrl = class extends webexpress.webui.Ctrl {
      * Build the control DOM (input area + extended content + single link toggle to the right).
      * Preserves any existing child elements of the host and places them in an
      * extended content container to the right of the input area.
-     * @private
      */
     _buildDom() {
         // capture original children so they can be reparented into extended content
@@ -103,7 +102,6 @@ webexpress.webapp.SearchCtrl = class extends webexpress.webui.Ctrl {
 
     /**
      * Instantiate existing SearchCtrl and WqlPromptCtrl inside hosts.
-     * @private
      */
     _initChildren() {
         // basic wrapper markup expected by SearchCtrl
@@ -149,7 +147,6 @@ webexpress.webapp.SearchCtrl = class extends webexpress.webui.Ctrl {
 
     /**
      * Attach event handlers for child events and UI interaction.
-     * @private
      */
     _attachEventHandlers() {
         // click on toggle link switches mode
@@ -170,36 +167,38 @@ webexpress.webapp.SearchCtrl = class extends webexpress.webui.Ctrl {
             }
         });
 
-        // listen for basic search change events (bubbled)
-        this._element.addEventListener(webexpress.webui.Event.CHANGE_FILTER_EVENT, (e) => {
+        // listen for basic search change events
+        this._basicHost.addEventListener(webexpress.webui.Event.CHANGE_FILTER_EVENT, (e) => {
+            e.stopPropagation();
+
             // ignore events emitted by this wrapper itself
             if (e.detail && e.detail._fromAdvanced) {
                 return;
             }
             // ensure event originates from basic child
             if (this._basicHost.contains(e.target)) {
-                const val = (e.detail && (e.detail.value || e.detail.query)) || "";
-                const payload = { value: val, source: "basic", _fromAdvanced: true };
-                this._element.dispatchEvent(new CustomEvent(webexpress.webui.Event.CHANGE_FILTER_EVENT, {
-                    bubbles: true,
-                    detail: payload
-                }));
+                const val = (e.detail && e.detail.value) || "";
+                this._dispatch(webexpress.webui.Event.CHANGE_FILTER_EVENT, {
+                    value: val,
+                    searchType: "basic"
+                });
             }
         });
 
-        // listen for WQL filter events and map them to unified change event
-        this._element.addEventListener(webexpress.webapp.Event.WQL_FILTER_EVENT, (e) => {
+        // listen for wql search change events
+        this._wqlHost.addEventListener(webexpress.webui.Event.CHANGE_FILTER_EVENT, (e) => {
+            e.stopPropagation();
+
             // ignore events emitted by this wrapper itself
             if (e.detail && e.detail._fromAdvanced) {
                 return;
             }
             // ensure event originates from wql child
             if (this._wqlHost.contains(e.target)) {
-                const val = (e.detail && (e.detail.query || e.detail.value)) || "";
+                const val = (e.detail && e.detail.value) || "";
                 this._dispatch(webexpress.webui.Event.CHANGE_FILTER_EVENT, {
                     value: val,
-                    source: "wql",
-                    _fromAdvanced: true
+                    searchType: "wql"
                 });
             }
         });
@@ -225,7 +224,6 @@ webexpress.webapp.SearchCtrl = class extends webexpress.webui.Ctrl {
      * Switch visible mode between "basic" and "wql".
      * Copies values between inputs to preserve user text.
      * @param {string} mode - either "basic" or "wql".
-     * @private
      */
     _applyMode(mode) {
         if (mode !== "basic" && mode !== "wql") {

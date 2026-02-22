@@ -12,6 +12,7 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
     _orderDir = null;     // current sort direction ('asc'/'desc')
 
     _filter = "";
+    _wql = "";
     _page = 0;
     _pageSize = 50;
 
@@ -43,18 +44,36 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
             return;
         }
 
-        const filter = encodeURIComponent(this._filter ?? "");
-        const separator = this._restUri.includes("?") ? "&" : "?";
-        let url = `${this._restUri}${separator}q=${filter}&p=${this._page}&limit=${this._pageSize}`;
+        // abort previous request if present
+        if (this._abortController) {
+            this._abortController.abort("search replaced");
+        }
+        this._abortController = new AbortController();
+
+        const base = window.location.origin;
+        let urlObj;
+        try {
+            urlObj = new URL(this._restUri, base);
+        } catch (e) {
+            urlObj = new URL(this._restUri, document.baseURI);
+        }
+
+        // set query parameters
+        urlObj.searchParams.set("q", this._filter || "");
+        urlObj.searchParams.set("wql", this._wql || "");
+        urlObj.searchParams.set("p", this._page);
+        urlObj.searchParams.set("l", this._pageSize);
 
         if (this._orderBy) {
-            url += `&o=${encodeURIComponent(this._orderBy)}`;
+            urlObj.searchParams.set("o", this._orderBy);
             if (this._orderDir) {
-                url += `&d=${encodeURIComponent(this._orderDir)}`;
+                urlObj.searchParams.set("d", this._orderDir);
             }
         }
 
-        fetch(url)
+        const fetchUrl = this._restUri.startsWith("http") ? urlObj.href : (urlObj.pathname + urlObj.search);
+
+        fetch(fetchUrl, { signal: this._abortController.signal })
             .then((res) => {
                 if (!res.ok) {
                     throw new Error("Request failed");
@@ -68,10 +87,14 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
                 this._element.dispatchEvent(new CustomEvent(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
                     detail: { id: this._element.id, response: response }
                 }));
+
+                this._abortController = null;
             })
             .catch((error) => {
                 console.error("TileCtrl Request failed:", error);
                 this._element.classList.remove("placeholder-glow");
+
+                this._abortController = null;
             });
     }
 
@@ -225,6 +248,20 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
         }).catch((err) => {
             console.error("TileCtrl update state failed", err);
         });
+    }
+
+    /**
+     * Sets the search filter and reloads the first page (without modifying order or paging settings).
+     * @param {string} pattern - Search pattern (optional, defaults to empty string)
+     * @param {string} [searchType="basic"] -  Filter type ("basic" or "wql").
+     */
+    search(pattern = "", searchType = "basic") {
+        this._filter = searchType === "basic" ? pattern : null;
+        this._wql = searchType === "wql" ? pattern : null;
+        this._page = 0;
+        if (this._restUri) {
+            this._receiveData(false);
+        }
     }
 };
 

@@ -16,6 +16,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
     _orderBy = null;
     _orderDir = null;
     _filter = "";
+    _wql = "";
     _page = 0;
     _pageSize = 50;
     _totalRecords = 0;
@@ -441,7 +442,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
 
         // abort previous request if present
         if (this._abortController) {
-            this._abortController.abort();
+            this._abortController.abort("search replaced");
         }
         this._abortController = new AbortController();
 
@@ -464,6 +465,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
 
         // set query parameters
         urlObj.searchParams.set("q", this._filter || "");
+        urlObj.searchParams.set("wql", this._wql || "");
         urlObj.searchParams.set("p", this._page);
         urlObj.searchParams.set("l", this._pageSize);
 
@@ -768,9 +770,11 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
     /**
      * Sets the search filter and reloads the first page (without modifying order or paging settings).
      * @param {string} pattern - Search pattern (optional, defaults to empty string)
+     * @param {string} [searchType="basic"] -  Filter type ("basic" or "wql").
      */
-    search(pattern = "") {
-        this._filter = pattern;
+    search(pattern = "", searchType = "basic") {
+        this._filter = searchType === "basic" ? pattern : null;
+        this._wql = searchType === "wql" ? pattern : null;
         this._page = 0;
         if (this._restUri) {
             this._receiveData(false);

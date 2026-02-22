@@ -7,40 +7,13 @@
  * - supports per-item edit and delete actions bound from server-provided options
  */
 webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
+    _filter = "";
+    _wql = "";
+    _page = 0;
+    _pageSize = 50;
 
-    /**
-     * Helper: creates an element and assigns bootstrap classes.
-     * @param {string} tag html tag name.
-     * @param {Array<string>} classList classes to add.
-     * @returns {HTMLElement} created element.
-     */
-    _createElement(tag, classList = []) {
-        const el = document.createElement(tag);
-        if (classList.length) {
-            el.classList.add(...classList);
-        }
-        return el;
-    }
-
-    /**
-     * Helper: creates a compact progress bar.
-     * @returns {HTMLDivElement} progress container.
-     */
-    _createProgressDiv() {
-        const div = this._createElement("div", ["progress", "mb-2"]);
-        div.setAttribute("role", "status");
-        div.style.height = "0.25rem"; // thin line
-        
-        const bar = this._createElement("div", [
-            "progress-bar",
-            "progress-bar-striped",
-            "progress-bar-animated"
-        ]);
-        bar.style.width = "100%";
-        
-        div.appendChild(bar);
-        return div;
-    }
+    _orderBy = null;      // current sort property
+    _orderDir = null;     // current sort direction ('asc'/'desc')
 
     // fields
     _restUri = "";
@@ -55,7 +28,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
 
     /**
      * Constructor for the REST ListCtrl.
-     * @param {HTMLElement} element host element.
+     * @param {HTMLElement} - element host element.
      */
     constructor(element) {
         super(element);
@@ -100,8 +73,36 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
     _receiveData() {
         this._progressDiv.style.visibility = "visible";
 
-        // basic fetch without pagination/filter params
-        fetch(this._restUri)
+        // abort previous request if present
+        if (this._abortController) {
+            this._abortController.abort("search replaced");
+        }
+        this._abortController = new AbortController();
+
+        const base = window.location.origin;
+        let urlObj;
+        try {
+            urlObj = new URL(this._restUri, base);
+        } catch (e) {
+            urlObj = new URL(this._restUri, document.baseURI);
+        }
+
+        // set query parameters
+        urlObj.searchParams.set("q", this._filter || "");
+        urlObj.searchParams.set("wql", this._wql || "");
+        urlObj.searchParams.set("p", this._page);
+        urlObj.searchParams.set("l", this._pageSize);
+
+        if (this._orderBy) {
+            urlObj.searchParams.set("o", this._orderBy);
+            if (this._orderDir) {
+                urlObj.searchParams.set("d", this._orderDir);
+            }
+        }
+
+        const fetchUrl = this._restUri.startsWith("http") ? urlObj.href : (urlObj.pathname + urlObj.search);
+
+        fetch(fetchUrl, { signal: this._abortController.signal })
             .then(res => {
                 if (!res.ok) {
                     throw new Error("Request failed");
@@ -151,17 +152,19 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
                 
                 // hide progress
                 this._progressDiv.style.visibility = "hidden";
+                this._abortController = null;
             })
             .catch(error => {
                 console.error("The request could not be completed successfully:", error);
                 this._progressDiv.style.visibility = "hidden";
+                this._abortController = null;
             });
     }
 
     /**
      * Maps a server response to internal list item structures.
-     * @param {any} response server payload.
-     * @returns {Array<Object>} normalized items for ListCtrl.
+     * @param {any} - response server payload.
+     * @returns {Array<Object>} - Normalized items for ListCtrl.
      */
     _mapResponseToItems(response) {
         const result = [];
@@ -244,8 +247,8 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
 
     /**
      * Opens an edit modal and submits changes via PUT.
-     * @param {Object} item list item descriptor.
-     * @param {string} uri form uri to load inside the modal.
+     * @param {Object} - item list item descriptor.
+     * @param {string} - uri form uri to load inside the modal.
      */
     _editItem(item, uri) {
         if (!webexpress.webapp.ModalFormCtrl) {
@@ -321,7 +324,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
 
     /**
      * Deletes an item via DELETE request with confirmation modal.
-     * @param {string|number|null} itemId id of the item to delete.
+     * @param {string|number|null} - itemId id of the item to delete.
      */
     _deleteItem(itemId) {
         if (!webexpress.webui.ModalConfirmDelete) {
@@ -341,7 +344,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
 
     /**
      * Executes the delete network request.
-     * @param {string|number|null} itemId id.
+     * @param {string|number|null} - itemId id.
      */
     _performDelete(itemId) {
         fetch(`${this._restUri}?id=${encodeURIComponent(itemId ?? "")}`, { method: "DELETE" })
@@ -352,8 +355,56 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
                 this._receiveData();
             })
             .catch(error => {
-                console.error(`Failed to delete item with ID ${itemId}.`, error);
+                console.error(`Failed to delete item with Id ${itemId}.`, error);
             });
+    }
+
+    /**
+     * Sets the search filter and reloads the first page (without modifying order or paging settings).
+     * @param {string} pattern - Search pattern (optional, defaults to empty string)
+     * @param {string} [searchType="basic"] -  Filter type ("basic" or "wql").
+     */
+    search(pattern = "", searchType = "basic") {
+        this._filter = searchType === "basic" ? pattern : null;
+        this._wql = searchType === "wql" ? pattern : null;
+        this._page = 0;
+        if (this._restUri) {
+            this._receiveData(false);
+        }
+    }
+
+    /**
+     * Creates an element and assigns bootstrap classes.
+     * @param {string} - tag html tag name.
+     * @param {Array<string>} - classList classes to add.
+     * @returns {HTMLElement} - Created element.
+     */
+    _createElement(tag, classList = []) {
+        const el = document.createElement(tag);
+        if (classList.length) {
+            el.classList.add(...classList);
+        }
+        return el;
+    }
+
+    /**
+     * Creates a compact progress bar.
+     * @returns {HTMLDivElement} - Progress container.
+     */
+    _createProgressDiv() {
+        const div = this._createElement("div", ["progress", "mb-2"]);
+        div.setAttribute("role", "status");
+        div.style.height = "0.25rem"; // thin line
+
+        const bar = this._createElement("div", [
+            "progress-bar",
+            "progress-bar-striped",
+            "progress-bar-animated"
+        ]);
+        bar.style.width = "100%";
+
+        div.appendChild(bar);
+        return div;
     }
 };
 

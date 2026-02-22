@@ -447,11 +447,10 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
                 this._historyIndex = this._history.length;
                 
                 this._unsentInput = "";
-                this._input.value = "";
                 this._suggestions = [];
                 this._currentContext = null;
                 
-                const sentMsg = this._i18n("webexpress.webapp:.wql.status.sent") || "Valid query sent.";
+                const sentMsg = this._i18n("webexpress.webapp:wql.status.sent") || "Valid query sent.";
                 this._setHintHtml(sentMsg);
                 this._setValidState();
 
