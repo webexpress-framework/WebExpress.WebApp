@@ -37,7 +37,7 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
     }
 
     /**
-     * Fetches data from the configured REST endpoint (Standalone Mode).
+     * Fetches data from the configured REST endpoint (standalone mode).
      */
     _receiveData() {
         if (!this._restUri) {
@@ -251,6 +251,17 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
     }
 
     /**
+     * Updates the control.
+     * By default, this method calls the render() method.
+     * Derived classes can override this method to implement specific behavior.
+     */
+    update() {
+        if (this._restUri && this._isVisible()) {
+            this._receiveData(false);
+        }
+    }
+
+    /**
      * Sets the search filter and reloads the first page (without modifying order or paging settings).
      * @param {string} pattern - Search pattern (optional, defaults to empty string)
      * @param {string} [searchType="basic"] -  Filter type ("basic" or "wql").
@@ -259,7 +270,7 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
         this._filter = searchType === "basic" ? pattern : null;
         this._wql = searchType === "wql" ? pattern : null;
         this._page = 0;
-        if (this._restUri) {
+        if (this._restUri && this._isVisible()) {
             this._receiveData(false);
         }
     }

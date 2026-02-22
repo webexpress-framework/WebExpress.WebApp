@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using WebExpress.WebApp.WebAttribute;
-using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebIcon;
@@ -71,14 +70,14 @@ namespace WebExpress.WebApp.WebRestApi
             var pageSize = Convert.ToInt32(request.GetParameter("l")?.Value ?? defaultPageSize);
             var filter = request.GetParameter("q")?.Value ?? string.Empty;
             var wql = request.GetParameter("wql")?.Value ?? null;
-            var query = new Query<TIndexItem>() as IQuery<TIndexItem>;;
+            var query = new Query<TIndexItem>() as IQuery<TIndexItem>; ;
 
             try
             {
                 if (!string.IsNullOrWhiteSpace(wql))
                 {
-                    var wqlStatement = WebEx.ComponentHub.GetComponentManager<WebIndex.IndexManager>()?
-                        .Retrieve<TIndexItem>(wql);
+                    var parser = new WqlParser<TIndexItem>();
+                    var wqlStatement = parser.Parse(wql);
 
                     query = Filter(wqlStatement, query, request);
                 }
@@ -193,7 +192,12 @@ namespace WebExpress.WebApp.WebRestApi
         /// </returns>
         protected virtual IQuery<TIndexItem> Filter(IWqlStatement<TIndexItem> wqlStatement, IQuery<TIndexItem> query, IRequest request)
         {
-            return query;
+            if (wqlStatement is null || wqlStatement.HasErrors)
+            {
+                return query;
+            }
+
+            return wqlStatement.ToQuery();
         }
 
         /// <summary>

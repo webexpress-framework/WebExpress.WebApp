@@ -282,7 +282,12 @@ namespace WebExpress.WebApp.WebRestApi
         /// </returns>
         protected virtual IQuery<TIndexItem> Filter(IWqlStatement<TIndexItem> wqlStatement, IQuery<TIndexItem> query, IRequest request)
         {
-            return query;
+            if (wqlStatement is null || wqlStatement.HasErrors)
+            {
+                return query;
+            }
+
+            return wqlStatement.ToQuery();
         }
 
         /// <summary>

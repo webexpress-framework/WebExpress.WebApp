@@ -768,6 +768,17 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
     }
 
     /**
+     * Updates the control.
+     * By default, this method calls the render() method.
+     * Derived classes can override this method to implement specific behavior.
+     */
+    update() {
+        if (this._restUri && this._isVisible()) {
+            this._receiveData(false);
+        }
+    }
+
+    /**
      * Sets the search filter and reloads the first page (without modifying order or paging settings).
      * @param {string} pattern - Search pattern (optional, defaults to empty string)
      * @param {string} [searchType="basic"] -  Filter type ("basic" or "wql").
@@ -776,7 +787,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
         this._filter = searchType === "basic" ? pattern : null;
         this._wql = searchType === "wql" ? pattern : null;
         this._page = 0;
-        if (this._restUri) {
+        if (this._restUri && this._isVisible()) {
             this._receiveData(false);
         }
     }
