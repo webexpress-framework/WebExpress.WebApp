@@ -128,25 +128,6 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
                 // map response into list items
                 const mappedItems = this._mapResponseToItems(response);
 
-                // bind edit/delete option actions if present
-                mappedItems.forEach(item => {
-                    if (Array.isArray(item.options)) {
-                        item.options.forEach(opt => {
-                            if (opt?.command === "edit") {
-                                const uri = opt.uri;
-                                opt.action = () => {
-                                    this._editItem(item, uri);
-                                };
-                            } else if (opt?.command === "delete") {
-                                opt.uri = "javascript:void(0);";
-                                opt.action = () => {
-                                    this._deleteItem(item.id);
-                                };
-                            }
-                        });
-                    }
-                });
-
                 // update list via base class
                 this.setItems(mappedItems);
                 
@@ -204,8 +185,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
                             uri: it.uri || null,
                             target: it.target || null,
                             modal: it.modal || null,
-                            objectId: it.objectId || null,
-                            item: it.item || null // item data for forms
+                            objectId: it.objectId || null
                         },
                         // action attributes
                         primaryAction: it.primaryAction || null,
@@ -219,144 +199,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
             return result;
         }
 
-        // fallback: transform table-like rows
-        if (Array.isArray(response?.rows)) {
-            for (const item of response.rows) {
-                const firstText = Array.isArray(item?.cells) && item.cells.length ? (item.cells[0]?.content ?? "") : "";
-                result.push({
-                    id: item?.id ?? null,
-                    class: item?.class ?? null,
-                    style: item?.style ?? null,
-                    color: item?.color ?? null,
-                    editable: false,
-                    content: { content: firstText },
-                    
-                    // action attributes
-                    primaryAction: item.primaryAction || null,
-                    secondaryAction: item.secondaryAction || null,
-                    bind: item.bind || null,
-
-                    options: Array.isArray(item?.options) ? item.options : null
-                });
-            }
-            return result;
-        }
-
         return result;
-    }
-
-    /**
-     * Opens an edit modal and submits changes via PUT.
-     * @param {Object} - item list item descriptor.
-     * @param {string} - uri form uri to load inside the modal.
-     */
-    _editItem(item, uri) {
-        if (!webexpress.webapp.ModalFormCtrl) {
-            console.warn("ModalFormCtrl not available");
-            return;
-        }
-
-        const editModal = new webexpress.webapp.ModalFormCtrl();
-        editModal._uri = uri;
-        editModal._selector = uri?.includes("#") ? ("#" + uri.split("#")[1]) : "form";
-        
-        // title handling depends on i18n availability
-        const titleText = webexpress.webui.I18N ? webexpress.webui.I18N.translate("webexpress.webapp:form.edit_item") : "Edit Item";
-        if (editModal._titleH1) {
-            editModal._titleH1.textContent = titleText;
-        }
-        
-        if (editModal._dialogDiv) {
-            editModal._dialogDiv.className = "modal-dialog modal-dialog-scrollable modal-lg";
-        }
-
-        // bind submit handling
-        if (editModal._form) {
-            editModal._form.addEventListener("submit", async (event) => {
-                event.preventDefault();
-                const formData = new FormData(editModal._form);
-
-                try {
-                    const response = await fetch(`${this._restUri}?id=${encodeURIComponent(item?.id ?? "")}`, {
-                        method: "PUT",
-                        body: formData
-                    });
-
-                    if (response.ok) {
-                        this._receiveData();
-                        editModal.hide();
-                        return;
-                    }
-
-                    if (response.status === 400) {
-                        const errors = await response.json();
-                        editModal.showValidationErrors(errors);
-                        return;
-                    }
-
-                    throw new Error(`HTTP ${response.status}`);
-                } catch (error) {
-                    console.error(`Failed to edit item with ID ${item?.id}.`, error);
-                }
-            });
-        }
-
-        // prefill logic
-        editModal._element.addEventListener(webexpress.webui.Event.UPDATED_EVENT, (event) => {
-            const form = event.detail.form;
-            if (form === editModal._form && item.content?.item) {
-                Object.entries(item.content.item).forEach(([content_field, value]) => {
-                    let field = editModal._form.elements.namedItem(content_field);
-                    if (field) {
-                        field.value = value;
-                    } else {
-                        const editorContainer = form.querySelector(`[name="${content_field}"]`);
-                        if (editorContainer) {
-                            editorContainer.innerHTML = String(value ?? "");
-                        }
-                    }
-                });
-            }
-        });
-
-        editModal.show();
-    }
-
-    /**
-     * Deletes an item via DELETE request with confirmation modal.
-     * @param {string|number|null} - itemId id of the item to delete.
-     */
-    _deleteItem(itemId) {
-        if (!webexpress.webui.ModalConfirmDelete) {
-            // fallback if modal not available
-            if (confirm("Delete this item?")) {
-                this._performDelete(itemId);
-            }
-            return;
-        }
-
-        const confirmModal = new webexpress.webui.ModalConfirmDelete();
-        confirmModal.confirmation(() => {
-            this._performDelete(itemId);
-        });
-        confirmModal.show();
-    }
-
-    /**
-     * Executes the delete network request.
-     * @param {string|number|null} - itemId id.
-     */
-    _performDelete(itemId) {
-        fetch(`${this._restUri}?id=${encodeURIComponent(itemId ?? "")}`, { method: "DELETE" })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error("Failed to delete item");
-                }
-                this._receiveData();
-            })
-            .catch(error => {
-                console.error(`Failed to delete item with Id ${itemId}.`, error);
-            });
     }
 
     /**

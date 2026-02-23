@@ -184,8 +184,6 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
     async _refreshContextAndSuggestions() {
         const text = this._input.value;
         const cursorPos = this._input.selectionStart;
-
-        // build request url with fallback for relative uris
         const base = window.location.origin;
         let urlObj;
         try {
@@ -193,21 +191,32 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         } catch (e) {
             urlObj = new URL(this._apiUri + "/analyze", document.baseURI);
         }
-
-        // set query parameters
         urlObj.searchParams.set("wql", text);
         urlObj.searchParams.set("c", cursorPos);
 
         const fetchUrl = this._apiUri.startsWith("http") ? urlObj.href : (urlObj.pathname + urlObj.search);
-
         try {
             const analyzeResp = await fetch(fetchUrl);
-
             if (analyzeResp.ok) {
                 const analyzeData = await analyzeResp.json();
-                this._currentContext = analyzeData.context; 
-            
-                await this._fetchSuggestions(this._currentContext);
+
+                if (analyzeData.isValidSoFar) {
+                    this._setValidState();
+                } else {
+                    //this._setInvalidState(this._i18n("webexpress.webapp:wql.error.label"));
+                }
+                this._currentContext = {
+                    type: (analyzeData.currentExpressionType || "").toLowerCase(),
+                    prefix: analyzeData.prefix || "",
+                    tokenStart: cursorPos,
+                    tokenEnd: cursorPos,
+                    attribute: analyzeData.attribute 
+                };
+                this._suggestions = Array.isArray(analyzeData.suggestions)
+                    ? analyzeData.suggestions
+                    : [];
+
+                this._tabCycleIndex = 0;
                 this._updateHint();
             }
         } catch (e) {
@@ -216,52 +225,8 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Fetches suggestions based on the current context.
-     * @param {Object} context - The context object from the parser.
-     */
-    async _fetchSuggestions(context) {
-        if (!context) {
-            this._suggestions = [];
-            return;
-        }
-
-        const { type, prefix, attribute } = context;
-        const key = `${type}:${attribute || ''}:${(prefix || '').toLowerCase()}`;
-        
-        if (this._suggestionCache.has(key)) {
-            const entry = this._suggestionCache.get(key);
-            if (Date.now() - entry.ts < this._cacheTtl) {
-                this._suggestions = entry.items;
-                this._tabCycleIndex = 0;
-                return;
-            }
-        }
-
-        const params = new URLSearchParams();
-        if (type) params.append("type", type);
-        if (prefix) params.append("prefix", prefix);
-        if (attribute) params.append("attribute", attribute);
-
-        try {
-            const resp = await fetch(`${this._apiUri}/suggestions?${params}`);
-            if (resp.ok) {
-                const data = await resp.json();
-                this._suggestions = Array.isArray(data.items) ? data.items : [];
-                
-                this._suggestionCache.set(key, { items: this._suggestions, ts: Date.now() });
-                this._tabCycleIndex = 0;
-            } else {
-                this._suggestions = [];
-            }
-        } catch (e) {
-            console.error("[WQL] Suggestion fetch error:", e);
-            this._suggestions = [];
-        }
-    }
-
-    /**
      * Handles special key events (Tab, Enter, Arrows, PageUp/Down).
-     * @param {KeyboardEvent} e 
+     * @param {KeyboardEvent} e - The keyboard event.
      */
     _onKeyDown(e) {
         if (e.key === "Tab") {
@@ -442,40 +407,21 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         const text = this._input.value.trim();
         if (!text) return;
 
-        try {
-            const resp = await fetch(this._apiUri + "/validate", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ query: text })
-            });
-            
-            const res = await resp.json();
-            
-            if (res.valid) {
-                if (this._history.length === 0 || this._history[this._history.length - 1] !== text) {
-                    this._history.push(text);
-                }
-                this._historyIndex = this._history.length;
-                
-                this._unsentInput = "";
-                this._suggestions = [];
-                this._currentContext = null;
-                
-                const sentMsg = this._i18n("webexpress.webapp:wql.status.sent") || "Valid query sent.";
-                this._setHintHtml(sentMsg);
-                this._setValidState();
-
-                // trigger event for external listeners
-                this._dispatch(webexpress.webui.Event.CHANGE_FILTER_EVENT, { value: text });
-            } else {
-                const unknownError = this._i18n("webexpress.webapp:wql.error.unknown") || "Unknown error";
-                this._setInvalidState(res.error || unknownError);
-            }
-        } catch (e) {
-            console.error("[WQL] Validation error:", e);
-            const netError = this._i18n("webexpress.webapp:wql.error.network") || "Network error during validation.";
-            this._setInvalidState(netError);
+        if (this._history.length === 0 || this._history[this._history.length - 1] !== text) {
+            this._history.push(text);
         }
+        this._historyIndex = this._history.length;
+        
+        this._unsentInput = "";
+        this._suggestions = [];
+        this._currentContext = null;
+        
+        const sentMsg = this._i18n("webexpress.webapp:wql.status.sent") || "Valid query sent.";
+        this._setHintHtml(sentMsg);
+        this._setValidState();
+
+        // trigger event for external listeners
+        this._dispatch(webexpress.webui.Event.CHANGE_FILTER_EVENT, { value: text });
     }
 
     /**

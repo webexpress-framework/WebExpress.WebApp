@@ -55,7 +55,6 @@ namespace WebExpress.WebApp.WebRestApi
             // extract path segments to determine endpoint
             var path = request.Uri;
             var last = path.PathSegments.LastOrDefault()?.Value;
-            //var queryParams = HttpUtility.ParseQueryString(request.Uri.Query);
 
             // handle history endpoint
             if (last?.Equals("history") ?? false)
@@ -67,17 +66,6 @@ namespace WebExpress.WebApp.WebRestApi
                     .ToResponse();
             }
 
-            // handle suggestions endpoint
-            if (last?.Equals("suggestions") ?? false)
-            {
-                //var type = queryParams["type"];
-                //var prefix = (queryParams["prefix"] ?? "").ToLower();
-                //var attribute = queryParams["attribute"];
-
-                //var items = GetSuggestions(type, prefix, attribute);
-                //return new ResponseJson(JsonSerializer.Serialize(new { items = items }));
-            }
-
             // handle analyze endpoint
             if (last?.Equals("analyze") ?? false)
             {
@@ -85,14 +73,58 @@ namespace WebExpress.WebApp.WebRestApi
                 var cursorPosition = request.GetParameter("c")?.Value ?? "0";
                 var ila = GetLookahead(wql, request);
                 var pos = Convert.ToInt32(cursorPosition);
-                var currentToken = ila.Items
-                   .Where(x => x.Token.Offset <= pos && pos <= x.Token.Offset + x.Token.Length)
-                   .FirstOrDefault();
 
-                return new RestApiWqlPromptParseResult()
+                var currentToken = ila.Items
+                    .Where(x => x.Token.Offset <= pos && pos <= x.Token.Offset + x.Token.Length)
+                    .FirstOrDefault()
+                    ?? ila.Items
+                        .Where(x => x.Token.Offset <= pos)
+                        .LastOrDefault();
+
+                var currentExpressionType = currentToken?.ExpressionType ?? WqlExpressionType.None;
+
+                // extract prefix - part of the token before the cursor
+                var prefix = "";
+                if (currentToken is not null)
+                {
+                    // get prefix safely using Range and Math.Min
+                    var offset = Math.Max(0, Math.Min(pos - currentToken.Token.Offset, currentToken.Token.Value.Length));
+                    prefix = currentToken.Token.Value[..offset];
+                }
+
+                // find the current attribute (example: look backwards for last attribute-type token)
+                string currentAttribute = null;
+                if (currentToken is not null)
+                {
+                    var items = ila.Items.ToList();
+                    var idx = items.IndexOf(currentToken);
+
+                    var previousAttribute = items
+                        .Take(idx)
+                        .Reverse()
+                        .FirstOrDefault(x => x.ExpressionType == WqlExpressionType.Attribute);
+
+                    if (previousAttribute is not null)
+                    {
+                        currentAttribute = previousAttribute.Token.Value;
+                    }
+                }
+
+                var nextExpressionTypes = currentToken?.ExpectedNextTokens ?? [];
+                var errorMessage = ila.IsValidSoFar
+                    ? null
+                    : "Query is invalid or incomplete.";
+
+                // call GetSuggestions with type, prefix, attribute
+                var suggestions = GetSuggestions(currentExpressionType, prefix, currentAttribute);
+
+                return new RestApiWqlPromptAnalyzeResult()
                 {
                     Lookahead = ila,
-                    CurrentExpressionType = currentToken?.ExpreesionType ?? WqlExpressionType.None
+                    CurrentExpressionType = currentExpressionType,
+                    NextExpressionTypes = nextExpressionTypes,
+                    ErrorMessage = errorMessage,
+                    Suggestions = suggestions
                 }
                     .ToResponse();
             }
@@ -100,46 +132,6 @@ namespace WebExpress.WebApp.WebRestApi
             // default response
             return new ResponseOK();
         }
-
-        /// <summary>
-        /// Processes an HTTP POST request and returns a response based on the request's 
-        /// URI path segment.
-        /// </summary>
-        /// <param name="request">
-        /// The HTTP request to process. Must not be null. The request's URI determines 
-        /// which endpoint is handled.
-        /// </param>
-        /// <returns>
-        /// An object that implements the IResponse interface, representing the result 
-        /// of the request. Returns a successful response for recognized endpoints or a 
-        /// default response otherwise.
-        /// </returns>
-        [Method(RequestMethod.POST)]
-        public IResponse Post(IRequest request)
-        {
-            // extract path segments to determine endpoint
-            var path = request.Uri;
-            var last = path.PathSegments.LastOrDefault()?.Value;
-
-            // handle validate endpoint
-            if (last?.Equals("validate") ?? false)
-            {
-                //var queryText = queryParams["query"] ?? "";
-                //var error = parser.Validate(queryText);
-                //var valid = string.IsNullOrEmpty(error);
-                //if (valid && !queryHistory.Contains(queryText))
-                //{
-                //    queryHistory.Add(queryText);
-                //}
-                //return new ResponseJson(JsonSerializer.Serialize(new { valid = valid, error = error }));
-                return new RestApiWqlPromptValidateResult()
-                    .ToResponse();
-            }
-
-            // default response
-            return new ResponseBadRequest();
-        }
-
 
         /// <summary>
         /// Retrieves a collection of historical entries associated with the specified request.
@@ -180,6 +172,57 @@ namespace WebExpress.WebApp.WebRestApi
             var ila = parser.Analyze(wql);
 
             return ila;
+        }
+
+        /// <summary>
+        /// Retrieves a list of suggested values based on the specified type, prefix, 
+        /// and attribute.
+        /// </summary>
+        /// <param name="type">
+        /// The type of suggestions to retrieve.
+        /// </param>
+        /// <param name="prefix">
+        /// An optional string used to filter the suggestions based on the starting 
+        /// characters. If provided, only suggestions that start with this prefix 
+        /// will be included.
+        /// </param>
+        /// <param name="attribute">
+        /// An optional attribute name that influences the suggestions returned for 
+        /// certain types, such as 'type' or 'status'.
+        /// </param>
+        /// <returns>
+        /// An enumerable collection of strings containing the suggested values 
+        /// based on the provided parameters. The collection may be empty if no 
+        /// suggestions are applicable.
+        /// </returns>
+        protected virtual IEnumerable<string> GetSuggestions(WqlExpressionType type, string prefix, string attribute)
+        {
+            // get all property names of the type as attribute suggestions
+            var attributes = typeof(TIndexItem)
+                .GetProperties()
+                .Select(p => p.Name);
+
+            var operators = new List<string>
+            {
+                "=", "!=", ">", "<", ">=", "<=", "~", "is", "is not", "in", "not in"
+            };
+
+            var items = new List<string>();
+
+            switch (type)
+            {
+                case WqlExpressionType.Attribute:
+                    items.AddRange(attributes);
+                    break;
+                case WqlExpressionType.Operator:
+                    items = operators;
+                    break;
+                default:
+                    items.AddRange(attributes);
+                    break;
+            }
+
+            return items;
         }
     }
 }

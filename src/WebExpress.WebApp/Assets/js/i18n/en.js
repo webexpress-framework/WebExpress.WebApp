@@ -52,7 +52,7 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "wql.error.history.unavailable": "History unavailable.",
     "wql.error.unknown": "Unknown error",
     "wql.error.network": "Network error during validation.",
-    "wql.error.label": "Error",
+    "wql.error.label": "Invalid WQL syntax.",
     "wql.no.suggestions": "No suggestions.",
     "wql.type.input": "Input",
     "wql.type.attribute": "Attribute",
