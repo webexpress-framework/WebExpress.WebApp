@@ -25,8 +25,6 @@ namespace WebExpress.WebApp.Test
     public class TestRestApiWqlPrompt<TIndexItem> : RestApiWqlPrompt<TIndexItem>
         where TIndexItem : IIndexItem
     {
-        private readonly IEnumerable<TIndexItem> _testData;
-
         /// <summary>
         /// Initializes a new instance of the class with the specified data and optional table title.
         /// </summary>

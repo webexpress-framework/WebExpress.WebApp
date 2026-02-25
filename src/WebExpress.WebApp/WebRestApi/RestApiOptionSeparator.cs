@@ -6,7 +6,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// <summary>
     /// Represents a separator option in a REST API.
     /// </summary>
-    public class RestApiOptionSeperator : RestApiOption
+    public class RestApiOptionSeparator : RestApiOption
     {
         /// <summary>
         /// Returns the type of the element, represented as a string.
@@ -17,7 +17,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="request">The request object associated with the current operation.</param>
-        public RestApiOptionSeperator(IRequest request)
+        public RestApiOptionSeparator(IRequest request)
             : base(request)
         {
         }

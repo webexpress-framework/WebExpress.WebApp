@@ -10,7 +10,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// </summary>
     [JsonPolymorphic]
     [JsonDerivedType(typeof(RestApiOptionHeader), "RestApiCrudTableRowOptionHeader")]
-    [JsonDerivedType(typeof(RestApiOptionSeperator), "RestApiCrudTableRowOptionSeperator")]
+    [JsonDerivedType(typeof(RestApiOptionSeparator), "RestApiCrudTableRowOptionSeparator")]
     [JsonDerivedType(typeof(RestApiOptionEdit), "RestApiCrudTableRowOptionEdit")]
     [JsonDerivedType(typeof(RestApiOptionClone), "RestApiCrudTableRowOptionClone")]
     [JsonDerivedType(typeof(RestApiOptionDelete), "RestApiCrudTableRowOptionDelete")]
