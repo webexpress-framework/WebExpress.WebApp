@@ -28,6 +28,7 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/js/webexpress.webapp.wql.prompt.js")]
     [Asset("/assets/js/i18n/en.js")]
     [Asset("/assets/js/i18n/de.js")]
+    [Asset("/assets/js/syntax/wql.js")]
     public sealed class IncludeJavaScript : IInclude
     {
     }

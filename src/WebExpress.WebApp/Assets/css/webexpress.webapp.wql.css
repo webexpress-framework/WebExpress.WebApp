@@ -1,34 +1,28 @@
-.wx-wql-error {
-    margin-bottom: 0.15em;
-    margin-top: 0.10em;           /* kleiner Abstand nach oben, für besseren Abstand zum Input */
-    display: none;                /* wird via Bootstrap und JS auf block gesetzt, wenn nötig */
-    color: #dc3545;               /* fallback Farbe wie .invalid-feedback von Bootstrap */
-    font-size: 0.95em;            /* leicht kleiner, wie Bootstrap */
+.wx-wql {
+
 }
 
-/* Fehlerfeld sichtbar, wenn das Eingabeelement is-invalid besitzt */
-input.is-invalid + .wx-wql-error {
+/* Error output styling for WQL prompt */
+.wx-wql-error {
+    margin-bottom: 0.15em;
+    margin-top: 0.10em;
+    display: none;
+    color: #dc3545;
+    font-size: 0.95em;
+}
+
+.wx-wql .wx-wql-input {
+    resize: vertical;
+    overflow: auto; 
+    min-height: 1.5em;
+}
+
+/* show error if input is marked invalid */
+input.is-invalid + .wx-wql-error,
+div.is-invalid + .wx-wql-error {
     display: block;
 }
 
-.wx-wql-ghost {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    pointer-events: none;
-    color: #bababa;
-    font-family: inherit;
-    font-size: inherit;
-    line-height: inherit;
-    white-space: pre;
-    z-index: 10;
-    padding: 0.375rem 0.75rem;
-    transition: opacity 0.1s;
-}
-.wx-wql-ghost-highlight {
-    color: #bbbbbb;
-    opacity: 0.65;
-}
 
 .wx-wql-key {
     display: inline-block;
@@ -46,8 +40,38 @@ input.is-invalid + .wx-wql-error {
 }
 
 .wx-wql-hint {
-    min-height: 1.5em; /* Adjusted height for key badge */
+    min-height: 1.5em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+
+/* WQL syntax highlighting theme (make sure to adjust for dark/light backgrounds!) */
+
+/* grammar/keyword elements */
+.wx-wql .keyword    { color: #005cc5; font-weight: bold; }
+.wx-wql .logical    { color: var(--bs-primary); font-weight: bold; }
+.wx-wql .operator   { color: var(--bs-danger); font-weight: bold; }
+.wx-wql .function   { color: #22863a; font-weight: bold; }
+.wx-wql .attribute  { color: var(--bs-success); }
+.wx-wql .number     { color: #032f62; }
+.wx-wql .string     { color: var(--bs-warning); }
+.wx-wql .comment    { color: #6a737d; font-style: italic; }
+.wx-wql .comma      { color: #586069; }
+.wx-wql .paren      { color: #586069; }
+.wx-wql .dot        { color: #586069; }
+/* fallback for unthemed code line */
+.wx-code-line     { display: block; white-space: pre; }
+
+/* Focus and error state for contenteditable */
+div.form-control.wx-wql-input.is-invalid {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 .2rem rgba(220,53,69,.25);
+}
+
+/* Optional: highlight current suggestion for WYSIWYG usage */
+.wql-suggestion-current {
+    background: #ffe69c;
+    border-radius: 2px;
 }
