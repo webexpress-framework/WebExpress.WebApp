@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
@@ -21,14 +20,6 @@ namespace WebExpress.WebApp.WebRestApi
     public abstract class RestApiWqlPrompt<TIndexItem> : IRestApi
         where TIndexItem : IIndexItem
     {
-        // parser instance for WQL operations
-        //private static readonly WqlParser<TIndexItem> parser = new ();
-        private static readonly string[] availableAttributes = typeof(TIndexItem).GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Where(p => p.CanRead)
-            .Select(p => p.Name.ToLower())
-            .ToArray();
-        private static readonly string[] operators = { "=", "!=", ">", "<", ">=", "<=", "~", "is", "is not", "in", "not in" };
-
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
@@ -54,7 +45,7 @@ namespace WebExpress.WebApp.WebRestApi
         {
             // extract path segments to determine endpoint
             var path = request.Uri;
-            var last = path.PathSegments.LastOrDefault()?.Value;
+            var last = path.PathSegments.LastOrDefault()?.Value.Trim('/');
 
             // handle history endpoint
             if (last?.Equals("history") ?? false)
@@ -73,15 +64,24 @@ namespace WebExpress.WebApp.WebRestApi
                 var cursorPosition = request.GetParameter("c")?.Value ?? "0";
                 var ila = GetLookahead(wql, request);
                 var pos = Convert.ToInt32(cursorPosition);
+                var lastToken = default(IWqlLookaheadToken);
+                var currentToken = default(IWqlLookaheadToken);
 
-                var currentToken = ila.Items
-                    .Where(x => x.Token.Offset <= pos && pos <= x.Token.Offset + x.Token.Length)
-                    .FirstOrDefault()
-                    ?? ila.Items
-                        .Where(x => x.Token.Offset <= pos)
-                        .LastOrDefault();
+                foreach (var item in ila.Items)
+                {
+                    if (item.Token.Offset <= pos && pos <= item.Token.Offset + item.Token.Length)
+                    {
+                        currentToken = item;
 
-                var currentExpressionType = currentToken?.ExpressionType ?? WqlExpressionType.None;
+                        break;
+                    }
+
+                    lastToken = item;
+                }
+
+                var currentExpressionType = currentToken?.ExpressionType
+                    ?? lastToken?.ExpectedNextTokens.FirstOrDefault()
+                    ?? WqlExpressionType.None;
 
                 // extract prefix - part of the token before the cursor
                 var prefix = "";
@@ -197,32 +197,92 @@ namespace WebExpress.WebApp.WebRestApi
         /// </returns>
         protected virtual IEnumerable<string> GetSuggestions(WqlExpressionType type, string prefix, string attribute)
         {
-            // get all property names of the type as attribute suggestions
-            var attributes = typeof(TIndexItem)
-                .GetProperties()
-                .Select(p => p.Name);
-
-            var operators = new List<string>
-            {
-                "=", "!=", ">", "<", ">=", "<=", "~", "is", "is not", "in", "not in"
-            };
-
             var items = new List<string>();
 
             switch (type)
             {
+                case WqlExpressionType.None:
+                    items.AddRange
+                    (
+                        typeof(TIndexItem)
+                            .GetProperties()
+                            .Select(p => p.Name)
+                    );
+                    break;
                 case WqlExpressionType.Attribute:
-                    items.AddRange(attributes);
+                    items.AddRange
+                    (
+                        typeof(TIndexItem)
+                            .GetProperties()
+                            .Select(p => p.Name)
+                            .Where
+                            (
+                                name =>
+                                prefix == null ||
+                                name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                            )
+                    );
                     break;
                 case WqlExpressionType.Operator:
-                    items = operators;
+
+                    var operators = new List<string>
+                    {
+                        "~", "=", "!=", ">", "<", ">=", "<=", "is", "is not", "in", "not in"
+                    };
+
+                    items.AddRange
+                    (
+                        operators.Where
+                        (
+                            x =>
+                            prefix == null ||
+                            x.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                        )
+                    );
+                    break;
+                case WqlExpressionType.Parameter:
+                    items.AddRange
+                    (
+                        GetSuggestions(prefix, attribute)
+                    );
+                    break;
+                case WqlExpressionType.LogicalOperator:
+
+                    var logicOperators = new List<string>
+                    {
+                        "and", "or"
+                    };
+
+                    items.AddRange
+                    (
+                        logicOperators.Where
+                        (
+                            x =>
+                            prefix == null ||
+                            x.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                        )
+                    );
                     break;
                 default:
-                    items.AddRange(attributes);
                     break;
             }
 
             return items;
+        }
+
+        /// <summary>
+        /// Retrieves a collection of suggested strings that match the specified prefix 
+        /// and are influenced by the provided attribute.
+        /// </summary>
+        /// <param name="prefix">The prefix used to filter suggestions. This parameter must not be null or empty.</param>
+        /// <param name="attribute">An attribute that affects the context or criteria for generating suggestions.</param>
+        /// <returns>
+        /// An enumerable collection of strings containing suggestions that correspond 
+        /// to the given prefix and attribute. The collection will be empty if no suggestions are found.
+        /// </returns>
+        protected virtual IEnumerable<string> GetSuggestions(string prefix, string attribute)
+        {
+            return [];
         }
     }
 }
