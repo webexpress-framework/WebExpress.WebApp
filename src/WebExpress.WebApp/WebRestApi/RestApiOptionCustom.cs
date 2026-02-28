@@ -77,11 +77,8 @@ namespace WebExpress.WebApp.WebRestApi
             var json = base.ToJson();
             json["type"] = Type;
             json["command"] = Command;
-
-            if (Uri is not null)
-            {
-                json["uri"] = Uri.ToString();
-            }
+            json["icon"] = Icon;
+            json["uri"] = Uri?.ToString();
 
             if (!string.IsNullOrWhiteSpace(CommandArg))
             {
@@ -91,11 +88,6 @@ namespace WebExpress.WebApp.WebRestApi
             if (!string.IsNullOrWhiteSpace(Text))
             {
                 json["text"] = Text;
-            }
-
-            if (Uri is not null)
-            {
-                json["uri"] = Uri?.ToString();
             }
 
             if (!string.IsNullOrWhiteSpace(Color))
