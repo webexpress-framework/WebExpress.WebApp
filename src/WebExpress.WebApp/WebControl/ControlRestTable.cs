@@ -61,13 +61,15 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IUri uri)
         {
+            var resultUri = uri?.BindParameters(renderContext.Request);
+
             var html = new HtmlElementTextContentDiv()
             {
                 Id = Id,
                 Class = Css.Concatenate("wx-webapp-table", GetClasses()),
                 Style = GetStyles()
             }
-                .AddUserAttribute("data-uri", uri?.ToString())
+                .AddUserAttribute("data-uri", resultUri?.ToString())
                 .AddUserAttribute("data-infinite", Infinite ? "true" : null)
                 .AddUserAttribute("data-page-size", PageSize > 0 ? PageSize.ToString() : null);
 

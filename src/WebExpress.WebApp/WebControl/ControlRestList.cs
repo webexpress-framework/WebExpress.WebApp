@@ -35,13 +35,27 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
+            return Render(renderContext, visualTree, RestUri);
+        }
+
+        /// <summary>
+        /// Converts the control to an HTML representation.
+        /// </summary>
+        /// <param name="renderContext">The context in which the control is rendered.</param>
+        /// <param name="visualTree">The visual tree.</param>
+        /// <param name="uri">An optional URI containing parameters to be bound to the rendering context. Can be null.</param>
+        /// <returns>An HTML node representing the rendered control.</returns>
+        public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IUri uri)
+        {
+            var resultUri = uri?.BindParameters(renderContext.Request);
+
             var html = new HtmlElementTextContentDiv()
             {
                 Id = Id,
                 Class = Css.Concatenate("wx-webapp-list", GetClasses()),
                 Style = GetStyles()
             }
-                .AddUserAttribute("data-uri", RestUri?.ToString());
+                .AddUserAttribute("data-uri", resultUri?.ToString());
 
             return html;
         }
