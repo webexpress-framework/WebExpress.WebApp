@@ -46,12 +46,12 @@ namespace WebExpress.WebApp.WebRestApi
             }
 
             // optional id parameter (used for clone operations)
-            var id = request.GetParameter<ParameterGuid>()?.Value;
-            var query = new Query<TIndexItem>() as IQuery<TIndexItem>; ;
+            var id = request.GetParameter<ParameterId>()?.Value;
+            var query = new Query<TIndexItem>() as IQuery<TIndexItem>;
 
             if (!string.IsNullOrWhiteSpace(id))
             {
-                query.WhereEquals(x => x.Id, Guid.Parse(id));
+                query = query.WhereEquals(x => x.Id, Guid.Parse(id));
             }
 
             // retrieve existing item if id is provided
@@ -117,7 +117,7 @@ namespace WebExpress.WebApp.WebRestApi
             try
             {
                 // extract 'id' parameter if present
-                var id = request.GetParameter<ParameterGuid>()?.Value ?? string.Empty;
+                var id = request.GetParameter<ParameterId>()?.Value ?? string.Empty;
                 // current page number
                 var pageNumber = Convert.ToInt32(request.GetParameter("p")?.Value ?? "0");
                 // number of items per page
@@ -132,11 +132,11 @@ namespace WebExpress.WebApp.WebRestApi
                     "delete" => RestApiCrudMode.Delete,
                     _ => RestApiCrudMode.Default
                 };
-                var query = new Query<TIndexItem>() as IQuery<TIndexItem>; ;
+                var query = new Query<TIndexItem>() as IQuery<TIndexItem>;
 
                 if (!string.IsNullOrWhiteSpace(id))
                 {
-                    query.WhereEquals(x => x.Id, Guid.Parse(id));
+                    query = query.WhereEquals(x => x.Id, Guid.Parse(id));
                 }
 
                 if (string.IsNullOrEmpty(id) && mode == RestApiCrudMode.Create)
@@ -414,7 +414,7 @@ namespace WebExpress.WebApp.WebRestApi
         public virtual IResponse Update(IRequest request)
         {
             // extract and validate the 'id' parameter
-            var id = request.GetParameter<ParameterGuid>()?.Value;
+            var id = request.GetParameter<ParameterId>()?.Value;
             if (string.IsNullOrEmpty(id))
             {
                 return new ResponseBadRequest(new StatusMessage("Missing 'id' parameter."));
@@ -755,7 +755,14 @@ namespace WebExpress.WebApp.WebRestApi
 
                 foreach (var parameter in request.Parameters)
                 {
-                    fieldMap[parameter.Key.ToLower()] = parameter.Value;
+                    var key = parameter switch
+                    {
+                        IParameterStatic staticParam => staticParam.GetKey(),
+                        IParameterDynamic staticParam => staticParam.Key,
+                        _ => null
+                    };
+
+                    fieldMap[key.ToLower()] = parameter.Value;
                 }
             }
 

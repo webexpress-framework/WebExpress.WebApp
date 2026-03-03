@@ -17,38 +17,52 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
      */
     constructor(element) {
         super(element);
+        // api uri for back-end operations
         this._apiUri = this._element.dataset.uri || null;
+
         // internal history state
         this._history = [];
         this._historyIndex = 0;
         this._unsentInput = "";
+
         // suggestion cache and timing
         this._suggestionCache = new Map();
         this._cacheTtl = 5 * 60 * 1000;
         this._debounceMs = 200;
         this._debounceTimer = null;
+        this._abortController = null;
+
         // suggestion and parsing context
         this._suggestions = [];
         this._currentContext = null;
         this._tabCycleIndex = 0;
         this._lastError = null;
+
         // ui initialization
         this._initUi();
         this._attachListeners();
+
         // load history asynchronously after initialization
-        setTimeout(() => { this._loadHistoryFromApi(); }, 200);
+        setTimeout(() => {
+            this._loadHistoryFromApi();
+        }, 200);
     }
 
     /**
      * Builds the DOM structure for the WYSIWYG prompt input.
+     * Uses Bootstrap classes for layout.
+     * @private
      */
     _initUi() {
         this._element.classList.add("wx-wql");
         this._element.style.position = "relative";
+
         const formGroup = document.createElement("div");
         formGroup.className = "form-group mb-0";
+
         const inputGroup = document.createElement("div");
         inputGroup.className = "input-group";
+
         // contenteditable input field
         this._input = document.createElement("div");
         this._input.className = "form-control wx-wql-input wx-code-line";
@@ -58,26 +72,41 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         this._input.style.minHeight = "2em";
         this._input.style.fontFamily = "monospace";
         this._input.dataset.language = "wql";
+        // prevents adding divs on enter in some browsers, ensures br
+        this._input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                // let custom handler manage it
+            }
+        });
+
         const placeholder = this._i18n("webexpress.webapp:wql.placeholder");
         this._input.dataset.placeholder = placeholder;
+
         inputGroup.appendChild(this._input);
         formGroup.appendChild(inputGroup);
+
         // unified hint/error area
         this._hint = document.createElement("small");
         this._hint.className = "form-text text-muted wx-wql-hint mt-1";
+
         const initMsg = this._i18n("webexpress.webapp:wql.status.initializing");
         this._setHintHtml(initMsg);
+
         formGroup.appendChild(this._hint);
         this._element.appendChild(formGroup);
     }
 
     /**
      * Attaches necessary event listeners to contenteditable input and buttons.
+     * @private
      */
     _attachListeners() {
         this._input.addEventListener("input", this._onInput.bind(this));
         this._input.addEventListener("keydown", this._onKeyDown.bind(this));
         this._input.addEventListener("click", this._onCursorMove.bind(this));
+        this._input.addEventListener("blur", () => {
+            // optional: clear suggestions on blur if needed
+        });
         this._input.addEventListener("keyup", (e) => {
             if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
                 this._onCursorMove();
@@ -87,6 +116,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
 
     /**
      * Clears the input field and resets state.
+     * @private
      */
     _onClearInput() {
         this._setInputText("");
@@ -102,49 +132,51 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
     /**
      * Gets plain text from the contenteditable input field.
      * @returns {string} The text content.
+     * @private
      */
     _getInputText() {
-        // traverse and join, treating <br> as '\n'
-        let result = '';
-        this._input.childNodes.forEach(node => {
-            if (node.nodeType === 3) { // Text
+        let result = "";
+        const nodes = this._input.childNodes;
+
+        for (let i = 0; i < nodes.length; i++) {
+            const node = nodes[i];
+            if (node.nodeType === Node.TEXT_NODE) {
                 result += node.data;
             } else if (node.nodeName === "BR") {
                 result += "\n";
-            } else if (node.nodeType === 1) {
-                result += node.textContent;
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+                // handle block elements that might have crept in
+                result += node.innerText + "\n";
             }
-        });
+        }
         return result;
     }
 
     /**
      * Sets the input field's content and applies syntax highlighting.
      * @param {string} value - The new value.
+     * @private
      */
     _setInputText(value) {
-        this._input.innerHTML = "";
-        const lines = value.split('\n');
-        lines.forEach((line, idx) => {
-            if (line.length > 0) {
-                this._input.appendChild(document.createTextNode(line));
-            }
-            if (idx < lines.length - 1) {
-                this._input.appendChild(document.createElement("br"));
-            }
-        });
+        this._input.innerText = value;
         this._highlightSyntax();
     }
 
     /**
      * Handles input events (typing into the prompt).
+     * @private
      */
     _onInput() {
         this._setValidState();
+
         if (this._historyIndex === this._history.length) {
             this._unsentInput = this._getInputText();
         }
-        if (this._debounceTimer) { clearTimeout(this._debounceTimer); }
+
+        if (this._debounceTimer) {
+            clearTimeout(this._debounceTimer);
+        }
+
         this._debounceTimer = setTimeout(() => {
             this._highlightSyntax();
             this._refreshContextAndSuggestions();
@@ -155,13 +187,16 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
      * Applies syntax highlighting for WQL using a language-specific function if available.
      * Preserves the cursor after re-highlighting contenteditable.
      * @param {string} [code] - Optional code to highlight.
+     * @private
      */
     _highlightSyntax(code) {
         code = code !== undefined ? code : this._getInputText();
         const syntaxFunction = webexpress.webui.Syntax?.get?.("wql");
+
         // preserve cursor position
         const selection = window.getSelection();
         let cursorOffset = 0;
+
         if (selection && this._input.contains(selection.anchorNode)) {
             const range = selection.getRangeAt(0);
             const preCaretRange = range.cloneRange();
@@ -169,28 +204,41 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
             preCaretRange.setEnd(range.endContainer, range.endOffset);
             cursorOffset = preCaretRange.toString().length;
         }
+
+        // clear current content
         this._input.innerHTML = "";
+
         if (typeof syntaxFunction === "function") {
+            // render highlighted html
             this._input.innerHTML = syntaxFunction(code);
         } else {
+            // fallback to plain text
             this._input.textContent = code;
         }
+
         this._restoreCursor(cursorOffset);
     }
 
     /**
      * Restores caret/cursor position in the input field after syntactic changes.
      * @param {number} offset - The desired character offset.
+     * @private
      */
     _restoreCursor(offset) {
-        let node = this._input;
+        const node = this._input;
         let charsLeft = offset;
-        function setCursor(node) {
-            for (let child of node.childNodes) {
-                if (child.nodeType === 3) {
+        const range = document.createRange();
+        const sel = window.getSelection();
+
+        /**
+         * Recursively traverses nodes to find the correct text node and offset.
+         * @param {Node} currentNode - The node to traverse.
+         * @returns {boolean} True if cursor set, false otherwise.
+         */
+        const setCursor = (currentNode) => {
+            for (const child of currentNode.childNodes) {
+                if (child.nodeType === Node.TEXT_NODE) {
                     if (child.length >= charsLeft) {
-                        const range = document.createRange();
-                        const sel = window.getSelection();
                         range.setStart(child, charsLeft);
                         range.collapse(true);
                         sel.removeAllRanges();
@@ -200,17 +248,27 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
                         charsLeft -= child.length;
                     }
                 } else {
-                    if (setCursor(child)) { return true; }
+                    if (setCursor(child)) {
+                        return true;
+                    }
                 }
             }
             return false;
+        };
+
+        // if exact position not found, place at end
+        if (!setCursor(node)) {
+            range.selectNodeContents(this._input);
+            range.collapse(false);
+            sel.removeAllRanges();
+            sel.addRange(range);
         }
-        setCursor(node);
     }
 
     /**
      * Loads query history from the backend with retry.
      * @param {number} retryCount - The current retry attempt.
+     * @private
      */
     async _loadHistoryFromApi(retryCount = 0) {
         try {
@@ -219,6 +277,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
                 const data = await resp.json();
                 this._history = Array.isArray(data.history) ? data.history : [];
                 this._historyIndex = this._history.length;
+
                 const readyMsg = this._i18n("webexpress.webapp:wql.status.ready") || "Ready.";
                 this._setHintHtml(readyMsg);
                 return;
@@ -226,8 +285,11 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         } catch (e) {
             console.warn(`[WQL] History load failed (Attempt ${retryCount + 1})`);
         }
+
         if (retryCount < 10) {
-            setTimeout(() => { this._loadHistoryFromApi(retryCount + 1); }, 500);
+            setTimeout(() => {
+                this._loadHistoryFromApi(retryCount + 1);
+            }, 500);
         } else {
             const errorMsg = this._i18n("webexpress.webapp:wql.error.history.unavailable") || "History unavailable.";
             this._setHintHtml(errorMsg);
@@ -238,9 +300,12 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
 
     /**
      * Handles cursor movement and triggers context refresh.
+     * @private
      */
     _onCursorMove() {
-        if (this._debounceTimer) { clearTimeout(this._debounceTimer); }
+        if (this._debounceTimer) {
+            clearTimeout(this._debounceTimer);
+        }
         this._debounceTimer = setTimeout(() => {
             this._refreshContextAndSuggestions();
         }, 100);
@@ -248,64 +313,90 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
 
     /**
      * Refreshes the parsing context and fetches suggestions from the server.
+     * Uses AbortController to cancel stale requests.
+     * @private
      */
     async _refreshContextAndSuggestions() {
+        // cancel previous pending request
+        if (this._abortController) {
+            this._abortController.abort();
+        }
+        this._abortController = new AbortController();
+
         const text = this._getInputText();
         const cursorPos = this._getCursorOffset();
         const base = window.location.origin;
         let urlObj;
+
         try {
             urlObj = new URL(this._apiUri + "/analyze", base);
         } catch (e) {
             urlObj = new URL(this._apiUri + "/analyze", document.baseURI);
         }
+
         urlObj.searchParams.set("wql", text);
-        urlObj.searchParams.set("c", cursorPos);
+        urlObj.searchParams.set("c", cursorPos.toString());
+
         const fetchUrl = this._apiUri.startsWith("http") ? urlObj.href : (urlObj.pathname + urlObj.search);
+
         try {
-            const analyzeResp = await fetch(fetchUrl);
+            const analyzeResp = await fetch(fetchUrl, { signal: this._abortController.signal });
+
             if (analyzeResp.ok) {
                 const analyzeData = await analyzeResp.json();
+
                 if (analyzeData.isValidSoFar) {
                     this._setValidState();
                 }
+
+                // calculate token boundaries if not provided by backend
+                // we assume prefix length helps us determine start
+                const prefix = analyzeData.prefix || "";
+                const tokenStart = cursorPos - prefix.length;
+
                 this._currentContext = {
                     type: (analyzeData.currentExpressionType || "").toLowerCase(),
-                    prefix: analyzeData.prefix || "",
-                    tokenStart: cursorPos,
-                    tokenEnd: cursorPos,
-                    attribute: analyzeData.attribute
+                    prefix: prefix,
+                    tokenStart: tokenStart,
+                    tokenEnd: cursorPos, // current cursor pos is end of token being typed
+                    attribute: analyzeData.attribute,
+                    quoted: analyzeData.quoted || false
                 };
-                this._suggestions = Array.isArray(analyzeData.suggestions)
-                    ? analyzeData.suggestions
-                    : [];
+
+                this._suggestions = Array.isArray(analyzeData.suggestions) ? analyzeData.suggestions : [];
                 this._tabCycleIndex = 0;
                 this._updateHint();
             }
         } catch (e) {
-            console.error("[WQL] Context refresh error:", e);
+            if (e.name !== 'AbortError') {
+                console.error("[WQL] Context refresh error:", e);
+            }
         }
     }
 
     /**
      * Gets the cursor offset (character position) in the input field.
      * @returns {number} Cursor position.
+     * @private
      */
     _getCursorOffset() {
         const selection = window.getSelection();
         if (!selection || !this._input.contains(selection.anchorNode)) {
             return this._getInputText().length;
         }
+
         const range = selection.getRangeAt(0);
         const preCaretRange = range.cloneRange();
         preCaretRange.selectNodeContents(this._input);
         preCaretRange.setEnd(range.endContainer, range.endOffset);
+
         return preCaretRange.toString().length;
     }
 
     /**
      * Handles key events: Tab, Enter, Arrows, PageUp/Down.
      * @param {KeyboardEvent} e - The keyboard event.
+     * @private
      */
     _onKeyDown(e) {
         if (e.key === "Tab") {
@@ -313,11 +404,11 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
             this._handleTab();
             return;
         }
+
         if (e.key === "Enter") {
             if (e.ctrlKey) {
-                // insert line break at cursor position in contenteditable
                 e.preventDefault();
-                document.execCommand("insertLineBreak");
+                this._insertLineBreakAtCursor();
                 return;
             } else {
                 e.preventDefault();
@@ -325,14 +416,16 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
                 return;
             }
         }
+
         if (e.key === "ArrowUp" || e.key === "ArrowDown") {
             if (this._suggestions.length > 0) {
                 e.preventDefault();
                 const dir = e.key === "ArrowDown" ? 1 : -1;
                 this._cycleSuggestions(dir);
+                return;
             }
-            return;
         }
+
         if (e.key === "PageUp" || e.key === "PageDown") {
             e.preventDefault();
             const dir = e.key === "PageDown" ? 1 : -1;
@@ -342,7 +435,48 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
+     * Inserts a newline character at the current cursor position.
+     * Manually manipulates DOM nodes to ensure correct behavior in contenteditable.
+     * @private
+     */
+    _insertLineBreakAtCursor() {
+        const selection = window.getSelection();
+        if (!selection.rangeCount) { return; }
+
+        const range = selection.getRangeAt(0);
+        const br = document.createElement("br");
+        
+        // delete current selection if any
+        range.deleteContents();
+        
+        // insert br tag
+        range.insertNode(br);
+        
+        // create a text node after br to ensure cursor can go there
+        // (needed for some browsers like chrome/safari to recognize the new line immediately)
+        const textNode = document.createTextNode('\u200B'); // zero-width space
+        range.setStartAfter(br);
+        range.insertNode(textNode);
+        
+        // move cursor after the zero-width space
+        range.setStartAfter(textNode);
+        range.collapse(true);
+        
+        selection.removeAllRanges();
+        selection.addRange(range);
+        
+        // scroll into view
+        if (this._input.scrollHeight > this._input.clientHeight) {
+            this._input.scrollTop = this._input.scrollHeight;
+        }
+
+        // trigger input event so state updates
+        this._onInput();
+    }
+
+    /**
      * Applies the currently selected suggestion.
+     * @private
      */
     _handleTab() {
         if (!this._suggestions || this._suggestions.length === 0) {
@@ -355,6 +489,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
     /**
      * Cycles through the suggestion list.
      * @param {number} dir - The direction: 1 for down, -1 for up.
+     * @private
      */
     _cycleSuggestions(dir) {
         if (this._suggestions.length === 0) {
@@ -365,16 +500,21 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Inserts the suggestion into the input field, applying smart formatting.
+     * Inserts the suggestion into the input field, replacing partial input.
      * @param {string} value - The suggestion value.
+     * @private
      */
     _applySuggestion(value) {
         if (!this._currentContext) {
             return;
         }
+        
+        // use calculated token boundaries from _refreshContextAndSuggestions
         const { tokenStart, tokenEnd, type } = this._currentContext;
+        
         let insertion = value;
-        // Smart formatting logic per WQL type
+
+        // smart formatting logic per wql type
         if (type === 'parenthesis_open') {
             insertion = `("${value}"`;
         } else if (type === 'set_parameter' || type === 'parameter') {
@@ -384,9 +524,12 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         } else if (type === 'set_next' && value === ',') {
             insertion = ", ";
         }
+
         if (!insertion.endsWith(" ") && value !== "(") {
             insertion += " ";
         }
+
+        // replace the range between start of current token and cursor position
         this._insertReplacementAt(tokenStart, tokenEnd, insertion);
     }
 
@@ -395,20 +538,31 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
      * @param {number} start - Start index.
      * @param {number} end - End index.
      * @param {string} text - Replacement text.
+     * @private
      */
     _insertReplacementAt(start, end, text) {
         const val = this._getInputText();
-        const before = val.slice(0, start);
-        const after = val.slice(end);
+        
+        // safety check for bounds
+        const safeStart = Math.max(0, start);
+        const safeEnd = Math.min(val.length, end);
+
+        const before = val.slice(0, safeStart);
+        const after = val.slice(safeEnd); // preserve everything after cursor
+
         const newValue = before + text + after;
         this._setInputText(newValue);
+
         const newPos = before.length + text.length;
         this._restoreCursor(newPos);
+        
+        // immediately refresh to update context for next input
         this._refreshContextAndSuggestions();
     }
 
     /**
      * Updates hint text below the input field.
+     * @private
      */
     _updateHint() {
         if (this._lastError) {
@@ -418,8 +572,10 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
             this._setHintHtml(`<b>${errLabel}:</b> ${this._escapeHtml(this._lastError)}`);
             return;
         }
+
         this._hint.classList.remove("text-danger");
         this._hint.classList.add("text-muted");
+
         const typeKeys = {
             attribute: "webexpress.webapp:wql.type.attribute",
             operator: "webexpress.webapp:wql.type.operator",
@@ -431,21 +587,29 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
             logical_operator: "webexpress.webapp:wql.type.logical.operator",
             number: "webexpress.webapp:wql.type.number"
         };
+
         const type = this._currentContext?.type;
+
         if (type) {
             let label = this._i18n(typeKeys[type]);
-            if (!label) { label = type || this._i18n("webexpress.webapp:wql.type.input") || "Input"; }
+            if (!label) {
+                label = type || this._i18n("webexpress.webapp:wql.type.input") || "Input";
+            }
+
             if (this._suggestions.length === 0) {
                 const noSuggestions = this._i18n("webexpress.webapp:wql.no.suggestions") || "No suggestions.";
                 this._setHintHtml(`${label}: ${noSuggestions}`);
                 return;
             }
+
+            // show current and next suggestions
             const selected = this._suggestions[this._tabCycleIndex];
             const others = this._suggestions.filter((_, i) => i !== this._tabCycleIndex).slice(0, 9);
+
             let html = `${label}: ${this._i18n("webexpress.webapp:wql.tab.label").replace("{0}", this._escapeHtml(selected))}`;
             if (others.length > 0) {
-                html += ` ${this._i18n("webexpress.webapp:wql.cursor.label").replace("{0}", others.map(
-                    o => `<b>${this._escapeHtml(o)}</b>`).join(", "))}`;
+                const otherList = others.map(o => `<b>${this._escapeHtml(o)}</b>`).join(", ");
+                html += ` ${this._i18n("webexpress.webapp:wql.cursor.label").replace("{0}", otherList)}`;
             }
             this._setHintHtml(html);
         }
@@ -454,6 +618,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
     /**
      * Sets HTML content for the hint element.
      * @param {string} html - The HTML to set.
+     * @private
      */
     _setHintHtml(html) {
         this._hint.innerHTML = html;
@@ -463,9 +628,12 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
      * Escapes HTML characters.
      * @param {string} str - String to escape.
      * @returns {string} Escaped string.
+     * @private
      */
     _escapeHtml(str) {
-        if (!str) { return ""; }
+        if (!str) {
+            return "";
+        }
         return str.toString()
             .replace(/&/g, "&amp;")
             .replace(/</g, "&lt;")
@@ -476,19 +644,27 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
 
     /**
      * Submits the input for validation and history management.
+     * @private
      */
     async _submitInput() {
         const text = this._getInputText().trim();
-        if (!text) { return; }
+        if (!text) {
+            return;
+        }
+
+        // update history only if it differs from last entry
         if (this._history.length === 0 || this._history[this._history.length - 1] !== text) {
             this._history.push(text);
         }
+
         this._historyIndex = this._history.length;
         this._unsentInput = "";
         this._suggestions = [];
         this._currentContext = null;
+
         const sentMsg = this._i18n("webexpress.webapp:wql.status.sent") || "Valid query sent.";
         this._setHintHtml(sentMsg);
+
         this._setValidState();
         this._dispatch(webexpress.webui.Event.CHANGE_FILTER_EVENT, { value: text });
     }
@@ -496,27 +672,46 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
     /**
      * Navigates through history.
      * @param {number} dir - Direction: 1 for forward, -1 for backward.
+     * @private
      */
     _navigateHistory(dir) {
-        if (!this._history.length) { return; }
+        // guard clause if no history
+        if (!this._history.length) {
+            return;
+        }
+
         let newIndex = this._historyIndex + dir;
-        if (newIndex < 0) { newIndex = 0; }
-        if (newIndex > this._history.length) { newIndex = this._history.length; }
+
+        // clamp index
+        if (newIndex < 0) {
+            newIndex = 0;
+        }
+        if (newIndex > this._history.length) {
+            newIndex = this._history.length;
+        }
+
+        // save current input before moving away from "new" line
         if (this._historyIndex === this._history.length && dir < 0) {
             this._unsentInput = this._getInputText();
         }
+
+        // restore appropriate text
         if (newIndex === this._history.length) {
             this._setInputText(this._unsentInput);
         } else {
             this._setInputText(this._history[newIndex]);
         }
+
         this._historyIndex = newIndex;
+
+        // cursor to end after history switch
         this._restoreCursor(this._getInputText().length);
         this._refreshContextAndSuggestions();
     }
 
     /**
      * Clears error state and resets styling.
+     * @private
      */
     _setValidState() {
         this._lastError = null;
@@ -527,6 +722,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
     /**
      * Sets error state and updates hint area.
      * @param {string} msg - Error message.
+     * @private
      */
     _setInvalidState(msg) {
         this._lastError = msg;

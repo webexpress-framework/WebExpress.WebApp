@@ -2,6 +2,7 @@
 using System.Linq;
 using WebExpress.WebCore;
 using WebExpress.WebCore.WebHtml;
+using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebFragment;
 using WebExpress.WebUI.WebPage;
@@ -81,7 +82,7 @@ namespace WebExpress.WebApp.WebControl
         {
             var renderFormContext = new RenderControlFormContext(renderContext, this);
 
-            return Render(renderFormContext, visualTree, items, id);
+            return Render(renderFormContext, visualTree, items, id, Uri);
         }
 
         /// <summary>
@@ -92,8 +93,10 @@ namespace WebExpress.WebApp.WebControl
         /// <param name="items">The form items.</param>
         /// <param name="id">The unique identifier for the item.</param>
         /// <returns>An HTML node representing the rendered control.</returns>
-        public virtual IHtmlNode Render(IRenderControlFormContext renderContext, IVisualTreeControl visualTree, IEnumerable<IControlFormItem> items, string id)
+        public virtual IHtmlNode Render(IRenderControlFormContext renderContext, IVisualTreeControl visualTree, IEnumerable<IControlFormItem> items, string id, IUri uri)
         {
+            var resultUri = uri?.BindParameters(renderContext.Request);
+
             // generate html
             var form = new HtmlElementFormForm()
             {
@@ -105,7 +108,7 @@ namespace WebExpress.WebApp.WebControl
                 .AddUserAttribute("data-method", Method.ToString())
                 .AddUserAttribute("data-mode", Mode.ToMode())
                 .AddUserAttribute("data-id", id?.ToString())
-                .AddUserAttribute("data-uri", Uri?.ToString());
+                .AddUserAttribute("data-uri", resultUri?.ToString());
 
             var header = new HtmlElementSectionHeader();
 
