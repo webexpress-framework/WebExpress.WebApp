@@ -1,7 +1,9 @@
 ﻿using System.Collections.Generic;
+using WebExpress.WebCore.WebIcon;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
+using WebExpress.WebUI.WebIcon;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -33,7 +35,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Returns the icon.
         /// </summary>
-        public virtual string Icon { get; set; }
+        public virtual IIcon Icon { get; set; }
 
         /// <summary>
         /// Returns the edit form uri.
@@ -77,8 +79,17 @@ namespace WebExpress.WebApp.WebRestApi
             var json = base.ToJson();
             json["type"] = Type;
             json["command"] = Command;
-            json["icon"] = Icon;
             json["uri"] = Uri?.ToString();
+
+            if (Icon is Icon icon)
+            {
+                json["icon"] = icon.Class;
+            }
+
+            if (Icon is ImageIcon img)
+            {
+                json["image"] = img.Uri?.ToString();
+            }
 
             if (!string.IsNullOrWhiteSpace(CommandArg))
             {
