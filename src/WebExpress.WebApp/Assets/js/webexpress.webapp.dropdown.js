@@ -94,18 +94,22 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
             a.id = item.id;
         }
 
-        // apply action attributes to the card element
+        // apply action attributes
         if (item.primaryAction) {
             for (const [key, value] of Object.entries(item.primaryAction)) {
-                const htmlName = `data-wx-primary-${key.toLowerCase()}`;
-                a.setAttribute(htmlName, value);
+                if (value) {
+                    const htmlName = `data-wx-primary-${key.toLowerCase()}`;
+                    a.setAttribute(htmlName, value);
+                }
             }
         }
 
         if (item.secondaryAction) {
             for (const [key, value] of Object.entries(item.secondaryAction)) {
-                const htmlName = `data-wx-secondary-${key.toLowerCase()}`;
-                a.setAttribute(htmlName, value);
+                if (value) {
+                    const htmlName = `data-wx-secondary-${key.toLowerCase()}`;
+                    a.setAttribute(htmlName, value);
+                }
             }
         }
 

@@ -21,6 +21,12 @@ namespace WebExpress.WebApp.WebRestApi
         public string Id { get; set; }
 
         /// <summary>
+        /// Returns or sets the title.
+        /// </summary>
+        [JsonPropertyName("title")]
+        public string Title { get; set; }
+
+        /// <summary>
         /// Returns or sets the primary display text.
         /// </summary>
         [JsonPropertyName("text")]

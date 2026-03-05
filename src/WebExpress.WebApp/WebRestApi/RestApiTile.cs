@@ -26,6 +26,7 @@ namespace WebExpress.WebApp.WebRestApi
     public abstract class RestApiTile<TIndexItem> : IRestApi
         where TIndexItem : IIndexItem
     {
+        private readonly PropertyInfo _cachedTitleAttribute;
         private readonly PropertyInfo _cachedTextAttribute;
         private readonly PropertyInfo _cachedDescriptionAttribute;
         private readonly PropertyInfo _cachedIconAttribute;
@@ -40,26 +41,27 @@ namespace WebExpress.WebApp.WebRestApi
         /// </summary>
         protected RestApiTile()
         {
-            // read title attribute once
+            // read attributes once
             Title = GetType().CustomAttributes
                 .Where(x => x is not null && x.AttributeType == typeof(TitleAttribute))
                 .Select(x => x.ConstructorArguments.FirstOrDefault().Value?.ToString())
                 .FirstOrDefault();
 
+            _cachedTitleAttribute = typeof(TIndexItem)
+                .GetProperties()
+                .FirstOrDefault(prop => Attribute.IsDefined(prop, typeof(RestTitleAttribute)));
+
             _cachedTextAttribute = typeof(TIndexItem)
                 .GetProperties()
-                .Where(prop => Attribute.IsDefined(prop, typeof(RestTextAttribute)))
-                .FirstOrDefault();
+                .FirstOrDefault(prop => Attribute.IsDefined(prop, typeof(RestTextAttribute)));
 
             _cachedDescriptionAttribute = typeof(TIndexItem)
                 .GetProperties()
-                .Where(prop => Attribute.IsDefined(prop, typeof(RestTextAttribute)))
-                .FirstOrDefault();
+                .FirstOrDefault(prop => Attribute.IsDefined(prop, typeof(RestTextAttribute)));
 
             _cachedIconAttribute = typeof(TIndexItem)
                 .GetProperties()
-                .Where(prop => Attribute.IsDefined(prop, typeof(RestIconAttribute)))
-                .FirstOrDefault();
+                .FirstOrDefault(prop => Attribute.IsDefined(prop, typeof(RestIconAttribute)));
         }
 
         /// <summary>
@@ -105,6 +107,7 @@ namespace WebExpress.WebApp.WebRestApi
                         return new RestApiTileItem<TIndexItem>()
                         {
                             Id = item.Id.ToString(),
+                            Title = _cachedTitleAttribute?.GetValue(item)?.ToString() ?? item.Id.ToString(),
                             Text = _cachedTextAttribute?.GetValue(item)?.ToString() ?? item.Id.ToString(),
                             Content = _cachedDescriptionAttribute?.GetValue(item)?.ToString(),
                             Uri = GetUri(item, request)?.ToString(),

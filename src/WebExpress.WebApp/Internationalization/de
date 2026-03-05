@@ -103,9 +103,9 @@ setting.group.system.description=Systembezogene Einstellungen für die Webanwend
 
 setting.tab.general.label=Allgemein
 setting.group.system.label=System
-setting.titel.plugin.label=Plugins
-setting.titel.systeminformation.label=Systeminformationen
-setting.titel.log.label=Log
+setting.title.plugin.label=Plugins
+setting.title.systeminformation.label=Systeminformationen
+setting.title.log.label=Log
 
 setting.logfile.label=Logdatei:
 setting.logfile.path=Speicherort:
@@ -205,3 +205,22 @@ setting.usermanager.user.edit.groups.selected=Ausgewählte Gruppen
 setting.sitemap.title=Sitemap
 setting.sitemap.label=Sitemap
 setting.sitemap.description=Hier können Sie die Sitemap der Webanwendung einsehen. Die Sitemap stellt die Struktur der Webseite dar und zeigt alle verfügbaren Seiten und deren Hierarchie an. Sie können die Sitemap verwenden, um schnell zu bestimmten Seiten zu navigieren oder um einen Überblick über die gesamte Webseite zu erhalten.
+
+setting.monitor.title.label=Monitor
+setting.monitor.group.statistics.label=Allgemeine Statistiken
+setting.monitor.uptime=Laufzeit
+setting.monitor.totalrequests=Gesamtanfragen
+setting.monitor.group.chart.traffic.label=Datenverkehr
+setting.monitor.dataset.requests=Anfragen
+setting.monitor.dataset.errors=Fehler
+setting.monitor.group.chart.performance.label=Leistung
+setting.monitor.dataset.avg_duration=Ø Dauer (ms)
+setting.monitor.dataset.max_duration=Max. Dauer (ms)
+setting.monitor.dataset.min_duration=Min. Dauer (ms)
+setting.monitor.chart.title=System Monitor
+setting.monitor.chart.axis.x=Zeit
+setting.monitor.chart.axis.y=Anzahl
+setting.monitor.currenttime=Aktuelle Systemzeit
+setting.monitor.group.chart.resources.label=Systemressourcen
+setting.monitor.dataset.cpu=CPU Auslastung (%)
+setting.monitor.dataset.memory=Speichernutzung (MB)

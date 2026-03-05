@@ -117,9 +117,9 @@ setting.group.system.description=System-related settings for the web application
 
 setting.tab.general.label=General
 setting.group.system.label=System
-setting.titel.plugin.label=Plugins
-setting.titel.systeminformation.label=System information
-setting.titel.log.label=Log
+setting.title.plugin.label=Plugins
+setting.title.systeminformation.label=System information
+setting.title.log.label=Log
 
 setting.plugin.label=Installed applications
 setting.plugin.description=

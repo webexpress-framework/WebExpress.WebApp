@@ -95,13 +95,15 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IUri uri, params IControl[] controls)
         {
+            var resultUri = uri?.BindParameters(renderContext.Request);
+
             var html = new HtmlElementTextContentDiv()
             {
                 Id = Id,
                 Class = Css.Concatenate("wx-webapp-search", GetClasses()),
                 Style = GetStyles()
             }
-                .AddUserAttribute("data-uri", uri?.ToString())
+                .AddUserAttribute("data-uri", resultUri?.ToString())
                 .Add(controls.Select(x => x.Render(renderContext, visualTree)));
 
             return html;

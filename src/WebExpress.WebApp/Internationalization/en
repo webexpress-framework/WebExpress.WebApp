@@ -118,9 +118,9 @@ setting.group.system.description=System-related settings for the web application
 
 setting.tab.general.label=General
 setting.group.system.label=System
-setting.titel.plugin.label=Plugins
-setting.titel.systeminformation.label=System information
-setting.titel.log.label=Log
+setting.title.plugin.label=Plugins
+setting.title.systeminformation.label=System information
+setting.title.log.label=Log
 
 setting.plugin.label=Installed applications
 setting.plugin.description=
@@ -206,3 +206,22 @@ setting.sitemap.title=Sitemap
 setting.sitemap.label=Sitemap
 setting.sitemap.notavailable=The sitemap is not available. Please make sure that the sitemap module is installed and activated.
 setting.sitemap.description=The sitemap provides an overview of the structure of the web application. It lists all available pages and their relationships to each other. This allows users to quickly navigate to the desired page and get an overview of the content offered by the web application.
+
+setting.monitor.title.label=Monitor
+setting.monitor.group.statistics.label=General Statistics
+setting.monitor.uptime=Uptime
+setting.monitor.totalrequests=Total Requests
+setting.monitor.group.chart.traffic.label=Traffic
+setting.monitor.dataset.requests=Requests
+setting.monitor.dataset.errors=Errors
+setting.monitor.group.chart.performance.label=Performance
+setting.monitor.dataset.avg_duration=Ø Duration (ms)
+setting.monitor.dataset.max_duration=Max. Duration (ms)
+setting.monitor.dataset.min_duration=Min. Duration (ms)
+setting.monitor.chart.title=System Monitor
+setting.monitor.chart.axis.x=Time
+setting.monitor.chart.axis.y=Count
+setting.monitor.currenttime=Current System Time
+setting.monitor.group.chart.resources.label=System Resources
+setting.monitor.dataset.cpu=CPU Usage (%)
+setting.monitor.dataset.memory=Memory Usage (MB)

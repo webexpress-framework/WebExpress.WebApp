@@ -18,7 +18,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
     /// Settings page with information about the active plugins.
     /// </summary>
     [WebIcon<IconPuzzlePiece>]
-    [Title("webexpress.webapp:setting.titel.plugin.label")]
+    [Title("webexpress.webapp:setting.title.plugin.label")]
     [SettingGroup<SettingGroupSystemGeneral>()]
     [SettingSection(SettingSection.Secondary)]
     [Scope<IScopeAdmin>]
