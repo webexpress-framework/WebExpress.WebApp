@@ -10,6 +10,7 @@ using WebExpress.WebCore.WebEndpoint;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebPage;
 using WebExpress.WebCore.WebTheme;
+using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebFragment;
 using WebExpress.WebUI.WebPage;
@@ -25,6 +26,11 @@ namespace WebExpress.WebApp.WebPage
         /// Returns or sets the theme of the web application.
         /// </summary>
         public IThemeContext Theme { get; set; }
+
+        /// <summary>
+        /// Returns or sets the URI used for breadcrumb navigation within the application.
+        /// </summary>
+        public IUri BreadcrumbUri { get; set; }
 
         /// <summary>
         /// Returns the HTML element that contains the URI of the message queue used by the application.
@@ -141,11 +147,12 @@ namespace WebExpress.WebApp.WebPage
             (
                 renderContext?.PageContext
             );
+            var breadcrumbUri = BreadcrumbUri ?? renderContext?.Request?.Uri;
             html.Body.Add(preferences.Select(x => x.Render(renderContext, this)));
             html.Body.Add(MessageQueueUri);
             html.Body.Add(Header.Render(renderContext, this));
             html.Body.Add(Toast.Render(renderContext, this));
-            html.Body.Add(Breadcrumb.Render(renderContext, this, context.Request.Uri));
+            html.Body.Add(Breadcrumb.Render(renderContext, this, breadcrumbUri));
             html.Body.Add(Prologue.Render(renderContext, this));
 
             var primary = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionBodyPrimary>
