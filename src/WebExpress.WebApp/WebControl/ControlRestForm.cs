@@ -41,7 +41,7 @@ namespace WebExpress.WebApp.WebControl
         {
             var renderFormContext = new RenderControlFormContext(renderContext, this);
 
-            return Render(renderFormContext, visualTree, Items, null);
+            return Render(renderFormContext, visualTree);
         }
 
         /// <summary>
@@ -49,13 +49,10 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="renderContext">The context in which the control is rendered.</param>
         /// <param name="visualTree">The visual tree.</param>
-        /// <param name="items">The form items.</param>
         /// <returns>An HTML node representing the rendered control.</returns>
-        public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IEnumerable<IControlFormItem> items)
+        public virtual IHtmlNode Render(IRenderControlFormContext renderContext, IVisualTreeControl visualTree)
         {
-            var renderFormContext = new RenderControlFormContext(renderContext, this);
-
-            return Render(renderFormContext, visualTree, items, null);
+            return Render(renderContext, visualTree, Items, null, Uri);
         }
 
         /// <summary>
@@ -67,22 +64,7 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>The control as html.</returns>
         public override IHtmlNode Render(IRenderControlFormContext renderContext, IVisualTreeControl visualTree, IEnumerable<IControlFormItem> items)
         {
-            return Render(renderContext, visualTree, items, null);
-        }
-
-        /// <summary>
-        /// Converts the control to an HTML representation.
-        /// </summary>
-        /// <param name="renderContext">The context in which the control is rendered.</param>
-        /// <param name="visualTree">The visual tree.</param>
-        /// <param name="items">The form items.</param>
-        /// <param name="id">The unique identifier for the item.</param>
-        /// <returns>An HTML node representing the rendered control.</returns>
-        public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IEnumerable<IControlFormItem> items, string id)
-        {
-            var renderFormContext = new RenderControlFormContext(renderContext, this);
-
-            return Render(renderFormContext, visualTree, items, id, Uri);
+            return Render(renderContext, visualTree, items, null, Uri);
         }
 
         /// <summary>
