@@ -37,14 +37,14 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
 
     // placeholder data shown while initial load is in progress
     _previewColumns = [
-        { label: "Loading...", width: null, visible: true },
-        { label: "Loading...", width: null, visible: true },
-        { label: "Loading...", width: null, visible: true }
+        { label: "", width: null, visible: true },
+        { label: "", width: null, visible: true },
+        { label: "", width: null, visible: true }
     ];
     _previewBody = [
-        { cells: [{ content: "..." }, { content: "..." }, { content: "..." }] },
-        { cells: [{ content: "..." }, { content: "..." }, { content: "..." }] },
-        { cells: [{ content: "..." }, { content: "..." }, { content: "..." }] }
+        this._createPreviewRow(["col-4", "col-8", "col-6"]),
+        this._createPreviewRow(["col-7", "col-5", "col-9"]),
+        this._createPreviewRow(["col-3", "col-10", "col-4"])
     ];
 
     /**
@@ -200,7 +200,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
         this._infoDiv = document.createElement("div");
         this._infoDiv.className = "wx-table-info text-muted small";
         this._infoDiv.style.marginTop = "0.25rem";
-        this._infoDiv.textContent = ""; // initially empty
+        this._infoDiv.textContent = "";
         // append info as sibling after pager for clarity and to avoid pager.render clearing it
         if (this._pagerElement && this._pagerElement.parentNode) {
             this._pagerElement.parentNode.insertBefore(this._infoDiv, this._pagerElement.nextSibling);
@@ -288,7 +288,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
         this._sentinel.className = "wx-table-sentinel";
         this._sentinel.style.height = "1px";
         this._sentinel.style.width = "100%";
-        this._sentinel.style.flexShrink = "0"; // prevent collapsing
+        this._sentinel.style.flexShrink = "0";
         this._sentinel.style.visibility = "hidden";
     }
 
@@ -351,8 +351,12 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
             // clamp requested page into range
             const totalPages = Math.max(1, Math.ceil(this._totalRecords / this._pageSize));
             let page = Number(targetPage) || 0;
-            if (page < 0) { page = 0; }
-            if (page >= totalPages) { page = totalPages - 1; }
+            if (page < 0) {
+                page = 0;
+            }
+            if (page >= totalPages) {
+                page = totalPages - 1;
+            }
             this._page = page;
 
             // immediate visual feedback while new page loads
@@ -790,6 +794,31 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
         if (this._restUri && this._isVisible()) {
             this._receiveData(false);
         }
+    }
+    
+    /**
+     * Creates bootstrap placeholder markup for preview cells.
+     * @param {string} widthClass Bootstrap width class for the placeholder.
+     * @returns {string} Bootstrap placeholder markup.
+     */
+    _createPlaceholderCellContent(widthClass = "col-12") {
+        return `<span class="placeholder ${widthClass}"></span>`;
+    }
+    
+    /**
+     * Creates a preview row with bootstrap placeholders.
+     * @param {Array<string>} widths Bootstrap width classes for each cell.
+     * @returns {Object} Preview row definition.
+     */
+    _createPreviewRow(widths) {
+        return {
+            cells: widths.map((widthClass) => {
+                return {
+                    content: this._createPlaceholderCellContent(widthClass),
+                    html: true
+                };
+            })
+        };
     }
 };
 

@@ -269,8 +269,8 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
             const formData = dataObj.data || (Object.keys(dataObj).length ? dataObj : null);
 
             this._setHeaderTitle(dataObj.title || null);
-  
-            // Priority to confirmItem if present (works for delete OR critical edits)
+
+            // priority to confirmitem if present (works for delete or critical edits)
             if (dataObj.confirmItem) {
                 this._displayDeletePrompt(dataObj.confirmItem);
             } else {
@@ -378,6 +378,58 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
+     * Validates a single form field element.
+     * Can be overridden by subclasses or used by them.
+     * @param {HTMLElement} el The element to validate.
+     * @returns {string|null} The error message or null if valid.
+     */
+    _validateField(el) {
+        if (!el || el.disabled) {
+            return null;
+        }
+
+        let msg = null;
+
+        if (!el.validity.valid) {
+            msg = el.validationMessage || this._i18n("webexpress.webapp:validation.invalid");
+        } else if (el.type === "email" && el.value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el.value)) {
+            msg = this._i18n("webexpress.webapp:validation.email.invalid");
+        } else if (el.hasAttribute("pattern") && el.value) {
+            try {
+                // cache regexp if possible, but for generic forms new RegExp is safer
+                const rx = new RegExp(`^(?:${el.getAttribute("pattern")})$`);
+                if (!rx.test(el.value)) {
+                    msg = el.getAttribute("data-error-message") || this._i18n("webexpress.webapp:validation.format.invalid");
+                }
+            } catch (e) {
+                // ignore invalid regex definition in html
+            }
+        } else if (el.type === "number" && el.value) {
+            const val = parseFloat(el.value);
+            const min = parseFloat(el.getAttribute("min"));
+            const max = parseFloat(el.getAttribute("max"));
+
+            if (!isNaN(min) && val < min) {
+                msg = this._applyParams(this._i18n("webexpress.webapp:validation.number.range"), { min, max });
+            } else if (!isNaN(max) && val > max) {
+                msg = this._applyParams(this._i18n("webexpress.webapp:validation.number.range"), { min, max });
+            }
+        } else {
+            const len = el.value.length;
+            const minLen = parseInt(el.getAttribute("minlength"), 10);
+            const maxLen = parseInt(el.getAttribute("maxlength"), 10);
+
+            if (!isNaN(minLen) && len < minLen) {
+                msg = this._applyParams(this._i18n("webexpress.webapp:validation.minlength"), { minlength: minLen });
+            } else if (!isNaN(maxLen) && len > maxLen) {
+                msg = this._applyParams(this._i18n("webexpress.webapp:validation.maxlength"), { maxlength: maxLen });
+            }
+        }
+
+        return msg;
+    }
+
+    /**
      * Validates the form using native HTML5 validity and extra rules.
      * @returns {boolean} True if valid, false otherwise.
      */
@@ -391,39 +443,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
         });
 
         for (const el of elements) {
-            let msg = null;
-
-            if (!el.validity.valid) {
-                msg = el.validationMessage || this._i18n("webexpress.webapp:validation.invalid");
-            } else if (el.type === "email" && el.value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el.value)) {
-                msg = this._i18n("webexpress.webapp:validation.email.invalid");
-            } else if (el.hasAttribute("pattern") && el.value) {
-                try {
-                    const rx = new RegExp(`^(?:${el.getAttribute("pattern")})$`);
-                    if (!rx.test(el.value)) {
-                        msg = el.getAttribute("data-error-message") || this._i18n("webexpress.webapp:validation.format.invalid");
-                    }
-                } catch (e) {
-                    // ignore invalid regex
-                }
-            } else if (el.type === "number" && el.value) {
-                const val = parseFloat(el.value);
-                const min = parseFloat(el.getAttribute("min"));
-                const max = parseFloat(el.getAttribute("max"));
-                if (!isNaN(min) && val < min) {
-                    msg = this._applyParams(this._i18n("webexpress.webapp:validation.number.range"), { min, max });
-                }
-            } else {
-                const len = el.value.length;
-                const minLen = parseInt(el.getAttribute("minlength"), 10);
-                const maxLen = parseInt(el.getAttribute("maxlength"), 10);
-
-                if (!isNaN(minLen) && len < minLen) {
-                    msg = this._applyParams(this._i18n("webexpress.webapp:validation.minlength"), { minlength: minLen });
-                } else if (!isNaN(maxLen) && len > maxLen) {
-                    msg = this._applyParams(this._i18n("webexpress.webapp:validation.maxlength"), { maxlength: maxLen });
-                }
-            }
+            const msg = this._validateField(el);
 
             if (msg) {
                 formIsValid = false;
@@ -501,6 +521,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
 
         let payload = this._buildPayload();
 
+        // run beforeSend hook
         if (typeof this.options.beforeSend === "function") {
             try {
                 const res = this.options.beforeSend(payload, this._element);
@@ -516,6 +537,33 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
             }
         }
 
+        const { url, init } = this._prepareRequest(endpoint, payload);
+
+        this._setSubmitting(true);
+        this._dispatch(webexpress.webui.Event.TASK_START_EVENT, { name: "submitting" });
+        this._dispatch(webexpress.webui.Event.DATA_REQUESTED_EVENT, { type: "submit", url: url });
+
+        try {
+            const resp = await fetch(url, init);
+            await this._handleResponse(resp);
+        } catch (error) {
+            if (typeof this.options.onError === "function") {
+                this.options.onError(error);
+            }
+            this._dispatchError(error);
+        } finally {
+            this._setSubmitting(false);
+            this._dispatch(webexpress.webui.Event.TASK_FINISH_EVENT, { name: "submitting" });
+        }
+    }
+
+    /**
+     * Prepares URL and Fetch options based on method and payload.
+     * @param {string} endpoint The target URL.
+     * @param {Object} payload The data to send.
+     * @returns {{url: string, init: Object}} Request configuration.
+     */
+    _prepareRequest(endpoint, payload) {
         const method = this.options.method;
         const init = {
             method: method,
@@ -523,10 +571,9 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
             credentials: this.options.credentials || "same-origin"
         };
 
-        let requestUrl = endpoint;
         const urlObj = new URL(endpoint, window.location.origin);
+        let requestUrl = endpoint;
 
-        // append query params for get/head/delete or x-www-form-urlencoded
         const appendParams = (target, data) => {
             for (const [k, v] of Object.entries(data)) {
                 const values = Array.isArray(v) ? v : [v];
@@ -564,7 +611,6 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
                 }
             } else {
                 const params = new URLSearchParams();
-                // reuse logic but on urlsearchparams object instead of url
                 for (const [k, v] of Object.entries(payload)) {
                     const values = Array.isArray(v) ? v : [v];
                     values.forEach((val) => {
@@ -587,84 +633,79 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
             }
         }
 
-        this._setSubmitting(true);
-        this._dispatch(webexpress.webui.Event.TASK_START_EVENT, { name: "submitting" });
-        this._dispatch(webexpress.webui.Event.DATA_REQUESTED_EVENT, { type: "submit", url: requestUrl });
+        return { url: requestUrl, init: init };
+    }
 
-        try {
-            const resp = await fetch(requestUrl, init);
-            let json = null;
-            const contentType = resp.headers.get("content-type") || "";
+    /**
+     * Handles the fetch response parsing and UI updates.
+     * @param {Response} resp The fetch response object.
+     */
+    async _handleResponse(resp) {
+        let json = null;
+        const contentType = resp.headers.get("content-type") || "";
 
-            if (contentType.includes("application/json")) {
-                try {
-                    json = await resp.json();
-                } catch (e) {
-                    // ignore
-                }
-            } else {
-                try {
-                    json = { text: await resp.text() };
-                } catch (e) {
-                    // ignore
-                }
+        if (contentType.includes("application/json")) {
+            try {
+                json = await resp.json();
+            } catch (e) {
+                // ignore json parse error on empty body
+            }
+        } else {
+            try {
+                json = { text: await resp.text() };
+            } catch (e) {
+                // ignore
+            }
+        }
+
+        if (resp.ok) {
+            this.clearErrors();
+            if (typeof this.options.onSuccess === "function") {
+                this.options.onSuccess(json, resp);
             }
 
-            if (resp.ok) {
-                this.clearErrors();
-                if (typeof this.options.onSuccess === "function") {
-                    this.options.onSuccess(json, resp);
-                }
+            this._dispatch(webexpress.webui.Event.UPLOAD_SUCCESS_EVENT, { response: json, status: resp.status, form: this._element });
+            this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, { type: "submit", data: json });
 
-                this._dispatch(webexpress.webui.Event.UPLOAD_SUCCESS_EVENT, { response: json, status: resp.status, form: this._element });
-                this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, { type: "submit", data: json });
+            const dataBlock = (json && json.data) ? json.data : json;
+            const confirmHtml = (dataBlock && dataBlock.confirmHtml) || (json && json.confirmHtml);
+            const message = (dataBlock && dataBlock.message) || (json && (json.confirmMessage || json.message));
 
-                const dataBlock = (json && json.data) ? json.data : json;
-                const confirmHtml = (dataBlock && dataBlock.confirmHtml) || (json && json.confirmHtml);
-                const message = (dataBlock && dataBlock.message) || (json && (json.confirmMessage || json.message));
-
-                if (json && (!json.message || json.hideForm === true)) {
-                    this._closeEnclosingModal();
-                } else {
-                    if (confirmHtml) {
-                        this._showConfirm(String(confirmHtml));
-                    } else if (message) {
-                        this._showConfirm(String(message));
-                    } else if (this._confirmHtml) {
-                        this._showConfirm(null);
-                    }
-                }
-            } else if (resp.status === 400) {
-                if (Array.isArray(json)) {
-                    this._applyServerArrayErrors(json);
-                } else if (json && json.errors) {
-                    this._applyServerFieldErrors(json.errors);
-                } else {
-                    const msg = (json && (json.message || json.error)) || this._i18n("webexpress.webapp:validation.failed");
-                    this._displayAggregatedErrors([typeof msg === "object" ? JSON.stringify(msg) : msg]);
-                }
-
-                if (typeof this.options.onError === "function") {
-                    this.options.onError(json, resp);
-                }
-                this._dispatch(webexpress.webui.Event.UPLOAD_ERROR_EVENT, { type: "validation", response: json, status: resp.status, form: this._element });
+            if (json && (!json.message || json.hideForm === true)) {
+                this._closeEnclosingModal();
             } else {
-                const message = this._i18n("webexpress.webapp:error.request_failed")
-                    .replace("{status}", resp.status);
-                const err = new Error(message);
-                err.status = resp.status;
-                err.response = resp;
-                err.payload = json;
-                throw err;
+                if (confirmHtml) {
+                    this._showConfirm(String(confirmHtml));
+                } else if (message) {
+                    this._showConfirm(String(message));
+                } else if (this._confirmHtml) {
+                    this._showConfirm(null);
+                }
             }
-        } catch (error) {
+        } else if (resp.status === 400) {
+            // handle validation errors
+            if (Array.isArray(json)) {
+                this._applyServerArrayErrors(json);
+            } else if (json && json.errors) {
+                this._applyServerFieldErrors(json.errors);
+            } else {
+                const msg = (json && (json.message || json.error)) || this._i18n("webexpress.webapp:validation.failed");
+                this._displayAggregatedErrors([typeof msg === "object" ? JSON.stringify(msg) : msg]);
+            }
+
             if (typeof this.options.onError === "function") {
-                this.options.onError(error);
+                this.options.onError(json, resp);
             }
-            this._dispatchError(error);
-        } finally {
-            this._setSubmitting(false);
-            this._dispatch(webexpress.webui.Event.TASK_FINISH_EVENT, { name: "submitting" });
+            this._dispatch(webexpress.webui.Event.UPLOAD_ERROR_EVENT, { type: "validation", response: json, status: resp.status, form: this._element });
+        } else {
+            // handle system errors
+            const message = this._i18n("webexpress.webapp:error.request_failed")
+                .replace("{status}", resp.status);
+            const err = new Error(message);
+            err.status = resp.status;
+            err.response = resp;
+            err.payload = json;
+            throw err;
         }
     }
 
