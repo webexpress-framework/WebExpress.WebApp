@@ -57,6 +57,8 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
                 this.options.headers["Content-Type"] = "application/json; charset=utf-8";
             }
         }
+        
+        this._element.classList.add("wx-restform");
 
         this._submitting = false;
         this._loading = false;
@@ -88,9 +90,9 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
         this._initConfirm();
 
         // ensure strict order: error -> confirm -> prolog.
-        this._ensureContainer("restform-error-container", "_formErrorContainer");
-        this._ensureContainer("restform-confirm", "_confirmContainer", ["alert", "alert-success"], this._formErrorContainer);
-        this._ensureContainer("restform-prolog-container", "_formPrologContainer", [], this._confirmContainer);
+        this._ensureContainer("wx-restform-error-container", "_formErrorContainer");
+        this._ensureContainer("wx-restform-confirm", "_confirmContainer", ["alert", "alert-success"], this._formErrorContainer);
+        this._ensureContainer("wx-restform-prolog-container", "_formPrologContainer", [], this._confirmContainer);
 
         const headerEl = this._element.querySelector(".modal-body");
         const main = headerEl ? headerEl.querySelector("main") : null;
@@ -734,9 +736,9 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
         });
 
         if (state) {
-            this._element.classList.add("restform-submitting");
+            this._element.classList.add("wx-restform-submitting");
         } else {
-            this._element.classList.remove("restform-submitting");
+            this._element.classList.remove("wx-restform-submitting");
         }
     }
 
@@ -857,9 +859,9 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
         }
 
         const marker = document.createElement("div");
-        marker.className = "restform-field-marker";
+        marker.className = "wx-restform-field-marker";
         const wrapper = document.createElement("div");
-        wrapper.className = "restform-field-wrapper";
+        wrapper.className = "wx-restform-field-wrapper";
 
         field.setAttribute("aria-invalid", "true");
 
@@ -886,13 +888,13 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
         }
 
         if (!this._formErrorContainer) {
-            this._ensureContainer("restform-error-container", "_formErrorContainer");
+            this._ensureContainer("wx-restform-error-container", "_formErrorContainer");
         }
 
-        let el = this._formErrorContainer.querySelector(".restform-error");
+        let el = this._formErrorContainer.querySelector(".wx-restform-error");
         if (!el) {
             el = document.createElement("div");
-            el.className = "restform-error alert alert-danger";
+            el.className = "wx-restform-error alert alert-danger";
             this._formErrorContainer.appendChild(el);
         }
 
@@ -929,7 +931,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
         this._fieldErrorMap.clear();
 
         if (this._formErrorContainer) {
-            const el = this._formErrorContainer.querySelector(".restform-error");
+            const el = this._formErrorContainer.querySelector(".wx-restform-error");
             if (el) {
                 el.remove();
             }
@@ -964,10 +966,10 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
 
-        let confirmDiv = this._element.querySelector(".restform-delete-confirm");
+        let confirmDiv = this._element.querySelector(".wx-restform-delete-confirm");
         if (!confirmDiv) {
             confirmDiv = document.createElement("div");
-            confirmDiv.className = "restform-delete-confirm";
+            confirmDiv.className = "wx-restform-delete-confirm";
         }
         confirmDiv.innerHTML = "";
 

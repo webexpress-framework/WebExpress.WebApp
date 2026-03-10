@@ -7,6 +7,10 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
 
     "form.edit_row": "Eintrag bearbeiten",
     "form.edit_item": "Element bearbeiten",
+    
+    "wizard.previous": "Zurück",
+    "wizard.next": "Weiter",
+    "wizard.finish": "Abschließen",
 
     "input.unique.error": "Eindeutigkeit kann nicht überprüft werden - Server ist nicht erreichbar.",
     "input.unique.checking": "Eindeutigkeit wird überprüft...",

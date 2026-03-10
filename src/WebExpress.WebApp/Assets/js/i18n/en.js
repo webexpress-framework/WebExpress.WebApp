@@ -7,6 +7,10 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
 
     "form.edit_row": "Edit Row",
     "form.edit_item": "Edit Item",
+    
+    "wizard.previous": "Previous",
+    "wizard.next": "Next",
+    "wizard.finish": "Finish",
 
     "input.unique.error": "Unable to check uniqueness - server could not be reached.",
     "input.unique.checking": "Checking uniqueness...",

@@ -249,7 +249,7 @@ webexpress.webapp.Event = class {
     // Event triggered when UI components require a general update
     static UPDATE_EVENT = "webexpress.webapp.update";
 }
-    
+
 // initialize the WebSocket connection after the DOM is fully loaded    
 document.addEventListener("DOMContentLoaded", function () {  
 

@@ -22,6 +22,7 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/js/webexpress.webapp.popupnotification.js")]
     [Asset("/assets/js/webexpress.webapp.progress.task.js")]
     [Asset("/assets/js/webexpress.webapp.restform.js")]
+    [Asset("/assets/js/webexpress.webapp.restwizard.js")]
     [Asset("/assets/js/webexpress.webapp.search.js")]
     [Asset("/assets/js/webexpress.webapp.table.js")]
     [Asset("/assets/js/webexpress.webapp.tile.js")]

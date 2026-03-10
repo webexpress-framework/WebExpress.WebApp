@@ -30,7 +30,7 @@ webexpress.webapp.InputTileCtrl = class extends webexpress.webui.InputTileCtrl {
     constructor(element) {
         super(element);
 
-        // read REST URI and remove attribute
+        // read rest uri and remove attribute
         this._restUri = element.dataset.uri || "";
         element.removeAttribute("data-uri");
 
@@ -75,11 +75,8 @@ webexpress.webapp.InputTileCtrl = class extends webexpress.webui.InputTileCtrl {
         });
 
         // click-outside closes dropdown
-        window.addEventListener("mousedown", e => {
-            if (this._dropdownVisible &&
-                !this._dropdownDiv.contains(e.target) &&
-                !this._searchBtn.contains(e.target)
-            ) {
+        window.addEventListener("mousedown", (e) => {
+            if (this._dropdownVisible && !this._dropdownDiv.contains(e.target) && !this._searchBtn.contains(e.target)) {
                 this._hideDropdown();
             }
         });
@@ -97,6 +94,7 @@ webexpress.webapp.InputTileCtrl = class extends webexpress.webui.InputTileCtrl {
             this._dropdownDiv.innerHTML = "";
             this._filterCtrl = new webexpress.webui.SearchCtrl(this._dropdownDiv);
         }
+        
         this._dropdownDiv.style.display = "block";
         this._dropdownVisible = true;
 
@@ -106,23 +104,27 @@ webexpress.webapp.InputTileCtrl = class extends webexpress.webui.InputTileCtrl {
                 setTimeout(bindInputHandler, 10);
                 return;
             }
+            
             if (this._filter) {
                 inp.value = this._filter;
             }
+            
             inp.focus();
             const cleanInput = inp.cloneNode(true);
             inp.parentNode.replaceChild(cleanInput, inp);
 
-            cleanInput.addEventListener("keydown", e => {
+            cleanInput.addEventListener("keydown", (e) => {
                 if (e.key === "Enter") {
                     this._filter = cleanInput.value;
                     this._hideDropdown();
                     this._receiveData();
                 }
+                
                 if (e.key === "Escape") {
                     this._hideDropdown();
                 }
             });
+            
             cleanInput.addEventListener("blur", () => {
                 setTimeout(() => {
                     if (!this._searchBtn.matches(":hover")) {
@@ -131,6 +133,7 @@ webexpress.webapp.InputTileCtrl = class extends webexpress.webui.InputTileCtrl {
                 }, 160);
             });
         };
+        
         bindInputHandler();
     }
 
@@ -157,60 +160,112 @@ webexpress.webapp.InputTileCtrl = class extends webexpress.webui.InputTileCtrl {
     _receiveData() {
         this._showPlaceholders();
         let url = this._restUri;
-        let filter = this._filter ? String(this._filter).trim() : "";
+        
+        let filter = "";
+        if (this._filter) {
+            filter = String(this._filter).trim();
+        }
+        
         if (filter.length) {
-            url += (url.includes("?") ? "&" : "?") + "q=" + encodeURIComponent(filter);
+            let separator = "?";
+            if (url.includes("?")) {
+                separator = "&";
+            }
+            url += separator + "q=" + encodeURIComponent(filter);
         }
 
         fetch(url)
-            .then(res => {
-                if (!res.ok) throw new Error("Request failed");
+            .then((res) => {
+                if (!res.ok) {
+                    throw new Error("Request failed");
+                }
                 return res.json();
             })
-            .then(response => {
-                let tiles = Array.isArray(response) ? response : response.items;
-                if (!Array.isArray(tiles)) tiles = [];
+            .then((response) => {
+                let tiles = [];
+                if (Array.isArray(response)) {
+                    tiles = response;
+                } else {
+                    if (response && response.items) {
+                        tiles = response.items;
+                    }
+                }
+                
+                if (!Array.isArray(tiles)) {
+                    tiles = [];
+                }
+                
                 // always append selected tiles, even if not in filter result
                 const selectedIds = this._getSelectedIds();
                 const seen = new Set();
+                
                 for (const t of tiles) {
-                    if (t.id) seen.add(t.id);
+                    if (t.id) {
+                        seen.add(t.id);
+                    }
                 }
+                
                 for (const selId of selectedIds) {
                     if (!seen.has(selId)) {
-                        const fallback = this.tiles.find(tile => tile.id === selId)
-                            || { id: selId, label: selId, html: "", class: "", icon: null, image: null, colorCss: "bg-secondary", colorStyle: null, visible: true };
+                        let fallback = this.tiles.find((tile) => {
+                            return tile.id === selId;
+                        });
+                        
+                        if (!fallback) {
+                            fallback = {
+                                id: selId,
+                                label: selId,
+                                html: "",
+                                class: "",
+                                icon: null,
+                                image: null,
+                                colorCss: "bg-secondary",
+                                colorStyle: null,
+                                visible: true
+                            };
+                        }
+                        
                         tiles.push(fallback);
                         seen.add(selId);
                     }
                 }
-                this.tiles = tiles.map(t => ({
-                    id: t.id,
-                    label: t.label || t.text || t.name || t.id,
-                    html: t.html ?? "",
-                    class: t.class ?? "",
-                    icon: t.icon ?? null,
-                    image: t.image ?? null,
-                    colorCss: t.colorCss ?? t.color ?? null,
-                    colorStyle: t.colorStyle ?? null,
-                    visible: t.visible !== false,
+                
+                this.tiles = tiles.map((t) => {
+                    let isVisible = true;
+                    if (t.visible === false) {
+                        isVisible = false;
+                    }
                     
-                    // map action attributes from API response
-                    primaryAction: t.primaryAction || null,
-                    primaryTarget: t.primaryTarget || null,
-                    primaryUri: t.primaryUri || null,
-                    secondaryAction: t.secondaryAction || null,
-                    secondaryTarget: t.secondaryTarget || null,
-                    secondaryUri: t.secondaryUri || null
-                }));
+                    return {
+                        id: t.id,
+                        label: t.label || t.text || t.name || t.id,
+                        html: t.html ?? "",
+                        class: t.class ?? "",
+                        icon: t.icon ?? null,
+                        image: t.image ?? null,
+                        colorCss: t.colorCss ?? t.color ?? null,
+                        colorStyle: t.colorStyle ?? null,
+                        visible: isVisible,
+                        
+                        // map action attributes from api response
+                        primaryAction: t.primaryAction || null,
+                        primaryTarget: t.primaryTarget || null,
+                        primaryUri: t.primaryUri || null,
+                        secondaryAction: t.secondaryAction || null,
+                        secondaryTarget: t.secondaryTarget || null,
+                        secondaryUri: t.secondaryUri || null
+                    };
+                });
+                
                 this._progressDiv.style.visibility = "hidden";
                 this._loading = false;
-                this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
+                
+                this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT || "webexpress.webui.data.arrived", {
                     sender: this._element,
-                    response
+                    response: response
                 });
             })
-            .catch(error => {
+            .catch((error) => {
                 this._progressDiv.style.visibility = "hidden";
                 this.tiles = [];
                 this._loading = false;
@@ -224,11 +279,24 @@ webexpress.webapp.InputTileCtrl = class extends webexpress.webui.InputTileCtrl {
      */
     _getSelectedIds() {
         if (this._multiselect) {
-            if (Array.isArray(this._value)) return this._value.slice();
-            if (typeof this._value === "string") return this._value.split(";").map(s => s.trim()).filter(Boolean);
+            if (Array.isArray(this._value)) {
+                return this._value.slice();
+            }
+            
+            if (typeof this._value === "string") {
+                return this._value.split(";").map((s) => {
+                    return s.trim();
+                }).filter((s) => {
+                    return Boolean(s);
+                });
+            }
+            
             return [];
         } else {
-            if (typeof this._value === "string" && this._value) return [this._value];
+            if (typeof this._value === "string" && this._value) {
+                return [this._value];
+            }
+            
             return [];
         }
     }
@@ -240,20 +308,26 @@ webexpress.webapp.InputTileCtrl = class extends webexpress.webui.InputTileCtrl {
      */
     _createTileCard(tile) {
         const card = super._createTileCard(tile);
-        if (
-            (tile.label === "" || !tile.label) &&
-            !tile.icon &&
-            !tile.image &&
-            (tile.colorCss && tile.colorCss.includes("placeholder"))
-        ) {
+        
+        let isPlaceholder = false;
+        if ((tile.label === "" || !tile.label) && !tile.icon && !tile.image) {
+            if (tile.colorCss) {
+                if (tile.colorCss.includes("placeholder")) {
+                    isPlaceholder = true;
+                }
+            }
+        }
+        
+        if (isPlaceholder) {
             card.classList.add("bg-transparent", "border-0");
-            card.querySelectorAll("*").forEach(e => {
+            card.querySelectorAll("*").forEach((e) => {
                 e.classList.add("placeholder", "bg-secondary", "rounded");
                 e.textContent = "";
             });
             card.tabIndex = -1;
             card.style.pointerEvents = "none";
         }
+        
         return card;
     }
 };
