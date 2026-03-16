@@ -248,6 +248,10 @@ webexpress.webapp.Event = class {
     static CHANGE_STATUS_EVENT = "webexpress.webapp.change.status";
     // Event triggered when UI components require a general update
     static UPDATE_EVENT = "webexpress.webapp.update";
+    // Event triggered when a tab is added dynamically.
+    static TAB_ADDED_EVENT = "webexpress.webapp.tab.added";
+    // Event triggered when a tab is closed dynamically.
+    static TAB_CLOSED_EVENT = "webexpress.webapp.tab.closed";
 }
 
 // initialize the WebSocket connection after the DOM is fully loaded    
