@@ -5,7 +5,6 @@
  */
 webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
 
-    // configuration
     _restUri = "";
     _abortController = null;
 
@@ -75,6 +74,37 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
     }
 
     /**
+     * Updates the internal column state and redraws the control.
+     * @param {Object} data - The json payload containing columns and layout.
+     */
+    updateData(data) {
+        if (data.columns) {
+            this._columns = data.columns.map((col) => {
+                return {
+                    id: col.id,
+                    label: col.label || "",
+                    size: col.size || "1fr",
+                    widgets: (col.widgets || []).map((w, i) => {
+                        return {
+                            instanceId: "wx_inst_" + col.id + "_" + i + "_" + Date.now(),
+                            id: w.id,
+                            label: w.label || null,
+                            icon: w.icon || null,
+                            image: w.image || null,
+                            color: w.color || null,
+                            removable: w.removable !== false,
+                            movable: w.movable !== false,
+                            html: w.html || "",
+                            params: w.params || {}
+                        };
+                    })
+                };
+            });
+        }
+        this.render();
+    }
+
+    /**
      * Initializes listeners for internal state changes to sync with the server.
      * @param {HTMLElement} element - The host element.
      */
@@ -86,7 +116,7 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
             if (e.detail && e.detail.id === this._element.id) {
                 const payload = {
                     action: e.detail.action,
-                    order: e.detail.order
+                    layout: e.detail.layout
                 };
                 this._sendStateToServer(payload);
             }
@@ -116,7 +146,7 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
      */
     update() {
         if (this._restUri) {
-            if (this._isVisible()) {
+            if (this._isVisible && this._isVisible()) {
                 this._receiveData();
             }
         }
