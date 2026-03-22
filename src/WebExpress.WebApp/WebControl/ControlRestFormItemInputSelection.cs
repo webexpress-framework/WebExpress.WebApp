@@ -16,6 +16,11 @@ namespace WebExpress.WebApp.WebApiControl
         public IUri RestUri { get; set; }
 
         /// <summary>
+        /// Returns or sets the binding.
+        /// </summary>
+        public IBinding Bind { get; set; }
+
+        /// <summary>
         /// Returns or sets the maximum number of entries to display (default 25).
         /// </summary>
         public int MaxItems { get; set; } = -1;
@@ -51,6 +56,8 @@ namespace WebExpress.WebApp.WebApiControl
                 .RemoveClass("wx-webui-input-selection")
                 .AddUserAttribute("data-uri", RestUri?.ToString())
                 .AddUserAttribute("data-maxItems", MaxItems > 0 ? MaxItems.ToString() : null);
+
+            Bind?.ApplyUserAttributes(html, Id);
 
             return html;
         }

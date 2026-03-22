@@ -13,8 +13,9 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
     // state
     _orderBy = null;
     _orderDir = null;
-    _filter = "";
+    _search = "";
     _wql = "";
+    _filter = "";
     _page = 0;
     _pageSize = 50;
     _totalRecords = 0;
@@ -351,8 +352,8 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
         }
 
         // set query parameters
-        if (this._filter) {
-            urlObj.searchParams.set("q", this._filter);
+        if (this._search) {
+            urlObj.searchParams.set("q", this._search);
         } else {
             urlObj.searchParams.set("q", "");
         }
@@ -361,6 +362,12 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
             urlObj.searchParams.set("wql", this._wql);
         } else {
             urlObj.searchParams.set("wql", "");
+        }
+
+        if (this._filter) {
+            urlObj.searchParams.set("f", this._filter);
+        } else {
+            urlObj.searchParams.set("f", "");
         }
         
         urlObj.searchParams.set("p", this._page);
@@ -645,18 +652,33 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
      */
     search(pattern = "", searchType = "basic") {
         if (searchType === "basic") {
-            this._filter = pattern;
+            this._search = pattern;
             this._wql = null;
         } else if (searchType === "wql") {
-            this._filter = null;
+            this._search = null;
             this._wql = pattern;
         } else {
-            this._filter = null;
+            this._search = null;
             this._wql = null;
         }
 
         this._page = 0;
         
+        if (this._restUri) {
+            if (this._isVisible()) {
+                this._receiveData();
+            }
+        }
+    }
+
+    /**
+     * Sets the filter and reloads the first page.
+     * @param {string} pattern Filter pattern.
+     */
+    filter(pattern = "") {
+        this._filter = pattern;
+        this._page = 0;
+
         if (this._restUri) {
             if (this._isVisible()) {
                 this._receiveData();

@@ -77,9 +77,10 @@ namespace WebExpress.WebApp.WebRestApi
             // read paging and filters; support both "filter" (frontend) and "search" (compat)
             var pageNumber = Convert.ToInt32(request.GetParameter("p")?.Value ?? "0");
             var pageSize = Convert.ToInt32(request.GetParameter("l")?.Value ?? "50");
-            var filter = request.GetParameter("q")?.Value ?? string.Empty;
+            var search = request.GetParameter("q")?.Value ?? string.Empty;
             var wql = request.GetParameter("wql")?.Value ?? null;
-            var query = new Query<TIndexItem>() as IQuery<TIndexItem>; ;
+            var filters = request.GetParameter("f")?.Value?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries) ?? [];
+            var query = new Query<TIndexItem>() as IQuery<TIndexItem>;
 
             try
             {
@@ -92,8 +93,11 @@ namespace WebExpress.WebApp.WebRestApi
                 }
                 else
                 {
-                    query = Filter(filter, query, request);
+                    query = Filter(search, query, request);
                 }
+
+                // quickfilters
+                query = Filter(filters, query, request);
 
                 // paging 
                 query = query.WithPaging(pageNumber * pageSize, pageSize);
@@ -316,7 +320,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Applies the specified filter criteria to the given query object.
         /// </summary>
-        /// <param name="filter">
+        /// <param name="search">
         /// A string representing the filter expression to apply. The format and supported 
         /// operators depend on the implementation.
         /// </param>
@@ -331,7 +335,29 @@ namespace WebExpress.WebApp.WebRestApi
         /// A query representing the filtered set of items that match the criteria defined by 
         /// the filter statement.
         /// </returns>
-        protected virtual IQuery<TIndexItem> Filter(string filter, IQuery<TIndexItem> query, IRequest request)
+        protected virtual IQuery<TIndexItem> Filter(string search, IQuery<TIndexItem> query, IRequest request)
+        {
+            return query;
+        }
+
+        /// <summary>
+        /// Applies the specified filter criteria to the given query object.
+        /// </summary>
+        /// <param name="filters">
+        /// A collection of quickfilter identifiers that should be applied in addition to the WQL criteria.
+        /// </param>
+        /// <param name="query">
+        /// The query object to which the filter will be applied.
+        /// </param>
+        /// <param name="request">
+        /// The request that provides the operational context for resolving
+        /// the appropriate REST API URI.
+        /// </param>
+        /// <returns>
+        /// A query representing the filtered set of items that match the criteria defined by 
+        /// the filter statement.
+        /// </returns>
+        protected virtual IQuery<TIndexItem> Filter(IEnumerable<string> filters, IQuery<TIndexItem> query, IRequest request)
         {
             return query;
         }

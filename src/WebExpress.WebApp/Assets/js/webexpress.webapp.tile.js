@@ -15,6 +15,7 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
     _orderBy = null;
     _orderDir = null;
     _filter = "";
+    _search = "";
     _wql = "";
     _page = 0;
     _pageSize = 50;
@@ -112,15 +113,12 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
             this._pagerElement.className = "wx-webui-pagination pagination mb-1";
             
             this._infoDiv = document.createElement("div");
-            this._infoDiv.className = "wx-tile-info text-muted small";
+            this._infoDiv.className = "text-muted small";
             
             container.appendChild(this._pagerElement);
             container.appendChild(this._infoDiv);
             host.appendChild(container);
-        } else {
-            this._pagerElement = container.querySelector(".wx-webui-pagination");
-            this._infoDiv = container.querySelector(".wx-tile-info");
-        }
+        } 
 
         this._pagerWrapper = container;
 
@@ -188,82 +186,11 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
                     // ignore errors when setting fallback properties
                 }
             }
-        } else {
-            // render native fallback pagination
-            this._renderFallbackPager(currentPage, totalPages);
         }
 
         if (this._infoDiv) {
             this._infoDiv.textContent = "Page " + (currentPage + 1) + " of " + totalPages + " / " + itemsOnPage + " of " + total + " items";
         }
-    }
-
-    /**
-     * Renders a native pagination control if no external pager is available.
-     * @param {number} currentPage The current active page index.
-     * @param {number} totalPages The total number of pages.
-     */
-    _renderFallbackPager(currentPage, totalPages) {
-        if (!this._pagerElement) {
-            return;
-        }
-
-        this._pagerElement.innerHTML = "";
-
-        // helper to construct a single page item
-        const createPageItem = (text, targetPage, isDisabled, isActive) => {
-            const li = document.createElement("li");
-            li.className = "page-item";
-            
-            if (isDisabled) {
-                li.classList.add("disabled");
-            }
-            if (isActive) {
-                li.classList.add("active");
-            }
-
-            const a = document.createElement("a");
-            a.className = "page-link";
-            a.href = "#";
-            a.textContent = text;
-
-            if (!isDisabled) {
-                if (!isActive) {
-                    a.addEventListener("click", (e) => {
-                        e.preventDefault();
-                        this._handleExternalPageChange(targetPage);
-                    });
-                } else {
-                    a.addEventListener("click", (e) => {
-                        e.preventDefault();
-                    });
-                }
-            } else {
-                a.addEventListener("click", (e) => {
-                    e.preventDefault();
-                });
-            }
-
-            li.appendChild(a);
-            return li;
-        };
-
-        // previous button
-        this._pagerElement.appendChild(createPageItem("«", currentPage - 1, currentPage <= 0, false));
-
-        // page numbers
-        for (let i = 0; i < totalPages; i++) {
-            if (i === 0 || i === totalPages - 1 || (i >= currentPage - 2 && i <= currentPage + 2)) {
-                this._pagerElement.appendChild(createPageItem(String(i + 1), i, false, i === currentPage));
-            } else {
-                if (i === currentPage - 3 || i === currentPage + 3) {
-                    this._pagerElement.appendChild(createPageItem("...", -1, true, false));
-                }
-            }
-        }
-
-        // next button
-        this._pagerElement.appendChild(createPageItem("»", currentPage + 1, currentPage >= totalPages - 1, false));
     }
 
     /**
@@ -317,7 +244,13 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
         }
 
         if (this._filter) {
-            urlObj.searchParams.set("q", this._filter);
+            urlObj.searchParams.set("f", this._filter);
+        } else {
+            urlObj.searchParams.set("f", "");
+        }
+
+        if (this._search) {
+            urlObj.searchParams.set("q", this._search);
         } else {
             urlObj.searchParams.set("q", "");
         }
@@ -495,7 +428,7 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
      * @returns {Array<Object>} Matches.
      */
     searchTiles(term) {
-        this._filter = term;
+        this._search = term;
         return super.searchTiles(term);
     }
 
@@ -595,18 +528,33 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
      */
     search(pattern = "", searchType = "basic") {
         if (searchType === "basic") {
-            this._filter = pattern;
+            this._search = pattern;
             this._wql = null;
         } else {
             if (searchType === "wql") {
-                this._filter = null;
+                this._search = null;
                 this._wql = pattern;
             } else {
-                this._filter = null;
+                this._search = null;
                 this._wql = null;
             }
         }
         
+        this._page = 0;
+
+        if (this._restUri) {
+            if (this._isVisible()) {
+                this._receiveData();
+            }
+        }
+    }
+
+    /**
+     * Sets the filter and reloads the first page.
+     * @param {string} pattern Filter pattern.
+     */
+    filter(pattern = "") {
+        this._filter = pattern;
         this._page = 0;
 
         if (this._restUri) {

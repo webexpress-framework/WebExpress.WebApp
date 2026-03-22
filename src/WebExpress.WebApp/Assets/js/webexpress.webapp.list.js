@@ -7,8 +7,9 @@
  * - supports per-item edit and delete actions bound from server-provided options
  */
 webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
-    _filter = "";
+    _search = "";
     _wql = "";
+    _filter = "";
     _page = 0;
     _pageSize = 50;
 
@@ -88,8 +89,9 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
         }
 
         // set query parameters
-        urlObj.searchParams.set("q", this._filter || "");
+        urlObj.searchParams.set("q", this._search || "");
         urlObj.searchParams.set("wql", this._wql || "");
+        urlObj.searchParams.set("f", this._filter || "");
         urlObj.searchParams.set("p", this._page);
         urlObj.searchParams.set("l", this._pageSize);
 
@@ -219,11 +221,26 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
      * @param {string} [searchType="basic"] -  Filter type ("basic" or "wql").
      */
     search(pattern = "", searchType = "basic") {
-        this._filter = searchType === "basic" ? pattern : null;
+        this._search = searchType === "basic" ? pattern : null;
         this._wql = searchType === "wql" ? pattern : null;
         this._page = 0;
         if (this._restUri && this._isVisible()) {
             this._receiveData(false);
+        }
+    }
+
+    /**
+     * Sets the filter and reloads the first page.
+     * @param {string} pattern Filter pattern.
+     */
+    filter(pattern = "") {
+        this._filter = pattern;
+        this._page = 0;
+
+        if (this._restUri) {
+            if (this._isVisible()) {
+                this._receiveData();
+            }
         }
     }
 

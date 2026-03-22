@@ -29,10 +29,9 @@ namespace WebExpress.WebApp.WebControl
         public uint PageSize { get; set; }
 
         /// <summary>
-        /// Returns or sets the binding interface used to perform search 
-        /// operations.
+        /// Returns or sets the binding.
         /// </summary>
-        public IBindSearch Bind { get; set; }
+        public IBinding Bind { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class.
@@ -73,7 +72,7 @@ namespace WebExpress.WebApp.WebControl
                 .AddUserAttribute("data-infinite", Infinite ? "true" : null)
                 .AddUserAttribute("data-page-size", PageSize > 0 ? PageSize.ToString() : null);
 
-            Bind?.ApplyUserAttributes(html, "search");
+            Bind?.ApplyUserAttributes(html, Id);
 
             return new HtmlList(html, Content.Select
             (

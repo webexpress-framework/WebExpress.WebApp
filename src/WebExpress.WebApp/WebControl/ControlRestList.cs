@@ -19,6 +19,11 @@ namespace WebExpress.WebApp.WebControl
         public IUri RestUri { get; set; }
 
         /// <summary>
+        /// Returns or sets the binding.
+        /// </summary>
+        public IBinding Bind { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The control id.</param>
@@ -56,6 +61,8 @@ namespace WebExpress.WebApp.WebControl
                 Style = GetStyles()
             }
                 .AddUserAttribute("data-uri", resultUri?.ToString());
+
+            Bind?.ApplyUserAttributes(html, Id);
 
             return html;
         }

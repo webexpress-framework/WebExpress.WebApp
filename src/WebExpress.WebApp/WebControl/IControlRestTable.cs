@@ -21,9 +21,8 @@ namespace WebExpress.WebApp.WebControl
         uint PageSize { get; }
 
         /// <summary>
-        /// Returns the binding interface used to perform search 
-        /// operations.
+        /// Returns the binding.
         /// </summary>
-        IBindSearch Bind { get; }
+        IBinding Bind { get; }
     }
 }

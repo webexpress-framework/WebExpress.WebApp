@@ -33,7 +33,6 @@
 	<ItemGroup>
 		<EmbeddedResource Include="Internationalization\de" />
 		<EmbeddedResource Include="Internationalization\en" />
-		<EmbeddedResource Include="WebFragment\en" />
 	</ItemGroup>
 
 	<ItemGroup>
