@@ -72,7 +72,7 @@ namespace WebExpress.WebApp.WebControl
                 .AddUserAttribute("data-infinite", Infinite ? "true" : null)
                 .AddUserAttribute("data-page-size", PageSize > 0 ? PageSize.ToString() : null);
 
-            Bind?.ApplyUserAttributes(html, Id);
+            Bind?.ApplyUserAttributes(html);
 
             return new HtmlList(html, Content.Select
             (

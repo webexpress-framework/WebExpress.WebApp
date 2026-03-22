@@ -57,7 +57,7 @@ namespace WebExpress.WebApp.WebApiControl
                 .AddUserAttribute("data-uri", RestUri?.ToString())
                 .AddUserAttribute("data-maxItems", MaxItems > 0 ? MaxItems.ToString() : null);
 
-            Bind?.ApplyUserAttributes(html, Id);
+            Bind?.ApplyUserAttributes(html);
 
             return html;
         }

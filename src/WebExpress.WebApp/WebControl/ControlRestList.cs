@@ -62,7 +62,7 @@ namespace WebExpress.WebApp.WebControl
             }
                 .AddUserAttribute("data-uri", resultUri?.ToString());
 
-            Bind?.ApplyUserAttributes(html, Id);
+            Bind?.ApplyUserAttributes(html);
 
             return html;
         }
