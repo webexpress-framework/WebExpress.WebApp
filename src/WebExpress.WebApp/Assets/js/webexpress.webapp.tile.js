@@ -71,9 +71,7 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
      * Initializes paging-related events for external paging controls.
      */
     _initPagingEvents() {
-        const pageEventName = (webexpress.webui.Event && webexpress.webui.Event.CHANGE_PAGE_EVENT) ? webexpress.webui.Event.CHANGE_PAGE_EVENT : "webexpress.webui.table.page.changed";
-
-        document.addEventListener(pageEventName, (e) => {
+        document.addEventListener(webexpress.webui.Event.CHANGE_PAGE_EVENT, (e) => {
             let isTarget = false;
             
             // check if event originates from our element
@@ -83,7 +81,7 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
             
             // check if event details match our element id
             if (e.detail) {
-                if (e.detail.id === this._element.id) {
+                if (e.detail.id === this._pagerElement.id) {
                     isTarget = true;
                 }
             }
@@ -111,6 +109,7 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
             
             this._pagerElement = document.createElement("ul");
             this._pagerElement.className = "wx-webui-pagination pagination mb-1";
+            this._pagerElement.id = "pager-" + Math.random().toString(36).substr(2, 9); // set random id
             
             this._infoDiv = document.createElement("div");
             this._infoDiv.className = "text-muted small";
