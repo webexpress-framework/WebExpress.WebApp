@@ -5,6 +5,8 @@
  * - queries a REST endpoint
  * - dispatches a data-arrived event on successful retrieval
  * - supports per-item edit and delete actions bound from server-provided options
+ * Emits events:
+ * - webexpress.webui.Event.DATA_ARRIVED_EVENT
  */
 webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
     _search = "";
@@ -12,6 +14,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
     _filter = "";
     _page = 0;
     _pageSize = 50;
+    _items = {};
 
     _orderBy = null;      // current sort property
     _orderDir = null;     // current sort direction ('asc'/'desc')
@@ -44,10 +47,6 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
         element.prepend(this._progressDiv);
 
         // show placeholders while loading
-        // list element is inherited from base class (this._list or via public api)
-        // access base list element directly via dom lookup if private, 
-        // but since we extend ListCtrl, usually the container IS the element or contains the list.
-        // based on base class, the ul is appended to element.
         const listUl = element.querySelector("ul.wx-list");
         if (listUl) {
             listUl.classList.add("placeholder-glow");
@@ -67,7 +66,6 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
         }));
 
         this._initPager(element);
-        this._initPagingEvents();
         
         // initial data load
         this._receiveData();
@@ -135,13 +133,21 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
                 }
 
                 // map response into list items
-                const mappedItems = this._mapResponseToItems(response);
+                const newItems = this._mapResponseToItems(response);
 
                 // update list via base class
-                this.setItems(mappedItems);
+                this.setItems(newItems);
+                
+                this._items = newItems;
 
                 // update paging display
                 this._syncPagerAndInfo();
+                
+                // notify listeners that data arrived
+                this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
+                    response: responseForUpdate,
+                    page: this._page
+                });
 
                 // hide progress
                 this._progressDiv.style.visibility = "hidden";
@@ -228,7 +234,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
     /**
      * Sets the search filter and reloads the first page (without modifying order or paging settings).
      * @param {string} pattern - Search pattern (optional, defaults to empty string)
-     * @param {string} [searchType="basic"] -  Filter type ("basic" or "wql").
+     * @param {string} [searchType="basic"] - Filter type ("basic" or "wql").
      */
     search(pattern = "", searchType = "basic") {
         this._search = searchType === "basic" ? pattern : null;
@@ -241,11 +247,25 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
 
     /**
      * Sets the filter and reloads the first page.
-     * @param {string} pattern Filter pattern.
+     * @param {string} pattern - Filter pattern.
      */
     filter(pattern = "") {
         this._filter = pattern;
         this._page = 0;
+
+        if (this._restUri) {
+            if (this._isVisible()) {
+                this._receiveData();
+            }
+        }
+    }
+    
+    /**
+     * Sets and loads the page.
+     * @param {string} page - The current page pattern.
+     */
+    paging(page = 0) {
+        this._page = page;
 
         if (this._restUri) {
             if (this._isVisible()) {
@@ -290,79 +310,32 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
     
     /**
      * Initializes or binds a pagination control and an information area.
-     * @param {HTMLElement} host The host element to search or attach the pager to.
+     * @param {HTMLElement} host - The host element to search or attach the pager to.
      */
     _initPager(host) {
-        let container = host.querySelector(".wx-tile-pagination-wrapper");
-        if (!container) {
-            // create layout wrapper for pager and info
-            container = document.createElement("div");
-            container.className = "wx-tile-pagination-wrapper d-flex flex-column align-items-center mt-4 mb-2";
-            
-            this._pagerElement = document.createElement("ul");
-            this._pagerElement.className = "wx-webui-pagination pagination mb-1";
-            this._pagerElement.id = "pager-" + Math.random().toString(36).substr(2, 9); // set random id
-            
-            this._infoDiv = document.createElement("div");
-            this._infoDiv.className = "text-muted small";
-            
-            container.appendChild(this._pagerElement);
-            container.appendChild(this._infoDiv);
-            host.appendChild(container);
-        } 
-
-        this._pagerWrapper = container;
-
-        const initialTotalPages = Math.max(1, Math.ceil((this._totalRecords || 0) / this._pageSize));
+        // find existing pager element
+        const paginationId = host.dataset.wxSourcePaging || null;
         
-        if (this._pagerElement) {
-            this._pagerElement.dataset.page = String(this._page);
-            this._pagerElement.dataset.total = String(initialTotalPages);
-        }
-
-        try {
-            if (webexpress.webui.PaginationCtrl) {
-                this._pagerCtrl = new webexpress.webui.PaginationCtrl(this._pagerElement);
-            } else {
-                this._pagerCtrl = null;
-            }
-        } catch (err) {
-            console.error("Failed to initialize PaginationCtrl:", err);
-            this._pagerCtrl = null;
-        }
-
-        this._syncPagerAndInfo();
-    }
-    
-    /**
-     * Initializes paging-related events for external paging controls.
-     */
-    _initPagingEvents() {
-        document.addEventListener(webexpress.webui.Event.CHANGE_PAGE_EVENT, (e) => {
-            let isTarget = false;
+        document.addEventListener("DOMContentLoaded", () => {
+            this._pagerElement = document.querySelector(paginationId);
             
-            // check if event originates from element
-            if (this._element.contains(e.target)) {
-                isTarget = true;
-            }
-            
-            // check if event details match pager id
-            if (e.detail) {
-                if (e.detail.id === this._pagerElement.id) {
-                    isTarget = true;
-                }
+            if (this._pagerElement) {
+                this._pagerCtrl = webexpress.webui.Controller.getInstanceByElement(this._pagerElement);
             }
 
-            if (isTarget) {
-                if (e.detail) {
-                    if (typeof e.detail.page === "number") {
-                        this._handleExternalPageChange(e.detail.page);
-                    }
-                }
-            }
+            // initialize info/pager display
+            this._syncPagerAndInfo();
         });
+        
+        // create info div to show totals and current page details
+        this._infoDiv = document.createElement("div");
+        this._infoDiv.className = "text-muted small";
+        this._infoDiv.style.marginTop = "0.25rem";
+        this._infoDiv.textContent = "";
+        
+        host.appendChild(this._infoDiv);
     }
-    
+
     /**
      * Updates pager state and info text.
      * Falls back to native rendering if external control is not available.
@@ -370,35 +343,39 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
     _syncPagerAndInfo() {
         const total = Number(this._totalRecords) || 0;
         let totalPages = 1;
-
         if (this._pageSize > 0) {
             totalPages = Math.max(1, Math.ceil(total / this._pageSize));
         }
 
+        // clamp current page to available range
         if (this._page < 0) {
             this._page = 0;
         }
-        
         if (this._page >= totalPages) {
             this._page = totalPages - 1;
         }
 
         const currentPage = this._page;
 
+        // non-infinite: rows correspond to the current page
         let itemsOnPage = 0;
-        if (Array.isArray(this._tiles)) {
-            itemsOnPage = this._tiles.length;
+        if (Array.isArray(this._items)) {
+            itemsOnPage = this._items.length;
         }
 
+        // update pager host dataset
         if (this._pagerElement) {
             this._pagerElement.dataset.page = String(currentPage);
             this._pagerElement.dataset.total = String(totalPages);
         }
 
+        // update pager control silently if available
         if (this._pagerCtrl) {
             if (typeof this._pagerCtrl.updateState === "function") {
+                // updatestate will not dispatch change_page_event
                 this._pagerCtrl.updateState(currentPage, totalPages);
             } else {
+                // fall back: set properties directly
                 try {
                     this._pagerCtrl.total = totalPages;
                     this._pagerCtrl.page = currentPage;
@@ -408,6 +385,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
             }
         }
 
+        // update textual info
         if (this._infoDiv) {
             this._infoDiv.textContent = "Page " + (currentPage + 1) + " of " + totalPages + " / " + itemsOnPage + " of " + total + " items";
         }

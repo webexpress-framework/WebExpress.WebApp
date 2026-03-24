@@ -73,22 +73,18 @@ webexpress.webapp.InputSelectionCtrl = class extends webexpress.webui.InputSelec
         this._spinner.setAttribute("role", "status");
 
         // fetch when dropdown menu is shown (base control dispatches a 'show' dom event on the menu)
-        if (this._dropdownmenu && typeof this._dropdownmenu.addEventListener === "function") {
-            this._dropdownmenu.addEventListener("show", () => {
-                const term = (this._filter && "value" in this._filter) ? this._filter.value : "";
-                this.receiveData(term);
-            });
-        }
+        this._dropdownmenu.addEventListener("show", () => {
+            const term = (this._filter && "value" in this._filter) ? this._filter.value : "";
+            this.receiveData(term);
+        });
 
         // optionally fetch when filter changes (uses base control custom event), debounced
-        if (this._element && typeof this._element.addEventListener === "function") {
-            this._element.addEventListener(webexpress.webui.Event.CHANGE_FILTER_EVENT, (e) => {
-                const term = (e && e.detail && typeof e.detail.filter === "string") ? e.detail.filter : "";
-                if (this._dropdownmenu && this._dropdownmenu.style && this._dropdownmenu.style.display === "flex") {
-                    this._debouncedReceive(term);
-                }
-            });
-        }
+        this._element.addEventListener(webexpress.webui.Event.CHANGE_FILTER_EVENT, (e) => {
+            const term = (e && e.detail && typeof e.detail.filter === "string") ? e.detail.filter : "";
+            if (this._dropdownmenu && this._dropdownmenu.style && this._dropdownmenu.style.display === "flex") {
+                this._debouncedReceive(term);
+            }
+        });
     }
 
     /**

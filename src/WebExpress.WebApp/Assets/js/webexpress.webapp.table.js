@@ -4,7 +4,6 @@
  *
  * Emits events:
  * - webexpress.webui.Event.DATA_ARRIVED_EVENT
- * - webexpress.webui.Event.UPDATE_PAGINATION_EVENT (custom event to synchronize external pager)
  */
 webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderable {
     // configuration
@@ -20,6 +19,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
     _pageSize = 50;
     _totalRecords = 0;
     _isLoading = false;
+    _rows = {};
 
     // ui helpers
     _progressDiv = null;
@@ -62,7 +62,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
             }
         }
 
-        this._setupProgressBar(element);
+        this._initProgressBar(element);
 
         if (typeof this._initPersistenceListeners === "function") {
             this._initPersistenceListeners(element);
@@ -90,7 +90,6 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
      * Initialize DOM and document-level event listeners required by the control.
      * Listens for:
      * - TABLE_SORT_EVENT to apply server-side sorting (or emit local request)
-     * - CHANGE_PAGE_EVENT to respond to external pagination controls
      */
     _initEvents() {
         // use fallback string in case the constant is undefined
@@ -127,16 +126,6 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
                 }
             }
         });
-
-        const pageEventName = webexpress.webui.Event.CHANGE_PAGE_EVENT;
-
-        document.addEventListener(pageEventName, (e) => {
-            if (e.detail) {
-                if (typeof e.detail.page === "number") {
-                    this._handleExternalPageChange(e.detail.page);
-                }
-            }
-        });
     }
 
     /**
@@ -144,61 +133,30 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
      * If an element with class "wx-webui-pagination" exists inside the host,
      * it is used. Otherwise a pager element is created and an instance of
      * PaginationCtrl is constructed. An info line showing totals is appended.
-     * @param {HTMLElement} host - the host element to search/attach pager to
+     * @param {HTMLElement} host - The host element to search or attach the pager to.
      */
     _initPager(host) {
-        // find existing pager element inside host
-        let pager = host.querySelector(".wx-webui-pagination");
-        if (!pager) {
-            // create a pager host element and append it after the table
-            pager = document.createElement("ul");
-            pager.className = "wx-webui-pagination";
-            pager.style.marginTop = "0.5rem";
-            if (this._table) {
-                if (this._table.parentNode === host) {
-                    host.insertBefore(pager, this._table.nextSibling);
-                } else {
-                    host.appendChild(pager);
-                }
-            } else {
-                host.appendChild(pager);
+        // find existing pager element
+        const paginationId = host.dataset.wxSourcePaging || null;
+        
+        document.addEventListener("DOMContentLoaded", () => {
+            this._pagerElement = document.querySelector(paginationId);
+            
+            if (this._pagerElement) {
+                this._pagerCtrl = webexpress.webui.Controller.getInstanceByElement(this._pagerElement);
             }
-        }
 
-        this._pagerElement = pager;
-
-        // set initial page and total
-        const initialTotalPages = Math.max(1, Math.ceil((this._totalRecords || 0) / this._pageSize));
-        this._pagerElement.dataset.page = String(this._page);
-        this._pagerElement.dataset.total = String(initialTotalPages);
-
-        try {
-            // create an instance of the pagination control
-            this._pagerCtrl = new webexpress.webui.PaginationCtrl(this._pagerElement);
-        } catch (err) {
-            // in case the pager class is not available yet, log and continue
-            console.error("Failed to initialize PaginationCtrl:", err);
-            this._pagerCtrl = null;
-        }
-
+            // initialize info/pager display
+            this._syncPagerAndInfo();
+        });
+        
         // create info div to show totals and current page details
         this._infoDiv = document.createElement("div");
-        this._infoDiv.className = "wx-table-info text-muted small";
+        this._infoDiv.className = "text-muted small";
         this._infoDiv.style.marginTop = "0.25rem";
         this._infoDiv.textContent = "";
         
-        if (this._pagerElement) {
-            if (this._pagerElement.parentNode) {
-                this._pagerElement.parentNode.insertBefore(this._infoDiv, this._pagerElement.nextSibling);
-            } else {
-                host.appendChild(this._infoDiv);
-            }
-        } else {
-            host.appendChild(this._infoDiv);
-        }
-
-        // initialize info/pager display
-        this._syncPagerAndInfo();
+        host.appendChild(this._infoDiv);
     }
 
     /**
@@ -258,34 +216,10 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
     }
 
     /**
-     * Handle page requests coming from external pagination controls.
-     * @param {number} targetPage - zero-based page index requested externally.
-     */
-    _handleExternalPageChange(targetPage) {
-        // clamp requested page into range
-        const totalPages = Math.max(1, Math.ceil(this._totalRecords / this._pageSize));
-        let page = Number(targetPage) || 0;
-        if (page < 0) {
-            page = 0;
-        }
-        if (page >= totalPages) {
-            page = totalPages - 1;
-        }
-        this._page = page;
-
-        // immediate visual feedback while new page loads
-        if (this._infoDiv) {
-            this._infoDiv.textContent = "Page " + (this._page + 1) + " of " + totalPages + " — loading…";
-        }
-
-        this._receiveData();
-    }
-
-    /**
      * Create and insert the progress bar element used to indicate loading state.
      * @param {HTMLElement} element - host element to which the progress bar will be added.
      */
-    _setupProgressBar(element) {
+    _initProgressBar(element) {
         this._progressDiv = document.createElement("div");
         this._progressDiv.className = "progress mb-2";
         this._progressDiv.setAttribute("role", "status");
@@ -391,13 +325,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
             })
             .then((response) => {
                 // try multiple possible fields for total
-                const totalFromResponse = response.total
-                    ?? response.count
-                    ?? response.totalCount
-                    ?? response.total_records
-                    ?? response.pagination?.totalCount
-                    ?? response.pagination?.TotalCount
-                    ?? null;
+                const totalFromResponse = response.total ?? null;
 
                 // determine number of rows actually returned
                 let receivedRows = 0;
@@ -438,12 +366,6 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
                     id: this._element.id, 
                     response: responseForUpdate, 
                     page: this._page
-                });
-
-                // emit pagination update
-                this._dispatch(webexpress.webui.Event.UPDATE_PAGINATION_EVENT, {
-                    page: this._page, 
-                    total: totalPages
                 });
 
                 // sync pager and info in a microtask
@@ -673,11 +595,25 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
 
     /**
      * Sets the filter and reloads the first page.
-     * @param {string} pattern Filter pattern.
+     * @param {string} pattern - Filter pattern.
      */
     filter(pattern = "") {
         this._filter = pattern;
         this._page = 0;
+
+        if (this._restUri) {
+            if (this._isVisible()) {
+                this._receiveData();
+            }
+        }
+    }
+    
+    /**
+     * Sets and loads the page.
+     * @param {string} page - The current page pattern.
+     */
+    paging(page = 0) {
+        this._page = page;
 
         if (this._restUri) {
             if (this._isVisible()) {
