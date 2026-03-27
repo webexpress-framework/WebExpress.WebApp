@@ -30,7 +30,8 @@ namespace WebExpress.WebApp.WWW.Api.V1
         /// </summary>
         /// <param name="request">The request containing the data to create.</param>
         /// <returns>The response containing the result of the operation.</returns>
-        public Response CreateData(Request request)
+        [Method(RequestMethod.POST)]
+        public Response Create(Request request)
         {
             return new ResponseBadRequest(new StatusMessage("Not implemented."));
         }
@@ -40,7 +41,8 @@ namespace WebExpress.WebApp.WWW.Api.V1
         /// </summary>
         /// <param name="request">The request containing the criteria for data retrieval.</param>
         /// <returns>The response containing the result of the operation.</returns>
-        public Response GetData(Request request)
+        [Method(RequestMethod.GET)]
+        public Response Retrieve(Request request)
         {
             var id = request.Uri.PathSegments.Last().Value;
 
@@ -69,7 +71,9 @@ namespace WebExpress.WebApp.WWW.Api.V1
         /// </summary>
         /// <param name="request">The request containing the data to update.</param>
         /// <returns>The response containing the result of the operation.</returns>
-        public Response UpdateData(Request request)
+        [Method(RequestMethod.PUT)]
+        [Method(RequestMethod.PATCH)]
+        public Response Update(Request request)
         {
             return new ResponseBadRequest(new StatusMessage("Not implemented."));
         }
@@ -79,7 +83,8 @@ namespace WebExpress.WebApp.WWW.Api.V1
         /// </summary>
         /// <param name="request">The request containing the data to delete.</param>
         /// <returns>The response containing the result of the operation.</returns>
-        public Response DeleteData(Request request)
+        [Method(RequestMethod.DELETE)]
+        public Response Delete(Request request)
         {
             return new ResponseBadRequest(new StatusMessage("Not implemented."));
         }

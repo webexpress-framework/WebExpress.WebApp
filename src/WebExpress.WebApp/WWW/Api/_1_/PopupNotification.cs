@@ -56,7 +56,7 @@ namespace WebExpress.WebApp.WWW.Api._1
         /// <param name="request">The request containing the data to delete.</param>
         /// <returns>The response containing the result of the operation.</returns>
         [Method(RequestMethod.DELETE)]
-        public Response DeleteData(Request request)
+        public Response Delete(Request request)
         {
             if (Guid.TryParse(request.Uri.PathSegments.Last()?.ToString(), out Guid id))
             {
