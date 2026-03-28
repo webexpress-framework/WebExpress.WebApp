@@ -12,6 +12,7 @@ namespace WebExpress.WebApp.WebInclude
     /// files required for the functionality of a web application.
     /// </remarks>
     [Asset("/assets/js/webexpress.webapp.js")]
+    [Asset("/assets/js/webexpress.webapp.dashboard.js")]
     [Asset("/assets/js/webexpress.webapp.dropdown.js")]
     [Asset("/assets/js/webexpress.webapp.input.selection.js")]
     [Asset("/assets/js/webexpress.webapp.input.tile.js")]

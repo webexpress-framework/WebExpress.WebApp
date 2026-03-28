@@ -458,6 +458,4 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
 };
 
 // register the class in the controller
-if (webexpress && webexpress.webui && webexpress.webui.Controller) {
-    webexpress.webui.Controller.registerClass("wx-webapp-tab", webexpress.webapp.TabCtrl);
-}
+webexpress.webui.Controller.registerClass("wx-webapp-tab", webexpress.webapp.TabCtrl);

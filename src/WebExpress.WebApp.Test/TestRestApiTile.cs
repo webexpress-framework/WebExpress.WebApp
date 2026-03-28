@@ -32,7 +32,7 @@ namespace WebExpress.WebApp.Test
     /// Provides a test implementation of a REST API tile for retrieving 
     /// index items using filter strings or WQL statements.
     /// </summary>
-    public class TestRestApiTile<TIndexItem> : RestApiTable<TIndexItem>
+    public class TestRestApiTile<TIndexItem> : RestApiTile<TIndexItem>
         where TIndexItem : IIndexItem
     {
         private readonly IEnumerable<TIndexItem> _testData;

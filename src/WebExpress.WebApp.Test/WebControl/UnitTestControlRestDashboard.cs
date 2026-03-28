@@ -6,17 +6,17 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.Test.WebControl
 {
     /// <summary>
-    /// Tests the api table control.
+    /// Tests the api dashboard control.
     /// </summary>
     [Collection("NonParallelTests")]
-    public class UnitTestControlRestTable
+    public class UnitTestControlRestDashboard
     {
         /// <summary>
-        /// Tests the id property of the api table control.
+        /// Tests the id property of the api dashboard control.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div id=""*"" class=""wx-webapp-table""></div>")]
-        [InlineData("id", @"<div id=""id"" class=""wx-webapp-table""></div>")]
+        [InlineData(null, @"<div id=""*"" class=""wx-webapp-dashboard""></div>")]
+        [InlineData("id", @"<div id=""id"" class=""wx-webapp-dashboard""></div>")]
         public void Id(string id, string expected)
         {
             // arrange
@@ -24,7 +24,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
             var context = UnitTestControlFixture.CreateRenderContextMock(application);
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestTable(id)
+            var control = new ControlRestDashboard(id)
             {
             };
 
@@ -36,11 +36,11 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
-        /// Tests the RestUri property of the API table control.
+        /// Tests the RestUri property of the api dashboard control.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div id=""*"" class=""wx-webapp-table""></div>")]
-        [InlineData("https://example.com/api/data", @"<div id=""*"" class=""wx-webapp-table"" data-uri=""https://example.com/api/data""></div>")]
+        [InlineData(null, @"<div id=""*"" class=""wx-webapp-dashboard""></div>")]
+        [InlineData("https://example.com/api/data", @"<div id=""*"" class=""wx-webapp-dashboard"" data-uri=""https://example.com/api/data""></div>")]
         public void RestUri(string uriString, string expected)
         {
             // arrange
@@ -48,34 +48,9 @@ namespace WebExpress.WebApp.Test.WebControl
             var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
             var context = UnitTestControlFixture.CreateRenderContextMock(application);
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestTable()
+            var control = new ControlRestDashboard()
             {
                 RestUri = uriString is not null ? new UriEndpoint(uriString) : null
-            };
-
-            // act
-            var html = control.Render(context, visualTree);
-
-            // validation
-            AssertExtensions.EqualWithPlaceholders(expected, html);
-        }
-
-        /// <summary>
-        /// Tests the page size property of the API table control.
-        /// </summary>
-        [Theory]
-        [InlineData(0, @"<div id=""*"" class=""wx-webapp-table""></div>")]
-        [InlineData(10, @"<div id=""*"" class=""wx-webapp-table"" data-page-size=""10""></div>")]
-        public void PageSize(uint pageSize, string expected)
-        {
-            // arrange
-            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
-            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
-            var context = UnitTestControlFixture.CreateRenderContextMock(application);
-            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestTable()
-            {
-                PageSize = pageSize
             };
 
             // act

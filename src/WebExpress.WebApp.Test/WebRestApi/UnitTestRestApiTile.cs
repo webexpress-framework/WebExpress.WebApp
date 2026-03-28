@@ -57,49 +57,14 @@ namespace WebExpress.WebApp.Test.WebRestApi
             var root = doc.RootElement;
 
             Assert.Equal("Title", root.GetProperty("title").GetString());
-            var columns = root.GetProperty("columns").EnumerateArray().ToList();
-            Assert.Equal(4, columns.Count);
+            var items = root.GetProperty("items").EnumerateArray().ToList();
+            Assert.Single(items);
 
-            Assert.Equal("Key", columns[0].GetProperty("name").GetString());
-            Assert.Equal("Key", columns[0].GetProperty("label").GetString());
-            Assert.Null(columns[0].GetProperty("icon").GetString());
-            Assert.Null(columns[0].GetProperty("width").GetString());
-            Assert.Null(columns[0].GetProperty("template").GetString());
+            Assert.NotEmpty(items[0].GetProperty("title").GetString());
+            Assert.NotEmpty(items[0].GetProperty("text").GetString());
+            Assert.Null(items[0].GetProperty("icon").GetString());
 
-            Assert.Equal("Names", columns[1].GetProperty("name").GetString());
-            Assert.Equal("Names", columns[1].GetProperty("label").GetString());
-            Assert.Null(columns[1].GetProperty("icon").GetString());
-            Assert.Null(columns[1].GetProperty("width").GetString());
-            Assert.Null(columns[1].GetProperty("template").GetString());
-
-            Assert.Equal("State", columns[2].GetProperty("name").GetString());
-            Assert.Equal("State", columns[2].GetProperty("label").GetString());
-            Assert.Null(columns[2].GetProperty("icon").GetString());
-            Assert.Null(columns[2].GetProperty("width").GetString());
-            Assert.Null(columns[2].GetProperty("template").GetString());
-
-            Assert.Equal("Description", columns[3].GetProperty("name").GetString());
-            Assert.Equal("Description", columns[3].GetProperty("label").GetString());
-            Assert.Null(columns[3].GetProperty("icon").GetString());
-            Assert.Null(columns[3].GetProperty("width").GetString());
-            Assert.Null(columns[3].GetProperty("template").GetString());
-
-            var rows = root.GetProperty("rows").EnumerateArray().ToList();
-            Assert.Single(rows);
-
-            Assert.NotNull(rows[0].GetProperty("id").GetString());
-            var cells = rows[0].GetProperty("cells").EnumerateArray().ToList();
-            Assert.Equal(4, cells.Count);
-
-            Assert.Equal("A1", cells[0].GetProperty("content").GetString());
-            var array = cells[1].GetProperty("content").EnumerateArray().ToList();
-            Assert.Equal(2, array.Count);
-            Assert.Equal("Anna", array[0].GetString());
-            Assert.Equal("Bob", array[1].GetString());
-            Assert.Equal("Active", cells[2].GetProperty("content").GetString());
-            Assert.Equal("hidden desc", cells[3].GetProperty("content").GetString());
-
-            var options = rows[0].GetProperty("options").EnumerateArray().ToList();
+            var options = items[0].GetProperty("options").EnumerateArray().ToList();
             Assert.Single(options);
 
             var option = options[0];
@@ -110,9 +75,9 @@ namespace WebExpress.WebApp.Test.WebRestApi
             Assert.Equal("text-primary", option.GetProperty("color").GetString());
             Assert.NotNull(option.GetProperty("id").GetString());
 
-            Assert.True(rows[0].TryGetProperty("icon", out var iconElement) && iconElement.ValueKind == JsonValueKind.Null);
-            Assert.True(rows[0].TryGetProperty("image", out var imageElement) && imageElement.ValueKind == JsonValueKind.Null);
-            Assert.True(rows[0].TryGetProperty("uri", out var uriElement) && uriElement.ValueKind == JsonValueKind.Null);
+            Assert.True(items[0].TryGetProperty("icon", out var iconElement) && iconElement.ValueKind == JsonValueKind.Null);
+            Assert.True(items[0].TryGetProperty("image", out var imageElement) && imageElement.ValueKind == JsonValueKind.Null);
+            Assert.True(items[0].TryGetProperty("uri", out var uriElement) && uriElement.ValueKind == JsonValueKind.Null);
         }
     }
 }

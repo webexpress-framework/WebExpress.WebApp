@@ -9,12 +9,6 @@ namespace WebExpress.WebApp.WebControl
     public interface IControlRestTable : IControlRest
     {
         /// <summary>
-        /// Specifies that the table operates in infinite‑scroll mode, where
-        /// paging has no predefined endpoint and more data can always be requested.
-        /// </summary>
-        bool Infinite { get; }
-
-        /// <summary>
         /// Retruns the number of items to display on each page in a 
         /// paginated collection.
         /// </summary>

@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using WebExpress.WebCore.WebHtml;
+﻿using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
@@ -7,20 +6,14 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Represents a control panel for API table interactions.
+    /// Represents a control panel for API tile interactions.
     /// </summary>
-    public class ControlRestTable : ControlPanel, IControlRestTable
+    public class ControlRestDashboard : ControlPanel, IControlRestDashboard
     {
         /// <summary>
         /// Returns or sets the uri that determines the data.
         /// </summary>
         public IUri RestUri { get; set; }
-
-        /// <summary>
-        /// Retruns or sets the number of items to display on each page in a 
-        /// paginated collection.
-        /// </summary>
-        public uint PageSize { get; set; }
 
         /// <summary>
         /// Returns or sets the binding.
@@ -31,7 +24,7 @@ namespace WebExpress.WebApp.WebControl
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The control id.</param>
-        public ControlRestTable(string id = null)
+        public ControlRestDashboard(string id = null)
             : base(id ?? RandomId.Create())
         {
         }
@@ -40,6 +33,7 @@ namespace WebExpress.WebApp.WebControl
         /// Converts the control to an HTML representation.
         /// </summary>
         /// <param name="renderContext">The context in which the control is rendered.</param>
+        /// <param name="visualTree">The visual tree.</param>
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
@@ -50,7 +44,8 @@ namespace WebExpress.WebApp.WebControl
         /// Converts the control to an HTML representation.
         /// </summary>
         /// <param name="renderContext">The context in which the control is rendered.</param>
-        /// <param name="uri">The uri that determines the data.</param>
+        /// <param name="visualTree">The visual tree.</param>
+        /// <param name="uri">An optional URI containing parameters to be bound to the rendering context. Can be null.</param>
         /// <returns>An HTML node representing the rendered control.</returns>
         public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IUri uri)
         {
@@ -59,18 +54,14 @@ namespace WebExpress.WebApp.WebControl
             var html = new HtmlElementTextContentDiv()
             {
                 Id = Id,
-                Class = Css.Concatenate("wx-webapp-table", GetClasses()),
+                Class = Css.Concatenate("wx-webapp-dashboard", GetClasses()),
                 Style = GetStyles()
             }
-                .AddUserAttribute("data-uri", resultUri?.ToString())
-                .AddUserAttribute("data-page-size", PageSize > 0 ? PageSize.ToString() : null);
+                .AddUserAttribute("data-uri", resultUri?.ToString());
 
             Bind?.ApplyUserAttributes(html);
 
-            return new HtmlList(html, Content.Select
-            (
-                x => x.Render(renderContext, visualTree))
-            );
+            return html;
         }
     }
 }
