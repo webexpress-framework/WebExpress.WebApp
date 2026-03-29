@@ -19,7 +19,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Returns or sets the collection of items associated with the list.
         /// </summary>
-        public IEnumerable<RestApiQuickfilterItem<TIndexItem>> Items { get; set; }
+        public IEnumerable<RestApiQuickfilterItem> Items { get; set; }
 
         /// <summary>
         /// Converts the current instance into a response object.

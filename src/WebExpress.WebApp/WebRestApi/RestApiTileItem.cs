@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Text.Json.Serialization;
-using WebExpress.WebIndex;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -8,11 +7,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// Represents a tile item in a REST API operation, with support for customizable 
     /// display properties and options.
     /// </summary>
-    /// <typeparam name="TIndexItem">
-    /// The type of the index item associated with this tile item.
-    /// </typeparam>
-    public class RestApiTileItem<TIndexItem>
-        where TIndexItem : IIndexItem
+    public class RestApiTileItem
     {
         /// <summary>
         /// Returns or sets the item id.
@@ -55,12 +50,6 @@ namespace WebExpress.WebApp.WebRestApi
         /// </summary>
         [JsonPropertyName("image")]
         public string Image { get; set; }
-
-        /// <summary>
-        /// Returns or sets the item associated with the index.
-        /// </summary>
-        [JsonPropertyName("item")]
-        public TIndexItem Item { get; set; }
 
         /// <summary>
         /// Returns or sets optional per-item options (edit/delete etc.).

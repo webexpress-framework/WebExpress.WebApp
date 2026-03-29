@@ -1,19 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using WebExpress.WebApp.WebAttribute;
-using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebAttribute;
-using WebExpress.WebCore.WebIcon;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
 using WebExpress.WebCore.WebStatusPage;
-using WebExpress.WebCore.WebUri;
 using WebExpress.WebIndex;
 using WebExpress.WebIndex.Queries;
 using WebExpress.WebIndex.Wql;
-using WebExpress.WebUI.WebIcon;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -24,34 +18,11 @@ namespace WebExpress.WebApp.WebRestApi
     public abstract class RestApiDropdown<TIndexItem> : IRestApi
         where TIndexItem : IIndexItem
     {
-        private readonly PropertyInfo _cachedTextAttribute;
-        private readonly PropertyInfo _cachedIconAttribute;
-
-        /// <summary>
-        /// Returns or sets the title associated with the current object.
-        /// </summary>
-        public string Title { get; protected set; }
-
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         public RestApiDropdown()
         {
-            // search for an attribute of type Title and return its value if present
-            Title = GetType().CustomAttributes
-                .Where(x => x?.AttributeType == typeof(TitleAttribute))
-                .Select(x => x.ConstructorArguments.FirstOrDefault().Value?.ToString())
-                .FirstOrDefault();
-
-            _cachedTextAttribute = typeof(TIndexItem)
-                .GetProperties()
-                .Where(prop => Attribute.IsDefined(prop, typeof(RestTextAttribute)))
-                .FirstOrDefault();
-
-            _cachedIconAttribute = typeof(TIndexItem)
-                .GetProperties()
-                .Where(prop => Attribute.IsDefined(prop, typeof(RestIconAttribute)))
-                .FirstOrDefault();
         }
 
         /// <summary>
@@ -90,23 +61,11 @@ namespace WebExpress.WebApp.WebRestApi
                 query = query.WithPaging(pageNumber * pageSize, pageSize);
 
                 using var context = CreateContext();
-                var items = Retrieve(query, context, request);
+                var items = RetrieveItems(query, context, request);
 
                 var result = new RestApiDropdownResult<IIndexItem>()
                 {
-                    Title = I18N.Translate(request, Title),
-                    Items = items.Select(item =>
-                    {
-                        var icon = _cachedIconAttribute?.GetValue(item) as IIcon;
-                        return new RestApiDropdownItem
-                        {
-                            Id = item.Id,
-                            Text = _cachedTextAttribute?.GetValue(item)?.ToString() ?? item.Id.ToString(),
-                            Uri = GetUri(item, request)?.ToString(),
-                            Icon = (icon is Icon) ? (icon as Icon).Class : null,
-                            Image = (icon is ImageIcon) ? (icon as ImageIcon).Uri?.ToString() : null
-                        };
-                    }),
+                    Items = items,
                     Pagination = new RestApiPaginationInfo()
                     {
                         PageNumber = pageNumber,
@@ -121,23 +80,6 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 return new ResponseBadRequest(new StatusMessage($"Error processing request. {ex}"));
             }
-        }
-
-        /// <summary>
-        /// Gets the URI associated with the specified request and index item.
-        /// </summary>
-        /// <param name="item">
-        /// The index item that provides context for generating the URI. Cannot be null.
-        /// </param>
-        /// <param name="request">
-        /// The request for which to retrieve the URI. Cannot be null.
-        /// </param>
-        /// <returns>
-        /// An object representing the URI for the given request and index item, or null if no URI is available.
-        /// </returns>
-        public virtual IUri GetUri(TIndexItem item, IRequest request)
-        {
-            return null;
         }
 
         /// <summary>
@@ -166,10 +108,11 @@ namespace WebExpress.WebApp.WebRestApi
         /// The request that provides the operational context.
         /// </param>
         /// <returns>
-        /// A collection representing the filtered set of index items. 
-        /// The collection may be empty if no items match the query.
+        /// An enumerable collection of RestApiDropdownItem objects that match 
+        /// the specified query and context. The collection may be empty if no
+        /// items are found.
         /// </returns>
-        protected abstract IEnumerable<TIndexItem> Retrieve(IQuery<TIndexItem> query, IQueryContext context, IRequest request);
+        protected abstract IEnumerable<RestApiDropdownItem> RetrieveItems(IQuery<TIndexItem> query, IQueryContext context, IRequest request);
 
         /// <summary>
         /// Applies filtering criteria to the specified query based on the provided WQL statement.

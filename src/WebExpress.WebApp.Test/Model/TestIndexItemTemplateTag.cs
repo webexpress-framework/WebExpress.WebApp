@@ -1,6 +1,4 @@
-﻿using WebExpress.WebApp.WebAttribute;
-using WebExpress.WebIndex;
-using WebExpress.WebUI.WebControl;
+﻿using WebExpress.WebIndex;
 
 namespace WebExpress.WebApp.Test.Model
 {
@@ -13,28 +11,21 @@ namespace WebExpress.WebApp.Test.Model
         /// <summary>
         /// Returns or sets the unique identifier of the current entity.
         /// </summary>
-        [RestHidden]
         public Guid Id { get; set; }
 
         /// <summary>
         /// Returns or sets the collection of tags associated with the current entity.
         /// </summary>
-        [RestTableColumnName("Tags1")]
-        [RestApiTableColumnTemplateTag(true)]
         public IEnumerable<string> Tags1 { get; set; }
 
         /// <summary>
         /// Returns or sets the collection of tags associated with the current entity.
         /// </summary>
-        [RestTableColumnName("Tags2")]
-        [RestApiTableColumnTemplateTag(color: TypeColorTag.Warning)]
         public IEnumerable<string> Tags2 { get; set; }
 
         /// <summary>
         /// Returns or sets the collection of tags associated with the current entity.
         /// </summary>
-        [RestTableColumnName("Tags3")]
-        [RestApiTableColumnTemplateTag(placeholder: "hello webexpress")]
         public IEnumerable<string> Tags3 { get; set; }
     }
 }

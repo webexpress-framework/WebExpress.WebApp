@@ -42,7 +42,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
                 Description = "hidden desc"
             };
             _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
-            var table = new TestRestApiTable<TestIndexItem>([item], "Title");
+            var table = new TestRestApiTable([item], "Title");
             var request = UnitTestControlFixture.CreateRequestMock();
 
             // act
@@ -127,7 +127,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             {
                 Id = Guid.NewGuid()
             };
-            var table = new TestRestApiTable<TestIndexItemTemplateTag>([item], "Title");
+            var table = new TestRestApiTableTemplateTag([item], "Title");
             var request = UnitTestControlFixture.CreateRequestMock();
 
             // act
@@ -142,8 +142,6 @@ namespace WebExpress.WebApp.Test.WebRestApi
 
             var columns = root.GetProperty("columns").EnumerateArray().ToList();
             Assert.Equal(3, columns.Count);
-
-            //var buf = columns[0].GetRawText();
 
             var template = columns[0].GetProperty("template");
             Assert.Equal("tag", template.GetProperty("type").GetString());

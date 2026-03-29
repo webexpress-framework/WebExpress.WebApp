@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
@@ -14,20 +13,10 @@ namespace WebExpress.WebApp.WebRestApi
     public abstract class RestApiUnique : IRestApi
     {
         /// <summary>
-        /// Returns or sets the title associated with the current object.
-        /// </summary>
-        public string Title { get; set; }
-
-        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         protected RestApiUnique()
         {
-            // read title attribute once
-            Title = GetType().CustomAttributes
-                .Where(x => x is not null && x.AttributeType == typeof(TitleAttribute))
-                .Select(x => x.ConstructorArguments.FirstOrDefault().Value?.ToString())
-                .FirstOrDefault();
         }
 
         /// <summary>

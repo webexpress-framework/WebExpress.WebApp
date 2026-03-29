@@ -1,16 +1,16 @@
 ﻿using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
 
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Represents the result of a REST API call that returns a table structure, 
-    /// including metadata, columns, rows, and pagination information.
+    /// Represents the result of a dashboard operation returned by a REST API.
     /// </summary>
-    public class RestApiTableResult : IRestApiResult
+    public class RestApiDashboardResult : IRestApiResult
     {
         private readonly JsonSerializerOptions _jsonOptions = new()
         {
@@ -19,37 +19,28 @@ namespace WebExpress.WebApp.WebRestApi
         };
 
         /// <summary>
-        /// Returns or sets the title associated with the object.
+        /// Returns or sets the title associated with the Kanban board.
         /// </summary>
         public string Title { get; set; }
 
         /// <summary>
-        /// Returns or sets the collection of columns associated with the table.
+        /// Returns or sets the collection of columns defined for the Kanban board.
         /// </summary>
-        public IEnumerable<RestApiTableColumn> Columns { get; set; }
-
-        /// <summary>
-        /// Returns or sets the collection of rows in the table.
-        /// </summary>
-        public IEnumerable<RestApiTableRow> Rows { get; set; }
-
-        /// <summary>
-        /// Returns or sets the pagination information for the current API request.
-        /// </summary>
-        public RestApiPaginationInfo Pagination { get; set; }
+        [JsonPropertyName("columns")]
+        public IEnumerable<RestApiDashboardColumn> Columns { get; set; }
 
         /// <summary>
         /// Converts the current instance into a <see cref="IResponse"/> object.
         /// </summary>
-        /// <returns>A Response object representing the result of the conversion.</returns>
+        /// <returns>
+        /// A Response object representing the result of the conversion.
+        /// </returns>
         public virtual IResponse ToResponse()
         {
             var data = new
             {
                 title = Title,
-                columns = Columns,
-                rows = Rows,
-                pagination = Pagination
+                columns = Columns
             };
 
             var jsonData = JsonSerializer.Serialize(data, _jsonOptions);

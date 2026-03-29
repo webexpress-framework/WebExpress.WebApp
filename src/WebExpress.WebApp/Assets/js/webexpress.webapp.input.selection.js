@@ -177,15 +177,7 @@ webexpress.webapp.InputSelectionCtrl = class extends webexpress.webui.InputSelec
                 return res.json();
             })
             .then((response) => {
-                // FIX: Handle flexible response formats ({data: []} OR {items: []} OR [])
-                let rawData = [];
-                if (Array.isArray(response)) {
-                    rawData = response;
-                } else if (response) {
-                    if (Array.isArray(response.items)) rawData = response.items;
-                    else if (Array.isArray(response.data)) rawData = response.data;
-                }
-
+                const rawData = response.items;
                 this._allItems = rawData;
                 const limitedItems = this._allItems.slice(0, this._maxItems);
                 this.options = limitedItems.map((x) => {

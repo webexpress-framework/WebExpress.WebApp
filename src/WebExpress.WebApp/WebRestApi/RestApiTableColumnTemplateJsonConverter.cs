@@ -2,13 +2,14 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace WebExpress.WebApp.WebAttribute
+namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Provides a custom JSON converter for serializing objects that implement the <see
-    /// cref="IRestTableColumnTemplate"/> interface.
+    /// Provides custom JSON serialization for objects implementing the 
+    /// IRestApiTableColumnTemplate interface. Supports serialization but 
+    /// does not support deserialization.
     /// </summary>
-    public class RestTableColumnTemplateJsonConverter : JsonConverter<IRestTableColumnTemplate>
+    internal class RestApiTableColumnTemplateJsonConverter : JsonConverter<IRestApiTableColumnTemplate>
     {
         /// <summary>
         /// Throws a <see cref="NotSupportedException"/> to indicate that deserialization 
@@ -30,7 +31,7 @@ namespace WebExpress.WebApp.WebAttribute
         /// <exception cref="NotSupportedException">
         /// Thrown in all cases to indicate that deserialization is not supported.
         /// </exception>
-        public override IRestTableColumnTemplate Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        public override IRestApiTableColumnTemplate Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             throw new NotSupportedException("Deserialization not supported.");
         }
@@ -48,7 +49,7 @@ namespace WebExpress.WebApp.WebAttribute
         /// <param name="options">
         /// Options to control the behavior of the JSON serialization.
         /// </param>
-        public override void Write(Utf8JsonWriter writer, IRestTableColumnTemplate value, JsonSerializerOptions options)
+        public override void Write(Utf8JsonWriter writer, IRestApiTableColumnTemplate value, JsonSerializerOptions options)
         {
             using var doc = JsonDocument.Parse(value.ToJson());
             doc.RootElement.WriteTo(writer);

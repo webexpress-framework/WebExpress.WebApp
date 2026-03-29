@@ -11,8 +11,12 @@ namespace WebExpress.WebApp.Test
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
-        public TestRestApiDashboard()
+        /// <param name="title">
+        /// The title to display for the tile. If not specified, defaults to "dashboard_title".
+        /// </param>
+        public TestRestApiDashboard(string title = "dashboard_title")
         {
+            Title = title;
         }
 
         /// <summary>
@@ -25,7 +29,7 @@ namespace WebExpress.WebApp.Test
         /// An enumerable collection of dashboard columns relevant to the request. The 
         /// collection is empty if no columns are available.
         /// </returns>
-        public override IEnumerable<RestApiDashboardColumn> GetColumns(IRequest request)
+        public override IEnumerable<RestApiDashboardColumn> RetrieveColumns(IRequest request)
         {
             // return empty by default
             return [];

@@ -7,9 +7,9 @@ using WebExpress.WebIndex.Wql;
 namespace WebExpress.WebApp.Test
 {
     /// <summary>
-    /// Represents a read-only tile of test index items for use with REST API scenarios.
+    /// Represents a read-only list of test index items for use with REST API scenarios.
     /// </summary>
-    public sealed class TestRestApiTile : RestApiTile<TestIndexItem>
+    public sealed class TestRestApiList : RestApiList<TestIndexItem>
     {
         private readonly IEnumerable<TestIndexItem> _testData;
 
@@ -23,7 +23,7 @@ namespace WebExpress.WebApp.Test
         /// <param name="title">
         /// The title to display for the tile. If not specified, defaults to "tab_title".
         /// </param>
-        public TestRestApiTile(IEnumerable<TestIndexItem> data, string title = "tab_title")
+        public TestRestApiList(IEnumerable<TestIndexItem> data, string title = "tab_title")
         {
             _testData = data;
             Title = title;
@@ -47,13 +47,12 @@ namespace WebExpress.WebApp.Test
         /// A collection representing the filtered set of index items. 
         /// The collection may be empty if no items match the query.
         /// </returns>
-        protected override IEnumerable<RestApiTileItem> RetrieveItems(IQuery<TestIndexItem> query, IQueryContext context, IRequest request)
+        protected override IEnumerable<RestApiListItem> RetrieveItems(IQuery<TestIndexItem> query, IQueryContext context, IRequest request)
         {
             return query.Apply(_testData.AsQueryable())
-                .Select(x => new RestApiTileItem()
+                .Select(x => new RestApiListItem()
                 {
                     Id = x.Id.ToString(),
-                    Title = x.Key,
                     Text = x.Description,
                     Options = GetOptions(x.Id.ToString(), request).Select(o => o.ToJson()),
                 });

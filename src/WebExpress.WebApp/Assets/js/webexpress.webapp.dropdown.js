@@ -338,15 +338,7 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
             }
 
             const json = await res.json();
-
-            let rawItems = [];
-            if (Array.isArray(json)) {
-                rawItems = json;
-            } else if (json && Array.isArray(json.items)) {
-                rawItems = json.items;
-            } else if (json && Array.isArray(json.data)) {
-                rawItems = json.data;
-            }
+            const rawItems = json.items;
 
             this._allItems = rawItems.map((x) => { return this._mapApiItem(x); });
 

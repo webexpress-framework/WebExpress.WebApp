@@ -39,8 +39,7 @@ namespace WebExpress.WebApp.WebRestApi
         {
             var data = new
             {
-                title = Title,
-                data = Items,
+                items = Items,
                 pagination = Pagination
             };
 
@@ -51,7 +50,7 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 Content = content
             }
-            .AddHeaderContentType("application/json");
+                .AddHeaderContentType("application/json");
         }
     }
 }

@@ -1,13 +1,13 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace WebExpress.WebApp.WebAttribute
+namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
     /// Defines the contract for a table column template used in REST API responses, 
     /// specifying the column type and whether the column is editable.
     /// </summary>
-    [JsonConverter(typeof(RestTableColumnTemplateJsonConverter))]
-    public interface IRestTableColumnTemplate
+    [JsonConverter(typeof(RestApiTableColumnTemplateJsonConverter))]
+    public interface IRestApiTableColumnTemplate
     {
         /// <summary>
         /// Returns the type identifier associated with the current instance.

@@ -24,7 +24,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Returns or sets the collection of items associated with the list.
         /// </summary>
-        public IEnumerable<RestApiListItem<TIndexItem>> Items { get; set; }
+        public IEnumerable<RestApiListItem> Items { get; set; }
 
         /// <summary>
         /// Returns or sets the pagination information for the current API request.

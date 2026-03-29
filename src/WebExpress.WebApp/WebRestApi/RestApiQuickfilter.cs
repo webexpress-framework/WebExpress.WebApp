@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using WebExpress.WebApp.WebAttribute;
 using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
@@ -19,16 +16,11 @@ namespace WebExpress.WebApp.WebRestApi
     public abstract class RestApiQuickfilter<TIndexItem> : IRestApi
         where TIndexItem : IIndexItem
     {
-        private readonly PropertyInfo _cachedNameAttribute;
-
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         protected RestApiQuickfilter()
         {
-            _cachedNameAttribute = typeof(TIndexItem)
-                .GetProperties()
-                .FirstOrDefault(prop => Attribute.IsDefined(prop, typeof(RestTextAttribute)));
         }
 
         /// <summary>
@@ -43,15 +35,7 @@ namespace WebExpress.WebApp.WebRestApi
             try
             {
                 using var context = CreateContext();
-                var items = Retrieve(context, request)
-                    .Select(item =>
-                    {
-                        return new RestApiQuickfilterItem<TIndexItem>()
-                        {
-                            Id = item.Id.ToString(),
-                            Name = _cachedNameAttribute?.GetValue(item)?.ToString() ?? item.Id.ToString(),
-                        };
-                    });
+                var items = RetrieveItems(context, request);
 
                 var result = new RestApiQuickfilterResult<TIndexItem>()
                 {
@@ -88,10 +72,11 @@ namespace WebExpress.WebApp.WebRestApi
         /// The request that provides the operational context.
         /// </param>
         /// <returns>
-        /// A collection representing the filtered set of index items. 
-        /// The collection may be empty if no items match the query.
+        /// An enumerable collection of quick filter items that match the 
+        /// specified context and request. The collection may be empty if 
+        /// no items are found.
         /// </returns>
-        protected abstract IEnumerable<TIndexItem> Retrieve(IQueryContext context, IRequest request);
+        protected abstract IEnumerable<RestApiQuickfilterItem> RetrieveItems(IQueryContext context, IRequest request);
 
     }
 }

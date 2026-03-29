@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
+using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
@@ -20,6 +21,11 @@ namespace WebExpress.WebApp.WebRestApi
         };
 
         /// <summary>
+        /// Returns or sets the title associated with the current object.
+        /// </summary>
+        public string Title { get; protected set; }
+
+        /// <summary>
         /// Handles get requests to retrieve the current dashboard layout and configuration.
         /// </summary>
         /// <param name="request">The incoming request.</param>
@@ -29,14 +35,13 @@ namespace WebExpress.WebApp.WebRestApi
         {
             try
             {
-                var data = new { columns = GetColumns(request) };
-                var jsonData = JsonSerializer.Serialize(data, _jsonOptions);
-                var content = Encoding.UTF8.GetBytes(jsonData);
-
-                return new ResponseOK
+                var result = new RestApiDashboardResult()
                 {
-                    Content = content
-                }.AddHeaderContentType("application/json");
+                    Title = I18N.Translate(request, Title),
+                    Columns = RetrieveColumns(request)
+                };
+
+                return result.ToResponse();
             }
             catch (Exception ex)
             {
@@ -91,7 +96,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// An enumerable collection of dashboard columns relevant to the request. The 
         /// collection is empty if no columns are available.
         /// </returns>
-        public virtual IEnumerable<RestApiDashboardColumn> GetColumns(IRequest request)
+        public virtual IEnumerable<RestApiDashboardColumn> RetrieveColumns(IRequest request)
         {
             // return empty by default
             return [];

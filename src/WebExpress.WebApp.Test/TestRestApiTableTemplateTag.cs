@@ -7,26 +7,64 @@ using WebExpress.WebIndex.Wql;
 namespace WebExpress.WebApp.Test
 {
     /// <summary>
-    /// Represents a read-only tile of test index items for use with REST API scenarios.
+    /// Represents a read-only table of test index items for use with REST API scenarios.
     /// </summary>
-    public sealed class TestRestApiTile : RestApiTile<TestIndexItem>
+    public sealed class TestRestApiTableTemplateTag : RestApiTable<TestIndexItemTemplateTag>
     {
-        private readonly IEnumerable<TestIndexItem> _testData;
+        private readonly IEnumerable<TestIndexItemTemplateTag> _testData;
 
         /// <summary>
-        /// Initializes a new instance of the TestRestApiTile class with the specified data 
-        /// and tile title.
+        /// Initializes a new instance of the TestRestApiTable class with the specified data 
+        /// and table title.
         /// </summary>
         /// <param name="data">
-        /// The collection of TestIndexItem objects to be displayed in the tile. Cannot be null.
+        /// The collection of TestIndexItem objects to be displayed in the table. Cannot be null.
         /// </param>
         /// <param name="title">
-        /// The title to display for the tile. If not specified, defaults to "tab_title".
+        /// The title to display for the table. If not specified, defaults to "tab_title".
         /// </param>
-        public TestRestApiTile(IEnumerable<TestIndexItem> data, string title = "tab_title")
+        public TestRestApiTableTemplateTag(IEnumerable<TestIndexItemTemplateTag> data, string title = "tab_title")
         {
             _testData = data;
             Title = title;
+        }
+
+        /// <summary>
+        /// Retrieves the collection of columns available for the specified 
+        /// REST API request.
+        /// </summary>
+        /// <param name="request">
+        /// The request for which to retrieve the available table columns.
+        /// </param>
+        /// <returns>
+        /// An enumerable collection of columns describing the structure of 
+        /// the data returned by the REST API for the specified request.
+        /// </returns>
+        protected override IEnumerable<RestApiTableColumn> RetrieveColums(IRequest request)
+        {
+            yield return new RestApiTableColumn()
+            {
+                Id = "tags1",
+                Name = "Tags1",
+                Label = "Tags1",
+                Template = new RestApiTableColumnTemplateTag(true)
+            };
+
+            yield return new RestApiTableColumn()
+            {
+                Id = "tags2",
+                Name = "Tags2",
+                Label = "Tags2",
+                Template = new RestApiTableColumnTemplateTag(false, WebUI.WebControl.TypeColorTag.Warning)
+            };
+
+            yield return new RestApiTableColumn()
+            {
+                Id = "tags3",
+                Name = "Tags3",
+                Label = "Tags3",
+                Template = new RestApiTableColumnTemplateTag(false, WebUI.WebControl.TypeColorTag.Default, "hello webexpress")
+            };
         }
 
         /// <summary>
@@ -40,6 +78,9 @@ namespace WebExpress.WebApp.Test
         /// The context in which the query is executed. Provides additional information or constraints 
         /// for the retrieval operation. Cannot be null.
         /// </param>
+        /// <param name="columns">
+        /// The collection of columns available for the specified REST API request.
+        /// </param>
         /// <param name="request">
         /// The request that provides the operational context.
         /// </param>
@@ -47,14 +88,27 @@ namespace WebExpress.WebApp.Test
         /// A collection representing the filtered set of index items. 
         /// The collection may be empty if no items match the query.
         /// </returns>
-        protected override IEnumerable<RestApiTileItem> RetrieveItems(IQuery<TestIndexItem> query, IQueryContext context, IRequest request)
+        protected override IEnumerable<RestApiTableRow> RetrieveRows(IQuery<TestIndexItemTemplateTag> query, IQueryContext context, IEnumerable<RestApiTableColumn> columns, IRequest request)
         {
             return query.Apply(_testData.AsQueryable())
-                .Select(x => new RestApiTileItem()
+                .Select(x => new RestApiTableRow()
                 {
                     Id = x.Id.ToString(),
-                    Title = x.Key,
-                    Text = x.Description,
+                    Cells = new[]
+                    {
+                        new RestApiTableCell()
+                        {
+                            Content = x.Tags1
+                        },
+                        new RestApiTableCell()
+                        {
+                            Content = x.Tags2
+                        },
+                        new RestApiTableCell()
+                        {
+                            Content = x.Tags3
+                        }
+                    },
                     Options = GetOptions(x.Id.ToString(), request).Select(o => o.ToJson()),
                 });
         }
@@ -77,7 +131,7 @@ namespace WebExpress.WebApp.Test
         /// A query representing the filtered set of items that match the criteria defined by 
         /// the WQL statement.
         /// </returns>
-        protected override IQuery<TestIndexItem> Filter(IWqlStatement<TestIndexItem> wqlStatement, IQuery<TestIndexItem> query, IRequest request)
+        protected override IQuery<TestIndexItemTemplateTag> Filter(IWqlStatement<TestIndexItemTemplateTag> wqlStatement, IQuery<TestIndexItemTemplateTag> query, IRequest request)
         {
             return query;
         }
@@ -100,7 +154,7 @@ namespace WebExpress.WebApp.Test
         /// A query representing the filtered set of items that match the criteria defined by 
         /// the filter statement.
         /// </returns>
-        protected override IQuery<TestIndexItem> Filter(string filter, IQuery<TestIndexItem> query, IRequest request)
+        protected override IQuery<TestIndexItemTemplateTag> Filter(string filter, IQuery<TestIndexItemTemplateTag> query, IRequest request)
         {
             return query;
         }

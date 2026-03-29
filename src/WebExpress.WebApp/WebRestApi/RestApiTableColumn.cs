@@ -1,5 +1,4 @@
 ﻿using System.Text.Json.Serialization;
-using WebExpress.WebApp.WebAttribute;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -48,7 +47,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// Returns or sets the path to the template file for rendering the column.
         /// </summary>
         [JsonPropertyName("template")]
-        public IRestTableColumnTemplate Template { get; set; }
+        public IRestApiTableColumnTemplate Template { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class.

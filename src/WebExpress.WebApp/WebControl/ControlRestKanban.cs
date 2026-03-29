@@ -6,9 +6,9 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Represents a control panel for API dashboard interactions.
+    /// Represents a control panel for API kanban interactions.
     /// </summary>
-    public class ControlRestDashboard : ControlPanel, IControlRestDashboard
+    public class ControlRestKanban : ControlPanel, IControlRestKanban
     {
         /// <summary>
         /// Returns or sets the uri that determines the data.
@@ -19,7 +19,7 @@ namespace WebExpress.WebApp.WebControl
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The control id.</param>
-        public ControlRestDashboard(string id = null)
+        public ControlRestKanban(string id = null)
             : base(id ?? RandomId.Create())
         {
         }
@@ -49,7 +49,7 @@ namespace WebExpress.WebApp.WebControl
             var html = new HtmlElementTextContentDiv()
             {
                 Id = Id,
-                Class = Css.Concatenate("wx-webapp-dashboard", GetClasses()),
+                Class = Css.Concatenate("wx-webapp-kanban", GetClasses()),
                 Style = GetStyles()
             }
                 .AddUserAttribute("data-uri", resultUri?.ToString());

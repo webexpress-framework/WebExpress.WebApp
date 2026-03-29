@@ -17,11 +17,6 @@ namespace WebExpress.WebApp.WebRestApi
         private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
         /// <summary>
-        /// Returns or sets the title associated with the object.
-        /// </summary>
-        public string Title { get; set; }
-
-        /// <summary>
         /// Returns or sets the collection of items associated with the list.
         /// </summary>
         public IEnumerable<RestApiDropdownItem> Items { get; set; }
@@ -39,8 +34,7 @@ namespace WebExpress.WebApp.WebRestApi
         {
             var data = new
             {
-                title = Title,
-                data = Items,
+                items = Items,
                 pagination = Pagination
             };
 
@@ -51,7 +45,7 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 Content = content
             }
-            .AddHeaderContentType("application/json");
+                .AddHeaderContentType("application/json");
         }
     }
 }

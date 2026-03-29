@@ -1,15 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Text.Json;
 using WebExpress.WebUI.WebControl;
 
-namespace WebExpress.WebApp.WebAttribute
+namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
     /// Represents a table column template of type "tag" for REST API table rendering, 
     /// providing configuration options such as color and placeholder text.
     /// </summary>
-    public class RestApiTableColumnTemplateTagAttribute : Attribute, IRestTableColumnTemplate
+    public class RestApiTableColumnTemplateTag : IRestApiTableColumnTemplate
     {
         private static readonly JsonSerializerOptions _jsonOptions = new()
         {
@@ -51,7 +50,7 @@ namespace WebExpress.WebApp.WebAttribute
         /// <param name="placeholder">
         /// The placeholder text to display when the column value is empty. Can be null.
         /// </param>
-        public RestApiTableColumnTemplateTagAttribute(bool editabl = false, TypeColorTag color = TypeColorTag.Default, string placeholder = null)
+        public RestApiTableColumnTemplateTag(bool editabl = false, TypeColorTag color = TypeColorTag.Default, string placeholder = null)
         {
             Editable = editabl;
             Color = color;

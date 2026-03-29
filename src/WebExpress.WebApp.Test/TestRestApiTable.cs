@@ -1,7 +1,6 @@
 ﻿using WebExpress.WebApp.Test.Model;
 using WebExpress.WebApp.WebRestApi;
 using WebExpress.WebCore.WebMessage;
-using WebExpress.WebIndex;
 using WebExpress.WebIndex.Queries;
 using WebExpress.WebIndex.Wql;
 
@@ -10,8 +9,10 @@ namespace WebExpress.WebApp.Test
     /// <summary>
     /// Represents a read-only table of test index items for use with REST API scenarios.
     /// </summary>
-    public sealed class TestRestApiTable : TestRestApiTable<TestIndexItem>
+    public sealed class TestRestApiTable : RestApiTable<TestIndexItem>
     {
+        private readonly IEnumerable<TestIndexItem> _testData;
+
         /// <summary>
         /// Initializes a new instance of the TestRestApiTable class with the specified data 
         /// and table title.
@@ -23,56 +24,51 @@ namespace WebExpress.WebApp.Test
         /// The title to display for the table. If not specified, defaults to "tab_title".
         /// </param>
         public TestRestApiTable(IEnumerable<TestIndexItem> data, string title = "tab_title")
-            : base(data, title)
-        {
-        }
-    }
-
-    /// <summary>
-    /// Provides a test implementation of a REST API table for retrieving 
-    /// index items using filter strings or WQL statements.
-    /// </summary>
-    public class TestRestApiTable<TIndexItem> : RestApiTable<TIndexItem>
-        where TIndexItem : IIndexItem
-    {
-        private readonly IEnumerable<TIndexItem> _testData;
-
-        /// <summary>
-        /// Initializes a new instance of the class with the specified data and optional table title.
-        /// </summary>
-        /// <param name="data">
-        /// The collection of TestIndexItem objects to be displayed in the table. Cannot be null.
-        /// </param>
-        /// <param name="title">
-        /// The title of the table. If not specified, defaults to "tab_title".
-        /// </param>
-        public TestRestApiTable(IEnumerable<TIndexItem> data, string title = "tab_title")
         {
             _testData = data;
             Title = title;
         }
 
         /// <summary>
-        /// Returns a collection of available REST API options for the specified 
-        /// request and data row.
+        /// Retrieves the collection of columns available for the specified 
+        /// REST API request.
         /// </summary>
-        /// <param name="row">
-        /// The data row representing the item for which options are generated. Cannot be null.
-        /// </param>
         /// <param name="request">
-        /// The request context for which to generate API options. Cannot be null.
+        /// The request for which to retrieve the available table columns.
         /// </param>
         /// <returns>
-        /// An enumerable collection of <see cref="RestApiOption"/> objects representing the 
-        /// available actions for the given request and row. The collection will contain at 
-        /// least one option if actions are available; otherwise, it may be empty.
+        /// An enumerable collection of columns describing the structure of 
+        /// the data returned by the REST API for the specified request.
         /// </returns>
-        public override IEnumerable<RestApiOption> GetOptions(TIndexItem row, IRequest request)
+        protected override IEnumerable<RestApiTableColumn> RetrieveColums(IRequest request)
         {
-            return
-            [
-                new RestApiOptionEdit(request) { }
-            ];
+            yield return new RestApiTableColumn()
+            {
+                Id = "key",
+                Name = "Key",
+                Label = "Key"
+            };
+
+            yield return new RestApiTableColumn()
+            {
+                Id = "names",
+                Name = "Names",
+                Label = "Names"
+            };
+
+            yield return new RestApiTableColumn()
+            {
+                Id = "state",
+                Name = "State",
+                Label = "State"
+            };
+
+            yield return new RestApiTableColumn()
+            {
+                Id = "description",
+                Name = "Description",
+                Label = "Description"
+            };
         }
 
         /// <summary>
@@ -86,6 +82,9 @@ namespace WebExpress.WebApp.Test
         /// The context in which the query is executed. Provides additional information or constraints 
         /// for the retrieval operation. Cannot be null.
         /// </param>
+        /// <param name="columns">
+        /// The collection of columns available for the specified REST API request.
+        /// </param>
         /// <param name="request">
         /// The request that provides the operational context.
         /// </param>
@@ -93,9 +92,33 @@ namespace WebExpress.WebApp.Test
         /// A collection representing the filtered set of index items. 
         /// The collection may be empty if no items match the query.
         /// </returns>
-        protected override IEnumerable<TIndexItem> Retrieve(IQuery<TIndexItem> query, IQueryContext context, IRequest request)
+        protected override IEnumerable<RestApiTableRow> RetrieveRows(IQuery<TestIndexItem> query, IQueryContext context, IEnumerable<RestApiTableColumn> columns, IRequest request)
         {
-            return query.Apply(_testData.AsQueryable());
+            return query.Apply(_testData.AsQueryable())
+                .Select(x => new RestApiTableRow()
+                {
+                    Id = x.Id.ToString(),
+                    Cells = new[]
+                    {
+                        new RestApiTableCell()
+                        {
+                            Content = x.Key
+                        },
+                        new RestApiTableCell()
+                        {
+                            Content = x.Names
+                        },
+                        new RestApiTableCell()
+                        {
+                            Content = x.State
+                        },
+                        new RestApiTableCell()
+                        {
+                            Content = x.Description
+                        }
+                    },
+                    Options = GetOptions(x.Id.ToString(), request).Select(o => o.ToJson()),
+                });
         }
 
         /// <summary>
@@ -116,7 +139,7 @@ namespace WebExpress.WebApp.Test
         /// A query representing the filtered set of items that match the criteria defined by 
         /// the WQL statement.
         /// </returns>
-        protected override IQuery<TIndexItem> Filter(IWqlStatement<TIndexItem> wqlStatement, IQuery<TIndexItem> query, IRequest request)
+        protected override IQuery<TestIndexItem> Filter(IWqlStatement<TestIndexItem> wqlStatement, IQuery<TestIndexItem> query, IRequest request)
         {
             return query;
         }
@@ -139,9 +162,32 @@ namespace WebExpress.WebApp.Test
         /// A query representing the filtered set of items that match the criteria defined by 
         /// the filter statement.
         /// </returns>
-        protected override IQuery<TIndexItem> Filter(string filter, IQuery<TIndexItem> query, IRequest request)
+        protected override IQuery<TestIndexItem> Filter(string filter, IQuery<TestIndexItem> query, IRequest request)
         {
             return query;
+        }
+
+        /// <summary>
+        /// Returns a collection of available REST API options for the specified 
+        /// request and data row.
+        /// </summary>
+        /// <param name="id">
+        /// The id representing the item for which options are generated. Cannot be null.
+        /// </param>
+        /// <param name="request">
+        /// The request context for which to generate API options. Cannot be null.
+        /// </param>
+        /// <returns>
+        /// An enumerable collection of <see cref="RestApiOption"/> objects representing the 
+        /// available actions for the given request and row. The collection will contain at 
+        /// least one option if actions are available; otherwise, it may be empty.
+        /// </returns>
+        private IEnumerable<RestApiOption> GetOptions(string id, IRequest request)
+        {
+            return
+            [
+                new RestApiOptionEdit(request) { }
+            ];
         }
     }
 }

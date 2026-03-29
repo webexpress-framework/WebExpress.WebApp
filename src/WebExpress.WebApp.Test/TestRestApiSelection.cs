@@ -7,9 +7,9 @@ using WebExpress.WebIndex.Wql;
 namespace WebExpress.WebApp.Test
 {
     /// <summary>
-    /// Represents a read-only tile of test index items for use with REST API scenarios.
+    /// Represents a read-only selection of test index items for use with REST API scenarios.
     /// </summary>
-    public sealed class TestRestApiTile : RestApiTile<TestIndexItem>
+    public sealed class TestRestApiSelection : RestApiSelection<TestIndexItem>
     {
         private readonly IEnumerable<TestIndexItem> _testData;
 
@@ -20,13 +20,9 @@ namespace WebExpress.WebApp.Test
         /// <param name="data">
         /// The collection of TestIndexItem objects to be displayed in the tile. Cannot be null.
         /// </param>
-        /// <param name="title">
-        /// The title to display for the tile. If not specified, defaults to "tab_title".
-        /// </param>
-        public TestRestApiTile(IEnumerable<TestIndexItem> data, string title = "tab_title")
+        public TestRestApiSelection(IEnumerable<TestIndexItem> data)
         {
             _testData = data;
-            Title = title;
         }
 
         /// <summary>
@@ -44,18 +40,17 @@ namespace WebExpress.WebApp.Test
         /// The request that provides the operational context.
         /// </param>
         /// <returns>
-        /// A collection representing the filtered set of index items. 
-        /// The collection may be empty if no items match the query.
+        /// An enumerable collection that match 
+        /// the specified query and context. The collection may be empty if no
+        /// items are found.
         /// </returns>
-        protected override IEnumerable<RestApiTileItem> RetrieveItems(IQuery<TestIndexItem> query, IQueryContext context, IRequest request)
+        protected override IEnumerable<RestApiSelectionItem> RetrieveItems(IQuery<TestIndexItem> query, IQueryContext context, IRequest request)
         {
             return query.Apply(_testData.AsQueryable())
-                .Select(x => new RestApiTileItem()
+                .Select(x => new RestApiSelectionItem()
                 {
-                    Id = x.Id.ToString(),
-                    Title = x.Key,
-                    Text = x.Description,
-                    Options = GetOptions(x.Id.ToString(), request).Select(o => o.ToJson()),
+                    Id = x.Id,
+                    Text = x.Description
                 });
         }
 

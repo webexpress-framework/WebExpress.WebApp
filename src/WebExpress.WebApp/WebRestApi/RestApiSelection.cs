@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using WebExpress.WebApp.WebAttribute;
-using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
@@ -21,34 +18,11 @@ namespace WebExpress.WebApp.WebRestApi
     public abstract class RestApiSelection<TIndexItem> : IRestApi
         where TIndexItem : IIndexItem
     {
-        private readonly PropertyInfo _cachedNameAttribute;
-        private readonly PropertyInfo _cachedUriAttribute;
-
-        /// <summary>
-        /// Returns or sets the title associated with the current object.
-        /// </summary>
-        public string Title { get; protected set; }
-
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         public RestApiSelection()
         {
-            // search for an attribute of type Title and return its value if present
-            Title = GetType().CustomAttributes
-                .Where(x => x?.AttributeType == typeof(TitleAttribute))
-                .Select(x => x.ConstructorArguments.FirstOrDefault().Value?.ToString())
-                .FirstOrDefault();
-
-            _cachedNameAttribute = typeof(TIndexItem)
-                .GetProperties()
-                .Where(prop => Attribute.IsDefined(prop, typeof(RestTextAttribute)))
-                .FirstOrDefault();
-
-            _cachedUriAttribute = typeof(TIndexItem)
-                .GetProperties()
-                .Where(prop => Attribute.IsDefined(prop, typeof(RestUriAttribute)))
-                .FirstOrDefault();
         }
 
         /// <summary>
@@ -90,17 +64,11 @@ namespace WebExpress.WebApp.WebRestApi
                 query = query.WithPaging(pageNumber * pageSize, pageSize);
 
                 using var context = CreateContext();
-                var items = Retrieve(query, context, request);
+                var items = RetrieveItems(query, context, request);
 
                 var result = new RestApiSelectionResult<IIndexItem>()
                 {
-                    Title = I18N.Translate(request, Title),
-                    Items = items.Select(x => new RestApiSelectionItem
-                    {
-                        Id = x.Id,
-                        Text = _cachedNameAttribute?.GetValue(x)?.ToString() ?? x.Id.ToString(),
-                        Uri = _cachedUriAttribute?.GetValue(x)?.ToString()
-                    }),
+                    Items = items,
                     Pagination = new RestApiPaginationInfo()
                     {
                         PageNumber = pageNumber,
@@ -143,10 +111,10 @@ namespace WebExpress.WebApp.WebRestApi
         /// The request that provides the operational context.
         /// </param>
         /// <returns>
-        /// A collection representing the filtered set of index items. 
-        /// The collection may be empty if no items match the query.
+        /// An enumerable collection of selection items that satisfy the query 
+        /// criteria. The collection is empty if no items match.
         /// </returns>
-        protected abstract IEnumerable<TIndexItem> Retrieve(IQuery<TIndexItem> query, IQueryContext context, IRequest request);
+        protected abstract IEnumerable<RestApiSelectionItem> RetrieveItems(IQuery<TIndexItem> query, IQueryContext context, IRequest request);
 
         /// <summary>
         /// Applies filtering criteria to the specified query based on the provided WQL statement.

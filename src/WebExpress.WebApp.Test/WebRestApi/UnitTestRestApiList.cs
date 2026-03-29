@@ -6,10 +6,10 @@ using WebExpress.WebApp.Test.Model;
 namespace WebExpress.WebApp.Test.WebRestApi
 {
     /// <summary>
-    /// Provides unit tests for verifying the behavior of the RestApiTile class.
+    /// Provides unit tests for verifying the behavior of the RestApiList class.
     /// </summary>
     [Collection("NonParallelTests")]
-    public class UnitTestRestApiTile
+    public class UnitTestRestApiList
     {
         /// <summary>
         /// Tests that the tile title is set correctly when a new instance of the 
@@ -19,7 +19,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
         public void SetTitle()
         {
             // act
-            var table = new TestRestApiTile([], "my title");
+            var table = new TestRestApiList([], "my title");
 
             // vallidation
             Assert.Equal("my title", table.Title);
@@ -42,11 +42,11 @@ namespace WebExpress.WebApp.Test.WebRestApi
                 Description = "hidden desc"
             };
             _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
-            var tile = new TestRestApiTile([item], "Title");
+            var list = new TestRestApiList([item], "Title");
             var request = UnitTestControlFixture.CreateRequestMock();
 
             // act
-            var result = tile.Retrieve(request);
+            var result = list.Retrieve(request);
 
             // vallidation
             Assert.NotNull(result);
@@ -60,8 +60,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             var items = root.GetProperty("items").EnumerateArray().ToList();
             Assert.Single(items);
 
-            Assert.NotEmpty(items[0].GetProperty("title").GetString());
-            Assert.NotEmpty(items[0].GetProperty("text").GetString());
+            Assert.NotEmpty(items[0].GetProperty("content").GetString());
             Assert.Null(items[0].GetProperty("icon").GetString());
 
             var options = items[0].GetProperty("options").EnumerateArray().ToList();
@@ -77,7 +76,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
 
             Assert.True(items[0].TryGetProperty("icon", out var iconElement) && iconElement.ValueKind == JsonValueKind.Null);
             Assert.True(items[0].TryGetProperty("image", out var imageElement) && imageElement.ValueKind == JsonValueKind.Null);
-            Assert.True(items[0].TryGetProperty("uri", out var uriElement) && uriElement.ValueKind == JsonValueKind.Null);
+            Assert.False(items[0].TryGetProperty("uri", out var uriElement) && uriElement.ValueKind == JsonValueKind.Null);
         }
     }
 }
