@@ -7,8 +7,9 @@ using WebExpress.WebCore.WebStatusPage;
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Abstract class providing CRUD list responses for REST API.
-    /// Produces a flat "items" array suitable for the ListCtrl frontend.
+    /// Provides an abstract base class for REST API endpoints that determine 
+    /// the uniqueness or availability of a resource value. Implements a 
+    /// standard pattern for processing GET requests and checking value availability.
     /// </summary>
     public abstract class RestApiUnique : IRestApi
     {
@@ -26,7 +27,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <param name="request">The request.</param>
         /// <returns>The response containing the result of the operation.</returns>
         [Method(RequestMethod.GET)]
-        public virtual IResponse GetData(Request request)
+        public virtual IResponse Retrieve(Request request)
         {
             // read value parameter
             var value = request.GetParameter("v")?.Value?.ToLower()

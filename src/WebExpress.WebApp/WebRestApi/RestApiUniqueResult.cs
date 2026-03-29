@@ -13,11 +13,6 @@ namespace WebExpress.WebApp.WebRestApi
         private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
         /// <summary>
-        /// Returns or sets the title associated with the object.
-        /// </summary>
-        public string Title { get; set; }
-
-        /// <summary>
         /// Returns or sets a value indicating whether the resource is currently available.
         /// </summary>
         public bool Available { get; set; }
@@ -30,7 +25,6 @@ namespace WebExpress.WebApp.WebRestApi
         {
             var data = new
             {
-                title = Title,
                 available = Available
             };
 
@@ -41,7 +35,7 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 Content = content
             }
-            .AddHeaderContentType("application/json");
+                .AddHeaderContentType("application/json");
         }
     }
 }
