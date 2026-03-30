@@ -96,7 +96,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// An enumerable collection of dashboard columns relevant to the request. The 
         /// collection is empty if no columns are available.
         /// </returns>
-        public virtual IEnumerable<RestApiDashboardColumn> RetrieveColumns(IRequest request)
+        protected virtual IEnumerable<RestApiDashboardColumn> RetrieveColumns(IRequest request)
         {
             // return empty by default
             return [];
@@ -112,7 +112,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <param name="request">
         /// The request containing the details for updating the columns.
         /// </param>
-        public virtual void UpdtaeColumns(RestApiDashboardLayout layout, IRequest request)
+        protected virtual void UpdtaeColumns(RestApiDashboardLayout layout, IRequest request)
         {
         }
     }

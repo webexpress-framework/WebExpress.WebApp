@@ -29,7 +29,7 @@ namespace WebExpress.WebApp.Test
         /// An enumerable collection of dashboard columns relevant to the request. The 
         /// collection is empty if no columns are available.
         /// </returns>
-        public override IEnumerable<RestApiDashboardColumn> RetrieveColumns(IRequest request)
+        protected override IEnumerable<RestApiDashboardColumn> RetrieveColumns(IRequest request)
         {
             // return empty by default
             return [];
@@ -45,7 +45,7 @@ namespace WebExpress.WebApp.Test
         /// <param name="request">
         /// The request containing the details for updating the columns.
         /// </param>
-        public override void UpdtaeColumns(RestApiDashboardLayout layout, IRequest request)
+        protected override void UpdtaeColumns(RestApiDashboardLayout layout, IRequest request)
         {
         }
     }

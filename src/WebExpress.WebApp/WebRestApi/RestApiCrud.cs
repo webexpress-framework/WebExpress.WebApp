@@ -689,7 +689,7 @@ namespace WebExpress.WebApp.WebRestApi
                 {
                     var converterType = (Type)converterAttr
                         .GetType()
-                        .GetProperty(nameof(RestConverterAttribute<IRestValueConverter>.ConverterType))
+                        .GetProperty(nameof(RestConverterAttribute<>.ConverterType))
                         .GetValue(converterAttr);
 
                     var converter = (IRestValueConverter)Activator.CreateInstance(converterType);

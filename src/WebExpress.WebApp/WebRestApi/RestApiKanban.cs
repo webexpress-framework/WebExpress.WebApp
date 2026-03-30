@@ -126,7 +126,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// An enumerable collection of Kanban columns relevant to the request. The 
         /// collection is empty if no columns are available.
         /// </returns>
-        public virtual IEnumerable<RestApiKanbanColumn> RetrieveColumns(IRequest request)
+        protected virtual IEnumerable<RestApiKanbanColumn> RetrieveColumns(IRequest request)
         {
             // return empty by default
             return [];
@@ -142,7 +142,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <param name="request">
         /// The request containing the details for updating the columns.
         /// </param>
-        public virtual void UpdtaeColumns(RestApiDashboardLayout layout, IRequest request)
+        protected virtual void UpdtaeColumns(RestApiDashboardLayout layout, IRequest request)
         {
         }
 
@@ -156,7 +156,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// An enumerable collection of swimlanes relevant to the request. The 
         /// collection is empty if no swimlanes are available.
         /// </returns>
-        public virtual IEnumerable<RestApiKanbanSwimlane> RetrieveSwimlanes(IRequest request)
+        protected virtual IEnumerable<RestApiKanbanSwimlane> RetrieveSwimlanes(IRequest request)
         {
             // return empty by default
             return [];
@@ -180,7 +180,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// An enumerable collection of cards relevant to the request. The 
         /// collection is empty if no cards are available.
         /// </returns>
-        public virtual IEnumerable<RestApiKanbanCard> RetrieveCards(IQuery<TIndexItem> query, IQueryContext context, IRequest request)
+        protected virtual IEnumerable<RestApiKanbanCard> RetrieveCards(IQuery<TIndexItem> query, IQueryContext context, IRequest request)
         {
             // return empty by default
             return [];

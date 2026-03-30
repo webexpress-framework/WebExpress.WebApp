@@ -44,6 +44,7 @@
 			<PackagePath>\</PackagePath>
 			<Pack>True</Pack>
 		</None>
+		<None Include="WebControl\IControlRestTabTemplate.cs" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(Configuration)' != 'DebugLocal'">

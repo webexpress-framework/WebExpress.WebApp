@@ -31,7 +31,7 @@ namespace WebExpress.WebApp.Test
         /// An enumerable collection of Kanban columns relevant to the request. The 
         /// collection is empty if no columns are available.
         /// </returns>
-        public override IEnumerable<RestApiKanbanColumn> RetrieveColumns(IRequest request)
+        protected override IEnumerable<RestApiKanbanColumn> RetrieveColumns(IRequest request)
         {
             // return empty by default
             return [];
@@ -47,7 +47,7 @@ namespace WebExpress.WebApp.Test
         /// An enumerable collection of swimlanes relevant to the request. The 
         /// collection is empty if no swimlanes are available.
         /// </returns>
-        public override IEnumerable<RestApiKanbanSwimlane> RetrieveSwimlanes(IRequest request)
+        protected override IEnumerable<RestApiKanbanSwimlane> RetrieveSwimlanes(IRequest request)
         {
             // return empty by default
             return [];
@@ -71,7 +71,7 @@ namespace WebExpress.WebApp.Test
         /// An enumerable collection of cards relevant to the request. The 
         /// collection is empty if no cards are available.
         /// </returns>
-        public override IEnumerable<RestApiKanbanCard> RetrieveCards(IQuery<TestIndexItem> query, IQueryContext context, IRequest request)
+        protected override IEnumerable<RestApiKanbanCard> RetrieveCards(IQuery<TestIndexItem> query, IQueryContext context, IRequest request)
         {
             // return empty by default
             return [];

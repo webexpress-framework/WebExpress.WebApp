@@ -2,6 +2,9 @@
  * A REST-enabled tab control extending the standard tab controller.
  * Fetches tab data from a REST endpoint, instantiates templates, binds data dynamically,
  * and allows creating new tabs via POST requests.
+ * The following events are triggered:
+ * - webexpress.webapp.Event.TAB_ADDED_EVENT
+ * - webexpress.webapp.Event.TAB_CLOSED_EVENT
  */
 webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
 
@@ -19,7 +22,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
 
     /**
      * Constructor for the REST-enabled TabCtrl class.
-     * @param {HTMLElement} element The DOM element associated with the control.
+     * @param {HTMLElement} element - The DOM element associated with the control.
      */
     constructor(element) {
         // initialize base class structure
@@ -172,22 +175,19 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
             }
             return res.json();
         })
-        .then((newTab) => {
-            // render and select the newly created tab
+        .then((response) => {
+            // take the first item from response.items (array)
+            const newTab = response.newTab;
+            if (!newTab) {
+                throw new Error("POST response did not contain a valid items array or was empty");
+            }
             this._renderSingleTab(newTab);
             this.selectTab(newTab.id);
-            
-            // dispatch custom event to notify other components
-            const evRoot = webexpress?.webui?.Event;
-            const evName = (evRoot && evRoot.TAB_ADDED_EVENT) ? evRoot.TAB_ADDED_EVENT : "webexpress.webui.tab.added";
-            
-            this._element.dispatchEvent(new CustomEvent(evName, {
-                bubbles: true,
-                detail: {
-                    tabId: newTab.id,
-                    sourceId: this._element.id
-                }
-            }));
+
+            // dispatch event to notify other components
+            this._dispatch(webexpress.webapp.Event.TAB_ADDED_EVENT, {
+                tabId: newTab.id,
+            });
         })
         .catch((error) => {
             console.error("failed to create new tab:", error);
@@ -201,7 +201,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
 
     /**
      * Resolves a potentially relative URI to a fully qualified URL string.
-     * @param {string} uri The URI to resolve.
+     * @param {string} uri - The URI to resolve.
      * @returns {string} The fully qualified URL.
      */
     _resolveUrl(uri) {
@@ -221,57 +221,66 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
     /**
      * Fills the pane with the template content and applies generic data binding via DOM manipulation.
      * Supports intelligent default bindings and explicit "target:property" syntax.
-     * @param {HTMLElement} pane The pane element to populate.
-     * @param {Object} item The tab data item.
+     * @param {HTMLElement} pane - The pane element to populate.
+     * @param {Object} item - The tab data item.
      */
     _buildPaneContent(pane, item) {
+        // resolve the template from the registered templates
         const templateId = item.templateId || "default";
         const html = this._templates.get(templateId) || this._templates.get("default") || "";
-        
-        // set raw html first
+
+        // insert template HTML markup into the pane
         pane.innerHTML = html;
-        
-        // apply dom-based data bindings
+
+        // build a map from item.binding
+        const bindingMap = (item.binding && typeof item.binding === "object") ? item.binding : {};
+
+        // select all elements with a data-wx-bind attribute
         const boundElements = pane.querySelectorAll("[data-wx-bind]");
-        
+
         for (let i = 0; i < boundElements.length; i++) {
             const el = boundElements[i];
             const bindAttr = el.getAttribute("data-wx-bind");
-            
-            if (bindAttr !== null) {
-                const bindings = bindAttr.split(",");
-                
-                for (let j = 0; j < bindings.length; j++) {
-                    const bindDef = bindings[j].trim();
-                    let target = "text";
-                    let prop = bindDef;
 
-                    // check for explicit mapping syntax like "data-uri:uri"
-                    if (bindDef.includes(":") === true) {
-                        const parts = bindDef.split(":");
-                        target = parts[0].trim();
-                        prop = parts[1].trim();
+            if (bindAttr !== null) {
+                // support multi-property binding: data-wx-bind="title, icon"
+                const bindings = bindAttr.split(",").map(s => s.trim());
+                for (let j = 0; j < bindings.length; j++) {
+                    const prop = bindings[j];
+
+                    // get value from bindingMap first, then fallback to item property
+                    const value =
+                        (bindingMap.hasOwnProperty(prop) ? bindingMap[prop] : undefined) ??
+                        (item[prop] !== undefined ? item[prop] : "");
+
+                    // determine the binding target for this property:
+                    // 1. prefer data-wx-target-<prop> for explicit mode ("content", "text", "attribute", "html" etc.)
+                    let target = "text";
+                    const explicitTarget = el.getAttribute("data-wx-target-" + prop);
+                    if (explicitTarget) {
+                        target = explicitTarget;
                     } else {
-                        // apply intelligent defaults for well-known properties
-                        if (prop === "uri" || prop === "contentUri") {
-                            target = "data-uri";
-                        } else if (prop === "id") {
-                            target = "id";
-                        } else {
-                            // default fallback is text content for names, labels, etc.
-                            target = "text";
+                        // 2. else check for data-wx-attribute-<prop> (for custom attribute names)
+                        const attr = el.getAttribute("data-wx-attribute-" + prop);
+                        if (attr) {
+                            target = "attribute:" + attr;
                         }
                     }
 
-                    const value = item[prop] !== undefined ? item[prop] : "";
-
-                    // apply the bound value to the calculated target
-                    if (target === "text") {
+                    // apply the value to the target
+                    if (target.startsWith("attribute:")) {
+                        // write as attribute (e.g. "data-uri", "href")
+                        const attrName = target.split(":")[1];
+                        el.setAttribute(attrName, value);
+                    } else if (target === "content" || target === "text") {
+                        // set as text content
                         el.textContent = value;
                     } else if (target === "html") {
+                        // set as inner HTML (use with caution)
                         el.innerHTML = value;
                     } else {
-                        el.setAttribute(target, value);
+                        // fallback: treat as text content
+                        el.textContent = value;
                     }
                 }
             }
@@ -281,7 +290,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
     /**
      * Public API to update the entire tab view with new data from the server.
      * Clears existing tabs and rebuilds the DOM.
-     * @param {Array<Object>} tabs The array of tab definition objects.
+     * @param {Array<Object>} tabs - The array of tab definition objects.
      */
     updateData(tabs) {
         if (tabs === undefined || tabs === null) {
@@ -318,7 +327,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
 
     /**
      * Creates the DOM structures for a single tab based on the provided item data and appends it.
-     * @param {Object} item The tab data item.
+     * @param {Object} item - The tab data item.
      */
     _renderSingleTab(item) {
         // dynamically create pane element
@@ -364,7 +373,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
 
     /**
      * Overrides the base method to append a close button to each tab header.
-     * @param {Object} tab Tab model.
+     * @param {Object} tab - The Tab model.
      * @returns {HTMLElement} List item element.
      */
     _buildTabHeader(tab) {
@@ -394,11 +403,26 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
 
     /**
      * Handles the closing/removal of a specific tab from the DOM and state.
-     * @param {string} tabId The identifier of the tab to close.
+     * @param {string} tabId - The identifier of the tab to close.
      */
     _closeTab(tabId) {
+        // send DELETE request to the server before removing the tab locally
+        if (this._restUri && tabId) {
+            const fetchUrl = this._resolveUrl(this._restUri + "?id=" + encodeURIComponent(tabId));
+            fetch(fetchUrl, { method: "DELETE" })
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error("failed to DELETE tab: " + res.status);
+                    }
+                })
+                .catch(err => {
+                    // optionally show error, but still remove tab from UI to ensure responsiveness
+                    console.error("Delete request failed (still removing tab locally):", err);
+                });
+        }
+
         let closedIndex = -1;
-        
+
         // filter out the closed tab from the model
         const newTabs = [];
         for (let i = 0; i < this._tabs.length; i++) {
@@ -408,7 +432,6 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
                 newTabs.push(this._tabs[i]);
             }
         }
-        
         this._tabs = newTabs;
 
         // remove the header element from the navigation
@@ -438,22 +461,15 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         if (this._activeTabId === tabId) {
             this._activeTabId = null;
             if (this._tabs.length > 0) {
-                // fallback to the previous tab or the first available one
                 const nextIndex = Math.max(0, closedIndex - 1);
                 this.selectTab(this._tabs[nextIndex].id);
             }
         }
 
         // notify external components about tab removal
-        const evRoot = webexpress?.webui?.Event;
-        const evName = (evRoot && evRoot.TAB_CLOSED_EVENT) ? evRoot.TAB_CLOSED_EVENT : "webexpress.webui.tab.closed";
-        
-        this._element.dispatchEvent(new CustomEvent(evName, {
-            bubbles: true,
-            detail: {
-                tabId: tabId
-            }
-        }));
+        this._dispatch(webexpress.webapp.Event.TAB_CLOSED_EVENT, {
+            tabId: tabId
+        });
     }
 };
 
