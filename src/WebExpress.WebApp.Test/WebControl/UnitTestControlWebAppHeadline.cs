@@ -40,7 +40,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData(null, @"<header style=""display: block;"">*<h2 class=""me-2 mb-0""></h2>*</header>")]
         [InlineData("title", @"<header style=""display: block;"">*<h2 class=""me-2 mb-0"">title</h2>*</header>")]
         [InlineData("webexpress.webui:plugin.name", @"<header style=""display: block;"">*<h2 class=""me-2 mb-0"">WebExpress.WebUI</h2>*</header>")]
-        public void Tiltle(string title, string expected)
+        public void Title(string title, string expected)
         {
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
