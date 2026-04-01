@@ -9,7 +9,7 @@ namespace WebExpress.WebApp.WebControl
     public interface IControlRestKanban : IControl
     {
         /// <summary>
-        /// Returns or sets the uri that determines the data.
+        /// Returns the uri that determines the data.
         /// </summary>
         IUri RestUri { get; }
     }

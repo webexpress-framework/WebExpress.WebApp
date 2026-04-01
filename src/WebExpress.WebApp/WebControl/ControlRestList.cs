@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using WebExpress.WebCore.WebHtml;
+﻿using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
@@ -11,8 +10,6 @@ namespace WebExpress.WebApp.WebControl
     /// </summary>
     public class ControlRestList : ControlPanel, IControlRestList
     {
-        private readonly List<ControlRestListOptionItem> _optionItems = [];
-
         /// <summary>
         /// Returns or sets the uri that determines the data.
         /// </summary>

@@ -34,7 +34,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             // act
             var result = selection.Retrieve(request);
 
-            // vallidation
+            // validation
             Assert.NotNull(result);
             Assert.Equal(200, result.Status);
 

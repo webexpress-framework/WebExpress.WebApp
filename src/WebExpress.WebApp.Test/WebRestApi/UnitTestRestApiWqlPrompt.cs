@@ -26,7 +26,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             // act
             var result = wqlApi.Get(request);
 
-            // vallidation
+            // validation
             Assert.NotNull(result);
             Assert.Equal(200, result.Status);
         }
@@ -55,7 +55,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             // act
             var result = wqlApi.Get(request);
 
-            // vallidation
+            // validation
             Assert.NotNull(result);
             Assert.NotNull(result.Content);
             Assert.Equal(200, result.Status);

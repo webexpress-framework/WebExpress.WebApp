@@ -20,7 +20,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             // act
             var table = new TestRestApiDashboard("my title");
 
-            // vallidation
+            // validation
             Assert.Equal("my title", table.Title);
         }
 
@@ -39,7 +39,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             // act
             var result = tile.Retrieve(request);
 
-            // vallidation
+            // validation
             Assert.NotNull(result);
             Assert.Equal(200, result.Status);
 

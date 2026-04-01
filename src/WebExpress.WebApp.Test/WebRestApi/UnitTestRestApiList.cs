@@ -21,7 +21,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             // act
             var table = new TestRestApiList([], "my title");
 
-            // vallidation
+            // validation
             Assert.Equal("my title", table.Title);
         }
 
@@ -48,7 +48,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             // act
             var result = list.Retrieve(request);
 
-            // vallidation
+            // validation
             Assert.NotNull(result);
             Assert.Equal(200, result.Status);
 
