@@ -11,6 +11,6 @@ namespace WebExpress.WebApp.WebControl
         /// <summary>
         /// Returns the uri that determines the data.
         /// </summary>
-        public IUri RestUri { get; }
+        public IUri RestUri { get; set; }
     }
 }
