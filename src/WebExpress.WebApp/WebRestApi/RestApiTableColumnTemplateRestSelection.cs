@@ -1,14 +1,15 @@
 ﻿using System.Collections.Generic;
 using System.Text.Json;
+using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Represents a table column template of type "tag" for REST API table rendering, 
+    /// Represents a table column template of type "selectiom" for REST API table rendering, 
     /// providing configuration options such as color and placeholder text.
     /// </summary>
-    public class RestApiTableColumnTemplateTag : IRestApiTableColumnTemplate
+    public class RestApiTableColumnTemplateRestSelection : IRestApiTableColumnTemplate
     {
         private static readonly JsonSerializerOptions _jsonOptions = new()
         {
@@ -19,7 +20,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Returns the type identifier associated with the current instance.
         /// </summary>
-        public string Type => "tag";
+        public string Type => "rest_selection";
 
         /// <summary>
         /// Returns or sets a value indicating whether the current object can be edited.
@@ -37,6 +38,11 @@ namespace WebExpress.WebApp.WebRestApi
         public string Placeholder { get; private set; }
 
         /// <summary>
+        /// Returns or sets the URI associated with this instance.
+        /// </summary>
+        public IUri Uri { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the class with the specified editability, color,
         /// and placeholder text.
         /// </summary>
@@ -50,7 +56,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <param name="placeholder">
         /// The placeholder text to display when the column value is empty. Can be null.
         /// </param>
-        public RestApiTableColumnTemplateTag(bool editabl = false, TypeColorTag color = TypeColorTag.Default, string placeholder = null)
+        public RestApiTableColumnTemplateRestSelection(bool editabl = false, TypeColorTag color = TypeColorTag.Default, string placeholder = null)
         {
             Editable = editabl;
             Color = color;
@@ -72,7 +78,8 @@ namespace WebExpress.WebApp.WebRestApi
                 {
                     ["editable"] = Editable,
                     ["colorCss"] = Color.ToClass(),
-                    ["placeholder"] = Placeholder
+                    ["placeholder"] = Placeholder,
+                    ["uri"] = Uri?.ToString()
                 }
             };
 

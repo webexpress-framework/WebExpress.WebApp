@@ -27,6 +27,7 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/js/webexpress.webapp.restform.js")]
     [Asset("/assets/js/webexpress.webapp.restwizard.js")]
     [Asset("/assets/js/webexpress.webapp.search.js")]
+    [Asset("/assets/js/webexpress.webapp.selection.js")]
     [Asset("/assets/js/webexpress.webapp.tab.js")]
     [Asset("/assets/js/webexpress.webapp.table.js")]
     [Asset("/assets/js/webexpress.webapp.tile.js")]
@@ -40,6 +41,7 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/js/panels/webexpress.webapp.panel.workflow.transition.properties.js")]
     [Asset("/assets/js/panels/webexpress.webapp.panel.workflow.validator.js")]
     [Asset("/assets/js/syntax/wql.js")]
+    [Asset("/assets/js/templates/default.js")]
     public sealed class IncludeJavaScript : IInclude
     {
     }

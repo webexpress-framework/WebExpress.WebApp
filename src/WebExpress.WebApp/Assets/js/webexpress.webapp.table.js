@@ -270,7 +270,8 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
 
         // abort previous request if present
         if (this._abortController) {
-            this._abortController.abort("search replaced");
+            // call abort without reason to trigger a standard AbortError
+            this._abortController.abort();
         }
         this._abortController = new AbortController();
 
@@ -291,7 +292,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
         } else {
             urlObj.searchParams.set("q", "");
         }
-        
+
         if (this._wql) {
             urlObj.searchParams.set("wql", this._wql);
         } else {
@@ -303,7 +304,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
         } else {
             urlObj.searchParams.set("f", "");
         }
-        
+
         urlObj.searchParams.set("p", this._page);
         urlObj.searchParams.set("l", this._pageSize);
 
@@ -363,8 +364,8 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
 
                 // notify listeners that data arrived
                 this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
-                    id: this._element.id, 
-                    response: responseForUpdate, 
+                    id: this._element.id,
+                    response: responseForUpdate,
                     page: this._page
                 });
 
@@ -377,10 +378,12 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
                 this._abortController = null;
             })
             .catch((error) => {
-                // ignore aborts as they are expected
-                if (error.name === "AbortError") {
+                // handle aborts silently
+                const isAbort = (error && typeof error === "object" && error.name === "AbortError");
+                if (isAbort) {
                     return;
                 }
+
                 console.error("TableCtrl Request failed:", error);
 
                 this._toggleProgress(false);
