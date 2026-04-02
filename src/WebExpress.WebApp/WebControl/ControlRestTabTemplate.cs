@@ -9,7 +9,7 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// Represents a template for a REST tab control that can be rendered as HTML.
     /// </summary>
-    public class ControlRestTabTemplate : IControlRestTabTempate
+    public class ControlRestTabTemplate : IControlRestTabTemplate
     {
         private readonly List<IControl> _content = [];
 
@@ -37,7 +37,7 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="items">The items to add.</param>
         /// <returns>The current instance for method chaining.</returns>
-        public IControlRestTabTempate Add(params IControl[] items)
+        public IControlRestTabTemplate Add(params IControl[] items)
         {
             _content.AddRange(items);
 
@@ -49,7 +49,7 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="items">The items to add.</param>
         /// <returns>The current instance for method chaining.</returns>
-        public IControlRestTabTempate Add(IEnumerable<IControl> items)
+        public IControlRestTabTemplate Add(IEnumerable<IControl> items)
         {
             _content.AddRange(items);
 
@@ -61,7 +61,7 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="item">The control to remove.</param>
         /// <returns>The current instance for method chaining.</returns>
-        public IControlRestTabTempate Remove(IControl item)
+        public IControlRestTabTemplate Remove(IControl item)
         {
             _content.Remove(item);
 

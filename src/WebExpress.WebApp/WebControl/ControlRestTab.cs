@@ -12,7 +12,7 @@ namespace WebExpress.WebApp.WebControl
     /// </summary>
     public class ControlRestTab : ControlPanel, IControlRestTab
     {
-        private readonly List<IControlRestTabTempate> _templates = [];
+        private readonly List<IControlRestTabTemplate> _templates = [];
 
         /// <summary>
         /// Returns or sets the uri that determines the data.
@@ -27,7 +27,7 @@ namespace WebExpress.WebApp.WebControl
         /// <summary>
         /// Returns the collection of templates associated with the tab.
         /// </summary>
-        public IEnumerable<IControlRestTabTempate> Tempates => _templates;
+        public IEnumerable<IControlRestTabTemplate> Templates => _templates;
 
         /// <summary>
         /// Initializes a new instance of the class.
@@ -43,7 +43,7 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="templates">The templates to add.</param>
         /// <returns>The current instance for method chaining.</returns>
-        public virtual IControlRestTab Add(params IControlRestTabTempate[] templates)
+        public virtual IControlRestTab Add(params IControlRestTabTemplate[] templates)
         {
             _templates.AddRange(templates);
 
@@ -55,7 +55,7 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="templates">The templates to add.</param>
         /// <returns>The current instance for method chaining.</returns>
-        public virtual IControlRestTab Add(IEnumerable<IControlRestTabTempate> templates)
+        public virtual IControlRestTab Add(IEnumerable<IControlRestTabTemplate> templates)
         {
             _templates.AddRange(templates);
 
@@ -67,7 +67,7 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="template">The template to remove.</param>
         /// <returns>The current instance for method chaining.</returns>
-        public virtual IControlRestTab Remove(IControlRestTabTempate template)
+        public virtual IControlRestTab Remove(IControlRestTabTemplate template)
         {
             _templates.Remove(template);
 

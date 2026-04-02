@@ -1,4 +1,4 @@
-﻿﻿/**
+/**
  * English translations for WebExpress
  */
 webexpress.webui.I18N.register("en", "webexpress.webapp", {

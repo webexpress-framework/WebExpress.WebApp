@@ -26,20 +26,14 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            var applicationContext = renderContext?.PageContext?.ApplicationContext;
+            var html = new HtmlElementTextContentDiv()
+            {
+                Id = Id,
+                Class = Css.Concatenate("wx-webapp-popupnotification", GetClasses()),
+                Style = GetStyles()
+            };
 
-            //var html = new HtmlElementTextContentDiv()
-            //{
-            //    Id = Id,
-            //    Class = Css.Concatenate("wx-webapp-popupnotification", GetClasses()),
-            //    Style = GetStyles()
-            //}
-            //    .AddUserAttribute("data-uri", WebEx.ComponentHub.SitemapManager.GetUri<PopupNotification>(applicationContext).ToString())
-            //    .AddUserAttribute("data-intervall", "15000");
-
-            //return html;
-
-            return null;
+            return html;
         }
     }
 }

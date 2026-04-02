@@ -21,6 +21,7 @@ webexpress.webapp.MessageQueueStatusCtrl = class extends webexpress.webui.Ctrl {
         this._queue = webexpress.webapp.MessageQueue;
         this._element = element;
         this._lastStatus = null;
+        this._lastError = null;
 
         // add base CSS classes for indicator
         this._element.classList.add("wx-message-queue-status");
@@ -28,11 +29,14 @@ webexpress.webapp.MessageQueueStatusCtrl = class extends webexpress.webui.Ctrl {
         // initial render
         this.update();
 
-        // listen for status events from MessageQueue and update immediately
-        document.addEventListener(webexpress.webapp.Event.CHANGE_STATUS_EVENT, (e) => {
+        // store handler reference so it can be removed in disconnect()
+        this._statusHandler = (e) => {
             const { status, lastError } = e.detail;
             this.update(status, lastError);
-        });
+        };
+
+        // listen for status events from MessageQueue and update immediately
+        document.addEventListener(webexpress.webapp.Event.CHANGE_STATUS_EVENT, this._statusHandler);
     }
 
     /**
@@ -45,10 +49,11 @@ webexpress.webapp.MessageQueueStatusCtrl = class extends webexpress.webui.Ctrl {
         // get status and lastError from arguments or fall back to queue
         status = status || this._queue.status;
         lastError = lastError !== undefined ? lastError : this._queue.lastError;
-        if (status === this._lastStatus && !lastError) {
+        if (status === this._lastStatus && lastError === this._lastError) {
             return;
         }
         this._lastStatus = status;
+        this._lastError = lastError;
 
         // clear DOM
         this._element.innerHTML = "";
@@ -97,7 +102,7 @@ webexpress.webapp.MessageQueueStatusCtrl = class extends webexpress.webui.Ctrl {
      * Cleanup when removing the control.
      */
     disconnect() {
-        // nothing to clean up since no periodic timer is used anymore
+        document.removeEventListener(webexpress.webapp.Event.CHANGE_STATUS_EVENT, this._statusHandler);
     }
 };
 
