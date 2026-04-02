@@ -315,17 +315,21 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
     _initPager(host) {
         // find existing pager element
         const paginationId = host.dataset.wxSourcePaging || null;
-        
-        document.addEventListener("DOMContentLoaded", () => {
+        const init = () => {
             this._pagerElement = document.querySelector(paginationId);
-            
+
             if (this._pagerElement) {
                 this._pagerCtrl = webexpress.webui.Controller.getInstanceByElement(this._pagerElement);
             }
 
-            // initialize info/pager display
             this._syncPagerAndInfo();
-        });
+        }
+
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", () => init());
+        } else {
+            init();
+        }
         
         // create info div to show totals and current page details
         this._infoDiv = document.createElement("div");
