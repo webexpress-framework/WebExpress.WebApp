@@ -10,39 +10,39 @@ namespace WebExpress.WebApp.WebControl
     public interface IControlRestTab : IControl
     {
         /// <summary>
-        /// Returns or sets the uri that determines the data.
+        /// Returns the uri that determines the data.
         /// </summary>
         IUri RestUri { get; }
 
         /// <summary>
-        /// Returns or sets the binding.
+        /// Returns the binding.
         /// </summary>
         IBinding Bind { get; }
 
         /// <summary>
         /// Returns the collection of templates associated with the tab.
         /// </summary>
-        IEnumerable<IControlRestTabTempate> Tempates { get; }
+        IEnumerable<IControlRestTabTemplate> Templates { get; }
 
         /// <summary>
         /// Adds one or more templates to the tab control.
         /// </summary>
         /// <param name="templates">The templates to add.</param>
         /// <returns>The current instance for method chaining.</returns>
-        IControlRestTab Add(params IControlRestTabTempate[] templates);
+        IControlRestTab Add(params IControlRestTabTemplate[] templates);
 
         /// <summary>
         /// Adds one or more templates to the tab control.
         /// </summary>
         /// <param name="templates">The templates to add.</param>
         /// <returns>The current instance for method chaining.</returns>
-        IControlRestTab Add(IEnumerable<IControlRestTabTempate> templates);
+        IControlRestTab Add(IEnumerable<IControlRestTabTemplate> templates);
 
         /// <summary>
         /// Removes the specified template from the tab control.
         /// </summary>
         /// <param name="templates">The template to remove.</param>
         /// <returns>The current instance for method chaining.</returns>
-        IControlRestTab Remove(IControlRestTabTempate templates);
+        IControlRestTab Remove(IControlRestTabTemplate templates);
     }
 }

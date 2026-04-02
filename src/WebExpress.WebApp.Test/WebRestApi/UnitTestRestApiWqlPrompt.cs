@@ -50,7 +50,6 @@ namespace WebExpress.WebApp.Test.WebRestApi
             string encoded = Uri.EscapeDataString(wql);
             var wqlApi = new TestRestApiWqlPrompt<TestIndexItem>();
             var request = UnitTestControlFixture.CreateRequestMock(uri: $"/api/analyze?wql={encoded}&c={cursor}");
-            var items = new List<TestIndexItem>();
 
             // act
             var result = wqlApi.Get(request);

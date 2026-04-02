@@ -35,8 +35,8 @@ namespace WebExpress.WebApp.WebAttribute
         /// </param>
         public ValidateDateRangeAttribute(string min, string max, string message = null)
         {
-            Min = DateTime.Parse(min);
-            Max = DateTime.Parse(max);
+            Min = DateTime.Parse(min, CultureInfo.InvariantCulture);
+            Max = DateTime.Parse(max, CultureInfo.InvariantCulture);
             Message = message ?? "webexpress.webapp:validation.daterange";
         }
 
