@@ -1,296 +1,659 @@
-/**
- * A rest table control extending the base Control class with column reordering functionality and visual indicators.
- * The following events are triggered:
- * - webexpress.webui.Event.TABLE_SORT_EVENT
- * - webexpress.webui.Event.COLUMN_REORDER_EVENT
+﻿/**
+ * A REST-enabled table control that extends the reorderable table class and
+ * integrates with a REST API. Supports standard pagination.
+ *
+ * Emits events:
+ * - webexpress.webui.Event.DATA_ARRIVED_EVENT
  */
-webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrl {
-    // Helper to create DOM elements with class list
-    _createElement(tag, classList = []) {
-        const el = document.createElement(tag);
-        classList.forEach(cls => el.classList.add(cls));
-        return el;
-    }
-
-    // Helper to create the progress bar
-    _createProgressDiv() {
-        const div = this._createElement("div", ["progress"]);
-        div.setAttribute("role", "status");
-        div.style.height = "0.5em";
-        const bar = this._createElement("div", [
-            "progress-bar",
-            "progress-bar-striped",
-            "progress-bar-animated",
-        ]);
-        bar.style.width = "100%";
-        div.appendChild(bar);
-        return div;
-    }
-
-    // Fields
+webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderable {
+    // configuration
     _restUri = "";
-    _titleDiv = this._createElement("h3", ["me-auto"]);
-    _progressDiv = this._createProgressDiv();
-    _filterDiv = this._createElement("div", ["col-3"]);
-    _filterCtrl = null;
-    _statusDiv = this._createElement("span");
-    _paginationDiv = this._createElement("div", ["justify-content-end"]);
-    _paginationCtrl = null;
-    _filter = null;
-    _page = 0;
-    _hasOptions = false;
-    _columns = [];
-    _rows = [];
-    _options = [];
 
-    // Placeholder columns and rows for loading state
+    // state
+    _orderBy = null;
+    _orderDir = null;
+    _search = "";
+    _wql = "";
+    _filter = "";
+    _page = 0;
+    _pageSize = 50;
+    _totalRecords = 0;
+    _isLoading = false;
+    _rows = {};
+
+    // ui helpers
+    _progressDiv = null;
+    _abortController = null;
+
+    // pager & info
+    _pagerElement = null;
+    _pagerCtrl = null;
+    _infoDiv = null;
+
+    // placeholder data shown while initial load is in progress
     _previewColumns = [
-        { content: "<span class='placeholder col-6 placeholder-lg'></span>" },
-        { content: "<span class='placeholder col-6 placeholder-lg'></span>" },
-        { content: "<span class='placeholder col-6 placeholder-lg'></span>" }
+        { label: "", width: null, visible: true },
+        { label: "", width: null, visible: true },
+        { label: "", width: null, visible: true }
     ];
     _previewBody = [
-        { cells: [{ content: "<span class='placeholder col-7'></span>" }, { content: "<span class='placeholder col-5'></span>" }, { content: "<span class='placeholder col-6'></span>" }] },
-        { cells: [{ content: "<span class='placeholder col-6'></span>" }, { content: "<span class='placeholder col-7'></span>" }, { content: "<span class='placeholder col-5'></span>" }] },
-        { cells: [{ content: "<span class='placeholder col-6'></span>" }, { content: "<span class='placeholder col-6'></span>" }, { content: "<span class='placeholder col-7'></span>" }] }
+        this._createPreviewRow(["col-4", "col-8", "col-6"]),
+        this._createPreviewRow(["col-7", "col-5", "col-9"]),
+        this._createPreviewRow(["col-3", "col-10", "col-4"])
     ];
 
     /**
-     * Constructor for the TableCtrl class.
-     * @param {HTMLElement} element - The DOM element associated with the control.
+     * Construct a new TableCtrl instance.
+     * Reads configuration from the element's data attributes:
+     * - data-uri: REST endpoint
+     * - data-page-size: number of rows per page
+     * @param {HTMLElement} element - The host DOM element for this controller.
      */
     constructor(element) {
         super(element);
 
-        // Get REST URI from data attribute or fallback to empty string
         this._restUri = element.dataset.uri || "";
-
-        // Remove REST URI attribute from DOM for security/cleanliness
         element.removeAttribute("data-uri");
 
-        // Build the toolbar (title and filter)
-        const toolbar = this._createElement("div", ["wx-table-toolbar"]);
-        toolbar.appendChild(this._titleDiv);
-        toolbar.appendChild(this._filterDiv);
+        if (element.dataset.pageSize) {
+            this._pageSize = parseInt(element.dataset.pageSize, 10);
+            if (isNaN(this._pageSize) || this._pageSize <= 0) {
+                this._pageSize = 50;
+            }
+        }
 
-        // Insert toolbar and progress bar at the top of the element
-        element.prepend(toolbar, this._progressDiv);
+        this._initProgressBar(element);
 
-        // Build the status bar (status and pagination)
-        const statusbar = this._createElement("div", ["wx-table-statusbar"]);
-        statusbar.appendChild(this._statusDiv);
-        statusbar.appendChild(this._paginationDiv);
+        if (typeof this._initPersistenceListeners === "function") {
+            this._initPersistenceListeners(element);
+        }
 
-        // Append status bar at the bottom of the element
-        element.appendChild(statusbar);
-
-        // Show placeholder columns and rows while loading
         this._columns = this._previewColumns;
         this._rows = this._previewBody;
         this._table.classList.add("placeholder-glow");
+
         this.render();
 
-        // Initialize filter control
-        this._filterCtrl = new webexpress.webui.SearchCtrl(this._filterDiv);
+        this._initEvents();
 
-        // Listen for filter changes
-        document.addEventListener(webexpress.webui.Event.CHANGE_FILTER_EVENT, (event) => {
-            const data = event.detail || {};
-            if (data.sender && data.sender === this._filterDiv) {
-                this._filter = data.value;
-                this._receiveData();
-            }
-        });
+        // initialize pager and info area
+        this._initPager(element);
 
-        // Initialize pagination control
-        this._paginationCtrl = new webexpress.webui.PaginationCtrl(this._paginationDiv);
-
-        // Listen for pagination changes
-        document.addEventListener(webexpress.webui.Event.CHANGE_PAGE_EVENT, (event) => {
-            const data = event.detail || {};
-            if (data.sender && data.sender === this._paginationDiv) {
-                this._page = data.page;
-                this._receiveData();
-                // Scroll to top of the table
-                window.scrollTo(0, element.offsetTop);
-            }
-        });
-
-        // Initial data load
-        this._receiveData();
+        if (this._restUri) {
+            this._receiveData();
+        } else {
+            this._toggleProgress(false);
+        }
     }
 
     /**
-     * Retrieve data from REST API and update the table.
+     * Initialize DOM and document-level event listeners required by the control.
+     * Listens for:
+     * - TABLE_SORT_EVENT to apply server-side sorting (or emit local request)
      */
-    _receiveData() {
-        this._progressDiv.style.visibility = "visible";
+    _initEvents() {
+        // use fallback string in case the constant is undefined
+        const sortEventName = webexpress.webui.Event.TABLE_SORT_EVENT;
 
-        const filter = encodeURIComponent(this._filter ?? "");
-        const url = `${this._restUri}?filter=${filter}&page=${this._page}`;
+        // bind to document to catch events that might not bubble to this._element
+        document.addEventListener(sortEventName, (e) => {
+            // check if the event target is inside this table or matches the id
+            let targetMatches = false;
+            if (this._element.contains(e.target)) {
+                targetMatches = true;
+            }
+            
+            const detail = e.detail || {};
+            if (detail.id) {
+                if (detail.id === this._element.id) {
+                    targetMatches = true;
+                }
+            }
 
-        fetch(url)
-            .then(res => {
-                if (!res.ok) throw new Error("Request failed");
-                return res.json();
-            })
-            .then(response => {
-                // Extract paging and data info with fallback defaults
-                const page = response.pagination.page ?? 0;
-                const pageSize = response.pagination.pageSize ?? 50;
-                const total = response.pagination.total ?? 0;
-                const totalPages = Math.ceil(total / pageSize);
-                const startIndex = page * pageSize + 1;
-                const endIndex = Math.min(startIndex + pageSize - 1, total);
+            if (targetMatches) {
+                if (detail.columnId) {
+                    this._orderBy = detail.columnId;
+                    this._orderDir = detail.sortDirection;
+                    this._page = 0;
 
-                this._columns = response.columns;
-                this._titleDiv.textContent = response.title;
-                this._statusDiv.textContent = `${startIndex} - ${endIndex} / ${total}`;
-
-                // Fire event for data arrival
-                const evt = new CustomEvent(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
-                    detail: {
-                        id: this._element.id,
-                        response: response
-                    }
-                });
-                this._element.dispatchEvent(evt);
-
-                // Update pagination control
-                this._paginationCtrl.total = totalPages;
-                this._paginationCtrl.page = page;
-
-                this._table.classList.remove("placeholder-glow");
-
-                // Bind edit/delete actions to each row, if applicable
-                this._rows = response.rows.map(row => {
-                    if (Array.isArray(row.options)) {
-                        this._hasOptions = true;
-                        row.options.forEach(option => {
-                            if (option.command === "edit") {
-                                option.action = () => this._editRow(row.id, this._columns, row.cells, option.uri);
-                            } else if (option.command === "delete") {
-                                option.action = () => this._deleteRow(row.id);
-                                option.uri = "javascript:void(0);";
-                            }
+                    if (this._restUri) {
+                        this._receiveData();
+                    } else {
+                        this._dispatch(webexpress.webui.Event.TABLE_SORT_EVENT, {
+                            orderBy: this._orderBy, orderDir: this._orderDir
                         });
                     }
-                    return row;
-                });
+                }
+            }
+        });
+    }
 
-                if (this._options?.length > 0) {
-                    this._hasOptions = true;
+    /**
+     * Initialize or bind a pagination control and an information area.
+     * If an element with class "wx-webui-pagination" exists inside the host,
+     * it is used. Otherwise a pager element is created and an instance of
+     * PaginationCtrl is constructed. An info line showing totals is appended.
+     * @param {HTMLElement} host - The host element to search or attach the pager to.
+     */
+    _initPager(host) {
+        // find existing pager element
+        const paginationId = host.dataset.wxSourcePaging || null;
+        const init = () => {
+            this._pagerElement = document.querySelector(paginationId);
+
+            if (this._pagerElement) {
+                this._pagerCtrl = webexpress.webui.Controller.getInstanceByElement(this._pagerElement);
+            }
+
+            this._syncPagerAndInfo();
+        }
+
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", () => init());
+        } else {
+            init();
+        }
+        
+        // create info div to show totals and current page details
+        this._infoDiv = document.createElement("div");
+        this._infoDiv.className = "text-muted small";
+        this._infoDiv.style.marginTop = "0.25rem";
+        this._infoDiv.textContent = "";
+        
+        host.appendChild(this._infoDiv);
+    }
+
+    /**
+     * Update pager control and info area after data changed.
+     * This updates pager state silently (without firing CHANGE_PAGE_EVENT)
+     * and refreshes the textual information about totals and current page.
+     */
+    _syncPagerAndInfo() {
+        const total = Number(this._totalRecords) || 0;
+        let totalPages = 1;
+        if (this._pageSize > 0) {
+            totalPages = Math.max(1, Math.ceil(total / this._pageSize));
+        }
+
+        // clamp current page to available range
+        if (this._page < 0) {
+            this._page = 0;
+        }
+        if (this._page >= totalPages) {
+            this._page = totalPages - 1;
+        }
+
+        const currentPage = this._page;
+
+        // non-infinite: rows correspond to the current page
+        let itemsOnPage = 0;
+        if (Array.isArray(this._rows)) {
+            itemsOnPage = this._rows.length;
+        }
+
+        // update pager host dataset
+        if (this._pagerElement) {
+            this._pagerElement.dataset.page = String(currentPage);
+            this._pagerElement.dataset.total = String(totalPages);
+        }
+
+        // update pager control silently if available
+        if (this._pagerCtrl) {
+            if (typeof this._pagerCtrl.updateState === "function") {
+                // updatestate will not dispatch change_page_event
+                this._pagerCtrl.updateState(currentPage, totalPages);
+            } else {
+                // fall back: set properties directly
+                try {
+                    this._pagerCtrl.total = totalPages;
+                    this._pagerCtrl.page = currentPage;
+                } catch (e) {
+                    // ignore errors when setting fallback properties
+                }
+            }
+        }
+
+        // update textual info
+        if (this._infoDiv) {
+            this._infoDiv.textContent = "Page " + (currentPage + 1) + " of " + totalPages + " / " + itemsOnPage + " of " + total + " items";
+        }
+    }
+
+    /**
+     * Create and insert the progress bar element used to indicate loading state.
+     * @param {HTMLElement} element - host element to which the progress bar will be added.
+     */
+    _initProgressBar(element) {
+        this._progressDiv = document.createElement("div");
+        this._progressDiv.className = "progress mb-2";
+        this._progressDiv.setAttribute("role", "status");
+        this._progressDiv.style.height = "0.25rem";
+        const bar = document.createElement("div");
+        bar.className = "progress-bar progress-bar-striped progress-bar-animated";
+        bar.style.width = "100%";
+        this._progressDiv.appendChild(bar);
+        if (this._table) {
+            if (this._table.parentNode === element) {
+                element.insertBefore(this._progressDiv, this._table);
+            } else {
+                element.prepend(this._progressDiv);
+            }
+        } else {
+            element.prepend(this._progressDiv);
+        }
+    }
+
+    /**
+     * Toggle the visibility of the progress indicator and update loading state.
+     * @param {boolean} show - true to show the progress indicator, false to hide.
+     */
+    _toggleProgress(show) {
+        if (this._progressDiv) {
+            this._progressDiv.style.visibility = show ? "visible" : "hidden";
+        }
+        this._isLoading = show;
+        if (show) {
+            if (this._rows.length === 0) {
+                this._table.classList.add("placeholder-glow");
+            } else {
+                this._table.classList.remove("placeholder-glow");
+            }
+        } else {
+            this._table.classList.remove("placeholder-glow");
+        }
+    }
+
+    /**
+     * Request data from the configured REST endpoint.
+     */
+    _receiveData() {
+        // abort if no uri
+        if (!this._restUri) {
+            return;
+        }
+
+        // abort previous request if present
+        if (this._abortController) {
+            // call abort without reason to trigger a standard AbortError
+            this._abortController.abort();
+        }
+        this._abortController = new AbortController();
+
+        this._toggleProgress(true);
+
+        // build request url with fallback for relative uris
+        const base = window.location.origin;
+        let urlObj;
+        try {
+            urlObj = new URL(this._restUri, base);
+        } catch (e) {
+            urlObj = new URL(this._restUri, document.baseURI);
+        }
+
+        // set query parameters
+        if (this._search) {
+            urlObj.searchParams.set("q", this._search);
+        } else {
+            urlObj.searchParams.set("q", "");
+        }
+
+        if (this._wql) {
+            urlObj.searchParams.set("wql", this._wql);
+        } else {
+            urlObj.searchParams.set("wql", "");
+        }
+
+        if (this._filter) {
+            urlObj.searchParams.set("f", this._filter);
+        } else {
+            urlObj.searchParams.set("f", "");
+        }
+
+        urlObj.searchParams.set("p", this._page);
+        urlObj.searchParams.set("l", this._pageSize);
+
+        if (this._orderBy) {
+            urlObj.searchParams.set("o", this._orderBy);
+            if (this._orderDir) {
+                urlObj.searchParams.set("d", this._orderDir);
+            }
+        }
+
+        const fetchUrl = this._restUri.startsWith("http") ? urlObj.href : (urlObj.pathname + urlObj.search);
+
+        fetch(fetchUrl, { signal: this._abortController.signal })
+            .then((res) => {
+                if (!res.ok) {
+                    throw new Error("Request failed: " + res.status);
+                }
+                return res.json();
+            })
+            .then((response) => {
+                // try multiple possible fields for total
+                const totalFromResponse = response.total ?? null;
+
+                // determine number of rows actually returned
+                let receivedRows = 0;
+                if (Array.isArray(response.rows)) {
+                    receivedRows = response.rows.length;
                 }
 
-                this.render();
-                this._progressDiv.style.visibility = "hidden";
+                // set or infer totalrecords
+                if (totalFromResponse !== null) {
+                    this._totalRecords = Number(totalFromResponse) || 0;
+                } else {
+                    this._totalRecords = (this._page * this._pageSize) + receivedRows;
+                }
+
+                // compute total pages and clamp current page
+                const totalPages = Math.max(1, Math.ceil(this._totalRecords / this._pageSize));
+                if (this._page >= totalPages) {
+                    this._page = totalPages - 1;
+                }
+
+                // normalize rows and apply client-side cap
+                let newRows = response.rows || [];
+                if (Array.isArray(newRows)) {
+                    if (newRows.length > this._pageSize) {
+                        // slice to configured page size
+                        newRows = newRows.slice(0, this._pageSize);
+                    }
+                }
+
+                // ensure the response passed to updatedata reflects any slicing
+                const responseForUpdate = Object.assign({}, response, { rows: newRows });
+
+                // integrate received data into table structures
+                this.updateData(responseForUpdate);
+
+                // notify listeners that data arrived
+                this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
+                    id: this._element.id,
+                    response: responseForUpdate,
+                    page: this._page
+                });
+
+                // sync pager and info in a microtask
+                setTimeout(() => {
+                    this._syncPagerAndInfo();
+                }, 0);
+
+                this._toggleProgress(false);
+                this._abortController = null;
             })
-            .catch(error => {
-                // Log any errors in retrieving data
-                console.error("The request could not be completed successfully:", error);
+            .catch((error) => {
+                // handle aborts silently
+                const isAbort = (error && typeof error === "object" && error.name === "AbortError");
+                if (isAbort) {
+                    return;
+                }
+
+                console.error("TableCtrl Request failed:", error);
+
+                this._toggleProgress(false);
+                this._abortController = null;
+                this._isLoading = false;
             });
     }
 
     /**
-     * Edit a row and send a PUT request to the REST API.
-     * @param {number} rowId - The ID of the row to be edited.
-     * @param {Array} columns - The column of the table.
-     * @param {Array} cells - The cells of the row to be edited.
-     * @param {string} uri - The uri for the form to be used for editing.
+     * Normalize and integrate server response into internal table data structures.
+     * @param {Object} response - parsed JSON response from the REST endpoint.
      */
-    _editRow(rowId, columns, cells, uri) {
-        const editModal = new webexpress.webapp.ModalFormCtrl();
-        editModal._uri = uri;
-        editModal._selector = uri?.includes("#") ? "#" + uri.split("#")[1] : "form";
-        editModal._titleH1.textContent = webexpress.webui.I18N.translate("webexpress.webapp:form.edit_row");
-        editModal._dialogDiv.className = "modal-dialog modal-dialog-scrollable modal-xl";
-        
-        // Bind form submission logic
-        editModal._form.addEventListener("submit", async (event) => {
-            event.preventDefault();
+    updateData(response) {
+        if (!response) {
+            return;
+        }
 
-            const formData = new FormData(editModal._form);
-
-            try {
-                const response = await fetch(`${this._restUri}?id=${rowId}`, {
-                    method: "PUT",
-                    body: formData
-                });
-
-                if (response.ok) {
-                    this._receiveData();
-                    editModal.hide();
-                    return;
-                }
-
-                if (response.status === 400) {
-                    const errors = await response.json();
-                    editModal.showValidationErrors(errors);
-                    return;
-                }
-
-                throw new Error(`HTTP ${response.status}`);
-            } catch (error) {
-                console.error(`Failed to edit row with ID ${rowId}.`, error);
-            }
-        });
-
-        // Fill the form fields with the row's values after the form is rendered
-        editModal._element.addEventListener(webexpress.webui.Event.UPDATED_EVENT, (event) => {
-            const form = event.detail.form;
-            if (form === editModal._form) {
-                columns.forEach((column, index) => {
-                    const value = cells[index]?.text || "";
-                    // try standard form field
-                    let field = editModal._form.elements.namedItem(column.name);
-                    if (field) {
-                        field.value = value;
-                    } else {
-                        const editorContainer = form.querySelector(`[name="${column.name}"]`);
-                        if (editorContainer) {
-                            // check which editor type is present
-                            let editorType = "default";
-                            if (editorContainer.classList.contains("wx-webui-editor")) {
-                                editorType = "wx-webui-editor";
-                            } 
-
-                            // handle various editors
-                            switch (editorType) {
-                                case "wx-webui-editor":
-                                    editorContainer.innerHTML = value;
-                                    break;
-                                default:
-                                    // fallback: set innerHTML directly
-                                    editorContainer.innerHTML = value;
-                            }
+        if (!this._columns || this._columns === this._previewColumns) {
+            this._columns = (response.columns || []).map((c, idx) => {
+                let rType = c.rendererType || null;
+                let rOpts = c.rendererOptions || {};
+                if (c.template) {
+                    if (typeof c.template === "object") {
+                        rType = c.template.type;
+                        rOpts = c.template.options || {};
+                        if (c.template.editable) {
+                            rOpts.editable = c.template.editable;
                         }
                     }
-                });
-            }
-        });
+                }
+                
+                let isVisible = true;
+                if (typeof c.visible === "boolean") {
+                    isVisible = c.visible;
+                }
+                
+                let isResizable = true;
+                if (typeof c.resizable === "boolean") {
+                    isResizable = c.resizable;
+                }
 
-        editModal.show();
+                return {
+                    id: c.id || `col_${idx}`,
+                    label: c.label || c.id,
+                    name: c.name || null,
+                    visible: isVisible,
+                    sort: null,
+                    width: c.width || null,
+                    minWidth: c.minWidth || null,
+                    resizable: isResizable,
+                    icon: c.icon || null,
+                    image: c.image || null,
+                    color: c.color || null,
+                    rendererType: rType,
+                    rendererOptions: rOpts
+                };
+            });
+            if (this._orderBy) {
+                const targetCol = this._columns.find((c) => c.id === this._orderBy);
+                if (targetCol) {
+                    targetCol.sort = this._orderDir || "asc";
+                }
+            }
+        }
+
+        /**
+         * Convert a raw server row object into the internal row representation.
+         * @param {Object} r - raw row object from the response
+         * @param {Object|null} parent - parent row, or null for root rows
+         * @returns {Object} normalized row
+         */
+        const normalizeRow = (r, parent = null) => {
+            let isExpanded = true;
+            if (typeof r.expanded === "boolean") {
+                isExpanded = r.expanded;
+            }
+            
+            const row = {
+                id: r.id || null,
+                class: r.class || null,
+                style: r.style || null,
+                color: r.color || null,
+                image: r.image || null,
+                icon: r.icon || null,
+                uri: r.uri || r.url || null,
+                target: r.target || null,
+                primaryAction: r.primaryAction || null,
+                secondaryAction: r.secondaryAction || null,
+                bind: r.bind || null,
+                cells: r.cells || [],
+                options: r.options || null,
+                children: [],
+                parent: parent,
+                expanded: isExpanded
+            };
+            if (r.children) {
+                if (Array.isArray(r.children)) {
+                    row.children = r.children.map((child) => normalizeRow(child, row));
+                }
+            }
+            return row;
+        };
+
+        // normalize incoming rows
+        let newRows = (response.rows || []).map((r) => normalizeRow(r, null));
+
+        if (newRows.length > this._pageSize) {
+            // slice to first pagesize entries
+            newRows = newRows.slice(0, this._pageSize);
+        }
+
+        this._rows = newRows;
+
+        let optionsExist = false;
+        if (this._options) {
+            if (this._options.length > 0) {
+                optionsExist = true;
+            }
+        }
+        
+        if (!optionsExist) {
+            if (this._rows.some((r) => r.options && r.options.length > 0)) {
+                optionsExist = true;
+            }
+        }
+        
+        this._hasOptions = optionsExist;
+
+        this.render();
+        
+        // sync pager and info after full render
+        this._syncPagerAndInfo();
     }
 
     /**
-     * Delete a row and send a DELETE request to the REST API.
-     * @param {number} rowId - The ID of the row to be deleted.
+     * Initialize listeners that persist column/row order changes.
+     * @param {HTMLElement} element - the host element to attach listeners to.
      */
-    _deleteRow(rowId) {
-        const confirmModal = new webexpress.webui.ModalConfirmDelete();
-
-        confirmModal.confirmation(() => {
-            fetch(`${this._restUri}?id=${rowId}`, { method: "DELETE" })
-                .then(response => {
-                    if (!response.ok) throw new Error("Failed to delete row");
-                    this._receiveData();
-                })
-                .catch(error => console.error(`Failed to delete row with ID ${rowId}.`, error));
-        });
-
-        confirmModal.show();
+    _initPersistenceListeners(element) {
+        const notifyStateChange = (type) => {
+            const colOrder = this._columns.filter((c) => c.visible).map((c) => c.id).join(",");
+            const rowOrder = this._rows.map((r) => r.id).join(",");
+            this._dispatch(webexpress.webui.Event.UPDATED_EVENT, {
+                type: type,
+                columnOrder: colOrder,
+                rowOrder: rowOrder
+            });
+            if (this._restUri) {
+                if (type === "row-reorder") {
+                    this._sendStateToServer({ r: rowOrder });
+                } else {
+                    this._sendStateToServer({ c: colOrder });
+                }
+            }
+        };
+        element.addEventListener(webexpress.webui.Event.COLUMN_REORDER_EVENT, () => notifyStateChange("column-reorder"));
+        element.addEventListener(webexpress.webui.Event.COLUMN_VISIBILITY_EVENT, () => notifyStateChange("column-visibility"));
+        element.addEventListener(webexpress.webui.Event.ROW_REORDER_EVENT, () => notifyStateChange("row-reorder"));
     }
-}
 
-// Register the class in the controller
+    /**
+     * Send a small state payload to the configured REST endpoint using PUT.
+     * @param {Object} stateObj - JSON-serializable object representing the state.
+     */
+    _sendStateToServer(stateObj) {
+        if (!this._restUri) {
+            return;
+        }
+        fetch(this._restUri, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(stateObj)
+        }).catch((err) => console.error("Update state failed", err));
+    }
+
+    /**
+     * Updates the control.
+     */
+    update() {
+        if (this._restUri) {
+            if (this._isVisible()) {
+                this._receiveData();
+            }
+        }
+    }
+
+    /**
+     * Sets the search filter and reloads the first page.
+     * @param {string} pattern - Search pattern
+     * @param {string} [searchType="basic"] -  Filter type ("basic" or "wql").
+     */
+    search(pattern = "", searchType = "basic") {
+        if (searchType === "basic") {
+            this._search = pattern;
+            this._wql = null;
+        } else if (searchType === "wql") {
+            this._search = null;
+            this._wql = pattern;
+        } else {
+            this._search = null;
+            this._wql = null;
+        }
+
+        this._page = 0;
+        
+        if (this._restUri) {
+            if (this._isVisible()) {
+                this._receiveData();
+            }
+        }
+    }
+
+    /**
+     * Sets the filter and reloads the first page.
+     * @param {string} pattern - Filter pattern.
+     */
+    filter(pattern = "") {
+        this._filter = pattern;
+        this._page = 0;
+
+        if (this._restUri) {
+            if (this._isVisible()) {
+                this._receiveData();
+            }
+        }
+    }
+    
+    /**
+     * Sets and loads the page.
+     * @param {string} page - The current page pattern.
+     */
+    paging(page = 0) {
+        this._page = page;
+
+        if (this._restUri) {
+            if (this._isVisible()) {
+                this._receiveData();
+            }
+        }
+    }
+    
+    /**
+     * Creates bootstrap placeholder markup for preview cells.
+     * @param {string} widthClass Bootstrap width class for the placeholder.
+     * @returns {string} Bootstrap placeholder markup.
+     */
+    _createPlaceholderCellContent(widthClass = "col-12") {
+        return `<span class="placeholder ${widthClass}"></span>`;
+    }
+    
+    /**
+     * Creates a preview row with bootstrap placeholders.
+     * @param {Array<string>} widths Bootstrap width classes for each cell.
+     * @returns {Object} Preview row definition.
+     */
+    _createPreviewRow(widths) {
+        return {
+            cells: widths.map((widthClass) => {
+                return {
+                    content: this._createPlaceholderCellContent(widthClass),
+                    html: true
+                };
+            })
+        };
+    }
+};
+
+// register the class in the controller
 webexpress.webui.Controller.registerClass("wx-webapp-table", webexpress.webapp.TableCtrl);

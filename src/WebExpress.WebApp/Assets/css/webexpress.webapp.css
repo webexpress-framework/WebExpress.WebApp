@@ -125,3 +125,16 @@ main {
     display: flex;
     justify-content: space-between;
 }
+
+.wx-message-queue-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2em;
+}
+
+.wx-message-queue-status .status-light {
+    width: 1em;
+    height: 1em;
+    border-radius: 50%;
+}
+

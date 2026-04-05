@@ -15,12 +15,12 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the id property of the web app header settings control.
         /// </summary>
         [Theory]
-        [InlineData(null, false, "<div class=\"wx-webui-dropdown wx-app-dropdown ms-2\" role=\"button\" data-icon=\"fas fa-cog\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">Settings</div><div class=\"wx-dropdown-item\"></div><div class=\"wx-dropdown-item\" data-icon=\"fas fa-gears\" data-uri=\"/server/app/webexpress.webapp/setting/system/log\">System</div></div>")]
-        [InlineData("id", false, "<div id=\"id\" class=\"wx-webui-dropdown wx-app-dropdown ms-2\" role=\"button\" data-icon=\"fas fa-cog\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">Settings</div><div class=\"wx-dropdown-item\"></div><div class=\"wx-dropdown-item\" data-icon=\"fas fa-gears\" data-uri=\"/server/app/webexpress.webapp/setting/system/log\">System</div></div>")]
-        [InlineData("id", true, "<div id=\"id\" class=\"wx-webui-dropdown wx-app-dropdown ms-2\" role=\"button\" data-icon=\"fas fa-cog\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-item\" data-icon=\"fas fa-gears\" data-uri=\"/server/app/webexpress.webapp/setting/system/log\">System</div></div>")]
+        [InlineData(null, false, "<div class=\"wx-webui-dropdown wx-app-dropdown ms-2\" role=\"button\" data-icon=\"fas fa-cog\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">Settings</div><div class=\"wx-dropdown-item\"></div><div class=\"wx-dropdown-item\" data-icon=\"fas fa-gears\" data-uri=\"/server/app/webexpress.webapp/settings/*\">System</div></div>")]
+        [InlineData("id", false, "<div id=\"id\" class=\"wx-webui-dropdown wx-app-dropdown ms-2\" role=\"button\" data-icon=\"fas fa-cog\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">Settings</div><div class=\"wx-dropdown-item\"></div><div class=\"wx-dropdown-item\" data-icon=\"fas fa-gears\" data-uri=\"/server/app/webexpress.webapp/settings/*\">System</div></div>")]
+        [InlineData("id", true, "<div id=\"id\" class=\"wx-webui-dropdown wx-app-dropdown ms-2\" role=\"button\" data-icon=\"fas fa-cog\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-item\" data-icon=\"fas fa-gears\" data-uri=\"/server/app/webexpress.webapp/settings/*\">System</div></div>")]
         public void Id(string id, bool empty, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
             var context = UnitTestControlFixture.CreateRenderContextMock(application);
@@ -34,7 +34,7 @@ namespace WebExpress.WebApp.Test.WebControl
                 control.AddPrimary(new ControlDropdownItemLink());
             }
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
             AssertExtensions.EqualWithPlaceholders(expected, html);

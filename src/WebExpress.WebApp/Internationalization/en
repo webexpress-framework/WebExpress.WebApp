@@ -2,8 +2,42 @@
 plugin.name=WebExpress.WebApp
 plugin.description=Provides basic components of a web application.
 
-module.name=WebExpress.WebApp
-module.description=Provides basic components of a web application.
+create.title=Create item
+create.label=Create
+edit.title=Edit item
+edit.label=Edit
+clone.title=Clone item
+clone.label=Clone
+delete.title=Delete item
+delete.label=Delete
+
+confirmation.title=Confirmation
+confirmation.description=Are you sure you want to perform this action?
+confirmation.delete.label=Delete
+confirmation.delete.success=The item has been deleted.
+confirmation.delete.confirm=Do you really want to delete the selected item '{0}'?
+confirmation.cancel.label=Cancel
+
+validation.allowedvalues=The value must be one of the allowed values.
+validation.contains=The text must contain the required substring.
+validation.daterange=The date must be within the allowed range.
+validation.email=The input must be a valid email address.
+validation.endswith=The text must end with the required suffix.
+validation.exactlength=The string must have the required length.
+validation.futuredate=The date must be in the future.
+validation.ipaddress=The input must be a valid IP address.
+validation.maxitems=The number of items must not exceed the maximum value.
+validation.maxlength=The text must not exceed the maximum length.
+validation.minitems=The number of items must meet the minimum required value.
+validation.minlength=The text must at least meet the minimum length.
+validation.notcontains=The text must not contain the disallowed substring.
+validation.notequal=The value must not be equal to the disallowed value.
+validation.pastdate=The date must be in the past.
+validation.range=The value must be within the allowed range.
+validation.regex=The text does not match the required pattern.
+validation.required=The field must not be empty.
+validation.startswith=The text must start with the required prefix.
+validation.url=The input must be a valid URL.
 
 indexmanager.initialization=The index manager has been initialized.
 
@@ -31,8 +65,6 @@ pagesettingmanager.register=A settings page has been added to the settings page 
 pagesettingmanager.idless=A settings page from the plugin '{0}' does not have an id.
 pagesettingmanager.moduleless=The settings page '{0}' from the plugin '{1}' does not have a module assitation.
 pagesettingmanager.resourceless=No associated resource could be found for the settings page '{0}' from the plugin '{1}'.
-
-edit.label=Edit
 
 search.label=Search
 search.placeholder=Enter your search terms here.
@@ -86,9 +118,9 @@ setting.group.system.description=System-related settings for the web application
 
 setting.tab.general.label=General
 setting.group.system.label=System
-setting.titel.plugin.label=Plugins
-setting.titel.systeminformation.label=System information
-setting.titel.log.label=Log
+setting.title.plugin.label=Plugins
+setting.title.systeminformation.label=System information
+setting.title.log.label=Log
 
 setting.plugin.label=Installed applications
 setting.plugin.description=
@@ -169,3 +201,27 @@ setting.usermanager.user.edit.groups.label=Groups:
 setting.usermanager.user.edit.groups.description=Assign the desired groups to the user.
 setting.usermanager.user.edit.groups.available=Available groups
 setting.usermanager.user.edit.groups.selected=Selected groups
+
+setting.sitemap.title=Sitemap
+setting.sitemap.label=Sitemap
+setting.sitemap.notavailable=The sitemap is not available. Please make sure that the sitemap module is installed and activated.
+setting.sitemap.description=The sitemap provides an overview of the structure of the web application. It lists all available pages and their relationships to each other. This allows users to quickly navigate to the desired page and get an overview of the content offered by the web application.
+
+setting.monitor.title.label=Monitor
+setting.monitor.group.statistics.label=General Statistics
+setting.monitor.uptime=Uptime
+setting.monitor.totalrequests=Total Requests
+setting.monitor.group.chart.traffic.label=Traffic
+setting.monitor.dataset.requests=Requests
+setting.monitor.dataset.errors=Errors
+setting.monitor.group.chart.performance.label=Performance
+setting.monitor.dataset.avg_duration=Ø Duration (ms)
+setting.monitor.dataset.max_duration=Max. Duration (ms)
+setting.monitor.dataset.min_duration=Min. Duration (ms)
+setting.monitor.chart.title=System Monitor
+setting.monitor.chart.axis.x=Time
+setting.monitor.chart.axis.y=Count
+setting.monitor.currenttime=Current System Time
+setting.monitor.group.chart.resources.label=System Resources
+setting.monitor.dataset.cpu=CPU Usage (%)
+setting.monitor.dataset.memory=Memory Usage (MB)

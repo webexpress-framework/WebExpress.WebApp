@@ -9,7 +9,7 @@ namespace WebExpress.WebApp.Test
     /// A dummy class for testing purposes.
     /// </summary>
     [Title("webindex:pagea.label")]
-    [Segment("pageb", "webindex:homepage.label")]
+    [Segment("pageb")]
     [Scope<IScopeGeneral>]
     public sealed class TestPageB : IPage<VisualTreeWebApp>, IScopeGeneral
     {
@@ -27,7 +27,7 @@ namespace WebExpress.WebApp.Test
             PageContext = pageContext;
 
             // test the injection
-            if (pageContext == null)
+            if (pageContext is null)
             {
                 throw new ArgumentNullException(nameof(pageContext), "Parameter cannot be null or empty.");
             }
@@ -41,7 +41,7 @@ namespace WebExpress.WebApp.Test
         public void Process(IRenderContext renderContext, VisualTreeWebApp visualTree)
         {
             // test the context
-            if (renderContext == null)
+            if (renderContext is null)
             {
                 throw new ArgumentNullException(nameof(renderContext), "Parameter cannot be null or empty.");
             }

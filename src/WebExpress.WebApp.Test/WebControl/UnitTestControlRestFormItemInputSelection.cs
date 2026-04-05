@@ -20,7 +20,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData("id", @"<div id=""id"" class=""wx-webapp-input-selection"" name=""id""></div>")]
         public void Id(string id, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var form = new ControlForm();
             var context = new RenderControlFormContext(UnitTestControlFixture.CreateRenderContextMock(), form);
@@ -29,9 +29,10 @@ namespace WebExpress.WebApp.Test.WebControl
             {
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
+            // validation
             AssertExtensions.EqualWithPlaceholders(expected, html);
         }
 
@@ -42,7 +43,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData(@"<div id=""*"" class=""wx-webapp-input-selection"" name=""*""></div>")]
         public void AutoId(string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var form = new ControlForm();
             var context = new RenderControlFormContext(UnitTestControlFixture.CreateRenderContextMock(), form);
@@ -51,9 +52,10 @@ namespace WebExpress.WebApp.Test.WebControl
             {
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
+            // validation
             AssertExtensions.EqualWithPlaceholders(expected, html);
         }
 
@@ -65,7 +67,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData("abc", @"<div class=""wx-webapp-input-selection"" name=""abc""></div>")]
         public void Name(string name, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var form = new ControlForm();
             var context = new RenderControlFormContext(UnitTestControlFixture.CreateRenderContextMock(), form);
@@ -75,9 +77,10 @@ namespace WebExpress.WebApp.Test.WebControl
                 Name = name
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
+            // validation
             AssertExtensions.EqualWithPlaceholders(expected, html);
         }
 
@@ -90,7 +93,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData("webexpress.webui:plugin.name", @"<div class=""wx-webapp-input-selection"" placeholder=""WebExpress.WebUI""></div>")]
         public void Placeholder(string placeholder, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var form = new ControlForm();
             var context = new RenderControlFormContext(UnitTestControlFixture.CreateRenderContextMock(), form);
@@ -100,9 +103,10 @@ namespace WebExpress.WebApp.Test.WebControl
                 Placeholder = placeholder
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
+            // validation
             AssertExtensions.EqualWithPlaceholders(expected, html);
         }
 
@@ -114,7 +118,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData(true, @"<div class=""wx-webapp-input-selection"" data-multiselection=""true""></div>")]
         public void MultiSelect(bool multiSelect, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var form = new ControlForm();
             var context = new RenderControlFormContext(UnitTestControlFixture.CreateRenderContextMock(), form);
@@ -124,9 +128,10 @@ namespace WebExpress.WebApp.Test.WebControl
                 MultiSelect = multiSelect
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
+            // validation
             AssertExtensions.EqualWithPlaceholders(expected, html);
         }
 
@@ -138,17 +143,17 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData("https://example.com/api/data", @"<div class=""wx-webapp-input-selection"" data-uri=""https://example.com/api/data""></div>")]
         public void RestUri(string uriString, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var form = new ControlForm();
             var context = new RenderControlFormContext(UnitTestControlFixture.CreateRenderContextMock(), form);
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestFormItemInputSelection(null)
             {
-                RestUri = uriString != null ? new UriEndpoint(uriString) : null
+                RestUri = uriString is not null ? new UriEndpoint(uriString) : null
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
             // validation
@@ -164,7 +169,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData(5, @"<div class=""wx-webapp-input-selection"" data-maxItems=""5""></div>")]
         public void MaxItems(int maxItems, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var form = new ControlForm();
             var context = new RenderControlFormContext(UnitTestControlFixture.CreateRenderContextMock(), form);
@@ -174,7 +179,7 @@ namespace WebExpress.WebApp.Test.WebControl
                 MaxItems = maxItems
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
             // validation

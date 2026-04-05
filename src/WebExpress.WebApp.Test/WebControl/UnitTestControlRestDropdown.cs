@@ -19,7 +19,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData("id", @"<div id=""id"" class=""wx-webapp-dropdown"" role=""button""></div>")]
         public void Id(string id, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
             var context = UnitTestControlFixture.CreateRenderContextMock(application);
@@ -28,7 +28,7 @@ namespace WebExpress.WebApp.Test.WebControl
             {
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
             // validation
@@ -43,17 +43,17 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData("https://example.com/api/data", @"<div class=""wx-webapp-dropdown"" role=""button"" data-uri=""https://example.com/api/data""></div>")]
         public void RestUri(string uriString, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
             var context = UnitTestControlFixture.CreateRenderContextMock(application);
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestDropdown()
             {
-                RestUri = uriString != null ? new UriEndpoint(uriString) : null
+                RestUri = uriString is not null ? new UriEndpoint(uriString) : null
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
             // validation
@@ -69,7 +69,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData(5, @"<div class=""wx-webapp-dropdown"" role=""button"" data-maxItems=""5""></div>")]
         public void MaxItems(int maxItems, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
             var context = UnitTestControlFixture.CreateRenderContextMock(application);
@@ -79,7 +79,7 @@ namespace WebExpress.WebApp.Test.WebControl
                 MaxItems = maxItems
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
             // validation
@@ -95,7 +95,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData("webexpress.webui:plugin.name", @"<div class=""wx-webapp-dropdown"" role=""button"" data-searchPlaceholder=""WebExpress.WebUI""></div>")]
         public void SearchPlaceholder(string searchPlaceholder, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
             var context = UnitTestControlFixture.CreateRenderContextMock(application);
@@ -105,7 +105,7 @@ namespace WebExpress.WebApp.Test.WebControl
                 SearchPlaceholder = searchPlaceholder
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
             // validation

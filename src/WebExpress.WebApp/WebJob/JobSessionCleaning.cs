@@ -27,17 +27,17 @@ namespace WebExpress.WebApp.WebJob
         public JobSessionCleaning(IJobContext jobContext, ISessionManager sessionManager, ILogManager logManager)
         {
             // test the injection
-            if (jobContext == null)
+            if (jobContext is null)
             {
                 throw new ArgumentNullException(nameof(jobContext), "Parameter cannot be null or empty.");
             }
 
-            if (sessionManager == null)
+            if (sessionManager is null)
             {
                 throw new ArgumentNullException(nameof(sessionManager), "Parameter cannot be null or empty.");
             }
 
-            if (logManager == null)
+            if (logManager is null)
             {
                 throw new ArgumentNullException(nameof(logManager), "Parameter cannot be null or empty.");
             }

@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using WebExpress.WebCore.WebHtml;
+﻿using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
@@ -13,78 +10,23 @@ namespace WebExpress.WebApp.WebControl
     /// </summary>
     public class ControlRestList : ControlPanel, IControlRestList
     {
-        private readonly List<IControlForm> _forms = [];
-        private readonly List<ControlRestListOptionItem> _optionItems = [];
-
         /// <summary>
         /// Returns or sets the uri that determines the data.
         /// </summary>
         public IUri RestUri { get; set; }
 
         /// <summary>
-        /// Returns the collection of forms associated with the control.
+        /// Returns or sets the binding.
         /// </summary>
-        public IEnumerable<IControlForm> Forms => _forms;
-
-        /// <summary>
-        /// Returns the editing options (e.g. Edit, Delete, ...).
-        /// </summary>
-        public IEnumerable<ControlRestListOptionItem> OptionItems => _optionItems;
+        public IBinding Bind { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The control id.</param>
         public ControlRestList(string id = null)
-            : base(id ?? Guid.NewGuid().ToString())
+            : base(id ?? RandomId.Create())
         {
-        }
-
-        /// <summary>
-        /// Adds a collection of forms to the current control rest list.
-        /// </summary>
-        /// <param name="forms">The collection of forms to add.</param>
-        /// <returns>The current instance for method chaining.</returns>
-        public virtual IControlRestList Add(params IControlForm[] forms)
-        {
-            if (forms != null)
-            {
-                _forms.AddRange(forms);
-            }
-
-            return this;
-        }
-
-        /// <summary>
-        /// Adds a collection of forms to the current control rest list.
-        /// </summary>
-        /// <param name="forms">The collection of forms to add.</param>
-        /// <returns>The current instance for method chaining.</returns>
-        public virtual IControlRestList Add(IEnumerable<IControlForm> forms)
-        {
-            if (forms != null)
-            {
-                _forms.AddRange(forms);
-            }
-
-            return this;
-        }
-
-        /// <summary>
-        /// Removes the specified form from the collection of forms.
-        /// </summary>
-        /// <param name="form">The form to remove.</param>
-        /// <returns>The current instance for method chaining.</returns>
-        public virtual IControlRestList Remove(IControlForm form)
-        {
-            if (form == null)
-            {
-                return this;
-            }
-
-            _forms.Remove(form);
-
-            return this;
         }
 
         /// <summary>
@@ -95,15 +37,31 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
+            return Render(renderContext, visualTree, RestUri);
+        }
+
+        /// <summary>
+        /// Converts the control to an HTML representation.
+        /// </summary>
+        /// <param name="renderContext">The context in which the control is rendered.</param>
+        /// <param name="visualTree">The visual tree.</param>
+        /// <param name="uri">An optional URI containing parameters to be bound to the rendering context. Can be null.</param>
+        /// <returns>An HTML node representing the rendered control.</returns>
+        public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IUri uri)
+        {
+            var resultUri = uri?.BindParameters(renderContext.Request);
+
             var html = new HtmlElementTextContentDiv()
             {
                 Id = Id,
                 Class = Css.Concatenate("wx-webapp-list", GetClasses()),
                 Style = GetStyles()
             }
-            .AddUserAttribute("data-uri", RestUri?.ToString());
+                .AddUserAttribute("data-uri", resultUri?.ToString());
 
-            return new HtmlList(html, Forms.Select(x => x.Render(renderContext, visualTree)));
+            Bind?.ApplyUserAttributes(html);
+
+            return html;
         }
     }
 }

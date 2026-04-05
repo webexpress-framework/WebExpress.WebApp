@@ -16,14 +16,14 @@ namespace WebExpress.WebApp.Test.WebPage
         [InlineData(typeof(TestApplication), typeof(TestPageA), "webexpress.webapp.test.testpagea")]
         public void Id(Type applicationType, Type pageType, string id)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var application = componentHub.ApplicationManager.GetApplications(applicationType).FirstOrDefault();
 
-            // test execution
+            // act
             var page = componentHub.PageManager.GetPages(pageType, application);
 
-            if (id == null)
+            if (id is null)
             {
                 Assert.Empty(page);
                 return;
@@ -40,7 +40,7 @@ namespace WebExpress.WebApp.Test.WebPage
         [InlineData("http://localhost:8080/server/app/pagea", "webexpress.webapp.test.testpagea")]
         public void SearchResource(string uri, string id)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateHttpContextMock();
             var httpServerContext = UnitTestControlFixture.CreateHttpServerContextMock();
@@ -50,7 +50,7 @@ namespace WebExpress.WebApp.Test.WebPage
             typeof(SearchContext).GetProperty("Culture").SetValue(searchContext, httpServerContext.Culture);
             typeof(SearchContext).GetProperty("HttpContext").SetValue(searchContext, context);
 
-            // test execution
+            // act
             var searchResult = componentHub.SitemapManager.SearchResource(new Uri(uri), searchContext);
             _ = componentHub.EndpointManager.HandleRequest(UnitTestControlFixture.CreateRequestMock(), searchResult.EndpointContext);
 

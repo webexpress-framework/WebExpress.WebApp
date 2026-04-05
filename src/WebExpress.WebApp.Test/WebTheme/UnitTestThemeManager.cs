@@ -16,14 +16,14 @@ namespace WebExpress.WebApp.Test.WebTheme
         [InlineData(typeof(TestApplication), typeof(TestThemeA), "webexpress.webapp.test.testthemea")]
         public void Id(Type applicationType, Type themeType, string id)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var application = componentHub.ApplicationManager.GetApplications(applicationType).FirstOrDefault();
 
-            // test execution
+            // act
             var themeContexts = componentHub.ThemeManager.GetThemes(application, themeType);
 
-            if (id == null)
+            if (id is null)
             {
                 Assert.Empty(themeContexts);
                 return;
@@ -39,11 +39,11 @@ namespace WebExpress.WebApp.Test.WebTheme
         [InlineData(typeof(TestApplication), typeof(TestThemeA), "webexpress.webapp.test.testthemea")]
         public void GetWebAppTheme(Type applicationType, Type themeType, string id)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var application = componentHub.ApplicationManager.GetApplications(applicationType).FirstOrDefault();
 
-            // test execution
+            // act
             var themeContext = componentHub.ThemeManager.GetThemes(application, themeType).FirstOrDefault();
             var theme = componentHub.ThemeManager.GetWebAppTheme(themeContext);
 

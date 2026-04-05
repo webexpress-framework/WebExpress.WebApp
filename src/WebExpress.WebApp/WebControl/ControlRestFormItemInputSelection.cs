@@ -1,5 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-using WebExpress.WebCore.WebHtml;
+﻿using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
@@ -17,6 +16,11 @@ namespace WebExpress.WebApp.WebApiControl
         public IUri RestUri { get; set; }
 
         /// <summary>
+        /// Returns or sets the binding.
+        /// </summary>
+        public IBinding Bind { get; set; }
+
+        /// <summary>
         /// Returns or sets the maximum number of entries to display (default 25).
         /// </summary>
         public int MaxItems { get; set; } = -1;
@@ -24,18 +28,8 @@ namespace WebExpress.WebApp.WebApiControl
         /// <summary>
         /// Initializes a new instance of the class with an automatically assigned ID.
         /// </summary>
-        /// <param name="instance">The name of the calling member. This is automatically provided by the compiler.</param>
-        /// <param name="file">The file path of the source file where this instance is created. This is automatically provided by the compiler.</param>
-        /// <param name="line">The line number in the source file where this instance is created. This is automatically provided by the compiler.</param>
-        /// <param name="items">The entries.</param>
-        public ControlRestFormItemInputSelection
-        (
-            [CallerMemberName] string instance = null,
-            [CallerFilePath] string file = null,
-            [CallerLineNumber] int? line = null,
-            params ControlFormItemInputSelectionItem[] items
-        )
-            : base($"restselection_{instance}_{file}_{line}".GetHashCode().ToString("X"), items)
+        public ControlRestFormItemInputSelection()
+            : this(DeterministicId.Create())
         {
         }
 
@@ -43,8 +37,9 @@ namespace WebExpress.WebApp.WebApiControl
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The control id.</param>
-        public ControlRestFormItemInputSelection(string id)
-            : base(id)
+        /// <param name="items">The entries.</param>
+        public ControlRestFormItemInputSelection(string id, params ControlFormItemInputSelectionItem[] items)
+            : base(id, items)
         {
         }
 
@@ -61,6 +56,8 @@ namespace WebExpress.WebApp.WebApiControl
                 .RemoveClass("wx-webui-input-selection")
                 .AddUserAttribute("data-uri", RestUri?.ToString())
                 .AddUserAttribute("data-maxItems", MaxItems > 0 ? MaxItems.ToString() : null);
+
+            Bind?.ApplyUserAttributes(html);
 
             return html;
         }

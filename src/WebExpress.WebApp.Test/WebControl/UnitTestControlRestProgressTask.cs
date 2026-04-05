@@ -19,7 +19,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData("id", @"<div id=""id"" class=""wx-webapp-progress-task"" data-uri=""/""></div>")]
         public void Id(string id, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
             var context = UnitTestControlFixture.CreateRenderContextMock(application);
@@ -28,7 +28,7 @@ namespace WebExpress.WebApp.Test.WebControl
             {
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
             // validation
@@ -44,7 +44,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData(1000, @"<div id=""*"" class=""wx-webapp-progress-task"" data-interval=""1000"" data-uri=""/""></div>")]
         public void Interval(int interval, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
             var context = UnitTestControlFixture.CreateRenderContextMock(application);
@@ -54,7 +54,7 @@ namespace WebExpress.WebApp.Test.WebControl
                 Interval = interval
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
             // validation
@@ -70,7 +70,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData("id", @"<div id=""*"" class=""wx-webapp-progress-task"" data-task=""id"" data-uri=""/""></div>")]
         public void TaskId(string taskId, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
             var context = UnitTestControlFixture.CreateRenderContextMock(application);
@@ -80,7 +80,7 @@ namespace WebExpress.WebApp.Test.WebControl
                 TaskId = taskId
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
             // validation
@@ -95,7 +95,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData(true, @"<div id=""*"" class=""wx-webapp-progress-task"" data-show-on-start=""true"" data-uri=""/""></div>")]
         public void ShowOnStart(bool value, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
             var context = UnitTestControlFixture.CreateRenderContextMock(application);
@@ -105,7 +105,7 @@ namespace WebExpress.WebApp.Test.WebControl
                 ShowOnStart = value
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
             // validation
@@ -120,7 +120,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData(true, @"<div id=""*"" class=""wx-webapp-progress-task"" data-hide-on-finish=""true"" data-uri=""/""></div>")]
         public void HideOnFinish(bool value, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
             var context = UnitTestControlFixture.CreateRenderContextMock(application);
@@ -130,7 +130,7 @@ namespace WebExpress.WebApp.Test.WebControl
                 HideOnFinish = value
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
             // validation
@@ -145,7 +145,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData(TypeDisplay.None, @"<div id=""*"" class=""wx-webapp-progress-task d-none"" data-uri=""/""></div>")]
         public void Display(TypeDisplay value, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
             var context = UnitTestControlFixture.CreateRenderContextMock(application);
@@ -155,7 +155,7 @@ namespace WebExpress.WebApp.Test.WebControl
                 Display = value
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
             // validation

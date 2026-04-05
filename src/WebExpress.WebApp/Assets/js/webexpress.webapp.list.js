@@ -1,58 +1,29 @@
 /**
  * A REST-backed list control extending the base flat ListCtrl.
- * - builds a toolbar (title + filter), a progress bar, and a status bar (status text + pagination)
+ * - simple list view without toolbar or pagination controls
  * - shows bootstrap placeholders while loading
- * - queries a REST endpoint with filter and page parameters
+ * - queries a REST endpoint
  * - dispatches a data-arrived event on successful retrieval
  * - supports per-item edit and delete actions bound from server-provided options
+ * Emits events:
+ * - webexpress.webui.Event.DATA_ARRIVED_EVENT
  */
 webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
+    _search = "";
+    _wql = "";
+    _filter = "";
+    _page = 0;
+    _pageSize = 50;
+    _items = {};
 
-    /**
-     * Helper: creates an element and assigns bootstrap classes.
-     * @param {string} tag html tag name.
-     * @param {Array<string>} classList classes to add.
-     * @returns {HTMLElement} created element.
-     */
-    _createElement(tag, classList = []) {
-        const el = document.createElement(tag);
-        classList.forEach(cls => {
-            el.classList.add(cls);
-        });
-        return el;
-    }
-
-    /**
-     * Helper: creates a compact progress bar.
-     * @returns {HTMLDivElement} progress container.
-     */
-    _createProgressDiv() {
-        const div = this._createElement("div", ["progress"]);
-        div.setAttribute("role", "status");
-        div.style.height = "0.5em";
-        const bar = this._createElement("div", [
-            "progress-bar",
-            "progress-bar-striped",
-            "progress-bar-animated"
-        ]);
-        bar.style.width = "100%";
-        div.appendChild(bar);
-        return div;
-    }
+    _orderBy = null;      // current sort property
+    _orderDir = null;     // current sort direction ('asc'/'desc')
 
     // fields
     _restUri = "";
-    _titleDiv = this._createElement("h3", ["me-auto"]);
     _progressDiv = this._createProgressDiv();
-    _filterDiv = this._createElement("div", ["col-3"]);
-    _filterCtrl = null;
-    _statusDiv = this._createElement("span");
-    _paginationDiv = this._createElement("div", ["justify-content-end"]);
-    _paginationCtrl = null;
-    _filter = null;
-    _page = 0;
-
-    // placeholder items for loading state (wrapper with child ensures firstElementChild exists)
+    
+    // placeholder items for loading state
     _previewItems = [
         { id: null, editable: false, content: { html: (() => { const w = document.createElement("span"); const s = document.createElement("span"); s.className = "placeholder col-8 placeholder-lg"; w.appendChild(s); return w; })() } },
         { id: null, editable: false, content: { html: (() => { const w = document.createElement("span"); const s = document.createElement("span"); s.className = "placeholder col-6 placeholder-lg"; w.appendChild(s); return w; })() } },
@@ -61,7 +32,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
 
     /**
      * Constructor for the REST ListCtrl.
-     * @param {HTMLElement} element host element.
+     * @param {HTMLElement} - element host element.
      */
     constructor(element) {
         super(element);
@@ -69,65 +40,33 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
         // read rest uri and clean attribute
         this._restUri = element.dataset.uri || "";
         element.removeAttribute("data-uri");
+        
+        element.className = "wx-list";
 
-        // build toolbar
-        const toolbar = this._createElement("div", ["wx-list-toolbar", "d-flex", "align-items-center", "gap-2", "mb-2"]);
-        toolbar.appendChild(this._titleDiv);
-        toolbar.appendChild(this._filterDiv);
-
-        // insert toolbar and progress at top
-        element.prepend(toolbar, this._progressDiv);
-
-        // build status bar
-        const statusbar = this._createElement("div", ["wx-list-statusbar", "d-flex", "align-items-center", "justify-content-between", "mt-2"]);
-        statusbar.appendChild(this._statusDiv);
-        statusbar.appendChild(this._paginationDiv);
-
-        // append statusbar at bottom
-        element.appendChild(statusbar);
+        // insert progress at top
+        element.prepend(this._progressDiv);
 
         // show placeholders while loading
-        this._list.classList.add("placeholder-glow");
-        this._items = this._previewItems.map(pi => {
+        const listUl = element.querySelector("ul.wx-list");
+        if (listUl) {
+            listUl.classList.add("placeholder-glow");
+        }
+
+        // set preview items using base class method
+        this.setItems(this._previewItems.map(pi => {
             return {
                 id: null,
                 class: null,
                 style: null,
                 color: null,
                 editable: false,
-                // clone the preview node to avoid reusing the same element
-                content: { text: "", html: (pi.content?.html instanceof Element) ? pi.content.html.cloneNode(true) : null },
+                content: { content: "", html: (pi.content?.html instanceof Element) ? pi.content.html.cloneNode(true) : null },
                 options: null
             };
-        });
-        this.render();
+        }));
 
-        // init filter control
-        this._filterCtrl = new webexpress.webui.SearchCtrl(this._filterDiv);
-
-        // listen for filter changes
-        document.addEventListener(webexpress.webui.Event.CHANGE_FILTER_EVENT, (event) => {
-            const data = event.detail || {};
-            if (data.sender && data.sender === this._filterDiv) {
-                this._filter = data.value;
-                this._receiveData();
-            }
-        });
-
-        // init pagination control
-        this._paginationCtrl = new webexpress.webui.PaginationCtrl(this._paginationDiv);
-
-        // listen for pagination changes
-        document.addEventListener(webexpress.webui.Event.CHANGE_PAGE_EVENT, (event) => {
-            const data = event.detail || {};
-            if (data.sender && data.sender === this._paginationDiv) {
-                this._page = data.page;
-                this._receiveData();
-                // scroll to top of the list
-                window.scrollTo(0, element.offsetTop);
-            }
-        });
-
+        this._initPager(element);
+        
         // initial data load
         this._receiveData();
     }
@@ -138,10 +77,37 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
     _receiveData() {
         this._progressDiv.style.visibility = "visible";
 
-        const filter = encodeURIComponent(this._filter ?? "");
-        const url = `${this._restUri}?search=${filter}&page=${this._page}`;
+        // abort previous request if present
+        if (this._abortController) {
+            this._abortController.abort("search replaced");
+        }
+        this._abortController = new AbortController();
 
-        fetch(url)
+        const base = window.location.origin;
+        let urlObj;
+        try {
+            urlObj = new URL(this._restUri, base);
+        } catch (e) {
+            urlObj = new URL(this._restUri, document.baseURI);
+        }
+
+        // set query parameters
+        urlObj.searchParams.set("q", this._search || "");
+        urlObj.searchParams.set("wql", this._wql || "");
+        urlObj.searchParams.set("f", this._filter || "");
+        urlObj.searchParams.set("p", this._page);
+        urlObj.searchParams.set("l", this._pageSize);
+
+        if (this._orderBy) {
+            urlObj.searchParams.set("o", this._orderBy);
+            if (this._orderDir) {
+                urlObj.searchParams.set("d", this._orderDir);
+            }
+        }
+
+        const fetchUrl = this._restUri.startsWith("http") ? urlObj.href : (urlObj.pathname + urlObj.search);
+
+        fetch(fetchUrl, { signal: this._abortController.signal })
             .then(res => {
                 if (!res.ok) {
                     throw new Error("Request failed");
@@ -149,95 +115,76 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
                 return res.json();
             })
             .then(response => {
-                // extract pagination meta with fallbacks
-                const page = response?.pagination?.page ?? 0;
-                const pageSize = response?.pagination?.pageSize ?? 50;
-                const total = response?.pagination?.total ?? 0;
-                const totalPages = Math.max(1, Math.ceil(total / Math.max(1, pageSize)));
-                const startIndex = total > 0 ? (page * pageSize + 1) : 0;
-                const endIndex = total > 0 ? Math.min(startIndex + pageSize - 1, total) : 0;
-
-                // update header + status
-                this._titleDiv.textContent = response?.title || "";
-                this._statusDiv.textContent = `${startIndex} - ${endIndex} / ${total}`;
+                // extract paging information from server response
+                this._totalRecords = Number(response.total ?? response.totalCount ?? response.count ?? 0) || 0;
+                this._page = Number(response.page ?? this._page ?? 0) || 0;
+                this._pageSize = Number(response.pageSize ?? this._pageSize ?? 50) || 50;
 
                 // emit data arrived event
                 const evt = new CustomEvent(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
-                    detail: {
-                        id: this._element.id,
-                        response: response
-                    }
+                    response: response
                 });
                 this._element.dispatchEvent(evt);
 
-                // update pagination control
-                this._paginationCtrl.total = totalPages;
-                this._paginationCtrl.page = page;
-
                 // remove placeholder state
-                this._list.classList.remove("placeholder-glow");
+                const listUl = this._element.querySelector("ul.wx-list");
+                if (listUl) {
+                    listUl.classList.remove("placeholder-glow");
+                }
 
                 // map response into list items
-                this._items = this._mapResponseToItems(response);
+                const newItems = this._mapResponseToItems(response);
 
-                // bind edit/delete option actions if present
-                this._items.forEach(item => {
-                    if (Array.isArray(item.options)) {
-                        item.options.forEach(opt => {
-                            if (opt?.command === "edit") {
-                                const uri = opt.uri;
-                                opt.action = () => {
-                                    this._editItem(item, uri);
-                                };
-                            } else if (opt?.command === "delete") {
-                                opt.uri = "javascript:void(0);";
-                                opt.action = () => {
-                                    this._deleteItem(item.id);
-                                };
-                            }
-                        });
-                    }
+                // update list via base class
+                this.setItems(newItems);
+                
+                this._items = newItems;
+
+                // update paging display
+                this._syncPagerAndInfo();
+                
+                // notify listeners that data arrived
+                this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
+                    response: responseForUpdate,
+                    page: this._page
                 });
 
-                // render and hide progress
-                this.render();
+                // hide progress
                 this._progressDiv.style.visibility = "hidden";
+                this._abortController = null;
             })
             .catch(error => {
-                // log any retrieval errors
                 console.error("The request could not be completed successfully:", error);
+                this._progressDiv.style.visibility = "hidden";
+                this._abortController = null;
             });
     }
 
     /**
      * Maps a server response to internal list item structures.
-     * @param {any} response server payload.
-     * @returns {Array<Object>} normalized items for ListCtrl.
+     * @param {any} - response server payload.
+     * @returns {Array<Object>} - Normalized items for ListCtrl.
      */
     _mapResponseToItems(response) {
         const result = [];
 
+        // handle response.items array
         if (Array.isArray(response?.items)) {
             for (const it of response.items) {
                 if (typeof it === "string") {
                     result.push({
                         id: null,
-                        class: null,
-                        style: null,
-                        color: null,
-                        editable: false,
-                        content: { text: it, html: null, image: null, icon: null, uri: null, target: null, modal: null, objectId: null },
-                        options: null
+                        content: { content: it }
                     });
                 } else if (it && typeof it === "object") {
-                    // detect optional html template (element or string), only use if a first child exists
+                    // detect optional html template
                     let htmlEl = null;
                     if (it.html instanceof Element) {
                         htmlEl = it.html.cloneNode(true);
                     } else if (typeof it.html === "string") {
                         const tmp = document.createElement("span");
                         tmp.innerHTML = it.html;
-                        htmlEl = tmp.firstElementChild ? tmp : null; // only accept if element child exists
+                        htmlEl = tmp.firstElementChild ? tmp : null;
                     }
 
                     result.push({
@@ -246,17 +193,23 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
                         style: it.style || null,
                         color: it.color || null,
                         editable: !!it.editable,
+                        rendererType: it.rendererType || it.type || null, // pass through type for templates
+                        rendererOptions: it.rendererOptions || {},
                         content: {
-                            text: (it.text ?? it.label ?? it.name ?? ""),
+                            content: (it.content ?? it.label ?? it.name ?? ""),
                             html: htmlEl,
                             image: it.image || null,
                             icon: it.icon || null,
                             uri: it.uri || null,
                             target: it.target || null,
                             modal: it.modal || null,
-                            objectId: it.objectId || null,
-                            item: it.item || null
+                            objectId: it.objectId || null
                         },
+                        // action attributes
+                        primaryAction: it.primaryAction || null,
+                        secondaryAction: it.secondaryAction || null,
+                        bind: it.bind || null,
+
                         options: Array.isArray(it.options) ? it.options : null
                     });
                 }
@@ -264,127 +217,209 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
             return result;
         }
 
-        // fallback: transform table-like rows to list items using first cell's text
-        if (Array.isArray(response?.rows)) {
-            for (const row of response.rows) {
-                const firstText = Array.isArray(row?.cells) && row.cells.length ? (row.cells[0]?.text ?? "") : "";
-                result.push({
-                    id: row?.id ?? null,
-                    class: row?.class ?? null,
-                    style: row?.style ?? null,
-                    color: row?.color ?? null,
-                    editable: false,
-                    content: { text: firstText, html: null, image: null, icon: null, uri: null, target: null, modal: null, objectId: null },
-                    options: Array.isArray(row?.options) ? row.options : null
-                });
-            }
-            return result;
-        }
-
-        // default: empty
         return result;
     }
 
     /**
-     * Opens an edit modal and submits changes via PUT.
-     * @param {Object} item list item descriptor.
-     * @param {string} uri form uri to load inside the modal.
+     * Updates the control.
+     * By default, this method calls the render() method.
+     * Derived classes can override this method to implement specific behavior.
      */
-    _editItem(item, uri) {
-        const editModal = new webexpress.webapp.ModalFormCtrl();
-        editModal._uri = uri;
-        editModal._selector = uri?.includes("#") ? ("#" + uri.split("#")[1]) : "form";
-        editModal._titleH1.textContent = webexpress.webui.I18N.translate("webexpress.webapp:form.edit_item");
-        editModal._dialogDiv.className = "modal-dialog modal-dialog-scrollable modal-lg";
-
-        // bind submit handling
-        editModal._form.addEventListener("submit", async (event) => {
-            event.preventDefault();
-            const formData = new FormData(editModal._form);
-
-            try {
-                const response = await fetch(`${this._restUri}?id=${encodeURIComponent(item?.id ?? "")}`, {
-                    method: "PUT",
-                    body: formData
-                });
-
-                if (response.ok) {
-                    this._receiveData();
-                    editModal.hide();
-                    return;
-                }
-
-                if (response.status === 400) {
-                    const errors = await response.json();
-                    editModal.showValidationErrors(errors);
-                    return;
-                }
-
-                throw new Error(`HTTP ${response.status}`);
-            } catch (error) {
-                console.error(`Failed to edit item with ID ${item?.id}.`, error);
-            }
-        });
-
-        // after modal content has rendered, try to prefill typical fields
-        editModal._element.addEventListener(webexpress.webui.Event.UPDATED_EVENT, (event) => {
-            const form = event.detail.form;
-            if (form === editModal._form) {
-                Object.entries(item.content?.item).forEach(([content_field, value], index) => {
-                    // try standard form field
-                    let field = editModal._form.elements.namedItem(content_field);
-                    if (field) {
-                        field.value = value;
-                    } else {
-                        const editorContainer = form.querySelector(`[name="${content_field}"]`);
-                        if (editorContainer) {
-                            // check which editor type is present
-                            let editorType = "default";
-                            if (editorContainer.classList.contains("wx-webui-editor")) {
-                                editorType = "wx-webui-editor";
-                            }
-
-                            // handle various editors
-                            switch (editorType) {
-                                case "wx-webui-editor":
-                                    editorContainer.innerHTML = value;
-                                    break;
-                                default:
-                                    // fallback: set innerHTML directly
-                                    editorContainer.innerHTML = value;
-                            }
-                        }
-                    }
-                });
-            }
-        });
-
-        editModal.show();
+    update() {
+        if (this._restUri && this._isVisible()) {
+            this._receiveData(false);
+        }
     }
 
     /**
-     * Deletes an item via DELETE request with confirmation modal.
-     * @param {string|number|null} itemId id of the item to delete.
+     * Sets the search filter and reloads the first page (without modifying order or paging settings).
+     * @param {string} pattern - Search pattern (optional, defaults to empty string)
+     * @param {string} [searchType="basic"] - Filter type ("basic" or "wql").
      */
-    _deleteItem(itemId) {
-        const confirmModal = new webexpress.webui.ModalConfirmDelete();
+    search(pattern = "", searchType = "basic") {
+        this._search = searchType === "basic" ? pattern : null;
+        this._wql = searchType === "wql" ? pattern : null;
+        this._page = 0;
+        if (this._restUri && this._isVisible()) {
+            this._receiveData(false);
+        }
+    }
 
-        confirmModal.confirmation(() => {
-            fetch(`${this._restUri}?id=${encodeURIComponent(itemId ?? "")}`, { method: "DELETE" })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error("Failed to delete item");
-                    }
-                    this._receiveData();
-                })
-                .catch(error => {
-                    console.error(`Failed to delete item with ID ${itemId}.`, error);
-                });
-        });
+    /**
+     * Sets the filter and reloads the first page.
+     * @param {string} pattern - Filter pattern.
+     */
+    filter(pattern = "") {
+        this._filter = pattern;
+        this._page = 0;
 
-        confirmModal.show();
+        if (this._restUri) {
+            if (this._isVisible()) {
+                this._receiveData();
+            }
+        }
+    }
+    
+    /**
+     * Sets and loads the page.
+     * @param {string} page - The current page pattern.
+     */
+    paging(page = 0) {
+        this._page = page;
+
+        if (this._restUri) {
+            if (this._isVisible()) {
+                this._receiveData();
+            }
+        }
+    }
+
+    /**
+     * Creates an element and assigns bootstrap classes.
+     * @param {string} - tag html tag name.
+     * @param {Array<string>} - classList classes to add.
+     * @returns {HTMLElement} - Created element.
+     */
+    _createElement(tag, classList = []) {
+        const el = document.createElement(tag);
+        if (classList.length) {
+            el.classList.add(...classList);
+        }
+        return el;
+    }
+
+    /**
+     * Creates a compact progress bar.
+     * @returns {HTMLDivElement} - Progress container.
+     */
+    _createProgressDiv() {
+        const div = this._createElement("div", ["progress", "mb-2"]);
+        div.setAttribute("role", "status");
+        div.style.height = "0.25rem"; // thin line
+
+        const bar = this._createElement("div", [
+            "progress-bar",
+            "progress-bar-striped",
+            "progress-bar-animated"
+        ]);
+        bar.style.width = "100%";
+
+        div.appendChild(bar);
+        return div;
+    }
+    
+    /**
+     * Initializes or binds a pagination control and an information area.
+     * @param {HTMLElement} host - The host element to search or attach the pager to.
+     */
+    _initPager(host) {
+        // find existing pager element
+        const paginationId = host.dataset.wxSourcePaging || null;
+        const init = () => {
+            this._pagerElement = document.querySelector(paginationId);
+
+            if (this._pagerElement) {
+                this._pagerCtrl = webexpress.webui.Controller.getInstanceByElement(this._pagerElement);
+            }
+
+            this._syncPagerAndInfo();
+        }
+
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", () => init());
+        } else {
+            init();
+        }
+        
+        // create info div to show totals and current page details
+        this._infoDiv = document.createElement("div");
+        this._infoDiv.className = "text-muted small";
+        this._infoDiv.style.marginTop = "0.25rem";
+        this._infoDiv.textContent = "";
+        
+        host.appendChild(this._infoDiv);
+    }
+
+    /**
+     * Updates pager state and info text.
+     * Falls back to native rendering if external control is not available.
+     */
+    _syncPagerAndInfo() {
+        const total = Number(this._totalRecords) || 0;
+        let totalPages = 1;
+        if (this._pageSize > 0) {
+            totalPages = Math.max(1, Math.ceil(total / this._pageSize));
+        }
+
+        // clamp current page to available range
+        if (this._page < 0) {
+            this._page = 0;
+        }
+        if (this._page >= totalPages) {
+            this._page = totalPages - 1;
+        }
+
+        const currentPage = this._page;
+
+        // non-infinite: rows correspond to the current page
+        let itemsOnPage = 0;
+        if (Array.isArray(this._items)) {
+            itemsOnPage = this._items.length;
+        }
+
+        // update pager host dataset
+        if (this._pagerElement) {
+            this._pagerElement.dataset.page = String(currentPage);
+            this._pagerElement.dataset.total = String(totalPages);
+        }
+
+        // update pager control silently if available
+        if (this._pagerCtrl) {
+            if (typeof this._pagerCtrl.updateState === "function") {
+                // updatestate will not dispatch change_page_event
+                this._pagerCtrl.updateState(currentPage, totalPages);
+            } else {
+                // fall back: set properties directly
+                try {
+                    this._pagerCtrl.total = totalPages;
+                    this._pagerCtrl.page = currentPage;
+                } catch (e) {
+                    // ignore errors when setting fallback properties
+                }
+            }
+        }
+
+        // update textual info
+        if (this._infoDiv) {
+            this._infoDiv.textContent = "Page " + (currentPage + 1) + " of " + totalPages + " / " + itemsOnPage + " of " + total + " items";
+        }
+    }
+    
+    /**
+     * Handles page changes coming from external or internal pagination controls.
+     * @param {number} targetPage Zero-based page index.
+     */
+    _handleExternalPageChange(targetPage) {
+        const totalPages = Math.max(1, Math.ceil(this._totalRecords / this._pageSize));
+        let page = Number(targetPage) || 0;
+
+        if (page < 0) {
+            page = 0;
+        }
+        
+        if (page >= totalPages) {
+            page = totalPages - 1;
+        }
+
+        this._page = page;
+
+        if (this._infoDiv) {
+            this._infoDiv.textContent = "Page " + (this._page + 1) + " of " + totalPages + " — loading…";
+        }
+
+        this._receiveData();
     }
 };
 
-// register class
+// register the class in the controller
 webexpress.webui.Controller.registerClass("wx-webapp-list", webexpress.webapp.ListCtrl);

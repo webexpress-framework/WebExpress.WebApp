@@ -18,7 +18,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData("id", @"<a id=""id"" href=""/server/app"" class=""text-decoration-none""><h1 class=""p-1 me-2 mb-0"">TestApplication</h1></a>")]
         public void Id(string id, string expected)
         {
-            // preconditions
+            // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock(componentHub?.ApplicationManager.Applications.FirstOrDefault());
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
@@ -26,7 +26,7 @@ namespace WebExpress.WebApp.Test.WebControl
             {
             };
 
-            // test execution
+            // act
             var html = control.Render(context, visualTree);
 
             AssertExtensions.EqualWithPlaceholders(expected, html);

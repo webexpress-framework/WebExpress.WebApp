@@ -22,6 +22,11 @@ namespace WebExpress.WebApp.WebControl
         private readonly List<IControl> _metadata = [];
 
         /// <summary>
+        /// Returns or sets the title.
+        /// </summary>
+        public string Title { get; set; }
+
+        /// <summary>
         /// Returns the prologue area.
         /// </summary>
         public IEnumerable<IControl> Prologue => _prologue;
@@ -231,7 +236,9 @@ namespace WebExpress.WebApp.WebControl
                         Text = I18N.Translate
                         (
                             renderContext,
-                            renderContext.PageContext?.PageTitle
+                            !string.IsNullOrWhiteSpace(Title)
+                                ? Title
+                                : renderContext.PageContext?.PageTitle
                         ),
                         Format = TypeFormatText.H2,
                         Margin = new PropertySpacingMargin(PropertySpacing.Space.None, PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.Null)

@@ -1,11 +1,15 @@
 ﻿using System.Linq;
 using WebExpress.WebApp.WebControl;
 using WebExpress.WebApp.WebPage;
+using WebExpress.WebApp.WebSection;
+using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebComponent;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebPage;
+using WebExpress.WebCore.WebTheme;
 using WebExpress.WebUI.WebControl;
+using WebExpress.WebUI.WebFragment;
 using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.WebSettingPage
@@ -49,21 +53,39 @@ namespace WebExpress.WebApp.WebSettingPage
             Breadcrumb.Prefix = "webexpress.webapp:setting.label";
             Breadcrumb.TakeLast = 1;
 
+            // head
             html.Head.Title = I18N.Translate(context.Request, Title);
             html.Head.Favicons = Favicons;
             html.Head.Styles = Styles;
             html.Head.Meta = Meta;
             html.Head.Scripts = HeaderScripts;
-            html.Head.CssLinks = CssLinks.Where(x => x != null).Select(x => x.ToString());
-            html.Head.ScriptLinks = HeaderScriptLinks?.Where(x => x != null).Select(x => x.ToString());
+            html.Head.CssLinks = CssLinks.Where(x => x is not null).Select(x => x.ToString());
+            html.Head.ScriptLinks = HeaderScriptLinks?.Where(x => x is not null).Select(x => x.ToString());
 
-            // header
+            // body
             Header.AppTitle.SetTitle(html.Head.Title);
+            if (Theme?.ThemeMode == ThemeMode.Dark)
+            {
+                html.Body.AddUserAttribute("data-bs-theme", "dark");
+            }
+
+            var preferences = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionBodyPreferences>
+            (
+                renderContext?.PageContext
+            );
+            html.Body.Add(preferences.Select(x => x.Render(renderContext, this)));
+            html.Body.Add(MessageQueueUri);
             html.Body.Add(Header.Render(renderContext, this));
             html.Body.Add(Toast.Render(renderContext, this));
             html.Body.Add(Breadcrumb.Render(renderContext, this));
             html.Body.Add(Prologue.Render(renderContext, this));
             html.Body.Add(SettingTab.Render(renderContext, this));
+
+            var primary = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionBodyPrimary>
+            (
+                renderContext?.PageContext
+            );
+            html.Body.Add(primary.Select(x => x.Render(renderContext, this)));
 
             var split = new ControlPanelSplit
             (
@@ -81,13 +103,20 @@ namespace WebExpress.WebApp.WebSettingPage
             html.Body.Add
             (
                 split.Render(renderContext, this)
-                    .AddUserAttribute("data-wx-toggle", "split")
-                    .AddUserAttribute("data-wx-target", $"#wx-split-button-toggle")
+                    .AddUserAttribute("data-wx-primary-action", "split")
+                    .AddUserAttribute("data-wx-primary-target", $"#wx-split-button-toggle")
             );
             html.Body.Add(Footer.Render(renderContext, this));
             html.Body.Add(NotificationPopup.Render(renderContext, this));
 
             html.Body.Scripts = [.. Scripts.Values];
+
+            var secondary = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionBodySecondary>
+            (
+                renderContext?.PageContext
+            );
+
+            html.Body.Add(secondary.Select(x => x.Render(renderContext, this)));
 
             return html;
         }

@@ -14,7 +14,7 @@ namespace WebExpress.WebApp.WebCondition
         /// </summary>
         /// <param name="request">The request.</param>
         /// <returns>True if the condition is fulfilled, false otherwise.</returns>
-        public bool Fulfillment(Request request)
+        public bool Fulfillment(IRequest request)
         {
             return Environment.OSVersion.ToString().Contains("unix", StringComparison.OrdinalIgnoreCase);
         }

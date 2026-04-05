@@ -92,12 +92,18 @@ namespace WebExpress.WebApp.Test.Fixture
         }
 
         /// <summary>
+        /// Create a fake request with no content and an empty URI.
+        /// </summary>
+        /// <returns>A fake request for testing.</returns>
+        public static IRequest CreateRequestMock() => CreateRequestMock("", "");
+
+        /// <summary>
         /// Create a fake request.
         /// </summary>
         /// <param name="content">The content of the request.</param>
         /// <param name="uri">The URI of the request.</param>
         /// <returns>A fake request for testing.</returns>
-        public static Request CreateRequestMock(string content = "", string uri = "")
+        public static IRequest CreateRequestMock(string content, string uri)
         {
             var context = CreateHttpContextMock(content);
 
@@ -108,6 +114,24 @@ namespace WebExpress.WebApp.Test.Fixture
                 var uriProperty = typeof(Request).GetProperty("Uri", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                 uriProperty.SetValue(request, new UriEndpoint(uri));
             }
+
+            return request;
+        }
+
+        /// <summary>
+        /// Create a fake request.
+        /// </summary>
+        /// <param name="uri">The URI of the request.</param>
+        /// <returns>A fake request for testing.</returns>
+        public static IRequest CreateRequestMock(string uri)
+        {
+            var content = $@"GET {uri} HTTP/1.1
+                Host: localhost
+                Content-Type: text/html";
+
+            var context = CreateHttpContextMock(content);
+
+            var request = context.Request;
 
             return request;
         }

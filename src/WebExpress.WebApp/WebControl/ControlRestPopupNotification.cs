@@ -12,6 +12,11 @@ namespace WebExpress.WebApp.WebControl
     public class ControlRestPopupNotification : Control
     {
         /// <summary>
+        /// Gets or sets the interval, in milliseconds, at which the control polls for new notifications.
+        /// </summary>
+        public int Interval { get; set; } = -1;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="ControlRestPopupNotification"/> class.
         /// </summary>
         /// <param name="id">The optional identifier for the control. If not provided, a new GUID will be generated.</param>
@@ -36,8 +41,10 @@ namespace WebExpress.WebApp.WebControl
                 Class = Css.Concatenate("wx-webapp-popupnotification", GetClasses()),
                 Style = GetStyles()
             }
-                .AddUserAttribute("data-uri", WebEx.ComponentHub.SitemapManager.GetUri<PopupNotification>(applicationContext).ToString())
-                .AddUserAttribute("data-intervall", "15000");
+                .AddUserAttribute("data-uri", WebEx.ComponentHub
+                    .SitemapManager
+                    .GetUri<PopupNotification>(applicationContext)?.ToString())
+                .AddUserAttribute("data-interval", Interval > 0 ? Interval.ToString() : null);
 
             return html;
         }

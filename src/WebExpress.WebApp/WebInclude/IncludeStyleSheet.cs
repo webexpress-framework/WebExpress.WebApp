@@ -11,9 +11,12 @@ namespace WebExpress.WebApp.WebInclude
     /// functionality of a web application.
     /// </remarks>
     [Asset("/assets/css/webexpress.webapp.css")]
+    [Asset("/assets/css/webexpress.webapp.form.css")]
     [Asset("/assets/css/webexpress.webapp.popupnotification.css")]
+    [Asset("/assets/css/webexpress.webapp.search.css")]
     [Asset("/assets/css/webexpress.webapp.table.css")]
     [Asset("/assets/css/webexpress.webapp.taskprogressbar.css")]
+    [Asset("/assets/css/webexpress.webapp.wql.css")]
     public sealed class IncludeStyleSheet : IInclude
     {
 

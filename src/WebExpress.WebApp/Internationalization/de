@@ -2,8 +2,42 @@
 plugin.name=WebExpress.WebApp
 plugin.description=Stellt Basiskomponenten einer Webanwendung bereit.
 
-module.name=WebExpress.WebApp
-module.description=Stellt Basiskomponenten einer Webanwendung bereit.
+create.title=Erstellen
+create.label=Erstellen
+edit.title=Bearbeiten
+edit.label=Bearbeiten
+clone.title=Klonen
+clone.label=Klonen
+delete.title=Löschen
+delete.label=Löschen
+
+confirmation.title=Bestätigung
+confirmation.description=Möchten Sie diese Aktion wirklich durchführen?
+confirmation.delete.label=Löschen
+confirmation.delete.success=Die Löschaktion wurde erfolgreich durchgeführt.
+confirmation.delete.confirm=Möchten Sie das ausgewählte Element '{0}' wirklich löschen?
+confirmation.cancel.label=Abbrechen
+
+validation.allowedvalues=Der Wert muss einer der erlaubten Werte sein.
+validation.contains=Der Text muss die geforderte Teilzeichenkette enthalten.
+validation.daterange=Das Datum muss im erlaubten Bereich liegen.
+validation.email=Die Eingabe muss eine gültige E-Mail-Adresse sein.
+validation.endswith=Der Text muss mit der geforderten Zeichenkette enden.
+validation.exactlength=Die Zeichenkette muss die erforderliche Länge haben.
+validation.futuredate=Das Datum muss in der Zukunft liegen.
+validation.ipaddress=Die Angabe muss eine gültige IP-Adresse sein.
+validation.maxitems=Die Anzahl der Elemente darf den Maximalwert nicht überschreiten.
+validation.maxlength=Der Text darf die maximale Länge nicht überschreiten.
+validation.minitems=Die Anzahl der Elemente muss mindestens den Minimalwert erreichen.
+validation.minlength=Der Text muss mindestens die Mindestlänge haben.
+validation.notcontains=Der Text darf die unzulässige Teilzeichenkette nicht enthalten.
+validation.notequal=Der Wert darf nicht dem unzulässigen Wert entsprechen.
+validation.pastdate=Das Datum muss in der Vergangenheit liegen.
+validation.range=Der Wert muss im erlaubten Bereich liegen.
+validation.regex=Der Text entspricht nicht dem erforderlichen Muster.
+validation.required=Das Feld darf nicht leer sein.
+validation.startswith=Der Text muss mit der geforderten Zeichenkette beginnen.
+validation.url=Die Angabe muss eine gültige URL sein.
 
 indexmanager.initialization=Der Index-Manager wurde initialisiert.
 
@@ -31,8 +65,6 @@ pagesettingmanager.register=Eine Einsteuungsseite wurde dem Einstellungsseitenma
 pagesettingmanager.idless=Eine Einstellungsseite aus dem Plugin '{0}' verfügt über keine Id.
 pagesettingmanager.moduleless=Die Einstellungsseite '{0}' aus dem Plugin '{1}' verfügt über keine Modulzuordnung.
 pagesettingmanager.resourceless=Zu der Einstellungsseite '{0}' aus dem Plugin '{1}' konnte keine zugehörige Ressource ermittelt werden.
-
-edit.label=Bearbeiten
 
 search.label=Suche
 search.placeholder=Geben Sie hier Ihre Suchbegriffe ein.
@@ -71,9 +103,9 @@ setting.group.system.description=Systembezogene Einstellungen für die Webanwend
 
 setting.tab.general.label=Allgemein
 setting.group.system.label=System
-setting.titel.plugin.label=Plugins
-setting.titel.systeminformation.label=Systeminformationen
-setting.titel.log.label=Log
+setting.title.plugin.label=Plugins
+setting.title.systeminformation.label=Systeminformationen
+setting.title.log.label=Log
 
 setting.logfile.label=Logdatei:
 setting.logfile.path=Speicherort:
@@ -169,3 +201,26 @@ setting.usermanager.user.edit.groups.label=Gruppen:
 setting.usermanager.user.edit.groups.description=Ordnen Sie die gewünschten Gruppen dem Benutzer zu.
 setting.usermanager.user.edit.groups.available=Verfügbare Gruppen
 setting.usermanager.user.edit.groups.selected=Ausgewählte Gruppen
+
+setting.sitemap.title=Sitemap
+setting.sitemap.label=Sitemap
+setting.sitemap.description=Hier können Sie die Sitemap der Webanwendung einsehen. Die Sitemap stellt die Struktur der Webseite dar und zeigt alle verfügbaren Seiten und deren Hierarchie an. Sie können die Sitemap verwenden, um schnell zu bestimmten Seiten zu navigieren oder um einen Überblick über die gesamte Webseite zu erhalten.
+
+setting.monitor.title.label=Monitor
+setting.monitor.group.statistics.label=Allgemeine Statistiken
+setting.monitor.uptime=Laufzeit
+setting.monitor.totalrequests=Gesamtanfragen
+setting.monitor.group.chart.traffic.label=Datenverkehr
+setting.monitor.dataset.requests=Anfragen
+setting.monitor.dataset.errors=Fehler
+setting.monitor.group.chart.performance.label=Leistung
+setting.monitor.dataset.avg_duration=Ø Dauer (ms)
+setting.monitor.dataset.max_duration=Max. Dauer (ms)
+setting.monitor.dataset.min_duration=Min. Dauer (ms)
+setting.monitor.chart.title=System Monitor
+setting.monitor.chart.axis.x=Zeit
+setting.monitor.chart.axis.y=Anzahl
+setting.monitor.currenttime=Aktuelle Systemzeit
+setting.monitor.group.chart.resources.label=Systemressourcen
+setting.monitor.dataset.cpu=CPU Auslastung (%)
+setting.monitor.dataset.memory=Speichernutzung (MB)

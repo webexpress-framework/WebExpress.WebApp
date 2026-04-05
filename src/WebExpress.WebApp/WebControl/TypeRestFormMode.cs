@@ -16,12 +16,22 @@
         /// Initializes a new instance of the class or creates a new object, depending on the context.
         /// </summary>
         /// <remarks>This member is typically used to indicate the creation of a new instance or object.</remarks>
-        New,
+        Add,
+
+        /// <summary>
+        /// Creates a new object that is a copy of the current instance.
+        /// </summary>
+        Clone,
 
         /// <summary>
         /// Represents an operation to edit an existing entity or resource.
         /// </summary>
-        Edit
+        Edit,
+
+        /// <summary>
+        /// Represents a delete operation or action.
+        /// </summary>
+        Delete
     }
 
     /// <summary>
@@ -38,8 +48,10 @@
         {
             return mode switch
             {
-                TypeRestFormMode.New => "new",
+                TypeRestFormMode.Add => "new",
+                TypeRestFormMode.Clone => "new",
                 TypeRestFormMode.Edit => "edit",
+                TypeRestFormMode.Delete => "delete",
                 _ => ""
             };
         }

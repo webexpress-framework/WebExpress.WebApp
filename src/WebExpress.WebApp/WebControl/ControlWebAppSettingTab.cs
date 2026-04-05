@@ -134,7 +134,7 @@ namespace WebExpress.WebApp.WebControl
             var appicationContext = renderContext.PageContext?.ApplicationContext;
             var settingPageContext = renderContext.PageContext as ISettingPageContext;
             var categories = settingPageManager?.GetSettingCategories(appicationContext)
-                .Where(x => settingPageManager.GetFirstSettingPage(appicationContext, x) != null)
+                .Where(x => settingPageManager.GetFirstSettingPage(appicationContext, x) is not null)
                 .Select
                 (
                     x => new ControlNavigationItemLink()

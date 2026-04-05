@@ -152,20 +152,20 @@ namespace WebExpress.WebApp.WebControl
                 ? (IControl)new ControlSplitButtonLink(Id)
                 {
                     Classes = ["btn-success"],
-                    Text = I18N.Translate(renderContext.Request?.Culture, "webexpress.webapp:header.quickcreate.label"),
+                    Text = I18N.Translate(renderContext, "webexpress.webapp:header.quickcreate.label"),
                     Uri = firstQuickcreate?.Uri,
                     OnClick = firstQuickcreate?.OnClick,
-                    Modal = firstQuickcreate?.Modal
+                    PrimaryAction = firstQuickcreate?.PrimaryAction
                 }
                     .Add(nextQuickcreate)
                 : Preferences.Any()
                 ? new ControlButtonLink(Id)
                 {
                     Classes = ["btn-success"],
-                    Text = I18N.Translate(renderContext.Request?.Culture, "webexpress.webapp:header.quickcreate.label"),
+                    Text = I18N.Translate(renderContext, "webexpress.webapp:header.quickcreate.label"),
                     Uri = firstQuickcreate?.Uri,
                     OnClick = firstQuickcreate?.OnClick,
-                    Modal = firstQuickcreate?.Modal
+                    PrimaryAction = firstQuickcreate?.PrimaryAction
                 }
                 : null;
 

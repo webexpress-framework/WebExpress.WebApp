@@ -64,6 +64,110 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
     }
 
     /**
+     * Helper to create a single menu item LI element.
+     * Overrides or polyfills the base class method to ensure action attributes are applied.
+     * @param {Object} item - The item data object.
+     * @returns {HTMLElement} The constructed LI element containing the link/button.
+     */
+    _createMenuItem(item) {
+        // handle dividers and headers
+        if (item.type === "divider") {
+            const li = document.createElement("li");
+            li.className = "dropdown-divider";
+            return li;
+        }
+        if (item.type === "header") {
+            const li = document.createElement("li");
+            const h = document.createElement("h6");
+            h.className = "dropdown-header";
+            h.textContent = item.text || item.content || "";
+            li.appendChild(h);
+            return li;
+        }
+
+        // standard Item
+        const li = document.createElement("li");
+        const a = document.createElement("a");
+        a.className = "dropdown-item";
+        a.href = item.uri || "#";
+        if (item.id) {
+            a.id = item.id;
+        }
+
+        // apply action attributes
+        if (item.primaryAction) {
+            for (const [key, value] of Object.entries(item.primaryAction)) {
+                if (value) {
+                    const htmlName = `data-wx-primary-${key.toLowerCase()}`;
+                    a.setAttribute(htmlName, value);
+                }
+            }
+        }
+
+        if (item.secondaryAction) {
+            for (const [key, value] of Object.entries(item.secondaryAction)) {
+                if (value) {
+                    const htmlName = `data-wx-secondary-${key.toLowerCase()}`;
+                    a.setAttribute(htmlName, value);
+                }
+            }
+        }
+
+        if (item.color) {
+            a.classList.add(item.color);
+        }
+        if (item.disabled) {
+            a.classList.add("disabled");
+            a.setAttribute("aria-disabled", "true");
+        }
+
+        // add Icon
+        if (item.icon) {
+            const i = document.createElement("i");
+            i.className = item.icon;
+            if (!i.classList.contains("me-2")) {
+                i.classList.add("me-2");
+            }
+            a.appendChild(i);
+        } else if (item.image) {
+            const img = document.createElement("img");
+            img.src = item.image;
+            img.className = "wx-icon me-2";
+            a.appendChild(img);
+        }
+
+        // add Text
+        const span = document.createElement("span");
+        span.textContent = item.text || item.content || item.label || "";
+        a.appendChild(span);
+
+        // add custom data attributes
+        if (Array.isArray(item.data)) {
+            item.data.forEach(([key, val]) => a.setAttribute(key, val));
+        }
+
+        // add click listener from base class logic logic
+        a.addEventListener("click", (e) => {
+            // re-use logic from base class if available, or implement standard behavior
+            if (typeof this._handleItemClick === "function") {
+                this._handleItemClick(e, item, a);
+            } else {
+                // fallback implementation
+                if (item.disabled) {
+                    e.preventDefault();
+                    return;
+                }
+                this._dispatch(webexpress.webui.Event.CHANGE_VALUE_EVENT, { value: item.id, item: item });
+                
+                const hasAction = a.dataset.wxPrimaryAction || a.dataset.wxSecondaryAction;
+            }
+        });
+
+        li.appendChild(a);
+        return li;
+    }
+
+    /**
      * Ensures the dropdown DOM structure is present exactly once and stable across updates.
      * Inserts the button/menu, search row, dynamic anchor, static divider, and static items.
      */
@@ -79,6 +183,8 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
         if (!ul) {
             return;
         }
+
+        const fragment = document.createDocumentFragment();
 
         // insert search input as the first menu item
         const liSearch = document.createElement("li");
@@ -109,34 +215,25 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
 
         liSearch.appendChild(input);
         this._searchInput = input;
-
-        if (ul.firstChild) {
-            ul.insertBefore(liSearch, ul.firstChild);
-        } else {
-            ul.appendChild(liSearch);
-        }
+        fragment.appendChild(liSearch);
 
         // add a small divider after the search row; this stays in place
         const liAfterSearchDivider = document.createElement("li");
         liAfterSearchDivider.className = "dropdown-divider";
-        if (liSearch.nextSibling) {
-            ul.insertBefore(liAfterSearchDivider, liSearch.nextSibling);
-        } else {
-            ul.appendChild(liAfterSearchDivider);
-        }
+        fragment.appendChild(liAfterSearchDivider);
 
         // dynamic region anchor (invisible marker)
         const anchor = document.createElement("li");
         anchor.className = "wx-dynamic-anchor d-none";
         anchor.setAttribute("aria-hidden", "true");
-        ul.appendChild(anchor);
+        fragment.appendChild(anchor);
         this._dynamicAnchor = anchor;
 
         // divider between dynamic and static (created now, toggled later)
         const dsDivider = document.createElement("li");
         dsDivider.className = "dropdown-divider";
         dsDivider.style.display = "none";
-        ul.appendChild(dsDivider);
+        fragment.appendChild(dsDivider);
         this._dynamicStaticDivider = dsDivider;
 
         // append static items (never filtered)
@@ -144,9 +241,16 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
         if (Array.isArray(this._staticItems)) {
             for (let i = 0; i < this._staticItems.length; i++) {
                 const node = this._createMenuItem(this._staticItems[i]);
-                ul.appendChild(node);
+                fragment.appendChild(node);
                 this._staticNodes.push(node);
             }
+        }
+
+        // prepend the constructed fragment to the list
+        if (ul.firstChild) {
+            ul.insertBefore(fragment, ul.firstChild);
+        } else {
+            ul.appendChild(fragment);
         }
 
         this._structureReady = true;
@@ -167,10 +271,10 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
             return;
         }
 
-        // dispatch "requested" event via internal dispatcher
         const startedAt = Date.now();
+        
+        // dispatch "requested" event via internal dispatcher
         try {
-            // Trigger event for external listeners
             this._dispatch(webexpress.webui.Event.DATA_REQUESTED_EVENT, {
                 endpoint: this._apiEndpoint,
                 method: this._httpMethod,
@@ -190,12 +294,42 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
             };
 
             if (this._httpMethod === "GET") {
+                const params = new URLSearchParams();
+                
+                // keep original query param for compatibility
+                params.set(this._queryParam, term || "");
+                // provide canonical dropdown search param
+                params.set("q", term || "");
+
+                // support dropdown paging hints
+                if (typeof this._page === "number" && this._page >= 0) {
+                    params.set("p", String(this._page));
+                }
+                if (typeof this._pageSize === "number" && this._pageSize > 0) {
+                    params.set("l", String(this._pageSize));
+                } else if (typeof this._max === "number" && this._max > 0) {
+                    params.set("m", String(this._max));
+                }
+
                 const hasQuery = url.includes("?");
-                const qp = encodeURIComponent(this._queryParam) + "=" + encodeURIComponent(term || "");
-                url = url + (hasQuery ? "&" : "?") + qp;
+                url = url + (hasQuery ? "&" : "?") + params.toString();
             } else if (this._httpMethod === "POST") {
                 init.headers["Content-Type"] = "application/json";
-                init.body = JSON.stringify({ [this._queryParam]: term || "" });
+                const body = {
+                    [this._queryParam]: term || "",
+                    q: term || "",
+                };
+
+                if (typeof this._page === "number" && this._page >= 0) {
+                    body.page = this._page;
+                }
+                if (typeof this._pageSize === "number" && this._pageSize > 0) {
+                    body.pageSize = this._pageSize;
+                } else if (typeof this._max === "number" && this._max > 0) {
+                    body.max = this._max;
+                }
+
+                init.body = JSON.stringify(body);
             }
 
             const res = await fetch(url, init);
@@ -204,27 +338,15 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
             }
 
             const json = await res.json();
+            const rawItems = json.items;
 
-            let rawItems = [];
-            if (Array.isArray(json)) {
-                rawItems = json;
-            } else if (json && Array.isArray(json.items)) {
-                rawItems = json.items;
-            } else if (json && Array.isArray(json.data)) {
-                rawItems = json.data;
-            } else {
-                rawItems = [];
-            }
-
-            this._allItems = rawItems.map((x) => this._mapApiItem(x));
+            this._allItems = rawItems.map((x) => { return this._mapApiItem(x); });
 
             // dynamic update without re-rendering the whole menu
             this._applyFilter(this._searchTerm);
 
-            // dispatch "arrived" event (success) via internal dispatcher
             try {
                 const finishedAt = Date.now();
-                // Trigger event for external listeners
                 this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
                     endpoint: this._apiEndpoint,
                     method: this._httpMethod,
@@ -242,10 +364,8 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
             this._allItems = [];
             this._applyFilter(this._searchTerm);
 
-            // dispatch "arrived" event (error) via internal dispatcher
             try {
                 const finishedAt = Date.now();
-                // Trigger event for external listeners
                 this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
                     endpoint: this._apiEndpoint,
                     method: this._httpMethod,
@@ -256,7 +376,7 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
                     error: String(err && err.message ? err.message : err)
                 });
             } catch (e) {
-                // noop
+                // ignore
             }
 
             console.error("failed to fetch dropdown data:", err);
@@ -270,21 +390,18 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
      * @returns {Object} A normalized item compatible with DropdownCtrl._createMenuItem.
      */
     _mapApiItem(apiItem) {
-        // choose field aliases defensively
         const id = apiItem.id || null;
         const uri = apiItem.uri || apiItem.url || "javascript:void(0);";
-        const content = apiItem.content || apiItem.name || apiItem.text || apiItem.title || "";
+        const text = apiItem.text || apiItem.name || apiItem.label || apiItem.title || "";
         const icon = apiItem.icon || null;
         const image = apiItem.image || apiItem.img || null;
         const color = apiItem.color || null;
         const disabled = Boolean(apiItem.disabled);
         const role = apiItem.role || null;
 
-        // transform data/aria objects into attribute tuples
         const dataTuples = [];
         if (apiItem.data && typeof apiItem.data === "object") {
             Object.keys(apiItem.data).forEach((k) => {
-                // ensure attribute key has data- prefix
                 const key = k.startsWith("data-") ? k : "data-" + k;
                 dataTuples.push([key, String(apiItem.data[k])]);
             });
@@ -293,7 +410,6 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
         const ariaTuples = [];
         if (apiItem.aria && typeof apiItem.aria === "object") {
             Object.keys(apiItem.aria).forEach((k) => {
-                // ensure attribute key has aria- prefix
                 const key = k.startsWith("aria-") ? k : "aria-" + k;
                 ariaTuples.push([key, String(apiItem.aria[k])]);
             });
@@ -304,12 +420,17 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
             uri: uri,
             image: image,
             icon: icon,
-            content: content,
+            text: text,
             color: color,
             disabled: disabled,
             data: dataTuples,
             aria: ariaTuples,
-            role: role
+            role: role,
+            
+            // action attributes to be used by _createMenuItem
+            primaryAction: apiItem.primaryAction || null,
+            secondaryAction: apiItem.secondaryAction || null,
+            bind: apiItem.bind || null
         };
     }
 
@@ -321,15 +442,14 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
     _applyFilter(term) {
         this._ensureStructure();
 
-        const filtered = this._allItems.slice(0);
-
         const limited = [];
         let remaining = this._maxItems;
-        for (let i = 0; i < filtered.length; i++) {
+        
+        for (let i = 0; i < this._allItems.length; i++) {
             if (remaining <= 0) {
                 break;
             }
-            limited.push(filtered[i]);
+            limited.push(this._allItems[i]);
             remaining--;
         }
 
@@ -347,7 +467,7 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
             return;
         }
 
-        // remove previous dynamic nodes
+        // remove previous dynamic nodes efficiently
         if (Array.isArray(this._currentDynamicNodes)) {
             for (let i = 0; i < this._currentDynamicNodes.length; i++) {
                 const n = this._currentDynamicNodes[i];
@@ -358,12 +478,15 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
         }
         this._currentDynamicNodes = [];
 
-        // insert new dynamic nodes before the dynamic-static divider
+        // insert new dynamic nodes using a document fragment
+        const fragment = document.createDocumentFragment();
         for (let i = 0; i < items.length; i++) {
             const li = this._createMenuItem(items[i]);
-            ul.insertBefore(li, this._dynamicStaticDivider);
+            fragment.appendChild(li);
             this._currentDynamicNodes.push(li);
         }
+        
+        ul.insertBefore(fragment, this._dynamicStaticDivider);
 
         // toggle divider visibility depending on presence of dynamic and static
         const hasDynamic = this._currentDynamicNodes.length > 0;
@@ -390,5 +513,5 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
     }
 };
 
-// Register the class in the controller
+// register the class in the controller
 webexpress.webui.Controller.registerClass("wx-webapp-dropdown", webexpress.webapp.DropdownCtrl);
