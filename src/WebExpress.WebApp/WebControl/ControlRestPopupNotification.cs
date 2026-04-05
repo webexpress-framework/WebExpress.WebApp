@@ -12,7 +12,7 @@ namespace WebExpress.WebApp.WebControl
     public class ControlRestPopupNotification : Control
     {
         /// <summary>
-        /// Returns or sets the interval, in milliseconds, at which the control polls for new notifications.
+        /// Gets or sets the interval, in milliseconds, at which the control polls for new notifications.
         /// </summary>
         public int Interval { get; set; } = -1;
 
