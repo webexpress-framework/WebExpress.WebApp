@@ -92,12 +92,18 @@ namespace WebExpress.WebApp.Test.Fixture
         }
 
         /// <summary>
+        /// Create a fake request with no content and an empty URI.
+        /// </summary>
+        /// <returns>A fake request for testing.</returns>
+        public static IRequest CreateRequestMock() => CreateRequestMock("", "");
+
+        /// <summary>
         /// Create a fake request.
         /// </summary>
         /// <param name="content">The content of the request.</param>
         /// <param name="uri">The URI of the request.</param>
         /// <returns>A fake request for testing.</returns>
-        public static IRequest CreateRequestMock(string content = "", string uri = "")
+        public static IRequest CreateRequestMock(string content, string uri)
         {
             var context = CreateHttpContextMock(content);
 

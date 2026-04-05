@@ -45,6 +45,12 @@ namespace WebExpress.WebApp.WebAttribute
         /// <returns>True if the value is valid; otherwise false.</returns>
         public bool IsValid(object value, CultureInfo culture, out string errorMessage)
         {
+            if (value is null)
+            {
+                errorMessage = string.Empty;
+                return true;
+            }
+
             if (!Values.Contains(value))
             {
                 errorMessage = I18N.Translate(culture, Message);

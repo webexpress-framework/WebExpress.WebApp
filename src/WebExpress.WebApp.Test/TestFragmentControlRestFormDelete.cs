@@ -10,7 +10,7 @@ namespace WebExpress.WebApp.Test
     /// </summary>
     [Section<SectionContentSecondary>()]
     [Scope<TestPageA>]
-    public sealed class TestFragmentControlRestFormDelete : FragmentControlRestFormAdd
+    public sealed class TestFragmentControlRestFormDelete : FragmentControlRestFormDelete
     {
         /// <summary>
         /// Initializes a new instance of the class.
