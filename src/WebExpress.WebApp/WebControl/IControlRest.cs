@@ -9,8 +9,8 @@ namespace WebExpress.WebApp.WebControl
     public interface IControlRest : IControl
     {
         /// <summary>
-        /// Gets or sets the uri that determines the data.
+        /// Returns the uri that determines the data.
         /// </summary>
-        public IUri RestUri { get; set; }
+        public IUri RestUri { get; }
     }
 }
