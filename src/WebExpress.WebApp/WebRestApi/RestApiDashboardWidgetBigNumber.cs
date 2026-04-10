@@ -35,14 +35,16 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 var dict = new Dictionary<string, string>();
                 if (!string.IsNullOrEmpty(Value)) { dict["value"] = Value; }
+                if (!string.IsNullOrEmpty(Title)) { dict["title"] = Title; }
                 if (!string.IsNullOrEmpty(Label)) { dict["label"] = Label; }
                 return dict;
             }
             set
             {
-                if (value != null)
+                if (value is not null)
                 {
                     if (value.TryGetValue("value", out var v)) { Value = v; }
+                    if (value.TryGetValue("title", out var t)) { Title = t; }
                     if (value.TryGetValue("label", out var l)) { Label = l; }
                 }
             }

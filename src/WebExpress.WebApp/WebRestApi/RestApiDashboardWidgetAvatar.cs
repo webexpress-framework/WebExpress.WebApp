@@ -40,6 +40,7 @@ namespace WebExpress.WebApp.WebRestApi
             get
             {
                 var dict = new Dictionary<string, string>();
+                if (!string.IsNullOrEmpty(Title)) { dict["title"] = Title; }
                 if (!string.IsNullOrEmpty(Name)) { dict["name"] = Name; }
                 if (!string.IsNullOrEmpty(Caption)) { dict["caption"] = Caption; }
                 if (!string.IsNullOrEmpty(Image)) { dict["image"] = Image; }
@@ -49,6 +50,7 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 if (value != null)
                 {
+                    if (value.TryGetValue("title", out var t)) { Title = t; }
                     if (value.TryGetValue("name", out var n)) { Name = n; }
                     if (value.TryGetValue("caption", out var cap)) { Caption = cap; }
                     if (value.TryGetValue("image", out var img)) { Image = img; }

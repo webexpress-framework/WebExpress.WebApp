@@ -29,15 +29,25 @@ namespace WebExpress.WebApp.WebRestApi
         {
             get
             {
-                // für Einfachheit als JSON-Array serialisieren
-                var dict = new Dictionary<string, string>
+                var dict = new Dictionary<string, string>();
+                if (Alerts is not null)
                 {
-                    ["alerts"] = System.Text.Json.JsonSerializer.Serialize(Alerts ?? [])
-                };
+                    dict["alerts"] = System.Text.Json.JsonSerializer.Serialize(Alerts ?? []);
+                }
+                if (!string.IsNullOrEmpty(Title))
+                {
+                    dict["title"] = Title;
+                }
+
                 return dict;
             }
             set
             {
+                if (value is not null)
+                {
+                    if (value.TryGetValue("title", out var t)) { Title = t; }
+                }
+
                 if (value != null && value.TryGetValue("alerts", out var json))
                 {
                     try
