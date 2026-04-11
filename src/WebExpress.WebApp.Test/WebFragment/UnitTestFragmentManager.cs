@@ -69,6 +69,8 @@ namespace WebExpress.WebApp.Test.WebFragment
         [InlineData(typeof(TestApplication), typeof(IFragmentControl), typeof(SectionBodySecondary), typeof(TestPageA), 1, @"<div id=""webexpress-webapp-test-testfragmentcontrolmodalremoteform"" class=""wx-webui-modal-form"" data-close-label=""Close""><div class=""wx-modal-header""></div><div class=""wx-modal-content""></div><div class=""wx-modal-footer""></div></div>")]
         [InlineData(typeof(TestApplication), typeof(FragmentControlRestQuickfilter), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<div id=""webexpress-webapp-test-testfragmentcontrolrestquickfilter"" class=""wx-webapp-quickfilter""></div>")]
         [InlineData(typeof(TestApplication), typeof(FragmentControlRestDashboard), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<div id=""webexpress-webapp-test-testfragmentcontrolrestdashboard"" class=""wx-webapp-dashboard""></div>")]
+        [InlineData(typeof(TestApplication), typeof(FragmentControlRestWizard), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<form id=""webexpress-webapp-test-testfragmentcontrolrestwizard"" class=""wx-webapp-restwizard""></form>")]
+        [InlineData(typeof(TestApplication), typeof(FragmentControlRestWorkflow), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<div id=""webexpress-webapp-test-testfragmentcontrolrestworkflow"" class=""wx-webapp-workflow-editor""></div>")]
         public void GetFragments(Type applicationType, Type fragmentType, Type sectionType, Type scopeType, int count, string expected)
         {
             // arrange
