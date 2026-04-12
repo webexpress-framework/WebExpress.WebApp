@@ -80,6 +80,13 @@ namespace WebExpress.WebApp.WebControl
         };
 
         /// <summary>
+        /// Returns or sets the avatar of the application settings.
+        /// </summary>
+        public IControlWebAppHeaderAvatar Avatar { get; } = new ControlWebAppHeaderAvatar("wx-header-avatar")
+        {
+        };
+
+        /// <summary>
         /// Returns or sets the navigation of the application settings.
         /// </summary>
         public IControlWebAppHeaderSettings Settings { get; } = new ControlWebAppHeaderSettings("wx-header-settings")
@@ -118,6 +125,7 @@ namespace WebExpress.WebApp.WebControl
              .Add(new ControlPanel() { Margin = new PropertySpacingMargin(PropertySpacing.Space.Auto, PropertySpacing.Space.None) })
              .Add(Help)
              .Add(Notifications)
+             .Add(Avatar)
              .Add(Settings);
 
             return new HtmlElementSectionHeader(content.Render(renderContext, visualTree))
