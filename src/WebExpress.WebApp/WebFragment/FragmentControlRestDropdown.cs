@@ -9,7 +9,7 @@ namespace WebExpress.WebApp.WebFragment
     /// <summary>
     /// Represents a dropdown control within a fragment context.
     /// </summary>
-    public class FragmentControlRestDropdown : ControlRestDropdown, IFragmentControl<ControlRestDropdown>
+    public abstract class FragmentControlRestDropdown : ControlRestDropdown, IFragmentControl<ControlRestDropdown>
     {
         /// <summary>
         /// Returns the context of the fragment.

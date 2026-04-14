@@ -9,7 +9,7 @@ namespace WebExpress.WebApp.WebFragment
     /// <summary>
     /// Represents a list control within a fragment context.
     /// </summary>
-    public class FragmentControlRestList : ControlRestList, IFragmentControl<ControlRestList>
+    public abstract class FragmentControlRestList : ControlRestList, IFragmentControl<ControlRestList>
     {
         /// <summary>
         /// Returns the context of the fragment.

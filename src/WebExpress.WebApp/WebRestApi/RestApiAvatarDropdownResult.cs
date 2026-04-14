@@ -4,6 +4,7 @@ using System.Text.Json;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
 using WebExpress.WebIndex;
+using WebExpress.WebUI.WebIcon;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -16,6 +17,16 @@ namespace WebExpress.WebApp.WebRestApi
          where TIndexItem : IIndexItem
     {
         private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
+
+        /// <summary>
+        /// Returns or sets the user name associated with the current instance.
+        /// </summary>
+        public string Username { get; set; }
+
+        /// <summary>
+        /// Returns or sets the icon image associated with this instance.
+        /// </summary>
+        public ImageIcon Image { get; set; }
 
         /// <summary>
         /// Returns or sets the collection of avatar dropdown items.
@@ -35,6 +46,8 @@ namespace WebExpress.WebApp.WebRestApi
         {
             var data = new
             {
+                username = Username,
+                image = Image?.Uri.ToString(),
                 items = Items,
                 pagination = Pagination
             };

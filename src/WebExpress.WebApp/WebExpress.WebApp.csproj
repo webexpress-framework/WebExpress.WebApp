@@ -58,4 +58,8 @@
 		<ProjectReference Include="..\..\..\WebExpress.WebIndex\src\WebExpress.WebIndex\WebExpress.WebIndex.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="Assets\img\" />
+	</ItemGroup>
+
 </Project>

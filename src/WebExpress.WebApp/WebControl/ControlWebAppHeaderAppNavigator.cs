@@ -132,13 +132,13 @@ namespace WebExpress.WebApp.WebControl
                 ? (IControl)new ControlDropdown(Id)
                 {
                     Classes = ["wx-appnavigator"],
-                    Icon = new ImageIcon(application?.Icon.ToUri(), new PropertySizeIcon(1, TypeSizeUnit.Em)),
+                    Icon = new ImageIcon(application?.Icon?.ToUri(), new PropertySizeIcon(1, TypeSizeUnit.Em)),
                 }
                     .Add(items)
                 : new ControlImage(Id)
                 {
                     Classes = ["wx-appnavigator"],
-                    Uri = application?.Icon.ToUri()
+                    Uri = application?.Icon?.ToUri()
                 };
 
             return navigatorCtrl?.Render(renderContext, visualTree);

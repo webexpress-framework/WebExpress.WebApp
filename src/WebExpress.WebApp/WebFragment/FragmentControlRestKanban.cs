@@ -9,7 +9,7 @@ namespace WebExpress.WebApp.WebFragment
     /// <summary>
     /// Represents a kanban control within a fragment context.
     /// </summary>
-    public class FragmentControlRestKanban : ControlRestKanban, IFragmentControl<ControlRestKanban>
+    public abstract class FragmentControlRestKanban : ControlRestKanban, IFragmentControl<ControlRestKanban>
     {
         /// <summary>
         /// Returns the context of the fragment.

@@ -9,7 +9,7 @@ namespace WebExpress.WebApp.WebFragment
     /// <summary>
     /// Represents a fragment control for editing REST form data.
     /// </summary>
-    public class FragmentControlRestFormEdit : ControlRestFormEdit, IFragmentControl<ControlRestFormEdit>
+    public abstract class FragmentControlRestFormEdit : ControlRestFormEdit, IFragmentControl<ControlRestFormEdit>
     {
         /// <summary>
         /// Returns the context of the fragment.

@@ -16,9 +16,9 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the id property of the web app header avatar control.
         /// </summary>
         [Theory]
-        [InlineData(null, false, "<div class=\"wx-webapp-avatar-dropdown wx-app-dropdown ms-2\" role=\"button\" data-icon=\"fas fa-cog\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">Avatar</div><div class=\"wx-dropdown-item\"></div><div class=\"wx-dropdown-item\" data-icon=\"fas fa-gears\" data-uri=\"/server/app/webexpress.webapp/settings/*\">System</div></div>")]
-        [InlineData("id", false, "<div id=\"id\" class=\"wx-webapp-avatar-dropdown wx-app-dropdown ms-2\" role=\"button\" data-icon=\"fas fa-cog\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">Avatar</div><div class=\"wx-dropdown-item\"></div><div class=\"wx-dropdown-item\" data-icon=\"fas fa-gears\" data-uri=\"/server/app/webexpress.webapp/settings/*\">System</div></div>")]
-        [InlineData("id", true, "<div id=\"id\" class=\"wx-webapp-avatar-dropdown wx-app-dropdown ms-2\" role=\"button\" data-icon=\"fas fa-cog\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-item\" data-icon=\"fas fa-gears\" data-uri=\"/server/app/webexpress.webapp/settings/*\">System</div></div>")]
+        [InlineData(null, false, "<div class=\"wx-webui-avatar-dropdown ms-2\" role=\"button\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">User</div><div class=\"wx-dropdown-item\"></div></div>")]
+        [InlineData("id", false, "<div id=\"id\" class=\"wx-webui-avatar-dropdown ms-2\" role=\"button\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">User</div><div class=\"wx-dropdown-item\"></div></div>")]
+        [InlineData("id", true, "")]
         public void Id(string id, bool empty, string expected)
         {
             // arrange
@@ -38,16 +38,17 @@ namespace WebExpress.WebApp.Test.WebControl
             // act
             var html = control.Render(context, visualTree);
 
+            // validation
             AssertExtensions.EqualWithPlaceholders(expected, html);
         }
 
         /// <summary>
-        /// Tests the rest uri property of the web app header avatar control.
+        /// Tests the username property of the web app header avatar control.
         /// </summary>
         [Theory]
-        [InlineData(null)]
-        [InlineData("https://example.com/api/avatar")]
-        public void RestUri(string uriString)
+        [InlineData(null, "<div id=\"id\" class=\"wx-webui-avatar-dropdown ms-2\" role=\"button\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">User</div><div class=\"wx-dropdown-item\"></div></div>")]
+        [InlineData("bob", "<div id=\"id\" class=\"wx-webui-avatar-dropdown ms-2\" role=\"button\" data-name=\"bob\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">User</div><div class=\"wx-dropdown-item\"></div></div>")]
+        public void Username(string username, string expected)
         {
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
@@ -56,7 +57,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlWebAppHeaderAvatar("id")
             {
-                RestUri = uriString is not null ? new UriEndpoint(uriString) : null
+                Username = username
             };
 
             control.AddPrimary(new ControlDropdownItemLink());
@@ -64,26 +65,17 @@ namespace WebExpress.WebApp.Test.WebControl
             // act
             var html = control.Render(context, visualTree);
 
-            if (uriString is not null)
-            {
-                AssertExtensions.EqualWithPlaceholders(
-                    "*data-uri=\"https://example.com/api/avatar\"*",
-                    html
-                );
-            }
-            else
-            {
-                Assert.NotNull(html);
-            }
+            // validation
+            AssertExtensions.EqualWithPlaceholders(expected, html);
         }
 
         /// <summary>
-        /// Tests the image property of the web app header avatar control.
+        /// Tests the Iamge property of the web app header avatar control.
         /// </summary>
         [Theory]
-        [InlineData(null)]
-        [InlineData("/img/avatar.png")]
-        public void Image(string image)
+        [InlineData(null, "<div id=\"id\" class=\"wx-webui-avatar-dropdown ms-2\" role=\"button\" data-src=\"/\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">User</div><div class=\"wx-dropdown-item\"></div></div>")]
+        [InlineData("/abc.svg", "<div id=\"id\" class=\"wx-webui-avatar-dropdown ms-2\" role=\"button\" data-src=\"/abc.svg\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">User</div><div class=\"wx-dropdown-item\"></div></div>")]
+        public void Iamge(string image, string expected)
         {
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
@@ -92,7 +84,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlWebAppHeaderAvatar("id")
             {
-                Image = image
+                Image = new UriEndpoint(image)
             };
 
             control.AddPrimary(new ControlDropdownItemLink());
@@ -100,17 +92,8 @@ namespace WebExpress.WebApp.Test.WebControl
             // act
             var html = control.Render(context, visualTree);
 
-            if (image is not null)
-            {
-                AssertExtensions.EqualWithPlaceholders(
-                    "*data-image=\"/img/avatar.png\"*",
-                    html
-                );
-            }
-            else
-            {
-                Assert.NotNull(html);
-            }
+            // validation
+            AssertExtensions.EqualWithPlaceholders(expected, html);
         }
 
         /// <summary>
@@ -134,8 +117,9 @@ namespace WebExpress.WebApp.Test.WebControl
             var html = control.Render(context, visualTree);
 
             // validation - verify the avatar dropdown class is present
-            AssertExtensions.EqualWithPlaceholders(
-                "*wx-webapp-avatar-dropdown*",
+            AssertExtensions.EqualWithPlaceholders
+            (
+                "<div id=\"id\" class=\"wx-webui-avatar-dropdown ms-2\" role=\"button\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">User</div><div class=\"wx-dropdown-item\"></div></div>",
                 html
             );
         }
@@ -159,7 +143,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var html = control.Render(context, visualTree);
 
             // validation - the control renders with the settings from SettingPageManager
-            Assert.NotNull(html);
+            Assert.Null(html);
         }
     }
 }

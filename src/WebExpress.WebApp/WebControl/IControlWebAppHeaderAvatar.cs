@@ -10,14 +10,14 @@ namespace WebExpress.WebApp.WebControl
     public interface IControlWebAppHeaderAvatar : IControl
     {
         /// <summary>
-        /// Returns or sets the REST API endpoint used to dynamically populate the avatar dropdown.
+        /// Returns the user name associated with the current instance.
         /// </summary>
-        IUri RestUri { get; set; }
+        public string Username { get; }
 
         /// <summary>
-        /// Returns or sets the avatar image uri.
+        /// Returns the icon image associated with this instance.
         /// </summary>
-        string Image { get; set; }
+        public IUri Image { get; }
 
         /// <summary>
         /// Returns the preferences area.

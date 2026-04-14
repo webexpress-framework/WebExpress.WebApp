@@ -9,7 +9,7 @@ namespace WebExpress.WebApp.WebFragment
     /// <summary>
     /// Represents a tile control within a fragment context.
     /// </summary>
-    public class FragmentControlRestTile : ControlRestTile, IFragmentControl<ControlRestTile>
+    public abstract class FragmentControlRestTile : ControlRestTile, IFragmentControl<ControlRestTile>
     {
         /// <summary>
         /// Returns the context of the fragment.

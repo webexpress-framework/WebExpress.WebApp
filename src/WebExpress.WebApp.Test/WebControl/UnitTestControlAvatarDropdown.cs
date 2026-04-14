@@ -24,7 +24,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
             var context = UnitTestControlFixture.CreateRenderContextMock(application);
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlAvatarDropdown(id)
+            var control = new ControlRestAvatarDropdown(id)
             {
             };
 
@@ -48,7 +48,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
             var context = UnitTestControlFixture.CreateRenderContextMock(application);
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlAvatarDropdown()
+            var control = new ControlRestAvatarDropdown()
             {
                 RestUri = uriString is not null ? new UriEndpoint(uriString) : null
             };
@@ -58,58 +58,6 @@ namespace WebExpress.WebApp.Test.WebControl
 
             // validation
             AssertExtensions.EqualWithPlaceholders(expected, html);
-        }
-
-        /// <summary>
-        /// Tests the image property of the avatar dropdown control.
-        /// </summary>
-        [Theory]
-        [InlineData(null, @"<div class=""wx-webapp-avatar-dropdown"" role=""button""></div>")]
-        [InlineData("/img/avatar.png", @"<div class=""wx-webapp-avatar-dropdown"" role=""button"" data-image=""/img/avatar.png""></div>")]
-        public void Image(string image, string expected)
-        {
-            // arrange
-            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
-            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
-            var context = UnitTestControlFixture.CreateRenderContextMock(application);
-            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlAvatarDropdown()
-            {
-                Image = image
-            };
-
-            // act
-            var html = control.Render(context, visualTree);
-
-            // validation
-            AssertExtensions.EqualWithPlaceholders(expected, html);
-        }
-
-        /// <summary>
-        /// Tests the combined rest uri and image properties of the avatar dropdown control.
-        /// </summary>
-        [Fact]
-        public void RestUriAndImage()
-        {
-            // arrange
-            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
-            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
-            var context = UnitTestControlFixture.CreateRenderContextMock(application);
-            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlAvatarDropdown()
-            {
-                RestUri = new UriEndpoint("https://example.com/api/avatar"),
-                Image = "/img/avatar.png"
-            };
-
-            // act
-            var html = control.Render(context, visualTree);
-
-            // validation
-            AssertExtensions.EqualWithPlaceholders(
-                @"<div class=""wx-webapp-avatar-dropdown"" role=""button"" data-uri=""https://example.com/api/avatar"" data-image=""/img/avatar.png""></div>",
-                html
-            );
         }
     }
 }

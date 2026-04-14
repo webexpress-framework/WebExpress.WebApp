@@ -8,6 +8,7 @@ using WebExpress.WebCore.WebStatusPage;
 using WebExpress.WebIndex;
 using WebExpress.WebIndex.Queries;
 using WebExpress.WebIndex.Wql;
+using WebExpress.WebUI.WebIcon;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -23,6 +24,9 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
+        /// <param name="restApiContext">
+        /// The REST API context providing necessary services and information for processing requests.
+        /// </param>
         public RestApiAvatarDropdown()
         {
         }
@@ -65,6 +69,8 @@ namespace WebExpress.WebApp.WebRestApi
 
                 var result = new RestApiAvatarDropdownResult<IIndexItem>()
                 {
+                    Image = RetrieveImage(context, request),
+                    Username = RetrieveUsername(context, request),
                     Items = items,
                     Pagination = new RestApiPaginationInfo()
                     {
@@ -109,6 +115,47 @@ namespace WebExpress.WebApp.WebRestApi
         /// An enumerable collection of RestApiAvatarDropdownItem objects.
         /// </returns>
         protected abstract IEnumerable<RestApiAvatarDropdownItem> RetrieveItems(IQuery<TIndexItem> query, IQueryContext context, IRequest request);
+
+        /// <summary>
+        /// Retrieves the user name associated with the specified request and query context.
+        /// </summary>
+        /// <param name="context">
+        /// The query context that provides access to data and services required to resolve 
+        /// the user name. Cannot be null.
+        /// </param>
+        /// <param name="request">
+        /// The request containing information used to identify the user. Cannot be null.
+        /// </param>
+        /// <returns>
+        /// A string containing the user name if found; otherwise, null.
+        /// </returns>
+        protected virtual string RetrieveUsername(IQueryContext context, IRequest request)
+        {
+            return null;
+        }
+
+        /// <summary>
+        /// Retrieves the image associated with the specified request and query context.
+        /// </summary>
+        /// <param name="context">
+        /// The query context that provides access to data sources and query parameters 
+        /// required for image retrieval. Cannot be null.
+        /// </param>
+        /// <param name="request">
+        /// The request containing the criteria or identifiers for the image to retrieve. 
+        /// Cannot be null.
+        /// </param>
+        /// <returns>
+        /// A string representing the image, such as a file path, URL, or encoded image data. 
+        /// The format and meaning of the string depend on the implementation.
+        /// </returns>
+        protected virtual ImageIcon RetrieveImage(IQueryContext context, IRequest request)
+        {
+            var applicationContet = request.ApplicationContext;
+            var avatar = applicationContet.Route.Concat("/webexpress.webapp/assets/img/avatar.svg");
+
+            return new ImageIcon(avatar.ToUri());
+        }
 
         /// <summary>
         /// Applies filtering criteria to the specified query based on the provided WQL statement.

@@ -5,18 +5,16 @@ using WebExpress.WebApp.WebSection;
 using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebHtml;
-using WebExpress.WebCore.WebSettingPage;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebFragment;
-using WebExpress.WebUI.WebIcon;
 using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
     /// Avatar control for a web app header. Uses the avatar image as the interactive menu
-    /// button via <see cref="ControlAvatarDropdown"/> and supports dynamic item loading
+    /// button via <see cref="ControlRestAvatarDropdown"/> and supports dynamic item loading
     /// through a REST API endpoint.
     /// </summary>
     public class ControlWebAppHeaderAvatar : Control, IControlWebAppHeaderAvatar
@@ -26,14 +24,14 @@ namespace WebExpress.WebApp.WebControl
         private readonly List<IControlDropdownItem> _secondary = [];
 
         /// <summary>
-        /// Returns or sets the REST API endpoint used to dynamically populate the avatar dropdown.
+        /// Returns or sets the user name associated with the current instance.
         /// </summary>
-        public IUri RestUri { get; set; }
+        public string Username { get; set; }
 
         /// <summary>
-        /// Returns or sets the avatar image uri.
+        /// Returns or sets the icon image associated with this instance.
         /// </summary>
-        public string Image { get; set; }
+        public IUri Image { get; set; }
 
         /// <summary>
         /// Returns the preferences area.
@@ -140,16 +138,35 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
+            return Render(renderContext, visualTree, Username, Image);
+        }
+
+        /// <summary>
+        /// Converts the control to an HTML representation.
+        /// </summary>
+        /// <param name="renderContext">The context in which the control is rendered.</param>
+        /// <param name="visualTree">The visual tree representing the control's structure.</param>
+        /// <param name="username">The user name to display in the avatar dropdown.</param>
+        /// <param name="image">The image icon to display in the avatar dropdown.</param>
+        /// <returns>An HTML node representing the rendered control.</returns>
+        public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, string username, IUri image)
+        {
+            var avatar = WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlAvatar, SectionAppAvatar>
+            (
+                renderContext?.PageContext
+            ).FirstOrDefault();
+
+            username = avatar?.GetUsername(renderContext) ?? username;
+            image = avatar?.GetImage(renderContext) ?? image;
+
             var items = GetItems(renderContext);
 
             var avatarCtrl = items.Any()
                 ? new ControlAvatarDropdown(Id)
                 {
-                    Classes = ["wx-app-dropdown"],
-                    Icon = new IconCog(),
                     AlignmentMenu = TypeAlignmentDropdownMenu.Right,
-                    RestUri = RestUri,
-                    Image = Image,
+                    User = username,
+                    Image = image,
                     Margin = new PropertySpacingMargin
                     (
                         PropertySpacing.Space.Two,
@@ -171,45 +188,6 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>A collection of dropdown items.</returns>
         private IEnumerable<IControlDropdownItem> GetItems(IRenderControlContext renderContext)
         {
-            var settinPageManager = WebEx.ComponentHub.SettingPageManager;
-            var appicationContext = renderContext.PageContext?.ApplicationContext;
-            var preferenceCategories = settinPageManager?.GetSettingCategories(appicationContext)
-                .Where(x => x.Section == SettingSection.Preferences)
-                .Where(x => settinPageManager.GetSettingPages(appicationContext, x).Any())
-                .Select
-                (
-                    x => new ControlDropdownItemLink()
-                    {
-                        Text = I18N.Translate(renderContext, x?.Name),
-                        Uri = settinPageManager.GetFirstSettingPage(appicationContext, x)?.Route.ToUri(),
-                        Icon = x.Icon
-                    }
-                );
-            var primaryCategories = settinPageManager?.GetSettingCategories(appicationContext)
-                .Where(x => x.Section == SettingSection.Primary)
-                .Where(x => settinPageManager.GetSettingPages(appicationContext, x).Any())
-                .Select
-                (
-                    x => new ControlDropdownItemLink()
-                    {
-                        Text = I18N.Translate(renderContext, x?.Name),
-                        Uri = settinPageManager.GetFirstSettingPage(appicationContext, x)?.Route.ToUri(),
-                        Icon = x.Icon
-                    }
-                );
-            var secondaryCategories = settinPageManager?.GetSettingCategories(appicationContext)
-                .Where(x => x.Section == SettingSection.Secondary)
-                .Where(x => settinPageManager.GetSettingPages(appicationContext, x).Any())
-                .Select
-                (
-                    x => new ControlDropdownItemLink()
-                    {
-                        Text = I18N.Translate(renderContext, x?.Name),
-                        Uri = settinPageManager.GetFirstSettingPage(appicationContext, x)?.Route.ToUri(),
-                        Icon = x.Icon
-                    }
-                );
-
             var preferences = Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppAvatarPreferences>
             (
                 renderContext?.PageContext
@@ -225,7 +203,7 @@ namespace WebExpress.WebApp.WebControl
                 renderContext?.PageContext
             ));
 
-            if (preferences.Any() || primary.Any() || secondary.Any() || preferenceCategories.Any())
+            if (preferences.Any() || primary.Any() || secondary.Any())
             {
                 yield return new ControlDropdownItemHeader()
                 {
@@ -233,24 +211,14 @@ namespace WebExpress.WebApp.WebControl
                 };
             }
 
-            foreach (var item in preferenceCategories)
-            {
-                yield return item;
-            }
-
             foreach (var item in preferences)
             {
                 yield return item;
             }
 
-            if ((preferenceCategories.Any() || preferences.Any()) && (primary.Any() || secondary.Any()))
+            if (preferences.Any() && (primary.Any() || secondary.Any()))
             {
                 yield return new ControlDropdownItemDivider();
-            }
-
-            foreach (var item in primaryCategories)
-            {
-                yield return item;
             }
 
             foreach (var item in primary)
@@ -258,14 +226,9 @@ namespace WebExpress.WebApp.WebControl
                 yield return item;
             }
 
-            if ((primaryCategories.Any() || primary.Any()) && secondary.Any())
+            if (primary.Any() && secondary.Any())
             {
                 yield return new ControlDropdownItemDivider();
-            }
-
-            foreach (var item in secondaryCategories)
-            {
-                yield return item;
             }
 
             foreach (var item in secondary)

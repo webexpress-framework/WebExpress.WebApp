@@ -107,7 +107,25 @@ namespace WebExpress.WebApp.Test.Fixture
         {
             var context = CreateHttpContextMock(content);
 
-            var request = context.Request;
+            var request = context.Request as Request;
+
+            var applicationContext = new ApplicationContext();
+
+            var prop = typeof(ApplicationContext).GetProperty
+            (
+                "Route",
+                BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public
+            );
+
+            prop?.SetValue(applicationContext, new RouteEndpoint("/"));
+
+            var property = request.GetType().GetProperty
+            (
+                "ApplicationContext",
+                BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public
+            );
+
+            property?.SetValue(request, applicationContext);
 
             if (!string.IsNullOrEmpty(uri))
             {

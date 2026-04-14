@@ -9,7 +9,7 @@ namespace WebExpress.WebApp.WebFragment
     /// <summary>
     /// Represents a workflow editor control within a fragment context.
     /// </summary>
-    public class FragmentControlRestWorkflow : ControlRestWorkflow, IFragmentControl<ControlRestWorkflow>
+    public abstract class FragmentControlRestWorkflow : ControlRestWorkflow, IFragmentControl<ControlRestWorkflow>
     {
         /// <summary>
         /// Returns the context of the fragment.
