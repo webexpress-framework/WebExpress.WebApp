@@ -99,7 +99,7 @@ namespace WebExpress.WebApp.WebPage
             var baseUri = RouteEndpoint.Combine(applicationContext?.Route, "webexpress.webapp/assets");
             var messageQueueUri = componentHub.SitemapManager
                 .GetUri<WWW.Ws.MessageQueue>(pageContext.ApplicationContext);
-            var domains = Domains?.Invoke() ?? pageContext.Domains.Select(x => x.FullName.ToLower());
+            var domains = Domains?.Invoke() ?? pageContext.Domains?.Select(x => x.FullName.ToLower()) ?? [];
 
             MessageQueueUri
                 .AddUserAttribute("data-wx-message-queue-url", messageQueueUri?.ToString())

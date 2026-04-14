@@ -19,7 +19,7 @@ namespace WebExpress.WebApp.WebPage
         /// </summary>
         /// <param name="renderContext">The context for rendering the page.</param>
         /// <param name="visualTree">The visual tree control to be processed.</param>
-        public void Process(IRenderContext renderContext, VisualTreeWebApp visualTree)
+        public virtual void Process(IRenderContext renderContext, VisualTreeWebApp visualTree)
         {
             if (renderContext is null)
             {
