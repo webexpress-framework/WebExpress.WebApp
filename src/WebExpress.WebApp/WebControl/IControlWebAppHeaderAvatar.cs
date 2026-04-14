@@ -5,7 +5,7 @@ using WebExpress.WebUI.WebControl;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Avatar controls for a web app header using a dropdown triggered by the avatar image.
+    /// Avatar control for a web app header using a dropdown triggered by the avatar image.
     /// </summary>
     public interface IControlWebAppHeaderAvatar : IControl
     {

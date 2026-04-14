@@ -15,7 +15,7 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Avatar controls for a web app header. Uses the avatar image as the interactive menu
+    /// Avatar control for a web app header. Uses the avatar image as the interactive menu
     /// button via <see cref="ControlAvatarDropdown"/> and supports dynamic item loading
     /// through a REST API endpoint.
     /// </summary>

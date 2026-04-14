@@ -15,7 +15,7 @@ namespace WebExpress.WebApp.WebRestApi
     public class RestApiAvatarDropdownResult<TIndexItem> : IRestApiResult
          where TIndexItem : IIndexItem
     {
-        private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
+        private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
         /// <summary>
         /// Returns or sets the collection of avatar dropdown items.
