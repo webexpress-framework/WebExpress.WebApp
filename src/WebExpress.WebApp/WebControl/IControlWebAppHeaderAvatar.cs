@@ -1,13 +1,24 @@
 ﻿using System.Collections.Generic;
+using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Settings controls for a web app.
+    /// Avatar controls for a web app header using a dropdown triggered by the avatar image.
     /// </summary>
     public interface IControlWebAppHeaderAvatar : IControl
     {
+        /// <summary>
+        /// Returns or sets the REST API endpoint used to dynamically populate the avatar dropdown.
+        /// </summary>
+        IUri RestUri { get; set; }
+
+        /// <summary>
+        /// Returns or sets the avatar image uri.
+        /// </summary>
+        string Image { get; set; }
+
         /// <summary>
         /// Returns the preferences area.
         /// </summary>
