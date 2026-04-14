@@ -154,7 +154,33 @@ namespace WebExpress.WebApp.WebIdentity
         /// </returns>
         public IResponse CreateForbiddenPage(IRequest request, IEndpointContext initiator, IIdentity identity)
         {
-            return WebEx.ComponentHub.StatusPageManager.CreateStatusResponse(null, 403, initiator?.ApplicationContext, request);
+            if (initiator is PageContext)
+            {
+                var loginPage = new PageForbidden();
+                var pageContext = new PageContext(initiator, scopes: [typeof(IScopeLogin)]);
+                var renderContext = new RenderControlContext(loginPage, pageContext, request);
+                var visualTree = new VisualTreeWebApp(WebEx.ComponentHub, pageContext);
+                var visualTreeContext = new VisualTreeContext(renderContext);
+                loginPage.Process(renderContext, visualTree);
+
+                var content = visualTree.Render(visualTreeContext)?.ToString();
+
+                var response = new ResponseOK
+                {
+                    Content = content
+                };
+                response.Header.ContentLength = content.Length;
+                response.Header.ContentType = "text/html; charset=utf-8";
+
+                return response;
+            }
+
+            return WebEx.ComponentHub.StatusPageManager.CreateStatusResponse
+            (
+                null,
+                403,
+                initiator?.ApplicationContext, request
+            );
         }
     }
 }

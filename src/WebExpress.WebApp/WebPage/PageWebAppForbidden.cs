@@ -1,5 +1,4 @@
 ﻿using System;
-using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebPage;
 using WebExpress.WebUI.WebControl;
@@ -45,15 +44,40 @@ namespace WebExpress.WebApp.WebPage
                 Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
             };
 
-            var loginUri = WebEx.ComponentHub.SitemapManager.GetUri<PageWebAppLogin>(renderContext.PageContext?.ApplicationContext);
-
-            var switchAccountLink = new ControlLink()
+            var image = new ControlImage()
             {
-                Text = I18N.Translate(renderContext, "webexpress.webapp:forbidden.switchaccount.label"),
-                Uri = loginUri
+                Uri = renderContext.PageContext.ApplicationContext?.Route.Concat("webexpress.webapp/assets/img/forbidden.svg").ToUri(),
+                Width = 96,
+                Height = 96,
+                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two)
             };
 
-            var card = new ControlPanelCard("wx-forbidden-card", title, description, switchAccountLink)
+            var left = new ControlPanel()
+            {
+                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two)
+            }
+                .Add(image);
+
+            var right = new ControlPanel()
+            {
+                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two)
+            }
+                .Add(title)
+                .Add(description);
+
+            var flex = new ControlPanelFlex()
+            {
+                Display = TypeDisplay.Flex,
+                Direction = TypeDirection.Horizontal,
+                Justify = TypeJustifiedFlex.Start,
+                Align = TypeAlignFlex.Start,
+                Gap = TypeGap.Three
+            };
+
+            flex.Add(left);
+            flex.Add(right);
+
+            var card = new ControlPanelCard("wx-forbidden-card", flex)
             {
                 Margin = new PropertySpacingMargin(PropertySpacing.Space.Three)
             };
