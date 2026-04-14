@@ -11,7 +11,7 @@ namespace WebExpress.WebApp.WebPage
     /// Shown when an authenticated user attempts to access a resource for which
     /// they do not have sufficient permissions.
     /// </summary>
-    public class PageWebAppForbidden : IPage<VisualTreeWebAppLogin>
+    public class PageWebAppForbidden : IPage<VisualTreeWebApp>
     {
         /// <summary>
         /// Processing of the page.
@@ -19,7 +19,7 @@ namespace WebExpress.WebApp.WebPage
         /// </summary>
         /// <param name="renderContext">The context for rendering the page.</param>
         /// <param name="visualTree">The visual tree control to be processed.</param>
-        public void Process(IRenderContext renderContext, VisualTreeWebAppLogin visualTree)
+        public void Process(IRenderContext renderContext, VisualTreeWebApp visualTree)
         {
             if (renderContext is null)
             {

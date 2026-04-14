@@ -36,6 +36,7 @@ namespace WebExpress.WebApp.WebRestApi
             get
             {
                 var dict = new Dictionary<string, string>();
+                if (!string.IsNullOrEmpty(Title)) { dict["title"] = Title; }
                 if (!string.IsNullOrEmpty(ChartType)) { dict["chartType"] = ChartType; }
                 if (!string.IsNullOrEmpty(Data)) { dict["data"] = Data; }
                 return dict;
@@ -44,6 +45,7 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 if (value != null)
                 {
+                    if (value.TryGetValue("title", out var t)) { Title = t; }
                     if (value.TryGetValue("chartType", out var ct)) { ChartType = ct; }
                     if (value.TryGetValue("data", out var d)) { Data = d; }
                 }

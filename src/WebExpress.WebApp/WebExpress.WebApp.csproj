@@ -3,8 +3,8 @@
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
 		<Title>WebExpress.WebApp</Title>
-		<Version>0.0.10.0</Version>
-		<AssemblyVersion>0.0.10.0</AssemblyVersion>
+		<Version>0.0.11.0</Version>
+		<AssemblyVersion>0.0.11.0</AssemblyVersion>
 		<TargetFramework>net10.0</TargetFramework>
 		<RuntimeIdentifiers>any</RuntimeIdentifiers>
 		<RepositoryUrl>https://github.com/ReneSchwarzer/WebExpress.WebApp</RepositoryUrl>
@@ -14,7 +14,7 @@
 		<EnableDynamicLoading>true</EnableDynamicLoading>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<Description>Provide a business application template for the WebExpress web server.</Description>
-		<PackageVersion>0.0.10-alpha</PackageVersion>
+		<PackageVersion>0.0.11-alpha</PackageVersion>
 		<PackageProjectUrl>https://github.com/ReneSchwarzer/WebExpress</PackageProjectUrl>
 		<PackageIcon>icon.png</PackageIcon>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
@@ -48,14 +48,18 @@
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(Configuration)' != 'DebugLocal'">
-		<PackageReference Include="WebExpress.WebUI" Version="0.0.10-alpha" />
-		<PackageReference Include="WebExpress.WebIndex" Version="0.0.10-alpha" />
+		<PackageReference Include="WebExpress.WebUI" Version="0.0.11-alpha" />
+		<PackageReference Include="WebExpress.WebIndex" Version="0.0.11-alpha" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(Configuration)' == 'DebugLocal'">
 		<ProjectReference Include="..\..\..\WebExpress.WebCore\src\WebExpress.WebCore\WebExpress.WebCore.csproj" />
 		<ProjectReference Include="..\..\..\WebExpress.WebUI\src\WebExpress.WebUI\WebExpress.WebUI.csproj" />
 		<ProjectReference Include="..\..\..\WebExpress.WebIndex\src\WebExpress.WebIndex\WebExpress.WebIndex.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Assets\img\" />
 	</ItemGroup>
 
 </Project>

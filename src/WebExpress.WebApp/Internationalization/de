@@ -47,6 +47,7 @@ identitymanager.moduleless=Es wurde kein Modul angegeben.
 header.quickcreate.label=Erstellen
 header.help.label=Hilfe
 header.notification.label=Benachrichtigungen
+header.avatar.label=Benutzer
 header.setting.label=Einstellungen
 header.setting.systeminformation.label=System Informationen
 

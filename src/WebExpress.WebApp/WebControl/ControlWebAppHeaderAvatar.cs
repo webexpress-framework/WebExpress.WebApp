@@ -1,24 +1,37 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using WebExpress.WebApp.WebApiControl;
 using WebExpress.WebApp.WebSection;
 using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebHtml;
+using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebFragment;
-using WebExpress.WebUI.WebIcon;
 using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// App navigator for a WebApp.
+    /// Avatar control for a web app header. Uses the avatar image as the interactive menu
+    /// button via <see cref="ControlRestAvatarDropdown"/> and supports dynamic item loading
+    /// through a REST API endpoint.
     /// </summary>
-    public class ControlWebAppHeaderAppNavigator : Control, IControlWebAppHeaderAppNavigator
+    public class ControlWebAppHeaderAvatar : Control, IControlWebAppHeaderAvatar
     {
         private readonly List<IControlDropdownItem> _preferences = [];
         private readonly List<IControlDropdownItem> _primary = [];
         private readonly List<IControlDropdownItem> _secondary = [];
+
+        /// <summary>
+        /// Returns or sets the user name associated with the current instance.
+        /// </summary>
+        public string Username { get; set; }
+
+        /// <summary>
+        /// Returns or sets the icon image associated with this instance.
+        /// </summary>
+        public IUri Image { get; set; }
 
         /// <summary>
         /// Returns the preferences area.
@@ -39,7 +52,7 @@ namespace WebExpress.WebApp.WebControl
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The control id.</param>
-        public ControlWebAppHeaderAppNavigator(string id = null)
+        public ControlWebAppHeaderAvatar(string id = null)
             : base(id)
         {
             Padding = new PropertySpacingPadding(PropertySpacing.Space.Null);
@@ -50,7 +63,7 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="items">The items to add to the preferences area.</param>
         /// <returns>The current instance for method chaining.</returns>
-        public IControlWebAppHeaderAppNavigator AddPreferences(params IControlDropdownItem[] items)
+        public IControlWebAppHeaderAvatar AddPreferences(params IControlDropdownItem[] items)
         {
             _preferences.AddRange(items);
 
@@ -62,7 +75,7 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="item">The item to remove from the preferences area.</param>
         /// <returns>The current instance for method chaining.</returns>
-        public IControlWebAppHeaderAppNavigator RemovePreference(IControlDropdownItem item)
+        public IControlWebAppHeaderAvatar RemovePreference(IControlDropdownItem item)
         {
             _preferences.Remove(item);
 
@@ -74,7 +87,7 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="items">The items to add to the primary area.</param>
         /// <returns>The current instance for method chaining.</returns>
-        public IControlWebAppHeaderAppNavigator AddPrimary(params IControlDropdownItem[] items)
+        public IControlWebAppHeaderAvatar AddPrimary(params IControlDropdownItem[] items)
         {
             _primary.AddRange(items);
 
@@ -86,7 +99,7 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="item">The item to remove from the primary area.</param>
         /// <returns>The current instance for method chaining.</returns>
-        public IControlWebAppHeaderAppNavigator RemovePrimary(IControlDropdownItem item)
+        public IControlWebAppHeaderAvatar RemovePrimary(IControlDropdownItem item)
         {
             _primary.Remove(item);
 
@@ -98,7 +111,7 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="items">The items to add to the secondary area.</param>
         /// <returns>The current instance for method chaining.</returns>
-        public IControlWebAppHeaderAppNavigator AddSecondary(params IControlDropdownItem[] items)
+        public IControlWebAppHeaderAvatar AddSecondary(params IControlDropdownItem[] items)
         {
             _secondary.AddRange(items);
 
@@ -110,7 +123,7 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="item">The item to remove from the secondary area.</param>
         /// <returns>The current instance for method chaining.</returns>
-        public IControlWebAppHeaderAppNavigator RemoveSecondary(IControlDropdownItem item)
+        public IControlWebAppHeaderAvatar RemoveSecondary(IControlDropdownItem item)
         {
             _secondary.Remove(item);
 
@@ -125,23 +138,47 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            var application = renderContext?.PageContext?.ApplicationContext;
+            return Render(renderContext, visualTree, Username, Image);
+        }
+
+        /// <summary>
+        /// Converts the control to an HTML representation.
+        /// </summary>
+        /// <param name="renderContext">The context in which the control is rendered.</param>
+        /// <param name="visualTree">The visual tree representing the control's structure.</param>
+        /// <param name="username">The user name to display in the avatar dropdown.</param>
+        /// <param name="image">The image icon to display in the avatar dropdown.</param>
+        /// <returns>An HTML node representing the rendered control.</returns>
+        public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, string username, IUri image)
+        {
+            var avatar = WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlAvatar, SectionAppAvatar>
+            (
+                renderContext?.PageContext
+            ).FirstOrDefault();
+
+            username = avatar?.GetUsername(renderContext) ?? username;
+            image = avatar?.GetImage(renderContext) ?? image;
+
             var items = GetItems(renderContext);
 
-            var navigatorCtrl = items.Any()
-                ? (IControl)new ControlDropdown(Id)
+            var avatarCtrl = items.Any()
+                ? new ControlAvatarDropdown(Id)
                 {
-                    Classes = ["wx-appnavigator"],
-                    Icon = new ImageIcon(application?.Icon?.ToUri(), new PropertySizeIcon(1, TypeSizeUnit.Em)),
+                    AlignmentMenu = TypeAlignmentDropdownMenu.Right,
+                    User = username,
+                    Image = image,
+                    Margin = new PropertySpacingMargin
+                    (
+                        PropertySpacing.Space.Two,
+                        PropertySpacing.Space.None,
+                        PropertySpacing.Space.None,
+                        PropertySpacing.Space.None
+                    )
                 }
                     .Add(items)
-                : new ControlImage(Id)
-                {
-                    Classes = ["wx-appnavigator"],
-                    Uri = application?.Icon?.ToUri()
-                };
+                : null;
 
-            return navigatorCtrl?.Render(renderContext, visualTree);
+            return avatarCtrl?.Render(renderContext, visualTree);
         }
 
         /// <summary>
@@ -151,19 +188,17 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>A collection of dropdown items.</returns>
         private IEnumerable<IControlDropdownItem> GetItems(IRenderControlContext renderContext)
         {
-            var application = renderContext?.PageContext?.ApplicationContext;
-
-            var preferences = Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppPreferences>
+            var preferences = Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppAvatarPreferences>
             (
                 renderContext?.PageContext
             ));
 
-            var primary = Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppPrimary>
+            var primary = Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppAvatarPrimary>
             (
                 renderContext?.PageContext
             ));
 
-            var secondary = Secondary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppSecondary>
+            var secondary = Secondary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppAvatarSecondary>
             (
                 renderContext?.PageContext
             ));
@@ -172,7 +207,7 @@ namespace WebExpress.WebApp.WebControl
             {
                 yield return new ControlDropdownItemHeader()
                 {
-                    Text = I18N.Translate(renderContext, application?.ApplicationName)
+                    Text = I18N.Translate(renderContext.Request, "webexpress.webapp:header.avatar.label")
                 };
             }
 

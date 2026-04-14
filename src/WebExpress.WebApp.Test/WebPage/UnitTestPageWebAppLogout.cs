@@ -1,6 +1,5 @@
 ﻿using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebPage;
-using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.Test.WebPage
 {
@@ -19,7 +18,7 @@ namespace WebExpress.WebApp.Test.WebPage
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
-            var visualTree = new VisualTreeWebAppLogin(componentHub, context.PageContext);
+            var visualTree = new VisualTreeWebApp(componentHub, context.PageContext);
             var page = new PageWebAppLogout();
 
             // act
@@ -38,7 +37,7 @@ namespace WebExpress.WebApp.Test.WebPage
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
-            var visualTree = new VisualTreeWebAppLogin(componentHub, context.PageContext);
+            var visualTree = new VisualTreeWebApp(componentHub, context.PageContext);
             var page = new PageWebAppLogout();
 
             // act
@@ -57,7 +56,7 @@ namespace WebExpress.WebApp.Test.WebPage
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
-            var visualTree = new VisualTreeWebAppLogin(componentHub, context.PageContext);
+            var visualTree = new VisualTreeWebApp(componentHub, context.PageContext);
             var page = new PageWebAppLogout();
 
             // act
@@ -76,7 +75,7 @@ namespace WebExpress.WebApp.Test.WebPage
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
-            var visualTree = new VisualTreeWebAppLogin(componentHub, context.PageContext);
+            var visualTree = new VisualTreeWebApp(componentHub, context.PageContext);
             var page = new PageWebAppLogout();
 
             // act & validation

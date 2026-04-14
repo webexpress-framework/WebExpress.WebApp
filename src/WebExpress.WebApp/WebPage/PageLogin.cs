@@ -3,14 +3,15 @@
 namespace WebExpress.WebApp.WebPage
 {
     /// <summary>
-    /// Represents an abstract base class for a login web application page.
+    /// Represents the login page for the web application, providing logic for rendering and processing user
+    /// authentication input.
     /// </summary>
-    public abstract class PageWebAppLogin : IPage<VisualTreeWebAppLogin>
+    internal class PageLogin : PageWebAppLogin
     {
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
-        public PageWebAppLogin()
+        public PageLogin()
         {
         }
 
@@ -19,8 +20,9 @@ namespace WebExpress.WebApp.WebPage
         /// </summary>
         /// <param name="renderContext">The context for rendering the page.</param>
         /// <param name="visualTree">The visual tree control to be processed.</param>
-        public virtual void Process(IRenderContext renderContext, VisualTreeWebAppLogin visualTree)
+        public override void Process(IRenderContext renderContext, VisualTreeWebAppLogin visualTree)
         {
+            base.Process(renderContext, visualTree);
         }
     }
 }

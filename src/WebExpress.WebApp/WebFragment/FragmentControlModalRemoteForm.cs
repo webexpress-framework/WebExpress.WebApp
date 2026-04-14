@@ -10,7 +10,7 @@ namespace WebExpress.WebApp.WebFragment
     /// Represents a modal remote form control that can be used as a fragment within a 
     /// user interface, supporting fragment-specific context and rendering.
     /// </summary>
-    public class FragmentControlModalRemoteForm : ControlModalRemoteForm, IFragmentControl<ControlModalRemoteForm>
+    public abstract class FragmentControlModalRemoteForm : ControlModalRemoteForm, IFragmentControl<ControlModalRemoteForm>
     {
         /// <summary>
         /// Returns the context of the fragment.

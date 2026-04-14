@@ -1,4 +1,4 @@
-﻿using WebExpress.WebApp.WebControl;
+using WebExpress.WebApp.WebControl;
 using WebExpress.WebCore.WebFragment;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebUI.WebFragment;
@@ -7,9 +7,9 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebFragment
 {
     /// <summary>
-    /// Represents a fragment control for editing REST form data.
+    /// Represents a workflow editor control within a fragment context.
     /// </summary>
-    public abstract class FragmentControlRestFormEdit : ControlRestFormEdit, IFragmentControl<ControlRestFormEdit>
+    public abstract class FragmentControlRestWorkflow : ControlRestWorkflow, IFragmentControl<ControlRestWorkflow>
     {
         /// <summary>
         /// Returns the context of the fragment.
@@ -20,12 +20,8 @@ namespace WebExpress.WebApp.WebFragment
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="fragmentContext">The context of the fragment.</param>
-        /// <param name="id">
-        /// The unique identifier for the modal remote form control. If null, the fragment 
-        /// Id will be used.
-        /// </param>
-        public FragmentControlRestFormEdit(IFragmentContext fragmentContext, string id = null)
-            : base(id ?? fragmentContext?.FragmentId?.ToString())
+        public FragmentControlRestWorkflow(IFragmentContext fragmentContext)
+            : base(fragmentContext?.FragmentId?.ToString())
         {
             FragmentContext = fragmentContext;
         }

@@ -9,7 +9,7 @@ namespace WebExpress.WebApp.WebFragment
     /// <summary>
     /// Represents a tab control within a fragment context.
     /// </summary>
-    public class FragmentControlRestTab : ControlRestTab, IFragmentControl<ControlRestTab>
+    public abstract class FragmentControlRestTab : ControlRestTab, IFragmentControl<ControlRestTab>
     {
         /// <summary>
         /// Returns the context of the fragment.

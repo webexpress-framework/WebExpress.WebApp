@@ -1,5 +1,6 @@
 ﻿using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebControl;
+using WebExpress.WebCore.WebApplication;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
@@ -20,8 +21,9 @@ namespace WebExpress.WebApp.Test.WebControl
         public void Id(string id, string expected)
         {
             // arrange
+            var applicationContext = new ApplicationContext();
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
-            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock(applicationContext);
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlWebAppHeader(id)
             {
@@ -50,8 +52,9 @@ namespace WebExpress.WebApp.Test.WebControl
         public void TextColor(TypeColorNavbar textColor, string expected)
         {
             // arrange
+            var applicationContext = new ApplicationContext();
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
-            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock(applicationContext);
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlWebAppHeader()
             {
@@ -74,8 +77,9 @@ namespace WebExpress.WebApp.Test.WebControl
         public void Fixed(TypeFixed fixedProperty, string expected)
         {
             // arrange
+            var applicationContext = new ApplicationContext();
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
-            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock(applicationContext);
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlWebAppHeader()
             {
@@ -97,8 +101,9 @@ namespace WebExpress.WebApp.Test.WebControl
         public void Sticky(TypeSticky sticky, string expected)
         {
             // arrange
+            var applicationContext = new ApplicationContext();
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
-            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock(applicationContext);
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlWebAppHeader()
             {

@@ -1,21 +1,21 @@
-﻿using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using WebExpress.WebApp.WebControl;
-using WebExpress.WebApp.WebPage;
-using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebComponent;
 using WebExpress.WebCore.WebEndpoint;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebPage;
 using WebExpress.WebCore.WebTheme;
+using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.WebPage
 {
     /// <summary>
-    /// Represents a simplified visual tree used for login, logout, and access-denied pages.
-    /// The layout omits the sidebar and breadcrumb, and centers the content within the page.
+    /// Represents the visual tree for login of the web application.
     /// </summary>
     public class VisualTreeWebAppLogin : VisualTreeControl, IVisualTreeWebApp
     {
@@ -23,6 +23,19 @@ namespace WebExpress.WebApp.WebPage
         /// Returns or sets the theme of the web application.
         /// </summary>
         public IThemeContext Theme { get; set; }
+
+        /// <summary>
+        /// Returns or sets the URI used for breadcrumb navigation within the application.
+        /// </summary>
+        public IUri BreadcrumbUri { get; set; }
+
+        /// <summary>
+        /// Returns the HTML element that contains the URI of the message queue used by the application.
+        /// </summary>
+        public HtmlElementTextContentDiv MessageQueueUri { get; } = new HtmlElementTextContentDiv()
+        {
+            Id = "webepress-webapp-message-queue"
+        };
 
         /// <summary>
         /// Returns header control.
@@ -36,26 +49,23 @@ namespace WebExpress.WebApp.WebPage
 
         /// <summary>
         /// Returns the range for the path specification.
-        /// Not rendered in the login visual tree.
         /// </summary>
-        public ControlBreadcrumb Breadcrumb { get; protected set; } = new ControlBreadcrumb("wx-breadcrumb");
+        public ControlBreadcrumb Breadcrumb => throw new NotImplementedException();
 
         /// <summary>
         /// Returns the area for prologue.
-        /// Not rendered in the login visual tree.
         /// </summary>
-        public ControlWebAppPrologue Prologue { get; protected set; } = new ControlWebAppPrologue("wx-prologue");
+        public ControlWebAppPrologue Prologue => throw new NotImplementedException();
 
         /// <summary>
         /// Returns the sidebar control.
-        /// Not rendered in the login visual tree.
         /// </summary>
-        public IControlWebAppSidebar Sidebar { get; protected set; } = new ControlWebAppSidebar("wx-sidebar");
+        public IControlWebAppSidebar Sidebar => throw new NotImplementedException();
 
         /// <summary>
         /// Returns the content control.
         /// </summary>
-        public new IControlWebAppContent Content { get; protected set; } = new ControlWebAppContent("wx-content");
+        public new IControlWebAppContent Content => throw new NotImplementedException();
 
         /// <summary>
         /// Returns the footer control.
@@ -68,10 +78,10 @@ namespace WebExpress.WebApp.WebPage
         public ControlRestPopupNotification NotificationPopup { get; protected set; } = new ControlRestPopupNotification("wx-notificationpopup");
 
         /// <summary>
-        /// Returns or sets a delegate that returns the collection of domain names associated with
-        /// the current context. Not used in the login visual tree.
+        /// Returns or sets a delegate that returns the collection of domain names associated with 
+        /// the current context.
         /// </summary>
-        public System.Func<System.Collections.Generic.IEnumerable<string>> Domains { get; set; }
+        public Func<IEnumerable<string>> Domains { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class.
@@ -98,11 +108,17 @@ namespace WebExpress.WebApp.WebPage
         public override IHtmlNode Render(IVisualTreeContext context)
         {
             var html = new HtmlElementRootHtml();
+            var body = new HtmlElementSectionBody();
             var renderContext = new RenderControlContext(context.RenderContext);
+            var login = new ControlLogin()
+            {
+                Margin = new PropertySpacingMargin(PropertySpacing.Space.Five)
+            };
 
             // head
             html.Head.Title = I18N.Translate(context.Request, Title);
             html.Head.Favicons = Favicons;
+            html.Head.Base = Base?.ToString();
             html.Head.Styles = Styles;
             html.Head.Meta = Meta;
             html.Head.Scripts = HeaderScripts;
@@ -115,18 +131,11 @@ namespace WebExpress.WebApp.WebPage
             {
                 html.Body.AddUserAttribute("data-bs-theme", "dark");
             }
-
+            html.Body.Add(MessageQueueUri);
             html.Body.Add(Header.Render(renderContext, this));
             html.Body.Add(Toast.Render(renderContext, this));
-
-            // render centered content area without sidebar or breadcrumb
-            var centeredContent = new ControlPanelCenter("wx-login-center",
-                Content.MainPanel as IControl)
-            {
-                Fluid = TypePanelContainer.Default
-            };
-
-            html.Body.Add(centeredContent.Render(renderContext, this));
+            html.Body.Add(login.Render(renderContext, this));
+            html.Body.Add(Footer.Render(renderContext, this));
             html.Body.Add(NotificationPopup.Render(renderContext, this));
 
             html.Body.Scripts = [.. Scripts.Values];

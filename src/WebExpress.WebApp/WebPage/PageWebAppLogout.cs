@@ -11,7 +11,7 @@ namespace WebExpress.WebApp.WebPage
     /// Terminates the current authenticated session and presents a confirmation message
     /// with a navigation link back to the login page.
     /// </summary>
-    public class PageWebAppLogout : IPage<VisualTreeWebAppLogin>
+    public class PageWebAppLogout : IPage<VisualTreeWebApp>
     {
         /// <summary>
         /// Processing of the page.
@@ -19,7 +19,7 @@ namespace WebExpress.WebApp.WebPage
         /// </summary>
         /// <param name="renderContext">The context for rendering the page.</param>
         /// <param name="visualTree">The visual tree control to be processed.</param>
-        public void Process(IRenderContext renderContext, VisualTreeWebAppLogin visualTree)
+        public void Process(IRenderContext renderContext, VisualTreeWebApp visualTree)
         {
             if (renderContext is null)
             {

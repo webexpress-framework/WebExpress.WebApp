@@ -9,7 +9,7 @@ namespace WebExpress.WebApp.WebFragment
     /// <summary>
     /// Represents a dashboard control within a fragment context.
     /// </summary>
-    public class FragmentControlRestDashboard : ControlRestDashboard, IFragmentControl<ControlRestDashboard>
+    public abstract class FragmentControlRestDashboard : ControlRestDashboard, IFragmentControl<ControlRestDashboard>
     {
         /// <summary>
         /// Returns the context of the fragment.

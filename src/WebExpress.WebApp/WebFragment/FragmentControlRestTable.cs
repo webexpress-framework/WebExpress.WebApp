@@ -9,7 +9,7 @@ namespace WebExpress.WebApp.WebFragment
     /// <summary>
     /// Represents a table control within a fragment context.
     /// </summary>
-    public class FragmentControlRestTable : ControlRestTable, IFragmentControl<ControlRestTable>
+    public abstract class FragmentControlRestTable : ControlRestTable, IFragmentControl<ControlRestTable>
     {
         /// <summary>
         /// Returns the context of the fragment.
