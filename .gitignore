@@ -400,3 +400,5 @@ FodyWeavers.xsd
 *.sln.iml
 /src/WebExpress.WebApp/WebExpress - Backup.WebApp.csproj
 nuget.config
+WebExpress.WebCore
+nuget.config
