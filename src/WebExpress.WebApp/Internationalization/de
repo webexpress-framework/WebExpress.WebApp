@@ -225,3 +225,24 @@ setting.monitor.currenttime=Aktuelle Systemzeit
 setting.monitor.group.chart.resources.label=Systemressourcen
 setting.monitor.dataset.cpu=CPU Auslastung (%)
 setting.monitor.dataset.memory=Speichernutzung (MB)
+login.title=Anmelden
+login.username.label=Benutzername
+login.username.placeholder=Benutzername eingeben
+login.password.label=Passwort
+login.password.placeholder=Passwort eingeben
+login.submit.label=Anmelden
+login.error.empty=Benutzername und Passwort sind erforderlich.
+login.error.invalid=Ungültiger Benutzername oder falsches Passwort.
+
+logout.title=Abgemeldet
+logout.description=Sie wurden erfolgreich abgemeldet.
+logout.login.label=Erneut anmelden
+
+forbidden.title=Zugriff verweigert
+forbidden.description=Sie verfügen nicht über die erforderlichen Berechtigungen, um auf diese Ressource zuzugreifen. Bitte wenden Sie sich an Ihren Administrator oder melden Sie sich mit einem Konto an, das über die notwendigen Berechtigungen verfügt.
+forbidden.switchaccount.label=Konto wechseln
+
+status.401.title=Nicht autorisiert
+status.401.description=Der HTTP-Statuscode 401 bedeutet, dass die Anfrage nicht bearbeitet wurde, da gültige Authentifizierungsdaten für die Zielressource fehlen. <ul><li>Der Benutzer hat sich nicht authentifiziert.</li><li>Die angegebenen Anmeldedaten sind ungültig oder abgelaufen.</li><li>Die Authentifizierungsmethode wird nicht unterstützt.</li></ul>
+status.403.title=Verboten
+status.403.description=Der HTTP-Statuscode 403 bedeutet, dass der Server die Anfrage verstanden hat, aber die Autorisierung verweigert. Im Gegensatz zu 401 macht eine erneute Authentifizierung keinen Unterschied. <ul><li>Der authentifizierte Benutzer verfügt nicht über die erforderlichen Berechtigungen.</li><li>Der Zugriff auf die angeforderte Ressource ist eingeschränkt.</li><li>Das Benutzerkonto könnte gesperrt oder deaktiviert sein.</li></ul>

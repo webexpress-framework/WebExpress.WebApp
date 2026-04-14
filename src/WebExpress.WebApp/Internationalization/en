@@ -226,3 +226,25 @@ setting.monitor.currenttime=Current System Time
 setting.monitor.group.chart.resources.label=System Resources
 setting.monitor.dataset.cpu=CPU Usage (%)
 setting.monitor.dataset.memory=Memory Usage (MB)
+
+login.title=Sign in
+login.username.label=Username
+login.username.placeholder=Enter your username
+login.password.label=Password
+login.password.placeholder=Enter your password
+login.submit.label=Sign in
+login.error.empty=Username and password are required.
+login.error.invalid=Invalid username or password.
+
+logout.title=Signed out
+logout.description=You have been successfully signed out.
+logout.login.label=Sign in again
+
+forbidden.title=Access denied
+forbidden.description=You do not have the required permissions to access this resource. Please contact your administrator or sign in with an account that has the necessary permissions.
+forbidden.switchaccount.label=Switch account
+
+status.401.title=Unauthorized
+status.401.description=The HTTP status code 401 indicates that the request was not applied because it lacks valid authentication credentials for the target resource. <ul><li>The user has not authenticated.</li><li>The provided credentials are invalid or expired.</li><li>The authentication method is not supported.</li></ul>
+status.403.title=Forbidden
+status.403.description=The HTTP status code 403 indicates that the server understood the request but refuses to authorize it. Unlike 401, re-authenticating will make no difference. <ul><li>The authenticated user does not have the required permissions.</li><li>Access to the requested resource is restricted.</li><li>The user account may be locked or disabled.</li></ul>
