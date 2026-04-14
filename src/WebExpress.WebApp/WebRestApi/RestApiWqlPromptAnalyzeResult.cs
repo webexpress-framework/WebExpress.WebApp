@@ -22,29 +22,29 @@ namespace WebExpress.WebApp.WebRestApi
         };
 
         /// <summary>
-        /// Returns or sets the lookahead configuration used for query execution.
+        /// Gets or sets the lookahead configuration used for query execution.
         /// </summary>
         public IWqlLookahead Lookahead { get; set; }
 
         /// <summary>
-        /// Returns or sets the type of WQL expression currently being processed.
+        /// Gets or sets the type of WQL expression currently being processed.
         /// </summary>
         public WqlExpressionType CurrentExpressionType { get; set; }
 
         /// <summary>
-        /// Returns or sets the collection of expression types that are valid to 
+        /// Gets or sets the collection of expression types that are valid to 
         /// follow the current expression in a WQL query.
         /// </summary>
         public IEnumerable<WqlExpressionType> NextExpressionTypes { get; set; } = [];
 
         /// <summary>
-        /// Returns or sets the error message that describes the result of the 
+        /// Gets or sets the error message that describes the result of the 
         /// current wql.
         /// </summary>
         public string ErrorMessage { get; set; }
 
         /// <summary>
-        /// Returns or sets the list of suggestion items.
+        /// Gets or sets the list of suggestion items.
         /// </summary>
         public IEnumerable<string> Suggestions { get; set; } = [];
 

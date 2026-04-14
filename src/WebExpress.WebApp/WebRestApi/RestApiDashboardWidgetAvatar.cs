@@ -9,30 +9,30 @@ namespace WebExpress.WebApp.WebRestApi
     public class RestApiDashboardWidgetAvatar : RestApiDashboardWidget
     {
         /// <summary>
-        /// Returns or sets the widget id.
+        /// Gets or sets the widget id.
         /// </summary>
         public override string Id => "widget_avatar";
 
         /// <summary>
-        /// Returns or sets the name associated with the object.
+        /// Gets or sets the name associated with the object.
         /// </summary>
         [JsonPropertyName("name")]
         public string Name { get; set; }
 
         /// <summary>
-        /// Returns or sets the caption text associated with the object.
+        /// Gets or sets the caption text associated with the object.
         /// </summary>
         [JsonPropertyName("caption")]
         public string Caption { get; set; }
 
         /// <summary>
-        /// Returns or sets the image associated with the entity.
+        /// Gets or sets the image associated with the entity.
         /// </summary>
         [JsonPropertyName("image")]
         public string Image { get; set; }
 
         /// <summary>
-        /// Returns or sets the additional widget parameters.
+        /// Gets or sets the additional widget parameters.
         /// </summary>
         [JsonPropertyName("params")]
         public override Dictionary<string, string> Params

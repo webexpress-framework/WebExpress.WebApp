@@ -9,13 +9,13 @@ namespace WebExpress.WebApp.WebControl
     public interface IControlRestTable : IControlRest
     {
         /// <summary>
-        /// Retruns the number of items to display on each page in a 
+        /// Gets the number of items to display on each page in a 
         /// paginated collection.
         /// </summary>
         uint PageSize { get; }
 
         /// <summary>
-        /// Returns the binding.
+        /// Gets the binding.
         /// </summary>
         IBinding Bind { get; }
     }

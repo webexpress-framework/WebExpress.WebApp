@@ -9,32 +9,32 @@ namespace WebExpress.WebApp.WebControl
     public interface IControlWebAppToolbar : IControlToolbar
     {
         /// <summary>
-        /// Returns the preferences area.
+        /// Gets the preferences area.
         /// </summary>
         IEnumerable<IControlToolbarItem> Preferences { get; }
 
         /// <summary>
-        /// Returns the primary area.
+        /// Gets the primary area.
         /// </summary>
         IEnumerable<IControlToolbarItem> Primary { get; }
 
         /// <summary>
-        /// Returns the secondary area.
+        /// Gets the secondary area.
         /// </summary>
         IEnumerable<IControlToolbarItem> Secondary { get; }
 
         /// <summary>
-        /// Returns the preferences area of the more menu.
+        /// Gets the preferences area of the more menu.
         /// </summary>
         IEnumerable<IControlDropdownItem> MorePreferences { get; }
 
         /// <summary>
-        /// Returns the primary area of the more menu.
+        /// Gets the primary area of the more menu.
         /// </summary>
         IEnumerable<IControlDropdownItem> MorePrimary { get; }
 
         /// <summary>
-        /// Returns the secondary area of the more menu.
+        /// Gets the secondary area of the more menu.
         /// </summary>
         IEnumerable<IControlDropdownItem> MoreSecondary { get; }
 

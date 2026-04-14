@@ -14,43 +14,43 @@ namespace WebExpress.WebApp.WebRestApi
     public class RestApiOptionClone : RestApiOption
     {
         /// <summary>
-        /// Returns the type of the element, represented as a string.
+        /// Gets the type of the element, represented as a string.
         /// </summary>
         [JsonPropertyName("type")]
         public virtual string Type => "item";
 
         /// <summary>
-        /// Returns the command.
+        /// Gets the command.
         /// </summary>
         public virtual string Command => "clone";
 
         /// <summary>
-        /// Returns the edit form uri.
+        /// Gets the edit form uri.
         /// </summary>
         public virtual IUri Uri { get; set; }
 
         /// <summary>
-        /// Returns the text.
+        /// Gets the text.
         /// </summary>
         public virtual string Text => I18N.Translate(Request, "webexpress.webapp:clone.label");
 
         /// <summary>
-        /// Returns the icon.
+        /// Gets the icon.
         /// </summary>
         public virtual string Icon => new IconCopy().Class;
 
         /// <summary>
-        /// Returns or sets the text color.
+        /// Gets or sets the text color.
         /// </summary>
         public virtual string Color => "text-primary";
 
         /// <summary>
-        /// Returns or sets the primary action, typically invoked on a single click.
+        /// Gets or sets the primary action, typically invoked on a single click.
         /// </summary>
         public virtual IAction PrimaryAction { get; set; }
 
         /// <summary>
-        /// Returns or sets the secondary action, typically invoked on a double‑click.
+        /// Gets or sets the secondary action, typically invoked on a double‑click.
         /// </summary>
         public virtual IAction SecondaryAction { get; set; }
 

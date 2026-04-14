@@ -15,12 +15,12 @@ namespace WebExpress.WebApp.WebControl
     public interface IControlSearch : IControl
     {
         /// <summary>
-        /// Returns the uri that determines the data.
+        /// Gets the uri that determines the data.
         /// </summary>
         IUri RestUri { get; }
 
         /// <summary>
-        /// Returns the content of the control (e.g., save button).
+        /// Gets the content of the control (e.g., save button).
         /// </summary>
         IEnumerable<IControl> Content { get; }
 

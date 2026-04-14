@@ -18,13 +18,13 @@ namespace WebExpress.WebApp.WebRestApi
     public abstract class RestApiOption
     {
         /// <summary>
-        /// Returns or sets the id.
+        /// Gets or sets the id.
         /// </summary>
         [JsonPropertyName("id")]
         public string Id { get; set; }
 
         /// <summary>
-        /// Returns the request object associated with the current operation.
+        /// Gets the request object associated with the current operation.
         /// </summary>
         [JsonIgnore]
         protected IRequest Request { get; }

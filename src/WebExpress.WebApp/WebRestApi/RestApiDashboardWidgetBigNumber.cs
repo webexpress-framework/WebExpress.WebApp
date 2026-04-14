@@ -9,24 +9,24 @@ namespace WebExpress.WebApp.WebRestApi
     public class RestApiDashboardWidgetBigNumber : RestApiDashboardWidget
     {
         /// <summary>
-        /// Returns or sets the widget id.
+        /// Gets or sets the widget id.
         /// </summary>
         public override string Id => "widget_bignumber";
 
         /// <summary>
-        /// Returns or sets the value represented by this property.
+        /// Gets or sets the value represented by this property.
         /// </summary>
         [JsonPropertyName("value")]
         public string Value { get; set; }
 
         /// <summary>
-        /// Returns or sets the display label associated with the object.
+        /// Gets or sets the display label associated with the object.
         /// </summary>
         [JsonPropertyName("label")]
         public string Label { get; set; }
 
         /// <summary>
-        /// Returns or sets the additional widget parameters.
+        /// Gets or sets the additional widget parameters.
         /// </summary>
         [JsonPropertyName("params")]
         public override Dictionary<string, string> Params

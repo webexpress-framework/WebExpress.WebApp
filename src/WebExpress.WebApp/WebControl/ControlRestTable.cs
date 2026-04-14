@@ -12,7 +12,7 @@ namespace WebExpress.WebApp.WebControl
     public class ControlRestTable : ControlPanel, IControlRestTable
     {
         /// <summary>
-        /// Returns or sets the uri that determines the data.
+        /// Gets or sets the uri that determines the data.
         /// </summary>
         public IUri RestUri { get; set; }
 
@@ -23,7 +23,7 @@ namespace WebExpress.WebApp.WebControl
         public uint PageSize { get; set; }
 
         /// <summary>
-        /// Returns or sets the binding.
+        /// Gets or sets the binding.
         /// </summary>
         public IBinding Bind { get; set; }
 

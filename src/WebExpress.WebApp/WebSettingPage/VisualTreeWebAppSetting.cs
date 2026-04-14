@@ -20,12 +20,12 @@ namespace WebExpress.WebApp.WebSettingPage
     public class VisualTreeWebAppSetting : VisualTreeWebApp
     {
         /// <summary>
-        /// Returns the area for setting tab.
+        /// Gets the area for setting tab.
         /// </summary>
         public ControlWebAppSettingTab SettingTab { get; protected set; } = new ControlWebAppSettingTab("wx-settingtab");
 
         /// <summary>
-        /// Returns the sidebar control.
+        /// Gets the sidebar control.
         /// </summary>
         public new ControlWebAppSettingMenu Sidebar { get; protected set; } = new ControlWebAppSettingMenu("wx-settingmenu");
 

@@ -27,12 +27,12 @@ namespace WebExpress.WebApp.WWW.Settings.System
         private readonly IComponentHub _componentHub;
 
         /// <summary>
-        /// The id of the web task for importing a plugin.
+        /// Gets the id of the web task for importing a plugin.
         /// </summary>
         private const string TaskId = "wx-plugin-upload";
 
         /// <summary>
-        /// Returns the label control.
+        /// Gets the label control.
         /// </summary>
         private ControlText Label { get; } = new ControlText()
         {
@@ -42,7 +42,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
         };
 
         /// <summary>
-        /// Returns the help text control.
+        /// Gets the help text control.
         /// </summary>
         private ControlText Description { get; } = new ControlText()
         {
@@ -51,7 +51,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
         };
 
         /// <summary>
-        /// Returns the upload button for uploading and initializing a plugin.
+        /// Gets the upload button for uploading and initializing a plugin.
         /// </summary>
         private ControlButton DownloadButton { get; } = new ControlButton()
         {
@@ -64,7 +64,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
         };
 
         /// <summary>
-        /// Form for uploading a plugin.
+        /// Gets the form for uploading a plugin.
         /// </summary>
         private ControlModalFormFileUpload ModalUploadForm { get; } = new ControlModalFormFileUpload("plugin-upload")
         {

@@ -13,7 +13,7 @@ namespace WebExpress.WebApp.WebRestApi
         private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
         /// <summary>
-        /// Returns or sets a value indicating whether the resource is currently available.
+        /// Gets or sets a value indicating whether the resource is currently available.
         /// </summary>
         public bool Available { get; set; }
 

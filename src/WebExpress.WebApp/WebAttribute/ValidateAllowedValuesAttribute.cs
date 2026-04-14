@@ -12,12 +12,12 @@ namespace WebExpress.WebApp.WebAttribute
     public sealed class ValidateAllowedValuesAttribute : Attribute, IValidation
     {
         /// <summary> 
-        /// Returns the list of allowed values. The validated value must match one of these. 
+        /// Gets the list of allowed values. The validated value must match one of these. 
         /// </summary>
         public object[] Values { get; }
 
         /// <summary> 
-        /// Returns the error message returned when validation fails. 
+        /// Gets the error message returned when validation fails. 
         /// </summary>
         public string Message { get; }
 

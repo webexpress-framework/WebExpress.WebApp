@@ -10,7 +10,7 @@ namespace WebExpress.WebApp.WebControl
     public interface IControlRestWqlPrompt : IControl
     {
         /// <summary>
-        /// Returns the uri that determines the data.
+        /// Gets the uri that determines the data.
         /// </summary>
         IUri RestUri { get; }
     }

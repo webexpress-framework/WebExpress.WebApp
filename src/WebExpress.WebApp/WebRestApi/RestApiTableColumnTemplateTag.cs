@@ -17,22 +17,22 @@ namespace WebExpress.WebApp.WebRestApi
         };
 
         /// <summary>
-        /// Returns the type identifier associated with the current instance.
+        /// Gets the type identifier associated with the current instance.
         /// </summary>
         public string Type => "tag";
 
         /// <summary>
-        /// Returns or sets a value indicating whether the current object can be edited.
+        /// Gets a value indicating whether the current object can be edited.
         /// </summary>
         public bool Editable { get; private set; }
 
         /// <summary>
-        /// Returns or sets the color tag associated with the type.
+        /// Gets the color tag associated with the type.
         /// </summary>
         public TypeColorTag Color { get; private set; }
 
         /// <summary>
-        /// Returns or sets the placeholder text to display when the input field is empty.
+        /// Gets the placeholder text to display when the input field is empty.
         /// </summary>
         public string Placeholder { get; private set; }
 

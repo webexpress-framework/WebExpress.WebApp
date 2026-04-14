@@ -18,7 +18,7 @@ namespace WebExpress.WebApp.WebRestApi
         };
 
         /// <summary>
-        /// Returns or sets the collection of retrieved items.
+        /// Gets or sets the collection of retrieved items.
         /// </summary>
         public IEnumerable<object> Data { get; set; }
 

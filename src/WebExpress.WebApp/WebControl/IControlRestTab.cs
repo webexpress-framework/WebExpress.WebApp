@@ -10,17 +10,17 @@ namespace WebExpress.WebApp.WebControl
     public interface IControlRestTab : IControl
     {
         /// <summary>
-        /// Returns the uri that determines the data.
+        /// Gets the uri that determines the data.
         /// </summary>
         IUri RestUri { get; }
 
         /// <summary>
-        /// Returns the binding.
+        /// Gets the binding.
         /// </summary>
         IBinding Bind { get; }
 
         /// <summary>
-        /// Returns the collection of templates associated with the tab.
+        /// Gets the collection of templates associated with the tab.
         /// </summary>
         IEnumerable<IControlRestTabTemplate> Templates { get; }
 

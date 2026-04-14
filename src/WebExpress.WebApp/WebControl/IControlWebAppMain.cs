@@ -9,22 +9,22 @@ namespace WebExpress.WebApp.WebControl
     public interface IControlWebAppMain : IControl
     {
         /// <summary>
-        /// Returns the preferences area.
+        /// Gets the preferences area.
         /// </summary>
         IEnumerable<IControl> Preferences { get; }
 
         /// <summary>
-        /// Returns the primary area.
+        /// Gets the primary area.
         /// </summary>
         IEnumerable<IControl> Primary { get; }
 
         /// <summary>
-        /// Returns the secondary area.
+        /// Gets the secondary area.
         /// </summary>
         IEnumerable<IControl> Secondary { get; }
 
         /// <summary>
-        /// Returns the headline control.
+        /// Gets the headline control.
         /// </summary>
         IControlWebAppHeadline Headline { get; }
 

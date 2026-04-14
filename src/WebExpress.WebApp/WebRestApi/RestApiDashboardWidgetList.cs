@@ -9,18 +9,18 @@ namespace WebExpress.WebApp.WebRestApi
     public class RestApiDashboardWidgetList : RestApiDashboardWidget
     {
         /// <summary>
-        /// Returns or sets the widget id.
+        /// Gets or sets the widget id.
         /// </summary>
         public override string Id => "widget_list";
 
         /// <summary>
-        /// Returns or sets the collection of item names associated with the current instance.
+        /// Gets or sets the collection of item names associated with the current instance.
         /// </summary>
         [JsonPropertyName("items")]
         public List<string> Items { get; set; }
 
         /// <summary>
-        /// Returns or sets the additional widget parameters.
+        /// Gets or sets the additional widget parameters.
         /// </summary>
         [JsonPropertyName("params")]
         public override Dictionary<string, string> Params

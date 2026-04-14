@@ -14,12 +14,12 @@ namespace WebExpress.WebApp.WebControl
         private readonly List<IControl> _content = [];
 
         /// <summary>
-        /// Returns or sets the template id.
+        /// Gets or sets the template id.
         /// </summary>
         public string Id { get; set; }
 
         /// <summary>
-        /// Returns the content of the view control.
+        /// Gets the content of the view control.
         /// </summary>
         public IEnumerable<IControl> Content => _content;
 

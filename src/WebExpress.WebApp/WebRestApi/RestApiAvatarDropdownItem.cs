@@ -10,7 +10,7 @@ namespace WebExpress.WebApp.WebRestApi
     public class RestApiAvatarDropdownItem : RestApiDropdownItem
     {
         /// <summary>
-        /// Returns or sets the section to which the item belongs (e.g. "preferences", "primary", "secondary").
+        /// Gets or sets the section to which the item belongs (e.g. "preferences", "primary", "secondary").
         /// </summary>
         [JsonPropertyName("section")]
         public string Section { get; set; }

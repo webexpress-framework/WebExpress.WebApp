@@ -17,12 +17,12 @@ namespace WebExpress.WebApp.WebRestApi
         private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
         /// <summary>
-        /// Returns or sets the collection of items associated with the list.
+        /// Gets or sets the collection of items associated with the list.
         /// </summary>
         public IEnumerable<RestApiDropdownItem> Items { get; set; }
 
         /// <summary>
-        /// Returns or sets the pagination information for the current API request.
+        /// Gets or sets the pagination information for the current API request.
         /// </summary>
         public RestApiPaginationInfo Pagination { get; set; }
 

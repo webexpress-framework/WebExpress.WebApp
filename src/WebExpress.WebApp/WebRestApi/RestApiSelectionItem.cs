@@ -9,19 +9,19 @@ namespace WebExpress.WebApp.WebRestApi
     public class RestApiSelectionItem
     {
         /// <summary>
-        /// Returns or sets the unique item identifier.
+        /// Gets or sets the unique item identifier.
         /// </summary>
         [JsonPropertyName("id")]
         public Guid Id { get; set; }
 
         /// <summary>
-        /// Returns or sets the display text of the item.
+        /// Gets or sets the display text of the item.
         /// </summary>
         [JsonPropertyName("text")]
         public string Text { get; set; }
 
         /// <summary>
-        /// Returns or sets the target uri for the item.
+        /// Gets or sets the target uri for the item.
         /// </summary>
         [JsonPropertyName("uri")]
         public string Uri { get; set; }

@@ -15,7 +15,7 @@ namespace WebExpress.WebApp.WebAttribute
         where TRestConverter : IRestValueConverter
     {
         /// <summary>
-        /// Returns the converter type used for REST serialization or deserialization operations.
+        /// Gets the converter type used for REST serialization or deserialization operations.
         /// </summary>
         public Type ConverterType { get; }
 

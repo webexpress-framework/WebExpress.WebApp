@@ -12,17 +12,17 @@ namespace WebExpress.WebApp.WebApiControl
     public class ControlRestDropdown : ControlDropdown
     {
         /// <summary>
-        /// Returns or sets the REST API endpoint used to populate the dropdown.
+        /// Gets or sets the REST API endpoint used to populate the dropdown.
         /// </summary>
         public IUri RestUri { get; set; }
 
         /// <summary>
-        /// Returns or sets the maximum number of entries to display (default 25).
+        /// Gets or sets the maximum number of entries to display (default 25).
         /// </summary>
         public int MaxItems { get; set; } = -1;
 
         /// <summary>
-        /// Returns or sets the placeholder text for the search input.
+        /// Gets or sets the placeholder text for the search input.
         /// </summary>
         public string SearchPlaceholder { get; set; }
 

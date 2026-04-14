@@ -12,7 +12,7 @@ namespace WebExpress.WebApp.Test
     public sealed class TestThemeA : IThemeWebApp
     {
         /// <summary>
-        /// Returns the text color for the theme.
+        /// Gets the text color for the theme.
         /// </summary>
         /// <value>
         /// A string representing the text color in hexadecimal format.

@@ -19,22 +19,22 @@ namespace WebExpress.WebApp.WebRestApi
         };
 
         /// <summary>
-        /// Returns or sets the title associated with the object.
+        /// Gets or sets the title associated with the object.
         /// </summary>
         public string Title { get; set; }
 
         /// <summary>
-        /// Returns or sets the collection of columns associated with the table.
+        /// Gets or sets the collection of columns associated with the table.
         /// </summary>
         public IEnumerable<RestApiTableColumn> Columns { get; set; }
 
         /// <summary>
-        /// Returns or sets the collection of rows in the table.
+        /// Gets or sets the collection of rows in the table.
         /// </summary>
         public IEnumerable<RestApiTableRow> Rows { get; set; }
 
         /// <summary>
-        /// Returns or sets the pagination information for the current API request.
+        /// Gets or sets the pagination information for the current API request.
         /// </summary>
         public RestApiPaginationInfo Pagination { get; set; }
 

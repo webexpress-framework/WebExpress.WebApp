@@ -10,12 +10,12 @@ namespace WebExpress.WebApp.WebRestApi
     public interface IRestApiTableColumnTemplate
     {
         /// <summary>
-        /// Returns the type identifier associated with the current instance.
+        /// Gets the type identifier associated with the current instance.
         /// </summary>
         string Type { get; }
 
         /// <summary>
-        /// Returns a value indicating whether the current object can be edited.
+        /// Gets a value indicating whether the current object can be edited.
         /// </summary>
         bool Editable { get; }
 

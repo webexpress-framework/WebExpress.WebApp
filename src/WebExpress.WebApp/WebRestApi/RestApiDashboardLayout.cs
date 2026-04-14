@@ -9,7 +9,7 @@ namespace WebExpress.WebApp.WebRestApi
     public class RestApiDashboardLayout
     {
         /// <summary>
-        /// Returns or sets the layout configuration.
+        /// Gets or sets the layout configuration.
         /// </summary>
         [JsonPropertyName("layout")]
         public List<RestApiDashboardLayoutColumn> Layout { get; set; }

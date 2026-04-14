@@ -8,17 +8,17 @@ namespace WebExpress.WebApp.WebRestApi
     public interface IRestApiCrudResultRetrieve : IRestApiResult
     {
         /// <summary>
-        /// Returns or sets the item.
+        /// Gets or sets the item.
         /// </summary>
         object Data { get; }
 
         /// <summary>
-        /// Returns or sets the title.
+        /// Gets or sets the title.
         /// </summary>
         string Title { get; }
 
         /// <summary>
-        /// Returns or sets the prolog for the item.
+        /// Gets or sets the prolog for the item.
         /// </summary>
         string Prolog { get; }
     }

@@ -9,12 +9,12 @@ namespace WebExpress.WebApp.WebControl
     public interface IControlRestTile : IControl
     {
         /// <summary>
-        /// Returns or sets the uri that determines the data.
+        /// Gets or sets the uri that determines the data.
         /// </summary>
         IUri RestUri { get; }
 
         /// <summary>
-        /// Returns or sets the binding.
+        /// Gets or sets the binding.
         /// </summary>
         IBinding Bind { get; }
     }

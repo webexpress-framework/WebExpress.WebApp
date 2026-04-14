@@ -17,7 +17,7 @@ namespace WebExpress.WebApp.WebControl
     public class ControlRestForm : ControlForm
     {
         /// <summary>
-        /// Returns or sets the mode that determines how the form behaves 
+        /// Gets or sets the mode that determines how the form behaves 
         /// or is rendered.
         /// </summary>
         public TypeRestFormMode Mode { get; set; } = TypeRestFormMode.Default;

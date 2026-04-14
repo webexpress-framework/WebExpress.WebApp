@@ -10,12 +10,12 @@ namespace WebExpress.WebApp.WebControl
     public class ControlWebAppContent : Control, IControlWebAppContent
     {
         /// <summary>
-        /// Returns the toolbar.
+        /// Gets the toolbar.
         /// </summary>
         public IControlWebAppToolbar Toolbar { get; } = new ControlWebAppToolbar("wx-content-toolbar");
 
         /// <summary>
-        /// Returns the main panel.
+        /// Gets the main panel.
         /// </summary>
         public IControlWebAppMain MainPanel { get; } = new ControlWebAppMain("wx-content-main")
         {
@@ -23,7 +23,7 @@ namespace WebExpress.WebApp.WebControl
         };
 
         /// <summary>
-        /// Returns the page properties.
+        /// Gets the page properties.
         /// </summary>
         public IControlWebAppProperty Property { get; } = new ControlWebAppProperty("wx-content-property");
 

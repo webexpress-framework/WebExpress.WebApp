@@ -9,17 +9,17 @@ namespace WebExpress.WebApp.WebControl
     public interface IControlWebAppHeaderAppNavigation : IControlPanel
     {
         /// <summary>
-        /// Returns the preferences area.
+        /// Gets the preferences area.
         /// </summary>
         IEnumerable<IControlNavigationItem> Preferences { get; }
 
         /// <summary>
-        /// Returns the primary area.
+        /// Gets the primary area.
         /// </summary>
         IEnumerable<IControlNavigationItem> Primary { get; }
 
         /// <summary>
-        /// Returns the secondary area.
+        /// Gets the secondary area.
         /// </summary>
         IEnumerable<IControlNavigationItem> Secondary { get; }
 

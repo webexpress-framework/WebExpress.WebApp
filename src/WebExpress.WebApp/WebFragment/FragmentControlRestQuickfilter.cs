@@ -12,7 +12,7 @@ namespace WebExpress.WebApp.WebFragment
     public abstract class FragmentControlRestQuickfilter : ControlRestQuickfilter, IFragmentControl<ControlRestQuickfilter>
     {
         /// <summary>
-        /// Returns the context of the fragment.
+        /// Gets the context of the fragment.
         /// </summary>
         public IFragmentContext FragmentContext { get; private set; }
 

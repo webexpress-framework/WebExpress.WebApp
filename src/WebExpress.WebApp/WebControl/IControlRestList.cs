@@ -14,7 +14,7 @@ namespace WebExpress.WebApp.WebControl
         IUri RestUri { get; set; }
 
         /// <summary>
-        /// Returns the binding.
+        /// Gets the binding.
         /// </summary>
         IBinding Bind { get; }
     }

@@ -17,7 +17,7 @@ namespace WebExpress.WebApp.WebStatusPage
         protected readonly IStatusPageContext _statusPageContext;
 
         /// <summary>
-        /// Returns the current status message of the operation.
+        /// Gets the current status message of the operation.
         /// </summary>
         public string StatusMessage { get; protected set; }
 

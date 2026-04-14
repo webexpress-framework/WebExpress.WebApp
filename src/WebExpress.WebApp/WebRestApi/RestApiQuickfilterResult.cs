@@ -17,7 +17,7 @@ namespace WebExpress.WebApp.WebRestApi
         private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
         /// <summary>
-        /// Returns or sets the collection of items associated with the list.
+        /// Gets or sets the collection of items associated with the list.
         /// </summary>
         public IEnumerable<RestApiQuickfilterItem> Items { get; set; }
 

@@ -11,7 +11,7 @@ namespace WebExpress.WebApp.WebControl
     public class ControlWebAppHeader : Control, IControlWebAppHeader
     {
         /// <summary>
-        /// Returns or sets the text color.
+        /// Gets or sets the text color.
         /// </summary>
         public new virtual PropertyColorNavbar TextColor
         {
@@ -20,7 +20,7 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
-        /// Returns or sets whether the arrangement is fixed.
+        /// Gets or sets whether the arrangement is fixed.
         /// </summary>
         public virtual TypeFixed Fixed
         {
@@ -29,7 +29,7 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
-        /// Returns or sets the fixed arrangement when the toolbar is at the top.
+        /// Gets or sets the fixed arrangement when the toolbar is at the top.
         /// </summary>
         public virtual TypeSticky Sticky
         {
@@ -38,56 +38,56 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
-        /// Returns or sets the application navigator.
+        /// Gets or sets the application navigator.
         /// </summary>
         public IControlWebAppHeaderAppNavigator AppNavigator { get; } = new ControlWebAppHeaderAppNavigator("wx-header-appnavigator")
         {
         };
 
         /// <summary>
-        /// Returns or setss the name of the application.
+        /// Gets or setss the name of the application.
         /// </summary>
         public IControlWebAppHeaderAppTitle AppTitle { get; } = new ControlWebAppHeaderAppTitle("wx-header-apptitle")
         {
         };
 
         /// <summary>
-        /// Returns or sets the navigation of the application.
+        /// Gets or sets the navigation of the application.
         /// </summary>
         public IControlWebAppHeaderAppNavigation AppNavigation { get; } = new ControlWebAppHeaderAppNavigation("wx-header-appnavigation")
         {
         };
 
         /// <summary>
-        /// Returns or sets the quick create.
+        /// Gets or sets the quick create.
         /// </summary>
         public IControlWebAppHeaderQuickCreate QuickCreate { get; } = new ControlWebAppHeaderQuickCreate("wx-header-quickcreate")
         {
         };
 
         /// <summary>
-        /// Returns or sets the navigation of the application helpers.
+        /// Gets or sets the navigation of the application helpers.
         /// </summary>
         public IControlWebAppHeaderHelp Help { get; } = new ControlWebAppHeaderHelp("wx-header-help")
         {
         };
 
         /// <summary>
-        /// Returns or sets the navigation of the application helpers.
+        /// Gets or sets the navigation of the application helpers.
         /// </summary>
         public IControlWebAppHeaderNotification Notifications { get; } = new ControlWebAppHeaderNotification("wx-header-notifications")
         {
         };
 
         /// <summary>
-        /// Returns or sets the avatar of the application settings.
+        /// Gets or sets the avatar of the application settings.
         /// </summary>
         public IControlWebAppHeaderAvatar Avatar { get; } = new ControlWebAppHeaderAvatar("wx-header-avatar")
         {
         };
 
         /// <summary>
-        /// Returns or sets the navigation of the application settings.
+        /// Gets or sets the navigation of the application settings.
         /// </summary>
         public IControlWebAppHeaderSettings Settings { get; } = new ControlWebAppHeaderSettings("wx-header-settings")
         {

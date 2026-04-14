@@ -17,7 +17,7 @@ namespace WebExpress.WebApp.WebRestApi
         };
 
         /// <summary>
-        /// Returns or sets the server‑provided message returned after a 
+        /// Gets or sets the server‑provided message returned after a 
         /// update operation.
         /// </summary>
         [JsonPropertyName("message")]

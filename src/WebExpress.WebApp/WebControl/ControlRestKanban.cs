@@ -11,7 +11,7 @@ namespace WebExpress.WebApp.WebControl
     public class ControlRestKanban : ControlPanel, IControlRestKanban
     {
         /// <summary>
-        /// Returns or sets the uri that determines the data.
+        /// Gets or sets the uri that determines the data.
         /// </summary>
         public IUri RestUri { get; set; }
 

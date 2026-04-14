@@ -10,7 +10,7 @@ namespace WebExpress.WebApp.WebMessageQueue
     public interface IMessageQueueSocket : ISocket
     {
         /// <summary>
-        /// Returns the client session associated with the current context.
+        /// Gets the client session associated with the current context.
         /// </summary>
         IClientSession ClientSession { get; }
 

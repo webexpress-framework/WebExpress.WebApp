@@ -9,37 +9,37 @@ namespace WebExpress.WebApp.WebControl
     public interface IControlWebAppSidebar : IControl
     {
         /// <summary>
-        /// Returns the header area.
+        /// Gets the header area.
         /// </summary>
         IEnumerable<IControlSidebarItem> Header { get; }
 
         /// <summary>
-        /// Returns the preferences area.
+        /// Gets the preferences area.
         /// </summary>
         IEnumerable<IControlSidebarItem> Preferences { get; }
 
         /// <summary>
-        /// Returns the primary area.
+        /// Gets the primary area.
         /// </summary>
         IEnumerable<IControlSidebarItem> Primary { get; }
 
         /// <summary>
-        /// Returns the secondary area.
+        /// Gets the secondary area.
         /// </summary>
         IEnumerable<IControlSidebarItem> Secondary { get; }
 
         /// <summary>
-        /// Returns the preferences area of the toolbar.
+        /// Gets the preferences area of the toolbar.
         /// </summary>
         IEnumerable<IControlToolbarItem> ToolPreferences { get; }
 
         /// <summary>
-        /// Returns the primary area of the toolbar.
+        /// Gets the primary area of the toolbar.
         /// </summary>
         IEnumerable<IControlToolbarItem> ToolPrimary { get; }
 
         /// <summary>
-        /// Returns the secondary area of the toolbar.
+        /// Gets the secondary area of the toolbar.
         /// </summary>
         IEnumerable<IControlToolbarItem> ToolSecondary { get; }
 

@@ -10,24 +10,24 @@ namespace WebExpress.WebApp.WebRestApi
     public class RestApiDashboardWidgetProgress : RestApiDashboardWidget
     {
         /// <summary>
-        /// Returns or sets the widget id.
+        /// Gets or sets the widget id.
         /// </summary>
         public override string Id => "widget_progress";
 
         /// <summary>
-        /// Returns or sets the integer value associated with this instance.
+        /// Gets or sets the integer value associated with this instance.
         /// </summary>
         [JsonPropertyName("value")]
         public int Value { get; set; }
 
         /// <summary>
-        /// Returns or sets the color used to display progress.
+        /// Gets or sets the color used to display progress.
         /// </summary>
         [JsonPropertyName("color")]
         public string ProgressColor { get; set; }
 
         /// <summary>
-        /// Returns or sets the additional widget parameters.
+        /// Gets or sets the additional widget parameters.
         /// </summary>
         [JsonPropertyName("params")]
         public override Dictionary<string, string> Params

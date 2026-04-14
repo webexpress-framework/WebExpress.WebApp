@@ -11,7 +11,7 @@ namespace WebExpress.WebApp.WebControl
     public class ControlRestFormDelete : ControlRestForm
     {
         /// <summary>
-        /// Returns or sets the static text content displayed by the control form item.
+        /// Gets or sets the static text content displayed by the control form item.
         /// </summary>
         public ControlFormItemStaticText Content { get; set; } = new ControlFormItemStaticText()
         {
@@ -19,7 +19,7 @@ namespace WebExpress.WebApp.WebControl
         };
 
         /// <summary>
-        /// Returns the submit button control for the form.
+        /// Gets the submit button control for the form.
         /// </summary>
         public ControlFormItemButtonSubmit Submit { get; } = new ControlFormItemButtonSubmit
         {

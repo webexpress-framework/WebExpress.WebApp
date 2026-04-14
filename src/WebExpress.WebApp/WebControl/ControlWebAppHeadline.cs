@@ -22,37 +22,37 @@ namespace WebExpress.WebApp.WebControl
         private readonly List<IControl> _metadata = [];
 
         /// <summary>
-        /// Returns or sets the title.
+        /// Gets or sets the title.
         /// </summary>
         public string Title { get; set; }
 
         /// <summary>
-        /// Returns the prologue area.
+        /// Gets the prologue area.
         /// </summary>
         public IEnumerable<IControl> Prologue => _prologue;
 
         /// <summary>
-        /// Returns the preferences area.
+        /// Gets the preferences area.
         /// </summary>
         public IEnumerable<IControl> Preferences => _preferences;
 
         /// <summary>
-        /// Returns the primary area.
+        /// Gets the primary area.
         /// </summary>
         public IEnumerable<IControl> Primary => _primary;
 
         /// <summary>
-        /// Returns the secondary area.
+        /// Gets the secondary area.
         /// </summary>
         public IEnumerable<IControl> Secondary => _secondary;
 
         /// <summary>
-        /// Returns the secondary area for the metadata.
+        /// Gets the secondary area for the metadata.
         /// </summary>
         public IEnumerable<IControl> Metadata => _metadata;
 
         /// <summary>
-        /// Returns the more control.
+        /// Gets the more control.
         /// </summary>
         public IControlWebAppHeadlineMore More { get; } = new ControlWebAppHeadlineMore("wx-content-main-headline-more")
         {

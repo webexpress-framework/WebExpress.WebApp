@@ -24,27 +24,27 @@ namespace WebExpress.WebApp.WebControl
         private readonly List<IControlDropdownItem> _secondary = [];
 
         /// <summary>
-        /// Returns or sets the user name associated with the current instance.
+        /// Gets or sets the user name associated with the current instance.
         /// </summary>
         public string Username { get; set; }
 
         /// <summary>
-        /// Returns or sets the icon image associated with this instance.
+        /// Gets or sets the icon image associated with this instance.
         /// </summary>
         public IUri Image { get; set; }
 
         /// <summary>
-        /// Returns the preferences area.
+        /// Gets the preferences area.
         /// </summary>
         public IEnumerable<IControlDropdownItem> Preferences => _preferences;
 
         /// <summary>
-        /// Returns the primary area.
+        /// Gets the primary area.
         /// </summary>
         public IEnumerable<IControlDropdownItem> Primary => _primary;
 
         /// <summary>
-        /// Returns the secondary area.
+        /// Gets the secondary area.
         /// </summary>
         public IEnumerable<IControlDropdownItem> Secondary => _secondary;
 

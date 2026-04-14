@@ -15,43 +15,43 @@ namespace WebExpress.WebApp.WebRestApi
         private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
         /// <summary>
-        /// Returns or sets the unique identifier for the entity.
+        /// Gets or sets the unique identifier for the entity.
         /// </summary>
         [JsonPropertyName("id")]
         public string Id { get; set; }
 
         /// <summary>
-        /// Returns or sets the name associated with the object.
+        /// Gets or sets the name associated with the object.
         /// </summary>
         [JsonPropertyName("name")]
         public string Name { get; set; }
 
         /// <summary>
-        /// Returns or sets the current state of the object.
+        /// Gets or sets the current state of the object.
         /// </summary>
         [JsonPropertyName("state")]
         public string State { get; set; }
 
         /// <summary>
-        /// Returns or sets the version identifier for the object.
+        /// Gets or sets the version identifier for the object.
         /// </summary>
         [JsonPropertyName("version")]
         public string Version { get; set; }
 
         /// <summary>
-        /// Returns or sets the description associated with this instance.
+        /// Gets or sets the description associated with this instance.
         /// </summary>
         [JsonPropertyName("description")]
         public string Description { get; set; }
 
         /// <summary>
-        /// Returns or sets the collection of workflow states associated with the workflow.
+        /// Gets or sets the collection of workflow states associated with the workflow.
         /// </summary>
         [JsonPropertyName("states")]
         public IEnumerable<RestApiWorkflowState> States { get; set; }
 
         /// <summary>
-        /// Returns or sets the collection of workflow transitions available in the current context.
+        /// Gets or sets the collection of workflow transitions available in the current context.
         /// </summary>
         [JsonPropertyName("transitions")]
         public IEnumerable<RestApiWorkflowTransition> Transitions { get; set; }

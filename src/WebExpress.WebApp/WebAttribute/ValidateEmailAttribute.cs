@@ -14,7 +14,7 @@ namespace WebExpress.WebApp.WebAttribute
         private static readonly Regex EmailRegex = new Regex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.Compiled);
 
         /// <summary> 
-        /// Returns the error message returned when validation fails. 
+        /// Gets the error message returned when validation fails. 
         /// </summary>
         public string Message { get; }
 

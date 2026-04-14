@@ -19,22 +19,22 @@ namespace WebExpress.WebApp.WebRestApi
         private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
         /// <summary>
-        /// Returns or sets the user name associated with the current instance.
+        /// Gets or sets the user name associated with the current instance.
         /// </summary>
         public string Username { get; set; }
 
         /// <summary>
-        /// Returns or sets the icon image associated with this instance.
+        /// Gets or sets the icon image associated with this instance.
         /// </summary>
         public ImageIcon Image { get; set; }
 
         /// <summary>
-        /// Returns or sets the collection of avatar dropdown items.
+        /// Gets or sets the collection of avatar dropdown items.
         /// </summary>
         public IEnumerable<RestApiAvatarDropdownItem> Items { get; set; }
 
         /// <summary>
-        /// Returns or sets the pagination information for the current API request.
+        /// Gets or sets the pagination information for the current API request.
         /// </summary>
         public RestApiPaginationInfo Pagination { get; set; }
 

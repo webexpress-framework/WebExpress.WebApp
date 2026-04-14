@@ -20,17 +20,17 @@ namespace WebExpress.WebApp.WebControl
         private readonly List<IControlSplitButtonItem> _secondary = [];
 
         /// <summary>
-        /// Returns the preferences area.
+        /// Gets the preferences area.
         /// </summary>
         public IEnumerable<IControlSplitButtonItem> Preferences => _preferences;
 
         /// <summary>
-        /// Returns the primary area.
+        /// Gets the primary area.
         /// </summary>
         public IEnumerable<IControlSplitButtonItem> Primary => _primary;
 
         /// <summary>
-        /// Returns the secondary area.
+        /// Gets the secondary area.
         /// </summary>
         public IEnumerable<IControlSplitButtonItem> Secondary => _secondary;
 

@@ -22,32 +22,32 @@ namespace WebExpress.WebApp.WebControl
         private readonly List<IControlDropdownItem> _moreSecondary = [];
 
         /// <summary>
-        /// Returns the preferences area.
+        /// Gets the preferences area.
         /// </summary>
         public IEnumerable<IControlToolbarItem> Preferences => _preferences;
 
         /// <summary>
-        /// Returns the primary area.
+        /// Gets the primary area.
         /// </summary>
         public IEnumerable<IControlToolbarItem> Primary => _primary;
 
         /// <summary>
-        /// Returns the secondary area.
+        /// Gets the secondary area.
         /// </summary>
         public IEnumerable<IControlToolbarItem> Secondary => _secondary;
 
         /// <summary>
-        /// Returns the preferences area of the more menu.
+        /// Gets the preferences area of the more menu.
         /// </summary>
         public IEnumerable<IControlDropdownItem> MorePreferences => _morePreferences;
 
         /// <summary>
-        /// Returns the primary area of the more menu.
+        /// Gets the primary area of the more menu.
         /// </summary>
         public IEnumerable<IControlDropdownItem> MorePrimary => _morePrimary;
 
         /// <summary>
-        /// Returns the secondary area of the more menu.
+        /// Gets the secondary area of the more menu.
         /// </summary>
         public IEnumerable<IControlDropdownItem> MoreSecondary => _moreSecondary;
 

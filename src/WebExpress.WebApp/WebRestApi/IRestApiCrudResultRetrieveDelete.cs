@@ -6,7 +6,7 @@
     public interface IRestApiCrudResultRetrieveDelete : IRestApiCrudResultRetrieve
     {
         /// <summary>
-        /// Returns the confirmation item for the delete prompt.
+        /// Gets the confirmation item for the delete prompt.
         /// </summary>
         public string ConfirmItem { get; }
     }

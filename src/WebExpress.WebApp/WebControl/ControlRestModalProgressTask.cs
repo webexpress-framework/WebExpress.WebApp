@@ -10,12 +10,12 @@ namespace WebExpress.WebApp.WebControl
     public class ControlRestModalProgressTask : ControlModal
     {
         /// <summary>
-        /// Returns or sets the progress bar.
+        /// Gets or sets the progress bar.
         /// </summary>
         private ControlProgress Progress { get; set; }
 
         /// <summary>
-        /// Returns or sets the progress message.
+        /// Gets or sets the progress message.
         /// </summary>
         private ControlText Message { get; set; }
 

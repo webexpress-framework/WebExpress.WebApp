@@ -12,7 +12,7 @@ namespace WebExpress.WebApp.WebApiControl
     public class ControlRestAvatarDropdown : ControlAvatarDropdown
     {
         /// <summary>
-        /// Returns or sets the REST API endpoint used to populate the dropdown.
+        /// Gets or sets the REST API endpoint used to populate the dropdown.
         /// </summary>
         public IUri RestUri { get; set; }
 

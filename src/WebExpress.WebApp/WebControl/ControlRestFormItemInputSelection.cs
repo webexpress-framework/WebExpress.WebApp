@@ -11,17 +11,17 @@ namespace WebExpress.WebApp.WebApiControl
     public class ControlRestFormItemInputSelection : ControlFormItemInputSelection
     {
         /// <summary>
-        /// Returns or sets the uri that determines the options.
+        /// Gets or sets the uri that determines the options.
         /// </summary>
         public IUri RestUri { get; set; }
 
         /// <summary>
-        /// Returns or sets the binding.
+        /// Gets or sets the binding.
         /// </summary>
         public IBinding Bind { get; set; }
 
         /// <summary>
-        /// Returns or sets the maximum number of entries to display (default 25).
+        /// Gets or sets the maximum number of entries to display (default 25).
         /// </summary>
         public int MaxItems { get; set; } = -1;
 

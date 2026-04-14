@@ -27,12 +27,12 @@ namespace WebExpress.WebApp.WebRestApi
         };
 
         /// <summary>
-        /// Returns or sets the collection of items.
+        /// Gets or sets the collection of items.
         /// </summary>
         public IEnumerable<TIndexItem> Data { get; set; }
 
         /// <summary>
-        /// Returns or sets the pagination information for the current API request.
+        /// Gets or sets the pagination information for the current API request.
         /// </summary>
         public RestApiPaginationInfo Pagination { get; set; }
 

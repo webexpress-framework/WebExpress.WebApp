@@ -10,24 +10,24 @@ namespace WebExpress.WebApp.WebRestApi
     public class RestApiDashboardWidgetStats : RestApiDashboardWidget
     {
         /// <summary>
-        /// Returns or sets the widget id.
+        /// Gets or sets the widget id.
         /// </summary>
         public override string Id => "widget_stats";
 
         /// <summary>
-        /// Returns or sets the title associated with the object.
+        /// Gets or sets the title associated with the object.
         /// </summary>
         [JsonPropertyName("title")]
         public string Title { get; set; }
 
         /// <summary>
-        /// Returns or sets the duration for which the service or application has been running.
+        /// Gets or sets the duration for which the service or application has been running.
         /// </summary>
         [JsonPropertyName("uptime")]
         public string Uptime { get; set; }
 
         /// <summary>
-        /// Returns or sets the additional widget parameters.
+        /// Gets or sets the additional widget parameters.
         /// </summary>
         [JsonPropertyName("params")]
         public override Dictionary<string, string> Params

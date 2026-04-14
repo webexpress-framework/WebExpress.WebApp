@@ -13,47 +13,47 @@ namespace WebExpress.WebApp.WebRestApi
     public class RestApiOptionCustom : RestApiOption
     {
         /// <summary>
-        /// Returns the type of the element, represented as a string.
+        /// Gets the type of the element, represented as a string.
         /// </summary>
         public virtual string Type => "item";
 
         /// <summary>
-        /// Returns or sets the command.
+        /// Gets or sets the command.
         /// </summary>
         public virtual string Command => "custom";
 
         /// <summary>
-        /// Returns or sets the command args.
+        /// Gets or sets the command args.
         /// </summary>
         public virtual string CommandArg { get; set; }
 
         /// <summary>
-        /// Returns the text.
+        /// Gets the text.
         /// </summary>
         public virtual string Text { get; set; }
 
         /// <summary>
-        /// Returns the icon.
+        /// Gets the icon.
         /// </summary>
         public virtual IIcon Icon { get; set; }
 
         /// <summary>
-        /// Returns the edit form uri.
+        /// Gets the edit form uri.
         /// </summary>
         public virtual IUri Uri { get; set; }
 
         /// <summary>
-        /// Returns or sets the text color.
+        /// Gets or sets the text color.
         /// </summary>
         public virtual string Color { get; set; } = "text-primary";
 
         /// <summary>
-        /// Returns or sets the primary action, typically invoked on a single click.
+        /// Gets or sets the primary action, typically invoked on a single click.
         /// </summary>
         public virtual IAction PrimaryAction { get; set; }
 
         /// <summary>
-        /// Returns or sets the secondary action, typically invoked on a double‑click.
+        /// Gets or sets the secondary action, typically invoked on a double‑click.
         /// </summary>
         public virtual IAction SecondaryAction { get; set; }
 

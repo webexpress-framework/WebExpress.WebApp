@@ -8,7 +8,7 @@ namespace WebExpress.WebApp.WebRestApi
     public interface IRestApiCrudResultUpdate : IRestApiResult
     {
         /// <summary>
-        /// Returns or sets the server‑provided message returned after a 
+        /// Gets or sets the server‑provided message returned after a 
         /// update operation.
         /// </summary>
         string Message { get; set; }

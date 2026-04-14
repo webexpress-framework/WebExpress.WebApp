@@ -23,37 +23,37 @@ namespace WebExpress.WebApp.WebControl
         private readonly List<IControlToolbarItem> _toolSecondary = [];
 
         /// <summary>
-        /// Returns the header area.
+        /// Gets the header area.
         /// </summary>
         public IEnumerable<IControlSidebarItem> Header => _header;
 
         /// <summary>
-        /// Returns the preferences area.
+        /// Gets the preferences area.
         /// </summary>
         public IEnumerable<IControlSidebarItem> Preferences => _preferences;
 
         /// <summary>
-        /// Returns the primary area.
+        /// Gets the primary area.
         /// </summary>
         public IEnumerable<IControlSidebarItem> Primary => _primary;
 
         /// <summary>
-        /// Returns the secondary area.
+        /// Gets the secondary area.
         /// </summary>
         public IEnumerable<IControlSidebarItem> Secondary => _secondary;
 
         /// <summary>
-        /// Returns the preferences area of the toolbar.
+        /// Gets the preferences area of the toolbar.
         /// </summary>
         public IEnumerable<IControlToolbarItem> ToolPreferences => _toolPreferences;
 
         /// <summary>
-        /// Returns the primary area of the toolbar.
+        /// Gets the primary area of the toolbar.
         /// </summary>
         public IEnumerable<IControlToolbarItem> ToolPrimary => _toolPrimary;
 
         /// <summary>
-        /// Returns the secondary area of the toolbar.
+        /// Gets the secondary area of the toolbar.
         /// </summary>
         public IEnumerable<IControlToolbarItem> ToolSecondary => _toolSecondary;
 

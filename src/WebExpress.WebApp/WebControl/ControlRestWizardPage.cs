@@ -18,23 +18,23 @@ namespace WebExpress.WebApp.WebControl
         private readonly List<IControlFormItem> _items = [];
 
         /// <summary>
-        /// Returns or sets the template id.
+        /// Gets or sets the template id.
         /// </summary>
         public string Id { get; set; }
 
         /// <summary>
-        /// Returns or sets the form layout.
+        /// Gets or sets the form layout.
         /// </summary>
         public TypeLayoutForm FormLayout { get; set; } = TypeLayoutForm.Default;
 
         /// <summary>
-        /// Returns or sets the item layout.
+        /// Gets or sets the item layout.
         /// </summary>
         public TypeLayoutFormItem ItemLayout { get; set; } = TypeLayoutFormItem.Vertical;
 
 
         /// <summary>
-        /// Returns the collection of form items contained in this control.
+        /// Gets the collection of form items contained in this control.
         /// </summary>
         public IEnumerable<IControlFormItem> Items => _items;
 

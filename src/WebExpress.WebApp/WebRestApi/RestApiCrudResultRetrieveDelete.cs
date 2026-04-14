@@ -16,7 +16,7 @@ namespace WebExpress.WebApp.WebRestApi
         };
 
         /// <summary>
-        /// Returns or sets the confirmation item for the delete prompt.
+        /// Gets or sets the confirmation item for the delete prompt.
         /// </summary>
         public string ConfirmItem { get; set; }
 

@@ -16,17 +16,17 @@ namespace WebExpress.WebApp.WebControl
         private readonly List<IControlRestWizardPage> _pages = [];
 
         /// <summary>
-        /// Returns the collection of wizard pages associated with the control.
+        /// Gets the collection of wizard pages associated with the control.
         /// </summary>
         public IEnumerable<IControlRestWizardPage> Pages => _pages;
 
         /// <summary>
-        /// Returns or sets the uri that determines the data.
+        /// Gets or sets the uri that determines the data.
         /// </summary>
         public IUri RestUri { get; set; }
 
         /// <summary>
-        /// Returns or sets the mode that determines how the form behaves 
+        /// Gets or sets the mode that determines how the form behaves 
         /// or is rendered.
         /// </summary>
         public TypeRestFormMode Mode { get; set; } = TypeRestFormMode.Default;

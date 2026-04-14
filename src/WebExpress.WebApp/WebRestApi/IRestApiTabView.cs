@@ -7,27 +7,27 @@
     public interface IRestApiTabView
     {
         /// <summary>
-        /// Returns the unique identifier for the tab view.
+        /// Gets the unique identifier for the tab view.
         /// </summary>
         string Id { get; }
 
         /// <summary>
-        /// Returns the display label associated with the object.
+        /// Gets the display label associated with the object.
         /// </summary>
         string Title { get; }
 
         /// <summary>
-        /// Returnsthe name associated with the object.
+        /// Gets the name associated with the object.
         /// </summary>
         string Name { get; }
 
         /// <summary>
-        /// Returns  the name or path of the icon associated with this instance.
+        /// Gets  the name or path of the icon associated with this instance.
         /// </summary>
         string Icon { get; }
 
         /// <summary>
-        /// Returns the identifier of the template associated with this instance.
+        /// Gets the identifier of the template associated with this instance.
         /// </summary>
         string TemplateId { get; }
     }

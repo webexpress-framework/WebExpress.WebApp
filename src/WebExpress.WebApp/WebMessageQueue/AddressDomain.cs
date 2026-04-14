@@ -9,7 +9,7 @@ using WebExpress.WebCore.WebDomain;
 public sealed class AddressDomain : IAddress
 {
     /// <summary>
-    /// Returns the domain associated with the current context.
+    /// Gets the domain associated with the current context.
     /// </summary>
     public string Domain { get; }
 

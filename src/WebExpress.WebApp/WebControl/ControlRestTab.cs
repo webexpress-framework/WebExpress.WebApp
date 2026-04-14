@@ -15,17 +15,17 @@ namespace WebExpress.WebApp.WebControl
         private readonly List<IControlRestTabTemplate> _templates = [];
 
         /// <summary>
-        /// Returns or sets the uri that determines the data.
+        /// Gets or sets the uri that determines the data.
         /// </summary>
         public IUri RestUri { get; set; }
 
         /// <summary>
-        /// Returns or sets the binding.
+        /// Gets or sets the binding.
         /// </summary>
         public IBinding Bind { get; set; }
 
         /// <summary>
-        /// Returns the collection of templates associated with the tab.
+        /// Gets the collection of templates associated with the tab.
         /// </summary>
         public IEnumerable<IControlRestTabTemplate> Templates => _templates;
 

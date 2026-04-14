@@ -11,18 +11,18 @@ namespace WebExpress.WebApp.WebControl
     public interface IControlRestWizard : IControlPanel
     {
         /// <summary>
-        /// Returns the uri that determines the data.
+        /// Gets the uri that determines the data.
         /// </summary>
         IUri RestUri { get; }
 
         /// <summary>
-        /// Returns the mode that determines how the form behaves 
+        /// Gets the mode that determines how the form behaves 
         /// or is rendered.
         /// </summary>
         TypeRestFormMode Mode { get; }
 
         /// <summary>
-        /// Returns the collection of wizard pages associated with the control.
+        /// Gets the collection of wizard pages associated with the control.
         /// </summary>
         IEnumerable<IControlRestWizardPage> Pages { get; }
 

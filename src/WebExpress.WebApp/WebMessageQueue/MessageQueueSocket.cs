@@ -20,7 +20,7 @@ namespace WebExpress.WebApp.WebMessageQueue
         private ISocketConnection _socketConnection;
 
         /// <summary>
-        /// Returns the client session associated with the current context.
+        /// Gets the client session associated with the current context.
         /// </summary>
         public IClientSession ClientSession => new ClientSession()
         {
@@ -40,17 +40,17 @@ namespace WebExpress.WebApp.WebMessageQueue
         };
 
         /// <summary>
-        /// Returns the unique identifier for the current connection.
+        /// Gets the unique identifier for the current connection.
         /// </summary>
         public Guid ConnectionId => _connectionId;
 
         /// <summary>
-        /// Returns the context associated with the underlying socket connection.
+        /// Gets the context associated with the underlying socket connection.
         /// </summary>
         public ISocketContext SocketContext => _socketContext;
 
         /// <summary>
-        /// Returns the request associated with the current operation.
+        /// Gets the request associated with the current operation.
         /// </summary>
         public IRequest Request => _request;
 

@@ -9,37 +9,37 @@ namespace WebExpress.WebApp.WebControl
     public interface IControlWebAppHeadline : IControl
     {
         /// <summary>
-        /// Returns or set the title.
+        /// Gets or set the title.
         /// </summary>
         string Title { get; set; }
 
         /// <summary>
-        /// Returns the prologue area.
+        /// Gets the prologue area.
         /// </summary>
         IEnumerable<IControl> Prologue { get; }
 
         /// <summary>
-        /// Returns the preferences area.
+        /// Gets the preferences area.
         /// </summary>
         IEnumerable<IControl> Preferences { get; }
 
         /// <summary>
-        /// Returns the primary area.
+        /// Gets the primary area.
         /// </summary>
         IEnumerable<IControl> Primary { get; }
 
         /// <summary>
-        /// Returns the secondary area.
+        /// Gets the secondary area.
         /// </summary>
         IEnumerable<IControl> Secondary { get; }
 
         /// <summary>
-        /// Returns the secondary area for the metadata.
+        /// Gets the secondary area for the metadata.
         /// </summary>
         IEnumerable<IControl> Metadata { get; }
 
         /// <summary>
-        /// Returns the more control.
+        /// Gets the more control.
         /// </summary>
         IControlWebAppHeadlineMore More { get; }
 

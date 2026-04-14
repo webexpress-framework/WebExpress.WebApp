@@ -8,13 +8,13 @@ namespace WebExpress.WebApp.WebRestApi
     public class RestApiQuickfilterItem
     {
         /// <summary>
-        /// Returns or sets the item id.
+        /// Gets or sets the item id.
         /// </summary>
         [JsonPropertyName("id")]
         public string Id { get; set; }
 
         /// <summary>
-        /// Returns or sets the name associated with the quickfilter.
+        /// Gets or sets the name associated with the quickfilter.
         /// </summary>
         [JsonPropertyName("name")]
         public string Name { get; set; }

@@ -17,13 +17,13 @@ namespace WebExpress.WebApp.WebRestApi
         };
 
         /// <summary>
-        /// Returns or sets the item.
+        /// Gets or sets the item.
         /// </summary>
         [JsonPropertyName("data")]
         public object Data { get; set; }
 
         /// <summary>
-        /// Returns or sets the server‑provided message returned after a 
+        /// Gets or sets the server‑provided message returned after a 
         /// create operation.
         /// </summary>
         [JsonPropertyName("message")]

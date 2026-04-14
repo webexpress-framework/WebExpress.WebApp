@@ -12,23 +12,23 @@ namespace WebExpress.WebApp.WebApiControl
     public class ControlRestProgressTask : Control
     {
         /// <summary>
-        /// Returns or sets the unique identifier for the task.
+        /// Gets or sets the unique identifier for the task.
         /// </summary>
         public string TaskId { get; set; }
 
         /// <summary>
-        /// Returns or sets the interval, in milliseconds, for the operation or process.
+        /// Gets or sets the interval, in milliseconds, for the operation or process.
         /// </summary>
         public int Interval { get; set; } = -1;
 
         /// <summary>
-        /// Returns or sets a value indicating whether the application should display the 
+        /// Gets or sets a value indicating whether the application should display the 
         /// start screen when launched.
         /// </summary>
         public bool ShowOnStart { get; set; }
 
         /// <summary>
-        /// Returns or sets a value indicating whether the associated element should be 
+        /// Gets or sets a value indicating whether the associated element should be 
         /// hidden when the operation is
         /// complete.
         /// </summary>

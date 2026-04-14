@@ -10,27 +10,27 @@ namespace WebExpress.WebApp.WebControl
     public interface IControlWebAppHeaderAvatar : IControl
     {
         /// <summary>
-        /// Returns the user name associated with the current instance.
+        /// Gets the user name associated with the current instance.
         /// </summary>
         public string Username { get; }
 
         /// <summary>
-        /// Returns the icon image associated with this instance.
+        /// Gets the icon image associated with this instance.
         /// </summary>
         public IUri Image { get; }
 
         /// <summary>
-        /// Returns the preferences area.
+        /// Gets the preferences area.
         /// </summary>
         IEnumerable<IControlDropdownItem> Preferences { get; }
 
         /// <summary>
-        /// Returns the primary area.
+        /// Gets the primary area.
         /// </summary>
         IEnumerable<IControlDropdownItem> Primary { get; }
 
         /// <summary>
-        /// Returns the secondary area.
+        /// Gets the secondary area.
         /// </summary>
         IEnumerable<IControlDropdownItem> Secondary { get; }
 

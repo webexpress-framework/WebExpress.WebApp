@@ -11,17 +11,17 @@ namespace WebExpress.WebApp.WebAttribute
     public sealed class ValidateDateRangeAttribute : Attribute, IValidation
     {
         /// <summary> 
-        /// Returns the minimum allowed date (inclusive). 
+        /// Gets the minimum allowed date (inclusive). 
         /// </summary>
         public DateTime Min { get; }
 
         /// <summary> 
-        /// Returns the maximum allowed date (inclusive). 
+        /// Gets the maximum allowed date (inclusive). 
         /// </summary>
         public DateTime Max { get; }
 
         /// <summary> 
-        /// Returns the error message returned when validation fails. 
+        /// Gets the error message returned when validation fails. 
         /// </summary>
         public string Message { get; }
 

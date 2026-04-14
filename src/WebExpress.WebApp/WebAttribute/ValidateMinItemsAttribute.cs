@@ -12,12 +12,12 @@ namespace WebExpress.WebApp.WebAttribute
     public sealed class ValidateMinItemsAttribute : Attribute, IValidation
     {
         /// <summary> 
-        /// Returns the minimum required number of items in the collection. 
+        /// Gets the minimum required number of items in the collection. 
         /// </summary>
         public int Count { get; }
 
         /// <summary> 
-        /// Returns the error message returned when validation fails. 
+        /// Gets the error message returned when validation fails. 
         /// </summary>
         public string Message { get; }
 

@@ -9,17 +9,17 @@ namespace WebExpress.WebApp.WebControl
     public interface IControlWebAppHeaderQuickCreate : IControl
     {
         /// <summary>
-        /// Returns the preferences area.
+        /// Gets the preferences area.
         /// </summary>
         IEnumerable<IControlSplitButtonItem> Preferences { get; }
 
         /// <summary>
-        /// Returns the primary area.
+        /// Gets the primary area.
         /// </summary>
         IEnumerable<IControlSplitButtonItem> Primary { get; }
 
         /// <summary>
-        /// Returns the secondary area.
+        /// Gets the secondary area.
         /// </summary>
         IEnumerable<IControlSplitButtonItem> Secondary { get; }
 

@@ -11,7 +11,7 @@ namespace WebExpress.WebApp.WebControl
     public class ControlRestFormAdd : ControlRestForm
     {
         /// <summary>
-        /// Returns the submit button control for the form.
+        /// Gets the submit button control for the form.
         /// </summary>
         public ControlFormItemButtonSubmit Submit { get; } = new ControlFormItemButtonSubmit
         {

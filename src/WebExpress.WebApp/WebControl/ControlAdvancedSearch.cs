@@ -20,12 +20,12 @@ namespace WebExpress.WebApp.WebControl
         private readonly List<IControl> _content = [];
 
         /// <summary>
-        /// Returns or sets the uri that determines the data.
+        /// Gets or sets the uri that determines the data.
         /// </summary>
         public IUri RestUri { get; set; }
 
         /// <summary>
-        /// Returns the content of the control (e.g., save button).
+        /// Gets the content of the control (e.g., save button).
         /// </summary>
         public IEnumerable<IControl> Content => _content;
 

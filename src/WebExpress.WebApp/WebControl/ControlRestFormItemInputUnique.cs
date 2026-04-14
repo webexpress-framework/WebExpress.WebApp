@@ -14,32 +14,32 @@ namespace WebExpress.WebApp.WebApiControl
     public class ControlRestFormItemInputUnique : ControlFormItemInput<ControlFormInputValueString>
     {
         /// <summary>
-        /// Returns or sets the uri that determines the options.
+        /// Gets or sets the uri that determines the options.
         /// </summary>
         public IUri RestUri { get; set; }
 
         /// <summary>
-        /// Returns or sets the description.
+        /// Gets or sets the description.
         /// </summary>
         public string Description { get; set; }
 
         /// <summary>
-        /// Returns or sets a placeholder text.
+        /// Gets or sets a placeholder text.
         /// </summary>
         public string Placeholder { get; set; }
 
         /// <summary>
-        /// Returns or sets the minimum length.
+        /// Gets or sets the minimum length.
         /// </summary>
         public uint? MinLength { get; set; }
 
         /// <summary>
-        /// Returns or sets the maximum length.
+        /// Gets or sets the maximum length.
         /// </summary>
         public uint? MaxLength { get; set; }
 
         /// <summary>
-        /// Returns or sets a search pattern that checks the content.
+        /// Gets or sets a search pattern that checks the content.
         /// </summary>
         public string Pattern { get; set; }
 

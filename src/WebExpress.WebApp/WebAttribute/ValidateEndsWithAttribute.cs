@@ -11,12 +11,12 @@ namespace WebExpress.WebApp.WebAttribute
     public sealed class ValidateEndsWithAttribute : Attribute, IValidation
     {
         /// <summary> 
-        /// Returns the suffix that the string must end with. 
+        /// Gets the suffix that the string must end with. 
         /// </summary>
         public string Suffix { get; }
 
         /// <summary> 
-        /// Returns the error message returned when validation fails. 
+        /// Gets the error message returned when validation fails. 
         /// </summary>
         public string Message { get; }
 
