@@ -1,10 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using WebExpress.WebApp.WebApiControl;
 using WebExpress.WebApp.WebSection;
 using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebSettingPage;
+using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebFragment;
 using WebExpress.WebUI.WebIcon;
@@ -13,13 +15,25 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Settings controls for a web app.
+    /// Avatar control for a web app header. Uses the avatar image as the interactive menu
+    /// button via <see cref="ControlAvatarDropdown"/> and supports dynamic item loading
+    /// through a REST API endpoint.
     /// </summary>
     public class ControlWebAppHeaderAvatar : Control, IControlWebAppHeaderAvatar
     {
         private readonly List<IControlDropdownItem> _preferences = [];
         private readonly List<IControlDropdownItem> _primary = [];
         private readonly List<IControlDropdownItem> _secondary = [];
+
+        /// <summary>
+        /// Returns or sets the REST API endpoint used to dynamically populate the avatar dropdown.
+        /// </summary>
+        public IUri RestUri { get; set; }
+
+        /// <summary>
+        /// Returns or sets the avatar image uri.
+        /// </summary>
+        public string Image { get; set; }
 
         /// <summary>
         /// Returns the preferences area.
@@ -128,12 +142,14 @@ namespace WebExpress.WebApp.WebControl
         {
             var items = GetItems(renderContext);
 
-            var settingCtlr = items.Any()
-                ? new ControlDropdown(Id)
+            var avatarCtrl = items.Any()
+                ? new ControlAvatarDropdown(Id)
                 {
                     Classes = ["wx-app-dropdown"],
                     Icon = new IconCog(),
                     AlignmentMenu = TypeAlignmentDropdownMenu.Right,
+                    RestUri = RestUri,
+                    Image = Image,
                     Margin = new PropertySpacingMargin
                     (
                         PropertySpacing.Space.Two,
@@ -145,7 +161,7 @@ namespace WebExpress.WebApp.WebControl
                     .Add(items)
                 : null;
 
-            return settingCtlr?.Render(renderContext, visualTree);
+            return avatarCtrl?.Render(renderContext, visualTree);
         }
 
         /// <summary>
