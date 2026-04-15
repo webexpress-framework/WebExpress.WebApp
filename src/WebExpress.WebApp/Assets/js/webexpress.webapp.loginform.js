@@ -75,10 +75,10 @@ webexpress.webapp.LoginFormCtrl = class extends webexpress.webui.LoginCtrl {
 
             this._submitting = true;
             this._loginBtn.disabled = true;
-            var submitLabel = this._loginBtn.textContent;
+            const submitLabel = this._loginBtn.textContent;
             this._loginBtn.textContent = "…";
 
-            this._dispatch(webexpress.webui.Events.DATA_REQUESTED_EVENT, {
+            this._dispatch(webexpress.webui.Event.DATA_REQUESTED_EVENT, {
                 username: username
             });
 
@@ -90,7 +90,7 @@ webexpress.webapp.LoginFormCtrl = class extends webexpress.webui.LoginCtrl {
                 body: JSON.stringify({ username, password })
             }).then((response) => {
                 return response.json().then((data) => {
-                    this._dispatch(webexpress.webui.Events.DATA_ARRIVED_EVENT, data);
+                    this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, data);
 
                     if (data.success) {
                         // successful login
