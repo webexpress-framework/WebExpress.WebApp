@@ -12,9 +12,6 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "wizard.next": "Weiter",
     "wizard.finish": "Abschließen",
 
-    "input.password.toggle.show": "Passwort anzeigen",
-    "input.password.toggle.hide": "Passwort verbergen",
-
     "input.unique.error": "Eindeutigkeit kann nicht überprüft werden - Server ist nicht erreichbar.",
     "input.unique.checking": "Eindeutigkeit wird überprüft...",
     "input.unique.available": "\"{value}\" ist verfügbar.",
@@ -45,11 +42,6 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "delete.confirmation.prompt": "Bitte geben Sie {item} ein, um die Löschaktion zu bestätigen.",
     "delete.confirmation.mismatch": "Der Wert stimmt nicht überein. Bitte überprüfen Sie Ihre Eingabe.",
 
-    "login.username.label": "Benutzername",
-    "login.username.placeholder": "Benutzername eingeben",
-    "login.password.label": "Passwort",
-    "login.password.placeholder": "Passwort eingeben",
-    "login.submit.label": "Anmelden",
     "login.error.empty": "Benutzername und Passwort sind erforderlich.",
     "login.error.invalid": "Ungültiger Benutzername oder falsches Passwort.",
     "login.error.locked": "Zu viele fehlgeschlagene Versuche. Bitte versuchen Sie es später erneut.",

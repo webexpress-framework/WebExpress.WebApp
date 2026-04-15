@@ -89,8 +89,8 @@ namespace WebExpress.WebApp.Test.WebControl
         /// </summary>
         [Theory]
         [InlineData(null, @"<div class=""wx-webapp-input-password""></div>")]
-        [InlineData("abc", @"<div class=""wx-webapp-input-password"" placeholder=""abc""></div>")]
-        [InlineData("webexpress.webui:plugin.name", @"<div class=""wx-webapp-input-password"" placeholder=""WebExpress.WebUI""></div>")]
+        [InlineData("abc", @"<div class=""wx-webapp-input-password"" data-placeholder=""abc""></div>")]
+        [InlineData("webexpress.webui:plugin.name", @"<div class=""wx-webapp-input-password"" data-placeholder=""WebExpress.WebUI""></div>")]
         public void Placeholder(string placeholder, string expected)
         {
             // arrange

@@ -1,6 +1,4 @@
-﻿using WebExpress.WebCore;
-using WebExpress.WebCore.Internationalization;
-using WebExpress.WebCore.WebHtml;
+﻿using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
@@ -8,10 +6,11 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebApiControl
 {
     /// <summary>
-    /// Represents a REST-enabled login form that submits credentials
-    /// to a REST API endpoint for authentication.
+    /// Represents a REST-enabled login form that extends the base 
+    /// <see cref="ControlLogin"/> from WebUI with REST API endpoint 
+    /// configuration and redirect support.
     /// </summary>
-    public class ControlRestLoginForm : Control
+    public class ControlRestLoginForm : ControlLogin
     {
         /// <summary>
         /// Gets or sets the REST API endpoint used for login authentication.
@@ -24,43 +23,10 @@ namespace WebExpress.WebApp.WebApiControl
         public IUri RedirectUri { get; set; }
 
         /// <summary>
-        /// Gets or sets the label for the username field.
-        /// </summary>
-        public string UsernameLabel { get; set; } = "webexpress.webapp:login.username.label";
-
-        /// <summary>
-        /// Gets or sets the placeholder for the username field.
-        /// </summary>
-        public string UsernamePlaceholder { get; set; } = "webexpress.webapp:login.username.placeholder";
-
-        /// <summary>
-        /// Gets or sets the label for the password field.
-        /// </summary>
-        public string PasswordLabel { get; set; } = "webexpress.webapp:login.password.label";
-
-        /// <summary>
-        /// Gets or sets the placeholder for the password field.
-        /// </summary>
-        public string PasswordPlaceholder { get; set; } = "webexpress.webapp:login.password.placeholder";
-
-        /// <summary>
-        /// Gets or sets the label for the submit button.
-        /// </summary>
-        public string SubmitLabel { get; set; } = "webexpress.webapp:login.submit.label";
-
-        /// <summary>
-        /// Initializes a new instance of the class with an automatically assigned ID.
-        /// </summary>
-        public ControlRestLoginForm()
-            : base(RandomId.Create())
-        {
-        }
-
-        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The control id.</param>
-        public ControlRestLoginForm(string id)
+        public ControlRestLoginForm(string id = null)
             : base(id)
         {
         }
@@ -73,22 +39,13 @@ namespace WebExpress.WebApp.WebApiControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            var applicationContext = renderContext?.PageContext?.ApplicationContext;
             var resultUri = RestUri?.BindParameters(renderContext?.Request);
 
-            var html = new HtmlElementFormForm()
-            {
-                Id = Id,
-                Class = Css.Concatenate("wx-webapp-loginform", GetClasses()),
-                Style = GetStyles()
-            }
+            var html = base.Render(renderContext, visualTree)
+                .AddClass("wx-webapp-loginform")
+                .RemoveClass("wx-webui-login")
                 .AddUserAttribute("data-uri", resultUri?.ToString())
-                .AddUserAttribute("data-redirect", RedirectUri?.ToString())
-                .AddUserAttribute("data-username-label", I18N.Translate(renderContext, UsernameLabel))
-                .AddUserAttribute("data-username-placeholder", I18N.Translate(renderContext, UsernamePlaceholder))
-                .AddUserAttribute("data-password-label", I18N.Translate(renderContext, PasswordLabel))
-                .AddUserAttribute("data-password-placeholder", I18N.Translate(renderContext, PasswordPlaceholder))
-                .AddUserAttribute("data-submit-label", I18N.Translate(renderContext, SubmitLabel));
+                .AddUserAttribute("data-redirect", RedirectUri?.ToString());
 
             return html;
         }

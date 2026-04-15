@@ -12,9 +12,6 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "wizard.next": "Next",
     "wizard.finish": "Finish",
 
-    "input.password.toggle.show": "Show password",
-    "input.password.toggle.hide": "Hide password",
-
     "input.unique.error": "Unable to check uniqueness - server could not be reached.",
     "input.unique.checking": "Checking uniqueness...",
     "input.unique.available": "\"{value}\" is available.",
@@ -45,11 +42,6 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "delete.confirmation.prompt": "Please type {item} to confirm deletion.", 
     "delete.confirmation.mismatch": "The value does not match. Please check your input.",
 
-    "login.username.label": "Username",
-    "login.username.placeholder": "Enter your username",
-    "login.password.label": "Password",
-    "login.password.placeholder": "Enter your password",
-    "login.submit.label": "Sign in",
     "login.error.empty": "Username and password are required.",
     "login.error.invalid": "Invalid username or password.",
     "login.error.locked": "Too many failed attempts. Please try again later.",

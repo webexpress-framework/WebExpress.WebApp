@@ -15,17 +15,15 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the id property of the login form control.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<form id=""*"" class=""wx-webapp-loginform"" data-username-label=""Username"" data-username-placeholder=""Enter your username"" data-password-label=""Password"" data-password-placeholder=""Enter your password"" data-submit-label=""Sign in""></form>")]
-        [InlineData("login-form", @"<form id=""login-form"" class=""wx-webapp-loginform"" data-username-label=""Username"" data-username-placeholder=""Enter your username"" data-password-label=""Password"" data-password-placeholder=""Enter your password"" data-submit-label=""Sign in""></form>")]
+        [InlineData(null, @"<div class=""wx-webapp-loginform""></div>")]
+        [InlineData("login-form", @"<div id=""login-form"" class=""wx-webapp-loginform""></div>")]
         public void Id(string id, string expected)
         {
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = id is not null
-                ? new ControlRestLoginForm(id)
-                : new ControlRestLoginForm();
+            var control = new ControlRestLoginForm(id);
 
             // act
             var html = control.Render(context, visualTree);
@@ -38,8 +36,8 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the REST URI property of the login form control.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<form id=""*"" class=""wx-webapp-loginform"" data-username-label=""Username"" data-username-placeholder=""Enter your username"" data-password-label=""Password"" data-password-placeholder=""Enter your password"" data-submit-label=""Sign in""></form>")]
-        [InlineData("https://example.com/api/login", @"<form id=""*"" class=""wx-webapp-loginform"" data-uri=""https://example.com/api/login"" data-username-label=""Username"" data-username-placeholder=""Enter your username"" data-password-label=""Password"" data-password-placeholder=""Enter your password"" data-submit-label=""Sign in""></form>")]
+        [InlineData(null, @"<div class=""wx-webapp-loginform""></div>")]
+        [InlineData("https://example.com/api/login", @"<div class=""wx-webapp-loginform"" data-uri=""https://example.com/api/login""></div>")]
         public void RestUri(string uriString, string expected)
         {
             // arrange
@@ -62,8 +60,8 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the redirect URI property of the login form control.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<form id=""*"" class=""wx-webapp-loginform"" data-username-label=""Username"" data-username-placeholder=""Enter your username"" data-password-label=""Password"" data-password-placeholder=""Enter your password"" data-submit-label=""Sign in""></form>")]
-        [InlineData("https://example.com/home", @"<form id=""*"" class=""wx-webapp-loginform"" data-redirect=""https://example.com/home"" data-username-label=""Username"" data-username-placeholder=""Enter your username"" data-password-label=""Password"" data-password-placeholder=""Enter your password"" data-submit-label=""Sign in""></form>")]
+        [InlineData(null, @"<div class=""wx-webapp-loginform""></div>")]
+        [InlineData("https://example.com/home", @"<div class=""wx-webapp-loginform"" data-redirect=""https://example.com/home""></div>")]
         public void RedirectUri(string uriString, string expected)
         {
             // arrange
@@ -73,6 +71,30 @@ namespace WebExpress.WebApp.Test.WebControl
             var control = new ControlRestLoginForm()
             {
                 RedirectUri = uriString is not null ? new UriEndpoint(uriString) : null
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
+
+        /// <summary>
+        /// Tests that the Title property from the base ControlLogin is accessible.
+        /// </summary>
+        [Theory]
+        [InlineData(null, @"<div class=""wx-webapp-loginform""></div>")]
+        [InlineData("My Login", @"<div class=""wx-webapp-loginform"" dataset-title=""My Login""></div>")]
+        public void Title(string title, string expected)
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlRestLoginForm()
+            {
+                Title = title
             };
 
             // act
