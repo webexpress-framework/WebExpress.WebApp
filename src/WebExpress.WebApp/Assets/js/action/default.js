@@ -3,14 +3,17 @@
  * Sends a DELETE request to the session REST API endpoint to invalidate
  * the current session, then redirects the browser to the application root.
  */
-
-// logout action
 webexpress.webui.Actions.register("logout", {
     execute: function (element, prefix) {
         var uri = element.getAttribute("data-wx-" + prefix + "-uri");
         if (!uri) {
             console.warn("Logout action: no session API URI specified.");
             return;
+        }
+        var target = element.getAttribute("data-wx-" + prefix + "-target") || "/";
+        if (!target) {
+            console.warn("Logout action: redirect target is empty, using '/' as fallback.");
+            target = "/";
         }
 
         fetch(uri, {
@@ -20,7 +23,7 @@ webexpress.webui.Actions.register("logout", {
             }
         }).finally(function () {
             // redirect to application root regardless of outcome
-            window.location.href = "/";
+            window.location.href = target;
         });
     }
 });

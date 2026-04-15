@@ -36,6 +36,7 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/js/webexpress.webapp.tile.js")]
     [Asset("/assets/js/webexpress.webapp.workflow.editor.js")]
     [Asset("/assets/js/webexpress.webapp.wql.prompt.js")]
+    [Asset("/assets/js/action/default.js")]
     [Asset("/assets/js/i18n/en.js")]
     [Asset("/assets/js/i18n/de.js")]
     [Asset("/assets/js/panels/webexpress.webapp.panel.workflow.guard.js")]

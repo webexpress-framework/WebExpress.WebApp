@@ -15,17 +15,34 @@ namespace WebExpress.WebApp.WebApiControl
         /// Gets or sets the URI of the REST API endpoint that handles
         /// session invalidation (i.e. the RestApiSession route).
         /// </summary>
-        public IUri SessionApiUri { get; set; }
+        public IUri RestUri { get; set; }
+
+        /// <summary>
+        /// Gets or sets the target URI associated with this instance.
+        /// </summary>
+        public IUri TargetUri { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
-        /// <param name="sessionApiUri">
+        /// <param name="restUri">
         /// The URI of the REST API endpoint that corresponds to RestApiSession.
         /// </param>
-        public ActionLogout(IUri sessionApiUri)
+        public ActionLogout(IUri restUri)
         {
-            SessionApiUri = sessionApiUri;
+            RestUri = restUri;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the class.
+        /// </summary>
+        /// <param name="restUri">
+        /// The URI of the REST API endpoint that corresponds to RestApiSession.
+        /// </param>
+        public ActionLogout(IUri restUri, IUri targetUri)
+        {
+            RestUri = restUri;
+            TargetUri = targetUri;
         }
 
         /// <summary>
@@ -40,17 +57,26 @@ namespace WebExpress.WebApp.WebApiControl
         /// <returns>The current instance for method chaining.</returns>
         public IAction ApplyUserAttributes(IHtmlNode htmlNode, TypeAction typeAction)
         {
-            var uri = SessionApiUri?.ToString();
+            var uri = RestUri?.ToString();
+            var target = TargetUri?.ToString();
 
             switch (typeAction)
             {
                 case TypeAction.Secondary:
                     htmlNode?.AddUserAttribute("data-wx-secondary-action", "logout");
                     htmlNode?.AddUserAttribute("data-wx-secondary-uri", uri);
+                    if (TargetUri is not null)
+                    {
+                        htmlNode?.AddUserAttribute("data-wx-secondary-target", target);
+                    }
                     break;
                 default:
                     htmlNode?.AddUserAttribute("data-wx-primary-action", "logout");
                     htmlNode?.AddUserAttribute("data-wx-primary-uri", uri);
+                    if (TargetUri is not null)
+                    {
+                        htmlNode?.AddUserAttribute("data-wx-primary-target", target);
+                    }
                     break;
             }
 
@@ -68,9 +94,13 @@ namespace WebExpress.WebApp.WebApiControl
                 ["action"] = "logout"
             };
 
-            if (SessionApiUri is not null)
+            if (RestUri is not null)
             {
-                dict["uri"] = SessionApiUri.ToString();
+                dict["uri"] = RestUri.ToString();
+            }
+            if (TargetUri is not null)
+            {
+                dict["target"] = TargetUri.ToString();
             }
 
             return dict;
