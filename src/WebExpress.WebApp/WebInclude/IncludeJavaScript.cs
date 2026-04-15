@@ -21,7 +21,7 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/js/webexpress.webapp.input.unique.js")]
     [Asset("/assets/js/webexpress.webapp.kanban.js")]
     [Asset("/assets/js/webexpress.webapp.list.js")]
-    [Asset("/assets/js/webexpress.webapp.loginform.js")]
+    [Asset("/assets/js/webexpress.webapp.login.js")]
     [Asset("/assets/js/webexpress.webapp.message.queue.status.js")]
     [Asset("/assets/js/webexpress.webapp.modalform.js")]
     [Asset("/assets/js/webexpress.webapp.popupnotification.js")]

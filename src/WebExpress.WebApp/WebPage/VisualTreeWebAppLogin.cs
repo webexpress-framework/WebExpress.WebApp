@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using WebExpress.WebApp.WebApiControl;
 using WebExpress.WebApp.WebControl;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebComponent;
@@ -84,6 +85,11 @@ namespace WebExpress.WebApp.WebPage
         public Func<IEnumerable<string>> Domains { get; set; }
 
         /// <summary>
+        /// Gets or sets the URI used for user login requests.
+        /// </summary>
+        public IUri LoginUri { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="componentHub">The component hub.</param>
@@ -110,8 +116,9 @@ namespace WebExpress.WebApp.WebPage
             var html = new HtmlElementRootHtml();
             var body = new HtmlElementSectionBody();
             var renderContext = new RenderControlContext(context.RenderContext);
-            var login = new ControlLogin()
+            var login = new ControlRestLogin()
             {
+                RestUri = LoginUri,
                 Margin = new PropertySpacingMargin(PropertySpacing.Space.Five)
             };
 

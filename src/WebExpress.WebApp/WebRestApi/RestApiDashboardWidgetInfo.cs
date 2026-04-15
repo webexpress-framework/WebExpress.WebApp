@@ -14,12 +14,6 @@ namespace WebExpress.WebApp.WebRestApi
         public override string Id => "widget_info";
 
         /// <summary>
-        /// Gets or sets the title associated with the object.
-        /// </summary>
-        [JsonPropertyName("title")]
-        public string Title { get; set; }
-
-        /// <summary>
         /// Gets or sets the description associated with this instance.
         /// </summary>
         [JsonPropertyName("desc")]

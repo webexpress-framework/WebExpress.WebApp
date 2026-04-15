@@ -15,15 +15,15 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the id property of the login form control.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div class=""wx-webapp-loginform""></div>")]
-        [InlineData("login-form", @"<div id=""login-form"" class=""wx-webapp-loginform""></div>")]
+        [InlineData(null, @"<div class=""wx-webapp-login""></div>")]
+        [InlineData("login-form", @"<div id=""login-form"" class=""wx-webapp-login""></div>")]
         public void Id(string id, string expected)
         {
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestLoginForm(id);
+            var control = new ControlRestLogin(id);
 
             // act
             var html = control.Render(context, visualTree);
@@ -36,15 +36,15 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the REST URI property of the login form control.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div class=""wx-webapp-loginform""></div>")]
-        [InlineData("https://example.com/api/login", @"<div class=""wx-webapp-loginform"" data-uri=""https://example.com/api/login""></div>")]
+        [InlineData(null, @"<div class=""wx-webapp-login""></div>")]
+        [InlineData("https://example.com/api/login", @"<div class=""wx-webapp-login"" data-uri=""https://example.com/api/login""></div>")]
         public void RestUri(string uriString, string expected)
         {
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestLoginForm()
+            var control = new ControlRestLogin()
             {
                 RestUri = uriString is not null ? new UriEndpoint(uriString) : null
             };
@@ -60,15 +60,15 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the redirect URI property of the login form control.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div class=""wx-webapp-loginform""></div>")]
-        [InlineData("https://example.com/home", @"<div class=""wx-webapp-loginform"" data-redirect=""https://example.com/home""></div>")]
+        [InlineData(null, @"<div class=""wx-webapp-login""></div>")]
+        [InlineData("https://example.com/home", @"<div class=""wx-webapp-login"" data-redirect=""https://example.com/home""></div>")]
         public void RedirectUri(string uriString, string expected)
         {
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestLoginForm()
+            var control = new ControlRestLogin()
             {
                 RedirectUri = uriString is not null ? new UriEndpoint(uriString) : null
             };
@@ -84,15 +84,15 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests that the Title property from the base ControlLogin is accessible.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div class=""wx-webapp-loginform""></div>")]
-        [InlineData("My Login", @"<div class=""wx-webapp-loginform"" dataset-title=""My Login""></div>")]
+        [InlineData(null, @"<div class=""wx-webapp-login""></div>")]
+        [InlineData("My Login", @"<div class=""wx-webapp-login"" dataset-title=""My Login""></div>")]
         public void Title(string title, string expected)
         {
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestLoginForm()
+            var control = new ControlRestLogin()
             {
                 Title = title
             };

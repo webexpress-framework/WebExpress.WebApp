@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebRestApi;
@@ -35,7 +33,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
 
             var json = ParseResponseJson(result);
             Assert.True(json.GetProperty("success").GetBoolean());
-            Assert.Equal("Authentication successful.", json.GetProperty("message").GetString());
+            Assert.Equal("webexpress.webapp:login.success", json.GetProperty("message").GetString());
         }
 
         /// <summary>
@@ -120,10 +118,10 @@ namespace WebExpress.WebApp.Test.WebRestApi
         public void LoginResultSuccess()
         {
             // arrange
-            var loginResult = new RestApiLoginResult
+            var loginResult = new RestApiSessionResult
             {
                 Success = true,
-                Token = "test-token",
+                SessionId = "test-token",
                 Message = "OK"
             };
 
@@ -142,7 +140,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
         public void LoginResultFailure()
         {
             // arrange
-            var loginResult = new RestApiLoginResult
+            var loginResult = new RestApiSessionResult
             {
                 Success = false,
                 Message = "Invalid credentials"
@@ -163,7 +161,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
         public void LoginResultRateLimited()
         {
             // arrange
-            var loginResult = new RestApiLoginResult
+            var loginResult = new RestApiSessionResult
             {
                 Success = false,
                 Message = "Too many attempts",
@@ -204,7 +202,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
         /// <summary>
         /// Test implementation of RestApiLogin for unit testing.
         /// </summary>
-        private sealed class TestRestApiLogin : RestApiLogin
+        private sealed class TestRestApiLogin : RestApiSession
         {
             private readonly string _validUsername;
             private readonly string _validPassword;

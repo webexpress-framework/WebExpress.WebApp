@@ -10,7 +10,7 @@ namespace WebExpress.WebApp.WebApiControl
     /// <see cref="ControlLogin"/> from WebUI with REST API endpoint 
     /// configuration and redirect support.
     /// </summary>
-    public class ControlRestLoginForm : ControlLogin
+    public class ControlRestLogin : ControlLogin
     {
         /// <summary>
         /// Gets or sets the REST API endpoint used for login authentication.
@@ -26,7 +26,7 @@ namespace WebExpress.WebApp.WebApiControl
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The control id.</param>
-        public ControlRestLoginForm(string id = null)
+        public ControlRestLogin(string id = null)
             : base(id)
         {
         }
@@ -42,7 +42,7 @@ namespace WebExpress.WebApp.WebApiControl
             var resultUri = RestUri?.BindParameters(renderContext?.Request);
 
             var html = base.Render(renderContext, visualTree)
-                .AddClass("wx-webapp-loginform")
+                .AddClass("wx-webapp-login")
                 .RemoveClass("wx-webui-login")
                 .AddUserAttribute("data-uri", resultUri?.ToString())
                 .AddUserAttribute("data-redirect", RedirectUri?.ToString());

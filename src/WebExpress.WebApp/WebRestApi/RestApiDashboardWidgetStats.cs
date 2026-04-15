@@ -15,12 +15,6 @@ namespace WebExpress.WebApp.WebRestApi
         public override string Id => "widget_stats";
 
         /// <summary>
-        /// Gets or sets the title associated with the object.
-        /// </summary>
-        [JsonPropertyName("title")]
-        public string Title { get; set; }
-
-        /// <summary>
         /// Gets or sets the duration for which the service or application has been running.
         /// </summary>
         [JsonPropertyName("uptime")]

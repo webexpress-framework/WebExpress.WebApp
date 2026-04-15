@@ -8,7 +8,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// <summary>
     /// Represents the result of a login REST API operation.
     /// </summary>
-    public class RestApiLoginResult : IRestApiResult
+    public class RestApiSessionResult : IRestApiResult
     {
         private readonly JsonSerializerOptions _jsonOptions = new()
         {
@@ -21,9 +21,9 @@ namespace WebExpress.WebApp.WebRestApi
         public bool Success { get; set; }
 
         /// <summary>
-        /// Gets or sets an optional authentication token.
+        /// Gets or sets an optional authentication session identifier.
         /// </summary>
-        public string Token { get; set; }
+        public string SessionId { get; set; }
 
         /// <summary>
         /// Gets or sets a message describing the authentication result.
@@ -42,10 +42,11 @@ namespace WebExpress.WebApp.WebRestApi
         /// <returns>A Response object representing the result of the conversion.</returns>
         public virtual IResponse ToResponse()
         {
+            // create the response payload matching the client expectations
             var data = new
             {
                 success = Success,
-                token = Token,
+                sessionId = SessionId,
                 message = Message,
                 retryAfter = RetryAfter
             };
@@ -55,6 +56,7 @@ namespace WebExpress.WebApp.WebRestApi
 
             if (Success)
             {
+                // return ok response for successful authentication
                 return new ResponseOK
                 {
                     Content = content
@@ -64,6 +66,7 @@ namespace WebExpress.WebApp.WebRestApi
 
             if (RetryAfter.HasValue && RetryAfter.Value > 0)
             {
+                // return bad request response if rate limit is reached
                 return new ResponseBadRequest
                 {
                     Content = content
@@ -71,11 +74,16 @@ namespace WebExpress.WebApp.WebRestApi
                     .AddHeaderContentType("application/json");
             }
 
-            return new ResponseUnauthorized
+            // return unauthorized response for invalid credentials
+            var response = new ResponseUnauthorized
             {
                 Content = content
             }
                 .AddHeaderContentType("application/json");
+
+            response.Header.WWWAuthenticate = false;
+
+            return response;
         }
     }
 }
