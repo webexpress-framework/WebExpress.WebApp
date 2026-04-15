@@ -233,6 +233,7 @@ login.password.placeholder=Passwort eingeben
 login.submit.label=Anmelden
 login.error.empty=Benutzername und Passwort sind erforderlich.
 login.error.invalid=Ungültiger Benutzername oder falsches Passwort.
+login.error.locked=Zu viele fehlgeschlagene Versuche. Bitte versuchen Sie es in {0} Sekunden erneut.
 
 logout.title=Abgemeldet
 logout.description=Sie wurden erfolgreich abgemeldet.

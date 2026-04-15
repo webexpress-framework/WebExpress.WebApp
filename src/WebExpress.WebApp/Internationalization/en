@@ -235,6 +235,7 @@ login.password.placeholder=Enter your password
 login.submit.label=Sign in
 login.error.empty=Username and password are required.
 login.error.invalid=Invalid username or password.
+login.error.locked=Too many failed attempts. Please try again in {0} seconds.
 
 logout.title=Signed out
 logout.description=You have been successfully signed out.
