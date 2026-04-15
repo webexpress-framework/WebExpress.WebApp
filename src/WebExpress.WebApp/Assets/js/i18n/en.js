@@ -42,6 +42,10 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "delete.confirmation.prompt": "Please type {item} to confirm deletion.", 
     "delete.confirmation.mismatch": "The value does not match. Please check your input.",
 
+    "login.error.empty": "Username and password are required.",
+    "login.error.invalid": "Invalid username or password.",
+    "login.error.locked": "Too many failed attempts. Please try again later.",
+
     // status
     "status.online": "Online",
     "status.connecting": "Connecting...",

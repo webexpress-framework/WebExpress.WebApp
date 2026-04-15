@@ -42,6 +42,10 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "delete.confirmation.prompt": "Bitte geben Sie {item} ein, um die Löschaktion zu bestätigen.",
     "delete.confirmation.mismatch": "Der Wert stimmt nicht überein. Bitte überprüfen Sie Ihre Eingabe.",
 
+    "login.error.empty": "Benutzername und Passwort sind erforderlich.",
+    "login.error.invalid": "Ungültiger Benutzername oder falsches Passwort.",
+    "login.error.locked": "Zu viele fehlgeschlagene Versuche. Bitte versuchen Sie es später erneut.",
+
     // status
     "status.online": "Online",
     "status.connecting": "Verbindung wird aufgebaut",
