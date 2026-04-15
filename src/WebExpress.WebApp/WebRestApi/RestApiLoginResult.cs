@@ -37,7 +37,7 @@ namespace WebExpress.WebApp.WebRestApi
         public int? RetryAfter { get; set; }
 
         /// <summary>
-        /// Converts the current instance into a <see cref="Response"/> object.
+        /// Converts the current instance into a <see cref="IResponse"/> object.
         /// </summary>
         /// <returns>A Response object representing the result of the conversion.</returns>
         public virtual IResponse ToResponse()
@@ -64,13 +64,11 @@ namespace WebExpress.WebApp.WebRestApi
 
             if (RetryAfter.HasValue && RetryAfter.Value > 0)
             {
-                var response = new Response
+                return new ResponseBadRequest
                 {
-                    Status = 429,
                     Content = content
-                };
-                response.Header.ContentType = "application/json";
-                return response;
+                }
+                    .AddHeaderContentType("application/json");
             }
 
             return new ResponseUnauthorized

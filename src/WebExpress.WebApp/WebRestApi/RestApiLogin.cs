@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Text;
 using System.Text.Json;
-using WebExpress.WebCore;
+using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebIdentity;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
@@ -50,10 +49,11 @@ namespace WebExpress.WebApp.WebRestApi
 
             try
             {
-                if (request.Content is byte[] bytes && bytes.Length > 0)
+                var r = request as Request;
+
+                if (r?.Content is byte[] bytes && bytes.Length > 0)
                 {
-                    var json = Encoding.UTF8.GetString(bytes);
-                    using var doc = JsonDocument.Parse(json);
+                    using var doc = JsonDocument.Parse(bytes);
                     var root = doc.RootElement;
 
                     username = root.TryGetProperty("username", out var u) ? u.GetString() : null;
