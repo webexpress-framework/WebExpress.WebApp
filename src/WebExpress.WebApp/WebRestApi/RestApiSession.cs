@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Text.Json;
+using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebIdentity;
@@ -197,7 +198,8 @@ namespace WebExpress.WebApp.WebRestApi
         /// <returns>A token string, or null if token-based auth is not used.</returns>
         protected virtual string GenerateSession(IIdentity identity, IRequest request)
         {
-            return null;
+            return WebEx.ComponentHub.IdentityManager.Login(identity, request)?
+                .Id.ToString();
         }
 
         /// <summary>
@@ -206,7 +208,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <param name="request">The original request.</param>
         protected virtual void InvalidateSession(IRequest request)
         {
-            // default implementation does nothing. override in derived class.
+            WebEx.ComponentHub.IdentityManager.Logout(request);
         }
 
         /// <summary>
