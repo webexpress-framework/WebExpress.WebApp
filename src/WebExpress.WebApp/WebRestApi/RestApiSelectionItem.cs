@@ -21,6 +21,12 @@ namespace WebExpress.WebApp.WebRestApi
         public string Text { get; set; }
 
         /// <summary>
+        /// Gets or sets the display color of the item.
+        /// </summary>
+        [JsonPropertyName("color")]
+        public string Color { get; set; }
+
+        /// <summary>
         /// Gets or sets the target uri for the item.
         /// </summary>
         [JsonPropertyName("uri")]
