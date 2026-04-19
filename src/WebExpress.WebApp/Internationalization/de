@@ -226,6 +226,7 @@ setting.monitor.group.chart.resources.label=Systemressourcen
 setting.monitor.dataset.cpu=CPU Auslastung (%)
 setting.monitor.dataset.memory=Speichernutzung (MB)
 login.title=Anmelden
+login.label=Anmelden
 login.username.label=Benutzername
 login.username.placeholder=Benutzername eingeben
 login.password.label=Passwort
@@ -236,6 +237,7 @@ login.error.invalid=Ungültiger Benutzername oder falsches Passwort.
 login.error.locked=Zu viele fehlgeschlagene Versuche. Bitte versuchen Sie es in {0} Sekunden erneut.
 
 logout.title=Abgemeldet
+logout.label=Abmelden
 logout.description=Sie wurden erfolgreich abgemeldet.
 logout.login.label=Erneut anmelden
 

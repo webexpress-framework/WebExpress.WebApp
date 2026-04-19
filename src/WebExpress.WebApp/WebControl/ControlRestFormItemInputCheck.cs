@@ -60,12 +60,12 @@ namespace WebExpress.WebApp.WebApiControl
 
             var html = new HtmlElementTextContentDiv()
             {
-                Id = Id,
                 Class = Css.Concatenate("wx-webapp-input-check", Layout.ToClass(), Inline ? "form-check-inline" : null, GetClasses()),
                 Style = GetStyles()
             }
                 .Add(new HtmlElementFieldInput()
                 {
+                    Id = Id,
                     Name = Name,
                     Type = "checkbox",
                     Disabled = Disabled,

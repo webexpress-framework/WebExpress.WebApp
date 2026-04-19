@@ -228,6 +228,7 @@ setting.monitor.dataset.cpu=CPU Usage (%)
 setting.monitor.dataset.memory=Memory Usage (MB)
 
 login.title=Sign in
+login.label=Sign in
 login.username.label=Username
 login.username.placeholder=Enter your username
 login.password.label=Password
@@ -238,6 +239,7 @@ login.error.invalid=Invalid username or password.
 login.error.locked=Too many failed attempts. Please try again in {0} seconds.
 
 logout.title=Signed out
+logout.label=Log out
 logout.description=You have been successfully signed out.
 logout.login.label=Sign in again
 

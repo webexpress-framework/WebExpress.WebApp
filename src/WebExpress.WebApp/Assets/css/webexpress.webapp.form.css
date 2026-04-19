@@ -28,6 +28,18 @@
     gap: 0.2em;
 }
 
+.wx-restform .modal-content {
+    background-color: var(--bs-light);
+}
+
+[data-bs-theme="dark"] .wx-restform .modal-content {
+    background-color: var(--bs-body-bg);
+}
+
+[data-bs-theme="dark"] .form-control {
+    background-color: black;
+}
+
 /* Main form wrapper */
 form.wx-webapp-restwizard {
     position: relative;

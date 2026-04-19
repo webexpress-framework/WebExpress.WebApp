@@ -17,7 +17,7 @@ namespace WebExpress.WebApp.Test.WebControl
         /// </summary>
         [Theory]
         [InlineData(null, @"<div class=""wx-webapp-input-check form-check""><input type=""checkbox"" class=""form-check-input""><label class=""form-check-label""></label></div>")]
-        [InlineData("id", @"<div id=""id"" class=""wx-webapp-input-check form-check""><input name=""id"" type=""checkbox"" class=""form-check-input""><label class=""form-check-label"" for=""id""></label></div>")]
+        [InlineData("id", @"<div class=""wx-webapp-input-check form-check""><input id=""id"" name=""id"" type=""checkbox"" class=""form-check-input""><label class=""form-check-label"" for=""id""></label></div>")]
         public void Id(string id, string expected)
         {
             // arrange
@@ -40,7 +40,7 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the auto id property of the REST check control.
         /// </summary>
         [Theory]
-        [InlineData(@"<div id=""*"" class=""wx-webapp-input-check form-check""><input name=""*"" type=""checkbox"" class=""form-check-input""><label class=""form-check-label"" for=""*""></label></div>")]
+        [InlineData(@"<div class=""wx-webapp-input-check form-check""><input id=""*"" name=""*"" type=""checkbox"" class=""form-check-input""><label class=""form-check-label"" for=""*""></label></div>")]
         public void AutoId(string expected)
         {
             // arrange
@@ -212,7 +212,7 @@ namespace WebExpress.WebApp.Test.WebControl
 
             // validation
             AssertExtensions.EqualWithPlaceholders(
-                @"*<div id=""chk"" class=""wx-webapp-input-check form-check"" data-uri=""https://example.com/api/check""><input name=""chk"" type=""checkbox"" class=""form-check-input""><label class=""form-check-label"" for=""chk""></label></div>*",
+                @"*<div class=""wx-webapp-input-check form-check"" data-uri=""https://example.com/api/check""><input id=""chk"" name=""chk"" type=""checkbox"" class=""form-check-input""><label class=""form-check-label"" for=""chk""></label></div>*",
                 html);
         }
 
@@ -223,8 +223,8 @@ namespace WebExpress.WebApp.Test.WebControl
         /// directly.
         /// </summary>
         [Theory]
-        [InlineData(true, "true", @"<input name=""chk"" type=""checkbox"" class=""form-check-input"" checked>")]
-        [InlineData(false, "false", @"<input name=""chk"" type=""checkbox"" class=""form-check-input"">")]
+        [InlineData(true, "true", @"<input id=""chk"" name=""chk"" type=""checkbox"" class=""form-check-input"" checked>")]
+        [InlineData(false, "false", @"<input id=""chk"" name=""chk"" type=""checkbox"" class=""form-check-input"">")]
         public void InitialCheckedEmitsDataValue(bool initial, string expectedValue, string expectedInput)
         {
             // arrange
@@ -243,7 +243,7 @@ namespace WebExpress.WebApp.Test.WebControl
 
             // validation
             AssertExtensions.EqualWithPlaceholders(
-                $@"*<div id=""chk"" class=""wx-webapp-input-check form-check"" data-uri=""https://example.com/api/check"" data-value=""{expectedValue}"">{expectedInput}<label class=""form-check-label"" for=""chk""></label></div>*",
+                $@"*<div class=""wx-webapp-input-check form-check"" data-uri=""https://example.com/api/check"" data-value=""{expectedValue}"">{expectedInput}<label class=""form-check-label"" for=""chk""></label></div>*",
                 html);
         }
     }
