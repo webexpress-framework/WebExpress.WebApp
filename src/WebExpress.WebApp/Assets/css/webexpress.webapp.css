@@ -74,9 +74,13 @@ main {
 }
 
 .wx-app-dropdown > .btn {
-    color: unset;
+    color: var(--bs-bory-bg);
     border-radius: inherit;
     border: unset;
+}
+
+[data-bs-theme="dark"] .wx-app-dropdown > .btn {
+    color: var(--bs-body-color);
 }
 
 .wx-toast {
@@ -106,19 +110,16 @@ main {
 .wx-proterty {
     overflow: auto;
     display: block;
-    background: #C6E2FF;
+    background: var(--bs-tertiary-bg);
     min-height: 100%;
     min-width: 15%;
+    height: 100%;
+    padding: 0.5em;
 }
 
 .wx-content {
     width: 100%;
     flex-grow: 1;
-}
-
-.wx-proterty {
-    height: 100%;
-    padding: 0.5em;
 }
 
 .wx-footer {

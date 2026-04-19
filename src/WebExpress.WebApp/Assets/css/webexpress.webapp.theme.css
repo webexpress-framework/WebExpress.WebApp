@@ -66,6 +66,10 @@
     color: var(--bs-body-color);
 }
 
+[data-bs-theme="dark"] #wx-toast {
+    color: #000;
+}
+
 #wx-breadcrumb {
 }
 
@@ -89,7 +93,7 @@
 }
 
 #wx-split-gutter {
-    background-color: rgba(var(--bs-light-rgb), var(--bs-bg-opacity)) !important;
+    background-color: var(--bs-border-color) !important;
 }
 
 #wx-content {
@@ -108,11 +112,11 @@
 }
 
 #wx-content-main-headline-more {
-    background: var(--bs-white);
+    background: var(--bs-body-bg);
 }
 
 #wx-content-property {
-    background: aliceblue;
+    background: var(--bs-tertiary-bg);
 }
 
 #wx-footer {

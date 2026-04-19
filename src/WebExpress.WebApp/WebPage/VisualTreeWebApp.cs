@@ -140,7 +140,7 @@ namespace WebExpress.WebApp.WebPage
             Header.AppTitle.SetTitle(html.Head.Title);
             if (Theme?.ThemeMode == ThemeMode.Dark)
             {
-                html.Body.AddUserAttribute("data-bs-theme", "dark");
+                html.AddUserAttribute("data-bs-theme", "dark");
             }
 
             var preferences = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionBodyPreferences>
