@@ -27,7 +27,7 @@ namespace WebExpress.WebApp.WebFragment
             : base(fragmentContext)
         {
             Text = "webexpress.webapp:logout.label";
-            Icon = new IconPowerOff();
+            Icon = new IconRightFromBracket();
         }
 
         /// <summary>

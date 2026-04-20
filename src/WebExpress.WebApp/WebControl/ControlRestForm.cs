@@ -128,7 +128,7 @@ namespace WebExpress.WebApp.WebControl
                 _ => new ControlFormItemGroupVertical(),
             };
 
-            foreach (var item in Items.Where(x => x is not ControlFormItemInputHidden))
+            foreach (var item in items.Where(x => x is not ControlFormItemInputHidden))
             {
                 group.Items.Add(item);
             }

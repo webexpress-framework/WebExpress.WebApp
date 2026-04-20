@@ -17,6 +17,7 @@ webexpress.webapp.InputUniqueCtrl = class extends webexpress.webui.Ctrl {
 
         // read configuration from attributes
         const el = this._element;
+        this._fieldId = el.getAttribute("id");
         this._fieldName = el.getAttribute("name") || "unique";
         this._initialValue = el.getAttribute("data-value") || null;
         this._url = el.getAttribute("data-uri") || el.getAttribute("data-url") || "";
@@ -47,6 +48,7 @@ webexpress.webapp.InputUniqueCtrl = class extends webexpress.webui.Ctrl {
         el.innerHTML = "";
         // remove config-bearing attributes from the host as they are now internal
         [
+            "id",
             "name",
             "placeholder",
             "data-value",
@@ -83,6 +85,9 @@ webexpress.webapp.InputUniqueCtrl = class extends webexpress.webui.Ctrl {
         // visible input
         this._input = document.createElement("input");
         this._input.type = "text";
+        if (this._fieldId) {
+            this._input.id = this._fieldId;
+        }
         this._input.className = "input form-control";
         this._input.value = this._currentValue;
         if (this._placeholderText) {
