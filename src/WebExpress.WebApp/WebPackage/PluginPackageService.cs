@@ -15,6 +15,8 @@ namespace WebExpress.WebApp.WebPackage
     /// </summary>
     public sealed class PluginPackageService
     {
+        private const int MaxPackageSizeBytes = 100 * 1024 * 1024;
+
         private readonly IComponentHub _componentHub;
         private readonly IHttpServerContext _httpServerContext;
 
@@ -136,6 +138,10 @@ namespace WebExpress.WebApp.WebPackage
                 );
             }
 
+            var previousId = package.Id;
+            var previousMetadata = package.Metadata;
+            var previousState = package.State;
+
             try
             {
                 var packageManager = _componentHub.PackageManager;
@@ -159,6 +165,9 @@ namespace WebExpress.WebApp.WebPackage
             }
             catch (Exception ex)
             {
+                package.Id = previousId;
+                package.Metadata = previousMetadata;
+                package.State = previousState;
                 _httpServerContext.Log.Exception(ex);
                 return PluginPackageOperationResult.Failed
                 (
@@ -310,7 +319,7 @@ namespace WebExpress.WebApp.WebPackage
                 );
             }
 
-            if (data.Length > 100 * 1024 * 1024)
+            if (data.Length > MaxPackageSizeBytes)
             {
                 return PluginPackageOperationResult.Failed
                 (

@@ -51,7 +51,7 @@ webexpress.webui.Actions.register("plugin-package", {
         var handleResponse = function (response) {
             if (!response.ok) {
                 return response.text().then(function (text) {
-                    throw new Error(text || "Request failed");
+                    throw new Error(text || ("Request failed with status " + response.status + " for " + method + " " + uri));
                 });
             }
             return response.json().catch(function () { return {}; });
@@ -75,10 +75,15 @@ webexpress.webui.Actions.register("plugin-package", {
             input.accept = ".wxp";
             input.style.display = "none";
             document.body.appendChild(input);
+            var cleanup = function () {
+                if (document.body.contains(input)) {
+                    document.body.removeChild(input);
+                }
+            };
 
             input.addEventListener("change", function () {
                 if (!input.files || input.files.length === 0) {
-                    document.body.removeChild(input);
+                    cleanup();
                     return;
                 }
 
@@ -88,11 +93,7 @@ webexpress.webui.Actions.register("plugin-package", {
                 fetch(uri, {
                     method: method,
                     body: formData
-                }).then(handleResponse).then(handleResult).catch(handleError).finally(function () {
-                    if (document.body.contains(input)) {
-                        document.body.removeChild(input);
-                    }
-                });
+                }).then(handleResponse).then(handleResult).catch(handleError).finally(cleanup);
             }, { once: true });
 
             input.click();

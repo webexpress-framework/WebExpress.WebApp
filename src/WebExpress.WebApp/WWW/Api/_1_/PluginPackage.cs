@@ -174,8 +174,18 @@ namespace WebExpress.WebApp.WWW.Api.V1
             }
 
             var tail = segments[^1]?.ToLowerInvariant();
-            var action = tail is "activate" or "deactivate" or "update" ? tail : string.Empty;
-            var packageId = action == string.Empty ? segments[^1] : segments.Count > 1 ? segments[^2] : null;
+            var action = string.Empty;
+            string packageId;
+
+            if (tail is "activate" or "deactivate" or "update")
+            {
+                action = tail;
+                packageId = segments.Count > 1 ? segments[^2] : null;
+            }
+            else
+            {
+                packageId = segments[^1];
+            }
 
             return (Uri.UnescapeDataString(packageId ?? string.Empty), action);
         }
