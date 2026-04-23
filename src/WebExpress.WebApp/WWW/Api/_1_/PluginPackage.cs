@@ -8,6 +8,7 @@ using WebExpress.WebCore.WebComponent;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebParameter;
 using WebExpress.WebCore.WebRestApi;
+using WebExpress.WebCore.WebStatusPage;
 
 namespace WebExpress.WebApp.WWW.Api.V1
 {
@@ -214,7 +215,8 @@ namespace WebExpress.WebApp.WWW.Api.V1
             return new ResponseOK()
             {
                 Content = JsonSerializer.Serialize(data)
-            }.AddHeaderContentType("application/json");
+            }
+                .AddHeaderContentType("application/json");
         }
 
         /// <summary>
