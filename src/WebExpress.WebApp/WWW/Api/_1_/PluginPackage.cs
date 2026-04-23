@@ -98,7 +98,7 @@ namespace WebExpress.WebApp.WWW.Api.V1
         [Method(RequestMethod.PATCH)]
         public Response Update(Request request)
         {
-            var (packageId, action) = ResolveSubPath(request);
+            var (packageId, action) = ResolveActionPath(request);
             if (string.IsNullOrWhiteSpace(packageId) || string.IsNullOrWhiteSpace(action))
             {
                 return CreateErrorResponse("Missing package id or action.");
@@ -125,12 +125,7 @@ namespace WebExpress.WebApp.WWW.Api.V1
         [Method(RequestMethod.DELETE)]
         public Response Delete(Request request)
         {
-            var (packageId, action) = ResolveSubPath(request);
-            if (!string.IsNullOrWhiteSpace(action))
-            {
-                return CreateErrorResponse("Unexpected sub-path segment.");
-            }
-
+            var packageId = ResolveItemPath(request);
             if (string.IsNullOrWhiteSpace(packageId))
             {
                 return CreateErrorResponse("Missing package id.");
@@ -165,29 +160,48 @@ namespace WebExpress.WebApp.WWW.Api.V1
         /// </summary>
         /// <param name="request">The request.</param>
         /// <returns>Tuple with package id and action.</returns>
-        private static (string packageId, string action) ResolveSubPath(Request request)
+        private static (string packageId, string action) ResolveActionPath(Request request)
         {
             var segments = request.Uri.PathSegments.Select(x => x.Value).ToList();
-            if (segments.Count == 0)
+            if (segments.Count < 3)
             {
                 return (null, null);
             }
 
-            var tail = segments[^1]?.ToLowerInvariant();
-            var action = string.Empty;
-            string packageId;
-
-            if (tail is "activate" or "deactivate" or "update")
+            if (!segments[^3].Equals("action", StringComparison.OrdinalIgnoreCase))
             {
-                action = tail;
-                packageId = segments.Count > 1 ? segments[^2] : null;
-            }
-            else
-            {
-                packageId = segments[^1];
+                return (null, null);
             }
 
-            return (Uri.UnescapeDataString(packageId ?? string.Empty), action);
+            var action = segments[^2]?.ToLowerInvariant();
+            if (action is not ("activate" or "deactivate" or "update"))
+            {
+                return (null, null);
+            }
+
+            var packageId = Uri.UnescapeDataString(segments[^1] ?? string.Empty);
+            return (packageId, action);
+        }
+
+        /// <summary>
+        /// Resolves package id from item route format.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns>The package id.</returns>
+        private static string ResolveItemPath(Request request)
+        {
+            var segments = request.Uri.PathSegments.Select(x => x.Value).ToList();
+            if (segments.Count < 2)
+            {
+                return null;
+            }
+
+            if (!segments[^2].Equals("item", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            return Uri.UnescapeDataString(segments[^1] ?? string.Empty);
         }
 
         /// <summary>

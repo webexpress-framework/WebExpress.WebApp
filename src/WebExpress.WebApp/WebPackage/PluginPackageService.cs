@@ -16,6 +16,7 @@ namespace WebExpress.WebApp.WebPackage
     public sealed class PluginPackageService
     {
         private const int MaxPackageSizeBytes = 100 * 1024 * 1024;
+        private readonly Lock _operationLock = new();
 
         private readonly IComponentHub _componentHub;
         private readonly IHttpServerContext _httpServerContext;
@@ -39,33 +40,36 @@ namespace WebExpress.WebApp.WebPackage
         /// <returns>The operation result.</returns>
         public PluginPackageOperationResult Install(string fileName, byte[] data)
         {
-            var validation = ValidateUpload(fileName, data);
-            if (!validation.Success)
+            lock (_operationLock)
             {
-                return validation;
-            }
+                var validation = ValidateUpload(fileName, data);
+                if (!validation.Success)
+                {
+                    return validation;
+                }
 
-            try
-            {
-                var targetPath = Path.Combine(_httpServerContext.PackagePath, Path.GetFileName(fileName));
+                try
+                {
+                    var targetPath = Path.Combine(_httpServerContext.PackagePath, Path.GetFileName(fileName));
 
-                Directory.CreateDirectory(_httpServerContext.PackagePath);
-                File.WriteAllBytes(targetPath, data);
+                    Directory.CreateDirectory(_httpServerContext.PackagePath);
+                    File.WriteAllBytes(targetPath, data);
 
-                Invoke(_componentHub.PackageManager, "Scan");
+                    Invoke(_componentHub.PackageManager, "Scan");
 
-                return PluginPackageOperationResult.Ok
-                (
-                    I18N.Translate("webexpress.webapp:setting.plugin.operation.install.success", Path.GetFileName(fileName))
-                );
-            }
-            catch (Exception ex)
-            {
-                _httpServerContext.Log.Exception(ex);
-                return PluginPackageOperationResult.Failed
-                (
-                    I18N.Translate("webexpress.webapp:setting.plugin.operation.error.internal")
-                );
+                    return PluginPackageOperationResult.Ok
+                    (
+                        I18N.Translate("webexpress.webapp:setting.plugin.operation.install.success", Path.GetFileName(fileName))
+                    );
+                }
+                catch (Exception ex)
+                {
+                    _httpServerContext.Log.Exception(ex);
+                    return PluginPackageOperationResult.Failed
+                    (
+                        I18N.Translate("webexpress.webapp:setting.plugin.operation.error.internal")
+                    );
+                }
             }
         }
 
@@ -77,40 +81,43 @@ namespace WebExpress.WebApp.WebPackage
         /// <returns>The operation result.</returns>
         public PluginPackageOperationResult Update(string packageId, byte[] data)
         {
-            var package = FindPackage(packageId);
-            if (package is null)
+            lock (_operationLock)
             {
-                return PluginPackageOperationResult.Failed
-                (
-                    I18N.Translate("webexpress.webapp:setting.plugin.operation.error.notfound", packageId)
-                );
-            }
+                var package = FindPackage(packageId);
+                if (package is null)
+                {
+                    return PluginPackageOperationResult.Failed
+                    (
+                        I18N.Translate("webexpress.webapp:setting.plugin.operation.error.notfound", packageId)
+                    );
+                }
 
-            var validation = ValidateUpload(package.File, data);
-            if (!validation.Success)
-            {
-                return validation;
-            }
+                var validation = ValidateUpload(package.File, data);
+                if (!validation.Success)
+                {
+                    return validation;
+                }
 
-            try
-            {
-                var targetPath = Path.Combine(_httpServerContext.PackagePath, package.File);
-                File.WriteAllBytes(targetPath, data);
+                try
+                {
+                    var targetPath = Path.Combine(_httpServerContext.PackagePath, package.File);
+                    File.WriteAllBytes(targetPath, data);
 
-                Invoke(_componentHub.PackageManager, "Scan");
+                    Invoke(_componentHub.PackageManager, "Scan");
 
-                return PluginPackageOperationResult.Ok
-                (
-                    I18N.Translate("webexpress.webapp:setting.plugin.operation.update.success", packageId)
-                );
-            }
-            catch (Exception ex)
-            {
-                _httpServerContext.Log.Exception(ex);
-                return PluginPackageOperationResult.Failed
-                (
-                    I18N.Translate("webexpress.webapp:setting.plugin.operation.error.internal")
-                );
+                    return PluginPackageOperationResult.Ok
+                    (
+                        I18N.Translate("webexpress.webapp:setting.plugin.operation.update.success", packageId)
+                    );
+                }
+                catch (Exception ex)
+                {
+                    _httpServerContext.Log.Exception(ex);
+                    return PluginPackageOperationResult.Failed
+                    (
+                        I18N.Translate("webexpress.webapp:setting.plugin.operation.error.internal")
+                    );
+                }
             }
         }
 
@@ -121,58 +128,61 @@ namespace WebExpress.WebApp.WebPackage
         /// <returns>The operation result.</returns>
         public PluginPackageOperationResult Activate(string packageId)
         {
-            var package = FindPackage(packageId);
-            if (package is null)
+            lock (_operationLock)
             {
-                return PluginPackageOperationResult.Failed
-                (
-                    I18N.Translate("webexpress.webapp:setting.plugin.operation.error.notfound", packageId)
-                );
-            }
+                var package = FindPackage(packageId);
+                if (package is null)
+                {
+                    return PluginPackageOperationResult.Failed
+                    (
+                        I18N.Translate("webexpress.webapp:setting.plugin.operation.error.notfound", packageId)
+                    );
+                }
 
-            if (package.State == PackageCatalogeItemState.Active)
-            {
-                return PluginPackageOperationResult.Ok
-                (
-                    I18N.Translate("webexpress.webapp:setting.plugin.operation.activate.success", packageId)
-                );
-            }
+                if (package.State == PackageCatalogeItemState.Active)
+                {
+                    return PluginPackageOperationResult.Ok
+                    (
+                        I18N.Translate("webexpress.webapp:setting.plugin.operation.activate.success", packageId)
+                    );
+                }
 
-            var previousId = package.Id;
-            var previousMetadata = package.Metadata;
-            var previousState = package.State;
+                var previousId = package.Id;
+                var previousMetadata = package.Metadata;
+                var previousState = package.State;
 
-            try
-            {
-                var packageManager = _componentHub.PackageManager;
-                var packageFilePath = Path.Combine(_httpServerContext.PackagePath, package.File);
-                var metadata = Invoke(packageManager, "LoadPackage", packageFilePath) as PackageCatalogItem;
+                try
+                {
+                    var packageManager = _componentHub.PackageManager;
+                    var packageFilePath = Path.Combine(_httpServerContext.PackagePath, package.File);
+                    var metadata = Invoke(packageManager, "LoadPackage", packageFilePath) as PackageCatalogItem;
 
-                package.Id = metadata?.Id ?? package.Id;
-                package.Metadata = metadata?.Metadata ?? package.Metadata;
-                package.State = PackageCatalogeItemState.Active;
+                    package.Id = metadata?.Id ?? package.Id;
+                    package.Metadata = metadata?.Metadata ?? package.Metadata;
+                    package.State = PackageCatalogeItemState.Active;
 
-                Invoke(packageManager, "ExtractPackage", package);
-                Invoke(packageManager, "RegisterPackage", package);
-                Invoke(packageManager, "BootPackage", package);
-                Invoke(packageManager, "SaveCatalog");
-                _componentHub.SitemapManager.Refresh();
+                    Invoke(packageManager, "ExtractPackage", package);
+                    Invoke(packageManager, "RegisterPackage", package);
+                    Invoke(packageManager, "BootPackage", package);
+                    Invoke(packageManager, "SaveCatalog");
+                    _componentHub.SitemapManager.Refresh();
 
-                return PluginPackageOperationResult.Ok
-                (
-                    I18N.Translate("webexpress.webapp:setting.plugin.operation.activate.success", packageId)
-                );
-            }
-            catch (Exception ex)
-            {
-                package.Id = previousId;
-                package.Metadata = previousMetadata;
-                package.State = previousState;
-                _httpServerContext.Log.Exception(ex);
-                return PluginPackageOperationResult.Failed
-                (
-                    I18N.Translate("webexpress.webapp:setting.plugin.operation.error.internal")
-                );
+                    return PluginPackageOperationResult.Ok
+                    (
+                        I18N.Translate("webexpress.webapp:setting.plugin.operation.activate.success", packageId)
+                    );
+                }
+                catch (Exception ex)
+                {
+                    package.Id = previousId;
+                    package.Metadata = previousMetadata;
+                    package.State = previousState;
+                    _httpServerContext.Log.Exception(ex);
+                    return PluginPackageOperationResult.Failed
+                    (
+                        I18N.Translate("webexpress.webapp:setting.plugin.operation.error.internal")
+                    );
+                }
             }
         }
 
@@ -183,47 +193,50 @@ namespace WebExpress.WebApp.WebPackage
         /// <returns>The operation result.</returns>
         public PluginPackageOperationResult Deactivate(string packageId)
         {
-            var package = FindPackage(packageId);
-            if (package is null)
+            lock (_operationLock)
             {
-                return PluginPackageOperationResult.Failed
-                (
-                    I18N.Translate("webexpress.webapp:setting.plugin.operation.error.notfound", packageId)
-                );
-            }
+                var package = FindPackage(packageId);
+                if (package is null)
+                {
+                    return PluginPackageOperationResult.Failed
+                    (
+                        I18N.Translate("webexpress.webapp:setting.plugin.operation.error.notfound", packageId)
+                    );
+                }
 
-            if (package.State == PackageCatalogeItemState.Disable)
-            {
-                return PluginPackageOperationResult.Ok
-                (
-                    I18N.Translate("webexpress.webapp:setting.plugin.operation.deactivate.success", packageId)
-                );
-            }
+                if (package.State == PackageCatalogeItemState.Disable)
+                {
+                    return PluginPackageOperationResult.Ok
+                    (
+                        I18N.Translate("webexpress.webapp:setting.plugin.operation.deactivate.success", packageId)
+                    );
+                }
 
-            try
-            {
-                var packageManager = _componentHub.PackageManager;
+                try
+                {
+                    var packageManager = _componentHub.PackageManager;
 
-                Invoke(packageManager, "DeactivateAndUnregisterPackage", package);
-                Invoke(packageManager, "RemoveExtractedDirectory", package);
+                    Invoke(packageManager, "DeactivateAndUnregisterPackage", package);
+                    Invoke(packageManager, "RemoveExtractedDirectory", package);
 
-                package.State = PackageCatalogeItemState.Disable;
+                    package.State = PackageCatalogeItemState.Disable;
 
-                Invoke(packageManager, "SaveCatalog");
-                _componentHub.SitemapManager.Refresh();
+                    Invoke(packageManager, "SaveCatalog");
+                    _componentHub.SitemapManager.Refresh();
 
-                return PluginPackageOperationResult.Ok
-                (
-                    I18N.Translate("webexpress.webapp:setting.plugin.operation.deactivate.success", packageId)
-                );
-            }
-            catch (Exception ex)
-            {
-                _httpServerContext.Log.Exception(ex);
-                return PluginPackageOperationResult.Failed
-                (
-                    I18N.Translate("webexpress.webapp:setting.plugin.operation.error.internal")
-                );
+                    return PluginPackageOperationResult.Ok
+                    (
+                        I18N.Translate("webexpress.webapp:setting.plugin.operation.deactivate.success", packageId)
+                    );
+                }
+                catch (Exception ex)
+                {
+                    _httpServerContext.Log.Exception(ex);
+                    return PluginPackageOperationResult.Failed
+                    (
+                        I18N.Translate("webexpress.webapp:setting.plugin.operation.error.internal")
+                    );
+                }
             }
         }
 
@@ -234,50 +247,53 @@ namespace WebExpress.WebApp.WebPackage
         /// <returns>The operation result.</returns>
         public PluginPackageOperationResult Delete(string packageId)
         {
-            var package = FindPackage(packageId);
-            if (package is null)
+            lock (_operationLock)
             {
-                return PluginPackageOperationResult.Failed
-                (
-                    I18N.Translate("webexpress.webapp:setting.plugin.operation.error.notfound", packageId)
-                );
-            }
-
-            try
-            {
-                var packageManager = _componentHub.PackageManager;
-
-                if (package.State == PackageCatalogeItemState.Active)
+                var package = FindPackage(packageId);
+                if (package is null)
                 {
-                    Invoke(packageManager, "DeactivateAndUnregisterPackage", package);
+                    return PluginPackageOperationResult.Failed
+                    (
+                        I18N.Translate("webexpress.webapp:setting.plugin.operation.error.notfound", packageId)
+                    );
                 }
 
-                Invoke(packageManager, "RemoveExtractedDirectory", package);
-
-                var packageFilePath = Path.Combine(_httpServerContext.PackagePath, package.File);
-                if (File.Exists(packageFilePath))
+                try
                 {
-                    File.Delete(packageFilePath);
+                    var packageManager = _componentHub.PackageManager;
+
+                    if (package.State == PackageCatalogeItemState.Active)
+                    {
+                        Invoke(packageManager, "DeactivateAndUnregisterPackage", package);
+                    }
+
+                    Invoke(packageManager, "RemoveExtractedDirectory", package);
+
+                    var packageFilePath = Path.Combine(_httpServerContext.PackagePath, package.File);
+                    if (File.Exists(packageFilePath))
+                    {
+                        File.Delete(packageFilePath);
+                    }
+
+                    Invoke(packageManager, "OnRemovePackage", package);
+                    _componentHub.PackageManager.Catalog.Packages.Remove(package);
+
+                    Invoke(packageManager, "SaveCatalog");
+                    _componentHub.SitemapManager.Refresh();
+
+                    return PluginPackageOperationResult.Ok
+                    (
+                        I18N.Translate("webexpress.webapp:setting.plugin.operation.delete.success", packageId)
+                    );
                 }
-
-                Invoke(packageManager, "OnRemovePackage", package);
-                _componentHub.PackageManager.Catalog.Packages.Remove(package);
-
-                Invoke(packageManager, "SaveCatalog");
-                _componentHub.SitemapManager.Refresh();
-
-                return PluginPackageOperationResult.Ok
-                (
-                    I18N.Translate("webexpress.webapp:setting.plugin.operation.delete.success", packageId)
-                );
-            }
-            catch (Exception ex)
-            {
-                _httpServerContext.Log.Exception(ex);
-                return PluginPackageOperationResult.Failed
-                (
-                    I18N.Translate("webexpress.webapp:setting.plugin.operation.error.internal")
-                );
+                catch (Exception ex)
+                {
+                    _httpServerContext.Log.Exception(ex);
+                    return PluginPackageOperationResult.Failed
+                    (
+                        I18N.Translate("webexpress.webapp:setting.plugin.operation.error.internal")
+                    );
+                }
             }
         }
 

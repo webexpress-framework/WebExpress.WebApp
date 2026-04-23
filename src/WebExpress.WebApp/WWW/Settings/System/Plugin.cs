@@ -185,10 +185,10 @@ namespace WebExpress.WebApp.WWW.Settings.System
         /// <returns>The action panel.</returns>
         private static ControlTableCellPanel CreateActions(IRenderContext renderContext, PackageCatalogItem package, IUri apiUri, string packageIdEscaped)
         {
-            var activateUri = BuildUri(apiUri, $"{packageIdEscaped}/activate");
-            var deactivateUri = BuildUri(apiUri, $"{packageIdEscaped}/deactivate");
-            var updateUri = BuildUri(apiUri, $"{packageIdEscaped}/update");
-            var deleteUri = BuildUri(apiUri, packageIdEscaped);
+            var activateUri = BuildUri(apiUri, $"action/activate/{packageIdEscaped}");
+            var deactivateUri = BuildUri(apiUri, $"action/deactivate/{packageIdEscaped}");
+            var updateUri = BuildUri(apiUri, $"action/update/{packageIdEscaped}");
+            var deleteUri = BuildUri(apiUri, $"item/{packageIdEscaped}");
             var actions = new ControlTableCellPanel();
 
             if (package.State == PackageCatalogeItemState.Active)

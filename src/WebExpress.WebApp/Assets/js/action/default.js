@@ -74,11 +74,8 @@ webexpress.webui.Actions.register("plugin-package", {
             input.type = "file";
             input.accept = ".wxp";
             input.style.display = "none";
-            document.body.appendChild(input);
             var cleanup = function () {
-                if (document.body.contains(input)) {
-                    document.body.removeChild(input);
-                }
+                input.value = "";
             };
 
             input.addEventListener("change", function () {
