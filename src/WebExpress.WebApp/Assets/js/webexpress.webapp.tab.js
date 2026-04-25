@@ -80,11 +80,13 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         }
 
         this._addLi = document.createElement("li");
-        this._addLi.className = "nav-item ms-auto";
+        this._addLi.className = "nav-item";
 
         this._addTabButton = document.createElement("button");
-        this._addTabButton.className = "btn btn-sm btn-outline-primary mt-1 me-1";
-        this._addTabButton.textContent = "+ AddTab";
+        this._addTabButton.className = "nav-link text-primary";
+        this._addTabButton.type = "button";
+        this._addTabButton.setAttribute("role", "tab");
+        this._addTabButton.innerHTML = '<i class="fas fa-plus"></i>';
 
         this._addTabButton.addEventListener("click", (e) => {
             e.preventDefault();
@@ -92,7 +94,12 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         });
 
         this._addLi.appendChild(this._addTabButton);
-        this._navElement.appendChild(this._addLi);
+        
+        if (this._toolbarLi) {
+            this._navElement.insertBefore(this._addLi, this._toolbarLi);
+        } else {
+            this._navElement.appendChild(this._addLi);
+        }
     }
 
     /**
@@ -156,8 +163,8 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         }
 
         // indicate loading state on the button
-        const originalText = this._addTabButton.textContent;
-        this._addTabButton.textContent = "...";
+        const originalHtml = this._addTabButton.innerHTML;
+        this._addTabButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
         this._addTabButton.disabled = true;
 
         const fetchUrl = this._resolveUrl(this._restUri);
@@ -194,7 +201,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         })
         .finally(() => {
             // restore button state
-            this._addTabButton.textContent = originalText;
+            this._addTabButton.innerHTML = originalHtml;
             this._addTabButton.disabled = false;
         });
     }
@@ -297,11 +304,11 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
             return;
         }
 
-        // clear existing headers except the add button
+        // clear existing headers except the add button and toolbar
         if (this._navElement !== null) {
             const headers = Array.from(this._navElement.children);
             for (let i = 0; i < headers.length; i++) {
-                if (headers[i] !== this._addLi) {
+                if (headers[i] !== this._addLi && headers[i] !== this._toolbarLi) {
                     this._navElement.removeChild(headers[i]);
                 }
             }
@@ -361,6 +368,9 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         if (this._navElement !== null && this._addLi !== null) {
             // insert before the add button wrapper
             this._navElement.insertBefore(navItem, this._addLi);
+        } else if (this._navElement !== null && this._toolbarLi !== null) {
+            // insert before the toolbar if no add button exists
+            this._navElement.insertBefore(navItem, this._toolbarLi);
         } else if (this._navElement !== null) {
             this._navElement.appendChild(navItem);
         }
