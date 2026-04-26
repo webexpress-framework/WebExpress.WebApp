@@ -1,3 +1,4 @@
+using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 
 namespace WebExpress.WebApp.WebControl
@@ -22,20 +23,14 @@ namespace WebExpress.WebApp.WebControl
         /// (e.g. <c>/api/1/FormStructure</c>). When null, the editor operates
         /// in offline-mock mode against the inline initial structure.
         /// </summary>
-        string RestUrl { get; }
+        IUri RestUri { get; }
 
         /// <summary>
         /// URL of the field-catalog REST endpoint (e.g.
         /// <c>/api/1/FormFieldCatalog</c>). When null, only a tiny built-in
         /// fallback catalog is offered.
         /// </summary>
-        string FieldCatalogUrl { get; }
-
-        /// <summary>
-        /// Initial layout of the designer. One of <c>two-pane</c>,
-        /// <c>tree-table</c>, <c>three-pane</c>. Defaults to <c>two-pane</c>.
-        /// </summary>
-        string Layout { get; }
+        IUri FieldCatalogUri { get; }
 
         /// <summary>
         /// Whether the live preview pane is shown initially.
@@ -51,13 +46,5 @@ namespace WebExpress.WebApp.WebControl
         /// Whether the editor is read-only (suppresses mutation UI and REST writes).
         /// </summary>
         bool Readonly { get; }
-
-        /// <summary>
-        /// Optional inline JSON snapshot of the initial structure
-        /// (matches <c>FormStructureDto</c>). Allows server-side rendering with
-        /// no first-load REST round-trip; takes precedence over
-        /// <see cref="FormId"/> when both are set.
-        /// </summary>
-        string InitialStructureJson { get; }
     }
 }

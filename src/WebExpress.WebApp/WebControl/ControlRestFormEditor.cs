@@ -1,7 +1,7 @@
-using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using WebExpress.WebCore.WebHtml;
+using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
@@ -16,40 +16,37 @@ namespace WebExpress.WebApp.WebControl
     /// </summary>
     public class ControlRestFormEditor : Control, IControlRestFormEditor
     {
-        /// <summary>Default tree indent in pixels.</summary>
-        public const int DefaultIndent = 18;
+        public const int _defaultIndent = 18;
 
-        /// <summary>Default designer layout.</summary>
-        public const string DefaultLayout = "two-pane";
-
-        private static readonly HashSet<string> KnownLayouts = new(System.StringComparer.OrdinalIgnoreCase)
-        {
-            "two-pane", "tree-table", "three-pane"
-        };
-
-        /// <inheritdoc/>
+        /// <summary>
+        /// Gets or sets the unique identifier of the form.
+        /// </summary>
         public string FormId { get; set; }
 
-        /// <inheritdoc/>
-        public string RestUrl { get; set; }
+        /// <summary>
+        /// Gets or sets the base URI used for REST API requests.
+        /// </summary>
+        public IUri RestUri { get; set; }
 
-        /// <inheritdoc/>
-        public string FieldCatalogUrl { get; set; }
+        /// <summary>
+        /// Gets or sets the URI of the field catalog resource.
+        /// </summary>
+        public IUri FieldCatalogUri { get; set; }
 
-        /// <inheritdoc/>
-        public string Layout { get; set; } = DefaultLayout;
-
-        /// <inheritdoc/>
+        /// <summary>
+        /// Gets or sets a value indicating whether preview mode is enabled.
+        /// </summary>
         public bool Preview { get; set; } = true;
 
-        /// <inheritdoc/>
-        public int Indent { get; set; } = DefaultIndent;
+        /// <summary>
+        /// Gets or sets the number of spaces used for each indentation level.
+        /// </summary>
+        public int Indent { get; set; } = _defaultIndent;
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Gets or sets a value indicating whether the object is read-only.
+        /// </summary>
         public bool Readonly { get; set; }
-
-        /// <inheritdoc/>
-        public string InitialStructureJson { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class.
@@ -69,9 +66,6 @@ namespace WebExpress.WebApp.WebControl
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
             var classes = Classes.ToList();
-            var layout = string.IsNullOrWhiteSpace(Layout) || !KnownLayouts.Contains(Layout)
-                ? DefaultLayout
-                : Layout.ToLowerInvariant();
             var indent = Indent < 8 ? 8 : Indent > 32 ? 32 : Indent;
 
             var html = new HtmlElementTextContentDiv()
@@ -81,14 +75,12 @@ namespace WebExpress.WebApp.WebControl
                 Style = GetStyles(),
                 Role = Role
             }
-                .AddUserAttribute("data-form-id", string.IsNullOrEmpty(FormId) ? null : FormId)
-                .AddUserAttribute("data-rest-url", string.IsNullOrEmpty(RestUrl) ? null : RestUrl)
-                .AddUserAttribute("data-field-catalog-url", string.IsNullOrEmpty(FieldCatalogUrl) ? null : FieldCatalogUrl)
-                .AddUserAttribute("data-layout", layout)
-                .AddUserAttribute("data-preview", Preview ? "true" : "false")
-                .AddUserAttribute("data-indent", indent.ToString(CultureInfo.InvariantCulture))
-                .AddUserAttribute("data-readonly", Readonly ? "true" : null)
-                .AddUserAttribute("data-initial-structure", string.IsNullOrEmpty(InitialStructureJson) ? null : InitialStructureJson);
+                .AddUserAttribute("data-form-id", FormId)
+                .AddUserAttribute("data-rest-url", RestUri?.ToString())
+                .AddUserAttribute("data-field-catalog-url", FieldCatalogUri?.ToString())
+                .AddUserAttribute("data-preview", !Preview ? "false" : null)
+                .AddUserAttribute("data-indent", indent != 18 ? indent.ToString(CultureInfo.InvariantCulture) : null)
+                .AddUserAttribute("data-readonly", Readonly ? "true" : null);
 
             return html;
         }
