@@ -44,18 +44,6 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
     // logical field types accepted by the editor
     static FIELD_TYPES = ["string", "text", "timestamp", "ref", "enum", "tags", "number", "file"];
 
-    // small built-in catalog used when no field-catalog url is configured
-    static FALLBACK_FIELD_CATALOG = [
-        { id: "Title",       type: "string"    },
-        { id: "Description", type: "text"      },
-        { id: "Status",      type: "enum"      },
-        { id: "Priority",    type: "enum"      },
-        { id: "Owner",       type: "ref"       },
-        { id: "Tags",        type: "tags"      },
-        { id: "DueDate",     type: "timestamp" },
-        { id: "Attachments", type: "file"      }
-    ];
-
     _formId = null;
     _restUrl = null;
     _fieldCatalogUrl = null;
@@ -73,7 +61,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
     _dropState = null;
     _pickerOpen = false;
     _pickerHi = 0;
-    _fieldCatalog = webexpress.webapp.RestFormEditorCtrl?.FALLBACK_FIELD_CATALOG?.slice() || [];
+    _fieldCatalog = [];
 
     // dom hosts
     _headerHost = null;
@@ -101,13 +89,6 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         const indent = parseInt(ds.indent, 10);
         this._indent = isFinite(indent) ? Math.min(32, Math.max(8, indent)) : 18;
         this._readonly = ds.readonly === "true";
-
-        // optionally hydrate from inline structure JSON
-        const inline = ds.initialStructure;
-        if (inline) {
-            try { this._structure = JSON.parse(inline); }
-            catch { this._structure = null; }
-        }
 
         // clean up the dom element and set base classes for styling
         element.removeAttribute("data-initial-structure");
@@ -404,7 +385,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
         try {
-            const res = await fetch(this._restUrl + "/item/" + encodeURIComponent(this._formId), {
+            const res = await fetch(this._restUrl, {
                 method: "GET",
                 headers: { "Accept": "application/json" }
             });

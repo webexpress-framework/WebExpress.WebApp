@@ -65,6 +65,20 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
+            return Render(renderContext, visualTree, RestUri, FieldCatalogUri, Readonly);
+        }
+
+        /// <summary>
+        /// Converts the control to an HTML representation.
+        /// </summary>
+        /// <param name="renderContext">The context in which the control is rendered.</param>
+        /// <param name="visualTree">The visual tree representing the control's structure.</param>
+        /// <param name="restUri">The base URI used for REST API requests.</param>
+        /// <param name="fieldCatalogUri">The URI of the field catalog resource.</param>
+        /// <param name="readonly">A value indicating whether the object is read-only.</param>
+        /// <returns>An HTML node representing the rendered control.</returns>
+        public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IUri restUri, IUri fieldCatalogUri, bool @readonly)
+        {
             var classes = Classes.ToList();
             var indent = Indent < 8 ? 8 : Indent > 32 ? 32 : Indent;
 
@@ -76,11 +90,11 @@ namespace WebExpress.WebApp.WebControl
                 Role = Role
             }
                 .AddUserAttribute("data-form-id", FormId)
-                .AddUserAttribute("data-rest-url", RestUri?.ToString())
-                .AddUserAttribute("data-field-catalog-url", FieldCatalogUri?.ToString())
+                .AddUserAttribute("data-rest-url", restUri?.ToString())
+                .AddUserAttribute("data-field-catalog-url", fieldCatalogUri?.ToString())
                 .AddUserAttribute("data-preview", !Preview ? "false" : null)
                 .AddUserAttribute("data-indent", indent != 18 ? indent.ToString(CultureInfo.InvariantCulture) : null)
-                .AddUserAttribute("data-readonly", Readonly ? "true" : null);
+                .AddUserAttribute("data-readonly", @readonly ? "true" : null);
 
             return html;
         }
