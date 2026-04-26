@@ -288,7 +288,6 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     gap: 2px;
     padding: 0.5rem 0.875rem 0;
     border-bottom: 1px solid var(--bs-border-color);
-    overflow-x: auto;
 }
 
 .wx-form-editor-tab {
@@ -1116,4 +1115,182 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     border-radius: 4px;
     font-family: var(--bs-font-monospace);
     font-size: 11px;
+}
+
+/* title block: name + version row above the description */
+.wx-form-editor-title {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25rem;
+}
+
+.wx-form-editor-title-main {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+/* SmartEditCtrl wrappers in the header */
+.wx-form-editor-name,
+.wx-form-editor-description {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    margin: 0;
+}
+
+.wx-form-editor-name {
+    font-weight: 600;
+    font-size: 1rem;
+    letter-spacing: -0.005em;
+}
+
+.wx-form-editor-description {
+    font-size: 12.5px;
+    color: var(--bs-secondary-color, var(--bs-body-color));
+    min-height: 1.2em;
+}
+
+.wx-form-editor-name input.wx-form-editor-name-input,
+.wx-form-editor-description textarea.wx-form-editor-description-input {
+    font: inherit;
+    color: inherit;
+    background: var(--bs-body-bg);
+    border-radius: var(--bs-border-radius);
+}
+
+.wx-form-editor-description textarea.wx-form-editor-description-input {
+    min-height: 2.4em;
+    resize: vertical;
+}
+
+/* preserve line breaks in the read-only header description */
+.wx-form-editor-description > span {
+    white-space: pre-wrap;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* Two-pane body now hosts a single child (split or structure pane). */
+.wx-form-editor-body {
+    display: flex;
+    overflow: hidden;
+}
+
+    .wx-form-editor-body > * {
+        flex: 1 1 auto;
+        min-width: 0;
+        min-height: 0;
+    }
+
+.wx-form-editor-body--two-pane,
+.wx-form-editor-body--three-pane,
+.wx-form-editor-body--tree-table,
+.wx-form-editor-body--no-preview.wx-form-editor-body--two-pane,
+.wx-form-editor-body--no-preview.wx-form-editor-body--three-pane {
+    grid-template-columns: none;
+}
+
+/* Split container that hosts structure (side) and preview (main) panes. */
+.wx-form-editor-split.wx-split,
+.wx-form-editor-split {
+    width: 100%;
+    height: 100%;
+}
+
+    .wx-form-editor-split .wx-side-pane,
+    .wx-form-editor-split .wx-main-pane {
+        display: flex;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+        .wx-form-editor-split .wx-side-pane > .wx-form-editor-pane,
+        .wx-form-editor-split .wx-main-pane > .wx-form-editor-pane {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+/* drag handle (⠿) at the start of every tree row */
+.wx-form-editor-tree-grip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 16px;
+    color: var(--bs-secondary-color, var(--bs-body-color));
+    cursor: grab;
+    font-size: 14px;
+    line-height: 1;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.1s;
+    user-select: none;
+}
+
+.wx-form-editor-tree-row:hover .wx-form-editor-tree-grip,
+.wx-form-editor-tree-row.selected .wx-form-editor-tree-grip {
+    opacity: 0.7;
+}
+
+.wx-form-editor-tree-grip:hover {
+    opacity: 1;
+}
+
+.wx-form-editor-tree-grip:active {
+    cursor: grabbing;
+}
+
+.wx-form-editor-tree-grip--disabled {
+    cursor: default;
+    pointer-events: none;
+}
+
+/* preview tab bar lives inside the preview card, below the sub line */
+.wx-form-editor-preview-tabs {
+    padding: 0;
+    margin: -0.25rem 0 0.875rem;
+    border-bottom: 1px solid var(--bs-border-color);
+    background: transparent;
+}
+
+/* SmartEditCtrl wrapping the structure-pane tab name */
+.wx-form-editor-tab .wx-form-editor-tab-name.wx-smart-edit {
+    margin: 0;
+    min-height: 0;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+    .wx-form-editor-tab .wx-form-editor-tab-name.wx-smart-edit > span {
+        font-weight: 500;
+    }
+
+    .wx-form-editor-tab .wx-form-editor-tab-name.wx-smart-edit .pencil {
+        position: static;
+        margin-left: 0.25rem;
+    }
+
+.wx-form-editor-tab-name-input {
+    font: inherit;
+    font-weight: 500;
+    padding: 1px 4px;
+    min-width: 80px;
+    max-width: 200px;
+    background: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    border: 1px solid var(--bs-primary, #0d6efd);
+    border-radius: 3px;
+}
+
+/* form description shown above the sub block in the preview card */
+.wx-form-editor-preview-description {
+    font-size: 12.5px;
+    color: var(--bs-secondary-color, var(--bs-body-color));
+    margin-bottom: 0.5rem;
+    white-space: pre-wrap;
 }

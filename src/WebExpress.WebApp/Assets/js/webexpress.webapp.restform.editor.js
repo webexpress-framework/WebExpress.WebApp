@@ -2,11 +2,11 @@
  * Controller for the visual form editor (Designer).
  *
  * Translates the KleeneStar Forms Designer prototype into a single self-contained
- * web UI control. Hosts a tab bar, a structure tree (drag-and-drop, inline rename,
- * keyboard navigation, QuickAdd picker), a live preview pane and an optional
- * palette pane (three-pane layout). Persists every mutation to the REST endpoint
- * pointed to by data-rest-url; runs in offline-mock mode when no REST URL is
- * configured.
+ * web UI control. Renders a fixed two-pane layout with the structure tree on the
+ * left (drag-and-drop, inline rename, keyboard navigation, QuickAdd picker, tab
+ * bar) and a live preview on the right (with a tab switcher that mirrors the
+ * structure). Persists every mutation to the REST endpoint pointed to by
+ * data-rest-url; runs in offline-mock mode when no REST URL is configured.
  *
  * Events:
  *  - webexpress.webapp.Event.FORM_EDITOR_LOADED_EVENT
@@ -16,7 +16,6 @@
  *  - webexpress.webapp.Event.FORM_EDITOR_NODE_MOVED_EVENT
  *  - webexpress.webapp.Event.FORM_EDITOR_TAB_ADDED_EVENT
  *  - webexpress.webapp.Event.FORM_EDITOR_TAB_RENAMED_EVENT
- *  - webexpress.webapp.Event.FORM_EDITOR_LAYOUT_CHANGED_EVENT
  *  - webexpress.webapp.Event.FORM_EDITOR_SAVED_EVENT
  *  - webexpress.webapp.Event.FORM_EDITOR_VALIDATION_FAILED_EVENT
  */
@@ -57,12 +56,9 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         { id: "Attachments", type: "file"      }
     ];
 
-    // designer layout names accepted on data-layout / setLayout()
-    static KNOWN_LAYOUTS = new Set(["two-pane", "tree-table", "three-pane"]);
     _formId = null;
     _restUrl = null;
     _fieldCatalogUrl = null;
-    _layout = "two-pane";
     _previewOn = true;
     _indent = 18;
     _readonly = false;
@@ -81,7 +77,6 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
 
     // dom hosts
     _headerHost = null;
-    _tabsHost = null;
     _bodyHost = null;
     _footerHost = null;
 
@@ -102,7 +97,6 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         this._formId = ds.formId || null;
         this._restUrl = ds.restUrl || null;
         this._fieldCatalogUrl = ds.fieldCatalogUrl || null;
-        this._layout = webexpress.webapp.RestFormEditorCtrl.KNOWN_LAYOUTS.has(ds.layout) ? ds.layout : "two-pane";
         this._previewOn = ds.preview !== "false";
         const indent = parseInt(ds.indent, 10);
         this._indent = isFinite(indent) ? Math.min(32, Math.max(8, indent)) : 18;
@@ -131,28 +125,6 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
      */
     get formId() {
         return this._formId;
-    }
-
-    /**
-     * Gets the active designer layout.
-     * @returns {"two-pane"|"tree-table"|"three-pane"}
-     */
-    get layout() {
-        return this._layout;
-    }
-
-    /**
-     * Sets the active designer layout. Re-renders the body if the value changed.
-     * @param {"two-pane"|"tree-table"|"three-pane"} value
-     */
-    set layout(value) {
-        if (!webexpress.webapp.RestFormEditorCtrl.KNOWN_LAYOUTS.has(value) || value === this._layout) {
-            return;
-        }
-        this._layout = value;
-        this._dispatch(webexpress.webapp.Event.FORM_EDITOR_LAYOUT_CHANGED_EVENT, { layout: value });
-        this._renderHeader();
-        this._renderBody();
     }
 
     /**
@@ -225,12 +197,15 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
         const id = webexpress.webapp.RestFormEditorCtrl._uid("t");
-        const tab = { id: id, name: "Tab " + (this._structure.tabs.length + 1), children: [] };
+        const tab = {
+            id: id,
+            name: this._t("formeditor.tab.new_name", this._structure.tabs.length + 1),
+            children: []
+        };
         this._structure.tabs.push(tab);
         this._activeTabId = id;
         this._selectedId = null;
         this._dispatch(webexpress.webapp.Event.FORM_EDITOR_TAB_ADDED_EVENT, { tab: tab });
-        this._renderTabs();
         this._renderBody();
         this._scheduleSave();
     }
@@ -314,12 +289,11 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
 
     /**
      * Renders the editor.
-     * Triggers a full re-render of header, tabs and body. Used after configuration
+     * Triggers a full re-render of header, body and footer. Used after configuration
      * changes that affect the whole UI.
      */
     render() {
         this._renderHeader();
-        this._renderTabs();
         this._renderBody();
         this._renderFooter();
     }
@@ -343,7 +317,8 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Builds the static skeleton (head/tabs/body/foot containers).
+     * Builds the static skeleton (head/body/foot containers). Tab bars live
+     * inside the structure and preview panes, not at the editor root.
      */
     _buildSkeleton() {
         const root = this._element;
@@ -352,9 +327,6 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         this._headerHost = document.createElement("div");
         this._headerHost.className = "wx-form-editor-head";
 
-        this._tabsHost = document.createElement("div");
-        this._tabsHost.className = "wx-form-editor-tabs";
-
         this._bodyHost = document.createElement("div");
         this._bodyHost.className = "wx-form-editor-body";
 
@@ -362,7 +334,6 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         this._footerHost.className = "wx-form-editor-foot";
 
         root.appendChild(this._headerHost);
-        root.appendChild(this._tabsHost);
         root.appendChild(this._bodyHost);
         root.appendChild(this._footerHost);
     }
@@ -379,10 +350,15 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         if (!this._structure) {
             this._structure = {
                 formId: this._formId || webexpress.webapp.RestFormEditorCtrl._uid("form"),
-                formName: "New form",
+                formName: this._t("formeditor.form.default_name"),
+                formDescription: "",
                 className: "",
                 version: 1,
-                tabs: [{ id: webexpress.webapp.RestFormEditorCtrl._uid("t"), name: "Details", children: [] }]
+                tabs: [{
+                    id: webexpress.webapp.RestFormEditorCtrl._uid("t"),
+                    name: this._t("formeditor.tab.default_name"),
+                    children: []
+                }]
             };
         }
 
@@ -443,7 +419,11 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Renders the header (form name + version + layout switch + preview toggle).
+     * Renders the header (form name + description + version + preview toggle).
+     *
+     * Form name and description are wired up as SmartEditCtrl inline editors;
+     * each inline save updates the in-memory structure and triggers the
+     * regular debounced REST save.
      */
     _renderHeader() {
         this._headerHost.textContent = "";
@@ -451,176 +431,319 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         const title = document.createElement("div");
         title.className = "wx-form-editor-title";
 
-        const name = document.createElement("span");
-        name.className = "wx-form-editor-name";
-        name.textContent = (this._structure && this._structure.formName) || "Form";
-        title.appendChild(name);
+        const titleMain = document.createElement("div");
+        titleMain.className = "wx-form-editor-title-main";
+
+        titleMain.appendChild(this._renderNameEditor());
 
         const version = document.createElement("span");
         version.className = "wx-form-editor-version";
         version.textContent = "v" + ((this._structure && this._structure.version) || 1);
-        title.appendChild(version);
+        titleMain.appendChild(version);
+
+        title.appendChild(titleMain);
+        title.appendChild(this._renderDescriptionEditor());
 
         const tools = document.createElement("div");
         tools.className = "wx-form-editor-tools";
-        tools.appendChild(this._renderLayoutSwitch());
-        const toggle = this._renderPreviewToggle();
-        if (toggle) {
-            tools.appendChild(toggle);
-        }
+        tools.appendChild(this._renderPreviewToggle());
 
         this._headerHost.appendChild(title);
         this._headerHost.appendChild(tools);
     }
 
     /**
-     * Renders the layout switcher (two-pane / tree / three-pane).
+     * Renders an inline-editable form-name field driven by SmartEditCtrl.
+     *
+     * The wrapper deliberately omits the `wx-webui-smart-edit` class — the
+     * Controller's MutationObserver auto-instantiates that class on append,
+     * which would conflict with the manual instantiation below. We follow
+     * the same pattern used by the table renderers in templates/default.js.
      * @returns {HTMLElement}
      */
-    _renderLayoutSwitch() {
+    _renderNameEditor() {
         const wrap = document.createElement("div");
-        wrap.className = "wx-form-editor-mode";
-        const layouts = [
-            { id: "two-pane",   label: "Two-pane",   title: "Preview + structure" },
-            { id: "tree-table", label: "Tree",       title: "Spec-style tree table" },
-            { id: "three-pane", label: "Three-pane", title: "Palette + preview + structure" }
-        ];
-        for (const l of layouts) {
-            const btn = document.createElement("button");
-            btn.type = "button";
-            btn.title = l.title;
-            btn.textContent = l.label;
-            if (this._layout === l.id) {
-                btn.classList.add("active");
-            }
-            btn.addEventListener("click", () => { this.layout = l.id; });
-            wrap.appendChild(btn);
+        wrap.className = "wx-form-editor-name";
+
+        const value = (this._structure && this._structure.formName) || "";
+
+        if (this._readonly) {
+            const span = document.createElement("span");
+            span.textContent = value || this._t("formeditor.form.fallback_name");
+            wrap.appendChild(span);
+            return wrap;
         }
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.className = "form-control form-control-sm wx-form-editor-name-input";
+        input.value = value;
+        input.placeholder = this._t("formeditor.form.name.placeholder");
+        wrap.appendChild(input);
+
+        const ctrl = new webexpress.webui.SmartEditCtrl(wrap);
+        ctrl.onSave = (el, value) => this._applyFormName(value);
         return wrap;
     }
 
     /**
-     * Renders the preview toggle. Returns null in tree-table layout (no preview).
-     * @returns {HTMLElement|null}
-     */
-    _renderPreviewToggle() {
-        if (this._layout === "tree-table") {
-            return null;
-        }
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "wx-form-editor-preview-toggle" + (this._previewOn ? " active" : "");
-        btn.textContent = this._previewOn ? "Hide preview" : "Show preview";
-        btn.addEventListener("click", () => { this.preview = !this._previewOn; });
-        return btn;
-    }
-
-    /**
-     * Renders the tab bar.
-     */
-    _renderTabs() {
-        this._tabsHost.textContent = "";
-        if (!this._structure || !this._structure.tabs) {
-            return;
-        }
-        for (const tab of this._structure.tabs) {
-            this._tabsHost.appendChild(this._renderTab(tab));
-        }
-        if (!this._readonly) {
-            const add = document.createElement("button");
-            add.type = "button";
-            add.className = "wx-form-editor-tab-add";
-            add.textContent = "+ Add tab";
-            add.addEventListener("click", () => this.addTab());
-            this._tabsHost.appendChild(add);
-        }
-    }
-
-    /**
-     * Renders a single tab handle.
-     * @param {object} tab - The tab model.
+     * Renders an inline-editable form-description field driven by SmartEditCtrl.
      * @returns {HTMLElement}
      */
-    _renderTab(tab) {
-        const tabEl = document.createElement("button");
-        tabEl.type = "button";
-        tabEl.className = "wx-form-editor-tab" + (tab.id === this._activeTabId ? " active" : "");
-        tabEl.dataset.tabId = tab.id;
+    _renderDescriptionEditor() {
+        const wrap = document.createElement("div");
+        wrap.className = "wx-form-editor-description";
 
-        const name = document.createElement("span");
-        name.className = "wx-form-editor-tab-name";
-        name.textContent = tab.name || "Tab";
-        tabEl.appendChild(name);
+        const value = (this._structure && this._structure.formDescription) || "";
 
-        const count = document.createElement("span");
-        count.className = "wx-form-editor-tab-count";
-        count.textContent = String(this._countFields(tab.children));
-        tabEl.appendChild(count);
+        if (this._readonly) {
+            const span = document.createElement("span");
+            span.textContent = value;
+            wrap.appendChild(span);
+            return wrap;
+        }
 
-        tabEl.addEventListener("click", () => {
-            this._activeTabId = tab.id;
-            this._selectedId = null;
-            this._renderTabs();
-            this._renderBody();
-        });
-        tabEl.addEventListener("dblclick", (e) => {
-            e.stopPropagation();
-            this._beginRenameTab(tab.id, tabEl);
-        });
-        return tabEl;
+        const input = document.createElement("textarea");
+        input.className = "form-control form-control-sm wx-form-editor-description-input";
+        input.rows = 2;
+        input.value = value;
+        input.placeholder = this._t("formeditor.form.description.placeholder");
+        wrap.appendChild(input);
+
+        const ctrl = new webexpress.webui.SmartEditCtrl(wrap);
+        ctrl.onSave = (el, value) => this._applyFormDescription(value);
+        return wrap;
     }
 
     /**
-     * Begins inline rename for the given tab.
-     * @param {string} tabId
-     * @param {HTMLElement} tabEl
+     * Persists a new form name and refreshes views that show it.
+     * @param {string} value
      */
-    _beginRenameTab(tabId, tabEl) {
-        if (this._readonly) {
+    _applyFormName(value) {
+        if (!this._structure) {
+            return;
+        }
+        const next = (value || "").trim();
+        if (next === (this._structure.formName || "")) {
+            return;
+        }
+        this._structure.formName = next;
+        this._scheduleSave();
+        // refresh the preview card title which mirrors formName
+        setTimeout(() => this._renderBody(), 0);
+    }
+
+    /**
+     * Persists a new form description and refreshes views that show it.
+     * @param {string} value
+     */
+    _applyFormDescription(value) {
+        if (!this._structure) {
+            return;
+        }
+        const next = value || "";
+        if (next === (this._structure.formDescription || "")) {
+            return;
+        }
+        this._structure.formDescription = next;
+        this._scheduleSave();
+        // refresh the preview card which mirrors formDescription
+        setTimeout(() => this._renderBody(), 0);
+    }
+
+    /**
+     * Persists a renamed tab and refreshes views that depend on tab names
+     * (structure heading, both tab bars, preview sub block).
+     * @param {string} tabId
+     * @param {string} value
+     */
+    _applyTabName(tabId, value) {
+        if (!this._structure || !Array.isArray(this._structure.tabs)) {
             return;
         }
         const tab = this._structure.tabs.find(t => t.id === tabId);
         if (!tab) {
             return;
         }
-
-        const input = document.createElement("input");
-        input.className = "wx-form-editor-tab-input";
-        input.value = tab.name || "";
-
-        tabEl.textContent = "";
-        tabEl.appendChild(input);
-        input.focus();
-        input.select();
-
-        const commit = () => {
-            const next = input.value.trim() || tab.name;
-            if (next !== tab.name) {
-                tab.name = next;
-                this._dispatch(webexpress.webapp.Event.FORM_EDITOR_TAB_RENAMED_EVENT, { tabId: tabId, name: next });
-                this._scheduleSave();
-            }
-            this._renderTabs();
-        };
-
-        input.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") {
-                e.preventDefault();
-                commit();
-            } else if (e.key === "Escape") {
-                e.preventDefault();
-                this._renderTabs();
-            }
+        const next = (value || "").trim();
+        if (!next || next === tab.name) {
+            return;
+        }
+        tab.name = next;
+        this._dispatch(webexpress.webapp.Event.FORM_EDITOR_TAB_RENAMED_EVENT, {
+            tabId: tabId,
+            name: next
         });
-        input.addEventListener("blur", commit);
-        input.addEventListener("click", e => e.stopPropagation());
+        this._scheduleSave();
+        setTimeout(() => this._renderBody(), 0);
     }
 
     /**
-     * Renders the body grid (palette / preview / tree depending on layout).
+     * Renders the preview toggle.
+     * @returns {HTMLElement}
+     */
+    _renderPreviewToggle() {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "wx-form-editor-preview-toggle" + (this._previewOn ? " active" : "");
+        btn.textContent = this._previewOn
+            ? this._t("formeditor.preview.toggle.hide")
+            : this._t("formeditor.preview.toggle.show");
+        btn.addEventListener("click", () => { this.preview = !this._previewOn; });
+        return btn;
+    }
+
+    /**
+     * Renders a tab bar for a single pane.
+     *
+     * The structure pane sets allowEdit=true so the bar always renders (with
+     * "+ Add tab" and double-click rename). Read-only / preview panes set
+     * allowEdit=false; the bar is then suppressed when there is at most one
+     * tab, since there is nothing to switch between.
+     *
+     * @param {object} opts
+     * @param {boolean} opts.allowEdit - Whether the bar may add / rename tabs.
+     * @returns {HTMLElement|null}
+     */
+    _renderPaneTabs(opts) {
+        const allowEdit = !this._readonly && !!(opts && opts.allowEdit);
+        const tabs = (this._structure && this._structure.tabs) || [];
+
+        if (!allowEdit && tabs.length <= 1) {
+            return null;
+        }
+
+        const bar = document.createElement("div");
+        bar.className = "wx-form-editor-tabs";
+
+        for (const tab of tabs) {
+            bar.appendChild(this._renderTab(tab, allowEdit));
+        }
+
+        if (allowEdit) {
+            const add = document.createElement("button");
+            add.type = "button";
+            add.className = "wx-form-editor-tab-add";
+            add.textContent = this._t("formeditor.tab.add");
+            add.addEventListener("click", (e) => {
+                e.stopPropagation();
+                this.addTab();
+            });
+            bar.appendChild(add);
+        }
+        return bar;
+    }
+
+    /**
+     * Renders a single tab handle.
+     *
+     * In the structure pane (allowEdit=true) the tab name is wrapped in a
+     * SmartEditCtrl so the user can rename via the inline pencil / dblclick
+     * trigger; the tab itself becomes a `<div role="button">` so the nested
+     * SmartEditCtrl buttons remain valid HTML. In read-only/preview panes the
+     * tab is the original `<button>` with a plain text name.
+     * @param {object} tab - The tab model.
+     * @param {boolean} allowEdit - Whether the tab is editable.
+     * @returns {HTMLElement}
+     */
+    _renderTab(tab, allowEdit) {
+        const tabEl = document.createElement(allowEdit ? "div" : "button");
+        if (!allowEdit) {
+            tabEl.type = "button";
+        } else {
+            tabEl.setAttribute("role", "button");
+            tabEl.setAttribute("tabindex", "0");
+        }
+        tabEl.className = "wx-form-editor-tab" + (tab.id === this._activeTabId ? " active" : "");
+        tabEl.dataset.tabId = tab.id;
+
+        tabEl.appendChild(this._renderTabName(tab, allowEdit));
+
+        const count = document.createElement("span");
+        count.className = "wx-form-editor-tab-count";
+        count.textContent = String(this._countFields(tab.children));
+        tabEl.appendChild(count);
+
+        tabEl.addEventListener("click", (e) => {
+            // ignore clicks routed through the inline rename form (input,
+            // ok / cancel buttons) so the active tab is not switched and the
+            // DOM is not torn down mid-edit.
+            if (allowEdit && e.target.closest(".wx-smart-edit form")) {
+                return;
+            }
+            // already active: skip the rebuild so the SmartEditCtrl attached
+            // to the active tab's name keeps its event listeners (the
+            // dblclick that follows a second click would otherwise land on a
+            // detached element).
+            if (this._activeTabId === tab.id) {
+                return;
+            }
+            e.stopPropagation();
+            this._activeTabId = tab.id;
+            this._selectedId = null;
+            this._renderBody();
+        });
+        if (allowEdit) {
+            tabEl.addEventListener("keydown", (e) => {
+                if ((e.key === "Enter" || e.key === " ") && e.target === tabEl) {
+                    e.preventDefault();
+                    if (this._activeTabId !== tab.id) {
+                        this._activeTabId = tab.id;
+                        this._selectedId = null;
+                        this._renderBody();
+                    }
+                }
+            });
+        }
+        return tabEl;
+    }
+
+    /**
+     * Renders the tab-name slot.
+     *
+     * Only the currently active tab is wired up with `SmartEditCtrl`: clicking
+     * an inactive tab triggers a body rebuild that would tear down the rename
+     * controller mid-gesture, so for inactive tabs we render a plain text
+     * span. Once a tab is active, the user can rename it via the inline
+     * pencil (single click) or by double-clicking the name.
+     * @param {object} tab
+     * @param {boolean} allowEdit
+     * @returns {HTMLElement}
+     */
+    _renderTabName(tab, allowEdit) {
+        const wrap = document.createElement("span");
+        wrap.className = "wx-form-editor-tab-name";
+
+        const value = tab.name || "";
+        const isActive = tab.id === this._activeTabId;
+
+        if (!allowEdit || !isActive) {
+            wrap.textContent = value || this._t("formeditor.tab.fallback_name");
+            return wrap;
+        }
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.className = "wx-form-editor-tab-name-input";
+        input.value = value;
+        input.placeholder = this._t("formeditor.tab.fallback_name");
+        wrap.appendChild(input);
+
+        const ctrl = new webexpress.webui.SmartEditCtrl(wrap);
+        ctrl.onSave = (el, val) => this._applyTabName(tab.id, val);
+        return wrap;
+    }
+
+    /**
+     * Renders the body (structure on the left, optional preview on the right).
+     *
+     * When the preview is visible the two panes are wrapped in a SplitCtrl so
+     * the user can resize the divider; the split keeps a stable id, so the
+     * cookie-backed size persists across re-renders. When the preview is
+     * hidden the structure pane fills the available space directly.
      */
     _renderBody() {
-        this._bodyHost.className = "wx-form-editor-body wx-form-editor-body--" + this._layout;
+        this._bodyHost.className = "wx-form-editor-body wx-form-editor-body--two-pane";
         if (!this._previewOn) {
             this._bodyHost.classList.add("wx-form-editor-body--no-preview");
         }
@@ -630,13 +753,48 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         if (!tab) {
             return;
         }
-        if (this._layout === "three-pane") {
-            this._bodyHost.appendChild(this._renderPalette());
+        if (this._previewOn) {
+            this._bodyHost.appendChild(this._renderSplitContent(tab));
+        } else {
+            this._bodyHost.appendChild(this._renderStructurePanel(tab));
         }
-        if (this._layout !== "tree-table" && this._previewOn) {
-            this._bodyHost.appendChild(this._renderPreviewPanel(tab));
+    }
+
+    /**
+     * Builds the resizable split host that pairs structure (left / side pane)
+     * and preview (right / main pane).
+     *
+     * The host is tagged with `wx-webui-split` so the framework's controller
+     * registry auto-instantiates `webexpress.webui.SplitCtrl` once the node
+     * is appended to the DOM. The host id stays stable across re-renders so
+     * the cookie-backed splitter size is preserved.
+     * @param {object} tab
+     * @returns {HTMLElement}
+     */
+    _renderSplitContent(tab) {
+        if (!this._splitId) {
+            this._splitId = (this._element.id ? this._element.id : "wx-form-editor")
+                + "-split";
         }
-        this._bodyHost.appendChild(this._renderStructurePanel(tab));
+
+        const host = document.createElement("div");
+        host.className = "wx-webui-split wx-form-editor-split";
+        host.id = this._splitId;
+        host.dataset.orientation = "horizontal";
+        host.dataset.size = "40%";
+        host.dataset.minSide = "260";
+
+        const side = document.createElement("div");
+        side.className = "wx-side-pane";
+        side.appendChild(this._renderStructurePanel(tab));
+
+        const main = document.createElement("div");
+        main.className = "wx-main-pane";
+        main.appendChild(this._renderPreviewPanel(tab));
+
+        host.appendChild(side);
+        host.appendChild(main);
+        return host;
     }
 
     /**
@@ -647,140 +805,15 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
 
         const hint = document.createElement("span");
         hint.className = "wx-form-editor-foot-hint";
-        hint.textContent = "Drag nodes to reorder · double-click to rename · press N to add";
+        hint.textContent = this._t("formeditor.footer.hint");
         this._footerHost.appendChild(hint);
 
         const status = document.createElement("span");
         status.className = "wx-form-editor-foot-status";
         status.textContent = this._restUrl
-            ? "Draft · autosaves on every change"
-            : "Offline preview · changes are not persisted";
+            ? this._t("formeditor.footer.draft")
+            : this._t("formeditor.footer.offline");
         this._footerHost.appendChild(status);
-    }
-
-    /**
-     * Renders the palette pane (search + fields + groups).
-     * @returns {HTMLElement}
-     */
-    _renderPalette() {
-        const panel = document.createElement("div");
-        panel.className = "wx-form-editor-pane wx-form-editor-pane--palette";
-
-        const head = document.createElement("div");
-        head.className = "wx-form-editor-pane-head";
-        head.textContent = "Palette";
-        panel.appendChild(head);
-
-        const body = document.createElement("div");
-        body.className = "wx-form-editor-pane-body";
-
-        const search = document.createElement("input");
-        search.type = "search";
-        search.className = "wx-form-editor-palette-search";
-        search.placeholder = "Filter…";
-        body.appendChild(search);
-
-        const fieldsHeader = document.createElement("div");
-        fieldsHeader.className = "wx-form-editor-palette-header";
-        fieldsHeader.textContent = "Fields";
-
-        const fieldsList = document.createElement("div");
-        fieldsList.className = "wx-form-editor-palette-list";
-        fieldsList.dataset.kind = "fields";
-
-        const groupsHeader = document.createElement("div");
-        groupsHeader.className = "wx-form-editor-palette-header";
-        groupsHeader.textContent = "Groups";
-
-        const groupsList = document.createElement("div");
-        groupsList.className = "wx-form-editor-palette-list";
-        groupsList.dataset.kind = "groups";
-
-        const renderLists = () => {
-            const q = search.value.toLowerCase();
-            fieldsList.textContent = "";
-            groupsList.textContent = "";
-            for (const f of this._fieldCatalog) {
-                if (!f.id.toLowerCase().includes(q)) continue;
-                fieldsList.appendChild(this._renderPaletteFieldItem(f));
-            }
-            for (const g of webexpress.webapp.RestFormEditorCtrl.GROUP_LAYOUTS) {
-                if (!g.label.toLowerCase().includes(q)) continue;
-                groupsList.appendChild(this._renderPaletteGroupItem(g));
-            }
-        };
-        search.addEventListener("input", renderLists);
-
-        body.appendChild(fieldsHeader);
-        body.appendChild(fieldsList);
-        body.appendChild(groupsHeader);
-        body.appendChild(groupsList);
-        renderLists();
-
-        panel.appendChild(body);
-        return panel;
-    }
-
-    /**
-     * Renders a single palette field item.
-     * @param {object} f - Catalog entry with id and type.
-     * @returns {HTMLElement}
-     */
-    _renderPaletteFieldItem(f) {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "wx-form-editor-palette-item";
-        btn.title = "Add " + f.id + " (" + f.type + ")";
-
-        const swatch = document.createElement("span");
-        swatch.className = "wx-form-editor-type-swatch wx-form-editor-type-" + f.type;
-        btn.appendChild(swatch);
-
-        const label = document.createElement("span");
-        label.className = "wx-form-editor-palette-label";
-        label.textContent = f.id;
-        btn.appendChild(label);
-
-        const type = document.createElement("span");
-        type.className = "wx-form-editor-palette-type";
-        type.textContent = f.type;
-        btn.appendChild(type);
-
-        btn.addEventListener("click", () => this.addNode({ kind: "field", name: f.id, type: f.type }));
-        return btn;
-    }
-
-    /**
-     * Renders a single palette group item.
-     * @param {object} g - Group layout descriptor.
-     * @returns {HTMLElement}
-     */
-    _renderPaletteGroupItem(g) {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "wx-form-editor-palette-item";
-
-        const glyph = document.createElement("span");
-        glyph.className = "wx-form-editor-palette-glyph";
-        glyph.textContent = "▦";
-        btn.appendChild(glyph);
-
-        const label = document.createElement("span");
-        label.className = "wx-form-editor-palette-label";
-        label.textContent = g.label;
-        btn.appendChild(label);
-
-        const type = document.createElement("span");
-        type.className = "wx-form-editor-palette-type";
-        type.textContent = g.id;
-        btn.appendChild(type);
-
-        btn.addEventListener("click", () => this.addNode({
-            kind: "group",
-            layout: g.id,
-            label: g.label.split(" ")[0]
-        }));
-        return btn;
     }
 
     /**
@@ -794,7 +827,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
 
         const head = document.createElement("div");
         head.className = "wx-form-editor-pane-head";
-        head.textContent = "Live preview";
+        head.textContent = this._t("formeditor.preview.title");
         panel.appendChild(head);
 
         const body = document.createElement("div");
@@ -805,14 +838,24 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
 
         const title = document.createElement("div");
         title.className = "wx-form-editor-preview-title";
-        title.textContent = (this._structure && this._structure.formName) || "Form";
+        title.textContent = (this._structure && this._structure.formName)
+            || this._t("formeditor.form.fallback_name");
         card.appendChild(title);
 
-        const sub = document.createElement("div");
-        sub.className = "wx-form-editor-preview-sub";
-        const className = (this._structure && this._structure.className) || "";
-        sub.textContent = className + (className ? " · " : "") + (tab.name || "");
-        card.appendChild(sub);
+        const description = (this._structure && this._structure.formDescription) || "";
+        if (description) {
+            const desc = document.createElement("div");
+            desc.className = "wx-form-editor-preview-description";
+            desc.textContent = description;
+            card.appendChild(desc);
+        }
+
+        // tab navigation sits directly under the heading block.
+        const tabsBar = this._renderPaneTabs({ allowEdit: false });
+        if (tabsBar) {
+            tabsBar.classList.add("wx-form-editor-preview-tabs");
+            card.appendChild(tabsBar);
+        }
 
         const list = document.createElement("div");
         list.className = "wx-form-editor-preview-list";
@@ -822,7 +865,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         if (!tab.children || tab.children.length === 0) {
             const empty = document.createElement("div");
             empty.className = "wx-form-editor-preview-empty";
-            empty.textContent = "Empty tab — add fields from the structure pane.";
+            empty.textContent = this._t("formeditor.preview.empty");
             list.appendChild(empty);
         }
         list.addEventListener("click", () => { this._selectedId = null; this._renderBody(); });
@@ -854,7 +897,8 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         const layoutCls = node.layout || "vertical";
         group.className = "wx-form-editor-preview-group wx-form-editor-preview-group--" + layoutCls
             + (this._selectedId === node.id ? " selected" : "");
-        group.dataset.layout = webexpress.webapp.RestFormEditorCtrl.LAYOUT_LABELS[layoutCls] || "FormGroup";
+        group.dataset.layout = webexpress.webapp.RestFormEditorCtrl.LAYOUT_LABELS[layoutCls]
+            || this._t("formeditor.group.fallback");
         group.addEventListener("click", (e) => { e.stopPropagation(); this._select(node.id); });
 
         for (const c of (node.children || [])) {
@@ -900,13 +944,13 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
             case "number": {
                 const input = document.createElement("input");
                 input.className = "wx-form-editor-preview-input";
-                input.placeholder = "Enter " + (node.name || "");
+                input.placeholder = this._t("formeditor.preview.placeholder.enter", node.name || "");
                 return input;
             }
             case "text": {
                 const ta = document.createElement("textarea");
                 ta.className = "wx-form-editor-preview-textarea";
-                ta.placeholder = "Describe " + (node.name || "") + "…";
+                ta.placeholder = this._t("formeditor.preview.placeholder.describe", node.name || "");
                 return ta;
             }
             case "timestamp": {
@@ -923,7 +967,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
                 dot.textContent = (node.name || "?")[0];
                 ref.appendChild(dot);
                 const txt = document.createElement("span");
-                txt.textContent = "Unassigned";
+                txt.textContent = this._t("formeditor.preview.placeholder.unassigned");
                 ref.appendChild(txt);
                 return ref;
             }
@@ -943,7 +987,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
             case "file": {
                 const file = document.createElement("div");
                 file.className = "wx-form-editor-preview-file";
-                file.textContent = "Drop files or browse…";
+                file.textContent = this._t("formeditor.preview.placeholder.file");
                 return file;
             }
             default: {
@@ -990,14 +1034,19 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         head.className = "wx-form-editor-pane-head";
 
         const heading = document.createElement("span");
-        heading.textContent = "Structure · " + (tab.name || "");
+        heading.textContent = this._t("formeditor.structure.title", tab.name || "");
         head.appendChild(heading);
 
         const meta = document.createElement("span");
         meta.className = "wx-form-editor-pane-meta";
-        meta.textContent = this._countNodes(tab.children) + " nodes";
+        meta.textContent = this._t("formeditor.structure.meta", this._countNodes(tab.children));
         head.appendChild(meta);
         panel.appendChild(head);
+
+        const tabsBar = this._renderPaneTabs({ allowEdit: true });
+        if (tabsBar) {
+            panel.appendChild(tabsBar);
+        }
 
         const body = document.createElement("div");
         body.className = "wx-form-editor-pane-body wx-form-editor-tree-body";
@@ -1012,10 +1061,20 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         if (rows.length === 0) {
             const empty = document.createElement("div");
             empty.className = "wx-form-editor-tree-empty";
-            empty.textContent = "No fields on this tab yet. Use Add field below or press N.";
+            empty.textContent = this._t("formeditor.structure.empty");
             tree.appendChild(empty);
         }
-        tree.addEventListener("dragleave", () => { this._dropState = null; });
+        tree.addEventListener("dragleave", (e) => {
+            if (!tree.contains(e.relatedTarget)) {
+                this._dropState = null;
+                this._clearDropIndicators();
+            }
+        });
+        tree.addEventListener("dragend", () => {
+            this._dragId = null;
+            this._dropState = null;
+            this._clearDropIndicators();
+        });
         tree.addEventListener("click", () => { this._selectedId = null; this._renderBody(); });
         body.appendChild(tree);
         panel.appendChild(body);
@@ -1046,9 +1105,25 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
             rowEl.classList.add("drop-" + this._dropState.pos);
         }
         rowEl.style.paddingLeft = (12 + depth * this._indent) + "px";
-        rowEl.draggable = !this._readonly && this._editingId !== node.id;
+        // The row itself never starts a drag; only the ⠿ grip does. This keeps
+        // text selection / clicks on the label and action buttons intact.
+        rowEl.draggable = false;
         rowEl.dataset.id = node.id;
         rowEl.dataset.kind = node.kind;
+
+        // ⠿ drag handle (visible on hover/selection)
+        const grip = document.createElement("span");
+        grip.className = "wx-form-editor-tree-grip";
+        grip.textContent = "⠿";
+        grip.title = this._t("formeditor.row.action.move");
+        const canDrag = !this._readonly && this._editingId !== node.id;
+        grip.draggable = canDrag;
+        if (!canDrag) {
+            grip.classList.add("wx-form-editor-tree-grip--disabled");
+        }
+        grip.addEventListener("click", (e) => e.stopPropagation());
+        grip.addEventListener("dragstart", (e) => this._handleDragStart(e, node));
+        rowEl.appendChild(grip);
 
         // chevron / spacer
         if (isGroup) {
@@ -1078,7 +1153,9 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         } else {
             const label = document.createElement("span");
             label.className = "wx-form-editor-tree-label";
-            label.textContent = isGroup ? (node.label || "Group") : (node.name || "");
+            label.textContent = isGroup
+                ? (node.label || this._t("formeditor.group.default_label"))
+                : (node.name || "");
             label.addEventListener("dblclick", (e) => {
                 e.stopPropagation();
                 this._editingId = node.id;
@@ -1088,7 +1165,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
             if (!isGroup && node.required) {
                 const req = document.createElement("span");
                 req.className = "wx-form-editor-tree-required";
-                req.textContent = "REQUIRED";
+                req.textContent = this._t("formeditor.structure.required");
                 rowEl.appendChild(req);
             }
         }
@@ -1097,7 +1174,8 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         const meta = document.createElement("span");
         meta.className = "wx-form-editor-tree-meta";
         meta.textContent = isGroup
-            ? (webexpress.webapp.RestFormEditorCtrl.LAYOUT_LABELS[node.layout] || "FormGroup")
+            ? (webexpress.webapp.RestFormEditorCtrl.LAYOUT_LABELS[node.layout]
+                || this._t("formeditor.group.fallback"))
             : (node.type || "");
         rowEl.appendChild(meta);
 
@@ -1107,7 +1185,6 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         }
 
         rowEl.addEventListener("click", (e) => { e.stopPropagation(); this._select(node.id); });
-        rowEl.addEventListener("dragstart", (e) => this._handleDragStart(e, node));
         rowEl.addEventListener("dragover", (e) => this._handleDragOver(e, node));
         rowEl.addEventListener("drop", (e) => this._handleDrop(e, node));
         return rowEl;
@@ -1152,7 +1229,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         const edit = document.createElement("button");
         edit.type = "button";
         edit.className = "wx-form-editor-icon-btn";
-        edit.title = "Rename (F2)";
+        edit.title = this._t("formeditor.row.action.rename");
         edit.textContent = "✎";
         edit.addEventListener("click", (e) => {
             e.stopPropagation();
@@ -1164,7 +1241,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         const del = document.createElement("button");
         del.type = "button";
         del.className = "wx-form-editor-icon-btn";
-        del.title = "Delete (Del)";
+        del.title = this._t("formeditor.row.action.delete");
         del.textContent = "✕";
         del.addEventListener("click", (e) => {
             e.stopPropagation();
@@ -1187,7 +1264,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         const input = document.createElement("input");
         input.type = "text";
         input.className = "wx-form-editor-quickadd-input";
-        input.placeholder = "Quick add — type field name or \"vertical\", \"horizontal\"…";
+        input.placeholder = this._t("formeditor.quickadd.placeholder");
 
         const picker = document.createElement("div");
         picker.className = "wx-form-editor-picker";
@@ -1206,7 +1283,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
             if (total === 0) {
                 const empty = document.createElement("div");
                 empty.className = "wx-form-editor-picker-empty";
-                empty.textContent = "No matches.";
+                empty.textContent = this._t("formeditor.picker.empty");
                 picker.appendChild(empty);
                 return;
             }
@@ -1215,7 +1292,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
             if (fieldMatches.length > 0) {
                 const sep = document.createElement("div");
                 sep.className = "wx-form-editor-picker-sep";
-                sep.textContent = "Fields";
+                sep.textContent = this._t("formeditor.picker.fields");
                 picker.appendChild(sep);
             }
             fieldMatches.forEach((f, i) => {
@@ -1225,7 +1302,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
             if (groupMatches.length > 0) {
                 const sep = document.createElement("div");
                 sep.className = "wx-form-editor-picker-sep";
-                sep.textContent = "Layout groups";
+                sep.textContent = this._t("formeditor.picker.groups");
                 picker.appendChild(sep);
             }
             groupMatches.forEach((g, i) => {
@@ -1254,7 +1331,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         const add = document.createElement("button");
         add.type = "button";
         add.className = "wx-form-editor-add-btn";
-        add.textContent = "+ Add";
+        add.textContent = this._t("formeditor.quickadd.add");
         add.addEventListener("click", () => input.focus());
         wrap.appendChild(add);
 
@@ -1290,7 +1367,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
 
         const meta = document.createElement("span");
         meta.className = "wx-form-editor-picker-meta";
-        meta.textContent = used ? "already used" : f.type;
+        meta.textContent = used ? this._t("formeditor.picker.used") : f.type;
         btn.appendChild(meta);
 
         btn.addEventListener("click", () => {
@@ -1403,11 +1480,11 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         const hints = document.createElement("div");
         hints.className = "wx-form-editor-tree-hints";
         const items = [
-            { key: "↑↓", label: "Navigate" },
-            { key: "←→", label: "Collapse / expand" },
-            { key: "F2", label: "Rename" },
-            { key: "Del", label: "Delete" },
-            { key: "N", label: "Add" }
+            { key: "↑↓", label: this._t("formeditor.hints.navigate") },
+            { key: "←→", label: this._t("formeditor.hints.collapse") },
+            { key: "F2", label: this._t("formeditor.hints.rename") },
+            { key: "Del", label: this._t("formeditor.hints.delete") },
+            { key: "N", label: this._t("formeditor.hints.add") }
         ];
         for (const it of items) {
             const span = document.createElement("span");
@@ -1488,6 +1565,11 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
 
     /**
      * Handles dragover on a tree row, computing the before/after/into drop position.
+     *
+     * The drop indicator is applied directly to the row classes; rebuilding
+     * the tree mid-drag would detach the source element and the browser
+     * would abort the drag without firing `drop`, which is why moves used
+     * to silently fail.
      * @param {DragEvent} e
      * @param {object} node
      */
@@ -1511,7 +1593,18 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         const next = { id: node.id, pos: pos };
         if (!this._dropState || this._dropState.id !== next.id || this._dropState.pos !== next.pos) {
             this._dropState = next;
-            this._renderBody();
+            this._clearDropIndicators();
+            e.currentTarget.classList.add("drop-" + pos);
+        }
+    }
+
+    /**
+     * Removes any drop-position indicator classes from the rendered tree rows.
+     */
+    _clearDropIndicators() {
+        const rows = this._element.querySelectorAll(".wx-form-editor-tree-row");
+        for (const r of rows) {
+            r.classList.remove("drop-before", "drop-after", "drop-into");
         }
     }
 
@@ -1530,20 +1623,18 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         const dragId = this._dragId;
         this._dropState = null;
         this._dragId = null;
+        this._clearDropIndicators();
         if (!dragId || !dropState || dragId === target.id) {
-            this._renderBody();
             return;
         }
 
         const source = this._findById(tab.children, dragId);
         if (!source) {
-            this._renderBody();
             return;
         }
 
         // no descendant-into-self moves
         if (source.kind === "group" && dropState.pos === "into" && this._isAncestor(source, target.id)) {
-            this._renderBody();
             return;
         }
 
@@ -1917,7 +2008,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
             return {
                 id: webexpress.webapp.RestFormEditorCtrl._uid("n"),
                 kind: "field",
-                name: spec.name || "Untitled",
+                name: spec.name || this._t("formeditor.field.default_name"),
                 type: type,
                 required: !!spec.required,
                 help: spec.help || undefined
@@ -1927,9 +2018,24 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
             id: webexpress.webapp.RestFormEditorCtrl._uid("n"),
             kind: "group",
             layout: spec.layout || "vertical",
-            label: spec.label || "Group",
+            label: spec.label || this._t("formeditor.group.default_label"),
             children: []
         };
+    }
+
+    /**
+     * Looks up an i18n value in the "webexpress.webapp" namespace and applies
+     * positional argument substitution ({0}, {1}, …).
+     * @param {string} key  - Key relative to the "webexpress.webapp" namespace.
+     * @param  {...any} args - Positional substitution arguments.
+     * @returns {string}
+     */
+    _t(key, ...args) {
+        let str = this._i18n("webexpress.webapp:" + key, key);
+        for (let i = 0; i < args.length; i++) {
+            str = str.split("{" + i + "}").join(String(args[i]));
+        }
+        return str;
     }
 
     /**
