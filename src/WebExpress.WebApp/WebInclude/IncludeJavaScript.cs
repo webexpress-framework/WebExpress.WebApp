@@ -28,6 +28,7 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/js/webexpress.webapp.progress.task.js")]
     [Asset("/assets/js/webexpress.webapp.quickfilter.js")]
     [Asset("/assets/js/webexpress.webapp.restform.js")]
+    [Asset("/assets/js/webexpress.webapp.restform.editor.js")]
     [Asset("/assets/js/webexpress.webapp.restwizard.js")]
     [Asset("/assets/js/webexpress.webapp.search.js")]
     [Asset("/assets/js/webexpress.webapp.selection.js")]

@@ -252,6 +252,26 @@ webexpress.webapp.Event = class {
     static TAB_ADDED_EVENT = "webexpress.webapp.tab.added";
     // Event triggered when a tab is closed dynamically.
     static TAB_CLOSED_EVENT = "webexpress.webapp.tab.closed";
+    // Event triggered when the form editor finishes loading (or reloading) a form.
+    static FORM_EDITOR_LOADED_EVENT = "webexpress.webapp.formeditor.loaded";
+    // Event triggered when a node is added in the form editor.
+    static FORM_EDITOR_NODE_ADDED_EVENT = "webexpress.webapp.formeditor.node.added";
+    // Event triggered when a node is removed in the form editor.
+    static FORM_EDITOR_NODE_REMOVED_EVENT = "webexpress.webapp.formeditor.node.removed";
+    // Event triggered when a node is renamed in the form editor.
+    static FORM_EDITOR_NODE_RENAMED_EVENT = "webexpress.webapp.formeditor.node.renamed";
+    // Event triggered when a node is moved (drag-and-drop) in the form editor.
+    static FORM_EDITOR_NODE_MOVED_EVENT = "webexpress.webapp.formeditor.node.moved";
+    // Event triggered when a tab is added in the form editor.
+    static FORM_EDITOR_TAB_ADDED_EVENT = "webexpress.webapp.formeditor.tab.added";
+    // Event triggered when a tab is renamed in the form editor.
+    static FORM_EDITOR_TAB_RENAMED_EVENT = "webexpress.webapp.formeditor.tab.renamed";
+    // Event triggered when the form editor's layout (two-pane / tree-table / three-pane) changes.
+    static FORM_EDITOR_LAYOUT_CHANGED_EVENT = "webexpress.webapp.formeditor.layout.changed";
+    // Event triggered after a successful structure save.
+    static FORM_EDITOR_SAVED_EVENT = "webexpress.webapp.formeditor.saved";
+    // Event triggered when a structure save fails validation.
+    static FORM_EDITOR_VALIDATION_FAILED_EVENT = "webexpress.webapp.formeditor.validation.failed";
 }
 
 // initialize the WebSocket connection after the DOM is fully loaded    

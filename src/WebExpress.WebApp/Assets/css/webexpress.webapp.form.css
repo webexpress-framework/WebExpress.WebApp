@@ -154,3 +154,966 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 .wx-restwizard-page-error {
     animation: fadeInPage 0.2s ease-in-out;
 }
+
+/* Type swatch palette (one colour per logical field type) */
+.wx-form-editor {
+    --wx-fe-type-string: oklch(62% 0.14 252);
+    --wx-fe-type-text: oklch(62% 0.14 215);
+    --wx-fe-type-timestamp: oklch(60% 0.13 180);
+    --wx-fe-type-ref: oklch(60% 0.15 290);
+    --wx-fe-type-enum: oklch(70% 0.15 75);
+    --wx-fe-type-tags: oklch(62% 0.14 155);
+    --wx-fe-type-number: oklch(58% 0.14 25);
+    --wx-fe-type-file: oklch(55% 0.05 250);
+    --wx-fe-primary-soft: color-mix(in oklab, var(--bs-primary, #0d6efd) 12%, var(--bs-body-bg, #fff));
+    --wx-fe-primary-border: color-mix(in oklab, var(--bs-primary, #0d6efd) 35%, var(--bs-body-bg, #fff));
+}
+
+/* root host */
+.wx-webui-form-editor.wx-form-editor {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    font-family: var(--bs-body-font-family);
+    font-size: var(--bs-body-font-size);
+    line-height: var(--bs-body-line-height);
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    overflow: hidden;
+}
+
+/* header */
+.wx-form-editor-head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0.875rem;
+    border-bottom: 1px solid var(--bs-border-color);
+    background: var(--bs-tertiary-bg, var(--bs-body-bg));
+}
+
+.wx-form-editor-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.wx-form-editor-name {
+    font-weight: 600;
+    font-size: 1rem;
+    letter-spacing: -0.005em;
+}
+
+.wx-form-editor-version {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 6px;
+    font-size: 11px;
+    font-family: var(--bs-font-monospace);
+    color: var(--bs-secondary-color, var(--bs-body-color));
+    background: var(--bs-secondary-bg, var(--bs-tertiary-bg));
+    border-radius: 4px;
+}
+
+.wx-form-editor-tools {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+}
+
+/* layout switch */
+.wx-form-editor-mode {
+    display: inline-flex;
+    align-items: stretch;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    overflow: hidden;
+}
+
+    .wx-form-editor-mode > button {
+        border: 0;
+        background: transparent;
+        color: var(--bs-secondary-color, var(--bs-body-color));
+        padding: 4px 10px;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+    }
+
+        .wx-form-editor-mode > button + button {
+            border-left: 1px solid var(--bs-border-color);
+        }
+
+        .wx-form-editor-mode > button:hover {
+            background: var(--bs-secondary-bg, var(--bs-tertiary-bg));
+            color: var(--bs-body-color);
+        }
+
+        .wx-form-editor-mode > button.active {
+            background: var(--wx-fe-primary-soft);
+            color: var(--bs-primary, #0d6efd);
+        }
+
+.wx-form-editor-preview-toggle {
+    border: 1px solid var(--bs-border-color);
+    background: transparent;
+    color: var(--bs-secondary-color, var(--bs-body-color));
+    border-radius: var(--bs-border-radius);
+    padding: 3px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+    .wx-form-editor-preview-toggle:hover {
+        background: var(--bs-secondary-bg, var(--bs-tertiary-bg));
+        color: var(--bs-body-color);
+    }
+
+    .wx-form-editor-preview-toggle.active {
+        background: var(--wx-fe-primary-soft);
+        color: var(--bs-primary, #0d6efd);
+        border-color: var(--wx-fe-primary-border);
+    }
+
+/* tab bar */
+.wx-form-editor-tabs {
+    display: flex;
+    align-items: stretch;
+    gap: 2px;
+    padding: 0.5rem 0.875rem 0;
+    border-bottom: 1px solid var(--bs-border-color);
+    overflow-x: auto;
+}
+
+.wx-form-editor-tab {
+    border: 0;
+    background: transparent;
+    padding: 6px 12px 8px;
+    margin-bottom: -1px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--bs-secondary-color, var(--bs-body-color));
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+}
+
+    .wx-form-editor-tab:hover {
+        color: var(--bs-body-color);
+        background: var(--bs-secondary-bg, var(--bs-tertiary-bg));
+        border-radius: var(--bs-border-radius) var(--bs-border-radius) 0 0;
+    }
+
+    .wx-form-editor-tab.active {
+        color: var(--bs-primary, #0d6efd);
+        border-bottom-color: var(--bs-primary, #0d6efd);
+        background: transparent;
+    }
+
+.wx-form-editor-tab-count {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 6px;
+    font-size: 11px;
+    color: var(--bs-secondary-color);
+    background: var(--bs-tertiary-bg, var(--bs-body-bg));
+    border-radius: 999px;
+    min-width: 18px;
+    justify-content: center;
+}
+
+.wx-form-editor-tab-input {
+    border: 1px solid var(--bs-primary, #0d6efd);
+    border-radius: 3px;
+    padding: 1px 4px;
+    font: inherit;
+    font-weight: 500;
+    background: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    min-width: 80px;
+}
+
+.wx-form-editor-tab-add {
+    border: 0;
+    background: transparent;
+    color: var(--bs-secondary-color, var(--bs-body-color));
+    padding: 6px 10px 8px;
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-bottom: -1px;
+    border-bottom: 2px solid transparent;
+}
+
+    .wx-form-editor-tab-add:hover {
+        color: var(--bs-primary, #0d6efd);
+    }
+
+/* body grid*/
+.wx-form-editor-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 0.875rem;
+    display: grid;
+    gap: 0.875rem;
+    background: var(--bs-tertiary-bg, var(--bs-body-bg));
+}
+
+.wx-form-editor-body--two-pane {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+}
+
+.wx-form-editor-body--three-pane {
+    grid-template-columns: 220px minmax(0, 1fr) minmax(300px, 380px);
+}
+
+.wx-form-editor-body--tree-table {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.wx-form-editor-body--no-preview.wx-form-editor-body--two-pane {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.wx-form-editor-body--no-preview.wx-form-editor-body--three-pane {
+    grid-template-columns: 220px minmax(0, 1fr);
+}
+
+/* pane chrome */
+.wx-form-editor-pane {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    overflow: hidden;
+}
+
+.wx-form-editor-pane-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--bs-border-color);
+    background: var(--bs-tertiary-bg, var(--bs-body-bg));
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--bs-secondary-color, var(--bs-body-color));
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.wx-form-editor-pane-meta {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 6px;
+    font-size: 11px;
+    color: var(--bs-secondary-color, var(--bs-body-color));
+    background: var(--bs-secondary-bg, var(--bs-tertiary-bg));
+    border-radius: 4px;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 500;
+}
+
+.wx-form-editor-pane-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+}
+
+/* tree pane */
+.wx-form-editor-tree-body {
+    padding: 0;
+}
+
+.wx-form-editor-tree {
+    padding: 4px 0;
+}
+
+.wx-form-editor-tree-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 4px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    user-select: none;
+    position: relative;
+}
+
+    .wx-form-editor-tree-row:hover {
+        background: var(--bs-secondary-bg, var(--bs-tertiary-bg));
+    }
+
+    .wx-form-editor-tree-row.selected {
+        background: var(--wx-fe-primary-soft);
+        border-left-color: var(--bs-primary, #0d6efd);
+    }
+
+    .wx-form-editor-tree-row.drop-before::before,
+    .wx-form-editor-tree-row.drop-after::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--bs-primary, #0d6efd);
+        z-index: 1;
+    }
+
+    .wx-form-editor-tree-row.drop-before::before {
+        top: -1px;
+    }
+
+    .wx-form-editor-tree-row.drop-after::after {
+        bottom: -1px;
+    }
+
+    .wx-form-editor-tree-row.drop-into {
+        outline: 2px solid var(--bs-primary, #0d6efd);
+        outline-offset: -2px;
+        background: var(--wx-fe-primary-soft);
+    }
+
+.wx-form-editor-chev {
+    border: 0;
+    background: transparent;
+    color: var(--bs-secondary-color, var(--bs-body-color));
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    line-height: 1;
+}
+
+    .wx-form-editor-chev:hover {
+        background: var(--bs-tertiary-bg, var(--bs-body-bg));
+        color: var(--bs-body-color);
+    }
+
+.wx-form-editor-chev--empty {
+    visibility: hidden;
+}
+
+.wx-form-editor-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+}
+
+.wx-form-editor-icon--group::before {
+    content: "▦";
+    color: var(--bs-primary, #0d6efd);
+    font-size: 12px;
+}
+
+/* type colour swatch — reused in tree, palette and picker */
+.wx-form-editor-type-swatch {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    background: var(--wx-fe-type-string);
+    flex-shrink: 0;
+}
+
+.wx-form-editor-type-string {
+    background: var(--wx-fe-type-string);
+}
+
+.wx-form-editor-type-text {
+    background: var(--wx-fe-type-text);
+}
+
+.wx-form-editor-type-timestamp {
+    background: var(--wx-fe-type-timestamp);
+}
+
+.wx-form-editor-type-ref {
+    background: var(--wx-fe-type-ref);
+}
+
+.wx-form-editor-type-enum {
+    background: var(--wx-fe-type-enum);
+}
+
+.wx-form-editor-type-tags {
+    background: var(--wx-fe-type-tags);
+}
+
+.wx-form-editor-type-number {
+    background: var(--wx-fe-type-number);
+}
+
+.wx-form-editor-type-file {
+    background: var(--wx-fe-type-file);
+}
+
+.wx-form-editor-tree-label {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+.wx-form-editor-tree-required {
+    font-size: 10px;
+    color: var(--bs-danger, #dc3545);
+    font-weight: 600;
+    margin-left: 0.25rem;
+}
+
+.wx-form-editor-tree-input {
+    flex: 1 1 auto;
+    border: 1px solid var(--bs-primary, #0d6efd);
+    border-radius: 3px;
+    padding: 1px 4px;
+    font: inherit;
+    font-weight: 500;
+    background: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    max-width: 240px;
+}
+
+.wx-form-editor-tree-meta {
+    font-family: var(--bs-font-monospace);
+    font-size: 11px;
+    color: var(--bs-secondary-color, var(--bs-body-color));
+    flex-shrink: 0;
+}
+
+.wx-form-editor-tree-row[data-kind="group"] .wx-form-editor-tree-meta {
+    color: var(--bs-primary, #0d6efd);
+    background: var(--wx-fe-primary-soft);
+    padding: 1px 6px;
+    border-radius: 4px;
+}
+
+.wx-form-editor-tree-actions {
+    display: inline-flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity 0.1s;
+}
+
+.wx-form-editor-tree-row:hover .wx-form-editor-tree-actions,
+.wx-form-editor-tree-row.selected .wx-form-editor-tree-actions {
+    opacity: 1;
+}
+
+.wx-form-editor-icon-btn {
+    border: 0;
+    background: transparent;
+    color: var(--bs-secondary-color, var(--bs-body-color));
+    width: 22px;
+    height: 22px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 11px;
+    line-height: 1;
+}
+
+    .wx-form-editor-icon-btn:hover {
+        background: var(--bs-tertiary-bg, var(--bs-body-bg));
+        color: var(--bs-body-color);
+    }
+
+.wx-form-editor-tree-empty {
+    padding: 2.5rem 1rem;
+    text-align: center;
+    color: var(--bs-secondary-color, var(--bs-body-color));
+    font-size: 12.5px;
+}
+
+/* quick add input + picker */
+.wx-form-editor-quickadd {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-top: 1px solid var(--bs-border-color);
+    background: var(--bs-tertiary-bg, var(--bs-body-bg));
+    position: relative;
+}
+
+.wx-form-editor-quickadd-input {
+    flex: 1 1 auto;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    padding: 5px 9px;
+    font-size: 13px;
+    background: var(--bs-body-bg);
+    color: var(--bs-body-color);
+}
+
+    .wx-form-editor-quickadd-input:focus {
+        outline: none;
+        border-color: var(--bs-primary, #0d6efd);
+        box-shadow: 0 0 0 2px var(--wx-fe-primary-border);
+    }
+
+.wx-form-editor-add-btn {
+    border: 1px solid var(--bs-primary, #0d6efd);
+    background: var(--bs-primary, #0d6efd);
+    color: var(--bs-primary-color, #fff);
+    border-radius: var(--bs-border-radius);
+    padding: 4px 10px;
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+    .wx-form-editor-add-btn:hover {
+        filter: brightness(1.05);
+    }
+
+.wx-form-editor-picker {
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 0.75rem;
+    right: 0.75rem;
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
+    max-height: 240px;
+    overflow-y: auto;
+    z-index: 20;
+    padding: 4px;
+}
+
+.wx-form-editor-picker-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    border: 0;
+    background: transparent;
+    padding: 5px 10px;
+    border-radius: 3px;
+    font-size: 12.5px;
+    color: var(--bs-body-color);
+    cursor: pointer;
+    text-align: left;
+}
+
+    .wx-form-editor-picker-item:hover,
+    .wx-form-editor-picker-item.highlighted {
+        background: var(--wx-fe-primary-soft);
+        color: var(--bs-primary, #0d6efd);
+    }
+
+    .wx-form-editor-picker-item.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+.wx-form-editor-picker-label {
+    flex: 1 1 auto;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wx-form-editor-picker-meta {
+    font-family: var(--bs-font-monospace);
+    font-size: 11px;
+    color: var(--bs-secondary-color, var(--bs-body-color));
+    flex-shrink: 0;
+}
+
+.wx-form-editor-picker-glyph {
+    color: var(--bs-primary, #0d6efd);
+    font-size: 12px;
+    width: 14px;
+    text-align: center;
+}
+
+.wx-form-editor-picker-sep {
+    padding: 6px 10px 2px;
+    font-size: 10.5px;
+    color: var(--bs-secondary-color, var(--bs-body-color));
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+}
+
+.wx-form-editor-picker-empty {
+    padding: 12px;
+    text-align: center;
+    color: var(--bs-secondary-color, var(--bs-body-color));
+    font-size: 12.5px;
+}
+
+/* tree hints row */
+.wx-form-editor-tree-hints {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 11.5px;
+    color: var(--bs-secondary-color, var(--bs-body-color));
+    border-top: 1px solid var(--bs-border-color);
+    background: var(--bs-tertiary-bg, var(--bs-body-bg));
+}
+
+.wx-form-editor-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.wx-form-editor-kbd {
+    display: inline-block;
+    padding: 1px 5px;
+    font-size: 10.5px;
+    font-family: var(--bs-font-monospace);
+    color: var(--bs-body-color);
+    background: var(--bs-secondary-bg, var(--bs-tertiary-bg));
+    border: 1px solid var(--bs-border-color);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    line-height: 1.3;
+}
+
+/* palette pane */
+.wx-form-editor-pane--palette .wx-form-editor-pane-body {
+    padding: 0.5rem;
+}
+
+.wx-form-editor-palette-search {
+    width: 100%;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    padding: 4px 8px;
+    font-size: 12.5px;
+    background: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    margin-bottom: 0.5rem;
+}
+
+.wx-form-editor-palette-header {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--bs-secondary-color, var(--bs-body-color));
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 8px 4px 4px;
+}
+
+.wx-form-editor-palette-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.wx-form-editor-palette-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    border: 0;
+    background: transparent;
+    padding: 5px 8px;
+    border-radius: var(--bs-border-radius);
+    font-size: 12.5px;
+    color: var(--bs-body-color);
+    cursor: pointer;
+    text-align: left;
+}
+
+    .wx-form-editor-palette-item:hover {
+        background: var(--bs-secondary-bg, var(--bs-tertiary-bg));
+    }
+
+.wx-form-editor-palette-label {
+    flex: 1 1 auto;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wx-form-editor-palette-type {
+    font-family: var(--bs-font-monospace);
+    font-size: 10.5px;
+    color: var(--bs-secondary-color, var(--bs-body-color));
+}
+
+.wx-form-editor-palette-glyph {
+    color: var(--bs-primary, #0d6efd);
+    font-size: 12px;
+    width: 14px;
+    text-align: center;
+}
+
+/* live preview pane */
+.wx-form-editor-pane--preview .wx-form-editor-pane-body {
+    padding: 1rem;
+    background: var(--bs-tertiary-bg, var(--bs-body-bg));
+}
+
+.wx-form-editor-preview-card {
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius-lg, 0.5rem);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .04);
+    padding: 1rem 1.125rem;
+    max-width: 520px;
+    margin: 0 auto;
+}
+
+.wx-form-editor-preview-title {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    margin-bottom: 2px;
+}
+
+.wx-form-editor-preview-sub {
+    font-size: 12.5px;
+    color: var(--bs-secondary-color, var(--bs-body-color));
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.wx-form-editor-preview-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+}
+
+.wx-form-editor-preview-empty {
+    padding: 1.875rem;
+    text-align: center;
+    color: var(--bs-secondary-color, var(--bs-body-color));
+    border: 1px dashed var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    font-size: 12.5px;
+}
+
+.wx-form-editor-preview-field {
+    min-width: 0;
+}
+
+    .wx-form-editor-preview-field.selected .wx-form-editor-preview-input,
+    .wx-form-editor-preview-field.selected .wx-form-editor-preview-textarea {
+        border-color: var(--bs-primary, #0d6efd);
+        box-shadow: 0 0 0 2px var(--wx-fe-primary-border);
+    }
+
+.wx-form-editor-preview-label {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--bs-secondary-color, var(--bs-body-color));
+    margin-bottom: 4px;
+}
+
+    .wx-form-editor-preview-label.required::after {
+        content: " *";
+        color: var(--bs-danger, #dc3545);
+    }
+
+.wx-form-editor-preview-help {
+    font-size: 11.5px;
+    color: var(--bs-secondary-color, var(--bs-body-color));
+    margin-top: 4px;
+    line-height: 1.4;
+}
+
+.wx-form-editor-preview-input,
+.wx-form-editor-preview-textarea {
+    width: 100%;
+    padding: 6px 10px;
+    border-radius: var(--bs-border-radius);
+    border: 1px solid var(--bs-border-color);
+    background: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+}
+
+.wx-form-editor-preview-textarea {
+    min-height: 72px;
+    resize: vertical;
+}
+
+.wx-form-editor-preview-file {
+    padding: 0.625rem;
+    border: 1.5px dashed var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    background: var(--bs-tertiary-bg, var(--bs-body-bg));
+    text-align: center;
+    color: var(--bs-secondary-color, var(--bs-body-color));
+    font-size: 12.5px;
+}
+
+.wx-form-editor-preview-tags {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    padding: 5px;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    background: var(--bs-body-bg);
+    min-height: 32px;
+}
+
+.wx-form-editor-preview-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--wx-fe-primary-soft);
+    color: var(--bs-primary, #0d6efd);
+    font-size: 11.5px;
+    font-weight: 500;
+}
+
+.wx-form-editor-preview-ref {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 6px 10px;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    background: var(--bs-body-bg);
+    font-size: 12.5px;
+}
+
+.wx-form-editor-preview-ref-dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--bs-secondary-bg, var(--bs-tertiary-bg));
+    color: var(--bs-secondary-color, var(--bs-body-color));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.wx-form-editor-preview-pills {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.wx-form-editor-preview-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--bs-border-color);
+    background: var(--bs-body-bg);
+    font-size: 12px;
+    color: var(--bs-secondary-color, var(--bs-body-color));
+}
+
+    .wx-form-editor-preview-pill.active {
+        background: var(--wx-fe-primary-soft);
+        color: var(--bs-primary, #0d6efd);
+        border-color: var(--wx-fe-primary-border);
+    }
+
+/* preview groups (dashed container with floating layout chip) */
+.wx-form-editor-preview-group {
+    display: flex;
+    gap: 0.875rem;
+    padding: 0.75rem 0.875rem;
+    border: 1px dashed var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    background: var(--bs-body-bg);
+    position: relative;
+}
+
+    .wx-form-editor-preview-group.selected {
+        outline: 2px solid var(--bs-primary, #0d6efd);
+        outline-offset: -2px;
+    }
+
+    .wx-form-editor-preview-group::before {
+        content: attr(data-layout);
+        position: absolute;
+        top: -8px;
+        left: 10px;
+        background: var(--bs-body-bg);
+        padding: 0 6px;
+        font-size: 10.5px;
+        font-weight: 500;
+        color: var(--bs-secondary-color, var(--bs-body-color));
+        font-family: var(--bs-font-monospace);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+.wx-form-editor-preview-group--horizontal {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+
+    .wx-form-editor-preview-group--horizontal > .wx-form-editor-preview-field {
+        flex: 1 1 160px;
+        min-width: 140px;
+    }
+
+.wx-form-editor-preview-group--vertical,
+.wx-form-editor-preview-group--mix {
+    flex-direction: column;
+}
+
+.wx-form-editor-preview-group--col-vertical,
+.wx-form-editor-preview-group--col-horizontal,
+.wx-form-editor-preview-group--col-mix {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.875rem;
+}
+
+/* footer */
+.wx-form-editor-foot {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.875rem;
+    border-top: 1px solid var(--bs-border-color);
+    background: var(--bs-tertiary-bg, var(--bs-body-bg));
+    font-size: 11.5px;
+    color: var(--bs-secondary-color, var(--bs-body-color));
+}
+
+.wx-form-editor-foot-status {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 6px;
+    background: var(--bs-secondary-bg, var(--bs-tertiary-bg));
+    border-radius: 4px;
+    font-family: var(--bs-font-monospace);
+    font-size: 11px;
+}
