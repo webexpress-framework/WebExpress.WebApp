@@ -11,8 +11,8 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Gets or sets the user-visible name (label) of the field.
         /// </summary>
-        [JsonPropertyName("name")]
-        public string Name { get; set; }
+        [JsonPropertyName("label")]
+        public string Label { get; set; }
 
         /// <summary>
         /// Gets or sets the logical field type. One of:

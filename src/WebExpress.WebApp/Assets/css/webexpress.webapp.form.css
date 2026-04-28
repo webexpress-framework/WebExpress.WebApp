@@ -181,7 +181,6 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     line-height: var(--bs-body-line-height);
     border: 1px solid var(--bs-border-color);
     border-radius: var(--bs-border-radius);
-    overflow: hidden;
 }
 
 /* header */
@@ -235,29 +234,29 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     overflow: hidden;
 }
 
-    .wx-form-editor-mode > button {
-        border: 0;
-        background: transparent;
-        color: var(--bs-secondary-color, var(--bs-body-color));
-        padding: 4px 10px;
-        font-size: 12px;
-        font-weight: 500;
-        cursor: pointer;
-    }
+.wx-form-editor-mode > button {
+    border: 0;
+    background: transparent;
+    color: var(--bs-secondary-color, var(--bs-body-color));
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+}
 
-        .wx-form-editor-mode > button + button {
-            border-left: 1px solid var(--bs-border-color);
-        }
+.wx-form-editor-mode > button + button {
+    border-left: 1px solid var(--bs-border-color);
+}
 
-        .wx-form-editor-mode > button:hover {
-            background: var(--bs-secondary-bg, var(--bs-tertiary-bg));
-            color: var(--bs-body-color);
-        }
+.wx-form-editor-mode > button:hover {
+    background: var(--bs-secondary-bg, var(--bs-tertiary-bg));
+    color: var(--bs-body-color);
+}
 
-        .wx-form-editor-mode > button.active {
-            background: var(--wx-fe-primary-soft);
-            color: var(--bs-primary, #0d6efd);
-        }
+.wx-form-editor-mode > button.active {
+    background: var(--wx-fe-primary-soft);
+    color: var(--bs-primary, #0d6efd);
+}
 
 .wx-form-editor-preview-toggle {
     border: 1px solid var(--bs-border-color);
@@ -358,33 +357,13 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     }
 
 /* body grid*/
-.wx-form-editor-body {
-    flex: 1 1 auto;
-    min-height: 0;
-    padding: 0.875rem;
-    display: grid;
-    gap: 0.875rem;
-    background: var(--bs-tertiary-bg, var(--bs-body-bg));
-}
-
-.wx-form-editor-body--two-pane {
+.wx-form-editor-body-pane {
     grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
 }
 
-.wx-form-editor-body--three-pane {
-    grid-template-columns: 220px minmax(0, 1fr) minmax(300px, 380px);
-}
 
-.wx-form-editor-body--tree-table {
+.wx-form-editor-body--no-preview.wx-form-editor-body-pane {
     grid-template-columns: minmax(0, 1fr);
-}
-
-.wx-form-editor-body--no-preview.wx-form-editor-body--two-pane {
-    grid-template-columns: minmax(0, 1fr);
-}
-
-.wx-form-editor-body--no-preview.wx-form-editor-body--three-pane {
-    grid-template-columns: 220px minmax(0, 1fr);
 }
 
 /* pane chrome */
@@ -395,7 +374,6 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     background: var(--bs-body-bg);
     border: 1px solid var(--bs-border-color);
     border-radius: var(--bs-border-radius);
-    overflow: hidden;
 }
 
 .wx-form-editor-pane-head {
@@ -429,7 +407,6 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 .wx-form-editor-pane-body {
     flex: 1 1 auto;
     min-height: 0;
-    overflow: auto;
 }
 
 /* tree pane */
@@ -569,7 +546,6 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 
 .wx-form-editor-tree-label {
     flex: 1 1 auto;
-    overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     font-weight: 500;
@@ -1176,20 +1152,16 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 /* Two-pane body now hosts a single child (split or structure pane). */
 .wx-form-editor-body {
     display: flex;
-    overflow: hidden;
 }
 
-    .wx-form-editor-body > * {
-        flex: 1 1 auto;
-        min-width: 0;
-        min-height: 0;
-    }
+.wx-form-editor-body > * {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+}
 
-.wx-form-editor-body--two-pane,
-.wx-form-editor-body--three-pane,
-.wx-form-editor-body--tree-table,
-.wx-form-editor-body--no-preview.wx-form-editor-body--two-pane,
-.wx-form-editor-body--no-preview.wx-form-editor-body--three-pane {
+.wx-form-editor-body-pane,
+.wx-form-editor-body--no-preview.wx-form-editor-body-pane{
     grid-template-columns: none;
 }
 
@@ -1200,18 +1172,24 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     height: 100%;
 }
 
-    .wx-form-editor-split .wx-side-pane,
-    .wx-form-editor-split .wx-main-pane {
-        display: flex;
-        min-height: 0;
-        overflow: hidden;
-    }
+.wx-form-editor-split.wx-split .wx-splitter
+{
+    background-color: inherit;
+}
 
-        .wx-form-editor-split .wx-side-pane > .wx-form-editor-pane,
-        .wx-form-editor-split .wx-main-pane > .wx-form-editor-pane {
-            flex: 1 1 auto;
-            min-width: 0;
-        }
+.wx-form-editor-split .wx-side-pane,
+.wx-form-editor-split .wx-main-pane {
+    display: flex;
+    min-height: 0;
+}
+
+.wx-form-editor-split .wx-side-pane > .wx-form-editor-pane,
+.wx-form-editor-split .wx-main-pane > .wx-form-editor-pane {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+}
 
 /* drag handle (⠿) at the start of every tree row */
 .wx-form-editor-tree-grip {

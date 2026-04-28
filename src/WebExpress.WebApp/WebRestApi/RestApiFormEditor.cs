@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using WebExpress.WebCore.WebAttribute;
@@ -52,6 +53,7 @@ namespace WebExpress.WebApp.WebRestApi
             try
             {
                 using var context = CreateContext();
+                var catalog = RetrieveCatalog(context, request);
                 var item = RetrieveItem(id, context, request);
 
                 if (item is null)
@@ -61,6 +63,7 @@ namespace WebExpress.WebApp.WebRestApi
 
                 var result = new RestApiFormEditorResult
                 {
+                    Catalog = catalog,
                     Data = item
                 };
 
@@ -129,6 +132,21 @@ namespace WebExpress.WebApp.WebRestApi
         {
             return new DefaultQueryContext();
         }
+
+        /// <summary>
+        /// Retrieves a catalog of form editor field items based on the specified query context and request parameters.
+        /// </summary>
+        /// <param name="context">
+        /// The query context that provides information about the current data retrieval operation. Cannot be null.
+        /// </param>
+        /// <param name="request">
+        /// The request containing parameters that influence which catalog items are retrieved. Cannot be null.
+        /// </param>
+        /// <returns>
+        /// An enumerable collection of catalog field items that match the specified context and request. The 
+        /// collection may be empty if no items are found.
+        /// </returns>
+        protected abstract IEnumerable<RestApiFormEditorFieldItem> RetrieveCatalog(IQueryContext context, IRequest request);
 
         /// <summary>
         /// Retrieves the form structure that corresponds to the given form id.

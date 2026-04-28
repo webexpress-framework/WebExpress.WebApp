@@ -258,11 +258,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         if (!node) {
             return;
         }
-        if (node.kind === "field") {
-            node.name = next;
-        } else {
-            node.label = next;
-        }
+        node.label = next;
         this._dispatch(webexpress.webapp.Event.FORM_EDITOR_NODE_RENAMED_EVENT, { id: nodeId, name: next });
         this._renderBody();
         this._scheduleSave();
@@ -325,7 +321,6 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
      * @returns {Promise<void>}
      */
     async _bootstrap() {
-        await this._loadFieldCatalog();
         await this._loadStructure();
 
         if (!this._structure) {
@@ -349,33 +344,6 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Loads the field catalog from data-field-catalog-url, if configured.
-     * @returns {Promise<void>}
-     */
-    async _loadFieldCatalog() {
-        if (!this._fieldCatalogUrl) {
-            return;
-        }
-        try {
-            const res = await fetch(this._fieldCatalogUrl, {
-                method: "GET",
-                headers: { "Accept": "application/json" }
-            });
-            if (!res.ok) {
-                return;
-            }
-            const json = await res.json();
-            if (Array.isArray(json.fields)) {
-                this._fieldCatalog = json.fields;
-            } else if (Array.isArray(json)) {
-                this._fieldCatalog = json;
-            }
-        } catch (e) {
-            console.warn("FormEditor: failed to load field catalog, falling back to defaults.", e);
-        }
-    }
-
-    /**
      * Loads the form structure for the current form id from data-rest-url, if configured
      * and no inline structure was supplied at construction time.
      * @returns {Promise<void>}
@@ -394,6 +362,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
             }
             const json = await res.json();
             this._structure = json.structure || json.data || json;
+            this._fieldCatalog = json.catalog;
         } catch (e) {
             console.warn("FormEditor: failed to load form, falling back to placeholder.", e);
         }
@@ -724,7 +693,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
      * hidden the structure pane fills the available space directly.
      */
     _renderBody() {
-        this._bodyHost.className = "wx-form-editor-body wx-form-editor-body--two-pane";
+        this._bodyHost.className = "wx-form-editor-body wx-form-editor-body-pane";
         if (!this._previewOn) {
             this._bodyHost.classList.add("wx-form-editor-body--no-preview");
         }
@@ -900,7 +869,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
 
         const label = document.createElement("div");
         label.className = "wx-form-editor-preview-label" + (node.required ? " required" : "");
-        label.textContent = node.name || "";
+        label.textContent = node.label || "";
         wrap.appendChild(label);
 
         wrap.appendChild(this._renderPreviewControl(node));
@@ -925,13 +894,13 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
             case "number": {
                 const input = document.createElement("input");
                 input.className = "wx-form-editor-preview-input";
-                input.placeholder = this._t("formeditor.preview.placeholder.enter", node.name || "");
+                input.placeholder = this._t("formeditor.preview.placeholder.enter", node.placeholder || "");
                 return input;
             }
             case "text": {
                 const ta = document.createElement("textarea");
                 ta.className = "wx-form-editor-preview-textarea";
-                ta.placeholder = this._t("formeditor.preview.placeholder.describe", node.name || "");
+                ta.placeholder = this._t("formeditor.preview.placeholder.describe", node.placeholder || "");
                 return ta;
             }
             case "timestamp": {
@@ -945,7 +914,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
                 ref.className = "wx-form-editor-preview-ref";
                 const dot = document.createElement("span");
                 dot.className = "wx-form-editor-preview-ref-dot";
-                dot.textContent = (node.name || "?")[0];
+                dot.textContent = (node.label || "?")[0];
                 ref.appendChild(dot);
                 const txt = document.createElement("span");
                 txt.textContent = this._t("formeditor.preview.placeholder.unassigned");
@@ -990,7 +959,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
             "Status":      [{ v: "Open" }, { v: "In progress", active: true }, { v: "Fixed" }, { v: "Closed" }],
             "Environment": [{ v: "Dev", active: true }, { v: "Stage" }, { v: "Prod" }]
         };
-        const items = palette[node.name] || [{ v: "Option A", active: true }];
+        const items = palette[node.label] || [{ v: "Option A", active: true }];
         const wrap = document.createElement("div");
         wrap.className = "wx-form-editor-preview-pills";
         for (const o of items) {
@@ -1009,7 +978,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
      */
     _renderStructurePanel(tab) {
         const panel = document.createElement("div");
-        panel.className = "wx-form-editor-pane wx-form-editor-pane--tree";
+        panel.className = "wx-form-editor-pane";
 
         const head = document.createElement("div");
         head.className = "wx-form-editor-pane-head";
@@ -1136,7 +1105,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
             label.className = "wx-form-editor-tree-label";
             label.textContent = isGroup
                 ? (node.label || this._t("formeditor.group.default_label"))
-                : (node.name || "");
+                : (node.label || "");
             label.addEventListener("dblclick", (e) => {
                 e.stopPropagation();
                 this._editingId = node.id;
@@ -1180,7 +1149,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
     _renderTreeRowEditor(node, isGroup) {
         const input = document.createElement("input");
         input.className = "wx-form-editor-tree-input";
-        input.value = (isGroup ? node.label : node.name) || "";
+        input.value = node.label;
         input.addEventListener("click", e => e.stopPropagation());
         input.addEventListener("keydown", (e) => {
             if (e.key === "Enter") {
@@ -1254,7 +1223,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         const renderPicker = () => {
             picker.textContent = "";
             const q = input.value.toLowerCase();
-            const used = this._collectFieldNames(tab.children);
+            const used = this._collectFieldLabels(tab.children);
 
             const fieldMatches = this._fieldCatalog.filter(f => f.id.toLowerCase().includes(q));
             const groupMatches = webexpress.webapp.RestFormEditorCtrl.GROUP_LAYOUTS
@@ -1343,7 +1312,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
 
         const label = document.createElement("span");
         label.className = "wx-form-editor-picker-label";
-        label.textContent = f.id;
+        label.textContent = f.label;
         btn.appendChild(label);
 
         const meta = document.createElement("span");
@@ -1355,7 +1324,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
             if (used) {
                 return;
             }
-            this.addNode({ kind: "field", name: f.id, type: f.type });
+            this.addNode({ kind: "field", id: f.id, label: f.label, type: f.type });
             input.value = "";
             this._pickerOpen = false;
             btn.parentElement.style.display = "none";
@@ -1434,11 +1403,11 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
             input.blur();
         } else if (e.key === "Enter") {
             e.preventDefault();
-            const used = this._collectFieldNames(tab.children);
+            const used = this._collectFieldLabels(tab.children);
             if (this._pickerHi < fieldMatches.length) {
                 const f = fieldMatches[this._pickerHi];
                 if (!used.has(f.id)) {
-                    this.addNode({ kind: "field", name: f.id, type: f.type });
+                    this.addNode({ kind: "field", id: f.id, label: f.label, type: f.type });
                     input.value = "";
                     closePicker();
                 }
@@ -1520,11 +1489,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
             this._renderBody();
             return;
         }
-        if (node.kind === "field") {
-            node.name = next;
-        } else {
-            node.label = next;
-        }
+        node.label = next;
         this._dispatch(webexpress.webapp.Event.FORM_EDITOR_NODE_RENAMED_EVENT, { id: id, name: next });
         this._renderBody();
         this._scheduleSave();
@@ -1959,18 +1924,18 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Collects every used field name in the given list, recursively.
+     * Collects every used field label in the given list, recursively.
      * @param {object[]} list
      * @param {Set<string>} [out]
      * @returns {Set<string>}
      */
-    _collectFieldNames(list, out) {
+    _collectFieldLabels(list, out) {
         out = out || new Set();
         for (const n of (list || [])) {
             if (n.kind === "field") {
-                out.add(n.name);
+                out.add(n.label);
             } else {
-                this._collectFieldNames(n.children, out);
+                this._collectFieldLabels(n.children, out);
             }
         }
         return out;
@@ -1989,7 +1954,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
             return {
                 id: webexpress.webapp.RestFormEditorCtrl._uid("n"),
                 kind: "field",
-                name: spec.name || this._t("formeditor.field.default_name"),
+                label: spec.label || this._t("formeditor.field.default_name"),
                 type: type,
                 required: !!spec.required,
                 help: spec.help || undefined

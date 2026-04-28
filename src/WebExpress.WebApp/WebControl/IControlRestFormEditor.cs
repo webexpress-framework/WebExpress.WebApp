@@ -26,13 +26,6 @@ namespace WebExpress.WebApp.WebControl
         IUri RestUri { get; }
 
         /// <summary>
-        /// URL of the field-catalog REST endpoint (e.g.
-        /// <c>/api/1/FormFieldCatalog</c>). When null, only a tiny built-in
-        /// fallback catalog is offered.
-        /// </summary>
-        IUri FieldCatalogUri { get; }
-
-        /// <summary>
         /// Whether the live preview pane is shown initially.
         /// </summary>
         bool Preview { get; }

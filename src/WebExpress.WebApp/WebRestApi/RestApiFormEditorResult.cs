@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using WebExpress.WebCore.WebMessage;
@@ -19,6 +20,11 @@ namespace WebExpress.WebApp.WebRestApi
         public RestApiFormEditorItem Data { get; set; }
 
         /// <summary>
+        /// Gets or sets the collection of available form editor field items for the catalog.
+        /// </summary>
+        public IEnumerable<RestApiFormEditorFieldItem> Catalog { get; set; } = [];
+
+        /// <summary>
         /// Converts the current instance into a response object. Wraps the
         /// payload as <c>{ "data": { ... } }</c> to match the JSON envelope
         /// expected by <c>webexpress.webapp.RestFormEditorCtrl</c>.
@@ -26,7 +32,11 @@ namespace WebExpress.WebApp.WebRestApi
         /// <returns>A response carrying the serialized form structure.</returns>
         public virtual IResponse ToResponse()
         {
-            var jsonData = JsonSerializer.Serialize(new { data = Data }, _jsonOptions);
+            var jsonData = JsonSerializer.Serialize(new
+            {
+                catalog = Catalog,
+                data = Data
+            }, _jsonOptions);
             var content = Encoding.UTF8.GetBytes(jsonData);
 
             return new ResponseOK
