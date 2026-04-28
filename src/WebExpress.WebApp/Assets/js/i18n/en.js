@@ -76,13 +76,13 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "wql.cursor.label": "Use <span class=\"wx-wql-key ms-5\">↑/↓</span> to navigate (<span class=\"text-muted\">{0}</span>)",
 
     // form editor
-    "formeditor.form.default_name": "New form",
-    "formeditor.form.fallback_name": "Form",
+    "formeditor.form.default.name": "New form",
+    "formeditor.form.fallback.name": "Form",
     "formeditor.form.name.placeholder": "Form name",
     "formeditor.form.description.placeholder": "Add a form description…",
-    "formeditor.tab.default_name": "Details",
-    "formeditor.tab.new_name": "Tab {0}",
-    "formeditor.tab.fallback_name": "Tab",
+    "formeditor.tab.default.name": "Default",
+    "formeditor.tab.new.name": "Tab {0}",
+    "formeditor.tab.fallback.name": "Tab",
     "formeditor.tab.add": "+ Add tab",
     "formeditor.preview.toggle.show": "Show preview",
     "formeditor.preview.toggle.hide": "Hide preview",

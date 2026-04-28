@@ -19,19 +19,9 @@ namespace WebExpress.WebApp.WebControl
         public const int _defaultIndent = 18;
 
         /// <summary>
-        /// Gets or sets the unique identifier of the form.
-        /// </summary>
-        public string FormId { get; set; }
-
-        /// <summary>
         /// Gets or sets the base URI used for REST API requests.
         /// </summary>
         public IUri RestUri { get; set; }
-
-        /// <summary>
-        /// Gets or sets the URI of the field catalog resource.
-        /// </summary>
-        public IUri FieldCatalogUri { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether preview mode is enabled.
@@ -65,7 +55,7 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            return Render(renderContext, visualTree, RestUri, FieldCatalogUri, Readonly);
+            return Render(renderContext, visualTree, RestUri, Readonly);
         }
 
         /// <summary>
@@ -74,10 +64,9 @@ namespace WebExpress.WebApp.WebControl
         /// <param name="renderContext">The context in which the control is rendered.</param>
         /// <param name="visualTree">The visual tree representing the control's structure.</param>
         /// <param name="restUri">The base URI used for REST API requests.</param>
-        /// <param name="fieldCatalogUri">The URI of the field catalog resource.</param>
         /// <param name="readonly">A value indicating whether the object is read-only.</param>
         /// <returns>An HTML node representing the rendered control.</returns>
-        public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IUri restUri, IUri fieldCatalogUri, bool @readonly)
+        public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IUri restUri, bool @readonly)
         {
             var classes = Classes.ToList();
             var indent = Indent < 8 ? 8 : Indent > 32 ? 32 : Indent;
@@ -89,9 +78,7 @@ namespace WebExpress.WebApp.WebControl
                 Style = GetStyles(),
                 Role = Role
             }
-                .AddUserAttribute("data-form-id", FormId)
                 .AddUserAttribute("data-rest-url", restUri?.ToString())
-                .AddUserAttribute("data-field-catalog-url", fieldCatalogUri?.ToString())
                 .AddUserAttribute("data-preview", !Preview ? "false" : null)
                 .AddUserAttribute("data-indent", indent != 18 ? indent.ToString(CultureInfo.InvariantCulture) : null)
                 .AddUserAttribute("data-readonly", @readonly ? "true" : null);

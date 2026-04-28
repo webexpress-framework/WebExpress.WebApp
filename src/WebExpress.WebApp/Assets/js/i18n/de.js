@@ -76,13 +76,13 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "wql.cursor.label": "<span class=\"wx-wql-key ms-5\">↑/↓</span> für (<span class=\"text-muted\">{0}</span>)",
 
     // Formular-Editor
-    "formeditor.form.default_name": "Neues Formular",
-    "formeditor.form.fallback_name": "Formular",
+    "formeditor.form.default.name": "Neues Formular",
+    "formeditor.form.fallback.name": "Formular",
     "formeditor.form.name.placeholder": "Formularname",
     "formeditor.form.description.placeholder": "Formularbeschreibung hinzufügen…",
-    "formeditor.tab.default_name": "Details",
-    "formeditor.tab.new_name": "Tab {0}",
-    "formeditor.tab.fallback_name": "Tab",
+    "formeditor.tab.default.name": "Standard",
+    "formeditor.tab.new.name": "Tab {0}",
+    "formeditor.tab.fallback.name": "Tab",
     "formeditor.tab.add": "+ Tab hinzufügen",
     "formeditor.preview.toggle.show": "Vorschau anzeigen",
     "formeditor.preview.toggle.hide": "Vorschau ausblenden",

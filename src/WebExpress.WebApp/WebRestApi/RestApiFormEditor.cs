@@ -13,8 +13,7 @@ using WebExpress.WebIndex.Queries;
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Abstract base class for the REST API that backs the visual form editor
-    /// (<c>ControlRestFormEditor</c> / <c>webexpress.webapp.RestFormEditorCtrl</c>).
+    /// Abstract base class for the REST API that backs the visual form editor.
     /// Handles the GET (load) and PUT (save) requests for a single form
     /// structure addressed by its form id.
     /// </summary>
@@ -53,7 +52,7 @@ namespace WebExpress.WebApp.WebRestApi
             try
             {
                 using var context = CreateContext();
-                var catalog = RetrieveCatalog(context, request);
+                var catalog = RetrieveCatalog(id, context, request);
                 var item = RetrieveItem(id, context, request);
 
                 if (item is null)
@@ -136,6 +135,9 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Retrieves a catalog of form editor field items based on the specified query context and request parameters.
         /// </summary>
+        /// <param name="formId">
+        /// The id of the form to load. Never null or whitespace.
+        /// </param>
         /// <param name="context">
         /// The query context that provides information about the current data retrieval operation. Cannot be null.
         /// </param>
@@ -146,7 +148,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// An enumerable collection of catalog field items that match the specified context and request. The 
         /// collection may be empty if no items are found.
         /// </returns>
-        protected abstract IEnumerable<RestApiFormEditorFieldItem> RetrieveCatalog(IQueryContext context, IRequest request);
+        protected abstract IEnumerable<RestApiFormEditorFieldItem> RetrieveCatalog(string formId, IQueryContext context, IRequest request);
 
         /// <summary>
         /// Retrieves the form structure that corresponds to the given form id.

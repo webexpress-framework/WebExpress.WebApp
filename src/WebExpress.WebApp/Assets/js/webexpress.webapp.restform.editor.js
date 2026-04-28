@@ -44,9 +44,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
     // logical field types accepted by the editor
     static FIELD_TYPES = ["string", "text", "timestamp", "ref", "enum", "tags", "number", "file"];
 
-    _formId = null;
     _restUrl = null;
-    _fieldCatalogUrl = null;
     _previewOn = true;
     _indent = 18;
     _readonly = false;
@@ -82,9 +80,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
 
         // initialize properties from data attributes
         const ds = element.dataset;
-        this._formId = ds.formId || null;
         this._restUrl = ds.restUrl || null;
-        this._fieldCatalogUrl = ds.fieldCatalogUrl || null;
         this._previewOn = ds.preview !== "false";
         const indent = parseInt(ds.indent, 10);
         this._indent = isFinite(indent) ? Math.min(32, Math.max(8, indent)) : 18;
@@ -98,14 +94,6 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         this._bindKeyboard();
         this._bindOutsideClick();
         this._bootstrap();
-    }
-
-    /**
-     * Gets the id of the form currently loaded in the editor.
-     * @returns {string|null}
-     */
-    get formId() {
-        return this._formId;
     }
 
     /**
@@ -160,17 +148,6 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Loads a form by id. When no rest url is configured and no inline structure
-     * was supplied, builds an empty placeholder structure with one tab.
-     * @param {string} formId - The form id to load.
-     * @returns {Promise<void>}
-     */
-    async loadForm(formId) {
-        this._formId = formId || this._formId;
-        await this._bootstrap();
-    }
-
-    /**
      * Adds a new tab and selects it.
      */
     addTab() {
@@ -180,7 +157,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         const id = webexpress.webapp.RestFormEditorCtrl._uid("t");
         const tab = {
             id: id,
-            name: this._t("formeditor.tab.new_name", this._structure.tabs.length + 1),
+            name: this._t("formeditor.tab.new.name", this._structure.tabs.length + 1),
             children: []
         };
         this._structure.tabs.push(tab);
@@ -325,17 +302,19 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
 
         if (!this._structure) {
             this._structure = {
-                formId: this._formId || webexpress.webapp.RestFormEditorCtrl._uid("form"),
-                formName: this._t("formeditor.form.default_name"),
+                formName: this._t("formeditor.form.default.name"),
                 formDescription: "",
                 className: "",
-                version: 1,
-                tabs: [{
-                    id: webexpress.webapp.RestFormEditorCtrl._uid("t"),
-                    name: this._t("formeditor.tab.default_name"),
-                    children: []
-                }]
+                version: 1
             };
+        }
+
+        if (!this._structure.tabs || this._structure.tabs.length == 0) {
+            this._structure.tabs = [{
+                id: webexpress.webapp.RestFormEditorCtrl._uid("t"),
+                name: this._t("formeditor.tab.default.name"),
+                children: []
+            }];
         }
 
         this._activeTabId = (this._structure.tabs && this._structure.tabs[0]) ? this._structure.tabs[0].id : null;
@@ -349,7 +328,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
      * @returns {Promise<void>}
      */
     async _loadStructure() {
-        if (this._structure || !this._restUrl || !this._formId) {
+        if (this._structure || !this._restUrl) {
             return;
         }
         try {
@@ -419,7 +398,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
 
         if (this._readonly) {
             const span = document.createElement("span");
-            span.textContent = value || this._t("formeditor.form.fallback_name");
+            span.textContent = value || this._t("formeditor.form.fallback.name");
             wrap.appendChild(span);
             return wrap;
         }
@@ -668,7 +647,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         const isActive = tab.id === this._activeTabId;
 
         if (!allowEdit || !isActive) {
-            wrap.textContent = value || this._t("formeditor.tab.fallback_name");
+            wrap.textContent = value || this._t("formeditor.tab.fallback.name");
             return wrap;
         }
 
@@ -676,7 +655,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         input.type = "text";
         input.className = "wx-form-editor-tab-name-input";
         input.value = value;
-        input.placeholder = this._t("formeditor.tab.fallback_name");
+        input.placeholder = this._t("formeditor.tab.fallback.name");
         wrap.appendChild(input);
 
         const ctrl = new webexpress.webui.SmartEditCtrl(wrap);
@@ -789,7 +768,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         const title = document.createElement("div");
         title.className = "wx-form-editor-preview-title";
         title.textContent = (this._structure && this._structure.formName)
-            || this._t("formeditor.form.fallback_name");
+            || this._t("formeditor.form.fallback.name");
         card.appendChild(title);
 
         const description = (this._structure && this._structure.formDescription) || "";
@@ -1696,7 +1675,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
      * Schedules a debounced PUT against the structure endpoint.
      */
     _scheduleSave() {
-        if (this._readonly || !this._restUrl || !this._formId || !this._structure) {
+        if (this._readonly || !this._restUrl || !this._structure) {
             return;
         }
         if (this._saveTimer) {
@@ -1711,11 +1690,11 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
      */
     async _save() {
         this._saveTimer = null;
-        if (this._readonly || !this._restUrl || !this._formId || !this._structure) {
+        if (this._readonly || !this._restUrl || !this._structure) {
             return;
         }
         try {
-            const res = await fetch(this._restUrl + "/item/" + encodeURIComponent(this._formId), {
+            const res = await fetch(this._restUrl, {
                 method: "PUT",
                 headers: {
                     "Accept": "application/json",

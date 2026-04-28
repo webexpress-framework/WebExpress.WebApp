@@ -12,13 +12,6 @@ namespace WebExpress.WebApp.WebControl
     public interface IControlRestFormEditor : IControl
     {
         /// <summary>
-        /// Identifier of the form to load on startup. When null, the editor
-        /// renders an empty shell and waits for a programmatic <c>loadForm</c>
-        /// call.
-        /// </summary>
-        string FormId { get; }
-
-        /// <summary>
         /// Base URL of the <c>FormStructure</c> REST endpoint
         /// (e.g. <c>/api/1/FormStructure</c>). When null, the editor operates
         /// in offline-mock mode against the inline initial structure.
