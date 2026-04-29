@@ -9,7 +9,7 @@ namespace WebExpress.WebApp.WebControl
     public interface IControlRestWorkflow : IControl
     {
         /// <summary>
-        /// Gets or sets the uri that determines the data.
+        /// Gets the uri that determines the data.
         /// </summary>
         IUri RestUri { get; }
     }

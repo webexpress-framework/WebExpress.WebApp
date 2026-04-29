@@ -57,6 +57,24 @@ namespace WebExpress.WebApp.WebRestApi
         public IEnumerable<RestApiWorkflowTransition> Transitions { get; set; }
 
         /// <summary>
+        /// Gets or sets the collection of workflow guards associated with this workflow.
+        /// </summary>
+        [JsonPropertyName("guards")]
+        public IEnumerable<RestApiWorkflowGuard> Guards { get; set; }
+
+        /// <summary>
+        /// Gets or sets the collection of post functions associated with the workflow transition.
+        /// </summary>
+        [JsonPropertyName("postfunctions")]
+        public IEnumerable<RestApiWorkflowPostFunction> PostFunctions { get; set; }
+
+        /// <summary>
+        /// Gets or sets the collection of validators to be applied to the workflow request.
+        /// </summary>
+        [JsonPropertyName("validations")]
+        public IEnumerable<RestApiWorkflowValidator> Validations { get; set; }
+
+        /// <summary>
         /// Converts the current instance into a response object.
         /// </summary>
         /// <returns>A Response object representing the result of the conversion.</returns>
@@ -70,7 +88,10 @@ namespace WebExpress.WebApp.WebRestApi
                 version = Version,
                 description = Description,
                 states = States,
-                transitions = Transitions
+                transitions = Transitions,
+                guards = Guards,
+                postfunctions = PostFunctions,
+                validations = Validations
             };
 
             var jsonData = JsonSerializer.Serialize(data, _jsonOptions);
