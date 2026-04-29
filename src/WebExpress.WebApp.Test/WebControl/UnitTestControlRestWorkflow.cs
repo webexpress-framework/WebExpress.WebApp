@@ -1,4 +1,4 @@
-﻿using WebExpress.WebApp.Test.Fixture;
+using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebControl;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebPage;
