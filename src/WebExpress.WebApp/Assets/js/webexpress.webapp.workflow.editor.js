@@ -12,19 +12,18 @@
  * Properties panel
  * ----------------
  * Selecting a state or transition in the canvas renders an inline properties
- * view inside the right pane (no modal). The DOM containers and CSS classes
- * mirror the KleeneStar Workflows.html prototype (props / prop-row /
- * prop-section / rule-list) translated to the framework's `wx-workflow-editor-`
- * namespace, so styling stays consistent and centralized in
- * `webexpress.webapp.workflow.editor.css`.
+ * view inside the right pane (no modal). When nothing is selected the panel
+ * shows a preflight status and a quick "Add transition" action.
+ *
+ * Transition properties group the rule editors (Validations, Guards, Post
+ * functions) into a tabbed area mirroring the design handoff.
  *
  * REST integration
  * ----------------
- * - data-uri               GET / PUT for the workflow model (states, transitions).
- * - data-templates-uri     GET dropdown of state templates (Add state).
- * - data-guards-uri        GET catalog of available guards.
- * - data-validators-uri    GET catalog of available validators.
- * - data-postfunctions-uri GET catalog of available post functions.
+ * A single `data-uri` returns the workflow definition as a
+ * `RestApiWorkflowResult` payload. The same response carries the catalogs of
+ * available guards, validations and post functions consumed by the rule
+ * pickers, so no additional endpoints are needed.
  *
  * Mutations are debounced and persisted automatically.
  */
@@ -32,18 +31,17 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
 
     // configuration
     _restUri = "";
-    _templatesUri = "";
-    _guardsUri = "";
-    _validatorsUri = "";
-    _postfunctionsUri = "";
+
+    // cached catalogs sourced from the same REST response
+    _catalog = { guards: [], validations: [], postfunctions: [] };
 
     // request state
     _isLoading = false;
     _abortController = null;
     _saveDebounce = null;
 
-    // dropdown controller instance (Add state)
-    _addNodeDropdownCtrl = null;
+    // workflow header metadata kept for round-tripping
+    _meta = { id: "", name: "", state: "", version: "", description: "" };
 
     // split layout
     _splitHost = null;
@@ -52,8 +50,9 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
     _propsHost = null;
     _toggleBtn = null;
 
-    // cached rule libraries (lazy-loaded the first time the rule picker opens)
-    _libraryCache = {};
+    // remembered tab selection so the panel does not snap back to the first
+    // tab on every render (e.g. while picking a rule)
+    _activeTransitionTab = "validations";
 
     /**
      * Initializes the workflow editor on the host element.
@@ -64,19 +63,11 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
 
         const ds = element.dataset;
         this._restUri = ds.uri || "";
-        this._templatesUri = ds.templatesUri || "";
-        this._guardsUri = ds.guardsUri || "";
-        this._validatorsUri = ds.validatorsUri || "";
-        this._postfunctionsUri = ds.postfunctionsUri || "";
 
-        for (const a of ["uri", "templates-uri", "guards-uri", "validators-uri", "postfunctions-uri"]) {
-            element.removeAttribute("data-" + a);
-        }
-
+        element.removeAttribute("data-uri");
         element.classList.add("wx-workflow-editor");
 
         this._buildLayout();
-        this._setupAddNodeDropdown();
         this._setupShortcuts();
 
         if (this._restUri !== "") {
@@ -117,7 +108,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
             toggle.type = "button";
             toggle.id = "btn-toggle-props";
             toggle.className = "wx-simple-btn wx-workflow-editor-toggle";
-            toggle.title = this._i18n("webexpress.webapp:workflow.editor.props.toggle", "Toggle properties panel");
+            toggle.title = this._i18n("webexpress.webui:workflow.editor.props.toggle");
             toggle.innerHTML = `<i class="fas fa-columns" aria-hidden="true"></i>`;
             toggle.onclick = (e) => {
                 e.stopPropagation();
@@ -171,57 +162,6 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
     }
 
     /**
-     * Replaces the standard add-node toolbar button with a REST dropdown
-     * sourced from `data-templates-uri`. When no templates URI is configured
-     * the original add-node button stays untouched.
-     */
-    _setupAddNodeDropdown() {
-        if (this._templatesUri === "") {
-            return;
-        }
-
-        const oldBtn = this._toolbarContainer && this._toolbarContainer.querySelector("#btn-add-node");
-        if (!oldBtn) {
-            return;
-        }
-
-        const dropdown = document.createElement("div");
-        dropdown.setAttribute("data-uri", this._templatesUri);
-        dropdown.setAttribute("data-searchplaceholder",
-            this._i18n("webexpress.webapp:workflow.editor.state.search", "Search states..."));
-        dropdown.setAttribute("data-icon", "fas fa-plus-circle");
-
-        oldBtn.parentNode.replaceChild(dropdown, oldBtn);
-
-        this._addNodeDropdownCtrl = new webexpress.webapp.DropdownCtrl(dropdown);
-
-        const eventName = webexpress.webui.Event.CHANGE_VALUE_EVENT || "webexpress.webui.change.value";
-        dropdown.addEventListener(eventName, (e) => {
-            const selectedId = e.detail.value;
-            if (!selectedId) {
-                return;
-            }
-
-            const stateId = selectedId.startsWith("tpl_") ? selectedId.substring(4) : selectedId;
-            if (this._model && this._model.nodes.some(n => n.id === stateId)) {
-                console.warn("workflow editor: state already exists.");
-                return;
-            }
-
-            fetch(this._templatesUri)
-                .then(res => res.json())
-                .then(data => {
-                    const items = Array.isArray(data.items) ? data.items : data;
-                    const tpl = items.find(t => t.id === selectedId);
-                    if (tpl) {
-                        this._instantiateNodeFromTemplate(tpl);
-                    }
-                })
-                .catch(err => console.error("workflow editor: template fetch failed", err));
-        });
-    }
-
-    /**
      * Wires keyboard shortcuts that complement the existing graph-editor keys.
      *  - F2     Rename selected state (focus inline edit).
      *  - Esc    Clear selection (collapses the properties panel preview).
@@ -265,9 +205,10 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
     }
 
     /**
-     * Loads the workflow model from the REST endpoint. Translates the
-     * states / transitions wire format to the nodes / edges shape the graph
-     * editor expects.
+     * Loads the workflow model from the REST endpoint. A single response
+     * carries both the workflow definition (states / transitions) and the
+     * catalogs (guards / validations / postfunctions) that drive the rule
+     * pickers, matching the `RestApiWorkflowResult` shape.
      */
     _receiveData() {
         if (this._restUri === "") {
@@ -299,6 +240,18 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
                 return res.json();
             })
             .then(response => {
+                this._meta = {
+                    id: response.id || "",
+                    name: response.name || "",
+                    state: response.state || "",
+                    version: response.version || "",
+                    description: response.description || ""
+                };
+                this._catalog = {
+                    guards: Array.isArray(response.guards) ? response.guards : [],
+                    validations: Array.isArray(response.validations) ? response.validations : [],
+                    postfunctions: Array.isArray(response.postfunctions) ? response.postfunctions : []
+                };
                 this.model = this._fromWireFormat(response);
                 this._element.classList.remove("placeholder-glow");
                 this._isLoading = false;
@@ -452,6 +405,11 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
         }
 
         const payload = {
+            id: this._meta.id,
+            name: this._meta.name,
+            state: this._meta.state,
+            version: this._meta.version,
+            description: this._meta.description,
             nodes: this._model.nodes,
             edges: this._model.edges,
             // mirror payload using the REST wire names so backends that prefer
@@ -471,58 +429,6 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
                 }
             })
             .catch(err => console.error("workflow editor: save failed", err));
-    }
-
-    /**
-     * Disables the base class manual add-node action — adding nodes is gated
-     * through the Add State dropdown.
-     */
-    _addNode() {
-        if (this._templatesUri === "") {
-            super._addNode();
-            return;
-        }
-        console.warn("workflow editor: use the Add State dropdown to insert new states.");
-    }
-
-    /**
-     * Materializes a new state node from a template. The node is selected
-     * after creation so the side panel immediately shows its inspector.
-     * @param {object} tpl - selected template object.
-     */
-    _instantiateNodeFromTemplate(tpl) {
-        this._saveStateToHistory();
-
-        const rect = this._svg.getBoundingClientRect();
-        const centerX = (rect.width / 2 - (this._pan ? this._pan.x : 0)) / (this._scale || 1);
-        const centerY = (rect.height / 2 - (this._pan ? this._pan.y : 0)) / (this._scale || 1);
-
-        const stateId = tpl.id.startsWith("tpl_") ? tpl.id.substring(4) : tpl.id;
-
-        const newNode = {
-            id: stateId,
-            label: tpl.label || stateId,
-            x: centerX,
-            y: centerY,
-            hasPosition: true,
-            layout: tpl.layout || "label-inside",
-            shape: tpl.shape || "rect",
-            backgroundColor: tpl.backgroundColor || "#ffffff",
-            foregroundColor: tpl.foregroundColor || "#000000",
-            icon: tpl.icon || "",
-            image: tpl.image || "",
-            uri: tpl.uri || ""
-        };
-
-        this._model.nodes.push(newNode);
-
-        this._deselectAll();
-        this._selectedNodeId = newNode.id;
-
-        this._buildPhysics();
-        this.render();
-        this._updateToolbarState();
-        this._emitChangeSafe();
     }
 
     /**
@@ -573,22 +479,144 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
     }
 
     /**
-     * Builds the empty-state hint shown when nothing is selected.
+     * Builds the empty-state hint shown when nothing is selected. Mirrors the
+     * layout handoff: eyebrow / title / hint, a preflight status block, and a
+     * quick "Add transition" action.
      * @returns {HTMLElement}
      */
     _renderEmptyProps() {
         const props = this._buildPropsShell(
-            this._i18n("webexpress.webapp:workflow.editor.props.eyebrow", "Properties"),
-            this._i18n("webexpress.webapp:workflow.editor.props.empty.title", "Select an item")
+            this._i18n("webexpress.webui:workflow.editor.props.eyebrow"),
+            this._i18n("webexpress.webui:workflow.editor.props.empty.title")
         );
         const body = props.querySelector(".wx-workflow-editor-props__body");
 
         const hint = document.createElement("div");
         hint.className = "wx-workflow-editor-props__hint";
-        hint.textContent = this._i18n("webexpress.webapp:workflow.editor.props.empty.hint",
-            "Click a state or transition in the canvas to inspect and edit its properties.");
+        hint.textContent = this._i18n("webexpress.webui:workflow.editor.props.empty.hint");
         body.appendChild(hint);
+
+        body.appendChild(this._renderPreflightStatus());
+
+        const addRow = document.createElement("div");
+        addRow.className = "wx-workflow-editor-props__add-action";
+
+        const addBtn = document.createElement("button");
+        addBtn.type = "button";
+        addBtn.className = "wx-workflow-editor-btn wx-workflow-editor-btn--ghost";
+        addBtn.innerHTML = `<i class="fas fa-plus" aria-hidden="true"></i> <span></span>`;
+        addBtn.querySelector("span").textContent =
+            this._i18n("webexpress.webui:workflow.editor.props.add.transition");
+        addBtn.addEventListener("click", () => this._beginAddTransition());
+        addRow.appendChild(addBtn);
+        body.appendChild(addRow);
+
         return props;
+    }
+
+    /**
+     * Computes a quick preflight summary for the current model and renders it
+     * as a status block. Reports the first concrete issue when something is
+     * off; otherwise reports "all green".
+     * @returns {HTMLElement}
+     */
+    _renderPreflightStatus() {
+        const issues = this._collectPreflightIssues();
+
+        const box = document.createElement("div");
+        box.className = "wx-workflow-editor-preflight";
+
+        const icon = document.createElement("i");
+        const text = document.createElement("span");
+        text.className = "wx-workflow-editor-preflight__text";
+
+        if (issues.length === 0) {
+            box.classList.add("wx-workflow-editor-preflight--ok");
+            icon.className = "fas fa-check";
+            text.textContent = this._i18n("webexpress.webui:workflow.editor.preflight.ok");
+        } else {
+            box.classList.add("wx-workflow-editor-preflight--warn");
+            icon.className = "fas fa-triangle-exclamation";
+            text.textContent = issues[0];
+        }
+        icon.setAttribute("aria-hidden", "true");
+
+        box.appendChild(icon);
+        box.appendChild(text);
+        return box;
+    }
+
+    /**
+     * Collects model-level issues used by the preflight indicator. A non-empty
+     * list disables the OK badge in the empty-state panel.
+     * @returns {string[]}
+     */
+    _collectPreflightIssues() {
+        const issues = [];
+        if (!this._model) {
+            return issues;
+        }
+        const nodes = this._model.nodes || [];
+        const edges = this._model.edges || [];
+        const ids = new Set(nodes.map(n => n.id));
+
+        for (const e of edges) {
+            if (!ids.has(e.from) || !ids.has(e.to)) {
+                issues.push(this._i18n("webexpress.webui:workflow.editor.preflight.broken.reference"));
+                return issues;
+            }
+        }
+
+        if (nodes.length > 0) {
+            const reachable = new Set();
+            const queue = [nodes[0].id];
+            while (queue.length > 0) {
+                const id = queue.shift();
+                if (reachable.has(id)) {
+                    continue;
+                }
+                reachable.add(id);
+                for (const e of edges) {
+                    if (e.from === id) { queue.push(e.to); }
+                }
+            }
+            if (reachable.size < nodes.length) {
+                issues.push(this._i18n("webexpress.webui:workflow.editor.preflight.unreachable"));
+            }
+        }
+
+        return issues;
+    }
+
+    /**
+     * Inserts a brand-new transition between the first two states and selects
+     * it for editing. Used by the empty-state quick action.
+     */
+    _beginAddTransition() {
+        if (!this._model || (this._model.nodes || []).length < 2) {
+            return;
+        }
+        this._saveStateToHistory();
+
+        const [a, b] = this._model.nodes;
+        const newEdge = {
+            id: "tr_" + Date.now(),
+            from: a.id,
+            to: b.id,
+            label: this._i18n("webexpress.webui:workflow.editor.transition.new"),
+            guards: [],
+            validators: [],
+            postfunctions: []
+        };
+        this._model.edges.push(newEdge);
+
+        this._deselectAll();
+        this._selectedEdgeId = newEdge.id;
+
+        this._buildPhysics();
+        this.render();
+        this._updateToolbarState();
+        this._emitChangeSafe();
     }
 
     /**
@@ -598,27 +626,27 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
      */
     _renderStateProps(node) {
         const props = this._buildPropsShell(
-            this._i18n("webexpress.webapp:workflow.editor.state.eyebrow", "State"),
+            this._i18n("webexpress.webui:workflow.editor.state.eyebrow"),
             node.label || node.id || ""
         );
         const body = props.querySelector(".wx-workflow-editor-props__body");
 
         body.appendChild(this._renderStaticRow(
-            this._i18n("webexpress.webapp:workflow.editor.state.id", "Key"),
+            this._i18n("webexpress.webui:workflow.editor.state.id"),
             node.id, "wx-workflow-editor-prop-row__value--mono"));
 
         body.appendChild(this._renderInputRow(
-            this._i18n("webexpress.webapp:workflow.editor.state.label", "Label"),
+            this._i18n("webexpress.webui:workflow.editor.state.label"),
             "label", node.label || "",
             (val) => this._mutateNode(node, { label: val })));
 
         body.appendChild(this._renderColorRow(
-            this._i18n("webexpress.webapp:workflow.editor.state.background", "Background"),
+            this._i18n("webexpress.webui:workflow.editor.state.background"),
             node.backgroundColor || "#ffffff",
             (val) => this._mutateNode(node, { backgroundColor: val })));
 
         body.appendChild(this._renderColorRow(
-            this._i18n("webexpress.webapp:workflow.editor.state.foreground", "Text colour"),
+            this._i18n("webexpress.webui:workflow.editor.state.foreground"),
             node.foregroundColor || "#000000",
             (val) => this._mutateNode(node, { foregroundColor: val })));
 
@@ -627,14 +655,14 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
         const outgoing = this._model.edges.filter(t => t.from === node.id);
 
         body.appendChild(this._renderTransitionListSection(
-            this._i18n("webexpress.webapp:workflow.editor.state.incoming", "Incoming transitions"),
+            this._i18n("webexpress.webui:workflow.editor.state.incoming"),
             incoming, "to"));
         body.appendChild(this._renderTransitionListSection(
-            this._i18n("webexpress.webapp:workflow.editor.state.outgoing", "Outgoing transitions"),
+            this._i18n("webexpress.webui:workflow.editor.state.outgoing"),
             outgoing, "from"));
 
         body.appendChild(this._renderDeleteRow(
-            this._i18n("webexpress.webapp:workflow.editor.state.delete", "Delete state"),
+            this._i18n("webexpress.webui:workflow.editor.state.delete"),
             () => {
                 this._selectedNodeId = node.id;
                 this._selectedEdgeId = null;
@@ -646,13 +674,14 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
 
     /**
      * Builds the transition properties view (label / form / description /
-     * source / target / guards / validators / post functions).
+     * source / target) followed by tabs for Validations / Guards / Post
+     * functions.
      * @param {object} edge
      * @returns {HTMLElement}
      */
     _renderTransitionProps(edge) {
         const props = this._buildPropsShell(
-            this._i18n("webexpress.webapp:workflow.editor.transition.eyebrow", "Transition"),
+            this._i18n("webexpress.webui:workflow.editor.transition.eyebrow"),
             edge.label || edge.id || ""
         );
         const body = props.querySelector(".wx-workflow-editor-props__body");
@@ -668,69 +697,46 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
         }
 
         body.appendChild(this._renderInputRow(
-            this._i18n("webexpress.webapp:workflow.editor.transition.label", "Label"),
+            this._i18n("webexpress.webui:workflow.editor.transition.label"),
             "label", edge.label || "",
             (val) => this._mutateEdge(edge, { label: val })));
 
         body.appendChild(this._renderSelectRow(
-            this._i18n("webexpress.webapp:workflow.editor.transition.source", "Source"),
+            this._i18n("webexpress.webui:workflow.editor.transition.source"),
             this._model.nodes.map(n => ({ value: n.id, label: n.label || n.id })),
             edge.from || "",
             (val) => this._mutateEdge(edge, { from: val })));
 
         body.appendChild(this._renderSelectRow(
-            this._i18n("webexpress.webapp:workflow.editor.transition.target", "Target"),
+            this._i18n("webexpress.webui:workflow.editor.transition.target"),
             this._model.nodes.map(n => ({ value: n.id, label: n.label || n.id, disabled: n.id === edge.from })),
             edge.to || "",
             (val) => this._mutateEdge(edge, { to: val })));
 
         body.appendChild(this._renderInputRow(
-            this._i18n("webexpress.webapp:workflow.editor.transition.form", "Form"),
+            this._i18n("webexpress.webui:workflow.editor.transition.form"),
             "form", edge.form || "",
             (val) => this._mutateEdge(edge, { form: val })));
 
         body.appendChild(this._renderInputRow(
-            this._i18n("webexpress.webapp:workflow.editor.transition.description", "Description"),
+            this._i18n("webexpress.webui:workflow.editor.transition.description"),
             "description", edge.description || "",
             (val) => this._mutateEdge(edge, { description: val })));
 
         body.appendChild(this._renderColorRow(
-            this._i18n("webexpress.webapp:workflow.editor.transition.color", "Colour"),
+            this._i18n("webexpress.webui:workflow.editor.transition.color"),
             edge.color || "#000000",
             (val) => this._mutateEdge(edge, { color: val })));
 
         body.appendChild(this._renderInputRow(
-            this._i18n("webexpress.webapp:workflow.editor.transition.dasharray", "Dash array"),
+            this._i18n("webexpress.webui:workflow.editor.transition.dasharray"),
             "dasharray", edge.dasharray || "",
             (val) => this._mutateEdge(edge, { dasharray: val })));
 
-        body.appendChild(this._renderRuleSection(
-            edge, "guards",
-            this._i18n("webexpress.webapp:workflow.editor.transition.guards", "Guards"),
-            "fas fa-shield-alt",
-            this._guardsUri,
-            this._i18n("webexpress.webapp:workflow.editor.transition.guards.add", "Add guard"),
-            this._i18n("webexpress.webapp:workflow.editor.transition.guards.empty", "No guards configured.")));
-
-        body.appendChild(this._renderRuleSection(
-            edge, "validators",
-            this._i18n("webexpress.webapp:workflow.editor.transition.validators", "Validators"),
-            "fas fa-check-double",
-            this._validatorsUri,
-            this._i18n("webexpress.webapp:workflow.editor.transition.validators.add", "Add validator"),
-            this._i18n("webexpress.webapp:workflow.editor.transition.validators.empty", "No validators configured.")));
-
-        body.appendChild(this._renderRuleSection(
-            edge, "postfunctions",
-            this._i18n("webexpress.webapp:workflow.editor.transition.postfunctions", "Post functions"),
-            "fas fa-bolt",
-            this._postfunctionsUri,
-            this._i18n("webexpress.webapp:workflow.editor.transition.postfunctions.add", "Add post function"),
-            this._i18n("webexpress.webapp:workflow.editor.transition.postfunctions.empty", "No post functions configured."),
-            true));
+        body.appendChild(this._renderRuleTabs(edge));
 
         body.appendChild(this._renderDeleteRow(
-            this._i18n("webexpress.webapp:workflow.editor.transition.delete", "Delete transition"),
+            this._i18n("webexpress.webui:workflow.editor.transition.delete"),
             () => {
                 this._selectedEdgeId = edge.id;
                 this._selectedNodeId = null;
@@ -741,9 +747,131 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
     }
 
     /**
+     * Builds the tab strip that groups the rule editors (Validations / Guards
+     * / Post functions). The tab control is a plain DOM-driven implementation
+     * so it can co-exist with the dynamic rebuild that drives the rest of the
+     * properties panel.
+     * @param {object} edge
+     * @returns {HTMLElement}
+     */
+    _renderRuleTabs(edge) {
+        const tabs = [
+            {
+                id: "validations",
+                label: this._i18n("webexpress.webui:workflow.editor.transition.validations"),
+                icon: "fas fa-check-double",
+                build: () => this._renderRulePanel(edge, "validators",
+                    this._catalog.validations,
+                    this._i18n("webexpress.webui:workflow.editor.transition.validations.add"),
+                    this._i18n("webexpress.webui:workflow.editor.transition.validations.empty"),
+                    false)
+            },
+            {
+                id: "guards",
+                label: this._i18n("webexpress.webui:workflow.editor.transition.guards"),
+                icon: "fas fa-shield-alt",
+                build: () => this._renderRulePanel(edge, "guards",
+                    this._catalog.guards,
+                    this._i18n("webexpress.webui:workflow.editor.transition.guards.add"),
+                    this._i18n("webexpress.webui:workflow.editor.transition.guards.empty"),
+                    false)
+            },
+            {
+                id: "postfunctions",
+                label: this._i18n("webexpress.webui:workflow.editor.transition.postfunctions"),
+                icon: "fas fa-bolt",
+                build: () => this._renderRulePanel(edge, "postfunctions",
+                    this._catalog.postfunctions,
+                    this._i18n("webexpress.webui:workflow.editor.transition.postfunctions.add"),
+                    this._i18n("webexpress.webui:workflow.editor.transition.postfunctions.empty"),
+                    true)
+            }
+        ];
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "wx-workflow-editor-tabs";
+
+        const nav = document.createElement("div");
+        nav.className = "wx-workflow-editor-tabs__nav";
+        nav.setAttribute("role", "tablist");
+
+        const panel = document.createElement("div");
+        panel.className = "wx-workflow-editor-tabs__panel";
+        panel.setAttribute("role", "tabpanel");
+
+        const counts = {
+            validations: Array.isArray(edge.validators) ? edge.validators.length : 0,
+            guards: Array.isArray(edge.guards) ? edge.guards.length : 0,
+            postfunctions: Array.isArray(edge.postfunctions) ? edge.postfunctions.length : 0
+        };
+
+        const activeId = tabs.some(t => t.id === this._activeTransitionTab)
+            ? this._activeTransitionTab
+            : tabs[0].id;
+
+        const renderActivePanel = () => {
+            panel.textContent = "";
+            const active = tabs.find(t => t.id === this._activeTransitionTab) || tabs[0];
+            panel.appendChild(active.build());
+        };
+
+        for (const tab of tabs) {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "wx-workflow-editor-tabs__tab";
+            btn.setAttribute("role", "tab");
+            btn.dataset.tabId = tab.id;
+            if (tab.id === activeId) {
+                btn.classList.add("is-active");
+                btn.setAttribute("aria-selected", "true");
+            } else {
+                btn.setAttribute("aria-selected", "false");
+            }
+
+            const i = document.createElement("i");
+            i.className = tab.icon;
+            i.setAttribute("aria-hidden", "true");
+            btn.appendChild(i);
+
+            const lbl = document.createElement("span");
+            lbl.className = "wx-workflow-editor-tabs__label";
+            lbl.textContent = tab.label;
+            btn.appendChild(lbl);
+
+            const badge = document.createElement("span");
+            const count = counts[tab.id] || 0;
+            badge.className = "wx-workflow-editor-badge" + (count === 0 ? " wx-workflow-editor-badge--zero" : "");
+            badge.textContent = String(count);
+            btn.appendChild(badge);
+
+            btn.addEventListener("click", () => {
+                if (this._activeTransitionTab === tab.id) {
+                    return;
+                }
+                this._activeTransitionTab = tab.id;
+                for (const t of nav.querySelectorAll(".wx-workflow-editor-tabs__tab")) {
+                    const isActive = t.dataset.tabId === tab.id;
+                    t.classList.toggle("is-active", isActive);
+                    t.setAttribute("aria-selected", isActive ? "true" : "false");
+                }
+                renderActivePanel();
+            });
+
+            nav.appendChild(btn);
+        }
+
+        wrapper.appendChild(nav);
+        wrapper.appendChild(panel);
+
+        this._activeTransitionTab = activeId;
+        renderActivePanel();
+
+        return wrapper;
+    }
+
+    /**
      * Builds the shared shell (eyebrow + title + body) used by every
-     * properties view. The eyebrow / title classes mirror the Workflows.html
-     * prototype's `props__eyebrow` / `props__title`.
+     * properties view.
      * @param {string} eyebrow
      * @param {string} title
      * @returns {HTMLElement}
@@ -801,9 +929,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
      * Renders a label / text input row.
      *
      * One undo snapshot is captured on focus; subsequent keystrokes mutate the
-     * model directly without pushing further history entries, so a typing
-     * session collapses into a single undoable edit. The canvas re-renders
-     * live and the autosave is debounced.
+     * model directly without pushing further history entries.
      * @param {string} label
      * @param {string} key
      * @param {string} value
@@ -949,8 +1075,8 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
     }
 
     /**
-     * Renders a labelled, collapsible-style section that lists a state's
-     * incoming or outgoing transitions.
+     * Renders a labelled section that lists a state's incoming or outgoing
+     * transitions.
      * @param {string} title
      * @param {object[]} edges
      * @param {string} otherSide - "from" or "to" (the side that isn't this state).
@@ -979,7 +1105,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
         if (edges.length === 0) {
             const empty = document.createElement("div");
             empty.className = "wx-workflow-editor-prop-section__empty";
-            empty.textContent = this._i18n("webexpress.webapp:workflow.editor.section.none", "—");
+            empty.textContent = this._i18n("webexpress.webui:workflow.editor.section.none");
             body.appendChild(empty);
         } else {
             for (const e of edges) {
@@ -1005,46 +1131,27 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
     }
 
     /**
-     * Renders a guard / validator / post-function section with an inline
-     * picker dropdown (lazy-loaded from the corresponding URI). When
-     * `ordered=true` the items are numbered and can be reordered via ↑ / ↓.
+     * Renders the rule list panel (used inside each tab) with an inline picker
+     * for the configured catalog. When `ordered=true` the items are numbered
+     * and can be reordered via ↑ / ↓.
      * @param {object} edge
-     * @param {"guards"|"validators"|"postfunctions"} kind
-     * @param {string} title
-     * @param {string} iconClass
-     * @param {string} uri
+     * @param {"validators"|"guards"|"postfunctions"} kind
+     * @param {object[]} catalog - catalog entries from the REST response
      * @param {string} addLabel
      * @param {string} emptyLabel
-     * @param {boolean} [ordered=false]
+     * @param {boolean} ordered
      * @returns {HTMLElement}
      */
-    _renderRuleSection(edge, kind, title, iconClass, uri, addLabel, emptyLabel, ordered = false) {
+    _renderRulePanel(edge, kind, catalog, addLabel, emptyLabel, ordered) {
         if (!Array.isArray(edge[kind])) {
             edge[kind] = [];
         }
         const items = edge[kind];
 
-        const section = document.createElement("div");
-        section.className = "wx-workflow-editor-prop-section";
+        const panel = document.createElement("div");
+        panel.className = "wx-workflow-editor-rule-panel";
 
-        // head ─ title / count badge / add button (with picker)
-        const head = document.createElement("div");
-        head.className = "wx-workflow-editor-prop-section__head";
-
-        const icon = document.createElement("i");
-        icon.className = iconClass;
-        icon.setAttribute("aria-hidden", "true");
-        head.appendChild(icon);
-
-        const titleEl = document.createElement("span");
-        titleEl.textContent = title;
-        head.appendChild(titleEl);
-
-        const badge = document.createElement("span");
-        badge.className = "wx-workflow-editor-badge" + (items.length === 0 ? " wx-workflow-editor-badge--zero" : "");
-        badge.textContent = String(items.length);
-        head.appendChild(badge);
-
+        // toolbar row ─ add button (with picker)
         const addWrap = document.createElement("div");
         addWrap.className = "wx-workflow-editor-rule-add";
 
@@ -1060,17 +1167,16 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
         picker.style.display = "none";
         addWrap.appendChild(picker);
 
-        const renderPickerItems = (lib) => {
+        const renderPickerItems = () => {
             picker.textContent = "";
-            if (!lib || lib.length === 0) {
+            if (!catalog || catalog.length === 0) {
                 const empty = document.createElement("div");
                 empty.className = "wx-workflow-editor-rule-picker__empty";
-                empty.textContent = this._i18n("webexpress.webapp:workflow.editor.picker.empty",
-                    "No catalog entries available.");
+                empty.textContent = this._i18n("webexpress.webui:workflow.editor.picker.empty");
                 picker.appendChild(empty);
                 return;
             }
-            for (const tpl of lib) {
+            for (const tpl of catalog) {
                 const opt = document.createElement("button");
                 opt.type = "button";
                 opt.className = "wx-workflow-editor-rule-picker__item";
@@ -1103,16 +1209,15 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
             }
             picker.style.display = visible ? "none" : "block";
             if (!visible) {
-                this._loadLibrary(uri).then(lib => renderPickerItems(lib));
+                renderPickerItems();
             }
         });
 
-        head.appendChild(addWrap);
-        section.appendChild(head);
+        panel.appendChild(addWrap);
 
-        // body ─ ordered list of currently configured items
+        // list ─ ordered list of currently configured items
         const body = document.createElement("div");
-        body.className = "wx-workflow-editor-prop-section__body";
+        body.className = "wx-workflow-editor-rule-panel__body";
 
         if (items.length === 0) {
             const empty = document.createElement("div");
@@ -1149,7 +1254,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
 
                 if (ordered && idx > 0) {
                     actions.appendChild(this._buildSmallBtn("↑",
-                        this._i18n("webexpress.webapp:workflow.editor.rule.up", "Move up"),
+                        this._i18n("webexpress.webui:workflow.editor.rule.up"),
                         () => {
                             this._saveStateToHistory();
                             const next = items.slice();
@@ -1161,7 +1266,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
                 }
                 if (ordered && idx < items.length - 1) {
                     actions.appendChild(this._buildSmallBtn("↓",
-                        this._i18n("webexpress.webapp:workflow.editor.rule.down", "Move down"),
+                        this._i18n("webexpress.webui:workflow.editor.rule.down"),
                         () => {
                             this._saveStateToHistory();
                             const next = items.slice();
@@ -1172,7 +1277,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
                         }));
                 }
                 actions.appendChild(this._buildSmallBtn("×",
-                    this._i18n("webexpress.webapp:workflow.editor.rule.remove", "Remove"),
+                    this._i18n("webexpress.webui:workflow.editor.rule.remove"),
                     () => {
                         this._saveStateToHistory();
                         const next = items.slice();
@@ -1188,8 +1293,8 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
             body.appendChild(list);
         }
 
-        section.appendChild(body);
-        return section;
+        panel.appendChild(body);
+        return panel;
     }
 
     /**
@@ -1214,36 +1319,8 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
     }
 
     /**
-     * Lazy-loads a catalog (guards / validators / post functions) from the
-     * configured URI and caches the result. Returns an empty list when no URI
-     * is configured.
-     * @param {string} uri
-     * @returns {Promise<object[]>}
-     */
-    _loadLibrary(uri) {
-        if (!uri) {
-            return Promise.resolve([]);
-        }
-        if (this._libraryCache[uri]) {
-            return Promise.resolve(this._libraryCache[uri]);
-        }
-        return fetch(uri)
-            .then(res => res.json())
-            .then(data => {
-                const items = Array.isArray(data.items) ? data.items : (Array.isArray(data) ? data : []);
-                this._libraryCache[uri] = items;
-                return items;
-            })
-            .catch(err => {
-                console.error("workflow editor: failed to load library", uri, err);
-                return [];
-            });
-    }
-
-    /**
      * Applies a partial mutation to a state node. Re-renders the canvas and
-     * triggers the debounced save. The caller is responsible for taking an
-     * undo snapshot at the right granularity (per-action, not per-keystroke).
+     * triggers the debounced save.
      * @param {object} node
      * @param {object} patch
      */
@@ -1263,8 +1340,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
 
     /**
      * Applies a partial mutation to a transition. Re-renders the canvas and
-     * triggers the debounced save. The caller is responsible for taking an
-     * undo snapshot at the right granularity (per-action, not per-keystroke).
+     * triggers the debounced save.
      * @param {object} edge
      * @param {object} patch
      */
