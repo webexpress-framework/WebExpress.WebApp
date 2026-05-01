@@ -1,4 +1,6 @@
-﻿using WebExpress.WebCore.WebHtml;
+﻿using System.Linq;
+using WebExpress.WebCore.Internationalization;
+using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
@@ -8,7 +10,7 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// Represents a control panel for API list interactions.
     /// </summary>
-    public class ControlRestList : ControlPanel, IControlRestList
+    public class ControlRestList : ControlList, IControlRestList
     {
         /// <summary>
         /// Gets or sets the uri that determines the data.
@@ -45,7 +47,9 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="renderContext">The context in which the control is rendered.</param>
         /// <param name="visualTree">The visual tree.</param>
-        /// <param name="uri">An optional URI containing parameters to be bound to the rendering context. Can be null.</param>
+        /// <param name="uri">
+        /// An optional URI containing parameters to be bound to the rendering context. Can be null.
+        /// </param>
         /// <returns>An HTML node representing the rendered control.</returns>
         public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IUri uri)
         {
@@ -57,7 +61,12 @@ namespace WebExpress.WebApp.WebControl
                 Class = Css.Concatenate("wx-webapp-list", GetClasses()),
                 Style = GetStyles()
             }
-                .AddUserAttribute("data-uri", resultUri?.ToString());
+                .AddUserAttribute("data-title", I18N.Translate(renderContext, Title))
+                .AddUserAttribute("data-sortable", Sortable ? "true" : null)
+                .AddUserAttribute("data-selectable", Selectable ? "true" : null)
+                .AddUserAttribute("data-layout", Layout.ToClass())
+                .AddUserAttribute("data-uri", resultUri?.ToString())
+                .Add(Items.Select(x => x.Render(renderContext, visualTree)));
 
             Bind?.ApplyUserAttributes(html);
 

@@ -60,7 +60,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             var items = root.GetProperty("items").EnumerateArray().ToList();
             Assert.Single(items);
 
-            Assert.NotEmpty(items[0].GetProperty("content").GetString());
+            Assert.NotEmpty(items[0].GetProperty("text").GetString());
             Assert.Null(items[0].GetProperty("icon").GetString());
 
             var options = items[0].GetProperty("options").EnumerateArray().ToList();
