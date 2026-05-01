@@ -62,19 +62,23 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 /* Progress indicator wrapper */
 .wx-restwizard-progress {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 0.5rem;
     margin-bottom: 2rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
 }
 
 /* Individual progress steps */
-.wx-restwizard-progress > div {
+.wx-restwizard-progress .wx-restwizard-step {
     flex: 1 1 0;
+    min-width: 0;
     text-align: center;
     padding: 0.75rem 0.5rem;
     font-size: 0.9rem;
-    border-bottom: 3px solid #dee2e6; /* Bootstrap border color */
-    color: #6c757d; /* text-muted */
+    border-bottom: 3px solid var(--bs-border-color, #dee2e6);
+    color: var(--bs-secondary-color, #6c757d);
     transition: all 0.3s ease;
     white-space: nowrap;
     overflow: hidden;
@@ -82,16 +86,16 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 }
 
 /* Active progress step */
-.wx-restwizard-progress > div.border-primary {
-    border-bottom-color: #0d6efd !important;
-    color: #0d6efd !important;
+.wx-restwizard-progress .wx-restwizard-step.active {
+    border-bottom-color: var(--bs-primary, #0d6efd);
+    color: var(--bs-primary, #0d6efd);
     font-weight: 600;
 }
 
 /* Completed progress steps */
-.wx-restwizard-progress > div.text-success {
-    border-bottom-color: #198754 !important;
-    color: #198754 !important;
+.wx-restwizard-progress .wx-restwizard-step.completed {
+    border-bottom-color: var(--bs-success, #198754);
+    color: var(--bs-success, #198754);
 }
 
 /* Page container and animation */
@@ -120,7 +124,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 .wx-restwizard-actions {
     margin-top: 1.5rem;
     padding-top: 1rem;
-    border-top: 1px solid #dee2e6;
+    border-top: 1px solid var(--bs-border-color, #dee2e6);
     display: flex;
     justify-content: space-between;
     align-items: center;
