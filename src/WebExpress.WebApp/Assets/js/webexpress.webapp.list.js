@@ -123,6 +123,15 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
                 // update list via base class
                 this.setItems(newItems);
 
+                if (this._selectable) {
+                    let selected = this._items.find((i) => i.id === this._selectedItem?.id) || null;
+                    if (!selected && this._items.length > 0) {
+                        selected = this._items[0];
+                        this._handleSelectionChange(selected, null, true);
+                        this._triggerPrimaryAction(selected);
+                    }
+                }
+
                 // update paging display
                 this._syncPagerAndInfo();
                 

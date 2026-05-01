@@ -97,6 +97,11 @@
 }
 
 #wx-content {
+    background: linear-gradient( 180deg, var(--bs-light) 0%, var(--bs-gray-200) 100% );
+}
+
+html[data-bs-theme="dark"] #wx-content {
+    background: linear-gradient( 180deg, var(--bs-dark) 0%, var(--bs-gray-800) 100% );
 }
 
 #wx-content-toolbar {
