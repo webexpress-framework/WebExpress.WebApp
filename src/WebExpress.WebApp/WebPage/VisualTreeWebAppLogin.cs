@@ -119,7 +119,7 @@ namespace WebExpress.WebApp.WebPage
             var login = new ControlRestLogin()
             {
                 RestUri = LoginUri,
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Five)
+                Padding = new PropertySpacingPadding(PropertySpacing.Space.Five)
             };
 
             // head

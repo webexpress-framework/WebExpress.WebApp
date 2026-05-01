@@ -96,12 +96,18 @@
     background-color: var(--bs-border-color) !important;
 }
 
-#wx-content {
+#wx-split-p2 {
     background: linear-gradient( 180deg, var(--bs-light) 0%, var(--bs-gray-200) 100% );
 }
 
+html[data-bs-theme="dark"] #wx-split-p2 {
+    background: linear-gradient(150deg, var(--bs-dark) 50%, #120348 100%)
+}
+
+#wx-content {
+}
+
 html[data-bs-theme="dark"] #wx-content {
-    background: linear-gradient( 180deg, var(--bs-dark) 0%, var(--bs-gray-800) 100% );
 }
 
 #wx-content-toolbar {
@@ -126,4 +132,12 @@ html[data-bs-theme="dark"] #wx-content {
 
 #wx-footer {
     background: var(--bs-light);
+}
+
+.wx-login {
+    background: linear-gradient( 180deg, var(--bs-light) 0%, var(--bs-gray-200) 100% );
+}
+
+html[data-bs-theme="dark"] .wx-login {
+    background: linear-gradient(150deg, var(--bs-dark) 50%, #120348 100%)
 }

@@ -25,10 +25,6 @@ webexpress.webapp.LoginCtrl = class extends webexpress.webui.LoginCtrl {
         element.removeAttribute("data-uri");
         element.removeAttribute("data-redirect");
 
-        // swap class from webui base to webapp
-        this._element.classList.remove("wx-webui-login");
-        this._element.classList.add("wx-webapp-loginform");
-
         // internal state for rate limiting and account locking
         this._submitting = false;
         this._retryTimer = null;
