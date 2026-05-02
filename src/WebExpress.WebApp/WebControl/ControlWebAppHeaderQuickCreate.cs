@@ -158,16 +158,16 @@ namespace WebExpress.WebApp.WebControl
                     PrimaryAction = firstQuickcreate?.PrimaryAction
                 }
                     .Add(nextQuickcreate)
-                : Preferences.Any()
-                ? new ControlButtonLink(Id)
-                {
-                    Classes = ["btn-success"],
-                    Text = I18N.Translate(renderContext, "webexpress.webapp:header.quickcreate.label"),
-                    Uri = firstQuickcreate?.Uri,
-                    OnClick = firstQuickcreate?.OnClick,
-                    PrimaryAction = firstQuickcreate?.PrimaryAction
-                }
-                : null;
+                : firstQuickcreate is not null
+                    ? new ControlButtonLink(Id)
+                    {
+                        Classes = ["btn-success"],
+                        Text = I18N.Translate(renderContext, "webexpress.webapp:header.quickcreate.label"),
+                        Uri = firstQuickcreate?.Uri,
+                        OnClick = firstQuickcreate?.OnClick,
+                        PrimaryAction = firstQuickcreate?.PrimaryAction
+                    }
+                    : null;
 
             return quickcreate?.Render(renderContext, visualTree);
         }
