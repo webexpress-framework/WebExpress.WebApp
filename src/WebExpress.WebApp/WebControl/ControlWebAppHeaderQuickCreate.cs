@@ -162,7 +162,7 @@ namespace WebExpress.WebApp.WebControl
                     ? new ControlButtonLink(Id)
                     {
                         Classes = ["btn-success"],
-                        Text = I18N.Translate(renderContext, "webexpress.webapp:header.quickcreate.label"),
+                        Text = (c) => I18N.Translate(renderContext, "webexpress.webapp:header.quickcreate.label"),
                         Uri = firstQuickcreate?.Uri,
                         OnClick = firstQuickcreate?.OnClick,
                         PrimaryAction = firstQuickcreate?.PrimaryAction

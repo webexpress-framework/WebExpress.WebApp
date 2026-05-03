@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Linq;
 using WebExpress.WebApp.WebApiControl;
-using WebExpress.WebApp.WWW.Api.V1;
 using WebExpress.WebApp.WebScope;
 using WebExpress.WebApp.WebSettingPage;
+using WebExpress.WebApp.WWW.Api.V1;
 using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebAttribute;
@@ -54,7 +54,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
         /// </summary>
         private ControlButton UploadButton { get; } = new ControlButton()
         {
-            Text = "webexpress.webapp:setting.plugin.upload.label",
+            Text = (c) => "webexpress.webapp:setting.plugin.upload.label",
             Margin = new PropertySpacingMargin(PropertySpacing.Space.Two),
             BackgroundColor = new PropertyColorButton(TypeColorButton.Primary),
             Icon = new IconUpload(),
@@ -195,7 +195,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
             {
                 actions.Add(new ControlButton()
                 {
-                    Text = "webexpress.webapp:setting.plugin.action.deactivate.label",
+                    Text = (c) => "webexpress.webapp:setting.plugin.action.deactivate.label",
                     Margin = new PropertySpacingMargin(PropertySpacing.Space.Two),
                     BackgroundColor = new PropertyColorButton(TypeColorButton.Secondary),
                     PrimaryAction = new ActionPluginPackage(new UriEndpoint(deactivateUri), RequestMethod.PUT.ToString())
@@ -208,7 +208,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
             {
                 actions.Add(new ControlButton()
                 {
-                    Text = "webexpress.webapp:setting.plugin.action.activate.label",
+                    Text = (c) => "webexpress.webapp:setting.plugin.action.activate.label",
                     Margin = new PropertySpacingMargin(PropertySpacing.Space.Two),
                     BackgroundColor = new PropertyColorButton(TypeColorButton.Success),
                     PrimaryAction = new ActionPluginPackage(new UriEndpoint(activateUri), RequestMethod.PUT.ToString())
@@ -220,7 +220,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
 
             actions.Add(new ControlButton()
             {
-                Text = "webexpress.webapp:setting.plugin.action.update.label",
+                Text = (c) => "webexpress.webapp:setting.plugin.action.update.label",
                 Margin = new PropertySpacingMargin(PropertySpacing.Space.Two),
                 BackgroundColor = new PropertyColorButton(TypeColorButton.Info),
                 PrimaryAction = new ActionPluginPackage(new UriEndpoint(updateUri), RequestMethod.PUT.ToString(), true)
@@ -231,7 +231,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
 
             actions.Add(new ControlButton()
             {
-                Text = "webexpress.webapp:setting.plugin.action.delete.label",
+                Text = (c) => "webexpress.webapp:setting.plugin.action.delete.label",
                 Margin = new PropertySpacingMargin(PropertySpacing.Space.Two),
                 BackgroundColor = new PropertyColorButton(TypeColorButton.Danger),
                 PrimaryAction = new ActionPluginPackage(new UriEndpoint(deleteUri), RequestMethod.DELETE.ToString())
