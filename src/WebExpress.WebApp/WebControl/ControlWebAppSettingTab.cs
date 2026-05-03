@@ -139,11 +139,11 @@ namespace WebExpress.WebApp.WebControl
                 (
                     x => new ControlNavigationItemLink()
                     {
-                        Text = I18N.Translate(renderContext, x?.Name),
-                        Uri = settingPageManager.GetFirstSettingPage(appicationContext, x)?
+                        Text = _ => I18N.Translate(renderContext, x?.Name),
+                        Uri = _ => settingPageManager.GetFirstSettingPage(appicationContext, x)?
                             .Route?
                             .ToUri(),
-                        Active = settingPageContext.SettingCategory == x ? TypeActive.Active : TypeActive.None
+                        Active = _ => settingPageContext.SettingCategory == x ? TypeActive.Active : TypeActive.None
                     }
                 ).OrderBy(x => x.Title);
 

@@ -52,8 +52,8 @@ namespace WebExpress.WebApp.WebPage
 
             var loginLink = new ControlLink()
             {
-                Text = I18N.Translate(renderContext, "webexpress.webapp:logout.login.label"),
-                Uri = loginUri
+                Text = _ => I18N.Translate(renderContext, "webexpress.webapp:logout.login.label"),
+                Uri = _ => loginUri
             };
 
             var card = new ControlPanelCard("wx-logout-card", title, message, loginLink)

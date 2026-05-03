@@ -17,7 +17,7 @@ namespace WebExpress.WebApp.WebControl
         public ControlWebAppHeaderAppTitle(string id = null)
             : base(id)
         {
-            Decoration = TypeTextDecoration.None;
+            Decoration = _ => TypeTextDecoration.None;
         }
 
         /// <summary>
@@ -29,7 +29,7 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>The current instance for method chaining.</returns>
         public IControlWebAppHeaderAppTitle SetTitle(string title)
         {
-            Title = title;
+            Title = _ => title;
 
             return this;
         }

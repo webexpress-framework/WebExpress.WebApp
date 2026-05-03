@@ -153,9 +153,9 @@ namespace WebExpress.WebApp.WebControl
                 {
                     Classes = ["btn-success"],
                     Text = I18N.Translate(renderContext, "webexpress.webapp:header.quickcreate.label"),
-                    Uri = firstQuickcreate?.Uri,
+                    Uri = firstQuickcreate?.Uri?.Invoke(renderContext),
                     OnClick = firstQuickcreate?.OnClick,
-                    PrimaryAction = firstQuickcreate?.PrimaryAction
+                    PrimaryAction = firstQuickcreate?.PrimaryAction?.Invoke(renderContext)
                 }
                     .Add(nextQuickcreate)
                 : firstQuickcreate is not null
@@ -163,9 +163,9 @@ namespace WebExpress.WebApp.WebControl
                     {
                         Classes = ["btn-success"],
                         Text = (c) => I18N.Translate(renderContext, "webexpress.webapp:header.quickcreate.label"),
-                        Uri = firstQuickcreate?.Uri,
+                        Uri = _ => firstQuickcreate?.Uri?.Invoke(renderContext),
                         OnClick = firstQuickcreate?.OnClick,
-                        PrimaryAction = _ => firstQuickcreate?.PrimaryAction
+                        PrimaryAction = _ => firstQuickcreate?.PrimaryAction?.Invoke(renderContext)
                     }
                     : null;
 
