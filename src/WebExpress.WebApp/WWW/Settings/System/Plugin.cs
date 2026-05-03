@@ -57,7 +57,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
             Text = (c) => "webexpress.webapp:setting.plugin.upload.label",
             Margin = new PropertySpacingMargin(PropertySpacing.Space.Two),
             BackgroundColor = new PropertyColorButton(TypeColorButton.Primary),
-            Icon = new IconUpload(),
+            Icon = _ => new IconUpload(),
             Active = TypeActive.Active
         };
 
@@ -80,7 +80,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
             var applicationContext = renderContext?.PageContext?.ApplicationContext;
             var packageApiUri = WebEx.ComponentHub.SitemapManager.GetUri<PluginPackage>(applicationContext);
 
-            UploadButton.PrimaryAction = new ActionPluginPackage(packageApiUri, RequestMethod.POST.ToString(), true);
+            UploadButton.PrimaryAction = _ => new ActionPluginPackage(packageApiUri, RequestMethod.POST.ToString(), true);
 
             var packageTable = new ControlTable() { Striped = TypeStripedTable.Row };
             packageTable.AddColumn("");
@@ -198,7 +198,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
                     Text = (c) => "webexpress.webapp:setting.plugin.action.deactivate.label",
                     Margin = new PropertySpacingMargin(PropertySpacing.Space.Two),
                     BackgroundColor = new PropertyColorButton(TypeColorButton.Secondary),
-                    PrimaryAction = new ActionPluginPackage(new UriEndpoint(deactivateUri), RequestMethod.PUT.ToString())
+                    PrimaryAction = _ => new ActionPluginPackage(new UriEndpoint(deactivateUri), RequestMethod.PUT.ToString())
                     {
                         ConfirmText = I18N.Translate(renderContext, "webexpress.webapp:setting.plugin.action.deactivate.confirm", package.Id)
                     }
@@ -211,7 +211,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
                     Text = (c) => "webexpress.webapp:setting.plugin.action.activate.label",
                     Margin = new PropertySpacingMargin(PropertySpacing.Space.Two),
                     BackgroundColor = new PropertyColorButton(TypeColorButton.Success),
-                    PrimaryAction = new ActionPluginPackage(new UriEndpoint(activateUri), RequestMethod.PUT.ToString())
+                    PrimaryAction = _ => new ActionPluginPackage(new UriEndpoint(activateUri), RequestMethod.PUT.ToString())
                     {
                         ConfirmText = I18N.Translate(renderContext, "webexpress.webapp:setting.plugin.action.activate.confirm", package.Id)
                     }
@@ -223,7 +223,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
                 Text = (c) => "webexpress.webapp:setting.plugin.action.update.label",
                 Margin = new PropertySpacingMargin(PropertySpacing.Space.Two),
                 BackgroundColor = new PropertyColorButton(TypeColorButton.Info),
-                PrimaryAction = new ActionPluginPackage(new UriEndpoint(updateUri), RequestMethod.PUT.ToString(), true)
+                PrimaryAction = _ => new ActionPluginPackage(new UriEndpoint(updateUri), RequestMethod.PUT.ToString(), true)
                 {
                     ConfirmText = I18N.Translate(renderContext, "webexpress.webapp:setting.plugin.action.update.confirm", package.Id)
                 }
@@ -234,7 +234,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
                 Text = (c) => "webexpress.webapp:setting.plugin.action.delete.label",
                 Margin = new PropertySpacingMargin(PropertySpacing.Space.Two),
                 BackgroundColor = new PropertyColorButton(TypeColorButton.Danger),
-                PrimaryAction = new ActionPluginPackage(new UriEndpoint(deleteUri), RequestMethod.DELETE.ToString())
+                PrimaryAction = _ => new ActionPluginPackage(new UriEndpoint(deleteUri), RequestMethod.DELETE.ToString())
                 {
                     ConfirmText = I18N.Translate(renderContext, "webexpress.webapp:setting.plugin.action.delete.confirm", package.Id)
                 }

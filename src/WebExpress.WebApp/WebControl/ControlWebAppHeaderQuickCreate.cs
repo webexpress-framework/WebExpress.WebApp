@@ -165,7 +165,7 @@ namespace WebExpress.WebApp.WebControl
                         Text = (c) => I18N.Translate(renderContext, "webexpress.webapp:header.quickcreate.label"),
                         Uri = firstQuickcreate?.Uri,
                         OnClick = firstQuickcreate?.OnClick,
-                        PrimaryAction = firstQuickcreate?.PrimaryAction
+                        PrimaryAction = _ => firstQuickcreate?.PrimaryAction
                     }
                     : null;
 
