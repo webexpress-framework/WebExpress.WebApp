@@ -45,37 +45,37 @@ namespace WebExpress.WebApp.WebStatusPage
             {
                 Text = _statusPageContext.StatusCode.ToString(),
                 Format = TypeFormatText.H2,
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.One),
-                Padding = new PropertySpacingPadding(PropertySpacing.Space.Four)
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.One),
+                Padding = _ => new PropertySpacingPadding(PropertySpacing.Space.Four)
             };
 
             var title = new ControlText()
             {
                 Text = I18N.Translate(renderContext, _statusPageContext.StatusTitle),
                 Format = TypeFormatText.H3,
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
             };
 
             var description = new ControlText()
             {
                 Text = I18N.Translate(renderContext, _statusPageContext.StatusDescription),
                 Format = TypeFormatText.Markdown,
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
             };
 
             var message = new ControlPanelCard()
             {
-                BackgroundColor = new PropertyColorBackground(TypeColorBackground.Light)
+                BackgroundColor = _ => new PropertyColorBackground(TypeColorBackground.Light)
             }
                 .Add(new ControlText()
                 {
                     Text = StatusMessage,
-                    Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
+                    Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
                 });
 
             var panel = new ControlPanel()
             {
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Three)
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Three)
             }
                 .Add(title, description, !string.IsNullOrWhiteSpace(StatusMessage) ? message : null);
 

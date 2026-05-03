@@ -152,7 +152,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestProgressTask()
             {
-                Display = value
+                Display = _ => value
             };
 
             // act

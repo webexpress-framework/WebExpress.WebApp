@@ -46,8 +46,8 @@ namespace WebExpress.WebApp.WebControl
             {
                 Text = I18N.Translate(renderContext, renderContext.PageContext?.ApplicationContext?.ApplicationName),
                 Format = TypeFormatText.H1,
-                Padding = new PropertySpacingPadding(PropertySpacing.Space.One),
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.None, PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.Null)
+                Padding = _ => new PropertySpacingPadding(PropertySpacing.Space.One),
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.None, PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.Null)
             };
 
             return new HtmlElementTextSemanticsA(apptitle.Render(renderContext, visualTree))

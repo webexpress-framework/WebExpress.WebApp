@@ -102,7 +102,7 @@ namespace WebExpress.WebApp.WebControl
         {
             Fixed = TypeFixed.Top;
             Styles = new List<string>(["position: sticky; top: 0; z-index: 99;"]);
-            Padding = new PropertySpacingPadding(PropertySpacing.Space.Null);
+            Padding = _ => new PropertySpacingPadding(PropertySpacing.Space.Null);
         }
 
         /// <summary>
@@ -122,7 +122,7 @@ namespace WebExpress.WebApp.WebControl
              .Add(AppTitle)
              .Add(AppNavigation)
              .Add(QuickCreate)
-             .Add(new ControlPanel() { Margin = new PropertySpacingMargin(PropertySpacing.Space.Auto, PropertySpacing.Space.None) })
+             .Add(new ControlPanel() { Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Auto, PropertySpacing.Space.None) })
              .Add(Help)
              .Add(Notifications)
              .Add(Avatar)

@@ -42,7 +42,7 @@ namespace WebExpress.WebApp.WebControl
         public ControlWebAppHeaderAppNavigator(string id = null)
             : base(id)
         {
-            Padding = new PropertySpacingPadding(PropertySpacing.Space.Null);
+            Padding = _ => new PropertySpacingPadding(PropertySpacing.Space.Null);
         }
 
         /// <summary>

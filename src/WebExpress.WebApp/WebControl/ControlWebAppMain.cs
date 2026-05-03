@@ -164,7 +164,7 @@ namespace WebExpress.WebApp.WebControl
             )
             {
                 BackgroundColor = BackgroundColor,
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None)
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None)
             };
 
             return mainCtlr?.Render(renderContext, visualTree);

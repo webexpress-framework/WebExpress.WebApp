@@ -55,7 +55,7 @@ namespace WebExpress.WebApp.WebControl
         public ControlWebAppHeaderAvatar(string id = null)
             : base(id)
         {
-            Padding = new PropertySpacingPadding(PropertySpacing.Space.Null);
+            Padding = _ => new PropertySpacingPadding(PropertySpacing.Space.Null);
         }
 
         /// <summary>
@@ -167,7 +167,7 @@ namespace WebExpress.WebApp.WebControl
                     AlignmentMenu = TypeAlignmentDropdownMenu.Right,
                     User = username,
                     Image = image,
-                    Margin = new PropertySpacingMargin
+                    Margin = _ => new PropertySpacingMargin
                     (
                         PropertySpacing.Space.Two,
                         PropertySpacing.Space.None,

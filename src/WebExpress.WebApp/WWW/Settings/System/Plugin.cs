@@ -36,7 +36,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
         private ControlText Label { get; } = new ControlText()
         {
             Text = "webexpress.webapp:setting.plugin.label",
-            Margin = new PropertySpacingMargin(PropertySpacing.Space.Two),
+            Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two),
             TextColor = new PropertyColorText(TypeColorText.Info)
         };
 
@@ -46,7 +46,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
         private ControlText Description { get; } = new ControlText()
         {
             Text = "webexpress.webapp:setting.plugin.description",
-            Margin = new PropertySpacingMargin(PropertySpacing.Space.Two)
+            Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two)
         };
 
         /// <summary>
@@ -55,7 +55,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
         private ControlButton UploadButton { get; } = new ControlButton()
         {
             Text = (c) => "webexpress.webapp:setting.plugin.upload.label",
-            Margin = new PropertySpacingMargin(PropertySpacing.Space.Two),
+            Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two),
             BackgroundColor = new PropertyColorButton(TypeColorButton.Primary),
             Icon = _ => new IconUpload(),
             Active = TypeActive.Active
@@ -127,7 +127,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
                             ),
                             Format = TypeFormatText.Default,
                             TextColor = new PropertyColorText(TypeColorText.Secondary),
-                            Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Null),
+                            Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Null),
                             Size = new PropertySizeText(TypeSizeText.Small)
                         } : null,
                         !string.IsNullOrWhiteSpace(package.Metadata?.Description) ? new ControlText()
@@ -139,7 +139,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
                             ),
                             Format = TypeFormatText.Default,
                             TextColor = new PropertyColorText(TypeColorText.Secondary),
-                            Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Null),
+                            Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Null),
                             Size = new PropertySizeText(TypeSizeText.Small)
                         } : null,
                         new ControlText()
@@ -151,7 +151,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
                             ),
                             Format = TypeFormatText.Code,
                             TextColor = new PropertyColorText(TypeColorText.Secondary),
-                            Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Null),
+                            Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Null),
                             Size = new PropertySizeText(TypeSizeText.Small)
                         }
                     ),
@@ -196,7 +196,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
                 actions.Add(new ControlButton()
                 {
                     Text = (c) => "webexpress.webapp:setting.plugin.action.deactivate.label",
-                    Margin = new PropertySpacingMargin(PropertySpacing.Space.Two),
+                    Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two),
                     BackgroundColor = new PropertyColorButton(TypeColorButton.Secondary),
                     PrimaryAction = _ => new ActionPluginPackage(new UriEndpoint(deactivateUri), RequestMethod.PUT.ToString())
                     {
@@ -209,7 +209,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
                 actions.Add(new ControlButton()
                 {
                     Text = (c) => "webexpress.webapp:setting.plugin.action.activate.label",
-                    Margin = new PropertySpacingMargin(PropertySpacing.Space.Two),
+                    Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two),
                     BackgroundColor = new PropertyColorButton(TypeColorButton.Success),
                     PrimaryAction = _ => new ActionPluginPackage(new UriEndpoint(activateUri), RequestMethod.PUT.ToString())
                     {
@@ -221,7 +221,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
             actions.Add(new ControlButton()
             {
                 Text = (c) => "webexpress.webapp:setting.plugin.action.update.label",
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two),
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two),
                 BackgroundColor = new PropertyColorButton(TypeColorButton.Info),
                 PrimaryAction = _ => new ActionPluginPackage(new UriEndpoint(updateUri), RequestMethod.PUT.ToString(), true)
                 {
@@ -232,7 +232,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
             actions.Add(new ControlButton()
             {
                 Text = (c) => "webexpress.webapp:setting.plugin.action.delete.label",
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two),
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two),
                 BackgroundColor = new PropertyColorButton(TypeColorButton.Danger),
                 PrimaryAction = _ => new ActionPluginPackage(new UriEndpoint(deleteUri), RequestMethod.DELETE.ToString())
                 {

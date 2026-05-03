@@ -241,7 +241,7 @@ namespace WebExpress.WebApp.WebControl
                                 : renderContext.PageContext?.PageTitle
                         ),
                         Format = TypeFormatText.H2,
-                        Margin = new PropertySpacingMargin(PropertySpacing.Space.None, PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.Null)
+                        Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.None, PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.Null)
                     },
                     preferences.Any() ? new ControlPanelFlex(null, [.. preferences])
                     {

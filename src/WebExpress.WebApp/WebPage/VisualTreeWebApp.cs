@@ -109,8 +109,8 @@ namespace WebExpress.WebApp.WebPage
             Header.Styles = ["position: sticky; top: 0; z-index: 99;"];
 
             Breadcrumb.Uri = pageContext?.Route?.ToUri();
-            Breadcrumb.Margin = new PropertySpacingMargin(PropertySpacing.Space.Null);
-            (Content as ControlWebAppContent).Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None);
+            Breadcrumb.Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Null);
+            (Content as ControlWebAppContent).Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None);
 
             AddCssLink(Theme?.ThemeStyle.ToString() ?? RouteEndpoint.Combine(baseUri, "css/webexpress.webapp.theme.css"));
         }
@@ -168,7 +168,7 @@ namespace WebExpress.WebApp.WebPage
                 [Content]
             )
             {
-                Border = new PropertyBorder(true),
+                Border = _ => new PropertyBorder(true),
                 Orientation = TypeOrientationSplit.Horizontal,
                 SidePanelInitialSize = 350,
                 SidePanelMinSize = 45

@@ -43,7 +43,7 @@ namespace WebExpress.WebApp.WebControl
         public ControlWebAppSettingTab(string id = null)
             : base(id)
         {
-            Padding = new PropertySpacingPadding(PropertySpacing.Space.Null);
+            Padding = _ => new PropertySpacingPadding(PropertySpacing.Space.Null);
         }
 
         /// <summary>

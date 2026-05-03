@@ -34,14 +34,14 @@ namespace WebExpress.WebApp.WebPage
             {
                 Text = I18N.Translate(renderContext, "webexpress.webapp:forbidden.title"),
                 Format = TypeFormatText.H2,
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
             };
 
             var description = new ControlText()
             {
                 Text = I18N.Translate(renderContext, "webexpress.webapp:forbidden.description"),
                 Format = TypeFormatText.Paragraph,
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
             };
 
             var image = new ControlImage()
@@ -49,25 +49,25 @@ namespace WebExpress.WebApp.WebPage
                 Uri = renderContext.PageContext.ApplicationContext?.Route.Concat("webexpress.webapp/assets/img/forbidden.svg").ToUri(),
                 Width = 96,
                 Height = 96,
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two)
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two)
             };
 
             var left = new ControlPanel()
             {
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two)
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two)
             }
                 .Add(image);
 
             var right = new ControlPanel()
             {
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two)
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two)
             }
                 .Add(title)
                 .Add(description);
 
             var flex = new ControlPanelFlex()
             {
-                Display = TypeDisplay.Flex,
+                Display = _ => TypeDisplay.Flex,
                 Direction = TypeDirection.Horizontal,
                 Justify = TypeJustifiedFlex.Start,
                 Align = TypeAlignFlex.Start,
@@ -79,7 +79,7 @@ namespace WebExpress.WebApp.WebPage
 
             var card = new ControlPanelCard("wx-forbidden-card", flex)
             {
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Three)
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Three)
             };
 
             visualTree.Title = I18N.Translate(renderContext, "webexpress.webapp:forbidden.title");

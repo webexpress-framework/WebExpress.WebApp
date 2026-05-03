@@ -38,14 +38,14 @@ namespace WebExpress.WebApp.WebPage
             {
                 Text = I18N.Translate(renderContext, "webexpress.webapp:logout.title"),
                 Format = TypeFormatText.H2,
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
             };
 
             var message = new ControlText()
             {
                 Text = I18N.Translate(renderContext, "webexpress.webapp:logout.description"),
                 Format = TypeFormatText.Paragraph,
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
             };
 
             var loginUri = WebEx.ComponentHub.SitemapManager.GetUri<PageWebAppLogin>(renderContext.PageContext?.ApplicationContext);
@@ -58,7 +58,7 @@ namespace WebExpress.WebApp.WebPage
 
             var card = new ControlPanelCard("wx-logout-card", title, message, loginLink)
             {
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Three)
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Three)
             };
 
             visualTree.Title = I18N.Translate(renderContext, "webexpress.webapp:logout.title");

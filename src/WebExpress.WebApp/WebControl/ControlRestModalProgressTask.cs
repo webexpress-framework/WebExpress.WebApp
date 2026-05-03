@@ -28,14 +28,14 @@ namespace WebExpress.WebApp.WebControl
         {
             Progress = new ControlProgress($"progressbar-{Id}")
             {
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two),
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two),
                 Color = new PropertyColorProgress(TypeColorProgress.Primary),
                 Format = TypeFormatProgress.Animated
             };
 
             Message = new ControlText($"message-{Id}")
             {
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two),
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two),
                 TextColor = new PropertyColorText(TypeColorText.Secondary)
             };
 

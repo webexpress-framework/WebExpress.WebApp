@@ -43,7 +43,7 @@ namespace WebExpress.WebApp.WebControl
         public ControlWebAppHeaderSettings(string id = null)
             : base(id)
         {
-            Padding = new PropertySpacingPadding(PropertySpacing.Space.Null);
+            Padding = _ => new PropertySpacingPadding(PropertySpacing.Space.Null);
         }
 
         /// <summary>
@@ -134,7 +134,7 @@ namespace WebExpress.WebApp.WebControl
                     Classes = ["wx-app-dropdown"],
                     Icon = new IconCog(),
                     AlignmentMenu = TypeAlignmentDropdownMenu.Right,
-                    Margin = new PropertySpacingMargin
+                    Margin = _ => new PropertySpacingMargin
                     (
                         PropertySpacing.Space.Two,
                         PropertySpacing.Space.None,

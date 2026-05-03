@@ -45,7 +45,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
             {
                 Text = I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.group.statistics.label"),
                 TextColor = new PropertyColorText(TypeColorText.Info),
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two)
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two)
             });
 
             // create a table to display scalar metric values
@@ -136,7 +136,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
             {
                 Text = I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.group.chart.traffic.label"),
                 TextColor = new PropertyColorText(TypeColorText.Info),
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two)
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two)
             });
 
             var chartTraffic = new ControlChart()
@@ -179,7 +179,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
             {
                 Text = I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.group.chart.performance.label"),
                 TextColor = new PropertyColorText(TypeColorText.Info),
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two)
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two)
             });
 
             var chartPerformance = new ControlChart()
@@ -230,7 +230,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
             {
                 Text = I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.group.chart.resources.label"),
                 TextColor = new PropertyColorText(TypeColorText.Info),
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two)
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two)
             });
 
             var chartResources = new ControlChart()

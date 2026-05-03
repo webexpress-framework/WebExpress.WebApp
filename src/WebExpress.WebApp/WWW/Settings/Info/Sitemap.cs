@@ -46,7 +46,7 @@ namespace WebExpress.WebApp.WWW.Settings.Info
             visualTree.Content.MainPanel.AddPrimary(new ControlText()
             {
                 Text = I18N.Translate(renderContext, "webexpress.webapp:setting.sitemap.description"),
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two),
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two),
                 Format = TypeFormatText.Markdown
             });
 
@@ -54,7 +54,7 @@ namespace WebExpress.WebApp.WWW.Settings.Info
             {
                 Text = I18N.Translate(renderContext, "webexpress.webapp:setting.sitemap.label"),
                 TextColor = new PropertyColorText(TypeColorText.Info),
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two)
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two)
             });
 
             // create the tree control

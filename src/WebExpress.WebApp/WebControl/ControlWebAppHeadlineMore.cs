@@ -41,7 +41,7 @@ namespace WebExpress.WebApp.WebControl
         public ControlWebAppHeadlineMore(string id = null)
             : base(id)
         {
-            Padding = new PropertySpacingPadding(PropertySpacing.Space.Null);
+            Padding = _ => new PropertySpacingPadding(PropertySpacing.Space.Null);
         }
 
         /// <summary>
@@ -132,7 +132,7 @@ namespace WebExpress.WebApp.WebControl
                 Icon = new IconEllipsisHorizontal(),
                 AlignmentMenu = TypeAlignmentDropdownMenu.Right,
                 //BackgroundColor = new PropertyColorButton(TypeColorButton.Dark),
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None)
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None)
             } :
             null;
 

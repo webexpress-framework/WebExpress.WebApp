@@ -94,7 +94,7 @@ namespace WebExpress.WebApp.WebSettingPage
                 [Content]
             )
             {
-                Border = new PropertyBorder(true),
+                Border = _ => new PropertyBorder(true),
                 Orientation = TypeOrientationSplit.Horizontal,
                 SidePanelInitialSize = 350,
                 SidePanelMinSize = 45

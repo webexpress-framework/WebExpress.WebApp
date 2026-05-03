@@ -182,7 +182,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
                     "webexpress.webapp:setting.systeminformation.group.server.label"
                 ),
                 TextColor = new PropertyColorText(TypeColorText.Info),
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two)
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two)
             });
             visualTree.Content.MainPanel.AddPrimary(serverTable);
 
@@ -298,7 +298,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
                     "webexpress.webapp:setting.systeminformation.group.environment.label"
                 ),
                 TextColor = new PropertyColorText(TypeColorText.Info),
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two)
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two)
             });
             visualTree.Content.MainPanel.AddPrimary(environmentTable);
         }
