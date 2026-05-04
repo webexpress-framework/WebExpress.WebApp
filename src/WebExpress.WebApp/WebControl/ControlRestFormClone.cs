@@ -27,8 +27,8 @@ namespace WebExpress.WebApp.WebControl
         public ControlRestFormClone(string id = null)
             : base(id)
         {
-            Mode = TypeRestFormMode.Clone;
-            Method = RequestMethod.POST;
+            Mode = _ => TypeRestFormMode.Clone;
+            Method = _ => RequestMethod.POST;
 
             AddPrimaryButton(Submit);
         }

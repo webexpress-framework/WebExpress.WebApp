@@ -27,8 +27,8 @@ namespace WebExpress.WebApp.WebControl
         public ControlRestFormAdd(string id = null)
             : base(id)
         {
-            Mode = TypeRestFormMode.Add;
-            Method = RequestMethod.POST;
+            Mode = _ => TypeRestFormMode.Add;
+            Method = _ => RequestMethod.POST;
 
             AddPrimaryButton(Submit);
         }

@@ -75,7 +75,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestFormItemInputUnique(null)
             {
-                Name = name
+                Name = _ => name
             };
 
             // act
@@ -203,7 +203,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestFormItemInputUnique(null)
             {
-                Required = required
+                Required = _ => required
             };
 
             // act
@@ -332,13 +332,18 @@ namespace WebExpress.WebApp.Test.WebControl
             // arrange
             var validated = false;
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
-            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock
+            (
+                null,
+                null,
+                new Parameter("form", "", ParameterScope.Parameter)
+            );
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestFormItemInputUnique("text-box").Initialize(args =>
             {
                 args.Value.Text = value;
             });
-            var form = new ControlForm()
+            var form = new ControlForm() { Name = _ => "form" }
                 .Add(control)
                 .Validate
                 (
@@ -374,7 +379,12 @@ namespace WebExpress.WebApp.Test.WebControl
             // arrange
             var validated = false;
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
-            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock
+            (
+                null,
+                null,
+                new Parameter("form", "", ParameterScope.Parameter)
+            );
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestFormItemInputUnique("text-box")
                 .Validate
@@ -388,7 +398,7 @@ namespace WebExpress.WebApp.Test.WebControl
                         validated = true;
                     }
                 );
-            var form = new ControlForm()
+            var form = new ControlForm() { Name = _ => "form" }
                 .Add(control);
 
             context.Request.AddParameter(new Parameter(form.Id, context.Request?.Session.Id.ToString(), ParameterScope.Parameter));
@@ -413,14 +423,19 @@ namespace WebExpress.WebApp.Test.WebControl
             // arrange
             var processed = false;
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
-            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock
+            (
+                null,
+                null,
+                new Parameter("form", "", ParameterScope.Parameter)
+            );
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestFormItemInputUnique("text-box")
                 .Initialize(args =>
                 {
                     args.Value.Text = value;
                 });
-            var form = new ControlForm()
+            var form = new ControlForm() { Name = _ => "form" }
                 .Add(control)
                 .Process
                 (
@@ -452,12 +467,17 @@ namespace WebExpress.WebApp.Test.WebControl
             // arrange
             var processed = false;
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
-            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock
+            (
+                null,
+                null,
+                new Parameter("form", "", ParameterScope.Parameter)
+            );
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestFormItemInputUnique("text-box")
                 .Initialize(x => x.Value.Text = value)
                 .Process(x => processed = true);
-            var form = new ControlForm()
+            var form = new ControlForm() { Name = _ => "form" }
                 .Add(control);
 
             context.Request.AddParameter(new Parameter(form.Id, context.Request?.Session.Id.ToString(), ParameterScope.Parameter));

@@ -15,7 +15,7 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         public ControlFormItemStaticText Content { get; set; } = new ControlFormItemStaticText()
         {
-            Text = "webexpress.webui:delete.description"
+            Text = _ => "webexpress.webui:delete.description"
         };
 
         /// <summary>
@@ -35,8 +35,8 @@ namespace WebExpress.WebApp.WebControl
         public ControlRestFormDelete(string id = null)
             : base(id)
         {
-            Mode = TypeRestFormMode.Delete;
-            Method = RequestMethod.DELETE;
+            Mode = _ => TypeRestFormMode.Delete;
+            Method = _ => RequestMethod.DELETE;
 
             Add(Content);
             AddPrimaryButton(Submit);

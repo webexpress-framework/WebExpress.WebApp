@@ -152,10 +152,10 @@ namespace WebExpress.WebApp.WebControl
                 ? (IControl)new ControlSplitButtonLink(Id)
                 {
                     Classes = ["btn-success"],
-                    Text = I18N.Translate(renderContext, "webexpress.webapp:header.quickcreate.label"),
+                    Text = _ => I18N.Translate(renderContext, "webexpress.webapp:header.quickcreate.label"),
                     Uri = firstQuickcreate?.Uri?.Invoke(renderContext),
                     OnClick = firstQuickcreate?.OnClick,
-                    PrimaryAction = firstQuickcreate?.PrimaryAction?.Invoke(renderContext)
+                    PrimaryAction = _ => firstQuickcreate?.PrimaryAction?.Invoke(renderContext)
                 }
                     .Add(nextQuickcreate)
                 : firstQuickcreate is not null

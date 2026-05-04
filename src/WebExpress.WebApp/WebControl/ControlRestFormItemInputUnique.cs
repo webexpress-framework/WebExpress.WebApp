@@ -69,13 +69,14 @@ namespace WebExpress.WebApp.WebApiControl
         public override IHtmlNode Render(IRenderControlFormContext renderContext, IVisualTreeControl visualTree)
         {
             var value = renderContext.GetValue<ControlFormInputValueString>(this);
+            var name = Name?.Invoke(renderContext);
 
             var html = new HtmlElementTextContentDiv()
             {
                 Id = Id,
                 Class = "wx-webapp-input-unique"
             }
-                .AddUserAttribute("name", Name)
+                .AddUserAttribute("name", name)
                 .AddUserAttribute("placeholder", I18N.Translate(renderContext, Placeholder))
                 .AddUserAttribute("data-minlength", MinLength >= 0 ? MinLength.ToString() : null)
                 .AddUserAttribute("data-value", value?.Text)
@@ -95,13 +96,15 @@ namespace WebExpress.WebApp.WebApiControl
         {
             var validationResults = new List<ValidationResult>(base.Validate(renderContext));
             var value = renderContext.GetValue<ControlFormInputValueString>(this)?.Text;
+            var disabled = Disabled?.Invoke(renderContext) ?? false;
+            var required = Required?.Invoke(renderContext) ?? false;
 
-            if (Disabled)
+            if (disabled)
             {
                 return [];
             }
 
-            if (Required && string.IsNullOrWhiteSpace(value))
+            if (required && string.IsNullOrWhiteSpace(value))
             {
                 validationResults.AddRange(new ValidationResult(TypeInputValidity.Error, "webexpress.webui:form.inputtextbox.validation.required"));
 

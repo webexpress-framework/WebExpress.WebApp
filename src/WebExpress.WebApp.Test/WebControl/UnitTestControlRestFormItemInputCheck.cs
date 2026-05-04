@@ -74,7 +74,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestFormItemInputCheck(null)
             {
-                Name = name
+                Name = _ => name
             };
 
             // act
