@@ -44,8 +44,8 @@ namespace WebExpress.WebApp.WWW.Settings.System
 
             var serverTable = new ControlTable()
             {
-                Striped = TypeStripedTable.Row,
-                SuppressHeaders = true
+                Striped = _ => TypeStripedTable.Row,
+                SuppressHeaders = _ => true
             }
                 .AddColumn("")
                 .AddColumn("")
@@ -53,7 +53,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
                 (
                     new ControlTableCell()
                     {
-                        Text = I18N.Translate
+                        Text = _ => I18N.Translate
                         (
                             renderContext,
                             "webexpress.webapp:setting.systeminformation.group.server.version"
@@ -69,7 +69,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
                 (
                     new ControlTableCell()
                     {
-                        Text = I18N.Translate
+                        Text = _ => I18N.Translate
                         (
                             renderContext,
                             "webexpress.webapp:setting.systeminformation.group.server.systemdate"
@@ -89,7 +89,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
             (
                 new ControlTableCell()
                 {
-                    Text = I18N.Translate
+                    Text = _ => I18N.Translate
                     (
                         renderContext,
                         "webexpress.webapp:setting.systeminformation.group.server.systemtime"
@@ -109,7 +109,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
             (
                 new ControlTableCell()
                 {
-                    Text = I18N.Translate
+                    Text = _ => I18N.Translate
                     (
                         renderContext,
                         "webexpress.webapp:setting.systeminformation.group.server.basisurl"
@@ -127,7 +127,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
             (
                 new ControlTableCell()
                 {
-                    Text = I18N.Translate
+                    Text = _ => I18N.Translate
                     (
                         renderContext,
                         "webexpress.webapp:setting.systeminformation.group.server.currentdirectory"
@@ -144,7 +144,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
             (
                 new ControlTableCell()
                 {
-                    Text = I18N.Translate
+                    Text = _ => I18N.Translate
                     (
                         renderContext,
                         "webexpress.webapp:setting.systeminformation.group.server.memory"
@@ -161,7 +161,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
             (
                 new ControlTableCell()
                 {
-                    Text = I18N.Translate
+                    Text = _ => I18N.Translate
                     (
                         renderContext,
                         "webexpress.webapp:setting.systeminformation.group.server.executiontime"
@@ -188,8 +188,8 @@ namespace WebExpress.WebApp.WWW.Settings.System
 
             var environmentTable = new ControlTable()
             {
-                Striped = TypeStripedTable.Row,
-                SuppressHeaders = true
+                Striped = _ => TypeStripedTable.Row,
+                SuppressHeaders = _ => true
             }
                 .AddColumn("")
                 .AddColumn("")
@@ -197,7 +197,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
                 (
                     new ControlTableCell()
                     {
-                        Text = I18N.Translate
+                        Text = _ => I18N.Translate
                         (
                             renderContext,
                             "webexpress.webapp:setting.systeminformation.group.environment.operatingsystem"
@@ -213,7 +213,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
                 (
                     new ControlTableCell()
                     {
-                        Text = I18N.Translate
+                        Text = _ => I18N.Translate
                         (
                             renderContext,
                             "webexpress.webapp:setting.systeminformation.group.environment.machinename"
@@ -229,7 +229,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
                 (
                     new ControlTableCell()
                     {
-                        Text = I18N.Translate
+                        Text = _ => I18N.Translate
                         (
                             renderContext,
                             "webexpress.webapp:setting.systeminformation.group.environment.processorcount"
@@ -245,7 +245,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
                 (
                     new ControlTableCell()
                     {
-                        Text = I18N.Translate
+                        Text = _ => I18N.Translate
                         (
                             renderContext,
                             "webexpress.webapp:setting.systeminformation.group.environment.64bit"
@@ -261,7 +261,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
                 (
                     new ControlTableCell()
                     {
-                        Text = I18N.Translate
+                        Text = _ => I18N.Translate
                         (
                             renderContext,
                             "webexpress.webapp:setting.systeminformation.group.environment.username"
@@ -277,7 +277,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
                 (
                     new ControlTableCell()
                     {
-                        Text = I18N.Translate
+                        Text = _ => I18N.Translate
                         (
                             renderContext,
                             "webexpress.webapp:setting.systeminformation.group.environment.clr"

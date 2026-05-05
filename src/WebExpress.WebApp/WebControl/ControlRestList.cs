@@ -54,6 +54,7 @@ namespace WebExpress.WebApp.WebControl
         public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IUri uri)
         {
             var resultUri = uri?.BindParameters(renderContext.Request);
+            var selectable = Selectable?.Invoke(renderContext) ?? false;
 
             var html = new HtmlElementTextContentDiv()
             {
@@ -63,7 +64,7 @@ namespace WebExpress.WebApp.WebControl
             }
                 .AddUserAttribute("data-title", I18N.Translate(renderContext, Title))
                 .AddUserAttribute("data-sortable", Sortable ? "true" : null)
-                .AddUserAttribute("data-selectable", Selectable ? "true" : null)
+                .AddUserAttribute("data-selectable", selectable ? "true" : null)
                 .AddUserAttribute("data-layout", Layout.ToClass())
                 .AddUserAttribute("data-uri", resultUri?.ToString())
                 .Add(Items.Select(x => x.Render(renderContext, visualTree)));

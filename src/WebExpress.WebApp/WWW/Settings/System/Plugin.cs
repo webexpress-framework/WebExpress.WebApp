@@ -82,7 +82,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
 
             UploadButton.PrimaryAction = _ => new ActionPluginPackage(packageApiUri, RequestMethod.POST.ToString(), true);
 
-            var packageTable = new ControlTable() { Striped = TypeStripedTable.Row };
+            var packageTable = new ControlTable() { Striped = _ => TypeStripedTable.Row };
             packageTable.AddColumn("");
             packageTable.AddColumn(I18N.Translate(renderContext, "webexpress.webapp:setting.plugin.name.label"));
             packageTable.AddColumn(I18N.Translate(renderContext, "webexpress.webapp:setting.plugin.version.label"));

@@ -51,8 +51,8 @@ namespace WebExpress.WebApp.WWW.Settings.System
             // create a table to display scalar metric values
             var statsTable = new ControlTable()
             {
-                Striped = TypeStripedTable.Row,
-                SuppressHeaders = true
+                Striped = _ => TypeStripedTable.Row,
+                SuppressHeaders = _ => true
             };
 
             statsTable.AddColumn("");
@@ -63,7 +63,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
             (
                 new ControlTableCell()
                 {
-                    Text = I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.currenttime")
+                    Text = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.currenttime")
                 },
                 new ControlTableCellPanel().Add(new ControlText()
                 {
@@ -77,7 +77,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
             (
                 new ControlTableCell()
                 {
-                    Text = I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.uptime")
+                    Text = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.uptime")
                 },
                 new ControlTableCellPanel().Add(new ControlText()
                 {
@@ -97,7 +97,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
             (
                 new ControlTableCell()
                 {
-                    Text = I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.totalrequests")
+                    Text = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.totalrequests")
                 },
                 new ControlTableCellPanel().Add(new ControlText()
                 {
@@ -141,13 +141,13 @@ namespace WebExpress.WebApp.WWW.Settings.System
 
             var chartTraffic = new ControlChart()
             {
-                Type = TypeChart.Line,
-                Height = 300,
-                Responsive = true,
-                MaintainAspectRatio = false,
-                TitleDisplay = false,
-                LegendDisplay = true,
-                YBeginAtZero = true
+                Type = _ => TypeChart.Line,
+                Height = _ => 300,
+                Responsive = _ => true,
+                MaintainAspectRatio = _ => false,
+                TitleDisplay = _ => false,
+                LegendDisplay = _ => true,
+                YBeginAtZero = _ => true
             };
 
             chartTraffic.AddLabel(labels);
@@ -184,13 +184,13 @@ namespace WebExpress.WebApp.WWW.Settings.System
 
             var chartPerformance = new ControlChart()
             {
-                Type = TypeChart.Line,
-                Height = 300,
-                Responsive = true,
-                MaintainAspectRatio = false,
-                TitleDisplay = false,
-                LegendDisplay = true,
-                YBeginAtZero = true
+                Type = _ => TypeChart.Line,
+                Height = _ => 300,
+                Responsive = _ => true,
+                MaintainAspectRatio = _ => false,
+                TitleDisplay = _ => false,
+                LegendDisplay = _ => true,
+                YBeginAtZero = _ => true
             };
 
             chartPerformance.AddLabel(labels);
@@ -235,13 +235,13 @@ namespace WebExpress.WebApp.WWW.Settings.System
 
             var chartResources = new ControlChart()
             {
-                Type = TypeChart.Line,
-                Height = 300,
-                Responsive = true,
-                MaintainAspectRatio = false,
-                TitleDisplay = false,
-                LegendDisplay = true,
-                YBeginAtZero = true
+                Type = _ => TypeChart.Line,
+                Height = _ => 300,
+                Responsive = _ => true,
+                MaintainAspectRatio = _ => false,
+                TitleDisplay = _ => false,
+                LegendDisplay = _ => true,
+                YBeginAtZero = _ => true
             };
 
             chartResources.AddLabel(labels);

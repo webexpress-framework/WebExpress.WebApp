@@ -15,9 +15,9 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         public ControlFormItemButtonSubmit Submit { get; } = new ControlFormItemButtonSubmit
         {
-            Text = "webexpress.webapp:clone.label",
-            Icon = new IconCopy(),
-            Color = new PropertyColorButton(TypeColorButton.Primary)
+            Text = _ => "webexpress.webapp:clone.label",
+            Icon = _ => new IconCopy(),
+            Color = _ => new PropertyColorButton(TypeColorButton.Primary)
         };
 
         /// <summary>

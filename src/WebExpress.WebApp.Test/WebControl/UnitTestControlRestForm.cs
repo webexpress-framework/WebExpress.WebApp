@@ -277,7 +277,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var control = new ControlRestForm();
             control.AddPrimaryButton(new ControlFormItemButtonSubmit("")
             {
-                Text = "sendbutton"
+                Text = _ => "sendbutton"
             });
 
             // act

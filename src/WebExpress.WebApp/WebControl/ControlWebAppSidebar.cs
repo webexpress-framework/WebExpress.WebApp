@@ -254,9 +254,9 @@ namespace WebExpress.WebApp.WebControl
                     .Add(tools)
                     .Add(new ControlToolbarItemButtonSplitToggle("wx-split-button-toggle")
                     {
-                        Alignment = TypeToolbarItemAlignment.Right,
-                        Overflow = TypeToolbarItemOverflow.Never,
-                        SpltterId = "wx-split"
+                        Alignment = _ => TypeToolbarItemAlignment.Right,
+                        Overflow = _ => TypeToolbarItemOverflow.Never,
+                        SpltterId = _ => "wx-split"
                     })
                 : null;
 
@@ -372,17 +372,17 @@ namespace WebExpress.WebApp.WebControl
                );
 
             var preferencesLeft = preferences
-                .Where(x => x.Alignment == TypeToolbarItemAlignment.Default || x.Alignment == TypeToolbarItemAlignment.Left);
+                .Where(x => x.Alignment?.Invoke(renderContext) == TypeToolbarItemAlignment.Default || x.Alignment?.Invoke(renderContext) == TypeToolbarItemAlignment.Left);
             var preferencesRight = preferences
-                .Where(x => x.Alignment == TypeToolbarItemAlignment.Right);
+                .Where(x => x.Alignment?.Invoke(renderContext) == TypeToolbarItemAlignment.Right);
             var primaryLeft = primary
-                .Where(x => x.Alignment == TypeToolbarItemAlignment.Default || x.Alignment == TypeToolbarItemAlignment.Left);
+                .Where(x => x.Alignment?.Invoke(renderContext) == TypeToolbarItemAlignment.Default || x.Alignment?.Invoke(renderContext) == TypeToolbarItemAlignment.Left);
             var primaryRight = primary
-                .Where(x => x.Alignment == TypeToolbarItemAlignment.Right);
+                .Where(x => x.Alignment?.Invoke(renderContext) == TypeToolbarItemAlignment.Right);
             var secondaryLeft = secondary
-                .Where(x => x.Alignment == TypeToolbarItemAlignment.Default || x.Alignment == TypeToolbarItemAlignment.Left);
+                .Where(x => x.Alignment?.Invoke(renderContext) == TypeToolbarItemAlignment.Default || x.Alignment?.Invoke(renderContext) == TypeToolbarItemAlignment.Left);
             var secondaryRight = secondary
-                .Where(x => x.Alignment == TypeToolbarItemAlignment.Right);
+                .Where(x => x.Alignment?.Invoke(renderContext) == TypeToolbarItemAlignment.Right);
 
             // left
             foreach (var item in preferencesLeft)
@@ -420,7 +420,7 @@ namespace WebExpress.WebApp.WebControl
             {
                 yield return new ControlToolbarItemDivider()
                 {
-                    Alignment = TypeToolbarItemAlignment.Right
+                    Alignment = _ => TypeToolbarItemAlignment.Right
                 };
             }
 
@@ -433,7 +433,7 @@ namespace WebExpress.WebApp.WebControl
             {
                 yield return new ControlToolbarItemDivider()
                 {
-                    Alignment = TypeToolbarItemAlignment.Right
+                    Alignment = _ => TypeToolbarItemAlignment.Right
                 };
             }
 

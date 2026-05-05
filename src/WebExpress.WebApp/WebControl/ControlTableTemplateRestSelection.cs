@@ -1,4 +1,5 @@
-﻿using WebExpress.WebCore.Internationalization;
+﻿using System;
+using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
@@ -19,22 +20,22 @@ namespace WebExpress.WebApp.WebControl
         /// <summary>
         /// Gets or sets a value indicating whether the current template is editable or read-only.
         /// </summary>
-        public bool Editable { get; set; }
+        public Func<IRenderControlContext, bool> Editable { get; set; }
 
         /// <summary>
         /// Allows you to select multiple items.
         /// </summary>
-        public bool MultiSelect { get; set; }
+        public Func<IRenderControlContext, bool> MultiSelect { get; set; }
 
         /// <summary>
         /// Gets or sets the placeholder text displayed when the input field is empty.
         /// </summary>
-        public string Placeholder { get; set; }
+        public Func<IRenderControlContext, string> Placeholder { get; set; }
 
         /// <summary>
         /// Gets or sets the uri that determines the data.
         /// </summary>
-        public IUri RestUri { get; set; }
+        public Func<IRenderControlContext, IUri> RestUri { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class.
@@ -53,15 +54,20 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
+            var multiSelect = MultiSelect?.Invoke(renderContext) ?? false;
+            var placeholder = Placeholder?.Invoke(renderContext);
+            var editable = Editable?.Invoke(renderContext) ?? false;
+            var restUri = RestUri?.Invoke(renderContext);
+
             var html = new HtmlElement("template")
             {
                 Id = Id
             }
                 .AddUserAttribute("data-type", "rest_selection")
-                .AddUserAttribute("data-multiselection", MultiSelect ? "true" : null)
-                .AddUserAttribute("data-placeholder", I18N.Translate(renderContext, Placeholder))
-                .AddUserAttribute("data-editable", Editable ? "true" : null)
-                .AddUserAttribute("data-uri", RestUri?.ToString());
+                .AddUserAttribute("data-multiselection", multiSelect ? "true" : null)
+                .AddUserAttribute("data-placeholder", I18N.Translate(renderContext, placeholder))
+                .AddUserAttribute("data-editable", editable ? "true" : null)
+                .AddUserAttribute("data-uri", restUri?.ToString());
 
             return html;
         }

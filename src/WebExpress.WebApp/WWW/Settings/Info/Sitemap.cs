@@ -11,6 +11,7 @@ using WebExpress.WebCore.WebSettingPage;
 using WebExpress.WebCore.WebSitemap;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebIcon;
+using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.WWW.Settings.Info
 {
@@ -71,8 +72,8 @@ namespace WebExpress.WebApp.WWW.Settings.Info
             // build hierarchical tree by path segments
             var root = new ControlTreeItem("sitemap-root")
             {
-                Text = "/",
-                Expand = true
+                Text = _ => "/",
+                Expand = _ => true
             };
 
             foreach (var ep in endpoints)
@@ -98,14 +99,14 @@ namespace WebExpress.WebApp.WWW.Settings.Info
                 foreach (var seg in segments)
                 {
                     // find existing child with same text
-                    var child = current.Children.OfType<ControlTreeItem>().FirstOrDefault(c => string.Equals(c.Text, seg, StringComparison.Ordinal));
+                    var child = current.Children.OfType<ControlTreeItem>().FirstOrDefault(c => string.Equals(c.Text?.Invoke(renderContext as IRenderControlContext), seg, StringComparison.Ordinal));
                     if (child == null)
                     {
                         // create new segment node
                         child = new ControlTreeItem(RandomId.Create())
                         {
-                            Text = seg,
-                            Expand = true
+                            Text = _ => seg,
+                            Expand = _ => true
                         };
                         current.Add(child);
                     }
@@ -123,8 +124,8 @@ namespace WebExpress.WebApp.WWW.Settings.Info
             {
                 var emptyNode = new ControlTreeItem("sitemap-empty")
                 {
-                    Text = I18N.Translate(renderContext, "kleenestar.core:setting.sitemap.empty"),
-                    Expand = true
+                    Text = _ => I18N.Translate(renderContext, "kleenestar.core:setting.sitemap.empty"),
+                    Expand = _ => true
                 };
                 tree.Add(emptyNode);
             }
@@ -156,10 +157,10 @@ namespace WebExpress.WebApp.WWW.Settings.Info
             var leaf = new ControlTreeItem($"ep-{ep.EndpointId}")
             {
                 // display a readable title: prefer route template or endpoint id
-                Text = GetEndpointDisplayText(ep),
+                Text = _ => GetEndpointDisplayText(ep),
                 // show endpoint id as tooltip for clarity
-                Tooltip = ep.EndpointId.ToString(),
-                Expand = true
+                Tooltip = _ => ep.EndpointId.ToString(),
+                Expand = _ => true
             };
 
             // if endpoint exposes a printable route, add it to tooltip as well
@@ -168,7 +169,7 @@ namespace WebExpress.WebApp.WWW.Settings.Info
                 var route = ep.Route;
                 if (route != null)
                 {
-                    leaf.Tooltip = $"{leaf.Tooltip} - {route.ToString()}";
+                    leaf.Tooltip = _ => $"{leaf.Tooltip} - {route.ToString()}";
                 }
             }
             catch

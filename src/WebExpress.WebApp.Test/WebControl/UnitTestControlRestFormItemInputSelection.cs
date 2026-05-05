@@ -100,7 +100,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestFormItemInputSelection(null)
             {
-                Placeholder = placeholder
+                Placeholder = _ => placeholder
             };
 
             // act
@@ -125,7 +125,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestFormItemInputSelection(null)
             {
-                MultiSelect = multiSelect
+                MultiSelect = _ => multiSelect
             };
 
             // act
