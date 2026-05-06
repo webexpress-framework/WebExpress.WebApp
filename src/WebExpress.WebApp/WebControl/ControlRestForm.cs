@@ -64,6 +64,7 @@ namespace WebExpress.WebApp.WebControl
             var formLayout = FormLayout?.Invoke(renderContext) ?? TypeLayoutForm.Default;
             var id = ItemId?.Invoke(renderContext);
             var method = Method?.Invoke(renderContext) ?? RequestMethod.NONE;
+            var role = Role?.Invoke(renderContext);
 
             var resultUri = uri?.BindParameters(renderContext.Request);
 
@@ -73,7 +74,7 @@ namespace WebExpress.WebApp.WebControl
                 Id = Id,
                 Class = Css.Concatenate("wx-webapp-restform", GetClasses()),
                 Style = GetStyles(),
-                Role = Role
+                Role = role
             }
                 .AddUserAttribute("data-method", method.ToString())
                 .AddUserAttribute("data-mode", mode?.ToMode())

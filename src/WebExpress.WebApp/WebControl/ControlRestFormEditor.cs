@@ -70,13 +70,14 @@ namespace WebExpress.WebApp.WebControl
         {
             var classes = Classes.ToList();
             var indent = Indent < 8 ? 8 : Indent > 32 ? 32 : Indent;
+            var role = Role?.Invoke(renderContext);
 
             var html = new HtmlElementTextContentDiv()
             {
                 Id = Id,
                 Class = Css.Concatenate("wx-webapp-restform-editor", classes),
                 Style = GetStyles(),
-                Role = Role
+                Role = role
             }
                 .AddUserAttribute("data-rest-url", restUri?.ToString())
                 .AddUserAttribute("data-preview", !Preview ? "false" : null)

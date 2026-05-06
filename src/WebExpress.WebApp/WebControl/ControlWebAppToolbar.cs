@@ -216,7 +216,7 @@ namespace WebExpress.WebApp.WebControl
             var items = GetItems(renderContext);
             var more = GetMore(renderContext);
 
-            Enable = items.Any() || more.Any();
+            var enable = items.Any() || more.Any();
 
             return base.Render(renderContext, visualTree, items, more);
         }

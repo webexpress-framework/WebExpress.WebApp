@@ -109,10 +109,11 @@ namespace WebExpress.WebApp.WebControl
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
             var items = GetItems(renderContext);
+            //var enable = Enable?.Invoke(renderContext) ?? true;
 
-            Enable = items.Count() > 1;
+            var enable = items.Count() > 1;
 
-            if (!Enable)
+            if (!enable)
             {
                 return null;
             }

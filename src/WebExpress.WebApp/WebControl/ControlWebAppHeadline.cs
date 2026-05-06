@@ -195,6 +195,7 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
+            var role = Role?.Invoke(renderContext);
             var prologue = Prologue.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionHeadlinePrologue>
             (
                 renderContext?.PageContext
@@ -281,7 +282,7 @@ namespace WebExpress.WebApp.WebControl
                 Id = Id,
                 Class = Css.Concatenate("", GetClasses()),
                 Style = Style.Concatenate("display: block;", GetStyles()),
-                Role = Role
+                Role = role
             };
         }
     }

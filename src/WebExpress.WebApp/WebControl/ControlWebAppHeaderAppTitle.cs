@@ -42,6 +42,8 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
+            var role = Role?.Invoke(renderContext);
+
             var apptitle = new ControlText()
             {
                 Text = I18N.Translate(renderContext, renderContext.PageContext?.ApplicationContext?.ApplicationName),
@@ -56,7 +58,7 @@ namespace WebExpress.WebApp.WebControl
                 Href = renderContext?.PageContext?.ApplicationContext?.Route?.ToString(),
                 Class = Css.Concatenate("", GetClasses()),
                 Style = Style.Concatenate("", GetStyles()),
-                Role = Role
+                Role = role
             };
         }
     }

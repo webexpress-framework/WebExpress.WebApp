@@ -52,8 +52,9 @@ namespace WebExpress.WebApp.WebApiControl
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
             var applicationContext = renderContext?.PageContext?.ApplicationContext;
+            var enable = Enable?.Invoke(renderContext) ?? true;
 
-            if (!Enable)
+            if (!enable)
             {
                 return null;
             }

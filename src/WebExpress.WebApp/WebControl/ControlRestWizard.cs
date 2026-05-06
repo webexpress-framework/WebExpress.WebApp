@@ -98,6 +98,7 @@ namespace WebExpress.WebApp.WebControl
         public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, string id, IUri uri)
         {
             var resultUri = uri?.BindParameters(renderContext.Request);
+            var role = Role?.Invoke(renderContext);
 
             // generate html
             var html = new HtmlElementFormForm()
@@ -105,7 +106,7 @@ namespace WebExpress.WebApp.WebControl
                 Id = Id,
                 Class = Css.Concatenate("wx-webapp-restwizard", GetClasses()),
                 Style = GetStyles(),
-                Role = Role
+                Role = role
             }
                 .AddUserAttribute("data-mode", Mode.ToMode())
                 .AddUserAttribute("data-id", id?.ToString())

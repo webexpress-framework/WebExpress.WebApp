@@ -113,6 +113,8 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
+            var role = Role?.Invoke(renderContext);
+
             var content = new ControlPanelFlex()
             {
                 Layout = TypeLayoutFlex.Default,
@@ -133,7 +135,7 @@ namespace WebExpress.WebApp.WebControl
                 Id = Id,
                 Class = Css.Concatenate("navbar", GetClasses()),
                 Style = Style.Concatenate("display: block;", GetStyles()),
-                Role = Role
+                Role = role
             };
         }
     }
