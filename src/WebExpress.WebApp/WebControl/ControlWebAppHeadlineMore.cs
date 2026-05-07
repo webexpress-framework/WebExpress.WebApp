@@ -129,8 +129,8 @@ namespace WebExpress.WebApp.WebControl
             var settingsCtlr = items.Any() ?
             new ControlDropdown(Id, [.. items])
             {
-                Icon = new IconEllipsisHorizontal(),
-                AlignmentMenu = TypeAlignmentDropdownMenu.Right,
+                Icon = _ => new IconEllipsisHorizontal(),
+                AlignmentMenu = _ => TypeAlignmentDropdownMenu.Right,
                 //BackgroundColor = new PropertyColorButton(TypeColorButton.Dark),
                 Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None)
             } :
@@ -165,7 +165,7 @@ namespace WebExpress.WebApp.WebControl
             {
                 yield return new ControlDropdownItemHeader()
                 {
-                    Text = "webexpress.webapp:headline.more.title"
+                    Text = _ => "webexpress.webapp:headline.more.title"
                 };
             }
 

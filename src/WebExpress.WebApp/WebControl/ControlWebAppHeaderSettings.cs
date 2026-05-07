@@ -132,8 +132,8 @@ namespace WebExpress.WebApp.WebControl
                 ? new ControlDropdown(Id)
                 {
                     Classes = ["wx-app-dropdown"],
-                    Icon = new IconCog(),
-                    AlignmentMenu = TypeAlignmentDropdownMenu.Right,
+                    Icon = _ => new IconCog(),
+                    AlignmentMenu = _ => TypeAlignmentDropdownMenu.Right,
                     Margin = _ => new PropertySpacingMargin
                     (
                         PropertySpacing.Space.Two,
@@ -164,9 +164,9 @@ namespace WebExpress.WebApp.WebControl
                 (
                     x => new ControlDropdownItemLink()
                     {
-                        Text = I18N.Translate(renderContext, x?.Name),
-                        Uri = settinPageManager.GetFirstSettingPage(appicationContext, x)?.Route.ToUri(),
-                        Icon = x.Icon
+                        Text = _ => I18N.Translate(renderContext, x?.Name),
+                        Uri = _ => settinPageManager.GetFirstSettingPage(appicationContext, x)?.Route.ToUri(),
+                        Icon = _ => x.Icon
                     }
                 );
             var primaryCategories = settinPageManager?.GetSettingCategories(appicationContext)
@@ -176,9 +176,9 @@ namespace WebExpress.WebApp.WebControl
                 (
                     x => new ControlDropdownItemLink()
                     {
-                        Text = I18N.Translate(renderContext, x?.Name),
-                        Uri = settinPageManager.GetFirstSettingPage(appicationContext, x)?.Route.ToUri(),
-                        Icon = x.Icon
+                        Text = _ => I18N.Translate(renderContext, x?.Name),
+                        Uri = _ => settinPageManager.GetFirstSettingPage(appicationContext, x)?.Route.ToUri(),
+                        Icon = _ => x.Icon
                     }
                 );
             var secondaryCategories = settinPageManager?.GetSettingCategories(appicationContext)
@@ -188,9 +188,9 @@ namespace WebExpress.WebApp.WebControl
                 (
                     x => new ControlDropdownItemLink()
                     {
-                        Text = I18N.Translate(renderContext, x?.Name),
-                        Uri = settinPageManager.GetFirstSettingPage(appicationContext, x)?.Route.ToUri(),
-                        Icon = x.Icon
+                        Text = _ => I18N.Translate(renderContext, x?.Name),
+                        Uri = _ => settinPageManager.GetFirstSettingPage(appicationContext, x)?.Route.ToUri(),
+                        Icon = _ => x.Icon
                     }
                 );
 
@@ -213,7 +213,7 @@ namespace WebExpress.WebApp.WebControl
             {
                 yield return new ControlDropdownItemHeader()
                 {
-                    Text = I18N.Translate(renderContext.Request, "webexpress.webapp:header.setting.label")
+                    Text = _ => I18N.Translate(renderContext.Request, "webexpress.webapp:header.setting.label")
                 };
             }
 

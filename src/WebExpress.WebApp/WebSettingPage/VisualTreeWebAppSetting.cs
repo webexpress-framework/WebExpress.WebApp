@@ -50,8 +50,8 @@ namespace WebExpress.WebApp.WebSettingPage
             var body = new HtmlElementSectionBody();
             var renderContext = new RenderControlContext(context.RenderContext);
 
-            Breadcrumb.Prefix = "webexpress.webapp:setting.label";
-            Breadcrumb.TakeLast = 1;
+            Breadcrumb.Prefix = _ => "webexpress.webapp:setting.label";
+            Breadcrumb.TakeLast = _ => 1;
 
             // head
             html.Head.Title = I18N.Translate(context.Request, Title);

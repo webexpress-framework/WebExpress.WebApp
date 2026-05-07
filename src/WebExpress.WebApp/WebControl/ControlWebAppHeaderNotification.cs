@@ -131,8 +131,8 @@ namespace WebExpress.WebApp.WebControl
                 ? new ControlDropdown(Id)
                 {
                     Classes = ["wx-app-dropdown"],
-                    Icon = new IconBell(),
-                    AlignmentMenu = TypeAlignmentDropdownMenu.Right,
+                    Icon = _ => new IconBell(),
+                    AlignmentMenu = _ => TypeAlignmentDropdownMenu.Right,
                     Margin = _ => new PropertySpacingMargin
                     (
                         PropertySpacing.Space.Two,
@@ -173,7 +173,7 @@ namespace WebExpress.WebApp.WebControl
             {
                 yield return new ControlDropdownItemHeader()
                 {
-                    Text = I18N.Translate(renderContext.Request, "webexpress.webapp:header.notification.label")
+                    Text = _ => I18N.Translate(renderContext.Request, "webexpress.webapp:header.notification.label")
                 };
             }
 

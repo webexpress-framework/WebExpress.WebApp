@@ -132,7 +132,7 @@ namespace WebExpress.WebApp.WebControl
                 ? (IControl)new ControlDropdown(Id)
                 {
                     Classes = ["wx-appnavigator"],
-                    Icon = new ImageIcon(application?.Icon?.ToUri(), new PropertySizeIcon(1, TypeSizeUnit.Em)),
+                    Icon = _ => new ImageIcon(application?.Icon?.ToUri(), new PropertySizeIcon(1, TypeSizeUnit.Em)),
                 }
                     .Add(items)
                 : new ControlImage(Id)
@@ -172,7 +172,7 @@ namespace WebExpress.WebApp.WebControl
             {
                 yield return new ControlDropdownItemHeader()
                 {
-                    Text = I18N.Translate(renderContext, application?.ApplicationName)
+                    Text = _ => I18N.Translate(renderContext, application?.ApplicationName)
                 };
             }
 

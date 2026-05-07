@@ -108,7 +108,7 @@ namespace WebExpress.WebApp.WebPage
             Header.Fixed = TypeFixed.Top;
             Header.Styles = ["position: sticky; top: 0; z-index: 99;"];
 
-            Breadcrumb.Uri = pageContext?.Route?.ToUri();
+            Breadcrumb.Uri = renderContext => BreadcrumbUri ?? renderContext?.Request?.Uri;
             Breadcrumb.Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Null);
             (Content as ControlWebAppContent).Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None);
 
@@ -147,12 +147,12 @@ namespace WebExpress.WebApp.WebPage
             (
                 renderContext?.PageContext
             );
-            var breadcrumbUri = BreadcrumbUri ?? renderContext?.Request?.Uri;
+
             html.Body.Add(preferences.Select(x => x.Render(renderContext, this)));
             html.Body.Add(MessageQueueUri);
             html.Body.Add(Header.Render(renderContext, this));
             html.Body.Add(Toast.Render(renderContext, this));
-            html.Body.Add(Breadcrumb.Render(renderContext, this, breadcrumbUri));
+            html.Body.Add(Breadcrumb.Render(renderContext, this));
             html.Body.Add(Prologue.Render(renderContext, this));
 
             var primary = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionBodyPrimary>

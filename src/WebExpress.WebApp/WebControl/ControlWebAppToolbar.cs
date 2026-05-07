@@ -377,7 +377,7 @@ namespace WebExpress.WebApp.WebControl
             {
                 yield return new ControlDropdownItemHeader()
                 {
-                    Text = "webexpress.webapp:toolbar.more.title"
+                    Text = _ => "webexpress.webapp:toolbar.more.title"
                 };
             }
 

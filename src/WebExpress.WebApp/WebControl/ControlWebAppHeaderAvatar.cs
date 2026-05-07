@@ -164,9 +164,9 @@ namespace WebExpress.WebApp.WebControl
             var avatarCtrl = items.Any()
                 ? new ControlAvatarDropdown(Id)
                 {
-                    AlignmentMenu = TypeAlignmentDropdownMenu.Right,
-                    User = username,
-                    Image = image,
+                    AlignmentMenu = _ => TypeAlignmentDropdownMenu.Right,
+                    User = _ => username,
+                    Image = _ => image,
                     Margin = _ => new PropertySpacingMargin
                     (
                         PropertySpacing.Space.Two,
@@ -207,7 +207,7 @@ namespace WebExpress.WebApp.WebControl
             {
                 yield return new ControlDropdownItemHeader()
                 {
-                    Text = I18N.Translate(renderContext.Request, "webexpress.webapp:header.avatar.label")
+                    Text = _ => I18N.Translate(renderContext.Request, "webexpress.webapp:header.avatar.label")
                 };
             }
 

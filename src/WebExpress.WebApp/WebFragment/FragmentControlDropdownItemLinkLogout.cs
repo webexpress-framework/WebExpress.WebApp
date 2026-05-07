@@ -1,4 +1,5 @@
-﻿using WebExpress.WebApp.WebApiControl;
+﻿using System;
+using WebExpress.WebApp.WebApiControl;
 using WebExpress.WebCore.WebFragment;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebUri;
@@ -20,14 +21,27 @@ namespace WebExpress.WebApp.WebFragment
     public abstract class FragmentControlDropdownItemLinkLogout : FragmentControlDropdownItemLink
     {
         /// <summary>
+        /// Gets or sets the URI associated with this instance.
+        /// </summary>
+        public Func<IRenderControlContext, IUri> RestUri { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="fragmentContext">The context in which the fragment is used.</param>
         public FragmentControlDropdownItemLinkLogout(IFragmentContext fragmentContext)
             : base(fragmentContext)
         {
-            Text = "webexpress.webapp:logout.label";
-            Icon = new IconRightFromBracket();
+            Text = _ => "webexpress.webapp:logout.label";
+            Icon = _ => new IconRightFromBracket();
+
+            PrimaryAction = renderContext =>
+            {
+                var uri = RestUri?.Invoke(renderContext);
+                var targetUri = renderContext.PageContext.ApplicationContext.Route.ToUri();
+
+                return new ActionLogout(uri, targetUri);
+            };
         }
 
         /// <summary>
@@ -43,10 +57,7 @@ namespace WebExpress.WebApp.WebFragment
                 return null;
             }
 
-            var targetUri = renderContext.PageContext.ApplicationContext.Route.ToUri();
-            var primaryAction = new ActionLogout(restUri, targetUri);
-
-            return base.Render(renderContext, visualTree, Text, Tooltip, Icon, Color, Uri, Target, primaryAction, SecondaryAction);
+            return base.Render(renderContext, visualTree);
         }
     }
 }
