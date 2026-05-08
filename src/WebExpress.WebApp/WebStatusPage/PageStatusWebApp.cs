@@ -43,23 +43,23 @@ namespace WebExpress.WebApp.WebStatusPage
         {
             var statusCode = new ControlText()
             {
-                Text = _statusPageContext.StatusCode.ToString(),
-                Format = TypeFormatText.H2,
+                Text = _ => _statusPageContext.StatusCode.ToString(),
+                Format = _ => TypeFormatText.H2,
                 Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.One),
                 Padding = _ => new PropertySpacingPadding(PropertySpacing.Space.Four)
             };
 
             var title = new ControlText()
             {
-                Text = I18N.Translate(renderContext, _statusPageContext.StatusTitle),
-                Format = TypeFormatText.H3,
+                Text = _ => I18N.Translate(renderContext, _statusPageContext.StatusTitle),
+                Format = _ => TypeFormatText.H3,
                 Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
             };
 
             var description = new ControlText()
             {
-                Text = I18N.Translate(renderContext, _statusPageContext.StatusDescription),
-                Format = TypeFormatText.Markdown,
+                Text = _ => I18N.Translate(renderContext, _statusPageContext.StatusDescription),
+                Format = _ => TypeFormatText.Markdown,
                 Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
             };
 
@@ -69,7 +69,7 @@ namespace WebExpress.WebApp.WebStatusPage
             }
                 .Add(new ControlText()
                 {
-                    Text = StatusMessage,
+                    Text = _ => StatusMessage,
                     Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
                 });
 
@@ -81,9 +81,9 @@ namespace WebExpress.WebApp.WebStatusPage
 
             var flex = new ControlPanelFlex()
             {
-                Layout = TypeLayoutFlex.Inline,
-                Justify = TypeJustifiedFlex.Start,
-                Align = TypeAlignFlex.Stretch
+                Layout = _ => TypeLayoutFlex.Inline,
+                Justify = _ => TypeJustifiedFlex.Start,
+                Align = _ => TypeAlignFlex.Stretch
             }
                 .Add(statusCode, panel);
 

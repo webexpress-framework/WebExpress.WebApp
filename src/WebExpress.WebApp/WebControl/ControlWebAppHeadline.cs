@@ -228,46 +228,46 @@ namespace WebExpress.WebApp.WebControl
                     null,
                     prologue.Any() ? new ControlPanelFlex(null, [.. prologue])
                     {
-                        Layout = TypeLayoutFlex.Default,
-                        Align = TypeAlignFlex.Center,
-                        Justify = TypeJustifiedFlex.Start
+                        Layout = _ => TypeLayoutFlex.Default,
+                        Align = _ => TypeAlignFlex.Center,
+                        Justify = _ => TypeJustifiedFlex.Start
                     } : null,
                     new ControlText()
                     {
-                        Text = I18N.Translate
+                        Text = _ => I18N.Translate
                         (
                             renderContext,
                             !string.IsNullOrWhiteSpace(Title)
                                 ? Title
                                 : renderContext.PageContext?.PageTitle
                         ),
-                        Format = TypeFormatText.H2,
+                        Format = _ => TypeFormatText.H2,
                         Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.None, PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.Null)
                     },
                     preferences.Any() ? new ControlPanelFlex(null, [.. preferences])
                     {
-                        Layout = TypeLayoutFlex.Default,
-                        Align = TypeAlignFlex.Center,
-                        Justify = TypeJustifiedFlex.Start
+                        Layout = _ => TypeLayoutFlex.Default,
+                        Align = _ => TypeAlignFlex.Center,
+                        Justify = _ => TypeJustifiedFlex.Start
                     } : null,
                     primary.Any() ? new ControlPanelFlex(null, [.. primary])
                     {
-                        Layout = TypeLayoutFlex.Default,
-                        Align = TypeAlignFlex.Center,
-                        Justify = TypeJustifiedFlex.Start
+                        Layout = _ => TypeLayoutFlex.Default,
+                        Align = _ => TypeAlignFlex.Center,
+                        Justify = _ => TypeJustifiedFlex.Start
                     } : null,
                     secondary.Any() ? new ControlPanelFlex(null, [.. secondary])
                     {
-                        Layout = TypeLayoutFlex.Default,
-                        Align = TypeAlignFlex.Center,
-                        Justify = TypeJustifiedFlex.End
+                        Layout = _ => TypeLayoutFlex.Default,
+                        Align = _ => TypeAlignFlex.Center,
+                        Justify = _ => TypeJustifiedFlex.End
                     } : null,
                     More
                 )
                 {
-                    Layout = TypeLayoutFlex.Default,
-                    Align = TypeAlignFlex.Center,
-                    Justify = TypeJustifiedFlex.Between
+                    Layout = _ => TypeLayoutFlex.Default,
+                    Align = _ => TypeAlignFlex.Center,
+                    Justify = _ => TypeJustifiedFlex.Between
                 }.Render(renderContext, visualTree),
                 metadata.Any() ? new HtmlElementTextContentDiv
                 (

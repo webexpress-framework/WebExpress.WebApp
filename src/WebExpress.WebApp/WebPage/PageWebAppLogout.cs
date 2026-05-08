@@ -36,15 +36,15 @@ namespace WebExpress.WebApp.WebPage
 
             var title = new ControlText()
             {
-                Text = I18N.Translate(renderContext, "webexpress.webapp:logout.title"),
-                Format = TypeFormatText.H2,
+                Text = _ => I18N.Translate(renderContext, "webexpress.webapp:logout.title"),
+                Format = _ => TypeFormatText.H2,
                 Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
             };
 
             var message = new ControlText()
             {
-                Text = I18N.Translate(renderContext, "webexpress.webapp:logout.description"),
-                Format = TypeFormatText.Paragraph,
+                Text = _ => I18N.Translate(renderContext, "webexpress.webapp:logout.description"),
+                Format = _ => TypeFormatText.Paragraph,
                 Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
             };
 

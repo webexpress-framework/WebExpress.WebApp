@@ -61,8 +61,8 @@ namespace WebExpress.WebApp.WWW.Settings.System
                     },
                     new ControlTableCellPanel().Add(new ControlText()
                     {
-                        Text = version,
-                        Format = TypeFormatText.Code
+                        Text = _ => version,
+                        Format = _ => TypeFormatText.Code
                     })
                 )
                 .AddRow
@@ -77,11 +77,11 @@ namespace WebExpress.WebApp.WWW.Settings.System
                     },
                     new ControlTableCellPanel().Add(new ControlText()
                     {
-                        Text = DateTime.Now.ToString
+                        Text = _ => DateTime.Now.ToString
                         (
                             renderContext.Request.Culture.DateTimeFormat.LongDatePattern
                         ),
-                        Format = TypeFormatText.Code
+                        Format = _ => TypeFormatText.Code
                     })
                 );
 
@@ -97,11 +97,11 @@ namespace WebExpress.WebApp.WWW.Settings.System
                 },
                 new ControlTableCellPanel().Add(new ControlText()
                 {
-                    Text = DateTime.Now.ToString
+                    Text = _ => DateTime.Now.ToString
                     (
                         renderContext.Request.Culture.DateTimeFormat.LongTimePattern
                     ),
-                    Format = TypeFormatText.Code
+                    Format = _ => TypeFormatText.Code
                 })
             );
 
@@ -117,9 +117,9 @@ namespace WebExpress.WebApp.WWW.Settings.System
                 },
                 new ControlTableCellPanel().Add(new ControlText()
                 {
-                    Text = renderContext.Uri?.BasePath?.GetDisplayText(renderContext)
+                    Text = _ => renderContext.Uri?.BasePath?.GetDisplayText(renderContext)
                         ?? renderContext.Uri?.GetDisplayText(renderContext),
-                    Format = TypeFormatText.Code
+                    Format = _ => TypeFormatText.Code
                 })
             );
 
@@ -135,8 +135,8 @@ namespace WebExpress.WebApp.WWW.Settings.System
                 },
                 new ControlTableCellPanel().Add(new ControlText()
                 {
-                    Text = Environment.CurrentDirectory,
-                    Format = TypeFormatText.Code
+                    Text = _ => Environment.CurrentDirectory,
+                    Format = _ => TypeFormatText.Code
                 })
             );
 
@@ -152,8 +152,8 @@ namespace WebExpress.WebApp.WWW.Settings.System
                 },
                 new ControlTableCellPanel().Add(new ControlText()
                 {
-                    Text = $"{memory.ToString("N2", renderContext.Request.Culture)} MB",
-                    Format = TypeFormatText.Code
+                    Text = _ => $"{memory.ToString("N2", renderContext.Request.Culture)} MB",
+                    Format = _ => TypeFormatText.Code
                 })
             );
 
@@ -169,19 +169,19 @@ namespace WebExpress.WebApp.WWW.Settings.System
                 },
                 new ControlTableCellPanel().Add(new ControlText()
                 {
-                    Text = (converter.ConvertTo(null, renderContext.Request.Culture, DateTime.Now - HttpServer.ExecutionTime, typeof(string))?.ToString()),
-                    Format = TypeFormatText.Code
+                    Text = _ => (converter.ConvertTo(null, renderContext.Request.Culture, DateTime.Now - HttpServer.ExecutionTime, typeof(string))?.ToString()),
+                    Format = _ => TypeFormatText.Code
                 })
             );
 
             visualTree.Content.MainPanel.AddPrimary(new ControlText()
             {
-                Text = I18N.Translate
+                Text = _ => I18N.Translate
                 (
                     renderContext,
                     "webexpress.webapp:setting.systeminformation.group.server.label"
                 ),
-                TextColor = new PropertyColorText(TypeColorText.Info),
+                TextColor = _ => new PropertyColorText(TypeColorText.Info),
                 Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two)
             });
             visualTree.Content.MainPanel.AddPrimary(serverTable);
@@ -205,8 +205,8 @@ namespace WebExpress.WebApp.WWW.Settings.System
                     },
                     new ControlTableCellPanel().Add(new ControlText()
                     {
-                        Text = Environment.OSVersion.ToString(),
-                        Format = TypeFormatText.Code
+                        Text = _ => Environment.OSVersion.ToString(),
+                        Format = _ => TypeFormatText.Code
                     })
                 )
                 .AddRow
@@ -221,8 +221,8 @@ namespace WebExpress.WebApp.WWW.Settings.System
                     },
                     new ControlTableCellPanel().Add(new ControlText()
                     {
-                        Text = Environment.MachineName,
-                        Format = TypeFormatText.Code
+                        Text = _ => Environment.MachineName,
+                        Format = _ => TypeFormatText.Code
                     })
                 )
                 .AddRow
@@ -237,8 +237,8 @@ namespace WebExpress.WebApp.WWW.Settings.System
                     },
                     new ControlTableCellPanel().Add(new ControlText()
                     {
-                        Text = Environment.ProcessorCount.ToString(renderContext.Request.Culture),
-                        Format = TypeFormatText.Code
+                        Text = _ => Environment.ProcessorCount.ToString(renderContext.Request.Culture),
+                        Format = _ => TypeFormatText.Code
                     })
                 )
                 .AddRow
@@ -253,8 +253,8 @@ namespace WebExpress.WebApp.WWW.Settings.System
                     },
                     new ControlTableCellPanel().Add(new ControlText()
                     {
-                        Text = Environment.Is64BitOperatingSystem.ToString(),
-                        Format = TypeFormatText.Code
+                        Text = _ => Environment.Is64BitOperatingSystem.ToString(),
+                        Format = _ => TypeFormatText.Code
                     })
                 )
                 .AddRow
@@ -269,8 +269,8 @@ namespace WebExpress.WebApp.WWW.Settings.System
                     },
                     new ControlTableCellPanel().Add(new ControlText()
                     {
-                        Text = Environment.UserName,
-                        Format = TypeFormatText.Code
+                        Text = _ => Environment.UserName,
+                        Format = _ => TypeFormatText.Code
                     })
                 )
                 .AddRow
@@ -285,19 +285,19 @@ namespace WebExpress.WebApp.WWW.Settings.System
                     },
                     new ControlTableCellPanel().Add(new ControlText()
                     {
-                        Text = Environment.Version.ToString(),
-                        Format = TypeFormatText.Code
+                        Text = _ => Environment.Version.ToString(),
+                        Format = _ => TypeFormatText.Code
                     })
                 );
 
             visualTree.Content.MainPanel.AddPrimary(new ControlText()
             {
-                Text = I18N.Translate
+                Text = _ => I18N.Translate
                 (
                     renderContext,
                     "webexpress.webapp:setting.systeminformation.group.environment.label"
                 ),
-                TextColor = new PropertyColorText(TypeColorText.Info),
+                TextColor = _ => new PropertyColorText(TypeColorText.Info),
                 Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two)
             });
             visualTree.Content.MainPanel.AddPrimary(environmentTable);

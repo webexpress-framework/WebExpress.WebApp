@@ -35,9 +35,9 @@ namespace WebExpress.WebApp.WWW.Settings.System
         /// </summary>
         private ControlText Label { get; } = new ControlText()
         {
-            Text = "webexpress.webapp:setting.plugin.label",
+            Text = _ => "webexpress.webapp:setting.plugin.label",
             Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two),
-            TextColor = new PropertyColorText(TypeColorText.Info)
+            TextColor = _ => new PropertyColorText(TypeColorText.Info)
         };
 
         /// <summary>
@@ -45,7 +45,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
         /// </summary>
         private ControlText Description { get; } = new ControlText()
         {
-            Text = "webexpress.webapp:setting.plugin.description",
+            Text = _ => "webexpress.webapp:setting.plugin.description",
             Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two)
         };
 
@@ -54,7 +54,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
         /// </summary>
         private ControlButton UploadButton { get; } = new ControlButton()
         {
-            Text = (c) => "webexpress.webapp:setting.plugin.upload.label",
+            Text = _ => "webexpress.webapp:setting.plugin.upload.label",
             Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two),
             BackgroundColor = _ => new PropertyColorButton(TypeColorButton.Primary),
             Icon = _ => new IconUpload(),
@@ -108,62 +108,62 @@ namespace WebExpress.WebApp.WWW.Settings.System
                 (
                     new ControlTableCellPanel().Add(new ControlImage()
                     {
-                        Uri = pluginContext?.Icon?.ToUri() ?? null,
-                        Width = 32
+                        Uri = _ => pluginContext?.Icon?.ToUri() ?? null,
+                        Width = _ => 32
                     }),
                     new ControlTableCellPanel().Add
                     (
                         new ControlText()
                         {
-                            Text = I18N.Translate(renderContext, packageName),
-                            Format = TypeFormatText.Default
+                            Text = _ => I18N.Translate(renderContext, packageName),
+                            Format = _ => TypeFormatText.Default
                         },
                         !string.IsNullOrWhiteSpace(package.Metadata?.Authors) ? new ControlText()
                         {
-                            Text = string.Format
+                            Text = _ => string.Format
                             (
                                 I18N.Translate(renderContext, "webexpress.webapp:setting.plugin.package.author.label"),
                                 package.Metadata.Authors
                             ),
-                            Format = TypeFormatText.Default,
-                            TextColor = new PropertyColorText(TypeColorText.Secondary),
+                            Format = _ => TypeFormatText.Default,
+                            TextColor = _ => new PropertyColorText(TypeColorText.Secondary),
                             Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Null),
-                            Size = new PropertySizeText(TypeSizeText.Small)
+                            Size = _ => new PropertySizeText(TypeSizeText.Small)
                         } : null,
                         !string.IsNullOrWhiteSpace(package.Metadata?.Description) ? new ControlText()
                         {
-                            Text = string.Format
+                            Text = _ => string.Format
                             (
                                 I18N.Translate(renderContext, "webexpress.webapp:setting.plugin.description.label"),
                                 I18N.Translate(renderContext, package.Metadata.Description)
                             ),
-                            Format = TypeFormatText.Default,
-                            TextColor = new PropertyColorText(TypeColorText.Secondary),
+                            Format = _ => TypeFormatText.Default,
+                            TextColor = _ => new PropertyColorText(TypeColorText.Secondary),
                             Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Null),
-                            Size = new PropertySizeText(TypeSizeText.Small)
+                            Size = _ => new PropertySizeText(TypeSizeText.Small)
                         } : null,
                         new ControlText()
                         {
-                            Text = string.Format
+                            Text = _ => string.Format
                             (
                                 I18N.Translate(renderContext, "webexpress.webapp:setting.plugin.package.file.label"),
                                 package.File
                             ),
-                            Format = TypeFormatText.Code,
-                            TextColor = new PropertyColorText(TypeColorText.Secondary),
+                            Format = _ => TypeFormatText.Code,
+                            TextColor = _ => new PropertyColorText(TypeColorText.Secondary),
                             Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Null),
-                            Size = new PropertySizeText(TypeSizeText.Small)
+                            Size = _ => new PropertySizeText(TypeSizeText.Small)
                         }
                     ),
                     new ControlTableCellPanel().Add(new ControlText()
                     {
-                        Text = packageVersion,
-                        Format = TypeFormatText.Code
+                        Text = _ => packageVersion,
+                        Format = _ => TypeFormatText.Code
                     }),
                     new ControlTableCellPanel().Add(new ControlText()
                     {
-                        Text = I18N.Translate(renderContext, packageState),
-                        Format = TypeFormatText.Default
+                        Text = _ => I18N.Translate(renderContext, packageState),
+                        Format = _ => TypeFormatText.Default
                     }),
                     actions
                 );

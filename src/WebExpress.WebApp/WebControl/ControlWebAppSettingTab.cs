@@ -120,7 +120,7 @@ namespace WebExpress.WebApp.WebControl
 
             return new ControlNavigation(Id, [.. items])
             {
-                Layout = TypeLayoutTab.Tab
+                Layout = _ => TypeLayoutTab.Tab
             }.Render(renderContext, visualTree);
         }
 

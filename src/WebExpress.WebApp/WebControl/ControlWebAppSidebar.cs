@@ -248,7 +248,7 @@ namespace WebExpress.WebApp.WebControl
             var sidebarCtlr = items.Any()
                 ? new ControlSidebar(Id)
                 {
-                    Breakpoint = 80
+                    Breakpoint = _ => 80
                 }
                     .Add(items)
                     .Add(tools)

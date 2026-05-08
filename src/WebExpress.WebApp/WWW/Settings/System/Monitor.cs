@@ -43,8 +43,8 @@ namespace WebExpress.WebApp.WWW.Settings.System
             // add a title for the general statistics section
             panel.AddPrimary(new ControlText()
             {
-                Text = I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.group.statistics.label"),
-                TextColor = new PropertyColorText(TypeColorText.Info),
+                Text = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.group.statistics.label"),
+                TextColor = _ => new PropertyColorText(TypeColorText.Info),
                 Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two)
             });
 
@@ -67,8 +67,8 @@ namespace WebExpress.WebApp.WWW.Settings.System
                 },
                 new ControlTableCellPanel().Add(new ControlText()
                 {
-                    Text = DateTime.Now.ToString(renderContext.Request.Culture),
-                    Format = TypeFormatText.Code
+                    Text = _ => DateTime.Now.ToString(renderContext.Request.Culture),
+                    Format = _ => TypeFormatText.Code
                 })
             );
 
@@ -81,8 +81,8 @@ namespace WebExpress.WebApp.WWW.Settings.System
                 },
                 new ControlTableCellPanel().Add(new ControlText()
                 {
-                    Text = (DateTime.Now - WebExpress.WebCore.HttpServer.ExecutionTime).ToString(@"dd\.hh\:mm\:ss"),
-                    Format = TypeFormatText.Code
+                    Text = _ => (DateTime.Now - WebExpress.WebCore.HttpServer.ExecutionTime).ToString(@"dd\.hh\:mm\:ss"),
+                    Format = _ => TypeFormatText.Code
                 })
             );
 
@@ -101,8 +101,8 @@ namespace WebExpress.WebApp.WWW.Settings.System
                 },
                 new ControlTableCellPanel().Add(new ControlText()
                 {
-                    Text = totalRequests.ToString(),
-                    Format = TypeFormatText.Code
+                    Text = _ => totalRequests.ToString(),
+                    Format = _ => TypeFormatText.Code
                 })
             );
 
@@ -134,8 +134,8 @@ namespace WebExpress.WebApp.WWW.Settings.System
             // chart 1: traffic (requests and errors)
             panel.AddPrimary(new ControlText()
             {
-                Text = I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.group.chart.traffic.label"),
-                TextColor = new PropertyColorText(TypeColorText.Info),
+                Text = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.group.chart.traffic.label"),
+                TextColor = _ => new PropertyColorText(TypeColorText.Info),
                 Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two)
             });
 
@@ -177,8 +177,8 @@ namespace WebExpress.WebApp.WWW.Settings.System
             // chart 2: performance (duration in ms)
             panel.AddPrimary(new ControlText()
             {
-                Text = I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.group.chart.performance.label"),
-                TextColor = new PropertyColorText(TypeColorText.Info),
+                Text = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.group.chart.performance.label"),
+                TextColor = _ => new PropertyColorText(TypeColorText.Info),
                 Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two)
             });
 
@@ -228,8 +228,8 @@ namespace WebExpress.WebApp.WWW.Settings.System
             // chart 3: resources (cpu % and memory mb)
             panel.AddPrimary(new ControlText()
             {
-                Text = I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.group.chart.resources.label"),
-                TextColor = new PropertyColorText(TypeColorText.Info),
+                Text = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.group.chart.resources.label"),
+                TextColor = _ => new PropertyColorText(TypeColorText.Info),
                 Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two)
             });
 

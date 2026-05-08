@@ -32,23 +32,23 @@ namespace WebExpress.WebApp.WebPage
 
             var title = new ControlText()
             {
-                Text = I18N.Translate(renderContext, "webexpress.webapp:forbidden.title"),
-                Format = TypeFormatText.H2,
+                Text = _ => I18N.Translate(renderContext, "webexpress.webapp:forbidden.title"),
+                Format = _ => TypeFormatText.H2,
                 Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
             };
 
             var description = new ControlText()
             {
-                Text = I18N.Translate(renderContext, "webexpress.webapp:forbidden.description"),
-                Format = TypeFormatText.Paragraph,
+                Text = _ => I18N.Translate(renderContext, "webexpress.webapp:forbidden.description"),
+                Format = _ => TypeFormatText.Paragraph,
                 Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
             };
 
             var image = new ControlImage()
             {
-                Uri = renderContext.PageContext.ApplicationContext?.Route.Concat("webexpress.webapp/assets/img/forbidden.svg").ToUri(),
-                Width = 96,
-                Height = 96,
+                Uri = _ => renderContext.PageContext.ApplicationContext?.Route.Concat("webexpress.webapp/assets/img/forbidden.svg").ToUri(),
+                Width = _ => 96,
+                Height = _ => 96,
                 Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two)
             };
 
@@ -68,10 +68,10 @@ namespace WebExpress.WebApp.WebPage
             var flex = new ControlPanelFlex()
             {
                 Display = _ => TypeDisplay.Flex,
-                Direction = TypeDirection.Horizontal,
-                Justify = TypeJustifiedFlex.Start,
-                Align = TypeAlignFlex.Start,
-                Gap = TypeGap.Three
+                Direction = _ => TypeDirection.Horizontal,
+                Justify = _ => TypeJustifiedFlex.Start,
+                Align = _ => TypeAlignFlex.Start,
+                Gap = _ => TypeGap.Three
             };
 
             flex.Add(left);

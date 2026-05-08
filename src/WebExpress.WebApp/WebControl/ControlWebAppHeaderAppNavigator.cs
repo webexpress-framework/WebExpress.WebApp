@@ -138,7 +138,7 @@ namespace WebExpress.WebApp.WebControl
                 : new ControlImage(Id)
                 {
                     Classes = ["wx-appnavigator"],
-                    Uri = application?.Icon?.ToUri()
+                    Uri = _ => application?.Icon?.ToUri()
                 };
 
             return navigatorCtrl?.Render(renderContext, visualTree);

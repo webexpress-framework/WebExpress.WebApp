@@ -46,15 +46,15 @@ namespace WebExpress.WebApp.WWW.Settings.Info
             // add title text
             visualTree.Content.MainPanel.AddPrimary(new ControlText()
             {
-                Text = I18N.Translate(renderContext, "webexpress.webapp:setting.sitemap.description"),
+                Text = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.sitemap.description"),
                 Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two),
-                Format = TypeFormatText.Markdown
+                Format = _ => TypeFormatText.Markdown
             });
 
             visualTree.Content.MainPanel.AddPrimary(new ControlText()
             {
-                Text = I18N.Translate(renderContext, "webexpress.webapp:setting.sitemap.label"),
-                TextColor = new PropertyColorText(TypeColorText.Info),
+                Text = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.sitemap.label"),
+                TextColor = _ => new PropertyColorText(TypeColorText.Info),
                 Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two)
             });
 

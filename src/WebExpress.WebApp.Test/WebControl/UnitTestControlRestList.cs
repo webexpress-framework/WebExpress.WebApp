@@ -78,7 +78,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestList()
             {
-                Layout = layout
+                Layout = _ => layout
             };
 
             // act
@@ -102,7 +102,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestList(null) { Title = title };
+            var control = new ControlRestList(null) { Title = _ => title };
 
             // act
             var html = control.Render(context, visualTree);
@@ -123,7 +123,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestList(null) { Sortable = sortable };
+            var control = new ControlRestList(null) { Sortable = _ => sortable };
 
             // act
             var html = control.Render(context, visualTree);

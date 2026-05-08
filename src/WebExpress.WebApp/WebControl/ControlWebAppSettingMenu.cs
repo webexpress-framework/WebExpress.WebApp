@@ -49,7 +49,7 @@ namespace WebExpress.WebApp.WebControl
             {
                 var settingPages = settinPageManager.GetSettingPages(appicationContext, group);
 
-                controls.Add(new ControlSidebarItemHeader() { Text = group?.Name });
+                controls.Add(new ControlSidebarItemHeader() { Text = _ => group?.Name });
 
                 foreach (var page in settingPages
                     .Where(x => x.Section == SettingSection.Preferences)
@@ -59,10 +59,10 @@ namespace WebExpress.WebApp.WebControl
                     {
                         controls.Add(new ControlSidebarItemLink()
                         {
-                            Text = page.PageTitle,
-                            Icon = page.PageIcon,
-                            Uri = page?.Route.ToUri(),
-                            Active = page == renderContext.PageContext ? TypeActive.Active : TypeActive.None
+                            Text = _ => page.PageTitle,
+                            Icon = _ => page.PageIcon,
+                            Uri = _ => page?.Route.ToUri(),
+                            Active = _ => page == renderContext.PageContext ? TypeActive.Active : TypeActive.None
                         });
                     }
                 }
@@ -75,10 +75,10 @@ namespace WebExpress.WebApp.WebControl
                     {
                         controls.Add(new ControlSidebarItemLink()
                         {
-                            Text = page.PageTitle,
-                            Icon = page.PageIcon,
-                            Uri = page?.Route.ToUri(),
-                            Active = page == renderContext.PageContext ? TypeActive.Active : TypeActive.None
+                            Text = _ => page.PageTitle,
+                            Icon = _ => page.PageIcon,
+                            Uri = _ => page?.Route.ToUri(),
+                            Active = _ => page == renderContext.PageContext ? TypeActive.Active : TypeActive.None
                         });
                     }
                 }
@@ -91,10 +91,10 @@ namespace WebExpress.WebApp.WebControl
                     {
                         controls.Add(new ControlSidebarItemLink()
                         {
-                            Text = page.PageTitle,
-                            Icon = page.PageIcon,
-                            Uri = page?.Route.ToUri(),
-                            Active = page == renderContext.PageContext ? TypeActive.Active : TypeActive.None
+                            Text = _ => page.PageTitle,
+                            Icon = _ => page.PageIcon,
+                            Uri = _ => page?.Route.ToUri(),
+                            Active = _ => page == renderContext.PageContext ? TypeActive.Active : TypeActive.None
                         });
                     }
                 }

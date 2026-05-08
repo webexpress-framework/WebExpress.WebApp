@@ -59,10 +59,13 @@ namespace WebExpress.WebApp.WebApiControl
             var isChecked = InitialChecked ?? renderContext.GetValue<ControlFormInputValueBool>(this)?.Checked ?? false;
             var name = Name?.Invoke(renderContext);
             var disabled = Disabled?.Invoke(renderContext) ?? false;
+            var layout = Layout?.Invoke(renderContext);
+            var inline = Inline?.Invoke(renderContext) ?? false;
+            var description = Description?.Invoke(renderContext);
 
             var html = new HtmlElementTextContentDiv()
             {
-                Class = Css.Concatenate("wx-webapp-input-check", Layout.ToClass(), Inline ? "form-check-inline" : null, GetClasses()),
+                Class = Css.Concatenate("wx-webapp-input-check", layout?.ToClass(), inline ? "form-check-inline" : null, GetClasses()),
                 Style = GetStyles()
             }
                 .Add(new HtmlElementFieldInput()
@@ -79,9 +82,9 @@ namespace WebExpress.WebApp.WebApiControl
                     Class = Css.Concatenate("form-check-label"),
                     For = Id
                 }
-                    .Add(new HtmlText(string.IsNullOrWhiteSpace(Description) ?
+                    .Add(new HtmlText(string.IsNullOrWhiteSpace(description) ?
                         string.Empty :
-                        I18N.Translate(renderContext.Request?.Culture, Description)
+                        I18N.Translate(renderContext.Request?.Culture, description)
                     )))
                 .AddUserAttribute("data-uri", RestUri?.ToString())
                 .AddUserAttribute("data-value", hasInitialValue ? (isChecked ? "true" : "false") : null);

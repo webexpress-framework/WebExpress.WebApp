@@ -117,8 +117,8 @@ namespace WebExpress.WebApp.WebControl
 
             var content = new ControlPanelFlex()
             {
-                Layout = TypeLayoutFlex.Default,
-                Align = TypeAlignFlex.Center
+                Layout = _ => TypeLayoutFlex.Default,
+                Align = _ => TypeAlignFlex.Center
             }
              .Add(AppNavigator)
              .Add(AppTitle)

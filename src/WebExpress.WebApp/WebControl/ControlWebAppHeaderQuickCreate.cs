@@ -153,7 +153,7 @@ namespace WebExpress.WebApp.WebControl
                 {
                     Classes = ["btn-success"],
                     Text = _ => I18N.Translate(renderContext, "webexpress.webapp:header.quickcreate.label"),
-                    Uri = firstQuickcreate?.Uri?.Invoke(renderContext),
+                    Uri = _ => firstQuickcreate?.Uri?.Invoke(renderContext),
                     PrimaryAction = _ => firstQuickcreate?.PrimaryAction?.Invoke(renderContext)
                 }
                     .Add(nextQuickcreate)

@@ -55,6 +55,9 @@ namespace WebExpress.WebApp.WebControl
         {
             var resultUri = uri?.BindParameters(renderContext.Request);
             var selectable = Selectable?.Invoke(renderContext) ?? false;
+            var title = Title?.Invoke(renderContext);
+            var sortable = Sortable?.Invoke(renderContext) ?? false;
+            var layout = Layout?.Invoke(renderContext);
 
             var html = new HtmlElementTextContentDiv()
             {
@@ -62,10 +65,10 @@ namespace WebExpress.WebApp.WebControl
                 Class = Css.Concatenate("wx-webapp-list", GetClasses()),
                 Style = GetStyles()
             }
-                .AddUserAttribute("data-title", I18N.Translate(renderContext, Title))
-                .AddUserAttribute("data-sortable", Sortable ? "true" : null)
+                .AddUserAttribute("data-title", I18N.Translate(renderContext, title))
+                .AddUserAttribute("data-sortable", sortable ? "true" : null)
                 .AddUserAttribute("data-selectable", selectable ? "true" : null)
-                .AddUserAttribute("data-layout", Layout.ToClass())
+                .AddUserAttribute("data-layout", layout?.ToClass())
                 .AddUserAttribute("data-uri", resultUri?.ToString())
                 .Add(Items.Select(x => x.Render(renderContext, visualTree)));
 
