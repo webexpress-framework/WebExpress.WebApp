@@ -1,5 +1,5 @@
 /**
- * English translations for WebExpress
+ * english translations for webexpress
  */
 webexpress.webui.I18N.register("en", "webexpress.webapp", {
 
@@ -115,5 +115,76 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "formeditor.hints.collapse": "Collapse / expand",
     "formeditor.hints.rename": "Rename",
     "formeditor.hints.delete": "Delete",
-    "formeditor.hints.add": "Add"
+    "formeditor.hints.add": "Add",
+
+    // general webui strings
+    "cancel": "Cancel",
+    "save": "Save",
+    "close": "Close",
+
+    // scrum & backlog
+    "scrum.backlog": "Backlog",
+    "scrum.sprint": "Sprint",
+    "scrum.items": "items",
+    "scrum.empty.sprint": "No items in this sprint.",
+    "scrum.empty.planned": "No items planned for this sprint.",
+    "scrum.empty.backlog": "Backlog is empty.",
+    "scrum.create_sprint": "Create sprint",
+    "scrum.edit_sprint": "Edit sprint",
+
+    // scrum sprint overview
+    "scrum.no_sprint": "No active sprint.",
+    "scrum.active_sprint": "Active sprint",
+    "scrum.progress": "Progress",
+    "scrum.completed": "completed",
+    "scrum.capacity": "Capacity",
+    "scrum.over_capacity": "over capacity",
+    "scrum.free_capacity": "free",
+    "scrum.burndown": "Burndown",
+    "scrum.days_left": "days left",
+    "scrum.day_short": "Day",
+    "scrum.today": "Today",
+    "scrum.loading": "Loading...",
+    "scrum.load_failed": "Failed to load sprint.",
+    "scrum.retry": "Retry",
+    "scrum.trend.no_data": "Trend: no data",
+    "scrum.trend.on_track": "Trend: on track",
+    "scrum.trend.behind": "Trend: behind",
+    "scrum.trend.ahead": "Trend: ahead",
+
+    // scrum context menus
+    "scrum.menu.move_to_backlog": "Move to backlog",
+    "scrum.menu.move_n_to_backlog": "Move {n} items to backlog",
+    "scrum.menu.move_to": "Move to",
+    "scrum.menu.move_n_to": "Move {n} items to",
+    "scrum.menu.start_sprint": "Start sprint",
+    "scrum.menu.complete_sprint": "Complete sprint",
+    "scrum.menu.edit_sprint": "Edit sprint",
+    "scrum.menu.delete_sprint": "Delete sprint",
+
+    // scrum active-sprint confirmation
+    "scrum.confirm.yes": "Yes",
+    "scrum.confirm.add_to_active.title": "Add to active sprint?",
+    "scrum.confirm.add_to_active.prompt": "Are you sure you want to add this item to the active sprint \"{sprint}\"?",
+    "scrum.confirm.add_to_active.prompt_n": "Are you sure you want to add {n} items to the active sprint \"{sprint}\"?",
+    "scrum.confirm.remove_from_active.title": "Remove from active sprint?",
+    "scrum.confirm.remove_from_active.prompt": "Are you sure you want to remove this item from the active sprint \"{sprint}\"?",
+    "scrum.confirm.remove_from_active.prompt_n": "Are you sure you want to remove {n} items from the active sprint \"{sprint}\"?",
+
+    // scrum sprint dialog fields
+    "scrum.field.name": "Sprint name",
+    "scrum.field.name.placeholder": "Sprint 27",
+    "scrum.field.goal": "Sprint goal",
+    "scrum.field.duration": "Duration",
+    "scrum.duration.custom": "Custom",
+    "scrum.duration.1": "1 Week",
+    "scrum.duration.2": "2 Weeks",
+    "scrum.duration.3": "3 Weeks",
+    "scrum.duration.4": "4 Weeks",
+    "scrum.field.start": "Start",
+    "scrum.field.start.placeholder": "Pick a start date",
+    "scrum.field.range": "Sprint period",
+    "scrum.field.range.placeholder": "Pick a date range",
+    "scrum.field.capacity": "Capacity (pts)",
+    "scrum.dialog.create": "Create"
 });

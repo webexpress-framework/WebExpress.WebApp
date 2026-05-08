@@ -30,6 +30,8 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/js/webexpress.webapp.restform.js")]
     [Asset("/assets/js/webexpress.webapp.restform.editor.js")]
     [Asset("/assets/js/webexpress.webapp.restwizard.js")]
+    [Asset("/assets/js/webexpress.webapp.scrum.backlog.js")]
+    [Asset("/assets/js/webexpress.webapp.scrum.sprint.js")]
     [Asset("/assets/js/webexpress.webapp.search.js")]
     [Asset("/assets/js/webexpress.webapp.selection.js")]
     [Asset("/assets/js/webexpress.webapp.tab.js")]
