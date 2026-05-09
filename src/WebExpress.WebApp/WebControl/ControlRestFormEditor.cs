@@ -1,3 +1,4 @@
+using System;
 using System.Globalization;
 using System.Linq;
 using WebExpress.WebCore.WebHtml;
@@ -21,22 +22,22 @@ namespace WebExpress.WebApp.WebControl
         /// <summary>
         /// Gets or sets the base URI used for REST API requests.
         /// </summary>
-        public IUri RestUri { get; set; }
+        public Func<IRenderControlContext, IUri> RestUri { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether preview mode is enabled.
         /// </summary>
-        public bool Preview { get; set; } = true;
+        public Func<IRenderControlContext, bool> Preview { get; set; } = _ => true;
 
         /// <summary>
         /// Gets or sets the number of spaces used for each indentation level.
         /// </summary>
-        public int Indent { get; set; } = _defaultIndent;
+        public Func<IRenderControlContext, int> Indent { get; set; } = _ => _defaultIndent;
 
         /// <summary>
         /// Gets or sets a value indicating whether the object is read-only.
         /// </summary>
-        public bool Readonly { get; set; }
+        public Func<IRenderControlContext, bool> Readonly { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class.
@@ -55,22 +56,14 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            return Render(renderContext, visualTree, RestUri, Readonly);
-        }
-
-        /// <summary>
-        /// Converts the control to an HTML representation.
-        /// </summary>
-        /// <param name="renderContext">The context in which the control is rendered.</param>
-        /// <param name="visualTree">The visual tree representing the control's structure.</param>
-        /// <param name="restUri">The base URI used for REST API requests.</param>
-        /// <param name="readonly">A value indicating whether the object is read-only.</param>
-        /// <returns>An HTML node representing the rendered control.</returns>
-        public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IUri restUri, bool @readonly)
-        {
-            var classes = Classes.ToList();
-            var indent = Indent < 8 ? 8 : Indent > 32 ? 32 : Indent;
+            var restUri = RestUri?.Invoke(renderContext);
+            var indent = Indent?.Invoke(renderContext) ?? _defaultIndent;
+            var preview = Preview?.Invoke(renderContext) ?? true;
+            var @readonly = Readonly?.Invoke(renderContext) ?? false;
             var role = Role?.Invoke(renderContext);
+            var classes = Classes.ToList();
+
+            indent = indent < 8 ? 8 : indent > 32 ? 32 : indent;
 
             var html = new HtmlElementTextContentDiv()
             {
@@ -80,7 +73,7 @@ namespace WebExpress.WebApp.WebControl
                 Role = role
             }
                 .AddUserAttribute("data-rest-url", restUri?.ToString())
-                .AddUserAttribute("data-preview", !Preview ? "false" : null)
+                .AddUserAttribute("data-preview", !preview ? "false" : null)
                 .AddUserAttribute("data-indent", indent != 18 ? indent.ToString(CultureInfo.InvariantCulture) : null)
                 .AddUserAttribute("data-readonly", @readonly ? "true" : null);
 

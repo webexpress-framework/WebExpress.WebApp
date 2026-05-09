@@ -48,7 +48,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestScrumBacklog("scrum")
             {
-                RestUri = new UriEndpoint("https://example.com/api/scrum/backlog"),
+                RestUri = _ => new UriEndpoint("https://example.com/api/scrum/backlog"),
                 Title = _ => "Backlog",
                 Selectable = _ => false,
                 IconActive = _ => "active-icon",

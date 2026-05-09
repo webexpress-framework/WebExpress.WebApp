@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
@@ -14,7 +16,7 @@ namespace WebExpress.WebApp.WebControl
         /// <summary>
         /// Gets or sets the uri that determines the data.
         /// </summary>
-        public IUri RestUri { get; set; }
+        public Func<IRenderControlContext, IUri> RestUri { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class.
@@ -33,7 +35,7 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            return Render(renderContext, visualTree, RestUri);
+            return Render(renderContext, visualTree, Items);
         }
 
         /// <summary>
@@ -41,10 +43,11 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="renderContext">The context in which the control is rendered.</param>
         /// <param name="visualTree">The visual tree.</param>
-        /// <param name="uri">An optional URI containing parameters to be bound to the rendering context. Can be null.</param>
+        /// <param name="items">The quickfilter items to render.</param>
         /// <returns>An HTML node representing the rendered control.</returns>
-        public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IUri uri)
+        public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IEnumerable<IControlQuickfilterItem> items)
         {
+            var uri = RestUri?.Invoke(renderContext);
             var resultUri = uri?.BindParameters(renderContext.Request);
 
             var html = new HtmlElementTextContentDiv()
@@ -54,7 +57,7 @@ namespace WebExpress.WebApp.WebControl
                 Style = GetStyles()
             }
                 .AddUserAttribute("data-uri", resultUri?.ToString())
-                .Add(Items.Select(x => x.Render(renderContext, visualTree)));
+                .Add(items.Select(x => x.Render(renderContext, visualTree)));
 
             return html;
         }

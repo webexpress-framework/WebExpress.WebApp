@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using WebExpress.WebCore;
 using WebExpress.WebCore.WebHtml;
@@ -18,19 +19,19 @@ namespace WebExpress.WebApp.WebControl
         private readonly List<IControlFormItem> _items = [];
 
         /// <summary>
-        /// Gets or sets the template id.
+        /// Gets or sets the id.
         /// </summary>
         public string Id { get; set; }
 
         /// <summary>
         /// Gets or sets the form layout.
         /// </summary>
-        public TypeLayoutForm FormLayout { get; set; } = TypeLayoutForm.Default;
+        public Func<IRenderControlContext, TypeLayoutForm> FormLayout { get; set; } = _ => TypeLayoutForm.Default;
 
         /// <summary>
         /// Gets or sets the item layout.
         /// </summary>
-        public TypeLayoutFormItem ItemLayout { get; set; } = TypeLayoutFormItem.Vertical;
+        public Func<IRenderControlContext, TypeLayoutFormItem> ItemLayout { get; set; } = _ => TypeLayoutFormItem.Vertical;
 
 
         /// <summary>
@@ -91,6 +92,22 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
+            return Render(renderContext, visualTree, _items);
+        }
+
+        /// <summary>
+        /// Converts the control to an HTML representation.
+        /// </summary>
+        /// <param name="renderContext">
+        /// The context in which the control is rendered.
+        /// </param>
+        /// <param name="visualTree">The visual tree.</param>
+        /// <param name="items">The collection of form items to render.</param>
+        /// <returns>An HTML node representing the rendered control.</returns>
+        public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IEnumerable<IControlFormItem> items)
+        {
+            var itemLayout = ItemLayout?.Invoke(renderContext) ?? TypeLayoutFormItem.Vertical;
+
             var renderFormContext = new RenderControlFormContext(renderContext, null);
 
             // generate html
@@ -99,7 +116,7 @@ namespace WebExpress.WebApp.WebControl
                 Id = Id,
                 Class = "wx-wizard-page"
             }
-                .Add(_items.Select(x => x.Render(renderFormContext, visualTree)));
+                .Add(items.Select(x => x.Render(renderFormContext, visualTree)));
 
             var header = new HtmlElementSectionHeader();
 
@@ -130,14 +147,14 @@ namespace WebExpress.WebApp.WebControl
             var main = new HtmlElementSectionMain();
             var group = default(ControlFormItemGroup);
 
-            group = ItemLayout switch
+            group = itemLayout switch
             {
                 TypeLayoutFormItem.Horizontal => new ControlFormItemGroupHorizontal(),
                 TypeLayoutFormItem.Mix => new ControlFormItemGroupMix(),
                 _ => new ControlFormItemGroupVertical(),
             };
 
-            foreach (var item in Items.Where(x => x is not ControlFormItemInputHidden))
+            foreach (var item in items.Where(x => x is not ControlFormItemInputHidden))
             {
                 group.Items.Add(item);
             }

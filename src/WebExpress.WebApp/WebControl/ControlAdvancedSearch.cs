@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebUri;
@@ -22,7 +23,7 @@ namespace WebExpress.WebApp.WebControl
         /// <summary>
         /// Gets or sets the uri that determines the data.
         /// </summary>
-        public IUri RestUri { get; set; }
+        public Func<IRenderControlContext, IUri> RestUri { get; set; }
 
         /// <summary>
         /// Gets the content of the control (e.g., save button).
@@ -82,7 +83,7 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            return Render(renderContext, visualTree, RestUri, [.. Content]);
+            return Render(renderContext, visualTree, [.. Content]);
         }
 
         /// <summary>
@@ -90,11 +91,11 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="renderContext">The context in which the control is rendered.</param>
         /// <param name="visualTree">The visual tree.</param>
-        /// <param name="uri">The URI that determines the data.</param>
         /// <param name="controls">The controls to render within the search control.</param>
         /// <returns>An HTML node representing the rendered control.</returns>
-        public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IUri uri, params IControl[] controls)
+        public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, params IControl[] controls)
         {
+            var uri = RestUri?.Invoke(renderContext);
             var resultUri = uri?.BindParameters(renderContext.Request);
 
             var html = new HtmlElementTextContentDiv()

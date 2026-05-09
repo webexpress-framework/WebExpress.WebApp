@@ -15,7 +15,7 @@ namespace WebExpress.WebApp.WebControl
         /// <summary>
         /// Gets or sets the uri that determines the data.
         /// </summary>
-        public IUri RestUri { get; set; }
+        public Func<IRenderControlContext, IUri> RestUri { get; set; }
 
         /// <summary>
         /// Gets or sets the title displayed by the backlog control.
@@ -89,18 +89,7 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            return Render(renderContext, visualTree, RestUri);
-        }
-
-        /// <summary>
-        /// Converts the control to an HTML representation.
-        /// </summary>
-        /// <param name="renderContext">The context in which the control is rendered.</param>
-        /// <param name="visualTree">The visual tree.</param>
-        /// <param name="uri">An optional URI containing parameters to be bound to the rendering context.</param>
-        /// <returns>An HTML node representing the rendered control.</returns>
-        public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IUri uri)
-        {
+            var uri = RestUri?.Invoke(renderContext);
             var resultUri = uri?.BindParameters(renderContext.Request);
             var title = Title?.Invoke(renderContext);
             var selectable = Selectable?.Invoke(renderContext) ?? true;

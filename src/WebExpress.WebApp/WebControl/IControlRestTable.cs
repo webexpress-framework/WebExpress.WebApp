@@ -1,4 +1,6 @@
-﻿using WebExpress.WebUI.WebControl;
+﻿using System;
+using WebExpress.WebUI.WebControl;
+using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.WebControl
 {
@@ -12,11 +14,11 @@ namespace WebExpress.WebApp.WebControl
         /// Gets the number of items to display on each page in a 
         /// paginated collection.
         /// </summary>
-        uint PageSize { get; }
+        Func<IRenderControlContext, uint> PageSize { get; }
 
         /// <summary>
         /// Gets the binding.
         /// </summary>
-        IBinding Bind { get; }
+        Func<IRenderControlContext, IBinding> Bind { get; }
     }
 }

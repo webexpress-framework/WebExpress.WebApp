@@ -1,5 +1,6 @@
-using WebExpress.WebCore.WebUri;
+using System;
 using WebExpress.WebUI.WebControl;
+using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.WebControl
 {
@@ -9,28 +10,21 @@ namespace WebExpress.WebApp.WebControl
     /// fields) via REST. All behaviour is driven client-side by the
     /// <c>webexpress.webui.FormEditorCtrl</c> JavaScript controller.
     /// </summary>
-    public interface IControlRestFormEditor : IControl
+    public interface IControlRestFormEditor : IControl, IControlRest
     {
-        /// <summary>
-        /// Base URL of the <c>FormStructure</c> REST endpoint
-        /// (e.g. <c>/api/1/FormStructure</c>). When null, the editor operates
-        /// in offline-mock mode against the inline initial structure.
-        /// </summary>
-        IUri RestUri { get; }
-
         /// <summary>
         /// Whether the live preview pane is shown initially.
         /// </summary>
-        bool Preview { get; }
+        Func<IRenderControlContext, bool> Preview { get; }
 
         /// <summary>
         /// Tree indent in pixels (clamped client-side to 8–32).
         /// </summary>
-        int Indent { get; }
+        Func<IRenderControlContext, int> Indent { get; }
 
         /// <summary>
         /// Whether the editor is read-only (suppresses mutation UI and REST writes).
         /// </summary>
-        bool Readonly { get; }
+        Func<IRenderControlContext, bool> Readonly { get; }
     }
 }

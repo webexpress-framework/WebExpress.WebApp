@@ -1,23 +1,19 @@
-﻿using System.Collections.Generic;
-using WebExpress.WebCore.WebUri;
+﻿using System;
+using System.Collections.Generic;
 using WebExpress.WebUI.WebControl;
+using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
     /// Defines the contract for a REST-backed tab control.
     /// </summary>
-    public interface IControlRestTab : IControl
+    public interface IControlRestTab : IControl, IControlRest
     {
-        /// <summary>
-        /// Gets the uri that determines the data.
-        /// </summary>
-        IUri RestUri { get; }
-
         /// <summary>
         /// Gets the binding.
         /// </summary>
-        IBinding Bind { get; }
+        Func<IRenderControlContext, IBinding> Bind { get; }
 
         /// <summary>
         /// Gets the collection of templates associated with the tab.

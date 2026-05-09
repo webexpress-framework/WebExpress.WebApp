@@ -14,7 +14,7 @@ namespace WebExpress.WebApp.WebControl
         private readonly List<IControl> _content = [];
 
         /// <summary>
-        /// Gets or sets the template id.
+        /// Gets or sets the id.
         /// </summary>
         public string Id { get; set; }
 

@@ -44,7 +44,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestFormEditor()
             {
-                RestUri = new UriEndpoint("/api/1/FormStructure")
+                RestUri = _ => new UriEndpoint("/api/1/FormStructure")
             };
 
             // act
@@ -70,7 +70,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestFormEditor()
             {
-                Preview = preview
+                Preview = _ => preview
             };
 
             // act
@@ -97,7 +97,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestFormEditor()
             {
-                Indent = indent
+                Indent = _ => indent
             };
 
             // act
@@ -121,7 +121,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestFormEditor()
             {
-                Readonly = readOnly
+                Readonly = _ => readOnly
             };
 
             // act
@@ -141,10 +141,10 @@ namespace WebExpress.WebApp.Test.WebControl
             var control = new ControlRestFormEditor();
 
             // validation
-            Assert.Equal(ControlRestFormEditor._defaultIndent, control.Indent);
-            Assert.True(control.Preview);
-            Assert.False(control.Readonly);
-            Assert.Null(control.RestUri);
+            Assert.Equal(ControlRestFormEditor._defaultIndent, control.Indent?.Invoke(null));
+            Assert.True(control.Preview?.Invoke(null));
+            Assert.False(control.Readonly?.Invoke(null) ?? false);
+            Assert.Null(control.RestUri?.Invoke(null));
         }
     }
 }

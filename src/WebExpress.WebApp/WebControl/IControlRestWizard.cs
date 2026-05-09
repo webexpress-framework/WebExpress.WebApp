@@ -1,6 +1,7 @@
-﻿using System.Collections.Generic;
-using WebExpress.WebCore.WebUri;
+﻿using System;
+using System.Collections.Generic;
 using WebExpress.WebUI.WebControl;
+using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.WebControl
 {
@@ -8,23 +9,24 @@ namespace WebExpress.WebApp.WebControl
     /// Represents a form that retrieves and displays data wizard from 
     /// a RESTful resource specified by a URI.
     /// </summary>
-    public interface IControlRestWizard : IControlPanel
+    public interface IControlRestWizard : IControlPanel, IControlRest
     {
-        /// <summary>
-        /// Gets the uri that determines the data.
-        /// </summary>
-        IUri RestUri { get; }
-
         /// <summary>
         /// Gets the mode that determines how the form behaves 
         /// or is rendered.
         /// </summary>
-        TypeRestFormMode Mode { get; }
+        Func<IRenderControlContext, TypeRestFormMode> Mode { get; }
 
         /// <summary>
         /// Gets the collection of wizard pages associated with the control.
         /// </summary>
         IEnumerable<IControlRestWizardPage> Pages { get; }
+
+        /// <summary>
+        /// Gets a delegate that returns the unique identifier for an item within 
+        /// the specified render control context.
+        /// </summary>
+        Func<IRenderControlContext, string> ItemId { get; }
 
         /// <summary>
         /// Adds one or more pages to the wizard control.
