@@ -56,6 +56,36 @@
     font-size: 0.75rem;
 }
 
+.wx-scrum-sprint-menu {
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    background: var(--bs-body-bg, #fff);
+    color: var(--bs-body-color, #212529);
+}
+
+.wx-scrum-sprint-menu:hover,
+.wx-scrum-sprint-menu:focus-visible {
+    background: var(--bs-tertiary-bg, #f8f9fa);
+    color: var(--bs-body-color, #212529);
+    border-color: var(--bs-border-color, #dee2e6);
+}
+
+.wx-scrum-ctx-item {
+    color: var(--bs-body-color, #212529);
+    border: 1px solid transparent;
+}
+
+.wx-scrum-ctx-item:hover,
+.wx-scrum-ctx-item:focus-visible {
+    background: var(--bs-tertiary-bg, #f8f9fa);
+    color: var(--bs-body-color, #212529);
+    border-color: var(--bs-border-color, #dee2e6);
+}
+
+.wx-scrum-ctx-item:disabled {
+    color: var(--bs-secondary-color, #6c757d);
+    opacity: 0.65;
+}
+
 .wx-scrum-section-head .wx-scrum-status {
     font-size: 0.7rem;
     text-transform: uppercase;
@@ -262,6 +292,35 @@
 
 [data-bs-theme="dark"] .wx-scrum-section {
     background: var(--bs-body-bg, #1d1f23);
+}
+
+[data-bs-theme="dark"] .wx-scrum-sprint-menu {
+    background: var(--bs-tertiary-bg, #2b3035);
+    color: var(--bs-body-color, #dee2e6);
+    border-color: var(--bs-border-color, #495057);
+}
+
+[data-bs-theme="dark"] .wx-scrum-sprint-menu:hover,
+[data-bs-theme="dark"] .wx-scrum-sprint-menu:focus-visible {
+    background: color-mix(in srgb, var(--bs-tertiary-bg, #2b3035) 80%, white 20%);
+    color: var(--bs-body-color, #dee2e6);
+    border-color: var(--bs-primary, #0d6efd);
+}
+
+[data-bs-theme="dark"] .wx-scrum-ctx-item {
+    color: var(--bs-body-color, #dee2e6);
+}
+
+[data-bs-theme="dark"] .wx-scrum-ctx-item:hover,
+[data-bs-theme="dark"] .wx-scrum-ctx-item:focus-visible {
+    background: color-mix(in srgb, var(--bs-tertiary-bg, #2b3035) 80%, white 20%);
+    color: var(--bs-body-color, #dee2e6);
+    border-color: var(--bs-primary, #0d6efd);
+}
+
+[data-bs-theme="dark"] .wx-scrum-ctx-item:disabled {
+    color: var(--bs-secondary-color, #adb5bd);
+    opacity: 0.6;
 }
 
 /* --------------------------------------------------------------- sprint overview */

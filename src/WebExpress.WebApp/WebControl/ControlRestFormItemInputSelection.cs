@@ -18,7 +18,7 @@ namespace WebExpress.WebApp.WebApiControl
         /// <summary>
         /// Gets or sets the binding.
         /// </summary>
-        public IBinding Bind { get; set; }
+        public new IBinding Bind { get; set; }
 
         /// <summary>
         /// Gets or sets the maximum number of entries to display (default 25).

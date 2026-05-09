@@ -398,8 +398,6 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
         }
     }
 
-    // ---------------------------------------------------------------- selection
-
     /**
      * Selects a single item programmatically by its id (clears other selection).
      * @param {string} itemId
@@ -594,8 +592,6 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
             row.removeAttribute("aria-selected");
         }
     }
-
-    // ---------------------------------------------------------------- moves & ranking
 
     /**
      * Moves a backlog item into a sprint and assigns a rank at the end.
@@ -865,8 +861,6 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
 
         return out;
     }
-
-    // ---------------------------------------------------------------- rendering
 
     /**
      * Renders the backlog control.
@@ -1359,8 +1353,6 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
         return span;
     }
 
-    // ---------------------------------------------------------------- context menus
-
     /**
      * Opens a context menu for one or more backlog items.
      * @param {MouseEvent} e
@@ -1458,8 +1450,6 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
 
         this._openContextMenu(e.clientX, e.clientY, entries);
     }
-
-    // ---------------------------------------------------------------- active-sprint guard
 
     /**
      * Returns the id of the currently active sprint or null.
@@ -1773,8 +1763,6 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
             document.removeEventListener("keydown", this._onCtxKeyDown);
         }
     }
-
-    // ---------------------------------------------------------------- sprint dialogs
 
     /**
      * Calculates the duration in weeks if possible.

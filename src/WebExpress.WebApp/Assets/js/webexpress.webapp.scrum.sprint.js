@@ -144,7 +144,7 @@ webexpress.webapp.ScrumSprintCtrl = class extends webexpress.webui.Ctrl {
 
     /**
      * Handles clicks on the sprint card and emits a select event.
-     * @param {MouseEvent} e
+     * @param {MouseEvent} e - The mouse event triggered by clicking on the sprint card.
      * @returns {void}
      */
     _onCardClick(e) {
@@ -230,8 +230,6 @@ webexpress.webapp.ScrumSprintCtrl = class extends webexpress.webui.Ctrl {
         };
     }
 
-    // ------------------------------------------------------------------ states
-
     /**
      * Builds the empty/no-active-sprint placeholder.
      * @returns {HTMLElement}
@@ -296,8 +294,6 @@ webexpress.webapp.ScrumSprintCtrl = class extends webexpress.webui.Ctrl {
 
         return wrap;
     }
-
-    // ------------------------------------------------------------------ sections
 
     /**
      * Builds the title section with goal and chips.
@@ -458,8 +454,6 @@ webexpress.webapp.ScrumSprintCtrl = class extends webexpress.webui.Ctrl {
 
         return sec;
     }
-
-    // ------------------------------------------------------------------ helpers
 
     /**
      * Builds an SVG path "d" attribute from a series of values.

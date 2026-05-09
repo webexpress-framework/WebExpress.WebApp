@@ -443,7 +443,7 @@ namespace WebExpress.WebApp.WebRestApi
             var validation = Validate(existingItem, fieldMap, request);
             if (!validation.IsValid)
             {
-                // Validation failed → return structured error response
+                // validation failed → return structured error response
                 return new ResponseBadRequest()
                 {
                     Content = validation.ToJson()
