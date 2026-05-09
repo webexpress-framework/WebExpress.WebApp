@@ -1,4 +1,6 @@
-﻿using WebExpress.WebCore.WebHtml;
+﻿using System;
+using WebExpress.WebApp.WebControl;
+using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
@@ -10,17 +12,17 @@ namespace WebExpress.WebApp.WebApiControl
     /// <see cref="ControlLogin"/> from WebUI with REST API endpoint 
     /// configuration and redirect support.
     /// </summary>
-    public class ControlRestLogin : ControlLogin
+    public class ControlRestLogin : ControlLogin, IControlRest
     {
         /// <summary>
         /// Gets or sets the REST API endpoint used for login authentication.
         /// </summary>
-        public IUri RestUri { get; set; }
+        public Func<IRenderControlContext, IUri> RestUri { get; set; }
 
         /// <summary>
         /// Gets or sets the URI to redirect to after a successful login.
         /// </summary>
-        public IUri RedirectUri { get; set; }
+        public Func<IRenderControlContext, IUri> RedirectUri { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class.
@@ -39,13 +41,16 @@ namespace WebExpress.WebApp.WebApiControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            var resultUri = RestUri?.BindParameters(renderContext?.Request);
+            var uri = RestUri?.Invoke(renderContext);
+            var redirectUri = RedirectUri?.Invoke(renderContext);
+
+            var resultUri = uri?.BindParameters(renderContext?.Request);
 
             var html = base.Render(renderContext, visualTree)
                 .AddClass("wx-webapp-login")
                 .RemoveClass("wx-webui-login")
                 .AddUserAttribute("data-uri", resultUri?.ToString())
-                .AddUserAttribute("data-redirect", RedirectUri?.ToString());
+                .AddUserAttribute("data-redirect", redirectUri?.ToString());
 
             return html;
         }

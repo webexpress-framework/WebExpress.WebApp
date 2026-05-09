@@ -1,4 +1,5 @@
-﻿using WebExpress.WebApp.WWW.Api.V1;
+﻿using System;
+using WebExpress.WebApp.WWW.Api.V1;
 using WebExpress.WebCore;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebUI.WebControl;
@@ -14,25 +15,25 @@ namespace WebExpress.WebApp.WebApiControl
         /// <summary>
         /// Gets or sets the unique identifier for the task.
         /// </summary>
-        public string TaskId { get; set; }
+        public Func<IRenderControlContext, string> TaskId { get; set; }
 
         /// <summary>
         /// Gets or sets the interval, in milliseconds, for the operation or process.
         /// </summary>
-        public int Interval { get; set; } = -1;
+        public Func<IRenderControlContext, int> Interval { get; set; } = _ => -1;
 
         /// <summary>
         /// Gets or sets a value indicating whether the application should display the 
         /// start screen when launched.
         /// </summary>
-        public bool ShowOnStart { get; set; }
+        public Func<IRenderControlContext, bool> ShowOnStart { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether the associated element should be 
         /// hidden when the operation is
         /// complete.
         /// </summary>
-        public bool HideOnFinish { get; set; }
+        public Func<IRenderControlContext, bool> HideOnFinish { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class.
@@ -53,6 +54,10 @@ namespace WebExpress.WebApp.WebApiControl
         {
             var applicationContext = renderContext?.PageContext?.ApplicationContext;
             var enable = Enable?.Invoke(renderContext) ?? true;
+            var taskId = TaskId?.Invoke(renderContext);
+            var interval = Interval?.Invoke(renderContext) ?? -1;
+            var showOnStart = ShowOnStart?.Invoke(renderContext) ?? false;
+            var hideOnFinish = HideOnFinish?.Invoke(renderContext) ?? false;
 
             if (!enable)
             {
@@ -65,10 +70,10 @@ namespace WebExpress.WebApp.WebApiControl
                 Class = Css.Concatenate("wx-webapp-progress-task", GetClasses()),
                 Style = GetStyles()
             }
-                .AddUserAttribute("data-task", TaskId)
-                .AddUserAttribute("data-interval", Interval > 0 ? Interval.ToString() : null)
-                .AddUserAttribute("data-show-on-start", ShowOnStart ? "true" : null)
-                .AddUserAttribute("data-hide-on-finish", HideOnFinish ? "true" : null)
+                .AddUserAttribute("data-task", taskId)
+                .AddUserAttribute("data-interval", interval > 0 ? interval.ToString() : null)
+                .AddUserAttribute("data-show-on-start", showOnStart ? "true" : null)
+                .AddUserAttribute("data-hide-on-finish", hideOnFinish ? "true" : null)
                 .AddUserAttribute("data-uri", WebEx.ComponentHub
                     .SitemapManager
                     .GetUri<ProgressTask>(applicationContext).ToString()

@@ -51,7 +51,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestProgressTask()
             {
-                Interval = interval
+                Interval = _ => interval
             };
 
             // act
@@ -77,7 +77,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestProgressTask()
             {
-                TaskId = taskId
+                TaskId = _ => taskId
             };
 
             // act
@@ -102,7 +102,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestProgressTask()
             {
-                ShowOnStart = value
+                ShowOnStart = _ => value
             };
 
             // act
@@ -127,7 +127,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestProgressTask()
             {
-                HideOnFinish = value
+                HideOnFinish = _ => value
             };
 
             // act

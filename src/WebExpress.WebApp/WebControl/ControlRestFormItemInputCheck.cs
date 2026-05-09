@@ -1,3 +1,5 @@
+using System;
+using WebExpress.WebApp.WebControl;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebUri;
@@ -14,13 +16,13 @@ namespace WebExpress.WebApp.WebApiControl
     /// precedence and no GET request is issued. Subsequent state changes
     /// are forwarded to the same endpoint via POST.
     /// </summary>
-    public class ControlRestFormItemInputCheck : ControlFormItemInputCheck
+    public class ControlRestFormItemInputCheck : ControlFormItemInputCheck, IControlRest
     {
         /// <summary>
         /// Gets or sets the uri of the REST endpoint used to read and
         /// persist the checked state.
         /// </summary>
-        public IUri RestUri { get; set; }
+        public Func<IRenderControlContext, IUri> RestUri { get; set; }
 
         /// <summary>
         /// Gets or sets the initial checked state. When set, the client
@@ -28,7 +30,7 @@ namespace WebExpress.WebApp.WebApiControl
         /// <see cref="RestUri"/>. When left unset, the client performs a
         /// GET to retrieve the current state.
         /// </summary>
-        public bool? InitialChecked { get; set; }
+        public Func<IRenderControlContext, bool?> InitialChecked { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class with an automatically assigned ID.
@@ -55,8 +57,11 @@ namespace WebExpress.WebApp.WebApiControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlFormContext renderContext, IVisualTreeControl visualTree)
         {
-            var hasInitialValue = InitialChecked.HasValue;
-            var isChecked = InitialChecked ?? renderContext.GetValue<ControlFormInputValueBool>(this)?.Checked ?? false;
+            var restUri = RestUri?.Invoke(renderContext);
+            var initialChecked = InitialChecked?.Invoke(renderContext);
+
+            var hasInitialValue = initialChecked.HasValue;
+            var isChecked = initialChecked ?? renderContext.GetValue<ControlFormInputValueBool>(this)?.Checked ?? false;
             var name = Name?.Invoke(renderContext);
             var disabled = Disabled?.Invoke(renderContext) ?? false;
             var layout = Layout?.Invoke(renderContext);
@@ -86,7 +91,7 @@ namespace WebExpress.WebApp.WebApiControl
                         string.Empty :
                         I18N.Translate(renderContext.Request?.Culture, description)
                     )))
-                .AddUserAttribute("data-uri", RestUri?.ToString())
+                .AddUserAttribute("data-uri", restUri?.ToString())
                 .AddUserAttribute("data-value", hasInitialValue ? (isChecked ? "true" : "false") : null);
 
             return html;

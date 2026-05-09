@@ -150,7 +150,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestFormItemInputSelection(null)
             {
-                RestUri = uriString is not null ? new UriEndpoint(uriString) : null
+                RestUri = _ => uriString is not null ? new UriEndpoint(uriString) : null
             };
 
             // act
@@ -176,7 +176,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestFormItemInputSelection(null)
             {
-                MaxItems = maxItems
+                MaxItems = _ => maxItems
             };
 
             // act

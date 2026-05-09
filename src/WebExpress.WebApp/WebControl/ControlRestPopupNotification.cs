@@ -1,4 +1,5 @@
-﻿using WebExpress.WebApp.WWW.Api._1;
+﻿using System;
+using WebExpress.WebApp.WWW.Api._1;
 using WebExpress.WebCore;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebUI.WebControl;
@@ -14,7 +15,7 @@ namespace WebExpress.WebApp.WebControl
         /// <summary>
         /// Gets or sets the interval, in milliseconds, at which the control polls for new notifications.
         /// </summary>
-        public int Interval { get; set; } = -1;
+        public Func<IRenderControlContext, int> Interval { get; set; } = _ => -1;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ControlRestPopupNotification"/> class.
@@ -34,6 +35,7 @@ namespace WebExpress.WebApp.WebControl
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
             var applicationContext = renderContext?.PageContext?.ApplicationContext;
+            var interval = Interval?.Invoke(renderContext) ?? -1;
 
             var html = new HtmlElementTextContentDiv()
             {
@@ -44,7 +46,7 @@ namespace WebExpress.WebApp.WebControl
                 .AddUserAttribute("data-uri", WebEx.ComponentHub
                     .SitemapManager
                     .GetUri<PopupNotification>(applicationContext)?.ToString())
-                .AddUserAttribute("data-interval", Interval > 0 ? Interval.ToString() : null);
+                .AddUserAttribute("data-interval", interval > 0 ? interval.ToString() : null);
 
             return html;
         }

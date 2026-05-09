@@ -1,4 +1,6 @@
-﻿using WebExpress.WebCore.WebHtml;
+﻿using System;
+using WebExpress.WebApp.WebControl;
+using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
@@ -9,12 +11,12 @@ namespace WebExpress.WebApp.WebApiControl
     /// Represents an avatar dropdown control that uses the avatar image as the interactive
     /// menu button and supports loading items dynamically via a REST API endpoint.
     /// </summary>
-    public class ControlRestAvatarDropdown : ControlAvatarDropdown
+    public class ControlRestAvatarDropdown : ControlAvatarDropdown, IControlRest
     {
         /// <summary>
         /// Gets or sets the REST API endpoint used to populate the dropdown.
         /// </summary>
-        public IUri RestUri { get; set; }
+        public Func<IRenderControlContext, IUri> RestUri { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class.
@@ -36,7 +38,7 @@ namespace WebExpress.WebApp.WebApiControl
             var html = base.Render(renderContext, visualTree)
                 .AddClass("wx-webapp-avatar-dropdown")
                 .RemoveClass("wx-webui-avatar-dropdown")
-                .AddUserAttribute("data-uri", RestUri?.ToString());
+                .AddUserAttribute("data-uri", RestUri?.Invoke(renderContext)?.ToString());
 
             return html;
         }
