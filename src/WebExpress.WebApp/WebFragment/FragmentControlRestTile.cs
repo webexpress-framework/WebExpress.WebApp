@@ -21,7 +21,7 @@ namespace WebExpress.WebApp.WebFragment
         /// </summary>
         /// <param name="fragmentContext">The context of the fragment.</param>
         public FragmentControlRestTile(IFragmentContext fragmentContext)
-            : base(fragmentContext?.FragmentId?.ToString())
+            : base(fragmentContext?.FragmentId?.ToString()?.Replace(".", "-"))
         {
             FragmentContext = fragmentContext;
         }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using WebExpress.WebCore.WebHtml;
+using WebExpress.WebCore.WebIcon;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
@@ -48,6 +49,7 @@ namespace WebExpress.WebApp.WebControl
             var pageSize = PageSize?.Invoke(renderContext);
             var bind = Bind?.Invoke(renderContext);
             var resultUri = uri?.BindParameters(renderContext.Request);
+            var iconTheme = renderContext?.PageContext?.ApplicationContext?.IconTheme ?? TypeIconTheme.Default;
 
             var html = new HtmlElementTextContentDiv()
             {
@@ -56,7 +58,8 @@ namespace WebExpress.WebApp.WebControl
                 Style = GetStyles()
             }
                 .AddUserAttribute("data-uri", resultUri?.ToString())
-                .AddUserAttribute("data-page-size", pageSize > 0 ? pageSize.ToString() : null);
+                .AddUserAttribute("data-page-size", pageSize > 0 ? pageSize.ToString() : null)
+                .AddUserAttribute("data-icon-theme", iconTheme == TypeIconTheme.Light ? "light" : null);
 
             bind?.ApplyUserAttributes(html);
 

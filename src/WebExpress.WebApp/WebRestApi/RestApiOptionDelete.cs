@@ -1,8 +1,10 @@
 ﻿using System.Collections.Generic;
 using WebExpress.WebCore.Internationalization;
+using WebExpress.WebCore.WebIcon;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
+using WebExpress.WebUI.WebIcon;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -29,7 +31,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Gets the icon.
         /// </summary>
-        public virtual string Icon => "fa fa-trash";
+        public virtual IIcon Icon { get; set; } = new IconTrash();
 
         /// <summary>
         /// Gets the edit form uri.
@@ -74,7 +76,7 @@ namespace WebExpress.WebApp.WebRestApi
             json["type"] = Type;
             json["command"] = Command;
             json["text"] = Text;
-            json["icon"] = Icon;
+            json["icon"] = (Icon as Icon)?.Class;
             json["color"] = Color;
 
             if (Uri is not null)

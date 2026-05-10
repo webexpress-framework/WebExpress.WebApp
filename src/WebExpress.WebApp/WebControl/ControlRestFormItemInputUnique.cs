@@ -71,7 +71,7 @@ namespace WebExpress.WebApp.WebApiControl
         {
             var value = renderContext.GetValue<ControlFormInputValueString>(this);
             var name = Name?.Invoke(renderContext);
-            var restUri = RestUri?.Invoke(renderContext);
+            var restUri = RestUri?.Invoke(renderContext)?.BindParameters(renderContext?.Request);
             var placeholder = Placeholder?.Invoke(renderContext);
             var minLength = MinLength?.Invoke(renderContext);
             var maxLength = MaxLength?.Invoke(renderContext);

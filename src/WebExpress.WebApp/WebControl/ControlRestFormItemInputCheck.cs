@@ -57,7 +57,7 @@ namespace WebExpress.WebApp.WebApiControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlFormContext renderContext, IVisualTreeControl visualTree)
         {
-            var restUri = RestUri?.Invoke(renderContext);
+            var restUri = RestUri?.Invoke(renderContext)?.BindParameters(renderContext?.Request);
             var initialChecked = InitialChecked?.Invoke(renderContext);
 
             var hasInitialValue = initialChecked.HasValue;

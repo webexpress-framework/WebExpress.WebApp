@@ -131,7 +131,6 @@ html[data-bs-theme="dark"] #wx-content {
 }
 
 #wx-footer {
-    background: var(--bs-light);
 }
 
 .wx-login {

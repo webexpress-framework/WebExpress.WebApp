@@ -72,6 +72,11 @@ namespace WebExpress.WebApp.WebPage
         public new IControlWebAppContent Content { get; protected set; } = new ControlWebAppContent("wx-content");
 
         /// <summary>
+        /// Gets the area for epilogue.
+        /// </summary>
+        public ControlWebAppEpilogue Epilogue { get; protected set; } = new ControlWebAppEpilogue("wx-epilogue");
+
+        /// <summary>
         /// Gets the footer control.
         /// </summary>
         public IControlWebAppFooter Footer { get; protected set; } = new ControlWebAppFooter("wx-footer");
@@ -180,6 +185,8 @@ namespace WebExpress.WebApp.WebPage
                     .AddUserAttribute("data-wx-primary-action", "split")
                     .AddUserAttribute("data-wx-primary-target", $"#wx-split-button-toggle")
             );
+
+            html.Body.Add(Epilogue.Render(renderContext, this));
             html.Body.Add(Footer.Render(renderContext, this));
             html.Body.Add(NotificationPopup.Render(renderContext, this));
 

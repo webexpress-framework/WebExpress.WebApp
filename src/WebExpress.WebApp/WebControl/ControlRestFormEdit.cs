@@ -1,4 +1,5 @@
-﻿using WebExpress.WebCore.WebMessage;
+﻿using WebExpress.WebCore.WebIcon;
+using WebExpress.WebCore.WebMessage;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebIcon;
 
@@ -16,7 +17,7 @@ namespace WebExpress.WebApp.WebControl
         public ControlFormItemButtonSubmit Submit { get; } = new ControlFormItemButtonSubmit
         {
             Text = _ => "webexpress.webui:edit.label",
-            Icon = _ => new IconSave(),
+            Icon = rennderContext => new IconFloppyDisk(rennderContext?.PageContext?.ApplicationContext.IconTheme ?? TypeIconTheme.Default),
             Color = _ => new PropertyColorButton(TypeColorButton.Success)
         };
 

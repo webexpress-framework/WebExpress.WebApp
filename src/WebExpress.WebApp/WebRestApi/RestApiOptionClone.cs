@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using WebExpress.WebCore.Internationalization;
+using WebExpress.WebCore.WebIcon;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
@@ -37,7 +38,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Gets the icon.
         /// </summary>
-        public virtual string Icon => new IconCopy().Class;
+        public virtual IIcon Icon { get; set; } = new IconClone();
 
         /// <summary>
         /// Gets or sets the text color.
@@ -77,7 +78,7 @@ namespace WebExpress.WebApp.WebRestApi
             json["type"] = Type;
             json["command"] = Command;
             json["text"] = Text;
-            json["icon"] = Icon;
+            json["icon"] = (Icon as Icon)?.Class;
             json["color"] = Color;
             json["uri"] = Uri?.ToString();
 
