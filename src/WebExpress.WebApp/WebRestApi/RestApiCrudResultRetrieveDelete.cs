@@ -31,7 +31,6 @@ namespace WebExpress.WebApp.WebRestApi
             var jsonData = JsonSerializer.Serialize(new
             {
                 data = Data,
-                title = Title,
                 prolog = Prolog,
                 confirmItem = ConfirmItem
             }, _jsonOptions);

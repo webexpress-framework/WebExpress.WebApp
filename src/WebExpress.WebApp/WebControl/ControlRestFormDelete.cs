@@ -1,4 +1,5 @@
-﻿using WebExpress.WebCore.WebIcon;
+﻿using System;
+using WebExpress.WebCore.WebIcon;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebIcon;
@@ -11,6 +12,12 @@ namespace WebExpress.WebApp.WebControl
     /// </summary>
     public class ControlRestFormDelete : ControlRestForm
     {
+        /// <summary>
+        /// Gets or sets the mode that determines how the form behaves 
+        /// or is rendered.
+        /// </summary>
+        public override Func<IRenderControlFormContext, string> Mode => _ => TypeRestFormMode.Delete.ToMode();
+
         /// <summary>
         /// Gets or sets the static text content displayed by the control form item.
         /// </summary>
@@ -36,7 +43,6 @@ namespace WebExpress.WebApp.WebControl
         public ControlRestFormDelete(string id = null)
             : base(id)
         {
-            Mode = _ => TypeRestFormMode.Delete;
             Method = _ => RequestMethod.DELETE;
 
             Add(Content);

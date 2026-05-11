@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using WebExpress.WebCore;
 using WebExpress.WebCore.WebHtml;
@@ -20,7 +21,7 @@ namespace WebExpress.WebApp.WebControl
         /// Gets or sets the mode that determines how the form behaves 
         /// or is rendered.
         /// </summary>
-        public Func<IRenderControlFormContext, TypeRestFormMode> Mode { get; set; } = _ => TypeRestFormMode.Default;
+        public virtual Func<IRenderControlFormContext, string> Mode { get; set; }
 
         /// <summary>
         /// Gets or sets the function used to retrieve the item identifier for a given render 
@@ -56,7 +57,7 @@ namespace WebExpress.WebApp.WebControl
         /// <param name="renderContext">The context in which the control is rendered.</param>
         /// <param name="visualTree">The visual tree.</param>
         /// <returns>An HTML node representing the rendered control.</returns>
-        public override IHtmlNode Render(IRenderControlFormContext renderContext, IVisualTreeControl visualTree)
+        public override IHtmlNode Render(IRenderControlFormContext renderContext, IVisualTreeControl visualTree, IEnumerable<IControlFormItem> items)
         {
             var uri = Uri?.Invoke(renderContext);
             var mode = Mode?.Invoke(renderContext);
@@ -77,7 +78,7 @@ namespace WebExpress.WebApp.WebControl
                 Role = role
             }
                 .AddUserAttribute("data-method", method.ToString())
-                .AddUserAttribute("data-mode", mode?.ToMode())
+                .AddUserAttribute("data-mode", mode)
                 .AddUserAttribute("data-id", id?.ToString())
                 .AddUserAttribute("data-uri", resultUri?.ToString());
 
@@ -102,7 +103,7 @@ namespace WebExpress.WebApp.WebControl
             header.Add(headerPrimary.Select(x => x.Render(renderContext, visualTree)));
             header.Add(headerSecondary.Select(x => x.Render(renderContext, visualTree)));
 
-            foreach (var item in Items.Where(x => x is ControlFormItemInputHidden))
+            foreach (var item in items.Where(x => x is ControlFormItemInputHidden))
             {
                 form.Add(item.Render(renderContext, visualTree));
             }
@@ -117,7 +118,7 @@ namespace WebExpress.WebApp.WebControl
                 _ => new ControlFormItemGroupVertical(),
             };
 
-            foreach (var item in Items.Where(x => x is not ControlFormItemInputHidden))
+            foreach (var item in items.Where(x => x is not ControlFormItemInputHidden))
             {
                 group.Items.Add(item);
             }

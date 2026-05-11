@@ -159,7 +159,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestForm(null)
             {
-                Mode = _ => mode
+                Mode = _ => mode.ToMode()
             };
 
             // act

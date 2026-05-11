@@ -1,4 +1,5 @@
-﻿using WebExpress.WebCore.WebIcon;
+﻿using System;
+using WebExpress.WebCore.WebIcon;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebIcon;
@@ -11,6 +12,12 @@ namespace WebExpress.WebApp.WebControl
     /// </summary>
     public class ControlRestFormClone : ControlRestForm
     {
+        /// <summary>
+        /// Gets or sets the mode that determines how the form behaves 
+        /// or is rendered.
+        /// </summary>
+        public override Func<IRenderControlFormContext, string> Mode => _ => TypeRestFormMode.Clone.ToMode();
+
         /// <summary>
         /// Gets the submit button control for the form.
         /// </summary>
@@ -28,7 +35,6 @@ namespace WebExpress.WebApp.WebControl
         public ControlRestFormClone(string id = null)
             : base(id)
         {
-            Mode = _ => TypeRestFormMode.Clone;
             Method = _ => RequestMethod.POST;
 
             AddPrimaryButton(Submit);

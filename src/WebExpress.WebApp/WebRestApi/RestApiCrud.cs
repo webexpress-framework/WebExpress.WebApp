@@ -6,7 +6,6 @@ using System.Text.Json;
 using WebExpress.WebApp.WebAttribute;
 using WebExpress.WebApp.WebMessageQueue;
 using WebExpress.WebCore;
-using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebDomain;
 using WebExpress.WebCore.WebMessage;
@@ -128,6 +127,7 @@ namespace WebExpress.WebApp.WebRestApi
                     "new" => string.IsNullOrWhiteSpace(id)
                         ? RestApiCrudMode.Create
                         : RestApiCrudMode.Clone,
+                    "clone" => RestApiCrudMode.Clone,
                     "edit" => RestApiCrudMode.Update,
                     "delete" => RestApiCrudMode.Delete,
                     _ => RestApiCrudMode.Default
@@ -139,7 +139,13 @@ namespace WebExpress.WebApp.WebRestApi
                     query = query.WhereEquals(x => x.Id, Guid.Parse(id));
                 }
 
-                if (string.IsNullOrEmpty(id) && mode == RestApiCrudMode.Create)
+                if (mode == RestApiCrudMode.Default)
+                {
+                    var result = RetrieveForDefault(query, modeParam, request);
+
+                    return result.ToResponse();
+                }
+                else if (string.IsNullOrEmpty(id) && mode == RestApiCrudMode.Create)
                 {
                     var result = RetrieveForCreate(request);
 
@@ -163,7 +169,7 @@ namespace WebExpress.WebApp.WebRestApi
 
                     return result.ToResponse();
                 }
-                else if (string.IsNullOrEmpty(id))
+                else
                 {
                     // paging
                     query = query.WithPaging(pageNumber * pageSize, pageSize);
@@ -177,10 +183,6 @@ namespace WebExpress.WebApp.WebRestApi
                         Data = data.Select(x => ConvertToJson(x))
                     }
                         .ToResponse();
-                }
-                else
-                {
-                    return new ResponseBadRequest(new StatusMessage($"Error processing request."));
                 }
             }
             catch (Exception ex)
@@ -221,6 +223,53 @@ namespace WebExpress.WebApp.WebRestApi
         protected abstract IEnumerable<TIndexItem> Retrieve(IQuery<TIndexItem> query, IQueryContext context, IRequest request);
 
         /// <summary>
+        /// Retrieves a resource using the default retrieval mode.
+        /// </summary>
+        /// <param name="query">
+        /// An object containing the query parameters used to filter and select index items. Cannot 
+        /// be null.
+        /// </param>
+        /// <param name="mode">
+        /// The mode that determines how the retrieval operation behaves or which subset of items 
+        /// should be returned. Typically corresponds to a form mode such as "add" or "edit".
+        /// </param>
+        /// <param name="request">
+        /// The request object containing the parameters for the retrieval operation.
+        /// </param>
+        /// <returns>
+        /// An object that contains the result of the retrieval operation.
+        /// </returns>
+        protected virtual IRestApiCrudResultRetrieve RetrieveForDefault(IQuery<TIndexItem> query, string mode, IRequest request)
+        {
+            using var context = CreateContext();
+            var data = Retrieve(query, context, request)
+                .FirstOrDefault();
+
+            return RetrieveForDefault(request, data);
+        }
+
+        /// <summary>
+        /// Retrieves a result object for the default case, containing the specified data.
+        /// </summary>
+        /// <param name="request">
+        /// The current request context used for localization and other request-specific operations. 
+        /// Cannot be null.
+        /// </param>
+        /// <param name="data">
+        /// The data item to include in the result. Represents the main content to be returned.
+        /// </param>
+        /// <returns>
+        /// A result object containing the localized title and the serialized data item.
+        /// </returns>
+        protected virtual IRestApiCrudResultRetrieve RetrieveForDefault(IRequest request, TIndexItem data)
+        {
+            return new RestApiCrudResultRetrieve()
+            {
+                Data = ConvertToJson(data)
+            };
+        }
+
+        /// <summary>
         /// Retrieves a result object containing default values and metadata for 
         /// creating a new item.
         /// </summary>
@@ -231,27 +280,8 @@ namespace WebExpress.WebApp.WebRestApi
         /// </returns>
         protected virtual IRestApiCrudResultRetrieve RetrieveForCreate(IRequest request)
         {
-            return RetrieveForCreate(request, null);
-        }
-
-        /// <summary>
-        /// Retrieves the result object used to initialize a create operation in the REST API workflow.
-        /// </summary>
-        /// <param name="request">
-        /// The current request context containing information about the HTTP request and user 
-        /// environment.
-        /// </param>
-        /// <param name="title">
-        /// An optional title to use for the result. If null, a default localized title is provided.
-        /// </param>
-        /// <returns>
-        /// An <see cref="IRestApiCrudResultRetrieve"/> instance configured for the create operation.
-        /// </returns>
-        protected virtual IRestApiCrudResultRetrieve RetrieveForCreate(IRequest request, string title)
-        {
             return new RestApiCrudResultRetrieve()
             {
-                Title = I18N.Translate(request, title ?? "webexpress.webapp:create.title")
             };
         }
 
@@ -287,17 +317,13 @@ namespace WebExpress.WebApp.WebRestApi
         /// <param name="data">
         /// The data item to be included in the result as the source for cloning.
         /// </param>
-        /// <param name="title">
-        /// An optional title to display for the clone operation. If null, a default localized title is used.
-        /// </param>
         /// <returns>
         /// A result object containing the serialized data and a localized title for the clone operation.
         /// </returns>
-        protected virtual IRestApiCrudResultRetrieve RetrieveForClone(IRequest request, TIndexItem data, string title = null)
+        protected virtual IRestApiCrudResultRetrieve RetrieveForClone(IRequest request, TIndexItem data)
         {
             return new RestApiCrudResultRetrieve()
             {
-                Title = I18N.Translate(request, title ?? "webexpress.webapp:clone.title"),
                 Data = ConvertToJson(data)
             };
         }
@@ -333,19 +359,14 @@ namespace WebExpress.WebApp.WebRestApi
         /// <param name="data">
         /// The item to be retrieved and prepared for update. Represents the data to be edited.
         /// </param>
-        /// <param name="title">
-        /// An optional title to use for the update operation. If null, a default localized title 
-        /// is used.
-        /// </param>
         /// <returns>
         /// A result object containing the item data and title, formatted for use in an 
         /// update (edit) operation.
         /// </returns>
-        protected virtual IRestApiCrudResultRetrieve RetrieveForUpdate(IRequest request, TIndexItem data, string title = null)
+        protected virtual IRestApiCrudResultRetrieve RetrieveForUpdate(IRequest request, TIndexItem data)
         {
             return new RestApiCrudResultRetrieve()
             {
-                Title = I18N.Translate(request, title ?? "webexpress.webapp:edit.title"),
                 Data = ConvertToJson(data)
             };
         }
@@ -369,7 +390,7 @@ namespace WebExpress.WebApp.WebRestApi
             var data = Retrieve(query, context, request)
                 .FirstOrDefault();
 
-            return RetrieveForDelete(request, data, null, data.Id.ToString());
+            return RetrieveForDelete(request, data, data.Id.ToString());
         }
 
         /// <summary>
@@ -384,10 +405,6 @@ namespace WebExpress.WebApp.WebRestApi
         /// The item to be retrieved and prepared for delete. Represents the data that will 
         /// be sent to the client.
         /// </param>
-        /// <param name="title">
-        /// An optional title to display for the delete operation. If null, a default localized 
-        /// title is used.
-        /// </param>
         /// <param name="confirm">
         /// The confirmation message to display to the user before proceeding with the delete.
         /// </param>
@@ -395,11 +412,10 @@ namespace WebExpress.WebApp.WebRestApi
         /// An object containing the prepared data, title, and confirmation message for 
         /// the delete operation.
         /// </returns>
-        protected virtual IRestApiCrudResultRetrieveDelete RetrieveForDelete(IRequest request, TIndexItem data, string title = null, string confirm = null)
+        protected virtual IRestApiCrudResultRetrieveDelete RetrieveForDelete(IRequest request, TIndexItem data, string confirm = null)
         {
             return new RestApiCrudResultRetrieveDelete()
             {
-                Title = I18N.Translate(request, title ?? "webexpress.webapp:delete.title"),
                 Data = ConvertToJson(data),
                 ConfirmItem = confirm,
             };

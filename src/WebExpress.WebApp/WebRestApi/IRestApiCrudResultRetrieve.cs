@@ -13,11 +13,6 @@ namespace WebExpress.WebApp.WebRestApi
         object Data { get; }
 
         /// <summary>
-        /// Gets or sets the title.
-        /// </summary>
-        string Title { get; }
-
-        /// <summary>
         /// Gets or sets the prolog for the item.
         /// </summary>
         string Prolog { get; }

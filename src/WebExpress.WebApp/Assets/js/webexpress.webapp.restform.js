@@ -236,7 +236,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Loads data (including prolog/title/confirm) from the backend depending on the current mode.
+     * Loads data (including prolog/confirm) from the backend depending on the current mode.
      * @returns {Promise<void>} Promise resolving when loading is complete.
      */
     async load() {
@@ -269,8 +269,6 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
             const json = await resp.json();
             const dataObj = (json && typeof json === "object") ? json : {};
             const formData = dataObj.data || (Object.keys(dataObj).length ? dataObj : null);
-
-            this._setHeaderTitle(dataObj.title || null);
 
             // priority to confirmitem if present (works for delete or critical edits)
             if (dataObj.confirmItem) {
