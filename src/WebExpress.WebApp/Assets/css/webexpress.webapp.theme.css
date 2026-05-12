@@ -122,6 +122,11 @@ html[data-bs-theme="dark"] #wx-content {
 #wx-content-main-headline {
 }
 
+#wx-content-main-headline h2 {
+    flex: 1;
+    text-align: left;
+}
+
 #wx-content-main-headline-more {
     background: var(--bs-body-bg);
 }

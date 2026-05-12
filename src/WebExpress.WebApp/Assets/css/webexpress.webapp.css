@@ -104,11 +104,9 @@ main {
     flex-direction: row;
     align-items: stretch;
     justify-content: flex-start;
-    overflow: auto;
 }
 
 .wx-proterty {
-    overflow: auto;
     display: block;
     background: var(--bs-tertiary-bg);
     min-height: 100%;
