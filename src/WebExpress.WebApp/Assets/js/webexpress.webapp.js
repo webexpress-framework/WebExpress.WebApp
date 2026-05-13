@@ -272,6 +272,14 @@ webexpress.webapp.Event = class {
     static FORM_EDITOR_SAVED_EVENT = "webexpress.webapp.formeditor.saved";
     // Event triggered when a structure save fails validation.
     static FORM_EDITOR_VALIDATION_FAILED_EVENT = "webexpress.webapp.formeditor.validation.failed";
+    // Event triggered when a remote user joins a CollaborativeCtrl container.
+    static COLLABORATIVE_USER_JOIN = "webexpress.webapp.collaborative.user.join";
+    // Event triggered when a remote user leaves a CollaborativeCtrl container.
+    static COLLABORATIVE_USER_LEAVE = "webexpress.webapp.collaborative.user.leave";
+    // Event triggered when a remote cursor position update is received.
+    static COLLABORATIVE_CURSOR = "webexpress.webapp.collaborative.cursor";
+    // Event triggered when a remote input value update is received.
+    static COLLABORATIVE_INPUT = "webexpress.webapp.collaborative.input";
 }
 
 // initialize the WebSocket connection after the DOM is fully loaded    

@@ -37,7 +37,7 @@ namespace WebExpress.WebApp.WebRestApi
             set
             {
                 // fill strongly-typed props if loaded from json
-                if (value != null)
+                if (value is not null)
                 {
                     if (value.TryGetValue("title", out string value1))
                     {

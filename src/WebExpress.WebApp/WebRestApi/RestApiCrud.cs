@@ -701,7 +701,7 @@ namespace WebExpress.WebApp.WebRestApi
                         a.GetType().GetGenericTypeDefinition() == typeof(RestConverterAttribute<>)
                     );
 
-                if (converterAttr != null)
+                if (converterAttr is not null)
                 {
                     var converterType = (Type)converterAttr
                         .GetType()

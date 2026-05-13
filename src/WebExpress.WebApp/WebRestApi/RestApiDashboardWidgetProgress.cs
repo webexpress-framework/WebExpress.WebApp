@@ -43,7 +43,7 @@ namespace WebExpress.WebApp.WebRestApi
             }
             set
             {
-                if (value != null)
+                if (value is not null)
                 {
                     if (value.TryGetValue("value", out var v) && int.TryParse(v, out var i))
                     {

@@ -167,7 +167,7 @@ namespace WebExpress.WebApp.WWW.Settings.Info
             try
             {
                 var route = ep.Route;
-                if (route != null)
+                if (route is not null)
                 {
                     leaf.Tooltip = _ => $"{leaf.Tooltip} - {route.ToString()}";
                 }
@@ -196,10 +196,10 @@ namespace WebExpress.WebApp.WWW.Settings.Info
             try
             {
                 var route = ep.Route;
-                if (route != null)
+                if (route is not null)
                 {
                     var segs = route.PathSegments?.Select(s => s?.ToString()).Where(s => !string.IsNullOrEmpty(s)).ToList();
-                    if (segs != null && segs.Count > 0)
+                    if (segs is not null && segs.Count > 0)
                     {
                         return string.Join("/", segs);
                     }

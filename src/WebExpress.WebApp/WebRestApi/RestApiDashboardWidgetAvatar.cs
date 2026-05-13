@@ -48,7 +48,7 @@ namespace WebExpress.WebApp.WebRestApi
             }
             set
             {
-                if (value != null)
+                if (value is not null)
                 {
                     if (value.TryGetValue("title", out var t)) { Title = t; }
                     if (value.TryGetValue("name", out var n)) { Name = n; }

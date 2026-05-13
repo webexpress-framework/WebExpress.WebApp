@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using WebExpress.WebCore.WebMessage;
@@ -8,7 +9,7 @@ using WebExpress.WebCore.WebSocket;
 namespace WebExpress.WebApp.WebMessageQueue
 {
     /// <summary>
-    /// Represents an abstract socket that integrates with a message queue system for 
+    /// Represents an abstract socket that integrates with a message queue system for
     /// handling socket communication events.
     /// </summary>
     public abstract class MessageQueueSocket : IMessageQueueSocket
@@ -17,6 +18,7 @@ namespace WebExpress.WebApp.WebMessageQueue
         private readonly ISocketContext _socketContext;
         private readonly IMessageQueueManager _messageQueueManager;
         private readonly IRequest _request;
+        private readonly ICollaborativeMessageHandler _collaborativeHandler;
         private ISocketConnection _socketConnection;
 
         /// <summary>
@@ -55,7 +57,7 @@ namespace WebExpress.WebApp.WebMessageQueue
         public IRequest Request => _request;
 
         /// <summary>
-        /// Initializes a new instance of the MessageQueueSocket class using the specified 
+        /// Initializes a new instance of the MessageQueueSocket class using the specified
         /// socket context and message queue manager.
         /// </summary>
         /// <param name="connectionId">
@@ -74,6 +76,9 @@ namespace WebExpress.WebApp.WebMessageQueue
             _socketContext = socketContext;
             _messageQueueManager = messageQueueManager;
             _request = request;
+            _collaborativeHandler = messageQueueManager is not null
+                ? new CollaborativeMessageHandler(messageQueueManager)
+                : null;
         }
 
         /// <summary>
@@ -104,11 +109,90 @@ namespace WebExpress.WebApp.WebMessageQueue
         }
 
         /// <summary>
-        /// Handles an incoming text message received by the component.
+        /// Handles an incoming text message received by the component. The socket
+        /// inspects the envelope to determine the message type and delegates the
+        /// actual processing to a specialized handler. This keeps the socket
+        /// implementation generic and allows additional message families to be
+        /// added without touching the transport.
         /// </summary>
         /// <param name="obj">The text message content to process. Cannot be null.</param>
         private void OnTextMessageReceived(string obj)
         {
+            if (string.IsNullOrWhiteSpace(obj))
+            {
+                return;
+            }
+
+            if (!TryReadMessageType(obj, out var messageType))
+            {
+                return;
+            }
+
+            if (CollaborativeMessageTypes.IsCollaborative(messageType) && _collaborativeHandler is not null)
+            {
+                _ = DispatchCollaborativeAsync(obj);
+            }
+        }
+
+        /// <summary>
+        /// Reads the application defined message type from the raw JSON envelope
+        /// without materializing the full payload. The lightweight inspection
+        /// avoids unnecessary allocations for messages that the socket does not
+        /// route to a handler.
+        /// </summary>
+        /// <param name="rawPayload">The raw text payload.</param>
+        /// <param name="messageType">The extracted message type on success.</param>
+        /// <returns>
+        /// <c>true</c> if the payload exposes a non-empty <c>type</c> field;
+        /// otherwise <c>false</c>.
+        /// </returns>
+        private static bool TryReadMessageType(string rawPayload, out string messageType)
+        {
+            messageType = null;
+
+            try
+            {
+                using var document = JsonDocument.Parse(rawPayload);
+
+                if (document.RootElement.ValueKind != JsonValueKind.Object)
+                {
+                    return false;
+                }
+
+                if (!document.RootElement.TryGetProperty("type", out var typeProperty)
+                    || typeProperty.ValueKind != JsonValueKind.String)
+                {
+                    return false;
+                }
+
+                messageType = typeProperty.GetString();
+            }
+            catch (JsonException)
+            {
+                return false;
+            }
+
+            return !string.IsNullOrEmpty(messageType);
+        }
+
+        /// <summary>
+        /// Forwards the raw payload to the collaborative handler. Exceptions
+        /// raised by the handler are intentionally swallowed so that a single
+        /// malformed message cannot tear down the socket connection.
+        /// </summary>
+        /// <param name="rawPayload">The raw text payload.</param>
+        private async Task DispatchCollaborativeAsync(string rawPayload)
+        {
+            try
+            {
+                await _collaborativeHandler
+                    .HandleAsync(this, rawPayload, CancellationToken.None);
+            }
+            catch
+            {
+                // intentionally swallowed; a misbehaving peer must not be able
+                // to break the transport for everyone else.
+            }
         }
 
         /// <summary>

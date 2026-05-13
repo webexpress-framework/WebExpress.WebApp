@@ -48,7 +48,7 @@ namespace WebExpress.WebApp.WebRestApi
                     if (value.TryGetValue("title", out var t)) { Title = t; }
                 }
 
-                if (value != null && value.TryGetValue("alerts", out var json))
+                if (value is not null && value.TryGetValue("alerts", out var json))
                 {
                     try
                     {

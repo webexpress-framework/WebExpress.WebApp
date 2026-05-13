@@ -33,7 +33,7 @@ namespace WebExpress.WebApp.WebMessageQueue
         {
             ArgumentNullException.ThrowIfNull(message);
 
-            return JsonSerializer.Serialize(message, _jsonOptions);
+            return JsonSerializer.Serialize(message, message.GetType(), _jsonOptions);
         }
     }
 }

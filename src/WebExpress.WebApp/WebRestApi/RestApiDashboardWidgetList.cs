@@ -35,7 +35,7 @@ namespace WebExpress.WebApp.WebRestApi
             }
             set
             {
-                if (value != null && value.TryGetValue("items", out var json))
+                if (value is not null && value.TryGetValue("items", out var json))
                 {
                     try
                     {

@@ -82,12 +82,12 @@ namespace WebExpress.WebApp.WebRestApi
             json["color"] = Color;
             json["uri"] = Uri?.ToString();
 
-            if (PrimaryAction != null)
+            if (PrimaryAction is not null)
             {
                 json["primaryAction"] = PrimaryAction.ToJson();
             }
 
-            if (SecondaryAction != null)
+            if (SecondaryAction is not null)
             {
                 json["secondaryAction"] = SecondaryAction.ToJson();
             }
