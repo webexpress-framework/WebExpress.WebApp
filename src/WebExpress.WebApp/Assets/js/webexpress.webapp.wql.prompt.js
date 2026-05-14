@@ -749,7 +749,12 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
     _getSelectionOffsets() {
         const selection = window.getSelection();
 
-        if (!selection || selection.rangeCount === 0 || !this._input.contains(selection.anchorNode) || !this._input.contains(selection.focusNode)) {
+        if (!selection
+            || selection.rangeCount === 0
+            || !selection.anchorNode
+            || !selection.focusNode
+            || !this._input.contains(selection.anchorNode)
+            || !this._input.contains(selection.focusNode)) {
             const length = this._getInputText().length;
             return { start: length, end: length };
         }
@@ -851,6 +856,10 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         const selection = this._getSelectionOffsets();
         const value = this._getInputText();
 
+        if ((inputType === "deleteByCut" || inputType === "deleteByDrag") && selection.start === selection.end) {
+            return;
+        }
+
         if (selection.start !== selection.end) {
             this._replaceSelection("");
             return;
@@ -883,9 +892,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
             default:
                 // leave unknown browser-specific delete behaviors to native handling
                 // until they are explicitly mapped to the plain-text model
-                if (inputType !== "deleteByCut" && inputType !== "deleteByDrag") {
-                    return;
-                }
+                return;
         }
 
         if (start === end) {
