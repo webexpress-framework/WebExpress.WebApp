@@ -25,6 +25,14 @@ namespace WebExpress.WebApp.WebMessageQueue
         private readonly PopupNotificationDispatcher _popupNotificationDispatcher;
         private readonly IPopupNotificationHandler _popupNotificationHandler;
         private readonly ProgressTaskDispatcher _progressTaskDispatcher;
+        private readonly ChatChannelStore _chatChannelStore;
+        private readonly IChatMessageHandler _chatMessageHandler;
+
+        /// <summary>
+        /// Gets the handler for inbound chat messages (send + history
+        /// replay) over the WebSocket.
+        /// </summary>
+        public IChatMessageHandler ChatMessageHandler => _chatMessageHandler;
 
         /// <summary>
         /// Gets the popup notification dispatcher that bridges the
@@ -59,6 +67,8 @@ namespace WebExpress.WebApp.WebMessageQueue
             _popupNotificationDispatcher = new PopupNotificationDispatcher(this, _componentHub);
             _popupNotificationHandler = new PopupNotificationHandler(_componentHub);
             _progressTaskDispatcher = new ProgressTaskDispatcher(this, _componentHub);
+            _chatChannelStore = new ChatChannelStore();
+            _chatMessageHandler = new ChatMessageHandler(this, _chatChannelStore);
         }
 
         /// <summary>

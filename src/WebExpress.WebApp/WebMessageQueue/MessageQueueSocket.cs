@@ -20,6 +20,7 @@ namespace WebExpress.WebApp.WebMessageQueue
         private readonly IRequest _request;
         private readonly ICollaborativeMessageHandler _collaborativeHandler;
         private readonly IPopupNotificationHandler _popupNotificationHandler;
+        private readonly IChatMessageHandler _chatMessageHandler;
         private ISocketConnection _socketConnection;
 
         /// <summary>
@@ -81,6 +82,7 @@ namespace WebExpress.WebApp.WebMessageQueue
                 ? new CollaborativeMessageHandler(messageQueueManager)
                 : null;
             _popupNotificationHandler = messageQueueManager?.PopupNotificationHandler;
+            _chatMessageHandler = messageQueueManager?.ChatMessageHandler;
         }
 
         /// <summary>
@@ -167,6 +169,31 @@ namespace WebExpress.WebApp.WebMessageQueue
             if (PopupNotificationMessageTypes.IsPopup(messageType) && _popupNotificationHandler is not null)
             {
                 _ = DispatchPopupAsync(obj);
+                return;
+            }
+
+            if (ChatMessageTypes.IsChat(messageType) && _chatMessageHandler is not null)
+            {
+                _ = DispatchChatAsync(obj);
+            }
+        }
+
+        /// <summary>
+        /// Forwards the raw payload to the chat message handler. Like the
+        /// collaborative and popup dispatchers, exceptions are swallowed so
+        /// a single malformed message cannot tear down the socket.
+        /// </summary>
+        /// <param name="rawPayload">The raw text payload.</param>
+        private async Task DispatchChatAsync(string rawPayload)
+        {
+            try
+            {
+                await _chatMessageHandler
+                    .HandleAsync(this, rawPayload, CancellationToken.None);
+            }
+            catch
+            {
+                // intentionally swallowed
             }
         }
 

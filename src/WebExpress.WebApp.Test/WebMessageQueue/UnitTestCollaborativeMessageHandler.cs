@@ -584,6 +584,8 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
 
             public IPopupNotificationHandler PopupNotificationHandler => null;
 
+            public IChatMessageHandler ChatMessageHandler => null;
+
             public void Dispose()
             {
             }

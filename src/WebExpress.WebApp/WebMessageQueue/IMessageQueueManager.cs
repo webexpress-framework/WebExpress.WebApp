@@ -111,5 +111,11 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// A token that propagates notification of request cancellation.
         /// </param>
         Task ReplayProgressTasksAsync(IMessageQueueSocket socket, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Gets the handler for inbound chat messages and history replay
+        /// requests. May be <c>null</c> when chat is not configured.
+        /// </summary>
+        IChatMessageHandler ChatMessageHandler { get; }
     }
 }

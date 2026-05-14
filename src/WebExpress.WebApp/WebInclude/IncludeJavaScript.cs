@@ -13,6 +13,7 @@ namespace WebExpress.WebApp.WebInclude
     /// </remarks>
     [Asset("/assets/js/webexpress.webapp.js")]
     [Asset("/assets/js/webexpress.webapp.avatar.dropdown.js")]
+    [Asset("/assets/js/webexpress.webapp.chat.js")]
     [Asset("/assets/js/webexpress.webapp.collaborative.js")]
     [Asset("/assets/js/webexpress.webapp.dashboard.js")]
     [Asset("/assets/js/webexpress.webapp.dropdown.js")]
