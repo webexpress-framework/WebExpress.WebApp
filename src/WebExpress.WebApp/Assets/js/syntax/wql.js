@@ -102,9 +102,9 @@ webexpress.webui.Syntax.register("wql", "wql", function(code) {
                 pos += bestToken.value.length;
             }
         }
-        return `<span class="wx-code-line">${html}</span>`;
+        return html;
     }
 
     // highlight each line and join
-    return code.split('\n').map(highlightLine).join('');
+    return code.split('\n').map(highlightLine).join('\n');
 });

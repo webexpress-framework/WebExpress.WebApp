@@ -37,6 +37,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         this._currentContext = null;
         this._tabCycleIndex = 0;
         this._lastError = null;
+        this._value = "";
 
         // ui initialization
         this._initUi();
@@ -98,7 +99,9 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
      * Attaches necessary event listeners to contenteditable input and buttons.
      */
     _attachListeners() {
+        this._input.addEventListener("beforeinput", this._onBeforeInput.bind(this));
         this._input.addEventListener("input", this._onInput.bind(this));
+        this._input.addEventListener("paste", this._onPaste.bind(this));
         this._input.addEventListener("keydown", this._onKeyDown.bind(this));
         this._input.addEventListener("click", this._onCursorMove.bind(this));
         this._input.addEventListener("keyup", (e) => {
@@ -127,22 +130,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
      * @returns {string} The text content.
      */
     _getInputText() {
-        let result = "";
-        const nodes = this._input.childNodes;
-
-        for (let i = 0; i < nodes.length; i++) {
-            const node = nodes[i];
-
-            if (node.nodeType === Node.TEXT_NODE) {
-                result += node.data.replace(/\u200B/g, "");
-            } else if (node.nodeName === "BR") {
-                result += "\n";
-            } else if (node.nodeType === Node.ELEMENT_NODE) {
-                result += node.innerText.replace(/\u200B/g, "") + "\n";
-            }
-        }
-
-        return result;
+        return this._value;
     }
 
     /**
@@ -150,28 +138,69 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
      * @param {string} value - The new value.
      */
     _setInputText(value) {
-        this._input.innerText = value;
-        this._highlightSyntax();
+        this._value = this._normalizeInputText(value);
+        this._highlightSyntax(this._value);
     }
 
     /**
      * Handles input events (typing into the prompt).
      */
     _onInput() {
+        this._value = this._readInputTextFromDom();
         this._setValidState();
 
         if (this._historyIndex === this._history.length) {
-            this._unsentInput = this._getInputText();
+            this._unsentInput = this._value;
         }
 
-        if (this._debounceTimer) {
-            clearTimeout(this._debounceTimer);
+        this._scheduleRefresh();
+    }
+
+    /**
+     * Handles editor mutations before the browser changes the highlighted DOM.
+     * @param {InputEvent} e - The beforeinput event.
+     */
+    _onBeforeInput(e) {
+        if (e.isComposing) {
+            return;
         }
 
-        this._debounceTimer = setTimeout(() => {
-            this._highlightSyntax();
-            this._refreshContextAndSuggestions();
-        }, this._debounceMs);
+        const inputType = e.inputType || "";
+
+        if (inputType === "insertFromPaste" || inputType === "insertFromDrop") {
+            e.preventDefault();
+            const dataTransfer = e.dataTransfer || e.clipboardData;
+            const text = dataTransfer?.getData("text/plain") || e.data || "";
+            this._replaceSelection(text);
+            return;
+        }
+
+        if (inputType === "insertText" || inputType === "insertReplacementText" || inputType === "insertCompositionText") {
+            e.preventDefault();
+            this._replaceSelection(e.data || "");
+            return;
+        }
+
+        if (inputType === "insertParagraph" || inputType === "insertLineBreak") {
+            e.preventDefault();
+            this._replaceSelection("\n");
+            return;
+        }
+
+        if (inputType.startsWith("delete")) {
+            e.preventDefault();
+            this._deleteByInputType(inputType);
+        }
+    }
+
+    /**
+     * Handles paste and forces plain-text insertion.
+     * @param {ClipboardEvent} e - The paste event.
+     */
+    _onPaste(e) {
+        e.preventDefault();
+        const text = e.clipboardData?.getData("text/plain") || "";
+        this._replaceSelection(text);
     }
 
     /**
@@ -180,20 +209,11 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
      * @param {string} [code] - Optional code to highlight.
      */
     _highlightSyntax(code) {
-        code = code !== undefined ? code : this._getInputText();
+        code = this._normalizeInputText(code !== undefined ? code : this._getInputText());
         const syntaxFunction = webexpress.webui.Syntax?.get?.("wql");
 
         // preserve cursor position
-        const selection = window.getSelection();
-        let cursorOffset = 0;
-
-        if (selection && selection.rangeCount > 0 && this._input.contains(selection.anchorNode)) {
-            const range = selection.getRangeAt(0);
-            const preCaretRange = range.cloneRange();
-            preCaretRange.selectNodeContents(this._input);
-            preCaretRange.setEnd(range.endContainer, range.endOffset);
-            cursorOffset = preCaretRange.toString().replace(/\u200B/g, "").length;
-        }
+        const selection = this._getSelectionOffsets();
 
         // clear current content
         this._input.innerHTML = "";
@@ -206,7 +226,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
             this._input.textContent = code;
         }
 
-        this._restoreCursor(cursorOffset);
+        this._restoreSelection(selection.start, selection.end);
     }
 
     /**
@@ -214,58 +234,28 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
      * @param {number} offset - The desired character offset.
      */
     _restoreCursor(offset) {
-        const node = this._input;
-        let charsLeft = offset;
+        this._restoreSelection(offset, offset);
+    }
+
+    /**
+     * Restores the text selection inside the input field.
+     * @param {number} start - The desired selection start.
+     * @param {number} [end] - The desired selection end.
+     */
+    _restoreSelection(start, end = start) {
         const range = document.createRange();
         const sel = window.getSelection();
+        const startPos = this._resolveDomPosition(start);
+        const endPos = this._resolveDomPosition(end);
 
-        /**
-         * Recursively traverses nodes to find the correct text node and offset.
-         * @param {Node} currentNode - The node to traverse.
-         * @returns {boolean} True if cursor set, false otherwise.
-         */
-        const setCursor = (currentNode) => {
-            for (const child of currentNode.childNodes) {
-                if (child.nodeType === Node.TEXT_NODE) {
-                    const normalizedText = child.data.replace(/\u200B/g, "");
-                    const normalizedLength = normalizedText.length;
-
-                    if (normalizedLength >= charsLeft) {
-                        let realOffset = 0;
-                        let visibleChars = 0;
-
-                        while (realOffset < child.data.length && visibleChars < charsLeft) {
-                            if (child.data.charAt(realOffset) !== "\u200B") {
-                                visibleChars++;
-                            }
-                            realOffset++;
-                        }
-
-                        range.setStart(child, realOffset);
-                        range.collapse(true);
-                        sel.removeAllRanges();
-                        sel.addRange(range);
-                        return true;
-                    } else {
-                        charsLeft -= normalizedLength;
-                    }
-                } else {
-                    if (setCursor(child)) {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        };
-
-        // if exact position not found, place at end
-        if (!setCursor(node)) {
-            range.selectNodeContents(this._input);
-            range.collapse(false);
-            sel.removeAllRanges();
-            sel.addRange(range);
+        if (!sel) {
+            return;
         }
+
+        range.setStart(startPos.node, startPos.offset);
+        range.setEnd(endPos.node, endPos.offset);
+        sel.removeAllRanges();
+        sel.addRange(range);
     }
 
     /**
@@ -389,18 +379,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
      * @returns {number} Cursor position.
      */
     _getCursorOffset() {
-        const selection = window.getSelection();
-
-        if (!selection || selection.rangeCount === 0 || !this._input.contains(selection.anchorNode)) {
-            return this._getInputText().length;
-        }
-
-        const range = selection.getRangeAt(0);
-        const preCaretRange = range.cloneRange();
-        preCaretRange.selectNodeContents(this._input);
-        preCaretRange.setEnd(range.endContainer, range.endOffset);
-
-        return preCaretRange.toString().replace(/\u200B/g, "").length;
+        return this._getSelectionOffsets().end;
     }
 
     /**
@@ -448,41 +427,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
      * Manually manipulates DOM nodes to ensure correct behavior in contenteditable.
      */
     _insertLineBreakAtCursor() {
-        const selection = window.getSelection();
-
-        if (!selection.rangeCount) {
-            return;
-        }
-
-        const range = selection.getRangeAt(0);
-        const br = document.createElement("br");
-
-        // delete current selection if any
-        range.deleteContents();
-
-        // insert br tag
-        range.insertNode(br);
-
-        // create a text node after br to ensure cursor can go there
-        // (needed for some browsers like chrome/safari to recognize the new line immediately)
-        const textNode = document.createTextNode("\u200B");
-        range.setStartAfter(br);
-        range.insertNode(textNode);
-
-        // move cursor after the zero-width space
-        range.setStartAfter(textNode);
-        range.collapse(true);
-
-        selection.removeAllRanges();
-        selection.addRange(range);
-
-        // scroll into view
-        if (this._input.scrollHeight > this._input.clientHeight) {
-            this._input.scrollTop = this._input.scrollHeight;
-        }
-
-        // trigger input event so state updates
-        this._onInput();
+        this._replaceSelection("\n");
     }
 
     /**
@@ -603,7 +548,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         this._setInputText(newValue);
 
         const newPos = before.length + text.length;
-        this._restoreCursor(newPos);
+        this._restoreSelection(newPos, newPos);
 
         // immediately refresh to update context for next input
         this._refreshContextAndSuggestions();
@@ -775,6 +720,282 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         this._lastError = msg;
         this._input.classList.add("is-invalid");
         this._updateHint();
+    }
+
+    /**
+     * Normalizes editor text to the internal representation.
+     * @param {string} value - The value to normalize.
+     * @returns {string} The normalized text.
+     */
+    _normalizeInputText(value) {
+        return (value || "")
+            .replace(/\r\n?/g, "\n")
+            .replace(/\u00A0/g, " ")
+            .replace(/\u200B/g, "");
+    }
+
+    /**
+     * Reads the plain-text editor content from the DOM.
+     * @returns {string} The normalized text content.
+     */
+    _readInputTextFromDom() {
+        return this._normalizeInputText(this._input.innerText || this._input.textContent || "");
+    }
+
+    /**
+     * Returns the current selection offsets within the plain-text content.
+     * @returns {{start: number, end: number}} The selection bounds.
+     */
+    _getSelectionOffsets() {
+        const selection = window.getSelection();
+
+        if (!selection || selection.rangeCount === 0 || !this._input.contains(selection.anchorNode) || !this._input.contains(selection.focusNode)) {
+            const length = this._getInputText().length;
+            return { start: length, end: length };
+        }
+
+        const range = selection.getRangeAt(0);
+        const start = this._getOffsetFromPosition(range.startContainer, range.startOffset);
+        const end = this._getOffsetFromPosition(range.endContainer, range.endOffset);
+
+        return {
+            start: Math.min(start, end),
+            end: Math.max(start, end)
+        };
+    }
+
+    /**
+     * Calculates the plain-text offset for a DOM position.
+     * @param {Node} node - The DOM node.
+     * @param {number} offset - The DOM offset.
+     * @returns {number} The plain-text offset.
+     */
+    _getOffsetFromPosition(node, offset) {
+        const range = document.createRange();
+
+        try {
+            range.selectNodeContents(this._input);
+            range.setEnd(node, offset);
+        } catch (e) {
+            return this._getInputText().length;
+        }
+
+        return this._normalizeInputText(range.toString()).length;
+    }
+
+    /**
+     * Resolves a plain-text offset back to a DOM position.
+     * @param {number} offset - The plain-text offset.
+     * @returns {{node: Node, offset: number}} The DOM position.
+     */
+    _resolveDomPosition(offset) {
+        const node = this._input;
+        let charsLeft = Math.max(0, Math.min(offset, this._getInputText().length));
+
+        const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+        let current = walker.nextNode();
+
+        while (current) {
+            const normalizedText = current.data.replace(/\u200B/g, "");
+            const normalizedLength = normalizedText.length;
+
+            if (normalizedLength >= charsLeft) {
+                let realOffset = 0;
+                let visibleChars = 0;
+
+                while (realOffset < current.data.length && visibleChars < charsLeft) {
+                    if (current.data.charAt(realOffset) !== "\u200B") {
+                        visibleChars++;
+                    }
+                    realOffset++;
+                }
+
+                return { node: current, offset: realOffset };
+            }
+
+            charsLeft -= normalizedLength;
+            current = walker.nextNode();
+        }
+
+        return { node: this._input, offset: this._input.childNodes.length };
+    }
+
+    /**
+     * Replaces the current selection with the provided text.
+     * @param {string} text - The replacement text.
+     */
+    _replaceSelection(text) {
+        const selection = this._getSelectionOffsets();
+        const value = this._getInputText();
+        const insertion = this._normalizeInputText(text);
+        const next = value.slice(0, selection.start) + insertion + value.slice(selection.end);
+        const nextPos = selection.start + insertion.length;
+
+        this._setInputText(next);
+        this._restoreSelection(nextPos, nextPos);
+
+        if (this._historyIndex === this._history.length) {
+            this._unsentInput = this._getInputText();
+        }
+
+        this._setValidState();
+        this._scheduleRefresh();
+        this._scrollInputToCaret();
+    }
+
+    /**
+     * Applies the requested deletion behavior to the current selection.
+     * @param {string} inputType - The delete input type.
+     */
+    _deleteByInputType(inputType) {
+        const selection = this._getSelectionOffsets();
+        const value = this._getInputText();
+
+        if (selection.start !== selection.end) {
+            this._replaceSelection("");
+            return;
+        }
+
+        let start = selection.start;
+        let end = selection.end;
+
+        switch (inputType) {
+            case "deleteContentBackward":
+                start = Math.max(0, start - 1);
+                break;
+            case "deleteContentForward":
+                end = Math.min(value.length, end + 1);
+                break;
+            case "deleteWordBackward":
+                start = this._findPreviousWordBoundary(value, start);
+                break;
+            case "deleteWordForward":
+                end = this._findNextWordBoundary(value, end);
+                break;
+            case "deleteSoftLineBackward":
+            case "deleteHardLineBackward":
+                start = this._findLineStart(value, start);
+                break;
+            case "deleteSoftLineForward":
+            case "deleteHardLineForward":
+                end = this._findLineEnd(value, end);
+                break;
+            default:
+                if (inputType !== "deleteByCut" && inputType !== "deleteByDrag") {
+                    return;
+                }
+        }
+
+        if (start === end) {
+            return;
+        }
+
+        const next = value.slice(0, start) + value.slice(end);
+        this._setInputText(next);
+        this._restoreSelection(start, start);
+
+        if (this._historyIndex === this._history.length) {
+            this._unsentInput = this._getInputText();
+        }
+
+        this._setValidState();
+        this._scheduleRefresh();
+        this._scrollInputToCaret();
+    }
+
+    /**
+     * Finds the previous word boundary from a cursor position.
+     * @param {string} text - The text to inspect.
+     * @param {number} position - The cursor position.
+     * @returns {number} The word boundary.
+     */
+    _findPreviousWordBoundary(text, position) {
+        let index = Math.max(0, position);
+
+        while (index > 0 && /\s/.test(text.charAt(index - 1))) {
+            index--;
+        }
+
+        while (index > 0 && !/\s/.test(text.charAt(index - 1))) {
+            index--;
+        }
+
+        return index;
+    }
+
+    /**
+     * Finds the next word boundary from a cursor position.
+     * @param {string} text - The text to inspect.
+     * @param {number} position - The cursor position.
+     * @returns {number} The word boundary.
+     */
+    _findNextWordBoundary(text, position) {
+        let index = Math.max(0, position);
+
+        while (index < text.length && /\s/.test(text.charAt(index))) {
+            index++;
+        }
+
+        while (index < text.length && !/\s/.test(text.charAt(index))) {
+            index++;
+        }
+
+        return index;
+    }
+
+    /**
+     * Finds the start of the current line.
+     * @param {string} text - The text to inspect.
+     * @param {number} position - The cursor position.
+     * @returns {number} The start index.
+     */
+    _findLineStart(text, position) {
+        let index = Math.max(0, position);
+
+        while (index > 0 && text.charAt(index - 1) !== "\n") {
+            index--;
+        }
+
+        return index;
+    }
+
+    /**
+     * Finds the end of the current line.
+     * @param {string} text - The text to inspect.
+     * @param {number} position - The cursor position.
+     * @returns {number} The end index.
+     */
+    _findLineEnd(text, position) {
+        let index = Math.max(0, position);
+
+        while (index < text.length && text.charAt(index) !== "\n") {
+            index++;
+        }
+
+        return index;
+    }
+
+    /**
+     * Schedules syntax highlighting and suggestion refresh.
+     */
+    _scheduleRefresh() {
+        if (this._debounceTimer) {
+            clearTimeout(this._debounceTimer);
+        }
+
+        this._debounceTimer = setTimeout(() => {
+            this._highlightSyntax(this._getInputText());
+            this._refreshContextAndSuggestions();
+        }, this._debounceMs);
+    }
+
+    /**
+     * Keeps the caret visible after local text mutations.
+     */
+    _scrollInputToCaret() {
+        if (this._input.scrollHeight > this._input.clientHeight) {
+            this._input.scrollTop = this._input.scrollHeight;
+        }
     }
 };
 
