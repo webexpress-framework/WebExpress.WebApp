@@ -16,6 +16,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
     _dragItemIds = [];
     _icons = {};
     _selectable = true;
+    _readonly = false;
     _selectedItemId = null;
     _selectedIds = new Set();
     _anchorId = null;
@@ -34,6 +35,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
 
         const selAttr = element.dataset.selectable || element.getAttribute("data-selectable");
         this._selectable = selAttr !== "false";
+        this._readonly = element.dataset.readonly === "true" || element.getAttribute("data-readonly") === "true";
 
         // read configurable icons or use font awesome defaults
         // item type icons are not configured here - they are delivered per item via item.icon from the rest api
@@ -55,6 +57,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
         element.removeAttribute("data-rest-uri");
         element.removeAttribute("data-title");
         element.removeAttribute("data-selectable");
+        element.removeAttribute("data-readonly");
 
         element.classList.add("wx-scrum-backlog");
         if (this._selectable) {
@@ -306,6 +309,10 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
      * @returns {void}
      */
     addSprint(sprint) {
+        if (this._readonly) {
+            return;
+        }
+
         if (!sprint) {
             return;
         }
@@ -331,6 +338,10 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
      * @returns {void}
      */
     updateSprint(patch) {
+        if (this._readonly) {
+            return;
+        }
+
         if (!patch || !patch.id) {
             return;
         }
@@ -350,6 +361,10 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
      * @returns {void}
      */
     deleteSprint(sprintId) {
+        if (this._readonly) {
+            return;
+        }
+
         if (!sprintId) {
             return;
         }
@@ -382,6 +397,10 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
      * @returns {void}
      */
     completeSprint(sprintId) {
+        if (this._readonly) {
+            return;
+        }
+
         if (sprintId) {
             this.updateSprint({ id: sprintId, status: "closed" });
         }
@@ -393,6 +412,10 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
      * @returns {void}
      */
     startSprint(sprintId) {
+        if (this._readonly) {
+            return;
+        }
+
         if (sprintId) {
             this.updateSprint({ id: sprintId, status: "active" });
         }
@@ -611,6 +634,10 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
      * @returns {void}
      */
     moveItemsToSprint(itemIds, sprintId) {
+        if (this._readonly) {
+            return;
+        }
+
         if (!itemIds || itemIds.length === 0) {
             return;
         }
@@ -694,6 +721,10 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
      * @returns {void}
      */
     insertItemsRelative(dragIds, targetId, side) {
+        if (this._readonly) {
+            return;
+        }
+
         if (!dragIds || dragIds.length === 0) {
             return;
         }
@@ -780,6 +811,10 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
      * @returns {void}
      */
     moveItemRank(itemId, delta) {
+        if (this._readonly) {
+            return;
+        }
+
         const item = this._itemIndex.get(itemId);
         if (!item) {
             return;
@@ -935,12 +970,14 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
         title.textContent = this._title;
         toolbar.appendChild(title);
 
-        const createBtn = document.createElement("button");
-        createBtn.type = "button";
-        createBtn.className = "btn btn-primary btn-sm wx-scrum-create-sprint";
-        createBtn.innerHTML = "<i class=\"fas fa-plus\"></i> " + this._i18n("webexpress.webapp:scrum.create_sprint", "Create sprint");
-        createBtn.addEventListener("click", () => this.openSprintDialog());
-        toolbar.appendChild(createBtn);
+        if (!this._readonly) {
+            const createBtn = document.createElement("button");
+            createBtn.type = "button";
+            createBtn.className = "btn btn-primary btn-sm wx-scrum-create-sprint";
+            createBtn.innerHTML = "<i class=\"fas fa-plus\"></i> " + this._i18n("webexpress.webapp:scrum.create_sprint", "Create sprint");
+            createBtn.addEventListener("click", () => this.openSprintDialog());
+            toolbar.appendChild(createBtn);
+        }
 
         return toolbar;
     }
@@ -989,7 +1026,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
         }
         head.appendChild(meta);
 
-        if (opts.allowSprintMenu) {
+        if (opts.allowSprintMenu && !this._readonly) {
             const menuBtn = document.createElement("button");
             menuBtn.type = "button";
             menuBtn.className = "btn btn-sm btn-light wx-scrum-sprint-menu";
@@ -1004,30 +1041,32 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
         section.appendChild(head);
 
         // section-level drop handling for empty sections / append-to-end
-        section.addEventListener("dragover", (e) => {
-            if (sprint.status !== "active" && sprint.status !== "planned" && sprint.status !== "backlog") {
-                return;
-            }
-            e.preventDefault();
-            section.classList.add("wx-scrum-drop-target");
-        });
+        if (!this._readonly) {
+            section.addEventListener("dragover", (e) => {
+                if (sprint.status !== "active" && sprint.status !== "planned" && sprint.status !== "backlog") {
+                    return;
+                }
+                e.preventDefault();
+                section.classList.add("wx-scrum-drop-target");
+            });
 
-        section.addEventListener("dragleave", () => {
-            section.classList.remove("wx-scrum-drop-target");
-        });
+            section.addEventListener("dragleave", () => {
+                section.classList.remove("wx-scrum-drop-target");
+            });
 
-        section.addEventListener("drop", (e) => {
-            section.classList.remove("wx-scrum-drop-target");
-            if (e.defaultPrevented) {
-                return;
-            }
-            const ids = this._readDragIds(e);
-            if (ids.length === 0) {
-                return;
-            }
-            const targetId = sprint.id === "backlog" ? null : sprint.id;
-            this.moveItemsToSprint(ids, targetId);
-        });
+            section.addEventListener("drop", (e) => {
+                section.classList.remove("wx-scrum-drop-target");
+                if (e.defaultPrevented) {
+                    return;
+                }
+                const ids = this._readDragIds(e);
+                if (ids.length === 0) {
+                    return;
+                }
+                const targetId = sprint.id === "backlog" ? null : sprint.id;
+                this.moveItemsToSprint(ids, targetId);
+            });
+        }
 
         if (items.length === 0) {
             const empty = document.createElement("div");
@@ -1054,7 +1093,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
         const row = document.createElement("div");
         row.className = "wx-scrum-row";
         row.dataset.itemId = item.id;
-        row.draggable = true;
+        row.draggable = !this._readonly;
         row.tabIndex = 0;
 
         if (this._selectedIds.has(item.id)) {
@@ -1071,14 +1110,16 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
 
         row.addEventListener("keydown", (e) => this._handleRowKeyDown(e, item));
 
-        row.addEventListener("contextmenu", (e) => {
-            e.preventDefault();
-            // ensure the right-clicked item is part of the selection
-            if (!this._selectedIds.has(item.id)) {
-                this._setSelection([item.id], item.id, item.id, true, e);
-            }
-            this._openItemMenu(e, item);
-        });
+        if (!this._readonly) {
+            row.addEventListener("contextmenu", (e) => {
+                e.preventDefault();
+                // ensure the right-clicked item is part of the selection
+                if (!this._selectedIds.has(item.id)) {
+                    this._setSelection([item.id], item.id, item.id, true, e);
+                }
+                this._openItemMenu(e, item);
+            });
+        }
 
         const type = document.createElement("span");
         type.className = "wx-scrum-type " + (item.type || "");
@@ -1109,7 +1150,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
         points.textContent = String(item.points || 0);
         row.appendChild(points);
 
-        if (allowAddToSprint && targetSprint) {
+        if (!this._readonly && allowAddToSprint && targetSprint) {
             const add = document.createElement("button");
             add.type = "button";
             add.className = "wx-scrum-add-sprint";
@@ -1129,84 +1170,86 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
         }
 
         // drag sorting logic
-        row.addEventListener("dragstart", (e) => {
-            // if dragging a row that's part of a multi-selection → drag the whole set
-            const ids = this._selectedIds.has(item.id) && this._selectedIds.size > 1
-                ? Array.from(this._selectedIds)
-                : [item.id];
+        if (!this._readonly) {
+            row.addEventListener("dragstart", (e) => {
+                // if dragging a row that's part of a multi-selection → drag the whole set
+                const ids = this._selectedIds.has(item.id) && this._selectedIds.size > 1
+                    ? Array.from(this._selectedIds)
+                    : [item.id];
 
-            this._dragItemId = item.id;
-            this._dragItemIds = ids;
-            row.classList.add("dragging");
+                this._dragItemId = item.id;
+                this._dragItemIds = ids;
+                row.classList.add("dragging");
 
-            // visually mark all rows in the drag set
-            if (ids.length > 1) {
-                for (const id of ids) {
-                    if (id === item.id) continue;
-                    const r = this._element.querySelector(`.wx-scrum-row[data-item-id="${CSS.escape(id)}"]`);
-                    if (r) r.classList.add("dragging");
+                // visually mark all rows in the drag set
+                if (ids.length > 1) {
+                    for (const id of ids) {
+                        if (id === item.id) continue;
+                        const r = this._element.querySelector(`.wx-scrum-row[data-item-id="${CSS.escape(id)}"]`);
+                        if (r) r.classList.add("dragging");
+                    }
                 }
-            }
 
-            try {
-                e.dataTransfer.effectAllowed = "move";
-                e.dataTransfer.setData("text/plain", item.id);
-                e.dataTransfer.setData("application/x-wx-scrum-ids", JSON.stringify(ids));
-            } catch (_) { /* ignore */ }
-        });
+                try {
+                    e.dataTransfer.effectAllowed = "move";
+                    e.dataTransfer.setData("text/plain", item.id);
+                    e.dataTransfer.setData("application/x-wx-scrum-ids", JSON.stringify(ids));
+                } catch (_) { /* ignore */ }
+            });
 
-        row.addEventListener("dragend", () => {
-            for (const r of this._element.querySelectorAll(".wx-scrum-row.dragging")) {
-                r.classList.remove("dragging");
-            }
-            this._dragItemId = null;
-            this._dragItemIds = [];
-        });
+            row.addEventListener("dragend", () => {
+                for (const r of this._element.querySelectorAll(".wx-scrum-row.dragging")) {
+                    r.classList.remove("dragging");
+                }
+                this._dragItemId = null;
+                this._dragItemIds = [];
+            });
 
-        row.addEventListener("dragover", (e) => {
-            if (!this._dragItemId || this._dragItemIds.includes(item.id)) {
-                return;
-            }
-            e.preventDefault();
-            e.stopPropagation();
+            row.addEventListener("dragover", (e) => {
+                if (!this._dragItemId || this._dragItemIds.includes(item.id)) {
+                    return;
+                }
+                e.preventDefault();
+                e.stopPropagation();
 
-            const rect = row.getBoundingClientRect();
-            const side = e.clientY < (rect.top + rect.height / 2) ? "before" : "after";
+                const rect = row.getBoundingClientRect();
+                const side = e.clientY < (rect.top + rect.height / 2) ? "before" : "after";
 
-            if (row.dataset.dropSide !== side) {
-                row.dataset.dropSide = side;
-                row.classList.remove("wx-drop-before", "wx-drop-after");
-                row.classList.add(side === "before" ? "wx-drop-before" : "wx-drop-after");
-            }
-        });
+                if (row.dataset.dropSide !== side) {
+                    row.dataset.dropSide = side;
+                    row.classList.remove("wx-drop-before", "wx-drop-after");
+                    row.classList.add(side === "before" ? "wx-drop-before" : "wx-drop-after");
+                }
+            });
 
-        row.addEventListener("dragleave", (e) => {
-            if (this._dragItemIds.includes(item.id)) {
-                return;
-            }
-            const rect = row.getBoundingClientRect();
-            if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
+            row.addEventListener("dragleave", (e) => {
+                if (this._dragItemIds.includes(item.id)) {
+                    return;
+                }
+                const rect = row.getBoundingClientRect();
+                if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
+                    row.classList.remove("wx-drop-before", "wx-drop-after");
+                    row.removeAttribute("data-drop-side");
+                }
+            });
+
+            row.addEventListener("drop", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
                 row.classList.remove("wx-drop-before", "wx-drop-after");
                 row.removeAttribute("data-drop-side");
-            }
-        });
 
-        row.addEventListener("drop", (e) => {
-            e.preventDefault();
-            e.stopPropagation();
+                const ids = this._readDragIds(e).filter((id) => id !== item.id);
+                if (ids.length === 0) {
+                    return;
+                }
 
-            row.classList.remove("wx-drop-before", "wx-drop-after");
-            row.removeAttribute("data-drop-side");
-
-            const ids = this._readDragIds(e).filter((id) => id !== item.id);
-            if (ids.length === 0) {
-                return;
-            }
-
-            const rect = row.getBoundingClientRect();
-            const side = e.clientY < (rect.top + rect.height / 2) ? "before" : "after";
-            this.insertItemsRelative(ids, item.id, side);
-        });
+                const rect = row.getBoundingClientRect();
+                const side = e.clientY < (rect.top + rect.height / 2) ? "before" : "after";
+                this.insertItemsRelative(ids, item.id, side);
+            });
+        }
 
         return row;
     }
@@ -1360,6 +1403,10 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
      * @returns {void}
      */
     _openItemMenu(e, item) {
+        if (this._readonly) {
+            return;
+        }
+
         const sprintTargets = this._sprints.filter((s) => s.status === "active" || s.status === "planned");
 
         // determine the active id set: either the multi-selection (if it includes the item) or just this item
@@ -1411,6 +1458,10 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
      * @returns {void}
      */
     _openSprintMenu(e, sprint) {
+        if (this._readonly) {
+            return;
+        }
+
         const entries = [];
 
         if (sprint.status === "active") {
@@ -1574,6 +1625,10 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
      * @returns {void}
      */
     _confirmDeleteSprint(sprint) {
+        if (this._readonly) {
+            return;
+        }
+
         const host = document.createElement("div");
 
         const header = document.createElement("span");
@@ -2095,6 +2150,10 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
      * @returns {void}
      */
     _openEditSprintDialog(sprint) {
+        if (this._readonly) {
+            return;
+        }
+
         this._openSprintFormDialog({
             sprint: sprint,
             title: this._i18n("webexpress.webapp:scrum.edit_sprint", "Edit sprint"),
@@ -2108,6 +2167,10 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
      * @returns {void}
      */
     openSprintDialog() {
+        if (this._readonly) {
+            return;
+        }
+
         this._openSprintFormDialog({
             sprint: {},
             title: this._i18n("webexpress.webapp:scrum.create_sprint", "Create sprint"),

@@ -68,5 +68,30 @@ namespace WebExpress.WebApp.Test.WebControl
             // validation
             AssertExtensions.EqualWithPlaceholders(@"<div id=""scrum"" class=""wx-webapp-scrum-backlog"" data-rest-uri=""https://example.com/api/scrum/backlog"" data-title=""Backlog"" data-selectable=""false"" data-icon-active=""active-icon"" data-icon-planned=""planned-icon"" data-icon-backlog=""backlog-icon"" data-icon-move-to-backlog=""move-backlog-icon"" data-icon-move-to-sprint=""move-sprint-icon"" data-icon-start-sprint=""start-icon"" data-icon-complete-sprint=""complete-icon"" data-icon-edit-sprint=""edit-icon"" data-icon-delete-sprint=""delete-icon""></div>", html);
         }
+
+        /// <summary>
+        /// Tests the readonly property emits a data-readonly attribute only when true.
+        /// </summary>
+        [Theory]
+        [InlineData(false, @"<div id=""*"" class=""wx-webapp-scrum-backlog""></div>")]
+        [InlineData(true, @"<div id=""*"" class=""wx-webapp-scrum-backlog"" data-readonly=""true""></div>")]
+        public void Readonly(bool readOnly, string expected)
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlRestScrumBacklog()
+            {
+                Readonly = _ => readOnly
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
     }
 }

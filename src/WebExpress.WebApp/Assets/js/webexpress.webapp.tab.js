@@ -10,6 +10,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
 
     // configuration
     _restUri = "";
+    _readonly = false;
     _templates = new Map();
 
     // request state
@@ -29,9 +30,13 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         super(element);
 
         this._restUri = element.dataset.uri || "";
+        this._readonly = element.dataset.readonly === "true" || element.getAttribute("data-readonly") === "true";
 
         if (element.hasAttribute("data-uri")) {
             element.removeAttribute("data-uri");
+        }
+        if (element.hasAttribute("data-readonly")) {
+            element.removeAttribute("data-readonly");
         }
 
         // extract and store templates
@@ -42,7 +47,9 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
             this._navElement.classList.add("wx-form-designer-tabs");
         }
 
-        this._initAddButton();
+        if (!this._readonly) {
+            this._initAddButton();
+        }
 
         if (this._restUri !== "") {
             this._element.classList.add("placeholder-glow");
@@ -158,6 +165,10 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
      * Sends a POST request to the server to create a new tab and appends it to the UI.
      */
     _createNewTab() {
+        if (this._readonly) {
+            return;
+        }
+
         if (this._restUri === "") {
             return;
         }
@@ -390,6 +401,10 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         // call the base class implementation first
         const li = super._buildTabHeader(tab);
         
+        if (this._readonly) {
+            return li;
+        }
+
         const a = li.querySelector(".nav-link");
         
         if (a !== null) {
@@ -416,6 +431,10 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
      * @param {string} tabId - The identifier of the tab to close.
      */
     _closeTab(tabId) {
+        if (this._readonly) {
+            return;
+        }
+
         // send DELETE request to the server before removing the tab locally
         if (this._restUri && tabId) {
             const fetchUrl = this._resolveUrl(this._restUri + "?id=" + encodeURIComponent(tabId));
