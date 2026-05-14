@@ -30,7 +30,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         super(element);
 
         this._restUri = element.dataset.uri || "";
-        this._readonly = element.dataset.readonly === "true" || element.getAttribute("data-readonly") === "true";
+        this._readonly = element.dataset.readonly === "true";
 
         if (element.hasAttribute("data-uri")) {
             element.removeAttribute("data-uri");

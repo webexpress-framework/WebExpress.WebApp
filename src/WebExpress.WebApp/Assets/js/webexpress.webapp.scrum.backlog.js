@@ -35,7 +35,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
 
         const selAttr = element.dataset.selectable || element.getAttribute("data-selectable");
         this._selectable = selAttr !== "false";
-        this._readonly = element.dataset.readonly === "true" || element.getAttribute("data-readonly") === "true";
+        this._readonly = element.dataset.readonly === "true";
 
         // read configurable icons or use font awesome defaults
         // item type icons are not configured here - they are delivered per item via item.icon from the rest api
