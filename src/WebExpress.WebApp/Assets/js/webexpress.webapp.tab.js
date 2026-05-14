@@ -69,9 +69,9 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         for (let i = 0; i < templateNodes.length; i++) {
             const tpl = templateNodes[i];
             const id = tpl.id || "default";
-            const icon = tpl.dataset.icon || tpl.getAttribute("data-icon") || "";
-            const name = tpl.dataset.name || tpl.getAttribute("data-name") || id;
-            const description = tpl.dataset.description || tpl.getAttribute("data-description") || "";
+            const icon = tpl.dataset.icon || "";
+            const name = tpl.dataset.name || id;
+            const description = tpl.dataset.description || "";
             
             // store template payload for later instantiation
             this._templates.set(id, {
@@ -192,7 +192,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
      */
     _createTemplateIcon(iconClass) {
         const icon = document.createElement("i");
-        const classes = (iconClass || "far fa-square").trim().split(/\s+/).filter(Boolean);
+        const classes = (iconClass || "far fa-square").trim().split(/\s+/);
         icon.className = classes.join(" ");
         return icon;
     }
