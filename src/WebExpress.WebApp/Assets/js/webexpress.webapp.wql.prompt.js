@@ -175,7 +175,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
 
-        if (inputType === "insertText" || inputType === "insertReplacementText" || inputType === "insertCompositionText") {
+        if (inputType === "insertText" || inputType === "insertReplacementText") {
             e.preventDefault();
             this._replaceSelection(e.data || "");
             return;
@@ -881,6 +881,8 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
                 end = this._findLineEnd(value, end);
                 break;
             default:
+                // leave unknown browser-specific delete behaviors to native handling
+                // until they are explicitly mapped to the plain-text model
                 if (inputType !== "deleteByCut" && inputType !== "deleteByDrag") {
                     return;
                 }
