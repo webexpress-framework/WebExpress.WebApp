@@ -891,7 +891,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
                 end = this._findLineEnd(value, end);
                 break;
             default:
-                console.warn(`[WQL] Unhandled delete input type: ${inputType}`);
+                console.debug?.(`[WQL] Unhandled delete input type: ${inputType}`);
                 return;
         }
 
