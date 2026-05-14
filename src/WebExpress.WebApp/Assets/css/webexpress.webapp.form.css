@@ -506,7 +506,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     font-size: 12px;
 }
 
-/* type colour swatch — reused in tree, palette and picker */
+/* type colour swatch - reused in tree, palette and picker */
 .wx-form-editor-type-swatch {
     display: inline-block;
     width: 8px;

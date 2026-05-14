@@ -79,5 +79,25 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// The current instance to support method chaining.
         /// </returns>
         Task<IMessageQueueManager> SendAsync(IAddress address, IMessage message, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Sends every still-valid popup notification visible to the given
+        /// socket's session/application back through that socket. Called
+        /// from <c>MessageQueueSocket.OnConnectedAsync</c> so a freshly
+        /// connecting or reconnecting client receives notifications it
+        /// missed while offline.
+        /// </summary>
+        /// <param name="socket">The (re)connecting socket.</param>
+        /// <param name="cancellationToken">
+        /// A token that propagates notification of request cancellation.
+        /// </param>
+        Task ReplayPopupNotificationsAsync(IMessageQueueSocket socket, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Gets the handler for inbound popup control messages such as
+        /// dismiss requests. May be <c>null</c> when popup notifications
+        /// are not configured.
+        /// </summary>
+        IPopupNotificationHandler PopupNotificationHandler { get; }
     }
 }

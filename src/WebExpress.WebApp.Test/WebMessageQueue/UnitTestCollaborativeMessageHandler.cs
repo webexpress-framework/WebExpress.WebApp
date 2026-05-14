@@ -48,7 +48,7 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
         }
 
         /// <summary>
-        /// Empty payloads must be discarded silently — a misbehaving client
+        /// Empty payloads must be discarded silently - a misbehaving client
         /// must not be able to push the socket pipeline into an error state.
         /// </summary>
         [Theory]
@@ -225,7 +225,7 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
 
         /// <summary>
         /// Server controlled fields (in particular the connection id) must not
-        /// be duplicated by client supplied entries — even if the client tries
+        /// be duplicated by client supplied entries - even if the client tries
         /// to set them, the server side value wins and only one entry is
         /// written.
         /// </summary>
@@ -575,6 +575,11 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
                 Sends.Add(new CapturedSend(address, message));
                 return Task.FromResult<IMessageQueueManager>(this);
             }
+
+            public Task ReplayPopupNotificationsAsync(IMessageQueueSocket socket, CancellationToken cancellationToken = default)
+                => Task.CompletedTask;
+
+            public IPopupNotificationHandler PopupNotificationHandler => null;
 
             public void Dispose()
             {

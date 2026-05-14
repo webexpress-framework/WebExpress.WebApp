@@ -18,8 +18,14 @@ webexpress.webapp.MessageQueue = new class {
 
         // reconnect state
         this._shouldReconnect = true;
-        this._reconnectDelay = 1000; // start with 1s
+        this._reconnectDelayInitial = 1000; // start with 1s
+        this._reconnectDelay = this._reconnectDelayInitial;
         this._reconnectMax = 15000;  // max 15s
+        this._reconnectTimer = null;
+
+        // remembered for automatic reconnect attempts
+        this._wsUrl = null;
+        this._domains = null;
     }
 
     /**
@@ -55,16 +61,26 @@ webexpress.webapp.MessageQueue = new class {
             this._ws = null;
         }
         this._wsUrl = url || this._wsUrl;
+        if (Array.isArray(domains)) {
+            // first explicit call wins; reconnects reuse the stored domains
+            this._domains = domains;
+        }
         if (!this._wsUrl) {
             this._status = "offline";
             this._lastError = "No WebSocket URL specified";
             return;
         }
 
+        // a manual connect cancels any pending reconnect timer
+        if (this._reconnectTimer) {
+            clearTimeout(this._reconnectTimer);
+            this._reconnectTimer = null;
+        }
+
         let finalUrl = this._wsUrl;
 
-        if (Array.isArray(domains) && domains.length > 0) {
-            const encoded = encodeURIComponent(domains.join(";"));
+        if (Array.isArray(this._domains) && this._domains.length > 0) {
+            const encoded = encodeURIComponent(this._domains.join(";"));
 
             // check if URL already has query parameters
             finalUrl += (finalUrl.includes("?") ? "&" : "?") + "domains=" + encoded;
@@ -86,6 +102,8 @@ webexpress.webapp.MessageQueue = new class {
         this._ws.addEventListener("open", (evt) => {
             this._setStatus("online");
             this._lastError = null;
+            // reset backoff so the next disconnect starts the staircase over
+            this._reconnectDelay = this._reconnectDelayInitial;
         });
 
         this._ws.addEventListener("message", (evt) => {
@@ -135,6 +153,10 @@ webexpress.webapp.MessageQueue = new class {
      */
     disconnect() {
         this._shouldReconnect = false;
+        if (this._reconnectTimer) {
+            clearTimeout(this._reconnectTimer);
+            this._reconnectTimer = null;
+        }
         if (this._ws) {
             this._ws.close();
             this._ws = null;
@@ -145,20 +167,28 @@ webexpress.webapp.MessageQueue = new class {
     /**
      * Schedules an automatic WebSocket reconnect attempt using an exponential
      * backoff strategy. The reconnect is only performed if automatic reconnects
-     * are enabled via `_shouldReconnect`.
+     * are enabled via `_shouldReconnect`. Once a connection succeeds the
+     * backoff resets to its initial value (see `open` handler).
      */
     _scheduleReconnect() {
-        if (!this._shouldReconnect) return;
+        if (!this._shouldReconnect) {
+            return;
+        }
 
-        //const delay = this._reconnectDelay;
-        //console.info(`WebSocket reconnect in ${delay}ms...`);
+        // an already scheduled reconnect should not be queued twice
+        if (this._reconnectTimer) {
+            return;
+        }
 
-        //setTimeout(() => {
-        //    this.connect();
-        //}, delay);
+        const delay = this._reconnectDelay;
 
-        // exponential backoff
-        //this._reconnectDelay = Math.min(this._reconnectDelay * 2, this._reconnectMax);
+        this._reconnectTimer = setTimeout(() => {
+            this._reconnectTimer = null;
+            this.connect(this._wsUrl);
+        }, delay);
+
+        // exponential backoff, capped at _reconnectMax
+        this._reconnectDelay = Math.min(this._reconnectDelay * 2, this._reconnectMax);
     }
 
 

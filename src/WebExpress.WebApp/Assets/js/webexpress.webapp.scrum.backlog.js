@@ -36,7 +36,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
         this._selectable = selAttr !== "false";
 
         // read configurable icons or use font awesome defaults
-        // item type icons are not configured here — they are delivered per item via item.icon from the rest api
+        // item type icons are not configured here - they are delivered per item via item.icon from the rest api
         this._icons = {
             // sections and status
             active: element.dataset.iconActive || "fas fa-play-circle",
@@ -555,7 +555,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
 
-        // single-select event (back-compat) — only when primary changes
+        // single-select event (back-compat) - only when primary changes
         if (primaryChanged) {
             const singleEv = webexpress.webui.Event.SELECT_ITEM_EVENT || "wx:select-item";
             this._dispatch(singleEv, {
@@ -564,7 +564,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
             });
         }
 
-        // multi-select event — always when called with dispatch=true
+        // multi-select event - always when called with dispatch=true
         const multiEv = webexpress.webui.Event.SELECT_ITEMS_EVENT || "wx:select-items";
         this._dispatch(multiEv, {
             itemIds: Array.from(this._selectedIds),
@@ -1911,7 +1911,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
                 : this._i18n("webexpress.webapp:scrum.field.start", "Start");
         };
 
-        // initial state — set without seeding since values are already correct
+        // initial state - set without seeding since values are already correct
         startInput.style.display = durSelect.value === "custom" ? "none" : "";
         rangeInput.style.display = durSelect.value === "custom" ? "" : "none";
         dateLabel.textContent = durSelect.value === "custom"

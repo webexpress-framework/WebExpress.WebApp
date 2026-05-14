@@ -54,9 +54,11 @@ namespace WebExpress.WebApp.WebPage
         IControlWebAppFooter Footer { get; }
 
         /// <summary>
-        /// Gets the control for displaying notification popups via API.
+        /// Gets the control for displaying notification popups. The
+        /// notifications are pushed live by the server through the
+        /// MessageQueue WebSocket.
         /// </summary>
-        ControlRestPopupNotification NotificationPopup { get; }
+        ControlPopupNotification NotificationPopup { get; }
 
         /// <summary>
         /// Gets a delegate that returns the collection of domain names associated with 

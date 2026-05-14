@@ -384,7 +384,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
     /**
      * Renders an inline-editable form-name field driven by SmartEditCtrl.
      *
-     * The wrapper deliberately omits the `wx-webui-smart-edit` class — the
+     * The wrapper deliberately omits the `wx-webui-smart-edit` class - the
      * Controller's MutationObserver auto-instantiates that class on append,
      * which would conflict with the manual instantiation below. We follow
      * the same pattern used by the table renderers in templates/default.js.

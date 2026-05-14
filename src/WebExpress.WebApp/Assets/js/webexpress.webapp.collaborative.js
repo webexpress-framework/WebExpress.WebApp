@@ -761,7 +761,7 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
 
         const field = this._resolveField(msg.fieldId);
         if (!field) {
-            // field is no longer available locally — drop any stale caret state
+            // field is no longer available locally - drop any stale caret state
             if (this._remoteCarets.delete(msg.userId)) {
                 this._renderCarets();
             }
@@ -885,7 +885,7 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
      * Renders the remote user cursors based on their last known coordinates.
      * Existing cursor nodes are reused so the CSS transition on left/top can
      * animate the movement instead of flashing every time a new message
-     * arrives — cursor updates can fire many times per second.
+     * arrives - cursor updates can fire many times per second.
      */
     _renderCursors() {
         if (!this._cursorLayer) {
@@ -1118,7 +1118,7 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
         }
 
         // a collapsed range can yield an empty client rect at the start or
-        // end of a block. The bounding rect of the range is then zeroed —
+        // end of a block. The bounding rect of the range is then zeroed -
         // prefer the rect of the closest text node line when that happens.
         let rect = null;
         const clientRects = range.getClientRects();

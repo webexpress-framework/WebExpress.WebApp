@@ -1,213 +1,319 @@
 /**
  * Control for displaying popup notifications.
- * The following events are triggered:
- * - webexpress.webui.Event.HIDE_EVENT with parameter id.
+ *
+ * Notifications are delivered as regular MessageQueue messages from the
+ * server (see WebExpress.WebApp.WebMessageQueue.PopupNotificationDispatcher).
+ * This replaces the previous REST polling against
+ * WebExpress.WebApp.WWW.Api._1.PopupNotification: there is no HTTP roundtrip
+ * to ask for new notifications anymore - the server pushes them over the
+ * existing WebSocket and replays every still-valid notification when the
+ * client (re)connects.
+ *
+ * The control keeps each received notification visible until the user
+ * dismisses it or the configured durability elapses. Dismissals are
+ * forwarded to the server through the same WebSocket channel as a
+ * "webexpress.webapp.popup.dismiss" message so they are not replayed on
+ * subsequent reconnects.
+ *
+ * Dispatched custom events:
+ * - webexpress.webui.Event.HIDE_EVENT with the notification id when the
+ *   alert is closed or expires.
  */
 class PopupNotificationCtrl extends webexpress.webui.Ctrl {
-    _interval = null;
-    _restUri = null;
+    static SHOW_TYPE = "webexpress.webapp.popup.show";
+    static DISMISS_TYPE = "webexpress.webapp.popup.dismiss";
+
     _activeNotifications = new Map();
 
     /**
-    * Constructor
-    * @param {HTMLElement} element - The DOM element associated with the move control.
-    */
+     * Constructor.
+     * @param {HTMLElement} element - The DOM element associated with the control.
+     */
     constructor(element) {
         super(element);
 
-        // initialize structure and parse existing data
-        this._interval = element.dataset.interval ? parseInt(element.dataset.interval) : 10000;
-        this._restUri = element.dataset.uri || null;
-
-        setInterval(() => {
-            this.receiveData();
-        }, this._interval);
-
-        this.receiveData();
-
-        // clean up the DOM
-        element.innerHTML = '';
-        element.removeAttribute('data-interval');
-        element.removeAttribute('data-uri');
-        element.classList.add('wx-popupnotification');
+        // clean up the host element so it can host the alert stack
+        element.innerHTML = "";
+        element.removeAttribute("data-interval");
+        element.removeAttribute("data-uri");
+        element.classList.add("wx-popupnotification");
         this._element = element;
+
+        // wire up to the singleton MessageQueue
+        this._queue = (typeof webexpress !== "undefined" && webexpress.webapp)
+            ? webexpress.webapp.MessageQueue
+            : null;
+
+        this._onMessage = (payload) => this._handleMessage(payload);
+
+        if (this._queue) {
+            this._queue.register(this._onMessage);
+        }
     }
 
     /**
-     * Retrieve data from rest api.
+     * Tears down the listener so the control no longer reacts to incoming
+     * messages. Called by frameworks that re-render the host element.
      */
-    receiveData() {
-        let interval = null;
+    destroy() {
+        if (this._queue && this._onMessage) {
+            this._queue.unregister(this._onMessage);
+        }
+        // clear any pending expiry timers
+        for (const data of this._activeNotifications.values()) {
+            if (data.expiryTimer) {
+                clearInterval(data.expiryTimer);
+            }
+        }
+        this._activeNotifications.clear();
+    }
 
-        function percents(created, durability) {
-            let till = created.valueOf() + durability;
-            let now = new Date().valueOf();
-            let p = Math.round((till - now) * 100 / durability);
-            p = Math.min(Math.max(p, 0), 100);
-            return p;
+    /**
+     * Routes incoming MessageQueue payloads to the popup handlers. Anything
+     * that does not look like a popup message is ignored.
+     * @param {*} payload - The raw message payload received from the queue.
+     */
+    _handleMessage(payload) {
+        if (!payload || typeof payload !== "object") {
+            return;
         }
 
-        const updateProgress = (progress, created, durability, data) => {
-            if (progress >= 0 && progress < 100) {
-                data.progressbar.style.width = progress + "%";
-            } else if (durability > 0) {
-                data.progressbar.style.width = percents(new Date(created), durability) + "%";
-                interval = setInterval(() => {
-                    let p = percents(new Date(created), durability);
-                    data.progressbar.style.width = p + "%";
-                    if (p <= 0) {
-                        data.alert.dispatchEvent(new CustomEvent('close'));
-                        this._activeNotifications.delete(data.id);
-                        clearInterval(interval);
-                        this._dispatch(webexpress.webui.Event.HIDE_EVENT, { message: data.id });
-                    }
-                }, 333);
-            }
+        if (payload.type === PopupNotificationCtrl.SHOW_TYPE && payload.notification) {
+            this._showNotification(payload.notification);
+        }
+    }
+
+    /**
+     * Renders a notification or, if the same id is already on screen,
+     * updates the visible alert with the latest properties. The dedupe by
+     * id makes server replays after reconnect/page navigation idempotent.
+     * @param {Object} notification - The notification payload.
+     */
+    _showNotification(notification) {
+        if (!notification || !notification.id) {
+            return;
+        }
+
+        if (this._activeNotifications.has(notification.id)) {
+            this._updateNotification(notification);
+            return;
+        }
+
+        const id = notification.id;
+        // anchor the visual countdown on the local arrival timestamp so the
+        // countdown is independent of any server clock or timezone parsing.
+        const arrivedAt = Date.now();
+        const durability = typeof notification.durability === "number" ? notification.durability : -1;
+        const progress = typeof notification.progress === "number" ? notification.progress : -1;
+        const typeClass = notification.type || "alert-primary";
+
+        const alert = document.createElement("div");
+        // intentionally no "alert-dismissible" / "data-bs-dismiss" so Bootstrap
+        // never gets a chance to remove the element on its own - every
+        // lifecycle decision is owned by this control.
+        alert.className = "alert " + typeClass + " fade show";
+        alert.setAttribute("role", "alert");
+        alert.dataset.notificationId = id;
+
+        const closeButton = document.createElement("button");
+        closeButton.type = "button";
+        closeButton.className = "btn-close";
+        closeButton.setAttribute("aria-label", "Close");
+        closeButton.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this._dismiss(id);
+        });
+        alert.appendChild(closeButton);
+
+        const heading = document.createElement("h5");
+        heading.textContent = notification.heading || "";
+        alert.appendChild(heading);
+
+        const content = document.createElement("div");
+        content.className = "d-flex justify-content-start";
+
+        let icon;
+        if (notification.icon) {
+            icon = document.createElement("img");
+            icon.src = notification.icon;
+            icon.alt = notification.heading || "";
+        } else {
+            icon = document.createElement("div");
+        }
+        content.appendChild(icon);
+
+        const message = document.createElement("div");
+        message.innerHTML = notification.message || "";
+        content.appendChild(message);
+
+        alert.appendChild(content);
+
+        let progressbar = null;
+        if (durability > 0 || (progress >= 0 && progress < 100)) {
+            const progressContainer = document.createElement("div");
+            progressContainer.className = "progress mt-2";
+
+            progressbar = document.createElement("div");
+            progressbar.className = "progress-bar progress-bar-striped bg-info";
+            progressbar.setAttribute("role", "progressbar");
+            progressbar.setAttribute("aria-valuemin", "0");
+            progressbar.setAttribute("aria-valuemax", "100");
+            progressbar.style.width = progress >= 0 && progress < 100
+                ? progress + "%"
+                : "100%";
+
+            progressContainer.appendChild(progressbar);
+            alert.appendChild(progressContainer);
+        }
+
+        this._element.appendChild(alert);
+
+        const data = {
+            id,
+            typeClass,
+            heading,
+            icon,
+            message,
+            progressbar,
+            content,
+            alert,
+            notification,
+            durability,
+            arrivedAt,
+            expiryTimer: null
         };
 
-        fetch(this._restUri, { method: "GET", headers: { 'Accept': 'application/json' } })
-            .then(response => {
-                // check if response is ok before parsing
-                if (!response.ok) {
-                    throw new Error(`http error: ${response.status}`);
-                }
+        this._activeNotifications.set(id, data);
 
-                // check if response has content
-                if (response.headers.get('content-length') === '0') {
-                    return null; // handle empty response
-                }
+        this._startExpiryTimer(data, progress);
+    }
 
-                // attempt to parse json with error handling
-                return response.json().catch(err => {
-                    console.error('json parsing failed:', err);
-                    throw new Error('invalid json response');
-                });
-            })
-            .then(data => {
-                // early return if data is null or not an array
-                if (data === null || !Array.isArray(data)) {
-                    return;
-                }
+    /**
+     * Applies fresh values onto an alert that is already on screen. Used
+     * when the server replays the notification (same id) with updated
+     * progress or content.
+     * @param {Object} notification - The fresh notification payload.
+     */
+    _updateNotification(notification) {
+        const id = notification.id;
+        const data = this._activeNotifications.get(id);
+        if (!data) {
+            return;
+        }
 
-                let newnotifications = data.filter(notification => !this._activeNotifications.has(notification.id));
-                newnotifications.forEach(notification => {
-                    let id = notification.id ?? "notification" + new Date().valueOf();
-                    let created = notification.created ?? new Date().toString();
-                    let durability = notification.durability ?? -1;
-                    let progress = notification.progress ?? -1;
-                    let type = notification.type ?? "alert-primary";
+        const previous = data.notification || {};
+        const previousType = previous.type || "alert-primary";
+        const nextType = notification.type || "alert-primary";
 
-                    let heading = document.createElement("h5");
-                    heading.textContent = notification.heading ?? "";
-                    let icon;
-                    if (notification.icon != null) {
-                        icon = document.createElement("img");
-                        icon.src = notification.icon;
-                        icon.alt = notification.heading ?? "";
-                    } else {
-                        icon = document.createElement("div");
-                    }
-                    let message = document.createElement("div");
-                    message.innerHTML = notification.message ?? "";
+        if (nextType !== previousType) {
+            data.alert.classList.remove(previousType);
+            data.alert.classList.add(nextType);
+            data.typeClass = nextType;
+        }
+        if (notification.heading !== previous.heading) {
+            data.heading.textContent = notification.heading || "";
+        }
+        if (notification.message !== previous.message) {
+            data.message.innerHTML = notification.message || "";
+        }
+        if (typeof notification.progress === "number"
+            && notification.progress !== previous.progress
+            && data.progressbar) {
+            data.progressbar.style.width = notification.progress + "%";
+        }
 
-                    let progressbar = document.createElement("div");
-                    progressbar.className = "progress-bar progress-bar-striped bg-info";
-                    progressbar.role = "progressbar";
-                    progressbar.setAttribute("aria-valuenow", "100");
-                    progressbar.setAttribute("aria-valuemin", "0");
-                    progressbar.setAttribute("aria-valuemax", "100");
-                    progressbar.style.width = (progress >= 0 && progress < 100 ? 0 : percents(new Date(created), durability)) + "%";
+        data.notification = notification;
+    }
 
-                    let alert = document.createElement("div");
-                    alert.className = `alert ${type} alert-dismissible fade show`;
-                    alert.role = "alert";
+    /**
+     * Computes the remaining lifetime of a notification expressed as a
+     * percentage from 0 to 100. The lifetime is anchored on the arrival
+     * timestamp so it is independent of the server clock.
+     */
+    _percentRemaining(arrivedAtMs, durability) {
+        if (durability <= 0) {
+            return 100;
+        }
+        const till = arrivedAtMs + durability;
+        const remaining = till - Date.now();
+        const p = Math.round(remaining * 100 / durability);
+        return Math.min(Math.max(p, 0), 100);
+    }
 
-                    let button = document.createElement("button");
-                    button.type = "button";
-                    button.className = "btn-close";
-                    button.setAttribute("data-bs-dismiss", "alert");
-                    button.setAttribute("aria-label", "Close");
+    /**
+     * Starts the visual expiry timer that shrinks the progress bar and
+     * eventually removes the alert when its durability runs out.
+     */
+    _startExpiryTimer(data, progress) {
+        if (progress >= 0 && progress < 100) {
+            // server-driven progress; no automatic local expiry
+            return;
+        }
+        if (!data.durability || data.durability <= 0) {
+            // persistent notification - no timer at all
+            return;
+        }
 
-                    let content = document.createElement("div");
-                    content.className = "d-flex justify-content-start";
-                    content.appendChild(icon);
-                    content.appendChild(message);
+        data.expiryTimer = setInterval(() => {
+            const p = this._percentRemaining(data.arrivedAt, data.durability);
+            if (data.progressbar) {
+                data.progressbar.style.width = p + "%";
+            }
+            if (p <= 0) {
+                this._expire(data.id);
+            }
+        }, 250);
+    }
 
-                    button.addEventListener("click", () => {
-                        this._activeNotifications.delete(id);
-                        clearInterval(interval);
-                        fetch(this._restUri + "/" + id, { method: "DELETE", headers: { 'Accept': 'application/json' } });
-                        this._dispatch(webexpress.webui.Event.HIDE_EVENT, { message: id });
-                    });
+    /**
+     * Removes a notification because its durability has elapsed locally.
+     * The server expires its copy independently.
+     */
+    _expire(id) {
+        const data = this._activeNotifications.get(id);
+        if (!data) {
+            return;
+        }
+        if (data.expiryTimer) {
+            clearInterval(data.expiryTimer);
+            data.expiryTimer = null;
+        }
+        if (data.alert && data.alert.parentNode) {
+            data.alert.parentNode.removeChild(data.alert);
+        }
+        this._activeNotifications.delete(id);
+        this._dispatch(webexpress.webui.Event.HIDE_EVENT, { message: id });
+    }
 
-                    alert.appendChild(button);
-                    alert.appendChild(heading);
-                    alert.appendChild(content);
-                    if (progress >= 0 || durability >= 0) {
-                        let progressContainer = document.createElement("div");
-                        progressContainer.className = "progress mt-2";
-                        progressContainer.appendChild(progressbar);
-                        alert.appendChild(progressContainer);
-                    }
+    /**
+     * The user clicked the close button. Remove the alert locally and tell
+     * the server to drop the notification so it is not replayed after a
+     * reconnect or page navigation.
+     */
+    _dismiss(id) {
+        const data = this._activeNotifications.get(id);
+        if (!data) {
+            return;
+        }
+        if (data.expiryTimer) {
+            clearInterval(data.expiryTimer);
+            data.expiryTimer = null;
+        }
 
-                    this._element.appendChild(alert);
-
-                    if (!this._activeNotifications.has(id)) {
-                        let dataObj = {
-                            id: id,
-                            type: type,
-                            heading: heading,
-                            icon: icon,
-                            message: message,
-                            progressbar: progressbar,
-                            content: content,
-                            alert: alert,
-                            notification: notification
-                        };
-
-                        this._activeNotifications.set(id, dataObj);
-                        updateProgress(progress, created, durability, dataObj);
-                    }
-                });
-
-                let oldnotifications = data.filter(notification => this._activeNotifications.has(notification.id));
-                oldnotifications.forEach(notification => {
-                    let id = notification.id ?? "notification" + new Date().valueOf();
-                    let dataObj = this._activeNotifications.get(id);
-
-                    if ((notification.type ?? "alert-primary") !== (dataObj.notification.type ?? "alert-primary")) {
-                        dataObj.alert.classList.remove(dataObj.notification.type ?? "alert-primary");
-                        dataObj.alert.classList.add(notification.type ?? "alert-primary");
-                    }
-                    if (notification.heading !== dataObj.notification.heading) {
-                        dataObj.heading.textContent = notification.heading ?? "";
-                    }
-                    if (notification.message !== dataObj.notification.message) {
-                        dataObj.message.innerHTML = notification.message ?? "";
-                    }
-                    if (notification.progress !== dataObj.notification.progress) {
-                        dataObj.progressbar.style.width = notification.progress + "%";
-                        if (notification.progress >= 100) {
-                            updateProgress(notification.progress ?? -1, notification.created ?? new Date().toString(), notification.durability ?? -1, dataObj);
-                        }
-                    }
-                    if (notification.icon !== dataObj.notification.icon) {
-                        if (dataObj.content.querySelector("img")) {
-                            dataObj.content.removeChild(dataObj.content.querySelector("img"));
-                        }
-                        if (notification.icon != null) {
-                            let newIcon = document.createElement("img");
-                            newIcon.src = notification.icon;
-                            newIcon.alt = notification.heading ?? "";
-                            dataObj.icon = newIcon;
-                        } else {
-                            dataObj.icon = document.createElement("div");
-                        }
-                        dataObj.content.insertBefore(dataObj.icon, dataObj.content.firstChild);
-                    }
-                    dataObj.notification = notification;
-                });
+        if (this._queue) {
+            this._queue.send({
+                type: PopupNotificationCtrl.DISMISS_TYPE,
+                notificationId: id
             });
+        }
+
+        if (data.alert && data.alert.parentNode) {
+            data.alert.parentNode.removeChild(data.alert);
+        }
+
+        this._activeNotifications.delete(id);
+        this._dispatch(webexpress.webui.Event.HIDE_EVENT, { message: id });
     }
 }
 

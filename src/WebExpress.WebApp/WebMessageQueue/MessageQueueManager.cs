@@ -22,6 +22,22 @@ namespace WebExpress.WebApp.WebMessageQueue
         private readonly IHttpServerContext _httpServerContext;
         private readonly SubscriberDictionary _subscribers = new();
         private readonly SocketDictionary _connections = new();
+        private readonly PopupNotificationDispatcher _popupNotificationDispatcher;
+        private readonly IPopupNotificationHandler _popupNotificationHandler;
+
+        /// <summary>
+        /// Gets the popup notification dispatcher that bridges the
+        /// <see cref="WebUI.WebNotification.NotificationManager"/> to this
+        /// transport. Used by <see cref="MessageQueueSocket"/> to replay
+        /// outstanding notifications on (re)connect.
+        /// </summary>
+        public PopupNotificationDispatcher PopupNotificationDispatcher => _popupNotificationDispatcher;
+
+        /// <summary>
+        /// Gets the handler for inbound popup control messages (currently
+        /// the dismiss requests issued when a user closes a notification).
+        /// </summary>
+        public IPopupNotificationHandler PopupNotificationHandler => _popupNotificationHandler;
 
         /// <summary>
         /// Initializes a new instance of the class.
@@ -38,6 +54,9 @@ namespace WebExpress.WebApp.WebMessageQueue
             (
                 I18N.Translate("webexpress.webcore:messagequeuemanager.initialization")
             );
+
+            _popupNotificationDispatcher = new PopupNotificationDispatcher(this, _componentHub);
+            _popupNotificationHandler = new PopupNotificationHandler(_componentHub);
         }
 
         /// <summary>
@@ -186,6 +205,19 @@ namespace WebExpress.WebApp.WebMessageQueue
             }
 
             return this;
+        }
+
+        /// <summary>
+        /// Replays every still-valid popup notification for the connecting
+        /// socket. Forwards to <see cref="PopupNotificationDispatcher"/>.
+        /// </summary>
+        /// <param name="socket">The connecting socket.</param>
+        /// <param name="cancellationToken">
+        /// A token that propagates notification of request cancellation.
+        /// </param>
+        public Task ReplayPopupNotificationsAsync(IMessageQueueSocket socket, CancellationToken cancellationToken = default)
+        {
+            return _popupNotificationDispatcher.ReplayAsync(socket, cancellationToken);
         }
 
         /// <summary>

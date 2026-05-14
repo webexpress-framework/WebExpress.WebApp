@@ -126,7 +126,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
         this._propsHost.className = "wx-workflow-editor-props-host";
         this._propsPane.appendChild(this._propsHost);
 
-        // split host — registered class name `wx-webui-split` is auto-replaced by
+        // split host - registered class name `wx-webui-split` is auto-replaced by
         // the controller registry once appended to the DOM.
         this._splitHost = document.createElement("div");
         this._splitHost.className = "wx-webui-split wx-workflow-editor-split";
@@ -297,7 +297,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
 
     /**
      * Hooks the autosave flow into the change pipeline. The properties panel
-     * is intentionally NOT rebuilt here — that would tear down the input the
+     * is intentionally NOT rebuilt here - that would tear down the input the
      * user is currently typing in. Panel refresh is driven by selection
      * changes (`_updateToolbarState`) and by the rule editors that explicitly
      * request a refresh after non-input mutations (add / remove / reorder).
@@ -310,7 +310,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
     /**
      * Toolbar updates fire whenever the selection changes, so the right-side
      * panel can be refreshed in lockstep. The panel is only rebuilt when the
-     * selection actually changes — re-renders triggered while typing in an
+     * selection actually changes - re-renders triggered while typing in an
      * input field are avoided to preserve focus.
      */
     _updateToolbarState() {
@@ -919,7 +919,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
 
         const val = document.createElement("span");
         val.className = "wx-workflow-editor-prop-row__value" + (valueClass ? " " + valueClass : "");
-        val.textContent = value || "—";
+        val.textContent = value || "-";
         row.appendChild(val);
 
         return row;

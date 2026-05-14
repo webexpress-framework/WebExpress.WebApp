@@ -19,6 +19,7 @@ namespace WebExpress.WebApp.WebMessageQueue
         private readonly IMessageQueueManager _messageQueueManager;
         private readonly IRequest _request;
         private readonly ICollaborativeMessageHandler _collaborativeHandler;
+        private readonly IPopupNotificationHandler _popupNotificationHandler;
         private ISocketConnection _socketConnection;
 
         /// <summary>
@@ -79,6 +80,7 @@ namespace WebExpress.WebApp.WebMessageQueue
             _collaborativeHandler = messageQueueManager is not null
                 ? new CollaborativeMessageHandler(messageQueueManager)
                 : null;
+            _popupNotificationHandler = messageQueueManager?.PopupNotificationHandler;
         }
 
         /// <summary>
@@ -95,6 +97,21 @@ namespace WebExpress.WebApp.WebMessageQueue
 
             _socketConnection.Disconnected += OnDisconnected;
             _socketConnection.TextMessageReceived += OnTextMessageReceived;
+
+            // Replay all still-valid popup notifications for this session so
+            // that messages issued during an offline phase (or before the
+            // current page navigation) are delivered immediately.
+            if (_messageQueueManager is not null)
+            {
+                try
+                {
+                    await _messageQueueManager.ReplayPopupNotificationsAsync(this);
+                }
+                catch
+                {
+                    // never let replay break the initial handshake
+                }
+            }
         }
 
         /// <summary>
@@ -131,6 +148,31 @@ namespace WebExpress.WebApp.WebMessageQueue
             if (CollaborativeMessageTypes.IsCollaborative(messageType) && _collaborativeHandler is not null)
             {
                 _ = DispatchCollaborativeAsync(obj);
+                return;
+            }
+
+            if (PopupNotificationMessageTypes.IsPopup(messageType) && _popupNotificationHandler is not null)
+            {
+                _ = DispatchPopupAsync(obj);
+            }
+        }
+
+        /// <summary>
+        /// Forwards the raw payload to the popup notification handler. Like
+        /// <see cref="DispatchCollaborativeAsync"/>, exceptions are swallowed
+        /// so that a single malformed message cannot tear down the socket.
+        /// </summary>
+        /// <param name="rawPayload">The raw text payload.</param>
+        private async Task DispatchPopupAsync(string rawPayload)
+        {
+            try
+            {
+                await _popupNotificationHandler
+                    .HandleAsync(this, rawPayload, CancellationToken.None);
+            }
+            catch
+            {
+                // intentionally swallowed
             }
         }
 

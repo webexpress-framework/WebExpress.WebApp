@@ -401,7 +401,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
         this._page = page;
 
         if (this._infoDiv) {
-            this._infoDiv.textContent = `Page ${this._page + 1} of ${totalPages} — loading…`;
+            this._infoDiv.textContent = `Page ${this._page + 1} of ${totalPages} - loading…`;
         }
 
         this._receiveData();
