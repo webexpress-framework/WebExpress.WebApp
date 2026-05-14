@@ -322,9 +322,13 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
         if (!this._inputEnabled) {
             return;
         }
-        
+
         const target = e.target;
         if (!target) {
+            return;
+        }
+
+        if (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA") {
             return;
         }
 
@@ -332,12 +336,12 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
         if (!fieldId) {
             return;
         }
-        
+
         if (this._suppressInput.has(fieldId)) {
             return;
         }
 
-        const value = "value" in target ? target.value : target.textContent || "";
+        const value = target.value != null ? target.value : "";
         const selectionStart = typeof target.selectionStart === "number" ? target.selectionStart : null;
         const selectionEnd = typeof target.selectionEnd === "number" ? target.selectionEnd : null;
 
@@ -359,11 +363,13 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
 
-        if (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA") {
+        if (!this._element.contains(target)) {
             return;
         }
 
-        if (!this._element.contains(target)) {
+        const isInputField = target.tagName === "INPUT" || target.tagName === "TEXTAREA";
+        const isEditable = target.isContentEditable;
+        if (!isInputField && !isEditable) {
             return;
         }
 
@@ -372,12 +378,28 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
 
-        const selectionStart = typeof target.selectionStart === "number"
-            ? target.selectionStart
-            : null;
-        const selectionEnd = typeof target.selectionEnd === "number"
-            ? target.selectionEnd
-            : selectionStart;
+        let selectionStart = null;
+        let selectionEnd = null;
+
+        if (isInputField) {
+            selectionStart = typeof target.selectionStart === "number"
+                ? target.selectionStart
+                : null;
+            selectionEnd = typeof target.selectionEnd === "number"
+                ? target.selectionEnd
+                : selectionStart;
+        } else {
+            const selection = window.getSelection ? window.getSelection() : null;
+            if (!selection || selection.rangeCount === 0) {
+                return;
+            }
+            const range = selection.getRangeAt(0);
+            if (!target.contains(range.startContainer)) {
+                return;
+            }
+            selectionStart = this._contentEditableOffset(target, range.startContainer, range.startOffset);
+            selectionEnd = this._contentEditableOffset(target, range.endContainer, range.endOffset);
+        }
 
         if (selectionStart === null) {
             return;
@@ -400,7 +422,9 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
 
-        if (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA") {
+        const isInputField = target.tagName === "INPUT" || target.tagName === "TEXTAREA";
+        const isEditable = target.isContentEditable;
+        if (!isInputField && !isEditable) {
             return;
         }
 
@@ -414,14 +438,80 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
 
     /**
      * Returns a stable identifier for a field, primarily utilizing its ID.
+     * For editable elements without an id of their own (typically the inner
+     * <c>contenteditable</c> of a WebUI EditorCtrl), the nearest ancestor id
+     * inside the collaborative container is used so peers can still address
+     * the field consistently.
      * @param {HTMLElement} el - The element to identify.
      * @returns {string|null} The identifier string or null if not identifiable.
      */
     _fieldIdentifier(el) {
+        if (!el) {
+            return null;
+        }
         if (el.id) {
             return el.id;
         }
+        if (el.isContentEditable) {
+            let p = el.parentElement;
+            while (p && p !== this._element && !p.id) {
+                p = p.parentElement;
+            }
+            if (p && p.id && this._element.contains(p)) {
+                return p.id;
+            }
+        }
         return null;
+    }
+
+    /**
+     * Resolves a fieldId back to the actual editable element. Inputs and
+     * textareas are returned directly; for ids that belong to a wrapper
+     * element (e.g. EditorCtrl's host), the contained
+     * <c>[contenteditable="true"]</c> descendant is returned instead.
+     * @param {string} fieldId - The field identifier.
+     * @returns {HTMLElement|null} The editable element or null.
+     */
+    _resolveField(fieldId) {
+        if (!fieldId) {
+            return null;
+        }
+        const root = this._element.querySelector("#" + CSS.escape(fieldId));
+        if (!root || !this._element.contains(root)) {
+            return null;
+        }
+        if (root.tagName === "INPUT" || root.tagName === "TEXTAREA") {
+            return root;
+        }
+        if (root.isContentEditable) {
+            return root;
+        }
+        const editable = root.querySelector("[contenteditable=\"true\"]");
+        if (editable && this._element.contains(editable)) {
+            return editable;
+        }
+        return null;
+    }
+
+    /**
+     * Returns the text offset of the given DOM position inside the
+     * specified contenteditable element. Counts the plain text characters
+     * that precede the caret, matching the offset semantics used by
+     * <c>input.selectionStart</c>.
+     * @param {HTMLElement} root - The contenteditable container.
+     * @param {Node} node - The DOM node the caret currently resides in.
+     * @param {number} offset - The offset within <paramref name="node"/>.
+     * @returns {number} The plain text character offset.
+     */
+    _contentEditableOffset(root, node, offset) {
+        const range = document.createRange();
+        range.selectNodeContents(root);
+        try {
+            range.setEnd(node, offset);
+        } catch (e) {
+            return 0;
+        }
+        return range.toString().length;
     }
 
     /**
@@ -669,8 +759,8 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
 
-        const field = this._element.querySelector("#" + CSS.escape(msg.fieldId));
-        if (!field || !this._element.contains(field)) {
+        const field = this._resolveField(msg.fieldId);
+        if (!field) {
             // field is no longer available locally — drop any stale caret state
             if (this._remoteCarets.delete(msg.userId)) {
                 this._renderCarets();
@@ -691,16 +781,15 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
             this._remoteCarets.delete(msg.userId);
         }
 
-        // do not overwrite a field that the local user is actively editing
-        if (document.activeElement !== field) {
+        // only form fields are value-synced; contenteditable content (e.g.
+        // EditorCtrl) carries rich HTML and would lose its formatting if we
+        // wrote it via textContent
+        const isFormField = field.tagName === "INPUT" || field.tagName === "TEXTAREA";
+        if (isFormField && document.activeElement !== field) {
             this._suppressInput.add(msg.fieldId);
 
             try {
-                if ("value" in field) {
-                    field.value = msg.value != null ? msg.value : "";
-                } else {
-                    field.textContent = msg.value != null ? msg.value : "";
-                }
+                field.value = msg.value != null ? msg.value : "";
                 // emit native event to ensure frameworks or bindings can react
                 field.dispatchEvent(new Event("input", { bubbles: true }));
             } finally {
@@ -746,8 +835,8 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
 
-        const field = this._element.querySelector("#" + CSS.escape(msg.fieldId));
-        if (!field || !this._element.contains(field)) {
+        const field = this._resolveField(msg.fieldId);
+        if (!field) {
             if (this._remoteCarets.delete(msg.userId)) {
                 this._renderCarets();
             }
@@ -881,8 +970,8 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
         }
 
         for (const [id, caret] of this._remoteCarets) {
-            const field = this._element.querySelector("#" + CSS.escape(caret.fieldId));
-            if (!field || !this._element.contains(field)) {
+            const field = this._resolveField(caret.fieldId);
+            if (!field) {
                 continue;
             }
 
@@ -931,6 +1020,11 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
      */
     _measureCaret(field, position) {
         const tag = field.tagName;
+
+        if (field.isContentEditable) {
+            return this._measureCaretInEditable(field, position);
+        }
+
         if (tag !== "INPUT" && tag !== "TEXTAREA") {
             return null;
         }
@@ -985,6 +1079,82 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
         const top = fieldRect.top - layerRect.top + offsetY - (field.scrollTop || 0);
 
         return { left, top, height };
+    }
+
+    /**
+     * Measures the caret position inside a <c>contenteditable</c> element
+     * such as the inner editable area of a WebUI EditorCtrl. Walks the text
+     * nodes to translate the plain text offset into a DOM Range and reads
+     * its bounding rectangle.
+     * @param {HTMLElement} field - The contenteditable element.
+     * @param {number} position - The plain text offset of the caret.
+     * @returns {{left: number, top: number, height: number} | null}
+     */
+    _measureCaretInEditable(field, position) {
+        const safePos = Math.max(0, position);
+        const range = document.createRange();
+        const walker = document.createTreeWalker(field, NodeFilter.SHOW_TEXT);
+
+        let consumed = 0;
+        let placed = false;
+        let node = walker.nextNode();
+        while (node) {
+            const len = node.nodeValue ? node.nodeValue.length : 0;
+            if (consumed + len >= safePos) {
+                const localOffset = Math.max(0, Math.min(safePos - consumed, len));
+                range.setStart(node, localOffset);
+                range.setEnd(node, localOffset);
+                placed = true;
+                break;
+            }
+            consumed += len;
+            node = walker.nextNode();
+        }
+
+        if (!placed) {
+            // caret is past the end of the text content; collapse at the end
+            range.selectNodeContents(field);
+            range.collapse(false);
+        }
+
+        // a collapsed range can yield an empty client rect at the start or
+        // end of a block. The bounding rect of the range is then zeroed —
+        // prefer the rect of the closest text node line when that happens.
+        let rect = null;
+        const clientRects = range.getClientRects();
+        if (clientRects.length > 0) {
+            rect = clientRects[0];
+        } else {
+            rect = range.getBoundingClientRect();
+        }
+
+        if (!rect || (rect.width === 0 && rect.height === 0 && rect.left === 0 && rect.top === 0)) {
+            // fall back to the field's bounding rect (e.g. empty editor)
+            const fallback = field.getBoundingClientRect();
+            const style = getComputedStyle(field);
+            const padTop = parseFloat(style.paddingTop) || 0;
+            const padLeft = parseFloat(style.paddingLeft) || 0;
+            const lh = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.2 || 16;
+            const layerRect = this._caretLayer.getBoundingClientRect();
+            return {
+                left: fallback.left - layerRect.left + padLeft,
+                top: fallback.top - layerRect.top + padTop,
+                height: lh
+            };
+        }
+
+        const layerRect = this._caretLayer.getBoundingClientRect();
+        const style = getComputedStyle(field);
+        const height = rect.height
+            || parseFloat(style.lineHeight)
+            || parseFloat(style.fontSize) * 1.2
+            || 16;
+
+        return {
+            left: rect.left - layerRect.left,
+            top: rect.top - layerRect.top,
+            height: height
+        };
     }
 
     /**
