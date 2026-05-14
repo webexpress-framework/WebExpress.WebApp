@@ -7,6 +7,7 @@
  * - webexpress.webapp.Event.TAB_CLOSED_EVENT
  */
 webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
+    static _defaultTemplateIcon = "far fa-square";
 
     // configuration
     _restUri = "";
@@ -192,9 +193,20 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
      */
     _createTemplateIcon(iconClass) {
         const icon = document.createElement("i");
-        const classes = (iconClass || "far fa-square").trim().split(/\s+/);
+        const classes = (iconClass || webexpress.webapp.TabCtrl._defaultTemplateIcon).trim().split(/\s+/);
         icon.className = classes.join(" ");
         return icon;
+    }
+
+    /**
+     * Resolves the template by id with fallback to default or first template.
+     * @param {string} templateId
+     * @returns {Object|null}
+     */
+    _resolveTemplate(templateId) {
+        return this._templates.get(templateId)
+            || this._templates.get("default")
+            || (this._templateOrder.length > 0 ? this._templates.get(this._templateOrder[0]) : null);
     }
 
     /**
@@ -360,10 +372,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
      */
     _buildPaneContent(pane, item) {
         // resolve the template from the registered templates
-        const templateId = item.templateId || "default";
-        const template = this._templates.get(templateId)
-            || this._templates.get("default")
-            || (this._templateOrder.length > 0 ? this._templates.get(this._templateOrder[0]) : null);
+        const template = this._resolveTemplate(item.templateId || "default");
         const html = template ? template.html : "";
 
         // insert template HTML markup into the pane
