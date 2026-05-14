@@ -11,6 +11,26 @@ namespace WebExpress.WebApp.WebControl
     public interface IControlRestTabTemplate : IWebUIElement<IRenderControlContext, IVisualTreeControl>
     {
         /// <summary>
+        /// Gets the template id.
+        /// </summary>
+        string Id { get; }
+
+        /// <summary>
+        /// Gets the icon CSS class for the template.
+        /// </summary>
+        string Icon { get; }
+
+        /// <summary>
+        /// Gets the display name of the template.
+        /// </summary>
+        string Name { get; }
+
+        /// <summary>
+        /// Gets the description of the template.
+        /// </summary>
+        string Description { get; }
+
+        /// <summary>
         /// Adds one or more items to the tab control.
         /// </summary>
         /// <param name="items">The items to add.</param>

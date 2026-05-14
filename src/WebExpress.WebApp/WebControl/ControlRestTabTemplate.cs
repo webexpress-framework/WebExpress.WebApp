@@ -19,6 +19,21 @@ namespace WebExpress.WebApp.WebControl
         public string Id { get; set; }
 
         /// <summary>
+        /// Gets or sets the icon CSS class for the template.
+        /// </summary>
+        public string Icon { get; set; }
+
+        /// <summary>
+        /// Gets or sets the display name of the template.
+        /// </summary>
+        public string Name { get; set; }
+
+        /// <summary>
+        /// Gets or sets the description of the template.
+        /// </summary>
+        public string Description { get; set; }
+
+        /// <summary>
         /// Gets the content of the view control.
         /// </summary>
         public IEnumerable<IControl> Content => _content;
@@ -81,6 +96,9 @@ namespace WebExpress.WebApp.WebControl
                 Id = Id,
                 Class = "wx-template"
             }
+                .AddUserAttribute("data-icon", Icon)
+                .AddUserAttribute("data-name", Name)
+                .AddUserAttribute("data-description", Description)
                 .Add(_content.Select(x => x.Render(renderContext, visualTree)));
 
             return templateDiv;

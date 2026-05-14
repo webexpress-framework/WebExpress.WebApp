@@ -12,6 +12,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
     _restUri = "";
     _readonly = false;
     _templates = new Map();
+    _templateOrder = [];
 
     // request state
     _isLoading = false;
@@ -20,6 +21,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
     // dom nodes for dynamic elements
     _addLi = null;
     _addTabButton = null;
+    _addTemplateMenu = null;
 
     /**
      * Constructor for the REST-enabled TabCtrl class.
@@ -67,9 +69,22 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         for (let i = 0; i < templateNodes.length; i++) {
             const tpl = templateNodes[i];
             const id = tpl.id || "default";
+            const icon = tpl.dataset.icon || tpl.getAttribute("data-icon") || "";
+            const name = tpl.dataset.name || tpl.getAttribute("data-name") || id;
+            const description = tpl.dataset.description || tpl.getAttribute("data-description") || "";
             
-            // store html content for later instantiation
-            this._templates.set(id, tpl.innerHTML);
+            // store template payload for later instantiation
+            this._templates.set(id, {
+                id: id,
+                html: tpl.innerHTML,
+                icon: icon,
+                name: name,
+                description: description
+            });
+
+            if (!this._templateOrder.includes(id)) {
+                this._templateOrder.push(id);
+            }
             
             // remove template node from dom
             if (tpl.parentNode !== null) {
@@ -87,7 +102,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         }
 
         this._addLi = document.createElement("li");
-        this._addLi.className = "nav-item";
+        this._addLi.className = "nav-item position-relative";
 
         this._addTabButton = document.createElement("button");
         this._addTabButton.className = "nav-link text-primary";
@@ -95,18 +110,113 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         this._addTabButton.setAttribute("role", "tab");
         this._addTabButton.innerHTML = '<i class="fas fa-plus"></i>';
 
-        this._addTabButton.addEventListener("click", (e) => {
-            e.preventDefault();
-            this._createNewTab();
-        });
+        const hasMultipleTemplates = this._templateOrder.length > 1;
+        if (hasMultipleTemplates) {
+            this._addTemplateMenu = document.createElement("ul");
+            this._addTemplateMenu.className = "dropdown-menu";
+
+            for (let i = 0; i < this._templateOrder.length; i++) {
+                const templateId = this._templateOrder[i];
+                const tpl = this._templates.get(templateId);
+                if (!tpl) {
+                    continue;
+                }
+
+                const li = document.createElement("li");
+                const itemBtn = document.createElement("button");
+                itemBtn.type = "button";
+                itemBtn.className = "dropdown-item";
+
+                const titleLine = document.createElement("div");
+                titleLine.className = "fw-semibold";
+                titleLine.appendChild(this._createTemplateIcon(tpl.icon));
+                titleLine.appendChild(document.createTextNode(" " + (tpl.name || tpl.id)));
+                itemBtn.appendChild(titleLine);
+
+                if (tpl.description) {
+                    const descLine = document.createElement("small");
+                    descLine.className = "d-block text-muted";
+                    descLine.textContent = tpl.description;
+                    itemBtn.appendChild(descLine);
+                }
+
+                itemBtn.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this._hideTemplateMenu();
+                    this._createNewTab(templateId);
+                });
+
+                li.appendChild(itemBtn);
+                this._addTemplateMenu.appendChild(li);
+            }
+
+            this._addTabButton.addEventListener("click", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this._toggleTemplateMenu();
+            });
+
+            document.addEventListener("click", (e) => {
+                if (!this._addLi || !this._addTemplateMenu || !this._addTemplateMenu.classList.contains("show")) {
+                    return;
+                }
+
+                if (!this._addLi.contains(e.target)) {
+                    this._hideTemplateMenu();
+                }
+            });
+        } else {
+            this._addTabButton.addEventListener("click", (e) => {
+                e.preventDefault();
+                this._createNewTab(this._templateOrder[0] || null);
+            });
+        }
 
         this._addLi.appendChild(this._addTabButton);
+        if (this._addTemplateMenu !== null) {
+            this._addLi.appendChild(this._addTemplateMenu);
+        }
         
         if (this._toolbarLi) {
             this._navElement.insertBefore(this._addLi, this._toolbarLi);
         } else {
             this._navElement.appendChild(this._addLi);
         }
+    }
+
+    /**
+     * Creates an icon element used in template selection entries.
+     * @param {string} iconClass
+     * @returns {HTMLElement}
+     */
+    _createTemplateIcon(iconClass) {
+        const icon = document.createElement("i");
+        const classes = (iconClass || "far fa-square").trim().split(/\s+/).filter(Boolean);
+        icon.className = classes.join(" ");
+        return icon;
+    }
+
+    /**
+     * Toggles the template selection dropdown menu.
+     */
+    _toggleTemplateMenu() {
+        if (this._addTemplateMenu === null) {
+            return;
+        }
+
+        this._addTemplateMenu.classList.toggle("show");
+    }
+
+    /**
+     * Hides the template selection dropdown menu.
+     */
+    _hideTemplateMenu() {
+        if (this._addTemplateMenu === null) {
+            return;
+        }
+
+        this._addTemplateMenu.classList.remove("show");
     }
 
     /**
@@ -164,7 +274,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
     /**
      * Sends a POST request to the server to create a new tab and appends it to the UI.
      */
-    _createNewTab() {
+    _createNewTab(templateId = null) {
         if (this._readonly) {
             return;
         }
@@ -185,7 +295,10 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ action: "create" })
+            body: JSON.stringify({
+                action: "create",
+                templateId: templateId
+            })
         })
         .then((res) => {
             if (res.ok === false) {
@@ -198,6 +311,9 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
             const newTab = response.newTab;
             if (!newTab) {
                 throw new Error("POST response did not contain a valid items array or was empty");
+            }
+            if (!newTab.templateId && templateId) {
+                newTab.templateId = templateId;
             }
             this._renderSingleTab(newTab);
             this.selectTab(newTab.id);
@@ -245,7 +361,10 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
     _buildPaneContent(pane, item) {
         // resolve the template from the registered templates
         const templateId = item.templateId || "default";
-        const html = this._templates.get(templateId) || this._templates.get("default") || "";
+        const template = this._templates.get(templateId)
+            || this._templates.get("default")
+            || (this._templateOrder.length > 0 ? this._templates.get(this._templateOrder[0]) : null);
+        const html = template ? template.html : "";
 
         // insert template HTML markup into the pane
         pane.innerHTML = html;
