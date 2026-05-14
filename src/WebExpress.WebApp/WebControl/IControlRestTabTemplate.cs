@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using WebExpress.WebCore.WebIcon;
 using WebExpress.WebCore.WebPage;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
@@ -11,24 +13,19 @@ namespace WebExpress.WebApp.WebControl
     public interface IControlRestTabTemplate : IWebUIElement<IRenderControlContext, IVisualTreeControl>
     {
         /// <summary>
-        /// Gets the template id.
-        /// </summary>
-        string Id { get; }
-
-        /// <summary>
         /// Gets the icon CSS class for the template.
         /// </summary>
-        string Icon { get; }
+        Func<IRenderControlContext, IIcon> Icon { get; }
 
         /// <summary>
         /// Gets the display name of the template.
         /// </summary>
-        string Name { get; }
+        Func<IRenderControlContext, string> Name { get; }
 
         /// <summary>
         /// Gets the description of the template.
         /// </summary>
-        string Description { get; }
+        Func<IRenderControlContext, string> Description { get; }
 
         /// <summary>
         /// Adds one or more items to the tab control.

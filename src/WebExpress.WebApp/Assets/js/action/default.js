@@ -102,3 +102,78 @@ webexpress.webui.Actions.register("plugin-package", {
         }).then(handleResponse).then(handleResult).catch(handleError);
     }
 });
+
+/**
+ * Popup notification action — lets any client side element show a popup
+ * notification when triggered (typically by a click), using the existing
+ * PopupNotificationCtrl pipeline. The action synthesizes a
+ * <c>webexpress.webapp.popup.show</c> envelope and dispatches it through
+ * the local MessageQueue listener channel so every PopupNotificationCtrl
+ * instance on the page picks it up. No HTTP roundtrip is involved.
+ *
+ * Supported attributes:
+ *   data-wx-{primary|secondary}-heading      — alert heading text
+ *   data-wx-{primary|secondary}-message      — alert body html
+ *   data-wx-{primary|secondary}-type         — bootstrap alert class
+ *                                              (default: "alert-primary")
+ *   data-wx-{primary|secondary}-durability   — lifetime in ms (-1 = pinned,
+ *                                              default: 5000)
+ *   data-wx-{primary|secondary}-icon         — optional icon URL
+ *
+ * Example:
+ *   <button type="button"
+ *           data-wx-primary-action="popup"
+ *           data-wx-primary-heading="Saved"
+ *           data-wx-primary-message="Your changes were stored."
+ *           data-wx-primary-type="alert-success"
+ *           data-wx-primary-durability="4000">Save</button>
+ */
+webexpress.webui.Actions.register("popup", {
+    execute: function (element, prefix, controller, event) {
+        if (event && typeof event.preventDefault === "function") {
+            event.preventDefault();
+        }
+
+        function attr(name) {
+            return element.getAttribute("data-wx-" + prefix + "-" + name);
+        }
+
+        var heading = attr("heading") || "";
+        var message = attr("message") || "";
+        var type = attr("type") || "alert-primary";
+        var icon = attr("icon") || null;
+        var durabilityRaw = attr("durability");
+        var durability = durabilityRaw === null || durabilityRaw === ""
+            ? 5000
+            : parseInt(durabilityRaw, 10);
+        if (isNaN(durability)) {
+            durability = 5000;
+        }
+
+        // build a notification id — random per click so multiple presses
+        // produce distinct alerts instead of replacing one another
+        var id = "popup-" + Date.now().toString(36) + "-"
+            + Math.random().toString(36).slice(2, 8);
+
+        var payload = {
+            type: "webexpress.webapp.popup.show",
+            notification: {
+                id: id,
+                heading: heading,
+                message: message,
+                type: type,
+                icon: icon,
+                durability: durability,
+                progress: -1,
+                created: new Date().toISOString()
+            }
+        };
+
+        var queue = (typeof webexpress !== "undefined" && webexpress.webapp)
+            ? webexpress.webapp.MessageQueue
+            : null;
+        if (queue && typeof queue.dispatchLocal === "function") {
+            queue.dispatchLocal(payload);
+        }
+    }
+});

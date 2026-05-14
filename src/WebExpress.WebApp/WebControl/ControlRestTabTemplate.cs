@@ -1,7 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using WebExpress.WebCore.WebHtml;
+using WebExpress.WebCore.WebIcon;
 using WebExpress.WebUI.WebControl;
+using WebExpress.WebUI.WebIcon;
 using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.WebControl
@@ -21,17 +24,17 @@ namespace WebExpress.WebApp.WebControl
         /// <summary>
         /// Gets or sets the icon CSS class for the template.
         /// </summary>
-        public string Icon { get; set; }
+        public Func<IRenderControlContext, IIcon> Icon { get; set; }
 
         /// <summary>
         /// Gets or sets the display name of the template.
         /// </summary>
-        public string Name { get; set; }
+        public Func<IRenderControlContext, string> Name { get; set; }
 
         /// <summary>
         /// Gets or sets the description of the template.
         /// </summary>
-        public string Description { get; set; }
+        public Func<IRenderControlContext, string> Description { get; set; }
 
         /// <summary>
         /// Gets the content of the view control.
@@ -91,15 +94,31 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered template control.</returns>
         public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
+            return Render(renderContext, visualTree, _content);
+        }
+
+        /// <summary>
+        /// Converts the template to an HTML representation.
+        /// </summary>
+        /// <param name="renderContext">The context in which the template is rendered.</param>
+        /// <param name="visualTree">The visual tree for the template.</param>
+        /// <param name="content">The content to render within the template.</param>
+        /// <returns>An HTML node representing the rendered template control.</returns>
+        public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IEnumerable<IControl> content)
+        {
+            var icon = Icon?.Invoke(renderContext);
+            var name = Name?.Invoke(renderContext);
+            var description = Description?.Invoke(renderContext);
+
             var templateDiv = new HtmlElementTextContentDiv()
             {
                 Id = Id,
                 Class = "wx-template"
             }
-                .AddUserAttribute("data-icon", Icon)
-                .AddUserAttribute("data-name", Name)
-                .AddUserAttribute("data-description", Description)
-                .Add(_content.Select(x => x.Render(renderContext, visualTree)));
+                .AddUserAttribute("data-icon", (icon as Icon)?.Class)
+                .AddUserAttribute("data-name", name)
+                .AddUserAttribute("data-description", description)
+                .Add(content.Select(x => x.Render(renderContext, visualTree)));
 
             return templateDiv;
         }

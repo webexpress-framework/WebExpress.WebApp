@@ -193,6 +193,27 @@ webexpress.webapp.MessageQueue = new class {
 
 
     /**
+     * Dispatches a synthesized payload to every registered listener
+     * without putting it on the WebSocket. Useful for client-only events
+     * (e.g. a "popup" action that wants to show a local notification
+     * through the existing PopupNotificationCtrl pipeline) without
+     * involving the server.
+     * @param {Object} payload - The synthesized payload object.
+     */
+    dispatchLocal(payload) {
+        if (!payload) {
+            return;
+        }
+        for (let listener of this._listeners) {
+            try {
+                listener(payload);
+            } catch (err) {
+                // listener errors must not interrupt the dispatch loop
+            }
+        }
+    }
+
+    /**
      * Sends a message through the active WebSocket connection.
      * Objects are serialized to JSON automatically.
      * @param {string|Object} message - The message to send.

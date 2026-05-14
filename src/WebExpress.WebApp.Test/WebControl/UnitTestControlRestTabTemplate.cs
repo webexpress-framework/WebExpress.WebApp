@@ -1,5 +1,6 @@
 ﻿using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebControl;
+using WebExpress.WebUI.WebIcon;
 using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.Test.WebControl
@@ -47,9 +48,9 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestTabTemplate("template")
             {
-                Icon = "fas fa-user",
-                Name = "User Template",
-                Description = "Template description"
+                Icon = _ => new IconUser(),
+                Name = _ => "User Template",
+                Description = _ => "Template description"
             };
 
             // act

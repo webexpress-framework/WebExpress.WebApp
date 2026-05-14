@@ -111,14 +111,18 @@ class PopupNotificationCtrl extends webexpress.webui.Ctrl {
         // intentionally no "alert-dismissible" / "data-bs-dismiss" so Bootstrap
         // never gets a chance to remove the element on its own - every
         // lifecycle decision is owned by this control.
-        alert.className = "alert " + typeClass + " fade show";
+        alert.className = "alert wx-popup-alert " + typeClass + " fade show";
         alert.setAttribute("role", "alert");
         alert.dataset.notificationId = id;
 
+        // close button — Font Awesome "times" icon, anchored top-right via
+        // the wx-popup-close CSS class
         const closeButton = document.createElement("button");
         closeButton.type = "button";
-        closeButton.className = "btn-close";
+        closeButton.className = "wx-popup-close";
         closeButton.setAttribute("aria-label", "Close");
+        closeButton.setAttribute("title", "Close");
+        closeButton.innerHTML = '<i class="fas fa-times" aria-hidden="true"></i>';
         closeButton.addEventListener("click", (e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -127,23 +131,27 @@ class PopupNotificationCtrl extends webexpress.webui.Ctrl {
         alert.appendChild(closeButton);
 
         const heading = document.createElement("h5");
+        heading.className = "wx-popup-heading";
         heading.textContent = notification.heading || "";
         alert.appendChild(heading);
 
         const content = document.createElement("div");
-        content.className = "d-flex justify-content-start";
+        content.className = "wx-popup-content d-flex justify-content-start";
 
         let icon;
         if (notification.icon) {
             icon = document.createElement("img");
             icon.src = notification.icon;
             icon.alt = notification.heading || "";
+            icon.className = "wx-popup-icon";
         } else {
             icon = document.createElement("div");
+            icon.className = "wx-popup-icon wx-popup-icon-empty";
         }
         content.appendChild(icon);
 
         const message = document.createElement("div");
+        message.className = "wx-popup-message";
         message.innerHTML = notification.message || "";
         content.appendChild(message);
 
@@ -279,11 +287,11 @@ class PopupNotificationCtrl extends webexpress.webui.Ctrl {
             clearInterval(data.expiryTimer);
             data.expiryTimer = null;
         }
-        if (data.alert && data.alert.parentNode) {
-            data.alert.parentNode.removeChild(data.alert);
-        }
-        this._activeNotifications.delete(id);
-        this._dispatch(webexpress.webui.Event.HIDE_EVENT, { message: id });
+
+        this._animateOutAndRemove(data, () => {
+            this._activeNotifications.delete(id);
+            this._dispatch(webexpress.webui.Event.HIDE_EVENT, { message: id });
+        });
     }
 
     /**
@@ -308,12 +316,73 @@ class PopupNotificationCtrl extends webexpress.webui.Ctrl {
             });
         }
 
-        if (data.alert && data.alert.parentNode) {
-            data.alert.parentNode.removeChild(data.alert);
+        this._animateOutAndRemove(data, () => {
+            this._activeNotifications.delete(id);
+            this._dispatch(webexpress.webui.Event.HIDE_EVENT, { message: id });
+        });
+    }
+
+    /**
+     * Adds the CSS hide-class to the alert, waits for the fade-out
+     * animation to finish (or a safety timeout to elapse) and then
+     * detaches the element from the DOM. The completion callback runs
+     * after the element is removed so callers can finalize their state
+     * (state-map cleanup, HIDE_EVENT, …).
+     * @param {Object} data - The internal notification state.
+     * @param {Function} done - Invoked after the node has been removed.
+     */
+    _animateOutAndRemove(data, done) {
+        if (!data || !data.alert) {
+            if (typeof done === "function") {
+                done();
+            }
+            return;
         }
 
-        this._activeNotifications.delete(id);
-        this._dispatch(webexpress.webui.Event.HIDE_EVENT, { message: id });
+        const alert = data.alert;
+
+        // already hiding — let the in-flight animation finish
+        if (alert.classList.contains("wx-popup-hiding")) {
+            return;
+        }
+
+        const finalize = () => {
+            if (alert.parentNode) {
+                alert.parentNode.removeChild(alert);
+            }
+            if (typeof done === "function") {
+                done();
+            }
+        };
+
+        // freeze the current height to allow max-height to animate down
+        // smoothly even though "auto" is not animatable
+        const measured = alert.getBoundingClientRect().height;
+        if (measured > 0) {
+            alert.style.maxHeight = measured + "px";
+        }
+
+        let removed = false;
+        const onEnd = () => {
+            if (removed) {
+                return;
+            }
+            removed = true;
+            alert.removeEventListener("animationend", onEnd);
+            alert.removeEventListener("animationcancel", onEnd);
+            finalize();
+        };
+
+        alert.addEventListener("animationend", onEnd);
+        alert.addEventListener("animationcancel", onEnd);
+
+        // fallback: detach unconditionally after a generous timeout so the
+        // node never leaks if animationend fails to fire (e.g. the element
+        // was hidden / display:none, prefers-reduced-motion skipped it, …)
+        setTimeout(onEnd, 600);
+
+        // trigger the keyframes
+        alert.classList.add("wx-popup-hiding");
     }
 }
 
