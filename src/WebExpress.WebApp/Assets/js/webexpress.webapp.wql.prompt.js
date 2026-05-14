@@ -167,7 +167,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
 
         const inputType = e.inputType || "";
 
-        if (inputType === "insertFromPaste" || inputType === "insertFromDrop") {
+        if (inputType === "insertFromDrop") {
             e.preventDefault();
             const dataTransfer = e.dataTransfer || e.clipboardData;
             const text = dataTransfer?.getData("text/plain") || e.data || "";
@@ -856,6 +856,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         const selection = this._getSelectionOffsets();
         const value = this._getInputText();
 
+        // cut/drag deletions are selection-based; a collapsed range is a no-op
         if ((inputType === "deleteByCut" || inputType === "deleteByDrag") && selection.start === selection.end) {
             return;
         }
@@ -890,8 +891,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
                 end = this._findLineEnd(value, end);
                 break;
             default:
-                // leave unknown browser-specific delete behaviors to native handling
-                // until they are explicitly mapped to the plain-text model
+                console.warn(`[WQL] Unhandled delete input type: ${inputType}`);
                 return;
         }
 
