@@ -99,5 +99,17 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// are not configured.
         /// </summary>
         IPopupNotificationHandler PopupNotificationHandler { get; }
+
+        /// <summary>
+        /// Sends the current state of every active task back through the
+        /// connecting socket so a freshly arriving client receives the
+        /// snapshot of every long-running operation it would otherwise
+        /// miss.
+        /// </summary>
+        /// <param name="socket">The (re)connecting socket.</param>
+        /// <param name="cancellationToken">
+        /// A token that propagates notification of request cancellation.
+        /// </param>
+        Task ReplayProgressTasksAsync(IMessageQueueSocket socket, CancellationToken cancellationToken = default);
     }
 }

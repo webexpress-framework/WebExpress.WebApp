@@ -111,6 +111,19 @@ namespace WebExpress.WebApp.WebMessageQueue
                 {
                     // never let replay break the initial handshake
                 }
+
+                // Replay the snapshot of every active task so the client
+                // receives the current state of any long-running operation
+                // immediately on (re)connect — even when it joined after the
+                // task already started.
+                try
+                {
+                    await _messageQueueManager.ReplayProgressTasksAsync(this);
+                }
+                catch
+                {
+                    // never let replay break the initial handshake
+                }
             }
         }
 

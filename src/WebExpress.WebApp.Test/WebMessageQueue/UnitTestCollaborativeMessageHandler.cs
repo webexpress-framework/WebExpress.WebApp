@@ -579,6 +579,9 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
             public Task ReplayPopupNotificationsAsync(IMessageQueueSocket socket, CancellationToken cancellationToken = default)
                 => Task.CompletedTask;
 
+            public Task ReplayProgressTasksAsync(IMessageQueueSocket socket, CancellationToken cancellationToken = default)
+                => Task.CompletedTask;
+
             public IPopupNotificationHandler PopupNotificationHandler => null;
 
             public void Dispose()

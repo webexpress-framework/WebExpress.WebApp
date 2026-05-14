@@ -24,6 +24,7 @@ namespace WebExpress.WebApp.WebMessageQueue
         private readonly SocketDictionary _connections = new();
         private readonly PopupNotificationDispatcher _popupNotificationDispatcher;
         private readonly IPopupNotificationHandler _popupNotificationHandler;
+        private readonly ProgressTaskDispatcher _progressTaskDispatcher;
 
         /// <summary>
         /// Gets the popup notification dispatcher that bridges the
@@ -57,6 +58,7 @@ namespace WebExpress.WebApp.WebMessageQueue
 
             _popupNotificationDispatcher = new PopupNotificationDispatcher(this, _componentHub);
             _popupNotificationHandler = new PopupNotificationHandler(_componentHub);
+            _progressTaskDispatcher = new ProgressTaskDispatcher(this, _componentHub);
         }
 
         /// <summary>
@@ -218,6 +220,20 @@ namespace WebExpress.WebApp.WebMessageQueue
         public Task ReplayPopupNotificationsAsync(IMessageQueueSocket socket, CancellationToken cancellationToken = default)
         {
             return _popupNotificationDispatcher.ReplayAsync(socket, cancellationToken);
+        }
+
+        /// <summary>
+        /// Replays every active task as a progress task update to the
+        /// connecting socket. Forwards to
+        /// <see cref="ProgressTaskDispatcher"/>.
+        /// </summary>
+        /// <param name="socket">The connecting socket.</param>
+        /// <param name="cancellationToken">
+        /// A token that propagates notification of request cancellation.
+        /// </param>
+        public Task ReplayProgressTasksAsync(IMessageQueueSocket socket, CancellationToken cancellationToken = default)
+        {
+            return _progressTaskDispatcher.ReplayAsync(socket, cancellationToken);
         }
 
         /// <summary>

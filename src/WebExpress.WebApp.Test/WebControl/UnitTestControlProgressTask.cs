@@ -1,22 +1,22 @@
-﻿using WebExpress.WebApp.Test.Fixture;
-using WebExpress.WebApp.WebApiControl;
+using WebExpress.WebApp.Test.Fixture;
+using WebExpress.WebApp.WebControl;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.Test.WebControl
 {
     /// <summary>
-    /// Tests the api progress task control.
+    /// Tests the WebSocket-driven progress task control.
     /// </summary>
     [Collection("NonParallelTests")]
-    public class UnitTestControlRestProgressTask
+    public class UnitTestControlProgressTask
     {
         /// <summary>
-        /// Tests the id property of the api progress task control.
+        /// Tests the id property of the progress task control.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div id=""*"" class=""wx-webapp-progress-task"" data-uri=""/""></div>")]
-        [InlineData("id", @"<div id=""id"" class=""wx-webapp-progress-task"" data-uri=""/""></div>")]
+        [InlineData(null, @"<div id=""*"" class=""wx-webapp-progress-task""></div>")]
+        [InlineData("id", @"<div id=""id"" class=""wx-webapp-progress-task""></div>")]
         public void Id(string id, string expected)
         {
             // arrange
@@ -24,9 +24,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
             var context = UnitTestControlFixture.CreateRenderContextMock(application);
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestProgressTask(id)
-            {
-            };
+            var control = new ControlProgressTask(id);
 
             // act
             var html = control.Render(context, visualTree);
@@ -36,38 +34,15 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
-        /// Tests the interval property of the api progress task control.
+        /// Tests the TaskId property — the rendered host element must carry
+        /// the configured task id as a <c>data-task</c> attribute so the
+        /// JavaScript controller can filter incoming MessageQueue updates by
+        /// task.
         /// </summary>
         [Theory]
-        [InlineData(-1, @"<div id=""*"" class=""wx-webapp-progress-task"" data-uri=""/""></div>")]
-        [InlineData(0, @"<div id=""*"" class=""wx-webapp-progress-task"" data-uri=""/""></div>")]
-        [InlineData(1000, @"<div id=""*"" class=""wx-webapp-progress-task"" data-interval=""1000"" data-uri=""/""></div>")]
-        public void Interval(int interval, string expected)
-        {
-            // arrange
-            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
-            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
-            var context = UnitTestControlFixture.CreateRenderContextMock(application);
-            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestProgressTask()
-            {
-                Interval = _ => interval
-            };
-
-            // act
-            var html = control.Render(context, visualTree);
-
-            // validation
-            AssertExtensions.EqualWithPlaceholders(expected, html);
-        }
-
-        /// <summary>
-        /// Tests the taskid property of the api progress task control.
-        /// </summary>
-        [Theory]
-        [InlineData(null, @"<div id=""*"" class=""wx-webapp-progress-task"" data-uri=""/""></div>")]
-        [InlineData("", @"<div id=""*"" class=""wx-webapp-progress-task"" data-uri=""/""></div>")]
-        [InlineData("id", @"<div id=""*"" class=""wx-webapp-progress-task"" data-task=""id"" data-uri=""/""></div>")]
+        [InlineData(null, @"<div id=""*"" class=""wx-webapp-progress-task""></div>")]
+        [InlineData("", @"<div id=""*"" class=""wx-webapp-progress-task""></div>")]
+        [InlineData("id", @"<div id=""*"" class=""wx-webapp-progress-task"" data-task=""id""></div>")]
         public void TaskId(string taskId, string expected)
         {
             // arrange
@@ -75,7 +50,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
             var context = UnitTestControlFixture.CreateRenderContextMock(application);
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestProgressTask()
+            var control = new ControlProgressTask()
             {
                 TaskId = _ => taskId
             };
@@ -88,11 +63,11 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
-        /// Tests the show on start property of the api progress task control.
+        /// Tests the ShowOnStart property.
         /// </summary>
         [Theory]
-        [InlineData(false, @"<div id=""*"" class=""wx-webapp-progress-task"" data-uri=""/""></div>")]
-        [InlineData(true, @"<div id=""*"" class=""wx-webapp-progress-task"" data-show-on-start=""true"" data-uri=""/""></div>")]
+        [InlineData(false, @"<div id=""*"" class=""wx-webapp-progress-task""></div>")]
+        [InlineData(true, @"<div id=""*"" class=""wx-webapp-progress-task"" data-show-on-start=""true""></div>")]
         public void ShowOnStart(bool value, string expected)
         {
             // arrange
@@ -100,7 +75,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
             var context = UnitTestControlFixture.CreateRenderContextMock(application);
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestProgressTask()
+            var control = new ControlProgressTask()
             {
                 ShowOnStart = _ => value
             };
@@ -113,11 +88,11 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
-        /// Tests the hide on finish property of the api progress task control.
+        /// Tests the HideOnFinish property.
         /// </summary>
         [Theory]
-        [InlineData(false, @"<div id=""*"" class=""wx-webapp-progress-task"" data-uri=""/""></div>")]
-        [InlineData(true, @"<div id=""*"" class=""wx-webapp-progress-task"" data-hide-on-finish=""true"" data-uri=""/""></div>")]
+        [InlineData(false, @"<div id=""*"" class=""wx-webapp-progress-task""></div>")]
+        [InlineData(true, @"<div id=""*"" class=""wx-webapp-progress-task"" data-hide-on-finish=""true""></div>")]
         public void HideOnFinish(bool value, string expected)
         {
             // arrange
@@ -125,7 +100,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
             var context = UnitTestControlFixture.CreateRenderContextMock(application);
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestProgressTask()
+            var control = new ControlProgressTask()
             {
                 HideOnFinish = _ => value
             };
@@ -138,11 +113,13 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
-        /// Tests the hide on finish property of the api progress task control.
+        /// Tests the Display property — verifies that the host element picks
+        /// up the <c>d-none</c> CSS class when the control is rendered
+        /// hidden.
         /// </summary>
         [Theory]
-        [InlineData(TypeDisplay.Default, @"<div id=""*"" class=""wx-webapp-progress-task"" data-uri=""/""></div>")]
-        [InlineData(TypeDisplay.None, @"<div id=""*"" class=""wx-webapp-progress-task d-none"" data-uri=""/""></div>")]
+        [InlineData(TypeDisplay.Default, @"<div id=""*"" class=""wx-webapp-progress-task""></div>")]
+        [InlineData(TypeDisplay.None, @"<div id=""*"" class=""wx-webapp-progress-task d-none""></div>")]
         public void Display(TypeDisplay value, string expected)
         {
             // arrange
@@ -150,7 +127,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
             var context = UnitTestControlFixture.CreateRenderContextMock(application);
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestProgressTask()
+            var control = new ControlProgressTask()
             {
                 Display = _ => value
             };
@@ -160,6 +137,30 @@ namespace WebExpress.WebApp.Test.WebControl
 
             // validation
             AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
+
+        /// <summary>
+        /// Disabled controls must render to <c>null</c> so the page is not
+        /// polluted with an inert progress host.
+        /// </summary>
+        [Fact]
+        public void Enable_False_RendersNothing()
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlProgressTask()
+            {
+                Enable = _ => false
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            Assert.Null(html);
         }
     }
 }
