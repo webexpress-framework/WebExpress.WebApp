@@ -19,6 +19,11 @@ namespace WebExpress.WebApp.WebControl
         Func<IRenderControlContext, bool> Selectable { get; }
 
         /// <summary>
+        /// Gets a value indicating whether the control is read-only.
+        /// </summary>
+        Func<IRenderControlContext, bool> Readonly { get; }
+
+        /// <summary>
         /// Gets the icon used for active sprints.
         /// </summary>
         Func<IRenderControlContext, string> IconActive { get; }

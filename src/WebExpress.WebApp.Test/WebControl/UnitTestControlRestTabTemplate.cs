@@ -33,5 +33,30 @@ namespace WebExpress.WebApp.Test.WebControl
             // validation
             AssertExtensions.EqualWithPlaceholders(expected, html);
         }
+
+        /// <summary>
+        /// Tests that template metadata attributes are rendered.
+        /// </summary>
+        [Fact]
+        public void Metadata()
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlRestTabTemplate("template")
+            {
+                Icon = "fas fa-user",
+                Name = "User Template",
+                Description = "Template description"
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(@"<div id=""template"" class=""wx-template"" data-icon=""fas fa-user"" data-name=""User Template"" data-description=""Template description""></div>", html);
+        }
     }
 }

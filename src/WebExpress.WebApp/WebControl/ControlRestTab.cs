@@ -31,6 +31,11 @@ namespace WebExpress.WebApp.WebControl
         public IEnumerable<IControlRestTabTemplate> Templates => _templates;
 
         /// <summary>
+        /// Gets or sets a value indicating whether the control is read-only.
+        /// </summary>
+        public Func<IRenderControlContext, bool> Readonly { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The control id.</param>
@@ -86,6 +91,7 @@ namespace WebExpress.WebApp.WebControl
             var uri = RestUri?.Invoke(renderContext);
             var bind = Bind?.Invoke(renderContext);
             var resultUri = uri?.BindParameters(renderContext.Request);
+            var @readonly = Readonly?.Invoke(renderContext) ?? false;
 
             var html = new HtmlElementTextContentDiv()
             {
@@ -94,6 +100,7 @@ namespace WebExpress.WebApp.WebControl
                 Style = GetStyles()
             }
                 .AddUserAttribute("data-uri", resultUri?.ToString())
+                .AddUserAttribute("data-readonly", @readonly ? "true" : null)
                 .Add(_templates.Select(x => x.Render(renderContext, visualTree)));
 
             bind?.ApplyUserAttributes(html);

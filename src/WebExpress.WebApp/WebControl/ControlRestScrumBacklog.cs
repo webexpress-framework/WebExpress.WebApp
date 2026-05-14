@@ -28,6 +28,11 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, bool> Selectable { get; set; } = _ => true;
 
         /// <summary>
+        /// Gets or sets a value indicating whether the control is read-only.
+        /// </summary>
+        public Func<IRenderControlContext, bool> Readonly { get; set; }
+
+        /// <summary>
         /// Gets or sets the icon used for active sprints.
         /// </summary>
         public Func<IRenderControlContext, string> IconActive { get; set; }
@@ -93,6 +98,7 @@ namespace WebExpress.WebApp.WebControl
             var resultUri = uri?.BindParameters(renderContext.Request);
             var title = Title?.Invoke(renderContext);
             var selectable = Selectable?.Invoke(renderContext) ?? true;
+            var @readonly = Readonly?.Invoke(renderContext) ?? false;
 
             var html = new HtmlElementTextContentDiv()
             {
@@ -103,6 +109,7 @@ namespace WebExpress.WebApp.WebControl
                 .AddUserAttribute("data-rest-uri", resultUri?.ToString())
                 .AddUserAttribute("data-title", I18N.Translate(renderContext, title))
                 .AddUserAttribute("data-selectable", selectable ? null : "false")
+                .AddUserAttribute("data-readonly", @readonly ? "true" : null)
                 .AddUserAttribute("data-icon-active", IconActive?.Invoke(renderContext))
                 .AddUserAttribute("data-icon-planned", IconPlanned?.Invoke(renderContext))
                 .AddUserAttribute("data-icon-backlog", IconBacklog?.Invoke(renderContext))

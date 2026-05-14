@@ -21,6 +21,11 @@ namespace WebExpress.WebApp.WebControl
         IEnumerable<IControlRestTabTemplate> Templates { get; }
 
         /// <summary>
+        /// Gets a value indicating whether the control is read-only.
+        /// </summary>
+        Func<IRenderControlContext, bool> Readonly { get; }
+
+        /// <summary>
         /// Adds one or more templates to the tab control.
         /// </summary>
         /// <param name="templates">The templates to add.</param>
