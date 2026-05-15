@@ -112,12 +112,13 @@ namespace WebExpress.WebApp.WebRestApi
         /// Retrieves a queryable collection of index items that match the specified query criteria.
         /// </summary>
         /// <param name="query">
-        /// An object containing the query parameters used to filter and select index items. Cannot 
-        /// be null.
+        /// An object containing the query parameters used to filter and select 
+        /// index items. Cannot be null.
         /// </param>
         /// <param name="context">
-        /// The context in which the query is executed. Provides additional information or constraints 
-        /// for the retrieval operation. Cannot be null.
+        /// The context in which the query is executed. Provides additional 
+        /// information or constraints for the retrieval operation. Cannot 
+        /// be null.
         /// </param>
         /// <param name="request">
         /// The request that provides the operational context.

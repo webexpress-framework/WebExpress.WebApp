@@ -77,7 +77,6 @@ wx-webapp-observer {
     width: 280px;
     max-height: 320px;
     overflow: hidden;
-    background: var(--wx-webapp-surface);
     border: 1px solid var(--wx-webapp-border);
     border-radius: var(--wx-webapp-r-md);
     box-shadow: 0 8px 28px rgba(20, 24, 36, 0.12);
@@ -91,7 +90,6 @@ wx-webapp-observer {
     padding: 8px 10px;
     border: 0;
     border-bottom: 1px solid var(--wx-webapp-divider);
-    background: var(--wx-webapp-surface);
     font: inherit;
     font-size: 13px;
     outline: none;
