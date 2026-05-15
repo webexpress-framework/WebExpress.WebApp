@@ -1,0 +1,587 @@
+.wx-webapp-comment {
+    background: var(--wx-webapp-surface);
+    border: 1px solid var(--wx-webapp-border);
+    border-radius: var(--wx-webapp-r-md);
+    overflow: hidden;
+}
+ 
+/* ---- toolbar ---- */
+.wx-webapp-comment-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--wx-webapp-divider);
+    background: var(--wx-webapp-surface-2);
+    flex-wrap: wrap;
+    font-size: 12.5px;
+    color: var(--wx-webapp-text-3);
+}
+ 
+.wx-webapp-comment-toolbar-label {
+    color: var(--wx-webapp-text-3);
+}
+ 
+.wx-webapp-comment-filter,
+.wx-webapp-comment-sort {
+    border: 1px solid var(--wx-webapp-border);
+    border-radius: var(--wx-webapp-r-sm);
+    background: var(--wx-webapp-surface);
+    font-size: 12.5px;
+    padding: 4px 22px 4px 8px;
+    color: var(--wx-webapp-text);
+    font-family: inherit;
+}
+ 
+.wx-webapp-comment-sort-dir {
+    border: 1px solid var(--wx-webapp-border);
+    border-radius: var(--wx-webapp-r-sm);
+    background: var(--wx-webapp-surface);
+    font-size: 12px;
+    padding: 4px 10px;
+    color: var(--wx-webapp-text-2);
+    cursor: pointer;
+}
+ 
+.wx-webapp-comment-sort-dir:hover {
+    background: var(--wx-webapp-surface-2);
+    color: var(--wx-webapp-text);
+}
+ 
+.wx-webapp-comment-pinned-note {
+    margin-left: auto;
+    font-size: 11.5px;
+    color: var(--wx-webapp-text-3);
+}
+ 
+/* ---- list ---- */
+.wx-webapp-comment-list {
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+ 
+.wx-webapp-comment-empty {
+    padding: 24px;
+    text-align: center;
+    color: var(--wx-webapp-text-3);
+    font-size: 13px;
+}
+ 
+/* ---- item ---- */
+.wx-webapp-comment-item {
+    border: 1px solid var(--wx-webapp-border);
+    border-radius: var(--wx-webapp-r-md);
+    overflow: hidden;
+    background: var(--wx-webapp-surface);
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+ 
+.wx-webapp-comment-item--pinned {
+    border-color: var(--wx-webapp-warn);
+    box-shadow: 0 0 0 3px #fdefd8;
+}
+ 
+.wx-webapp-comment-item--me {
+    border-left: 3px solid var(--wx-webapp-primary);
+}
+ 
+.wx-webapp-comment-item--collapsed .wx-webapp-comment-body,
+.wx-webapp-comment-item--collapsed .wx-webapp-comment-footer,
+.wx-webapp-comment-item--collapsed .wx-webapp-comment-reactions,
+.wx-webapp-comment-item--collapsed .wx-webapp-comment-replies {
+    display: none;
+}
+ 
+.wx-webapp-comment-head {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 12px;
+    background: var(--wx-webapp-surface-2);
+    border-bottom: 1px solid var(--wx-webapp-divider);
+}
+ 
+.wx-webapp-comment-item--collapsed .wx-webapp-comment-head {
+    border-bottom: 0;
+}
+ 
+.wx-webapp-comment-avatar {
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: #1d2230;
+    flex-shrink: 0;
+}
+ 
+.wx-webapp-comment-avatar--lg {
+    width: 36px;
+    height: 36px;
+    font-size: 13px;
+}
+ 
+.wx-webapp-comment-avatar--sm {
+    width: 22px;
+    height: 22px;
+    font-size: 9.5px;
+}
+ 
+.wx-webapp-comment-head-main {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+ 
+.wx-webapp-comment-author-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+ 
+.wx-webapp-comment-author {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--wx-webapp-text);
+}
+ 
+.wx-webapp-comment-team {
+    font-size: 11.5px;
+    color: var(--wx-webapp-text-3);
+}
+ 
+.wx-webapp-comment-when {
+    font-size: 11.5px;
+    color: var(--wx-webapp-text-3);
+    font-family: var(--wx-webapp-font-mono);
+}
+ 
+.wx-webapp-comment-when--edited::after {
+    content: " · edited";
+    font-style: italic;
+    opacity: 0.8;
+}
+ 
+.wx-webapp-comment-pinned {
+    font-size: 10.5px;
+    color: var(--wx-webapp-warn);
+    font-weight: 600;
+}
+ 
+.wx-webapp-comment-labels {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+ 
+.wx-webapp-comment-category {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 999px;
+    border: 1px solid currentColor;
+}
+ 
+.wx-webapp-comment-label {
+    display: inline-block;
+    padding: 1px 6px;
+    font-size: 10.5px;
+    color: var(--wx-webapp-text-2);
+    background: var(--wx-webapp-surface);
+    border: 1px solid var(--wx-webapp-border);
+    border-radius: 4px;
+    font-family: var(--wx-webapp-font-mono);
+}
+ 
+/* ---- head actions ---- */
+.wx-webapp-comment-head-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+}
+ 
+.wx-webapp-comment-action {
+    background: transparent;
+    border: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    color: var(--wx-webapp-text-3);
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 0 6px;
+}
+ 
+.wx-webapp-comment-action:hover {
+    background: var(--wx-webapp-surface-3);
+    color: var(--wx-webapp-text);
+}
+ 
+.wx-webapp-comment-action--liked {
+    color: var(--wx-webapp-danger);
+}
+ 
+.wx-webapp-comment-action--pinned {
+    color: var(--wx-webapp-warn);
+}
+ 
+.wx-webapp-comment-like-count {
+    font-size: 11px;
+    font-family: var(--wx-webapp-font-mono);
+}
+ 
+/* ---- body ---- */
+.wx-webapp-comment-body {
+    padding: 12px 14px;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--wx-webapp-text);
+}
+ 
+.wx-webapp-comment-body p:first-child {
+    margin-top: 0;
+}
+ 
+.wx-webapp-comment-body p:last-child {
+    margin-bottom: 0;
+}
+ 
+.wx-webapp-comment-body code {
+    font-family: var(--wx-webapp-font-mono);
+    font-size: 12px;
+    background: var(--wx-webapp-surface-2);
+    border: 1px solid var(--wx-webapp-border);
+    border-radius: 3px;
+    padding: 1px 5px;
+}
+ 
+/* ---- edit ---- */
+.wx-webapp-comment-edit {
+    padding: 10px 12px;
+    background: var(--wx-webapp-surface-2);
+    border-top: 1px solid var(--wx-webapp-divider);
+}
+ 
+.wx-webapp-comment-edit-editor {
+    min-height: 100px;
+    border: 1px solid var(--wx-webapp-border);
+    border-radius: var(--wx-webapp-r-sm);
+    background: var(--wx-webapp-surface);
+}
+ 
+.wx-webapp-comment-edit-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-top: 8px;
+}
+ 
+.wx-webapp-comment-edit-cat,
+.wx-webapp-comment-edit-labels {
+    border: 1px solid var(--wx-webapp-border);
+    border-radius: var(--wx-webapp-r-sm);
+    padding: 4px 8px;
+    font-size: 12.5px;
+    background: var(--wx-webapp-surface);
+}
+ 
+.wx-webapp-comment-edit-labels {
+    flex: 1;
+    min-width: 0;
+}
+ 
+/* ---- reactions ---- */
+.wx-webapp-comment-reactions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    flex-wrap: wrap;
+    border-top: 1px dashed var(--wx-webapp-divider);
+    background: rgba(252, 252, 253, 0.5);
+}
+ 
+.wx-webapp-comment-reaction {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 9px;
+    background: var(--wx-webapp-surface);
+    border: 1px solid var(--wx-webapp-border);
+    border-radius: 999px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color 0.1s, background 0.1s;
+}
+ 
+.wx-webapp-comment-reaction:hover {
+    background: var(--wx-webapp-surface-2);
+}
+ 
+.wx-webapp-comment-reaction--mine {
+    background: var(--wx-webapp-primary-soft);
+    border-color: var(--wx-webapp-primary-border);
+    color: var(--wx-webapp-primary);
+    font-weight: 600;
+}
+ 
+.wx-webapp-comment-reaction-emoji {
+    font-size: 14px;
+    line-height: 1;
+}
+ 
+.wx-webapp-comment-reaction-add-wrap {
+    position: relative;
+    display: inline-block;
+}
+ 
+.wx-webapp-comment-reaction-add {
+    width: 26px;
+    height: 26px;
+    border-radius: 999px;
+    border: 1px dashed var(--wx-webapp-border-2);
+    background: transparent;
+    color: var(--wx-webapp-text-3);
+    cursor: pointer;
+}
+ 
+.wx-webapp-comment-reaction-add:hover {
+    border-color: var(--wx-webapp-primary);
+    color: var(--wx-webapp-primary);
+}
+ 
+.wx-webapp-comment-reaction-popup {
+    position: absolute;
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--wx-webapp-surface);
+    border: 1px solid var(--wx-webapp-border);
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(20, 24, 36, 0.16);
+    padding: 4px;
+    gap: 2px;
+    z-index: 50;
+    white-space: nowrap;
+}
+ 
+.wx-webapp-comment-reaction-popup button {
+    background: transparent;
+    border: 0;
+    padding: 4px 6px;
+    font-size: 18px;
+    border-radius: 5px;
+    cursor: pointer;
+    line-height: 1;
+}
+ 
+.wx-webapp-comment-reaction-popup button:hover {
+    background: var(--wx-webapp-surface-2);
+}
+ 
+/* ---- footer ---- */
+.wx-webapp-comment-footer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px;
+    border-top: 1px dashed var(--wx-webapp-divider);
+    font-size: 11.5px;
+    color: var(--wx-webapp-text-3);
+}
+ 
+.wx-webapp-comment-reply-btn {
+    background: none;
+    border: 0;
+    cursor: pointer;
+    color: var(--wx-webapp-text-3);
+    font-size: 11.5px;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+ 
+.wx-webapp-comment-reply-btn:hover {
+    background: var(--wx-webapp-surface-2);
+    color: var(--wx-webapp-text);
+}
+ 
+.wx-webapp-comment-edited-note {
+    margin-left: auto;
+    font-style: italic;
+    font-size: 10.5px;
+}
+ 
+/* ---- replies ---- */
+.wx-webapp-comment-replies {
+    background: var(--wx-webapp-surface-2);
+    border-top: 1px dashed var(--wx-webapp-divider);
+}
+ 
+.wx-webapp-comment-reply {
+    display: grid;
+    grid-template-columns: 28px 1fr;
+    gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px dashed var(--wx-webapp-divider);
+}
+ 
+.wx-webapp-comment-reply:last-child {
+    border-bottom: 0;
+}
+ 
+.wx-webapp-comment-reply-head {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 2px;
+    font-size: 12px;
+}
+ 
+.wx-webapp-comment-reply-author {
+    font-weight: 600;
+    color: var(--wx-webapp-text);
+}
+ 
+.wx-webapp-comment-reply-when {
+    color: var(--wx-webapp-text-3);
+    font-family: var(--wx-webapp-font-mono);
+    font-size: 11px;
+}
+ 
+.wx-webapp-comment-reply-body {
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--wx-webapp-text);
+}
+ 
+.wx-webapp-comment-reply-compose {
+    padding: 10px 14px 14px;
+    border-top: 1px dashed var(--wx-webapp-divider);
+    background: var(--wx-webapp-surface-2);
+}
+ 
+.wx-webapp-comment-reply-compose textarea {
+    display: block;
+    width: 100%;
+    min-height: 60px;
+    padding: 8px 10px;
+    border: 1px solid var(--wx-webapp-border);
+    border-radius: var(--wx-webapp-r-sm);
+    background: var(--wx-webapp-surface);
+    font: inherit;
+    font-size: 13px;
+    resize: vertical;
+}
+ 
+.wx-webapp-comment-reply-compose textarea:focus {
+    outline: none;
+    border-color: var(--wx-webapp-primary-border);
+    box-shadow: 0 0 0 3px var(--wx-webapp-primary-soft);
+}
+ 
+.wx-webapp-comment-reply-compose-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-top: 6px;
+}
+ 
+/* ---- delete confirm strip ---- */
+.wx-webapp-comment-delete-confirm {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: #fde8e8;
+    border-top: 1px solid #f4c2c2;
+    font-size: 12.5px;
+}
+ 
+.wx-webapp-comment-delete-confirm .wx-webapp-comment-spacer {
+    flex: 1;
+}
+ 
+/* ---- composer ---- */
+.wx-webapp-comment-composer {
+    margin: 4px 14px 14px;
+    border: 1px solid var(--wx-webapp-border);
+    border-radius: var(--wx-webapp-r-md);
+    overflow: hidden;
+    background: var(--wx-webapp-surface);
+}
+ 
+.wx-webapp-comment-composer-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--wx-webapp-surface-2);
+    border-bottom: 1px solid var(--wx-webapp-divider);
+    font-size: 12.5px;
+    color: var(--wx-webapp-text-3);
+}
+ 
+.wx-webapp-comment-composer-title {
+    color: var(--wx-webapp-text-2);
+    font-size: 12.5px;
+    font-weight: 600;
+}
+ 
+.wx-webapp-comment-composer-cat {
+    margin-left: auto;
+    border: 1px solid var(--wx-webapp-border);
+    border-radius: var(--wx-webapp-r-sm);
+    padding: 3px 8px;
+    font-size: 12px;
+    background: var(--wx-webapp-surface);
+}
+ 
+.wx-webapp-comment-composer-editor {
+    min-height: 100px;
+    border: 0;
+}
+ 
+.wx-webapp-comment-composer-foot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-top: 1px solid var(--wx-webapp-divider);
+    background: var(--wx-webapp-surface-2);
+}
+ 
+.wx-webapp-comment-composer-labels {
+    border: 1px solid var(--wx-webapp-border);
+    border-radius: var(--wx-webapp-r-sm);
+    padding: 4px 8px;
+    font-size: 12px;
+    background: var(--wx-webapp-surface);
+    max-width: 240px;
+}
+ 
+.wx-webapp-comment-composer-hint {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--wx-webapp-text-muted);
+}
+ 
+/* ---- spacer utility ---- */
+.wx-webapp-comment-spacer {
+    flex: 1;
+}

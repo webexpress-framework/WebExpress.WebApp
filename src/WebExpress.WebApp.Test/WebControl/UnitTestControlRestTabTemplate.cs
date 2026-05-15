@@ -1,5 +1,6 @@
 ﻿using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebControl;
+using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebIcon;
 using WebExpress.WebUI.WebPage;
 
@@ -58,6 +59,48 @@ namespace WebExpress.WebApp.Test.WebControl
 
             // validation
             AssertExtensions.EqualWithPlaceholders(@"<div id=""template"" class=""wx-template"" data-icon=""fas fa-user"" data-name=""User Template"" data-description=""Template description""></div>", html);
+        }
+
+        /// <summary>
+        /// Tests that template id can be read through the interface contract.
+        /// </summary>
+        [Fact]
+        public void InterfaceId()
+        {
+            // arrange
+            IControlRestTabTemplate template = new ControlRestTabTemplate("template-id");
+
+            // validation
+            Assert.Equal("template-id", template.Id);
+        }
+
+        /// <summary>
+        /// Tests that template bind metadata attributes are rendered.
+        /// </summary>
+        [Fact]
+        public void Bind()
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlRestTabTemplate("template")
+            {
+                Bind = _ => new Binding().Add(new BindTemplate()
+                    .Add("uri", TypeBindMode.Attr, ".wx-webapp-dashboard", "data-uri")
+                    .Add("title"))
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            var htmlString = html.ToString();
+            Assert.Contains("data-wx-bind=\"uri, title\"", htmlString);
+            Assert.Contains("data-wx-bind-uri-mode=\"attr\"", htmlString);
+            Assert.Contains("data-wx-bind-uri-target=\".wx-webapp-dashboard\"", htmlString);
+            Assert.Contains("data-wx-bind-uri-name=\"data-uri\"", htmlString);
         }
     }
 }

@@ -331,6 +331,20 @@ webexpress.webapp.Event = class {
     static COLLABORATIVE_CURSOR = "webexpress.webapp.collaborative.cursor";
     // Event triggered when a remote input value update is received.
     static COLLABORATIVE_INPUT = "webexpress.webapp.collaborative.input";
+    // Event triggered when a comment is added
+    static COMMENT_ADDED_EVENT = "webexpress.webapp.comment.added";
+    // Event triggered when a comment is updated
+    static COMMENT_UPDATED_EVENT = "webexpress.webapp.comment.updated";
+    // Event triggered when a comment is deleted
+    static COMMENT_DELETED_EVENT = "webexpress.webapp.comment.deleted";
+    // Event triggered when a reaction is added to a comment
+    static COMMENT_REACTION_EVENT = "webexpress.webapp.comment.reaction";
+    // Event triggered when a reply is added to a comment
+    static COMMENT_REPLY_EVENT = "webexpress.webapp.comment.reply";
+    // Event triggered when an observer is added
+    static OBSERVER_ADDED_EVENT = "webexpress.webapp.observer.added";
+    // Event triggered when an observer is removed
+    static OBSERVER_REMOVED_EVENT = "webexpress.webapp.observer.removed";
 }
 
 // initialize the WebSocket connection after the DOM is fully loaded    

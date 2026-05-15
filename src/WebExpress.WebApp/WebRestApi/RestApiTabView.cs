@@ -43,5 +43,29 @@ namespace WebExpress.WebApp.WebRestApi
         /// </summary>
         [JsonPropertyName("uri")]
         public string Uri { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional color class associated with this tab.
+        /// </summary>
+        [JsonPropertyName("color")]
+        public string Color { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional primary action identifier.
+        /// </summary>
+        [JsonPropertyName("primaryAction")]
+        public string PrimaryAction { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional primary action target.
+        /// </summary>
+        [JsonPropertyName("primaryTarget")]
+        public string PrimaryTarget { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional binding payload used by template bindings.
+        /// </summary>
+        [JsonPropertyName("binding")]
+        public object Binding { get; set; }
     }
 }

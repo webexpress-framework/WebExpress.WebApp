@@ -22,6 +22,11 @@ namespace WebExpress.WebApp.WebControl
         public string Id { get; set; }
 
         /// <summary>
+        /// Gets or sets the optional declarative binding configuration for template content.
+        /// </summary>
+        public Func<IRenderControlContext, IBinding> Bind { get; set; }
+
+        /// <summary>
         /// Gets or sets the icon CSS class for the template.
         /// </summary>
         public Func<IRenderControlContext, IIcon> Icon { get; set; }
@@ -106,19 +111,23 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered template control.</returns>
         public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IEnumerable<IControl> content)
         {
+            var bind = Bind?.Invoke(renderContext);
             var icon = Icon?.Invoke(renderContext);
             var name = Name?.Invoke(renderContext);
             var description = Description?.Invoke(renderContext);
+            var iconClass = icon is Icon webUiIcon ? webUiIcon.Class : null;
 
             var templateDiv = new HtmlElementTextContentDiv()
             {
                 Id = Id,
                 Class = "wx-template"
             }
-                .AddUserAttribute("data-icon", (icon as Icon)?.Class)
+                .AddUserAttribute("data-icon", iconClass)
                 .AddUserAttribute("data-name", name)
                 .AddUserAttribute("data-description", description)
                 .Add(content.Select(x => x.Render(renderContext, visualTree)));
+
+            bind?.ApplyUserAttributes(templateDiv);
 
             return templateDiv;
         }

@@ -30,5 +30,30 @@
         /// Gets the identifier of the template associated with this instance.
         /// </summary>
         string TemplateId { get; }
+
+        /// <summary>
+        /// Gets the uri associated with this instance.
+        /// </summary>
+        string Uri { get; }
+
+        /// <summary>
+        /// Gets the optional color class associated with this tab.
+        /// </summary>
+        string Color { get; }
+
+        /// <summary>
+        /// Gets the optional primary action identifier associated with this tab.
+        /// </summary>
+        string PrimaryAction { get; }
+
+        /// <summary>
+        /// Gets the optional primary action target associated with this tab.
+        /// </summary>
+        string PrimaryTarget { get; }
+
+        /// <summary>
+        /// Gets the optional binding payload used for template bindings.
+        /// </summary>
+        object Binding { get; }
     }
 }

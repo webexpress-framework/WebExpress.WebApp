@@ -66,14 +66,14 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
     _extractTemplates() {
         // find all elements acting as templates
         const templateNodes = Array.from(this._element.querySelectorAll(".wx-template, template"));
-        
+
         for (let i = 0; i < templateNodes.length; i++) {
             const tpl = templateNodes[i];
             const id = tpl.id || "default";
             const icon = tpl.dataset.icon || "";
             const name = tpl.dataset.name || id;
             const description = tpl.dataset.description || "";
-            
+
             // store template payload for later instantiation
             this._templates.set(id, {
                 id: id,
@@ -86,7 +86,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
             if (!this._templateOrder.includes(id)) {
                 this._templateOrder.push(id);
             }
-            
+
             // remove template node from dom
             if (tpl.parentNode !== null) {
                 tpl.parentNode.removeChild(tpl);
@@ -178,7 +178,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         if (this._addTemplateMenu !== null) {
             this._addLi.appendChild(this._addTemplateMenu);
         }
-        
+
         if (this._toolbarLi) {
             this._navElement.insertBefore(this._addLi, this._toolbarLi);
         } else {
@@ -243,10 +243,9 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
             // abort previous running requests
             this._abortController.abort("search replaced");
         }
-        
+
         this._abortController = new AbortController();
         this._isLoading = true;
-
         this._element.classList.add("placeholder-glow");
 
         const fetchUrl = this._resolveUrl(this._restUri);
@@ -263,7 +262,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
                 if (Array.isArray(response.items)) {
                     newTabs = response.items;
                 }
-                
+
                 this.updateData(newTabs);
 
                 // remove loading indicators
@@ -285,6 +284,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
 
     /**
      * Sends a POST request to the server to create a new tab and appends it to the UI.
+     * @param {string|null} templateId - Optional template id to create the tab from.
      */
     _createNewTab(templateId = null) {
         if (this._readonly) {
@@ -292,6 +292,10 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         }
 
         if (this._restUri === "") {
+            return;
+        }
+
+        if (this._addTabButton === null) {
             return;
         }
 
@@ -312,37 +316,38 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
                 templateId: templateId
             })
         })
-        .then((res) => {
-            if (res.ok === false) {
-                throw new Error("post request failed");
-            }
-            return res.json();
-        })
-        .then((response) => {
-            // take the first item from response.items (array)
-            const newTab = response.newTab;
-            if (!newTab) {
-                throw new Error("POST response did not contain a valid items array or was empty");
-            }
-            if (!newTab.templateId && templateId) {
-                newTab.templateId = templateId;
-            }
-            this._renderSingleTab(newTab);
-            this.selectTab(newTab.id);
+            .then((res) => {
+                if (res.ok === false) {
+                    throw new Error("post request failed");
+                }
+                return res.json();
+            })
+            .then((response) => {
+                const newTab = response.newTab;
+                if (!newTab) {
+                    throw new Error("post response did not contain newTab");
+                }
 
-            // dispatch event to notify other components
-            this._dispatch(webexpress.webapp.Event.TAB_ADDED_EVENT, {
-                tabId: newTab.id,
+                if (!newTab.templateId && templateId) {
+                    newTab.templateId = templateId;
+                }
+
+                this._renderSingleTab(newTab);
+                this.selectTab(newTab.id);
+
+                // dispatch event to notify other components
+                this._dispatch(webexpress.webapp.Event.TAB_ADDED_EVENT, {
+                    tabId: newTab.id
+                });
+            })
+            .catch((error) => {
+                console.error("failed to create new tab:", error);
+            })
+            .finally(() => {
+                // restore button state
+                this._addTabButton.innerHTML = originalHtml;
+                this._addTabButton.disabled = false;
             });
-        })
-        .catch((error) => {
-            console.error("failed to create new tab:", error);
-        })
-        .finally(() => {
-            // restore button state
-            this._addTabButton.innerHTML = originalHtml;
-            this._addTabButton.disabled = false;
-        });
     }
 
     /**
@@ -353,83 +358,195 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
     _resolveUrl(uri) {
         const base = window.location.origin;
         let urlObj;
-        
+
         try {
             urlObj = new URL(uri, base);
-        } catch (e) {
+        } catch (error) {
             // fallback to document base uri if parsing fails
             urlObj = new URL(uri, document.baseURI);
         }
 
-        return uri.startsWith("http") ? urlObj.href : (urlObj.pathname + urlObj.search);
+        if (uri.startsWith("http")) {
+            return urlObj.href;
+        }
+
+        return urlObj.pathname + urlObj.search;
     }
 
     /**
-     * Fills the pane with the template content and applies generic data binding via DOM manipulation.
-     * Supports intelligent default bindings and explicit "target:property" syntax.
+     * Gets a value from binding map or item with fallback to empty string.
+     * @param {Object} item - Data item.
+     * @param {Object} bindingMap - Flattened binding map.
+     * @param {string} key - Property name.
+     * @returns {*} Resolved value.
+     */
+    _resolveBindingValue(item, bindingMap, key) {
+        if (Object.prototype.hasOwnProperty.call(bindingMap, key)) {
+            return bindingMap[key];
+        }
+
+        if (item[key] !== undefined) {
+            return item[key];
+        }
+
+        return "";
+    }
+
+    /**
+     * Resolves target elements for a binding and always includes source element.
+     * @param {HTMLElement} rootElement - Current bound element.
+     * @param {HTMLElement} pane - Pane root.
+     * @param {string} targetSelector - Optional selector.
+     * @returns {HTMLElement[]} Target elements.
+     */
+    _resolveBindingTargets(rootElement, pane, targetSelector) {
+        const targets = [rootElement];
+
+        if (!targetSelector || targetSelector === "self") {
+            return targets;
+        }
+
+        const nodes = Array.from(pane.querySelectorAll(targetSelector));
+        for (let i = 0; i < nodes.length; i++) {
+            if (!targets.includes(nodes[i])) {
+                targets.push(nodes[i]);
+            }
+        }
+
+        return targets;
+    }
+
+    /**
+     * Applies one normalized binding operation to target elements.
+     * @param {HTMLElement[]} targets - Target elements.
+     * @param {string} mode - Binding mode.
+     * @param {string} name - Optional mode-specific name.
+     * @param {*} value - Value to apply.
+     */
+    _applyBindingToTargets(targets, mode, name, value) {
+        const finalValue = value == null ? "" : String(value);
+
+        for (let i = 0; i < targets.length; i++) {
+            const target = targets[i];
+
+            if (mode === "text") {
+                target.textContent = finalValue;
+            } else if (mode === "html") {
+                target.innerHTML = finalValue;
+            } else if (mode === "attr") {
+                if (name) {
+                    target.setAttribute(name, finalValue);
+                }
+            } else if (mode === "prop") {
+                if (name) {
+                    target[name] = value;
+                }
+            } else if (mode === "class") {
+                if (name) {
+                    target.classList.add(finalValue);
+                } else {
+                    target.className = finalValue;
+                }
+            } else if (mode === "style") {
+                if (name) {
+                    target.style.setProperty(name, finalValue);
+                }
+            } else if (mode === "toggle") {
+                if (name) {
+                    target.classList.toggle(name, Boolean(value));
+                }
+            } else {
+                target.textContent = finalValue;
+            }
+        }
+    }
+
+    /**
+     * Applies all bindings declared in data-wx-bind using per-key attributes:
+     * - data-wx-bind-<key>-mode
+     * - data-wx-bind-<key>-name
+     * - data-wx-bind-<key>-target
+     * @param {HTMLElement} el - Bound element.
+     * @param {HTMLElement} pane - Pane root.
+     * @param {Object} item - Data item.
+     * @param {Object} bindingMap - Binding map.
+     * @returns {boolean} True if at least one binding was applied.
+     */
+    _applyBindings(el, pane, item, bindingMap) {
+        const bindAttr = el.getAttribute("data-wx-bind");
+        if (bindAttr === null) {
+            return false;
+        }
+
+        const keys = bindAttr.split(",").map(function(s) {
+            return s.trim();
+        });
+
+        let applied = false;
+
+        for (let i = 0; i < keys.length; i++) {
+            const key = keys[i];
+            if (key === "") {
+                continue;
+            }
+
+            const mode = (el.getAttribute("data-wx-bind-" + key + "-mode") || "text").trim().toLowerCase();
+            const name = (el.getAttribute("data-wx-bind-" + key + "-name") || "").trim();
+            const targetSelector = (el.getAttribute("data-wx-bind-" + key + "-target") || "self").trim();
+
+            const value = this._resolveBindingValue(item, bindingMap, key);
+            const targets = this._resolveBindingTargets(el, pane, targetSelector);
+
+            this._applyBindingToTargets(targets, mode, name, value);
+            applied = true;
+        }
+
+        return applied;
+    }
+
+    /**
+     * Removes binding metadata attributes from an element after applying binding.
+     * @param {HTMLElement} el - Bound element.
+     */
+    _cleanupBindingAttributes(el) {
+        if (el.hasAttribute("data-wx-bind")) {
+            el.removeAttribute("data-wx-bind");
+        }
+
+        const attrsToRemove = [];
+        for (let i = 0; i < el.attributes.length; i++) {
+            const attrName = el.attributes[i].name;
+            if (attrName.startsWith("data-wx-bind-") && attrName !== "data-wx-bind") {
+                attrsToRemove.push(attrName);
+            }
+        }
+
+        for (let i = 0; i < attrsToRemove.length; i++) {
+            el.removeAttribute(attrsToRemove[i]);
+        }
+    }
+
+    /**
+     * Fills the pane with template content and applies unified data binding.
      * @param {HTMLElement} pane - The pane element to populate.
      * @param {Object} item - The tab data item.
      */
     _buildPaneContent(pane, item) {
-        // resolve the template from the registered templates
         const template = this._resolveTemplate(item.templateId || "default");
         const html = template ? template.html : "";
-
-        // insert template HTML markup into the pane
         pane.innerHTML = html;
 
-        // build a map from item.binding
         const bindingMap = (item.binding && typeof item.binding === "object") ? item.binding : {};
+        const boundElements = Array.from(pane.querySelectorAll("[data-wx-bind]"));
 
-        // select all elements with a data-wx-bind attribute
-        const boundElements = pane.querySelectorAll("[data-wx-bind]");
-
+        // apply all bindings first
         for (let i = 0; i < boundElements.length; i++) {
-            const el = boundElements[i];
-            const bindAttr = el.getAttribute("data-wx-bind");
+            this._applyBindings(boundElements[i], pane, item, bindingMap);
+        }
 
-            if (bindAttr !== null) {
-                // support multi-property binding: data-wx-bind="title, icon"
-                const bindings = bindAttr.split(",").map(s => s.trim());
-                for (let j = 0; j < bindings.length; j++) {
-                    const prop = bindings[j];
-
-                    // get value from bindingMap first, then fallback to item property
-                    const value =
-                        (bindingMap.hasOwnProperty(prop) ? bindingMap[prop] : undefined) ??
-                        (item[prop] !== undefined ? item[prop] : "");
-
-                    // determine the binding target for this property:
-                    // 1. prefer data-wx-target-<prop> for explicit mode ("content", "text", "attribute", "html" etc.)
-                    let target = "text";
-                    const explicitTarget = el.getAttribute("data-wx-target-" + prop);
-                    if (explicitTarget) {
-                        target = explicitTarget;
-                    } else {
-                        // 2. else check for data-wx-attribute-<prop> (for custom attribute names)
-                        const attr = el.getAttribute("data-wx-attribute-" + prop);
-                        if (attr) {
-                            target = "attribute:" + attr;
-                        }
-                    }
-
-                    // apply the value to the target
-                    if (target.startsWith("attribute:")) {
-                        // write as attribute (e.g. "data-uri", "href")
-                        const attrName = target.split(":")[1];
-                        el.setAttribute(attrName, value);
-                    } else if (target === "content" || target === "text") {
-                        // set as text content
-                        el.textContent = value;
-                    } else if (target === "html") {
-                        // set as inner HTML (use with caution)
-                        el.innerHTML = value;
-                    } else {
-                        // fallback: treat as text content
-                        el.textContent = value;
-                    }
-                }
-            }
+        // cleanup after all binding writes
+        for (let i = 0; i < boundElements.length; i++) {
+            this._cleanupBindingAttributes(boundElements[i]);
         }
     }
 
@@ -457,7 +574,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         if (this._contentElement !== null) {
             this._contentElement.innerHTML = "";
         }
-        
+
         this._tabs = [];
 
         // build new tabs from data
@@ -481,7 +598,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         pane.id = item.id || "wx-tab-rest-" + Date.now();
         pane.className = "tab-pane fade";
         pane.setAttribute("role", "tabpanel");
-        
+
         // apply template and bindings via dom
         this._buildPaneContent(pane, item);
 
@@ -503,7 +620,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
 
         // build header using the overridden method
         const navItem = this._buildTabHeader(tabData);
-        
+
         if (this._navElement !== null && this._addLi !== null) {
             // insert before the add button wrapper
             this._navElement.insertBefore(navItem, this._addLi);
@@ -528,29 +645,29 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
     _buildTabHeader(tab) {
         // call the base class implementation first
         const li = super._buildTabHeader(tab);
-        
+
         if (this._readonly) {
             return li;
         }
 
         const a = li.querySelector(".nav-link");
-        
+
         if (a !== null) {
             const closeBtn = document.createElement("span");
             closeBtn.className = "ms-2 text-muted fw-bold";
             closeBtn.style.cursor = "pointer";
             closeBtn.textContent = "x";
-            
+
             // attach event listener to remove the tab
             closeBtn.addEventListener("click", (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 this._closeTab(tab.id);
             });
-            
+
             a.appendChild(closeBtn);
         }
-        
+
         return li;
     }
 
@@ -563,18 +680,18 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
             return;
         }
 
-        // send DELETE request to the server before removing the tab locally
+        // send delete request to the server before removing the tab locally
         if (this._restUri && tabId) {
             const fetchUrl = this._resolveUrl(this._restUri + "?id=" + encodeURIComponent(tabId));
             fetch(fetchUrl, { method: "DELETE" })
-                .then(res => {
+                .then((res) => {
                     if (!res.ok) {
-                        throw new Error("failed to DELETE tab: " + res.status);
+                        throw new Error("failed to delete tab: " + res.status);
                     }
                 })
-                .catch(err => {
-                    // optionally show error, but still remove tab from UI to ensure responsiveness
-                    console.error("Delete request failed (still removing tab locally):", err);
+                .catch((err) => {
+                    // optionally show error, but still remove tab from ui to ensure responsiveness
+                    console.error("delete request failed (still removing tab locally):", err);
                 });
         }
 

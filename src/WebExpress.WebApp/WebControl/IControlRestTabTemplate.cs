@@ -13,6 +13,11 @@ namespace WebExpress.WebApp.WebControl
     public interface IControlRestTabTemplate : IWebUIElement<IRenderControlContext, IVisualTreeControl>
     {
         /// <summary>
+        /// Gets the optional declarative binding configuration for template content.
+        /// </summary>
+        Func<IRenderControlContext, IBinding> Bind { get; }
+
+        /// <summary>
         /// Gets the icon CSS class for the template.
         /// </summary>
         Func<IRenderControlContext, IIcon> Icon { get; }
