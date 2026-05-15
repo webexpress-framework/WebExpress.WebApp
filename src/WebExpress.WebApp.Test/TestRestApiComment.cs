@@ -1,15 +1,25 @@
-using System.Collections.Generic;
-using System.Linq;
 using WebExpress.WebApp.WebRestApi;
 using WebExpress.WebCore.WebMessage;
+using WebExpress.WebIndex;
+using WebExpress.WebIndex.Queries;
 
 namespace WebExpress.WebApp.Test
 {
     /// <summary>
-    /// Provides a minimal in-memory implementation of <see cref="RestApiComment"/>
+    /// Minimal index item used to satisfy the generic constraint of
+    /// <see cref="RestApiComment{TIndexItem}"/>; tests only exercise the
+    /// HTTP wiring, not the index integration.
+    /// </summary>
+    public sealed class TestCommentIndexItem : IIndexItem
+    {
+        public System.Guid Id { get; set; }
+    }
+
+    /// <summary>
+    /// Provides a minimal in-memory implementation of <see cref="RestApiComment{TIndexItem}"/>
     /// used to exercise the base class's HTTP wiring and sub-path routing.
     /// </summary>
-    public sealed class TestRestApiComment : RestApiComment
+    public sealed class TestRestApiComment : RestApiComment<TestCommentIndexItem>
     {
         private readonly List<RestApiCommentItem> _comments;
         private int _nextId = 1;
@@ -38,11 +48,35 @@ namespace WebExpress.WebApp.Test
         /// </summary>
         public IReadOnlyList<RestApiCommentItem> Comments => _comments;
 
-        /// <inheritdoc/>
-        protected override IEnumerable<RestApiCommentItem> RetrieveComments(IRequest request) => _comments;
+        /// <summary>
+        /// Returns the current set of comments to be rendered by the
+        /// client-side controller.
+        /// </summary>
+        /// <param name="query">
+        /// The query that defines the criteria for selecting Scrum items. Cannot 
+        /// be null.
+        /// </param>
+        /// <param name="context">
+        /// The context in which the query is executed, providing additional 
+        /// information or constraints. Cannot be null.
+        /// </param>
+        /// <param name="request">The incoming request.</param>
+        /// <returns>The comments.</returns>
+        protected override IEnumerable<RestApiCommentItem> RetrieveComments(IQuery<TestCommentIndexItem> query, IQueryContext context, IRequest request) => _comments;
 
-        /// <inheritdoc/>
-        protected override RestApiCommentItem CreateComment(RestApiCommentPayload payload, IRequest request)
+        /// <summary>
+        /// Persists a newly created comment.
+        /// </summary>
+        /// <param name="payload">The create payload.</param>
+        /// <param name="context">
+        /// The context in which the query is executed, providing additional 
+        /// information or constraints. Cannot be null.
+        /// </param>
+        /// <param name="request">The incoming request.</param>
+        /// <returns>
+        /// The created comment, or <see langword="null"/> when creation failed.
+        /// </returns>
+        protected override RestApiCommentItem CreateComment(RestApiCommentPayload payload, IQueryContext context, IRequest request)
         {
             var item = new RestApiCommentItem
             {
@@ -61,8 +95,22 @@ namespace WebExpress.WebApp.Test
             return item;
         }
 
-        /// <inheritdoc/>
-        protected override RestApiCommentItem UpdateComment(string id, RestApiCommentPayload payload, IRequest request)
+        /// <summary>
+        /// Updates the body / category / labels of an existing comment.
+        /// </summary>
+        /// <param name="id">The id of the comment to update.</param>
+        /// <param name="payload">The new field values.</param>
+        /// <param name="context">
+        /// The context in which the query is executed, providing additional 
+        /// information or constraints. Cannot be null.
+        /// </param>
+        /// <param name="request">
+        /// The incoming request.
+        /// </param>
+        /// <returns>
+        /// The updated comment, or <see langword="null"/> when not found.
+        /// </returns>
+        protected override RestApiCommentItem UpdateComment(string id, RestApiCommentPayload payload, IQueryContext context, IRequest request)
         {
             var item = _comments.FirstOrDefault(x => x.Id == id);
             if (item is null)
@@ -77,8 +125,19 @@ namespace WebExpress.WebApp.Test
             return item;
         }
 
-        /// <inheritdoc/>
-        protected override bool DeleteComment(string id, IRequest request)
+        /// <summary>
+        /// Permanently removes a comment.
+        /// </summary>
+        /// <param name="id">The id of the comment to delete.</param>
+        /// <param name="context">
+        /// The context in which the query is executed, providing additional 
+        /// information or constraints. Cannot be null.
+        /// </param>
+        /// <param name="request">The incoming request.</param>
+        /// <returns>
+        /// <see langword="true"/> when the comment existed and was deleted.
+        /// </returns>
+        protected override bool DeleteComment(string id, IQueryContext context, IRequest request)
         {
             var existing = _comments.FirstOrDefault(x => x.Id == id);
             if (existing is null)
@@ -90,8 +149,22 @@ namespace WebExpress.WebApp.Test
             return true;
         }
 
-        /// <inheritdoc/>
-        protected override IEnumerable<string> ToggleLike(string id, string userId, IRequest request)
+        /// <summary>
+        /// Toggles the like for the specified user on the comment with the
+        /// given id.
+        /// </summary>
+        /// <param name="id">The comment id.</param>
+        /// <param name="userId">The user toggling the like.</param>
+        /// <param name="context">
+        /// The context in which the query is executed, providing additional 
+        /// information or constraints. Cannot be null.
+        /// </param>
+        /// <param name="request">The incoming request.</param>
+        /// <returns>
+        /// The new like collection, or <see langword="null"/> when the 
+        /// comment does not exist.
+        /// </returns>
+        protected override IEnumerable<string> ToggleLike(string id, string userId, IQueryContext context, IRequest request)
         {
             var item = _comments.FirstOrDefault(x => x.Id == id);
             if (item is null)
@@ -113,8 +186,20 @@ namespace WebExpress.WebApp.Test
             return likes;
         }
 
-        /// <inheritdoc/>
-        protected override bool? TogglePin(string id, IRequest request)
+        /// <summary>
+        /// Toggles the pinned state of a comment.
+        /// </summary>
+        /// <param name="id">The comment id.</param>
+        /// <param name="context">
+        /// The context in which the query is executed, providing additional 
+        /// information or constraints. Cannot be null.
+        /// </param>
+        /// <param name="request">The incoming request.</param>
+        /// <returns>
+        /// The new pinned state, or <see langword="null"/> when the comment 
+        /// does not exist.
+        /// </returns>
+        protected override bool? TogglePin(string id, IQueryContext context, IRequest request)
         {
             var item = _comments.FirstOrDefault(x => x.Id == id);
             if (item is null)
@@ -126,8 +211,25 @@ namespace WebExpress.WebApp.Test
             return item.Pinned;
         }
 
-        /// <inheritdoc/>
-        protected override IDictionary<string, IEnumerable<string>> ToggleReaction(string id, string emoji, string userId, IRequest request)
+        /// <summary>
+        /// Toggles a reaction emoji for the specified user on the comment
+        /// with the given id.
+        /// </summary>
+        /// <param name="id">The comment id.</param>
+        /// <param name="emoji">The emoji glyph.</param>
+        /// <param name="userId">The user toggling the reaction.</param>
+        /// <param name="context">
+        /// The context in which the query is executed, providing additional 
+        /// information or constraints. Cannot be null.
+        /// </param>
+        /// <param name="request">
+        /// The incoming request.
+        /// </param>
+        /// <returns>
+        /// The new reactions map, or <see langword="null"/> when the comment 
+        /// does not exist.
+        /// </returns>
+        protected override IDictionary<string, IEnumerable<string>> ToggleReaction(string id, string emoji, string userId, IQueryContext context, IRequest request)
         {
             var item = _comments.FirstOrDefault(x => x.Id == id);
             if (item is null)
@@ -166,8 +268,21 @@ namespace WebExpress.WebApp.Test
             return reactions;
         }
 
-        /// <inheritdoc/>
-        protected override RestApiCommentReply AppendReply(string id, string body, IRequest request)
+        /// <summary>
+        /// Appends a reply to the specified parent comment.
+        /// </summary>
+        /// <param name="id">The parent comment id.</param>
+        /// <param name="body">The reply body.</param>
+        /// <param name="context">
+        /// The context in which the query is executed, providing additional 
+        /// information or constraints. Cannot be null.
+        /// </param>
+        /// <param name="request">The incoming request.</param>
+        /// <returns>
+        /// The created reply, or <see langword="null"/> when the parent 
+        /// does not exist.
+        /// </returns>
+        protected override RestApiCommentReply AppendReply(string id, string body, IQueryContext context, IRequest request)
         {
             var item = _comments.FirstOrDefault(x => x.Id == id);
             if (item is null)
@@ -189,7 +304,17 @@ namespace WebExpress.WebApp.Test
             return reply;
         }
 
-        /// <inheritdoc/>
-        protected override string ResolveCurrentUser(IRequest request) => _currentUser;
+        /// <summary>
+        /// Returns the id of the user driving the current request. Override
+        /// to plug a real identity provider in; the default implementation
+        /// returns <see langword="null"/>.
+        /// </summary>
+        /// <param name="context">
+        /// The context in which the query is executed, providing additional 
+        /// information or constraints. Cannot be null.
+        /// </param>
+        /// <param name="request">The incoming request.</param>
+        /// <returns>The user id.</returns>
+        protected override string ResolveCurrentUser(IQueryContext context, IRequest request) => _currentUser;
     }
 }

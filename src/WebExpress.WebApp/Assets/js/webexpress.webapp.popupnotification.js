@@ -115,7 +115,7 @@ class PopupNotificationCtrl extends webexpress.webui.Ctrl {
         alert.setAttribute("role", "alert");
         alert.dataset.notificationId = id;
 
-        // close button — Font Awesome "times" icon, anchored top-right via
+        // close button - Font Awesome "times" icon, anchored top-right via
         // the wx-popup-close CSS class
         const closeButton = document.createElement("button");
         closeButton.type = "button";
@@ -341,7 +341,7 @@ class PopupNotificationCtrl extends webexpress.webui.Ctrl {
 
         const alert = data.alert;
 
-        // already hiding — let the in-flight animation finish
+        // already hiding - let the in-flight animation finish
         if (alert.classList.contains("wx-popup-hiding")) {
             return;
         }

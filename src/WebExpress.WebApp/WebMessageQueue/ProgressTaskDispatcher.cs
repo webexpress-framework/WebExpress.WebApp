@@ -124,7 +124,7 @@ namespace WebExpress.WebApp.WebMessageQueue
             }
             catch
             {
-                // swallow — never let a transport error tear down the task
+                // swallow - never let a transport error tear down the task
                 // manager event pipeline
             }
         }

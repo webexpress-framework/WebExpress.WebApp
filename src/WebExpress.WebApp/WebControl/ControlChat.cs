@@ -40,7 +40,7 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, string> UserColor { get; set; }
 
         /// <summary>
-        /// Gets or sets the chat mode hint — <c>group</c> for many-to-many
+        /// Gets or sets the chat mode hint - <c>group</c> for many-to-many
         /// channels, <c>direct</c> for 1:1 conversations. Used only by the
         /// JS for cosmetic decisions; routing is always driven by
         /// <see cref="ChannelId"/>.

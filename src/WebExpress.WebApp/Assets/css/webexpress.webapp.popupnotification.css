@@ -59,7 +59,7 @@
             background-color: rgba(0, 0, 0, 0.08);
         }
 
-        /* close button — Font Awesome icon, anchored top-right */
+        /* close button - Font Awesome icon, anchored top-right */
         .wx-popupnotification > div > .wx-popup-close {
             position: absolute;
             top: 0.4rem;
@@ -137,7 +137,7 @@
     }
 }
 
-/* respect reduced-motion preference — keep the controller's hide-class
+/* respect reduced-motion preference - keep the controller's hide-class
    path intact but skip the visible animation */
 @media (prefers-reduced-motion: reduce) {
     .wx-popupnotification > div,

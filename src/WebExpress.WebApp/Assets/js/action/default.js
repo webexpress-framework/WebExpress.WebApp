@@ -104,7 +104,7 @@ webexpress.webui.Actions.register("plugin-package", {
 });
 
 /**
- * Popup notification action — lets any client side element show a popup
+ * Popup notification action - lets any client side element show a popup
  * notification when triggered (typically by a click), using the existing
  * PopupNotificationCtrl pipeline. The action synthesizes a
  * <c>webexpress.webapp.popup.show</c> envelope and dispatches it through
@@ -112,13 +112,13 @@ webexpress.webui.Actions.register("plugin-package", {
  * instance on the page picks it up. No HTTP roundtrip is involved.
  *
  * Supported attributes:
- *   data-wx-{primary|secondary}-heading      — alert heading text
- *   data-wx-{primary|secondary}-message      — alert body html
- *   data-wx-{primary|secondary}-type         — bootstrap alert class
+ *   data-wx-{primary|secondary}-heading      - alert heading text
+ *   data-wx-{primary|secondary}-message      - alert body html
+ *   data-wx-{primary|secondary}-type         - bootstrap alert class
  *                                              (default: "alert-primary")
- *   data-wx-{primary|secondary}-durability   — lifetime in ms (-1 = pinned,
+ *   data-wx-{primary|secondary}-durability   - lifetime in ms (-1 = pinned,
  *                                              default: 5000)
- *   data-wx-{primary|secondary}-icon         — optional icon URL
+ *   data-wx-{primary|secondary}-icon         - optional icon URL
  *
  * Example:
  *   <button type="button"
@@ -150,7 +150,7 @@ webexpress.webui.Actions.register("popup", {
             durability = 5000;
         }
 
-        // build a notification id — random per click so multiple presses
+        // build a notification id - random per click so multiple presses
         // produce distinct alerts instead of replacing one another
         var id = "popup-" + Date.now().toString(36) + "-"
             + Math.random().toString(36).slice(2, 8);

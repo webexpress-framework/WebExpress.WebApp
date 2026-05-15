@@ -18,7 +18,7 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// <summary>
         /// Server-to-client: a state/progress/message update for a single
         /// task. The same type is used for the initial snapshot, every
-        /// progress tick and the final finish event — the receiver
+        /// progress tick and the final finish event - the receiver
         /// distinguishes via the <c>state</c> field.
         /// </summary>
         public const string Update = Prefix + "update";

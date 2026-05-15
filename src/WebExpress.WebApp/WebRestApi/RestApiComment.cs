@@ -44,7 +44,7 @@ namespace WebExpress.WebApp.WebRestApi
 
         /// <summary>
         /// Handles the <c>GET</c> entry point. Always returns the full list
-        /// of comments — paging is delegated to the JS controller, which
+        /// of comments - paging is delegated to the JS controller, which
         /// renders client-side.
         /// </summary>
         /// <param name="request">The incoming request.</param>
@@ -101,6 +101,7 @@ namespace WebExpress.WebApp.WebRestApi
         {
             try
             {
+                using var context = CreateContext();
                 var segments = GetRelativeSegments(request);
 
                 // POST {base}
@@ -111,8 +112,7 @@ namespace WebExpress.WebApp.WebRestApi
                     {
                         return new ResponseBadRequest(new StatusMessage("missing or invalid payload."));
                     }
-
-                    var created = CreateComment(payload, request);
+                    var created = CreateComment(payload, context, request);
                     return created is null
                         ? new ResponseBadRequest(new StatusMessage("comment could not be created."))
                         : Json(created);
@@ -126,7 +126,7 @@ namespace WebExpress.WebApp.WebRestApi
                     if (Matches(segments[1], "likes"))
                     {
                         var payload = GetPayload<RestApiCommentLikePayload>(request);
-                        var likes = ToggleLike(id, payload?.UserId ?? ResolveCurrentUser(request), request);
+                        var likes = ToggleLike(id, payload?.UserId ?? ResolveCurrentUser(context, request), context, request);
                         return likes is null
                             ? new ResponseNotFound()
                             : Json(new { likes });
@@ -134,7 +134,7 @@ namespace WebExpress.WebApp.WebRestApi
 
                     if (Matches(segments[1], "pin"))
                     {
-                        var pinned = TogglePin(id, request);
+                        var pinned = TogglePin(id, context, request);
                         return pinned is null
                             ? new ResponseNotFound()
                             : Json(new { pinned });
@@ -148,7 +148,7 @@ namespace WebExpress.WebApp.WebRestApi
                             return new ResponseBadRequest(new StatusMessage("missing reaction emoji."));
                         }
 
-                        var reactions = ToggleReaction(id, payload.Emoji, payload.UserId ?? ResolveCurrentUser(request), request);
+                        var reactions = ToggleReaction(id, payload.Emoji, payload.UserId ?? ResolveCurrentUser(context, request), context, request);
                         return reactions is null
                             ? new ResponseNotFound()
                             : Json(new { reactions });
@@ -162,7 +162,7 @@ namespace WebExpress.WebApp.WebRestApi
                             return new ResponseBadRequest(new StatusMessage("missing reply body."));
                         }
 
-                        var reply = AppendReply(id, payload.Body, request);
+                        var reply = AppendReply(id, payload.Body, context, request);
                         return reply is null
                             ? new ResponseNotFound()
                             : Json(reply);
@@ -188,6 +188,7 @@ namespace WebExpress.WebApp.WebRestApi
         {
             try
             {
+                using var context = CreateContext();
                 var segments = GetRelativeSegments(request);
                 if (segments.Count != 1)
                 {
@@ -200,7 +201,7 @@ namespace WebExpress.WebApp.WebRestApi
                     return new ResponseBadRequest(new StatusMessage("missing or invalid payload."));
                 }
 
-                var updated = UpdateComment(segments[0], payload, request);
+                var updated = UpdateComment(segments[0], payload, context, request);
                 return updated is null
                     ? new ResponseNotFound()
                     : Json(updated);
@@ -221,13 +222,14 @@ namespace WebExpress.WebApp.WebRestApi
         {
             try
             {
+                using var context = CreateContext();
                 var segments = GetRelativeSegments(request);
                 if (segments.Count != 1)
                 {
                     return new ResponseNotFound();
                 }
 
-                var deleted = DeleteComment(segments[0], request);
+                var deleted = DeleteComment(segments[0], context, request);
                 return deleted
                     ? new ResponseNoContent()
                     : new ResponseNotFound();
@@ -254,6 +256,14 @@ namespace WebExpress.WebApp.WebRestApi
         /// Returns the current set of comments to be rendered by the
         /// client-side controller.
         /// </summary>
+        /// <param name="query">
+        /// The query that defines the criteria for selecting Scrum items. Cannot 
+        /// be null.
+        /// </param>
+        /// <param name="context">
+        /// The context in which the query is executed, providing additional 
+        /// information or constraints. Cannot be null.
+        /// </param>
         /// <param name="request">The incoming request.</param>
         /// <returns>The comments.</returns>
         protected abstract IEnumerable<RestApiCommentItem> RetrieveComments(IQuery<TIndexItem> query, IQueryContext context, IRequest request);
@@ -262,26 +272,46 @@ namespace WebExpress.WebApp.WebRestApi
         /// Persists a newly created comment.
         /// </summary>
         /// <param name="payload">The create payload.</param>
+        /// <param name="context">
+        /// The context in which the query is executed, providing additional 
+        /// information or constraints. Cannot be null.
+        /// </param>
         /// <param name="request">The incoming request.</param>
-        /// <returns>The created comment, or <see langword="null"/> when creation failed.</returns>
-        protected abstract RestApiCommentItem CreateComment(RestApiCommentPayload payload, IRequest request);
+        /// <returns>
+        /// The created comment, or <see langword="null"/> when creation failed.
+        /// </returns>
+        protected abstract RestApiCommentItem CreateComment(RestApiCommentPayload payload, IQueryContext context, IRequest request);
 
         /// <summary>
         /// Updates the body / category / labels of an existing comment.
         /// </summary>
         /// <param name="id">The id of the comment to update.</param>
         /// <param name="payload">The new field values.</param>
-        /// <param name="request">The incoming request.</param>
-        /// <returns>The updated comment, or <see langword="null"/> when not found.</returns>
-        protected abstract RestApiCommentItem UpdateComment(string id, RestApiCommentPayload payload, IRequest request);
+        /// <param name="context">
+        /// The context in which the query is executed, providing additional 
+        /// information or constraints. Cannot be null.
+        /// </param>
+        /// <param name="request">
+        /// The incoming request.
+        /// </param>
+        /// <returns>
+        /// The updated comment, or <see langword="null"/> when not found.
+        /// </returns>
+        protected abstract RestApiCommentItem UpdateComment(string id, RestApiCommentPayload payload, IQueryContext context, IRequest request);
 
         /// <summary>
         /// Permanently removes a comment.
         /// </summary>
         /// <param name="id">The id of the comment to delete.</param>
+        /// <param name="context">
+        /// The context in which the query is executed, providing additional 
+        /// information or constraints. Cannot be null.
+        /// </param>
         /// <param name="request">The incoming request.</param>
-        /// <returns><see langword="true"/> when the comment existed and was deleted.</returns>
-        protected abstract bool DeleteComment(string id, IRequest request);
+        /// <returns>
+        /// <see langword="true"/> when the comment existed and was deleted.
+        /// </returns>
+        protected abstract bool DeleteComment(string id, IQueryContext context, IRequest request);
 
         /// <summary>
         /// Toggles the like for the specified user on the comment with the
@@ -289,17 +319,31 @@ namespace WebExpress.WebApp.WebRestApi
         /// </summary>
         /// <param name="id">The comment id.</param>
         /// <param name="userId">The user toggling the like.</param>
+        /// <param name="context">
+        /// The context in which the query is executed, providing additional 
+        /// information or constraints. Cannot be null.
+        /// </param>
         /// <param name="request">The incoming request.</param>
-        /// <returns>The new like collection, or <see langword="null"/> when the comment does not exist.</returns>
-        protected abstract IEnumerable<string> ToggleLike(string id, string userId, IRequest request);
+        /// <returns>
+        /// The new like collection, or <see langword="null"/> when the 
+        /// comment does not exist.
+        /// </returns>
+        protected abstract IEnumerable<string> ToggleLike(string id, string userId, IQueryContext context, IRequest request);
 
         /// <summary>
         /// Toggles the pinned state of a comment.
         /// </summary>
         /// <param name="id">The comment id.</param>
+        /// <param name="context">
+        /// The context in which the query is executed, providing additional 
+        /// information or constraints. Cannot be null.
+        /// </param>
         /// <param name="request">The incoming request.</param>
-        /// <returns>The new pinned state, or <see langword="null"/> when the comment does not exist.</returns>
-        protected abstract bool? TogglePin(string id, IRequest request);
+        /// <returns>
+        /// The new pinned state, or <see langword="null"/> when the comment 
+        /// does not exist.
+        /// </returns>
+        protected abstract bool? TogglePin(string id, IQueryContext context, IRequest request);
 
         /// <summary>
         /// Toggles a reaction emoji for the specified user on the comment
@@ -308,27 +352,47 @@ namespace WebExpress.WebApp.WebRestApi
         /// <param name="id">The comment id.</param>
         /// <param name="emoji">The emoji glyph.</param>
         /// <param name="userId">The user toggling the reaction.</param>
-        /// <param name="request">The incoming request.</param>
-        /// <returns>The new reactions map, or <see langword="null"/> when the comment does not exist.</returns>
-        protected abstract IDictionary<string, IEnumerable<string>> ToggleReaction(string id, string emoji, string userId, IRequest request);
+        /// <param name="context">
+        /// The context in which the query is executed, providing additional 
+        /// information or constraints. Cannot be null.
+        /// </param>
+        /// <param name="request">
+        /// The incoming request.
+        /// </param>
+        /// <returns>
+        /// The new reactions map, or <see langword="null"/> when the comment 
+        /// does not exist.
+        /// </returns>
+        protected abstract IDictionary<string, IEnumerable<string>> ToggleReaction(string id, string emoji, string userId, IQueryContext context, IRequest request);
 
         /// <summary>
         /// Appends a reply to the specified parent comment.
         /// </summary>
         /// <param name="id">The parent comment id.</param>
         /// <param name="body">The reply body.</param>
+        /// <param name="context">
+        /// The context in which the query is executed, providing additional 
+        /// information or constraints. Cannot be null.
+        /// </param>
         /// <param name="request">The incoming request.</param>
-        /// <returns>The created reply, or <see langword="null"/> when the parent does not exist.</returns>
-        protected abstract RestApiCommentReply AppendReply(string id, string body, IRequest request);
+        /// <returns>
+        /// The created reply, or <see langword="null"/> when the parent 
+        /// does not exist.
+        /// </returns>
+        protected abstract RestApiCommentReply AppendReply(string id, string body, IQueryContext context, IRequest request);
 
         /// <summary>
         /// Returns the id of the user driving the current request. Override
         /// to plug a real identity provider in; the default implementation
         /// returns <see langword="null"/>.
         /// </summary>
+        /// <param name="context">
+        /// The context in which the query is executed, providing additional 
+        /// information or constraints. Cannot be null.
+        /// </param>
         /// <param name="request">The incoming request.</param>
         /// <returns>The user id.</returns>
-        protected virtual string ResolveCurrentUser(IRequest request) => null;
+        protected virtual string ResolveCurrentUser(IQueryContext context, IRequest request) => null;
 
         /// <summary>
         /// Applies filtering criteria to the specified query based on the provided 

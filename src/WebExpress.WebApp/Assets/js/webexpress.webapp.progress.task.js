@@ -6,7 +6,7 @@
  * polling the REST endpoint. The server pushes start, progress, message and
  * finish events through the same channel that already serves popups and
  * collaboration messages, and replays the current state of every active
- * task whenever a client (re)connects — so progress is preserved across
+ * task whenever a client (re)connects - so progress is preserved across
  * page navigation, transient disconnects and full reconnects.
  *
  * Dispatched events (unchanged for backwards compatibility):
@@ -75,7 +75,7 @@ webexpress.webapp.ProgressTaskCtrl = class extends webexpress.webui.Ctrl {
             this._element.style.display = "none";
         }
 
-        // wire up to the singleton MessageQueue — there is no REST polling
+        // wire up to the singleton MessageQueue - there is no REST polling
         // anymore, every update arrives through the existing WebSocket
         this._queue = (typeof webexpress !== "undefined" && webexpress.webapp)
             ? webexpress.webapp.MessageQueue

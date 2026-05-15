@@ -1,7 +1,11 @@
 /**
- * A rich, threaded comment control. Renders a toolbar (category filter +
- * sort), a list of comments with reactions / replies / edit-in-place, and a
- * composer at the bottom that uses webexpress.webui.EditorCtrl for input.
+ * A rich, threaded comment display control. Renders a toolbar (category
+ * filter + sort), a list of comments with reactions / replies /
+ * edit-in-place. Authoring of new top-level comments is delegated to the
+ * separate webexpress.webapp.CommentComposerCtrl, which dispatches a
+ * COMMENT_ADDED_EVENT on the document; this control listens for that event
+ * (when the comment matches the same REST endpoint) and appends the new
+ * comment without an additional roundtrip.
  *
  * Each comment carries an author, a category (general / question / hint /
  * status / decision / solution), free-form labels, a body in HTML, a list of
@@ -16,7 +20,6 @@
  *
  * REST contract:
  *   GET    {uri}                                       → [Comment]
- *   POST   {uri}                body { body, category, labels }     → Comment
  *   PUT    {uri}/{id}           body { body, category, labels }     → Comment
  *   DELETE {uri}/{id}                                  → 204
  *   POST   {uri}/{id}/reactions body { emoji }         → { reactions }
@@ -25,11 +28,15 @@
  *   POST   {uri}/{id}/replies   body { body }          → Reply
  *
  * Events dispatched on the host element:
- *   webexpress.webapp.Event.COMMENT_ADDED_EVENT     detail: { comment }
  *   webexpress.webapp.Event.COMMENT_UPDATED_EVENT   detail: { comment }
  *   webexpress.webapp.Event.COMMENT_DELETED_EVENT   detail: { id }
  *   webexpress.webapp.Event.COMMENT_REACTION_EVENT  detail: { commentId, emoji, reactions }
  *   webexpress.webapp.Event.COMMENT_REPLY_EVENT     detail: { commentId, reply }
+ *
+ * Events listened for on the document:
+ *   webexpress.webapp.Event.COMMENT_ADDED_EVENT     detail: { comment, uri }
+ *     - When detail.uri matches this control's REST URI (or is missing),
+ *       the new comment is appended to the list and re-rendered.
  */
 webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
 
@@ -80,7 +87,6 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
         this._sortBy = "date";   // "date" | "likes"
         this._sortDir = "desc";  // "asc" | "desc"
         this._filterCat = "all";
-        this._editorRef = null;  // EditorCtrl instance of the composer
         this._editingId = null;  // id of comment currently in edit-mode
         this._editorEditRef = null; // EditorCtrl instance while editing
         this._userCache = {};    // userId -> user record
@@ -101,7 +107,17 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Builds the static DOM scaffold: toolbar, list container, composer.
+     * Tears down listeners.
+     */
+    destroy() {
+        if (this._onCommentAdded) {
+            document.removeEventListener(webexpress.webapp.Event.COMMENT_ADDED_EVENT, this._onCommentAdded);
+            this._onCommentAdded = null;
+        }
+    }
+
+    /**
+     * Builds the static DOM scaffold: toolbar, list container.
      */
     _buildDom() {
         this._toolbar = document.createElement("div");
@@ -145,7 +161,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
 
         const pinnedNote = document.createElement("span");
         pinnedNote.className = "wx-webapp-comment-pinned-note";
-        pinnedNote.textContent = "📌 " + this._i18n("webexpress.webapp:comment.pinned-on-top", "Pinned comments stay on top");
+        pinnedNote.innerHTML = "<i class='wx-icon-light wx-icon-light-pin'></i>" + this._i18n("webexpress.webapp:comment.pinned-on-top", "Pinned comments stay on top");
         this._toolbar.appendChild(pinnedNote);
 
         // list area
@@ -154,10 +170,6 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
 
         this._element.appendChild(this._toolbar);
         this._element.appendChild(this._list);
-
-        if (!this._readonly) {
-            this._element.appendChild(this._buildComposer());
-        }
     }
 
     /**
@@ -197,74 +209,6 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Builds the composer scaffold. The actual EditorCtrl is instantiated
-     * inside the textarea host on render.
-     * @returns {HTMLElement}
-     */
-    _buildComposer() {
-        const composer = document.createElement("div");
-        composer.className = "wx-webapp-comment-composer";
-
-        const head = document.createElement("div");
-        head.className = "wx-webapp-comment-composer-head";
-
-        const title = document.createElement("strong");
-        title.className = "wx-webapp-comment-composer-title";
-        title.textContent = this._i18n("webexpress.webapp:comment.compose.head", "Write a new comment");
-
-        this._composerCatSelect = document.createElement("select");
-        this._composerCatSelect.className = "wx-webapp-comment-composer-cat";
-        for (const cat of Object.values(this._categories)) {
-            const opt = document.createElement("option");
-            opt.value = cat.id;
-            opt.textContent = this._i18n(cat.i18n, cat.id);
-            this._composerCatSelect.appendChild(opt);
-        }
-        this._composerCatSelect.value = "general";
-
-        head.appendChild(title);
-        head.appendChild(this._composerCatSelect);
-
-        // editor host
-        this._composerEditorHost = document.createElement("div");
-        this._composerEditorHost.className = "wx-webui-editor wx-webapp-comment-composer-editor";
-        this._composerEditorHost.dataset.placeholder = this._i18n("webexpress.webapp:comment.compose.placeholder", "Write a comment…");
-        if (this._imageUploadUri) {
-            this._composerEditorHost.dataset.imageUploadUri = this._imageUploadUri;
-        }
-        if (this._usersUri) {
-            this._composerEditorHost.dataset.mentionUri = this._usersUri;
-        }
-
-        // footer
-        const foot = document.createElement("div");
-        foot.className = "wx-webapp-comment-composer-foot";
-
-        this._composerLabels = document.createElement("input");
-        this._composerLabels.type = "text";
-        this._composerLabels.className = "wx-webapp-comment-composer-labels";
-        this._composerLabels.placeholder = this._i18n("webexpress.webapp:comment.labels.placeholder", "Labels (comma-separated)");
-
-        const hint = document.createElement("span");
-        hint.className = "wx-webapp-comment-composer-hint";
-        hint.textContent = this._i18n("webexpress.webapp:comment.compose.hint", "Ctrl + Enter to send");
-
-        this._composerSubmit = document.createElement("button");
-        this._composerSubmit.type = "button";
-        this._composerSubmit.className = "wx-webapp-comment-composer-submit btn btn-primary btn-sm";
-        this._composerSubmit.textContent = this._i18n("webexpress.webapp:comment.compose.submit", "Send");
-
-        foot.appendChild(this._composerLabels);
-        foot.appendChild(hint);
-        foot.appendChild(this._composerSubmit);
-
-        composer.appendChild(head);
-        composer.appendChild(this._composerEditorHost);
-        composer.appendChild(foot);
-        return composer;
-    }
-
-    /**
      * Wires UI event handlers.
      */
     _attachEventHandlers() {
@@ -282,15 +226,33 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
             this._renderList();
         });
 
-        if (!this._readonly) {
-            this._composerSubmit.addEventListener("click", () => this._submit());
-            this._composerEditorHost.addEventListener("keydown", (e) => {
-                if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-                    e.preventDefault();
-                    this._submit();
-                }
-            });
+        // pick up new comments authored by the separate composer control
+        this._onCommentAdded = (event) => this._handleCommentAdded(event);
+        document.addEventListener(webexpress.webapp.Event.COMMENT_ADDED_EVENT, this._onCommentAdded);
+    }
+
+    /**
+     * Appends a comment authored by a sibling CommentComposerCtrl. The
+     * composer carries its REST URI in the event detail so that multiple
+     * comment surfaces on the same page do not pollute one another.
+     * @param {CustomEvent} event
+     */
+    _handleCommentAdded(event) {
+        const detail = event?.detail;
+        if (!detail || !detail.comment) {
+            return;
         }
+        if (detail.uri && this._uri && detail.uri !== this._uri) {
+            return;
+        }
+        if (this._comments.some(c => c.id === detail.comment.id)) {
+            return;
+        }
+        this._comments.push(detail.comment);
+        this._preloadUsers().then(() => {
+            this._rebuildFilterOptions();
+            this._renderList();
+        });
     }
 
     /**
@@ -298,9 +260,9 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
      */
     _updateSortDirBtn() {
         if (this._sortDir === "asc") {
-            this._sortDirBtn.textContent = "↑ " + this._i18n("webexpress.webapp:comment.sort.asc", "Ascending");
+            this._sortDirBtn.textContent = this._i18n("webexpress.webapp:comment.sort.asc", "Ascending");
         } else {
-            this._sortDirBtn.textContent = "↓ " + this._i18n("webexpress.webapp:comment.sort.desc", "Descending");
+            this._sortDirBtn.textContent = this._i18n("webexpress.webapp:comment.sort.desc", "Descending");
         }
     }
 
@@ -325,8 +287,6 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
         await this._preloadUsers();
         this._rebuildFilterOptions();
         this._renderList();
-        // instantiate the composer's EditorCtrl now that the DOM is settled
-        this._ensureComposerEditor();
     }
 
     /**
@@ -817,60 +777,6 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
     }
 
     // ============================================================ REST ops
-
-    /**
-     * Instantiates the composer's EditorCtrl if it doesn't exist yet.
-     */
-    _ensureComposerEditor() {
-        if (this._editorRef || this._readonly || !this._composerEditorHost) {
-            return;
-        }
-        try {
-            this._editorRef = new webexpress.webui.EditorCtrl(this._composerEditorHost);
-        } catch (e) {
-            console.warn("CommentCtrl: composer editor init failed", e);
-        }
-    }
-
-    /**
-     * Submits the composer's content as a new comment.
-     */
-    async _submit() {
-        if (!this._uri) {
-            return;
-        }
-        const body = (this._editorRef ? this._editorRef.value : this._composerEditorHost.innerHTML) || "";
-        if (!body.trim() || body.trim() === "<p><br></p>") {
-            return;
-        }
-        const category = this._composerCatSelect.value;
-        const labels = this._composerLabels.value.split(",").map(s => s.trim()).filter(Boolean);
-        try {
-            const res = await fetch(this._uri, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Accept": "application/json" },
-                body: JSON.stringify({ body, category, labels })
-            });
-            if (!res.ok) throw new Error(res.statusText);
-            const created = await res.json();
-            this._comments.push(created);
-            await this._preloadUsers();
-            this._rebuildFilterOptions();
-            this._renderList();
-            this._dispatch(webexpress.webapp.Event.COMMENT_ADDED_EVENT, { comment: created });
-
-            // reset composer
-            if (this._editorRef) {
-                this._editorRef.value = "";
-            } else {
-                this._composerEditorHost.innerHTML = "";
-            }
-            this._composerLabels.value = "";
-            this._composerCatSelect.value = "general";
-        } catch (e) {
-            console.warn("CommentCtrl: submit failed", e);
-        }
-    }
 
     /**
      * Saves an inline edit for a comment.

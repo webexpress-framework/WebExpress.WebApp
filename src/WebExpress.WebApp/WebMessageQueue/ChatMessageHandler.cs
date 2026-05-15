@@ -19,7 +19,7 @@ namespace WebExpress.WebApp.WebMessageQueue
     ///         <c>messageId</c>, enriches the payload with routing info,
     ///         appends to <see cref="ChatChannelStore"/> and broadcasts the
     ///         authoritative copy to every connected client of the
-    ///         application — the receiver filters by channel id.</item>
+    ///         application - the receiver filters by channel id.</item>
     ///   <item>For <c>chat.history.request</c>: replays the buffered
     ///         backlog for the requested channel back to the originating
     ///         socket only.</item>

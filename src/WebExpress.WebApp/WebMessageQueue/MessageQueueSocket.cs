@@ -116,7 +116,7 @@ namespace WebExpress.WebApp.WebMessageQueue
 
                 // Replay the snapshot of every active task so the client
                 // receives the current state of any long-running operation
-                // immediately on (re)connect — even when it joined after the
+                // immediately on (re)connect - even when it joined after the
                 // task already started.
                 try
                 {

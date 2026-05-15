@@ -519,13 +519,51 @@
  
 /* ---- composer ---- */
 .wx-webapp-comment-composer {
-    margin: 4px 14px 14px;
     border: 1px solid var(--wx-webapp-border);
     border-radius: var(--wx-webapp-r-md);
     overflow: hidden;
     background: var(--wx-webapp-surface);
+    transition: border-color 0.15s, box-shadow 0.15s;
 }
- 
+
+.wx-webapp-comment-composer--expanded {
+    border-color: var(--wx-webapp-primary-border);
+    box-shadow: 0 0 0 3px var(--wx-webapp-primary-soft);
+}
+
+/* collapsed trigger: a single-line input-like button */
+.wx-webapp-comment-composer-trigger {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 10px 14px;
+    font: inherit;
+    font-size: 13px;
+    color: var(--wx-webapp-text-3);
+    background: var(--wx-webapp-surface);
+    border: 0;
+    cursor: text;
+}
+
+.wx-webapp-comment-composer-trigger:hover {
+    background: var(--wx-webapp-surface-2);
+    color: var(--wx-webapp-text-2);
+}
+
+.wx-webapp-comment-composer-trigger:focus {
+    outline: none;
+    background: var(--wx-webapp-surface-2);
+    color: var(--wx-webapp-text-2);
+}
+
+.wx-webapp-comment-composer--collapsed .wx-webapp-comment-composer-form {
+    display: none;
+}
+
+.wx-webapp-comment-composer--expanded .wx-webapp-comment-composer-trigger {
+    display: none;
+}
+
 .wx-webapp-comment-composer-head {
     display: flex;
     align-items: center;

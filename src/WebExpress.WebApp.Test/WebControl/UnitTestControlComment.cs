@@ -26,7 +26,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlComment(id)
+            var control = new ControlRestComment(id)
             {
             };
 
@@ -49,7 +49,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlComment()
+            var control = new ControlRestComment()
             {
                 RestUri = _ => uriString is not null ? new UriEndpoint(uriString) : null
             };
@@ -73,7 +73,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlComment()
+            var control = new ControlRestComment()
             {
                 UsersUri = _ => uriString is not null ? new UriEndpoint(uriString) : null
             };
@@ -99,7 +99,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlComment()
+            var control = new ControlRestComment()
             {
                 CurrentUser = _ => user
             };
@@ -124,7 +124,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlComment()
+            var control = new ControlRestComment()
             {
                 Readonly = _ => readOnly
             };
@@ -147,7 +147,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlComment()
+            var control = new ControlRestComment()
             {
                 ImageUploadUri = _ => new UriEndpoint("https://example.com/api/upload")
             };
@@ -170,7 +170,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlComment("c")
+            var control = new ControlRestComment("c")
             {
                 Categories = _ => "{\"general\":{\"id\":\"general\"}}"
             };
@@ -192,7 +192,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlComment("c1")
+            var control = new ControlRestComment("c1")
             {
                 RestUri = _ => new UriEndpoint("https://example.com/api/comments/INC-1"),
                 UsersUri = _ => new UriEndpoint("https://example.com/api/users"),
@@ -219,7 +219,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlComment()
+            var control = new ControlRestComment()
             {
                 Enable = _ => false
             };

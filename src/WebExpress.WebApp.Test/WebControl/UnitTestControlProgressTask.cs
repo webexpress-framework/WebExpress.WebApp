@@ -34,7 +34,7 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
-        /// Tests the TaskId property — the rendered host element must carry
+        /// Tests the TaskId property - the rendered host element must carry
         /// the configured task id as a <c>data-task</c> attribute so the
         /// JavaScript controller can filter incoming MessageQueue updates by
         /// task.
@@ -113,7 +113,7 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
-        /// Tests the Display property — verifies that the host element picks
+        /// Tests the Display property - verifies that the host element picks
         /// up the <c>d-none</c> CSS class when the control is rendered
         /// hidden.
         /// </summary>

@@ -7,36 +7,34 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Renders the host element for a threaded comment surface. The control
-    /// only emits the placeholder div; the actual toolbar, list and composer
-    /// are built by the client-side <c>webexpress.webapp.CommentCtrl</c>,
-    /// which talks to the configured REST endpoint to load, post, edit,
-    /// delete, like, pin and reply to comments.
+    /// Renders the host element for the minimalist new-comment composer.
+    /// The control only emits a placeholder div; the actual collapsed
+    /// trigger and expanded form (category select, WYSIWYG editor, labels
+    /// input, send / cancel) are built by the client-side
+    /// <c>webexpress.webapp.CommentComposerCtrl</c>, which POSTs the
+    /// authored comment to the configured REST endpoint and dispatches a
+    /// <c>COMMENT_ADDED_EVENT</c> so that any sibling
+    /// <see cref="ControlRestComment"/> on the same page picks it up.
     /// </summary>
-    public class ControlComment : Control
+    public class ControlRestCommentComposer : Control
     {
         /// <summary>
-        /// Gets or sets the REST URI that backs this comment surface. The
-        /// JS controller issues
-        /// <c>GET/POST {Uri}</c>,
-        /// <c>PUT/DELETE {Uri}/{id}</c>,
-        /// <c>POST {Uri}/{id}/reactions</c>,
-        /// <c>POST {Uri}/{id}/likes</c>,
-        /// <c>POST {Uri}/{id}/pin</c> and
-        /// <c>POST {Uri}/{id}/replies</c>.
+        /// Gets or sets the REST URI the composer POSTs new comments to.
+        /// The JS controller issues <c>POST {Uri}</c> with the payload
+        /// <c>{ body, category, labels }</c>.
         /// </summary>
         public Func<IRenderControlContext, IUri> RestUri { get; set; }
 
         /// <summary>
-        /// Gets or sets the URI used to resolve user records referenced by
-        /// authors, likes, reactions and replies. The JS controller calls
-        /// <c>{UsersUri}?ids=u1,u2,…</c> to warm its user cache.
+        /// Gets or sets the URI used to resolve user records for mentions
+        /// inside the rich-text editor.
         /// </summary>
         public Func<IRenderControlContext, IUri> UsersUri { get; set; }
 
         /// <summary>
-        /// Gets or sets the id of the currently signed-in user. It is used
-        /// to highlight the user's own comments, reactions and likes.
+        /// Gets or sets the id of the currently signed-in user. Forwarded
+        /// to the JS controller so the dispatched <c>COMMENT_ADDED_EVENT</c>
+        /// can be filtered per user.
         /// </summary>
         public Func<IRenderControlContext, string> CurrentUser { get; set; }
 
@@ -47,11 +45,18 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, IUri> ImageUploadUri { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether the surface is read-only.
-        /// When <see langword="true"/>, the composer and inline actions
-        /// (reply, like, edit, delete, react) are suppressed.
+        /// Gets or sets the id of the category that is pre-selected when
+        /// the composer is expanded. Defaults to <c>"general"</c> on the
+        /// client side when not provided.
         /// </summary>
-        public Func<IRenderControlContext, bool> Readonly { get; set; }
+        public Func<IRenderControlContext, string> DefaultCategory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the text shown in the collapsed single-line
+        /// trigger. Defaults to a localized "Write a comment…" when not
+        /// provided.
+        /// </summary>
+        public Func<IRenderControlContext, string> Placeholder { get; set; }
 
         /// <summary>
         /// Gets or sets an optional JSON string overriding the default
@@ -64,7 +69,7 @@ namespace WebExpress.WebApp.WebControl
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">Optional host element id.</param>
-        public ControlComment(string id = null)
+        public ControlRestCommentComposer(string id = null)
             : base(id)
         {
         }
@@ -86,12 +91,11 @@ namespace WebExpress.WebApp.WebControl
             var restUri = RestUri?.Invoke(renderContext)?.BindParameters(renderContext.Request);
             var usersUri = UsersUri?.Invoke(renderContext)?.BindParameters(renderContext.Request);
             var imageUploadUri = ImageUploadUri?.Invoke(renderContext)?.BindParameters(renderContext.Request);
-            var readOnly = Readonly?.Invoke(renderContext) ?? false;
 
             return new HtmlElementTextContentDiv()
             {
                 Id = Id,
-                Class = Css.Concatenate("wx-webapp-comment", GetClasses()),
+                Class = Css.Concatenate("wx-webapp-comment-composer", GetClasses()),
                 Style = GetStyles(),
                 Role = Role?.Invoke(renderContext)
             }
@@ -99,7 +103,8 @@ namespace WebExpress.WebApp.WebControl
                 .AddUserAttribute("data-users-uri", usersUri?.ToString())
                 .AddUserAttribute("data-current-user", CurrentUser?.Invoke(renderContext))
                 .AddUserAttribute("data-image-upload-uri", imageUploadUri?.ToString())
-                .AddUserAttribute("data-readonly", readOnly ? "true" : null)
+                .AddUserAttribute("data-default-category", DefaultCategory?.Invoke(renderContext))
+                .AddUserAttribute("data-placeholder", Placeholder?.Invoke(renderContext))
                 .AddUserAttribute("data-categories", Categories?.Invoke(renderContext));
         }
     }

@@ -16,6 +16,7 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/js/webexpress.webapp.chat.js")]
     [Asset("/assets/js/webexpress.webapp.collaborative.js")]
     [Asset("/assets/js/webexpress.webapp.comment.js")]
+    [Asset("/assets/js/webexpress.webapp.comment.composer.js")]
     [Asset("/assets/js/webexpress.webapp.dashboard.js")]
     [Asset("/assets/js/webexpress.webapp.dropdown.js")]
     [Asset("/assets/js/webexpress.webapp.input.selection.js")]

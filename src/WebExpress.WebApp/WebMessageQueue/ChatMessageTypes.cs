@@ -5,7 +5,7 @@ namespace WebExpress.WebApp.WebMessageQueue
     /// <summary>
     /// Wire-format message types used by the chat control to talk to the
     /// server over the existing MessageQueue WebSocket. The same prefix
-    /// covers both group chats and 1:1 direct conversations — the
+    /// covers both group chats and 1:1 direct conversations - the
     /// <c>channelId</c> on every payload selects the target conversation.
     /// </summary>
     public static class ChatMessageTypes

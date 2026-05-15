@@ -10,7 +10,7 @@ namespace WebExpress.WebApp.WebControl
     /// client (typically by a button click), displays a popup notification
     /// through the existing
     /// <c>webexpress.webapp.PopupNotificationCtrl</c> pipeline. The action
-    /// runs entirely on the client — no HTTP roundtrip or server
+    /// runs entirely on the client - no HTTP roundtrip or server
     /// notification is required.
     /// </summary>
     public class ActionPopup : IAction
