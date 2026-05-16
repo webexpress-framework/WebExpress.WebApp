@@ -45,7 +45,7 @@ webexpress.webapp.ObserverCtrl = class extends webexpress.webui.Ctrl {
         element.removeAttribute("data-users-uri");
         element.removeAttribute("data-max-visible");
         element.removeAttribute("data-readonly");
-        element.classList.add("wx-webapp-observer");
+        element.classList.add("wx-observer");
 
         this._buildDom();
         this._attachEventHandlers();
@@ -57,27 +57,27 @@ webexpress.webapp.ObserverCtrl = class extends webexpress.webui.Ctrl {
      */
     _buildDom() {
         this._row = document.createElement("div");
-        this._row.className = "wx-webapp-observer-row";
+        this._row.className = "wx-observer-row";
 
         this._addBtn = document.createElement("button");
         this._addBtn.type = "button";
-        this._addBtn.className = "wx-webapp-observer-add";
+        this._addBtn.className = "wx-observer-add";
         this._addBtn.title = this._i18n("webexpress.webapp:observer.add", "Add observer");
         this._addBtn.setAttribute("aria-label", this._addBtn.title);
         this._addBtn.textContent = "+";
 
         this._dropdown = document.createElement("div");
-        this._dropdown.className = "wx-webapp-observer-dropdown";
+        this._dropdown.className = "wx-observer-dropdown";
         this._dropdown.style.display = "none";
 
         this._searchInput = document.createElement("input");
         this._searchInput.type = "text";
-        this._searchInput.className = "wx-webapp-observer-search";
+        this._searchInput.className = "wx-observer-search";
         this._searchInput.placeholder = this._i18n("webexpress.webapp:observer.search.placeholder", "Search person…");
         this._searchInput.autocomplete = "off";
 
         this._resultsList = document.createElement("div");
-        this._resultsList.className = "wx-webapp-observer-results";
+        this._resultsList.className = "wx-observer-results";
 
         this._dropdown.appendChild(this._searchInput);
         this._dropdown.appendChild(this._resultsList);
@@ -158,7 +158,7 @@ webexpress.webapp.ObserverCtrl = class extends webexpress.webui.Ctrl {
         }
         if (overflow > 0) {
             const more = document.createElement("span");
-            more.className = "wx-webapp-observer-more";
+            more.className = "wx-observer-more";
             more.textContent = "+" + overflow;
             more.title = this._observers.slice(this._maxVisible).map(u => u.name).join(", ");
             this._row.appendChild(more);
@@ -174,7 +174,7 @@ webexpress.webapp.ObserverCtrl = class extends webexpress.webui.Ctrl {
     _makeAvatar(user) {
         const av = document.createElement("button");
         av.type = "button";
-        av.className = "wx-webapp-observer-avatar";
+        av.className = "wx-observer-avatar";
         av.title = user.name + (user.team ? " · " + user.team : "");
         av.setAttribute("aria-label", av.title);
         av.style.background = user.color || "#888";
@@ -242,7 +242,7 @@ webexpress.webapp.ObserverCtrl = class extends webexpress.webui.Ctrl {
         this._resultsList.replaceChildren();
         if (candidates.length === 0) {
             const empty = document.createElement("div");
-            empty.className = "wx-webapp-observer-empty";
+            empty.className = "wx-observer-empty";
             empty.textContent = this._i18n("webexpress.webapp:observer.no.matches", "No matches");
             this._resultsList.appendChild(empty);
             return;
@@ -250,12 +250,12 @@ webexpress.webapp.ObserverCtrl = class extends webexpress.webui.Ctrl {
         for (const u of candidates) {
             const row = document.createElement("button");
             row.type = "button";
-            row.className = "wx-webapp-observer-result";
+            row.className = "wx-observer-result";
             row.innerHTML = `
-                <span class="wx-webapp-observer-result-avatar" style="background:${u.color || "#888"}">${u.initials || (u.name || "?").slice(0, 2).toUpperCase()}</span>
-                <span class="wx-webapp-observer-result-body">
-                    <span class="wx-webapp-observer-result-name">${this._esc(u.name)}</span>
-                    ${u.team ? `<span class="wx-webapp-observer-result-team">${this._esc(u.team)}</span>` : ""}
+                <span class="wx-observer-result-avatar" style="background:${u.color || "#888"}">${u.initials || (u.name || "?").slice(0, 2).toUpperCase()}</span>
+                <span class="wx-observer-result-body">
+                    <span class="wx-observer-result-name">${this._esc(u.name)}</span>
+                    ${u.team ? `<span class="wx-observer-result-team">${this._esc(u.team)}</span>` : ""}
                 </span>
             `;
             row.addEventListener("click", () => this._add(u));

@@ -1,4 +1,4 @@
-wx-webapp-observer {
+wx-observer {
     display: inline-flex;
     align-items: center;
     flex-wrap: wrap;
@@ -6,14 +6,14 @@ wx-webapp-observer {
     position: relative;
 }
  
-.wx-webapp-observer-row {
+.wx-observer-row {
     display: inline-flex;
     align-items: center;
     gap: 6px;
     flex-wrap: wrap;
 }
  
-.wx-webapp-observer-avatar {
+.wx-observer-avatar {
     width: 24px;
     height: 24px;
     border-radius: 50%;
@@ -29,16 +29,16 @@ wx-webapp-observer {
     transition: transform 0.1s, box-shadow 0.1s;
 }
  
-.wx-webapp-observer-avatar:hover {
+.wx-observer-avatar:hover {
     transform: translateY(-1px);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
 }
  
-.wx-webapp-observer-avatar:disabled {
+.wx-observer-avatar:disabled {
     cursor: default;
 }
  
-.wx-webapp-observer-more {
+.wx-observer-more {
     font-size: 11px;
     color: var(--wx-webapp-text-3);
     background: var(--wx-webapp-surface-2);
@@ -48,7 +48,7 @@ wx-webapp-observer {
     font-family: var(--wx-webapp-font-mono);
 }
  
-.wx-webapp-observer-add {
+.wx-observer-add {
     width: 24px;
     height: 24px;
     border-radius: 50%;
@@ -64,12 +64,12 @@ wx-webapp-observer {
     padding: 0;
 }
  
-.wx-webapp-observer-add:hover {
+.wx-observer-add:hover {
     border-color: var(--wx-webapp-primary);
     color: var(--wx-webapp-primary);
 }
- 
-.wx-webapp-observer-dropdown {
+
+.wx-observer-dropdown {
     position: absolute;
     top: 100%;
     left: 0;
@@ -77,6 +77,7 @@ wx-webapp-observer {
     width: 280px;
     max-height: 320px;
     overflow: hidden;
+    background: var(--bs-body-bg);
     border: 1px solid var(--wx-webapp-border);
     border-radius: var(--wx-webapp-r-md);
     box-shadow: 0 8px 28px rgba(20, 24, 36, 0.12);
@@ -85,7 +86,7 @@ wx-webapp-observer {
     flex-direction: column;
 }
  
-.wx-webapp-observer-search {
+.wx-observer-search {
     width: 100%;
     padding: 8px 10px;
     border: 0;
@@ -95,13 +96,13 @@ wx-webapp-observer {
     outline: none;
 }
  
-.wx-webapp-observer-results {
+.wx-observer-results {
     overflow-y: auto;
     flex: 1;
     max-height: 260px;
 }
  
-.wx-webapp-observer-result {
+.wx-observer-result {
     display: grid;
     grid-template-columns: 28px 1fr;
     gap: 10px;
@@ -116,15 +117,15 @@ wx-webapp-observer {
     align-items: center;
 }
  
-.wx-webapp-observer-result:last-child {
+.wx-observer-result:last-child {
     border-bottom: 0;
 }
  
-.wx-webapp-observer-result:hover {
+.wx-observer-result:hover {
     background: var(--wx-webapp-surface-2);
 }
  
-.wx-webapp-observer-result-avatar {
+.wx-observer-result-avatar {
     width: 24px;
     height: 24px;
     border-radius: 50%;
@@ -136,25 +137,25 @@ wx-webapp-observer {
     color: #1d2230;
 }
  
-.wx-webapp-observer-result-body {
+.wx-observer-result-body {
     display: flex;
     flex-direction: column;
     gap: 1px;
     min-width: 0;
 }
  
-.wx-webapp-observer-result-name {
+.wx-observer-result-name {
     font-size: 13px;
     color: var(--wx-webapp-text);
     font-weight: 500;
 }
  
-.wx-webapp-observer-result-team {
+.wx-observer-result-team {
     font-size: 11px;
     color: var(--wx-webapp-text-3);
 }
  
-.wx-webapp-observer-empty {
+.wx-observer-empty {
     padding: 16px;
     text-align: center;
     color: var(--wx-webapp-text-3);
