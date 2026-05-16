@@ -51,9 +51,9 @@ namespace WebExpress.WebApp.WebPackage
 
                 try
                 {
-                    var targetPath = Path.Combine(_httpServerContext.PackagePath, Path.GetFileName(fileName));
+                    var targetPath = Path.Combine(_httpServerContext?.PackagePath, Path.GetFileName(fileName));
 
-                    Directory.CreateDirectory(_httpServerContext.PackagePath);
+                    Directory.CreateDirectory(_httpServerContext?.PackagePath);
                     File.WriteAllBytes(targetPath, data);
 
                     Invoke(_componentHub?.PackageManager, "Scan");
@@ -65,7 +65,7 @@ namespace WebExpress.WebApp.WebPackage
                 }
                 catch (Exception ex)
                 {
-                    _httpServerContext.Log?.Exception(ex);
+                    _httpServerContext?.Log?.Exception(ex);
                     return PluginPackageOperationResult.Failed
                     (
                         I18N.Translate("webexpress.webapp:setting.plugin.operation.error.internal")
@@ -101,7 +101,7 @@ namespace WebExpress.WebApp.WebPackage
 
                 try
                 {
-                    var targetPath = Path.Combine(_httpServerContext.PackagePath, package.File);
+                    var targetPath = Path.Combine(_httpServerContext?.PackagePath, package.File);
                     File.WriteAllBytes(targetPath, data);
 
                     Invoke(_componentHub?.PackageManager, "Scan");
@@ -113,7 +113,7 @@ namespace WebExpress.WebApp.WebPackage
                 }
                 catch (Exception ex)
                 {
-                    _httpServerContext.Log?.Exception(ex);
+                    _httpServerContext?.Log?.Exception(ex);
                     return PluginPackageOperationResult.Failed
                     (
                         I18N.Translate("webexpress.webapp:setting.plugin.operation.error.internal")
@@ -155,7 +155,7 @@ namespace WebExpress.WebApp.WebPackage
                 try
                 {
                     var packageManager = _componentHub?.PackageManager;
-                    var packageFilePath = Path.Combine(_httpServerContext.PackagePath, package.File);
+                    var packageFilePath = Path.Combine(_httpServerContext?.PackagePath, package.File);
                     var metadata = Invoke(packageManager, "LoadPackage", packageFilePath) as PackageCatalogItem;
 
                     package.Id = metadata?.Id ?? package.Id;
@@ -178,7 +178,7 @@ namespace WebExpress.WebApp.WebPackage
                     package.Id = previousId;
                     package.Metadata = previousMetadata;
                     package.State = previousState;
-                    _httpServerContext.Log?.Exception(ex);
+                    _httpServerContext?.Log?.Exception(ex);
                     return PluginPackageOperationResult.Failed
                     (
                         I18N.Translate("webexpress.webapp:setting.plugin.operation.error.internal")
@@ -232,7 +232,7 @@ namespace WebExpress.WebApp.WebPackage
                 }
                 catch (Exception ex)
                 {
-                    _httpServerContext.Log?.Exception(ex);
+                    _httpServerContext?.Log?.Exception(ex);
                     return PluginPackageOperationResult.Failed
                     (
                         I18N.Translate("webexpress.webapp:setting.plugin.operation.error.internal")
@@ -270,7 +270,7 @@ namespace WebExpress.WebApp.WebPackage
 
                     Invoke(packageManager, "RemoveExtractedDirectory", package);
 
-                    var packageFilePath = Path.Combine(_httpServerContext.PackagePath, package.File);
+                    var packageFilePath = Path.Combine(_httpServerContext?.PackagePath, package.File);
                     if (File.Exists(packageFilePath))
                     {
                         File.Delete(packageFilePath);
@@ -289,7 +289,7 @@ namespace WebExpress.WebApp.WebPackage
                 }
                 catch (Exception ex)
                 {
-                    _httpServerContext.Log?.Exception(ex);
+                    _httpServerContext?.Log?.Exception(ex);
                     return PluginPackageOperationResult.Failed
                     (
                         I18N.Translate("webexpress.webapp:setting.plugin.operation.error.internal")

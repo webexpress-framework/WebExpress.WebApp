@@ -36,7 +36,7 @@ namespace WebExpress.WebApp.WebIndex
                 Remove(pluginContext);
             };
 
-            _httpServerContext.Log?.Debug
+            _httpServerContext?.Log?.Debug
             (
                 I18N.Translate("webexpress.webapp:indexmanager.initialization")
             );
