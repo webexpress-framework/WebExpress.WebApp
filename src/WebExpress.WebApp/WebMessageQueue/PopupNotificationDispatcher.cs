@@ -117,7 +117,7 @@ namespace WebExpress.WebApp.WebMessageQueue
                 return;
             }
 
-            _notificationManager = _componentHub.GetComponentManager<NotificationManager>();
+            _notificationManager = _componentHub?.GetComponentManager<NotificationManager>();
             if (_notificationManager == null)
             {
                 return;

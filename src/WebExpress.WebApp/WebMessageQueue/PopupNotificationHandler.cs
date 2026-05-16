@@ -64,7 +64,7 @@ namespace WebExpress.WebApp.WebMessageQueue
                 return Task.CompletedTask;
             }
 
-            var manager = _componentHub.GetComponentManager<NotificationManager>();
+            var manager = _componentHub?.GetComponentManager<NotificationManager>();
             manager?.RemoveNotifications(notificationId);
 
             return Task.CompletedTask;

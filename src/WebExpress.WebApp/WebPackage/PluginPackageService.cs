@@ -56,7 +56,7 @@ namespace WebExpress.WebApp.WebPackage
                     Directory.CreateDirectory(_httpServerContext.PackagePath);
                     File.WriteAllBytes(targetPath, data);
 
-                    Invoke(_componentHub.PackageManager, "Scan");
+                    Invoke(_componentHub?.PackageManager, "Scan");
 
                     return PluginPackageOperationResult.Ok
                     (
@@ -104,7 +104,7 @@ namespace WebExpress.WebApp.WebPackage
                     var targetPath = Path.Combine(_httpServerContext.PackagePath, package.File);
                     File.WriteAllBytes(targetPath, data);
 
-                    Invoke(_componentHub.PackageManager, "Scan");
+                    Invoke(_componentHub?.PackageManager, "Scan");
 
                     return PluginPackageOperationResult.Ok
                     (
@@ -154,7 +154,7 @@ namespace WebExpress.WebApp.WebPackage
 
                 try
                 {
-                    var packageManager = _componentHub.PackageManager;
+                    var packageManager = _componentHub?.PackageManager;
                     var packageFilePath = Path.Combine(_httpServerContext.PackagePath, package.File);
                     var metadata = Invoke(packageManager, "LoadPackage", packageFilePath) as PackageCatalogItem;
 
@@ -166,7 +166,7 @@ namespace WebExpress.WebApp.WebPackage
                     Invoke(packageManager, "RegisterPackage", package);
                     Invoke(packageManager, "BootPackage", package);
                     Invoke(packageManager, "SaveCatalog");
-                    _componentHub.SitemapManager.Refresh();
+                    _componentHub?.SitemapManager.Refresh();
 
                     return PluginPackageOperationResult.Ok
                     (
@@ -215,7 +215,7 @@ namespace WebExpress.WebApp.WebPackage
 
                 try
                 {
-                    var packageManager = _componentHub.PackageManager;
+                    var packageManager = _componentHub?.PackageManager;
 
                     Invoke(packageManager, "DeactivateAndUnregisterPackage", package);
                     Invoke(packageManager, "RemoveExtractedDirectory", package);
@@ -223,7 +223,7 @@ namespace WebExpress.WebApp.WebPackage
                     package.State = PackageCatalogeItemState.Disable;
 
                     Invoke(packageManager, "SaveCatalog");
-                    _componentHub.SitemapManager.Refresh();
+                    _componentHub?.SitemapManager.Refresh();
 
                     return PluginPackageOperationResult.Ok
                     (
@@ -261,7 +261,7 @@ namespace WebExpress.WebApp.WebPackage
 
                 try
                 {
-                    var packageManager = _componentHub.PackageManager;
+                    var packageManager = _componentHub?.PackageManager;
 
                     if (package.State == PackageCatalogeItemState.Active)
                     {
@@ -277,10 +277,10 @@ namespace WebExpress.WebApp.WebPackage
                     }
 
                     Invoke(packageManager, "OnRemovePackage", package);
-                    _componentHub.PackageManager.Catalog.Packages.Remove(package);
+                    _componentHub?.PackageManager.Catalog.Packages.Remove(package);
 
                     Invoke(packageManager, "SaveCatalog");
-                    _componentHub.SitemapManager.Refresh();
+                    _componentHub?.SitemapManager.Refresh();
 
                     return PluginPackageOperationResult.Ok
                     (

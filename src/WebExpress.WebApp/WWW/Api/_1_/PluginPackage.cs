@@ -41,7 +41,7 @@ namespace WebExpress.WebApp.WWW.Api.V1
         [Method(RequestMethod.GET)]
         public Response Retrieve(Request request)
         {
-            var packages = _componentHub.PackageManager.Catalog.Packages
+            var packages = _componentHub?.PackageManager.Catalog.Packages
                 .Where(x => x is not null)
                 .OrderBy(x => x.Id)
                 .Select(x => new

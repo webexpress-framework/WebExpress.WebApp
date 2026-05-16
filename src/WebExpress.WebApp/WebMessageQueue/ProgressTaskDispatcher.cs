@@ -93,7 +93,7 @@ namespace WebExpress.WebApp.WebMessageQueue
                 return;
             }
 
-            _taskManager = _componentHub.TaskManager;
+            _taskManager = _componentHub?.TaskManager;
             if (_taskManager == null)
             {
                 return;

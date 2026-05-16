@@ -89,7 +89,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
             packageTable.AddColumn(I18N.Translate(renderContext, "webexpress.webapp:setting.plugin.state.label"));
             packageTable.AddColumn(I18N.Translate(renderContext, "webexpress.webapp:setting.plugin.actions.label"));
 
-            foreach (var package in _componentHub.PackageManager.Catalog.Packages.Where(x => x is not null).OrderBy(x => x.Id))
+            foreach (var package in _componentHub?.PackageManager.Catalog.Packages.Where(x => x is not null).OrderBy(x => x.Id))
             {
                 var pluginContext = package.Plugins.FirstOrDefault();
                 var packageName = pluginContext?.PluginName ?? package.Id;
