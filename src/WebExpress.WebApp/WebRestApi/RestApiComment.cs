@@ -19,6 +19,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// <c>webexpress.webapp.CommentCtrl</c>:
     /// <list type="bullet">
     ///   <item><c>GET    {base}</c> → list of comments</item>
+    ///   <item><c>GET    {base}/categories</c> → list of categories</item>
     ///   <item><c>POST   {base}</c> → create comment</item>
     ///   <item><c>PUT    {base}/{id}</c> → update comment</item>
     ///   <item><c>DELETE {base}/{id}</c> → delete comment</item>
@@ -54,11 +55,15 @@ namespace WebExpress.WebApp.WebRestApi
         {
             try
             {
-                //var segments = GetRelativeSegments(request);
-                //if (segments.Count != 0)
-                //{
-                //    return new ResponseNotFound();
-                //}
+                var segments = GetRelativeSegments(request);
+
+                // GET {base}/categories — expose the configured category set
+                if (segments.Count == 1 && Matches(segments[0], "categories"))
+                {
+                    using var categoryContext = CreateContext();
+                    var categories = RetrieveCategories(categoryContext, request) ?? [];
+                    return Json(categories);
+                }
 
                 var search = request.GetParameter("q")?.Value ?? string.Empty;
                 var wql = request.GetParameter("wql")?.Value;
@@ -250,6 +255,35 @@ namespace WebExpress.WebApp.WebRestApi
         protected virtual IQueryContext CreateContext()
         {
             return new DefaultQueryContext();
+        }
+
+        /// <summary>
+        /// Returns the set of comment categories that the client-side
+        /// controller should expose in its filter and edit-form pickers.
+        /// The default implementation returns the six built-in categories
+        /// (<c>general</c>, <c>question</c>, <c>hint</c>, <c>status</c>,
+        /// <c>decision</c>, <c>solution</c>) so that derived endpoints get
+        /// a usable category set out of the box. Override to ship a
+        /// domain-specific set (e.g. <c>impl</c> / <c>risk</c> /
+        /// <c>signoff</c> for change requests).
+        /// </summary>
+        /// <param name="context">
+        /// The context in which the query is executed, providing additional
+        /// information or constraints. Cannot be null.
+        /// </param>
+        /// <param name="request">The incoming request.</param>
+        /// <returns>The categories to expose to the client.</returns>
+        protected virtual IEnumerable<RestApiCommentCategory> RetrieveCategories(IQueryContext context, IRequest request)
+        {
+            return
+            [
+                new RestApiCommentCategory { Id = "general",  I18n = "webexpress.webapp:comment.cat.general",  Color = "var(--wx-webapp-cat-general,  #6b7280)", Background = "var(--wx-webapp-cat-general-bg,  #f3f4f6)" },
+                new RestApiCommentCategory { Id = "question", I18n = "webexpress.webapp:comment.cat.question", Color = "var(--wx-webapp-cat-question, #b45309)", Background = "var(--wx-webapp-cat-question-bg, #fef3c7)" },
+                new RestApiCommentCategory { Id = "hint",     I18n = "webexpress.webapp:comment.cat.hint",     Color = "var(--wx-webapp-cat-hint,     #1e40af)", Background = "var(--wx-webapp-cat-hint-bg,     #dbeafe)" },
+                new RestApiCommentCategory { Id = "status",   I18n = "webexpress.webapp:comment.cat.status",   Color = "var(--wx-webapp-cat-status,   #6d28d9)", Background = "var(--wx-webapp-cat-status-bg,   #ede9fe)" },
+                new RestApiCommentCategory { Id = "decision", I18n = "webexpress.webapp:comment.cat.decision", Color = "var(--wx-webapp-cat-decision, #0e7490)", Background = "var(--wx-webapp-cat-decision-bg, #cffafe)" },
+                new RestApiCommentCategory { Id = "solution", I18n = "webexpress.webapp:comment.cat.solution", Color = "var(--wx-webapp-cat-solution, #047857)", Background = "var(--wx-webapp-cat-solution-bg, #d1fae5)" }
+            ];
         }
 
         /// <summary>

@@ -40,14 +40,17 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webui.Ctrl {
         this._placeholder = element.dataset.placeholder
             || this._i18n("webexpress.webapp:comment.composer.trigger", "Write a comment…");
 
+        // categories are sourced from the REST API ({uri}/categories) unless
+        // a static override is supplied via the data-categories attribute.
+        this._categoriesPreset = false;
+        this._categories = {};
         if (element.dataset.categories) {
             try {
-                this._categories = JSON.parse(element.dataset.categories);
+                this._categories = this._normalizeCategories(JSON.parse(element.dataset.categories));
+                this._categoriesPreset = true;
             } catch (_) {
-                this._categories = webexpress.webapp.CommentCtrl?.CATEGORIES ?? {};
+                this._categoriesPreset = false;
             }
-        } else {
-            this._categories = webexpress.webapp.CommentCtrl?.CATEGORIES ?? {};
         }
 
         this._editorRef = null;
@@ -67,6 +70,74 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webui.Ctrl {
 
         this._buildDom();
         this._attachEventHandlers();
+        if (!this._categoriesPreset) {
+            void this._loadCategories();
+        }
+    }
+
+    /**
+     * Loads the categories from the REST API and refreshes the picker.
+     * Failures fall back to whatever categories were already known (often
+     * none) so that the composer remains usable.
+     */
+    async _loadCategories() {
+        if (!this._uri) {
+            return;
+        }
+        try {
+            const sep = this._uri.endsWith("/") ? "" : "/";
+            const url = this._uri + sep + "categories";
+            const res = await fetch(url, { headers: { "Accept": "application/json" } });
+            if (!res.ok) throw new Error(res.statusText);
+            this._categories = this._normalizeCategories(await res.json());
+            this._rebuildCategoryOptions();
+        } catch (e) {
+            console.warn("CommentComposerCtrl: categories load failed", e);
+        }
+    }
+
+    /**
+     * Accepts either an array or an object keyed by category id and returns
+     * the canonical object form keyed by id.
+     * @param {Array|Object} input
+     * @returns {Object<string, Object>}
+     */
+    _normalizeCategories(input) {
+        if (!input) {
+            return {};
+        }
+        if (Array.isArray(input)) {
+            const obj = {};
+            for (const c of input) {
+                if (c && c.id) {
+                    obj[c.id] = c;
+                }
+            }
+            return obj;
+        }
+        return input;
+    }
+
+    /**
+     * Repopulates the category select after categories have loaded.
+     */
+    _rebuildCategoryOptions() {
+        if (!this._catSelect) {
+            return;
+        }
+        const previous = this._catSelect.value;
+        this._catSelect.replaceChildren();
+        for (const cat of Object.values(this._categories)) {
+            const opt = document.createElement("option");
+            opt.value = cat.id;
+            opt.textContent = this._i18n(cat.i18n, cat.id);
+            this._catSelect.appendChild(opt);
+        }
+        if (previous && this._categories[previous]) {
+            this._catSelect.value = previous;
+        } else if (this._categories[this._defaultCategory]) {
+            this._catSelect.value = this._defaultCategory;
+        }
     }
 
     /**
