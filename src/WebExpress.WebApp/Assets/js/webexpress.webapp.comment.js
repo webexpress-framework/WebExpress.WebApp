@@ -120,7 +120,10 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
         // state
         this._comments = [];
         this._sortBy = "date";   // "date" | "likes"
-        this._sortDir = "desc";  // "asc" | "desc"
+        const persistedSortDir = this._getCookie("wx_comment_sort_dir");
+        this._sortDir = persistedSortDir === "asc" || persistedSortDir === "desc"
+            ? persistedSortDir
+            : "desc";  // "asc" | "desc"
         this._filterCat = "all";
         this._editingId = null;  // id of comment currently in edit-mode
         this._editorEditRef = null; // EditorCtrl instance while editing
@@ -317,6 +320,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
         });
         this._sortDirBtn.addEventListener("click", () => {
             this._sortDir = this._sortDir === "asc" ? "desc" : "asc";
+            this._setCookie("wx_comment_sort_dir", this._sortDir, 365);
             this._updateSortDirBtn();
             this._renderList();
         });
@@ -433,8 +437,14 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
 
     /**
      * Renders the comment list according to the current filter and sort.
+     * Preserves the page scroll position across the rebuild so user actions
+     * (like, pin, collapse, edit, reply, …) do not yank the viewport back to
+     * the top.
      */
     _renderList() {
+        const scrollEl = document.scrollingElement || document.documentElement;
+        const savedScroll = scrollEl ? scrollEl.scrollTop : 0;
+
         this._list.replaceChildren();
 
         let arr = this._comments.slice();
@@ -462,10 +472,22 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
                 ? this._i18n("webexpress.webapp:comment.empty", "No comments yet")
                 : this._i18n("webexpress.webapp:comment.empty.filtered", "No comments in this category");
             this._list.appendChild(empty);
-            return;
+        } else {
+            for (const c of arr) {
+                this._list.appendChild(this._renderComment(c));
+            }
         }
-        for (const c of arr) {
-            this._list.appendChild(this._renderComment(c));
+
+        // restore the viewport — both immediately (covers the common case) and
+        // on the next frame to defeat any browser-side scroll adjustments that
+        // happen after layout settles.
+        if (scrollEl) {
+            scrollEl.scrollTop = savedScroll;
+            requestAnimationFrame(() => {
+                if (scrollEl.scrollTop !== savedScroll) {
+                    scrollEl.scrollTop = savedScroll;
+                }
+            });
         }
     }
 
@@ -486,21 +508,21 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
 
         const wrap = document.createElement("article");
         wrap.className = "wx-comment-item"
-            + (comment.pinned ? " wx-comment-item--pinned" : "")
-            + (collapsed ? " wx-comment-item--collapsed" : "")
-            + (isMe ? " wx-comment-item--me" : "");
+            + (comment.pinned ? " wx-comment-item-pinned" : "")
+            + (collapsed ? " wx-comment-item-collapsed" : "")
+            + (isMe ? " wx-comment-item-me" : "");
         wrap.dataset.commentId = comment.id;
 
         // header
         const head = document.createElement("header");
         head.className = "wx-comment-head";
         head.innerHTML = `
-            <span class="wx-comment-avatar wx-comment-avatar--lg" style="background:${author.color || "#888"}" title="${this._esc(author.name)}">${this._esc(author.initials || "?")}</span>
+            <span class="wx-comment-avatar wx-comment-avatar-lg" style="background:${author.color || "#888"}" title="${this._esc(author.name)}">${this._esc(author.initials || "?")}</span>
             <div class="wx-comment-head-main">
                 <div class="wx-comment-author-row">
                     <span class="wx-comment-author">${this._esc(author.name)}</span>
                     ${author.team ? `<span class="wx-comment-team">· ${this._esc(author.team)}</span>` : ""}
-                    <span class="wx-comment-when${comment.edited ? " wx-comment-when--edited" : ""}">${this._esc(comment.when)}</span>
+                    <span class="wx-comment-when${comment.edited ? " wx-comment-when-edited" : ""}">${this._esc(comment.when)}</span>
                     ${comment.pinned ? `<span class="wx-comment-pinned"><i class="${this._iconClass("pin")}" aria-hidden="true"></i> ${this._esc(this._i18n("webexpress.webapp:comment.pinned", "Pinned"))}</span>` : ""}
                 </div>
                 <div class="wx-comment-labels">
@@ -517,7 +539,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
         const likeBtn = this._iconBtn(this._iconClass(liked ? "likeFilled" : "likeOutline"), liked
             ? this._i18n("webexpress.webapp:comment.like.remove", "Unlike")
             : this._i18n("webexpress.webapp:comment.like", "Like"));
-        likeBtn.classList.toggle("wx-comment-action--liked", liked);
+        likeBtn.classList.toggle("wx-comment-action-liked", liked);
         const likeCount = document.createElement("span");
         likeCount.className = "wx-comment-like-count";
         likeCount.textContent = String((comment.likes || []).length);
@@ -528,7 +550,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
         const pinBtn = this._iconBtn(this._iconClass("pin"), comment.pinned
             ? this._i18n("webexpress.webapp:comment.pin.remove", "Unpin")
             : this._i18n("webexpress.webapp:comment.pin", "Pin"));
-        pinBtn.classList.toggle("wx-comment-action--pinned", !!comment.pinned);
+        pinBtn.classList.toggle("wx-comment-action-pinned", !!comment.pinned);
         pinBtn.addEventListener("click", () => this._togglePin(comment));
         actions.appendChild(pinBtn);
 
@@ -649,7 +671,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
             const names = users.map(uid => this._user(uid).name).join(", ");
             const b = document.createElement("button");
             b.type = "button";
-            b.className = "wx-comment-reaction" + (mine ? " wx-comment-reaction--mine" : "");
+            b.className = "wx-comment-reaction" + (mine ? " wx-comment-reaction-mine" : "");
             b.title = names + (mine ? " · " + this._i18n("webexpress.webapp:comment.reaction.you-too", "and you") : "");
             b.innerHTML = `<span class="wx-comment-reaction-emoji">${emoji}</span> ${users.length}`;
             b.addEventListener("click", () => this._toggleReaction(comment, emoji));
@@ -712,7 +734,12 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
         wrap.className = "wx-comment-edit";
 
         const editorHost = document.createElement("div");
-        editorHost.className = "wx-webui-editor wx-comment-edit-editor";
+        // intentionally do NOT add the auto-registered "wx-webui-editor"
+        // class here — the controller registry would otherwise instantiate
+        // an EditorCtrl on insertion AND our queueMicrotask call below
+        // would instantiate a second one, producing a nested editor inside
+        // the edit pane.
+        editorHost.className = "wx-comment-edit-editor";
         editorHost.innerHTML = comment.body || "";
 
         const actions = document.createElement("div");
@@ -737,7 +764,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
         const saveBtn = document.createElement("button");
         saveBtn.type = "button";
         saveBtn.className = "btn btn-primary btn-sm";
-        saveBtn.textContent = this._i18n("save", "Save");
+        saveBtn.textContent = this._i18n("webexpress.webui:save", "Save");
         saveBtn.addEventListener("click", () => {
             const newBody = this._editorEditRef ? this._editorEditRef.value : editorHost.innerHTML;
             this._saveEdit(comment, {
@@ -793,7 +820,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
             const row = document.createElement("div");
             row.className = "wx-comment-reply";
             row.innerHTML = `
-                <span class="wx-comment-avatar wx-comment-avatar--sm" style="background:${ru.color || "#888"}">${this._esc(ru.initials || "?")}</span>
+                <span class="wx-comment-avatar wx-comment-avatar-sm" style="background:${ru.color || "#888"}">${this._esc(ru.initials || "?")}</span>
                 <div>
                     <div class="wx-comment-reply-head">
                         <span class="wx-comment-reply-author">${this._esc(ru.name)}</span>
@@ -1020,6 +1047,29 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
      */
     _esc(s) {
         return String(s ?? "").replace(/[<>"&]/g, c => ({ "<": "&lt;", ">": "&gt;", '"': "&quot;", "&": "&amp;" }[c]));
+    }
+
+    /**
+     * Writes a cookie with the specified name and value.
+     * @param {string} name - The cookie name.
+     * @param {string} value - The cookie value (will be URI-encoded).
+     * @param {number} [days] - Lifetime in days; omit for a session cookie.
+     */
+    _setCookie(name, value, days) {
+        const expires = days
+            ? "; expires=" + new Date(Date.now() + days * 864e5).toUTCString()
+            : "";
+        document.cookie = name + "=" + encodeURIComponent(value) + expires + "; path=/; SameSite=Strict";
+    }
+
+    /**
+     * Reads a cookie by name.
+     * @param {string} name - The cookie name.
+     * @returns {string|null} The decoded value, or null when not set.
+     */
+    _getCookie(name) {
+        const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]*)"));
+        return match ? decodeURIComponent(match[2]) : null;
     }
 
     /**

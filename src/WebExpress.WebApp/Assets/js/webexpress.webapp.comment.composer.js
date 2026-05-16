@@ -65,8 +65,8 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webui.Ctrl {
         element.removeAttribute("data-default-category");
         element.removeAttribute("data-placeholder");
         element.removeAttribute("data-categories");
-        element.classList.add("wx-webapp-comment-composer");
-        element.classList.add("wx-webapp-comment-composer--collapsed");
+        element.classList.add("wx-comment-composer");
+        element.classList.add("wx-comment-composer-collapsed");
 
         this._buildDom();
         this._attachEventHandlers();
@@ -147,23 +147,23 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webui.Ctrl {
         // collapsed trigger
         this._trigger = document.createElement("button");
         this._trigger.type = "button";
-        this._trigger.className = "wx-webapp-comment-composer-trigger";
+        this._trigger.className = "wx-comment-composer-trigger";
         this._trigger.textContent = this._placeholder;
         this._element.appendChild(this._trigger);
 
         // expanded form
         this._form = document.createElement("div");
-        this._form.className = "wx-webapp-comment-composer-form";
+        this._form.className = "wx-comment-composer-form";
 
         const head = document.createElement("div");
-        head.className = "wx-webapp-comment-composer-head";
+        head.className = "wx-comment-composer-head";
 
         const title = document.createElement("strong");
-        title.className = "wx-webapp-comment-composer-title";
+        title.className = "wx-comment-composer-title";
         title.textContent = this._i18n("webexpress.webapp:comment.compose.head", "Write a new comment");
 
         this._catSelect = document.createElement("select");
-        this._catSelect.className = "wx-webapp-comment-composer-cat";
+        this._catSelect.className = "wx-comment-composer-cat";
         for (const cat of Object.values(this._categories)) {
             const opt = document.createElement("option");
             opt.value = cat.id;
@@ -177,9 +177,13 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webui.Ctrl {
         head.appendChild(title);
         head.appendChild(this._catSelect);
 
-        // editor host
+        // editor host — intentionally without the auto-registered
+        // "wx-webui-editor" class so that only our explicit
+        // _ensureEditor() instantiates an EditorCtrl. Adding the class
+        // would let the controller registry create a second editor on
+        // insertion, nesting it inside the composer.
         this._editorHost = document.createElement("div");
-        this._editorHost.className = "wx-webui-editor wx-webapp-comment-composer-editor";
+        this._editorHost.className = "wx-comment-composer-editor";
         this._editorHost.dataset.placeholder = this._i18n("webexpress.webapp:comment.compose.placeholder", "Write a comment…");
         if (this._imageUploadUri) {
             this._editorHost.dataset.imageUploadUri = this._imageUploadUri;
@@ -190,25 +194,25 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webui.Ctrl {
 
         // footer
         const foot = document.createElement("div");
-        foot.className = "wx-webapp-comment-composer-foot";
+        foot.className = "wx-comment-composer-foot";
 
         this._labelsInput = document.createElement("input");
         this._labelsInput.type = "text";
-        this._labelsInput.className = "wx-webapp-comment-composer-labels";
+        this._labelsInput.className = "wx-comment-composer-labels";
         this._labelsInput.placeholder = this._i18n("webexpress.webapp:comment.labels.placeholder", "Labels (comma-separated)");
 
         const hint = document.createElement("span");
-        hint.className = "wx-webapp-comment-composer-hint";
+        hint.className = "wx-comment-composer-hint";
         hint.textContent = this._i18n("webexpress.webapp:comment.compose.hint", "Ctrl + Enter to send");
 
         this._submitBtn = document.createElement("button");
         this._submitBtn.type = "button";
-        this._submitBtn.className = "wx-webapp-comment-composer-submit btn btn-primary btn-sm";
+        this._submitBtn.className = "wx-comment-composer-submit btn btn-primary btn-sm";
         this._submitBtn.textContent = this._i18n("webexpress.webapp:comment.compose.submit", "Send");
 
         this._cancelBtn = document.createElement("button");
         this._cancelBtn.type = "button";
-        this._cancelBtn.className = "wx-webapp-comment-composer-cancel btn btn-secondary btn-sm";
+        this._cancelBtn.className = "wx-comment-composer-cancel btn btn-secondary btn-sm";
         this._cancelBtn.textContent = this._i18n("webexpress.webui:cancel", "Cancel");
 
         
@@ -256,8 +260,8 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
         this._expanded = true;
-        this._element.classList.remove("wx-webapp-comment-composer--collapsed");
-        this._element.classList.add("wx-webapp-comment-composer--expanded");
+        this._element.classList.remove("wx-comment-composer-collapsed");
+        this._element.classList.add("wx-comment-composer-expanded");
         this._ensureEditor();
         // focus the editor on the next frame so the EditorCtrl has wired up
         queueMicrotask(() => {
@@ -275,8 +279,8 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webui.Ctrl {
      */
     _collapse() {
         this._expanded = false;
-        this._element.classList.remove("wx-webapp-comment-composer--expanded");
-        this._element.classList.add("wx-webapp-comment-composer--collapsed");
+        this._element.classList.remove("wx-comment-composer-expanded");
+        this._element.classList.add("wx-comment-composer-collapsed");
         this._resetForm();
     }
 

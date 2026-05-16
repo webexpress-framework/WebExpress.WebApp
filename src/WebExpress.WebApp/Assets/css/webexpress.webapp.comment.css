@@ -1,11 +1,11 @@
 .wx-comment {
-    background: var(--wx-webapp-surface);
+    background: var(-wx-webapp-surface);
     border: 1px solid var(--wx-webapp-border);
     border-radius: var(--wx-webapp-r-md);
     overflow: hidden;
 }
  
-/* ---- toolbar ---- */
+/* toolbar */
 .wx-comment-toolbar {
     display: flex;
     align-items: center;
@@ -54,7 +54,7 @@
     color: var(--wx-webapp-text-3);
 }
  
-/* ---- list ---- */
+/* list */
 .wx-comment-list {
     padding: 12px 14px;
     display: flex;
@@ -69,7 +69,7 @@
     font-size: 13px;
 }
  
-/* ---- item ---- */
+/* item */
 .wx-comment-item {
     border: 1px solid var(--wx-webapp-border);
     border-radius: var(--wx-webapp-r-md);
@@ -78,19 +78,19 @@
     transition: border-color 0.15s, box-shadow 0.15s;
 }
  
-.wx-comment-item--pinned {
+.wx-comment-item-pinned {
     border-color: var(--wx-webapp-warn);
     box-shadow: 0 0 0 3px #fdefd8;
 }
  
-.wx-comment-item--me {
+.wx-comment-item-me {
     border-left: 3px solid var(--wx-webapp-primary);
 }
  
-.wx-comment-item--collapsed .wx-comment-body,
-.wx-comment-item--collapsed .wx-comment-footer,
-.wx-comment-item--collapsed .wx-comment-reactions,
-.wx-comment-item--collapsed .wx-comment-replies {
+.wx-comment-item-collapsed .wx-comment-body,
+.wx-comment-item-collapsed .wx-comment-footer,
+.wx-comment-item-collapsed .wx-comment-reactions,
+.wx-comment-item-collapsed .wx-comment-replies {
     display: none;
 }
  
@@ -104,7 +104,7 @@
     border-bottom: 1px solid var(--wx-webapp-divider);
 }
  
-.wx-comment-item--collapsed .wx-comment-head {
+.wx-comment-item-collapsed .wx-comment-head {
     border-bottom: 0;
 }
  
@@ -118,13 +118,13 @@
     flex-shrink: 0;
 }
  
-.wx-comment-avatar--lg {
+.wx-comment-avatar-lg {
     width: 36px;
     height: 36px;
     font-size: 13px;
 }
  
-.wx-comment-avatar--sm {
+.wx-comment-avatar-sm {
     width: 22px;
     height: 22px;
     font-size: 9.5px;
@@ -161,7 +161,7 @@
     font-family: var(--wx-webapp-font-mono);
 }
  
-.wx-comment-when--edited::after {
+.wx-comment-when-edited::after {
     content: " · edited";
     font-style: italic;
     opacity: 0.8;
@@ -203,7 +203,7 @@
     font-family: var(--wx-webapp-font-mono);
 }
  
-/* ---- head actions ---- */
+/* head actions */
 .wx-comment-head-actions {
     display: flex;
     align-items: center;
@@ -233,11 +233,11 @@
     color: var(--wx-webapp-text);
 }
  
-.wx-comment-action--liked {
+.wx-comment-action-liked {
     color: var(--wx-webapp-danger);
 }
  
-.wx-comment-action--pinned {
+.wx-comment-action-pinned {
     color: var(--wx-webapp-warn);
 }
  
@@ -246,7 +246,7 @@
     font-family: var(--wx-webapp-font-mono);
 }
  
-/* ---- body ---- */
+/* body */
 .wx-comment-body {
     padding: 12px 14px;
     font-size: 13.5px;
@@ -271,7 +271,7 @@
     padding: 1px 5px;
 }
  
-/* ---- edit ---- */
+/* edit */
 .wx-comment-edit {
     padding: 10px 12px;
     background: var(--wx-webapp-surface-2);
@@ -306,7 +306,7 @@
     min-width: 0;
 }
  
-/* ---- reactions ---- */
+/* reactions */
 .wx-comment-reactions {
     display: flex;
     align-items: center;
@@ -333,7 +333,7 @@
     background: var(--wx-webapp-surface-2);
 }
  
-.wx-comment-reaction--mine {
+.wx-comment-reaction-mine {
     background: var(--wx-webapp-primary-soft);
     border-color: var(--wx-webapp-primary-border);
     color: var(--wx-webapp-primary);
@@ -369,7 +369,7 @@
     position: absolute;
     top: 30px;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translateX(-20%);
     background: var(--bs-body-bg);
     border: 1px solid var(--wx-webapp-border);
     border-radius: 8px;
@@ -394,7 +394,7 @@
     background: var(--wx-webapp-surface-2);
 }
  
-/* ---- footer ---- */
+/* footer */
 .wx-comment-footer {
     display: flex;
     align-items: center;
@@ -426,7 +426,7 @@
     font-size: 10.5px;
 }
  
-/* ---- replies ---- */
+/* replies */
 .wx-comment-replies {
     background: var(--wx-webapp-surface-2);
     border-top: 1px dashed var(--wx-webapp-divider);
@@ -501,7 +501,7 @@
     margin-top: 6px;
 }
  
-/* ---- delete confirm strip ---- */
+/* delete confirm strip */
 .wx-comment-delete-confirm {
     display: flex;
     align-items: center;
@@ -516,7 +516,7 @@
     flex: 1;
 }
  
-/* ---- composer ---- */
+/* composer */
 .wx-comment-composer {
     border: 1px solid var(--wx-webapp-border);
     border-radius: var(--wx-webapp-r-md);
@@ -525,7 +525,7 @@
     transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.wx-comment-composer--expanded {
+.wx-comment-composer-expanded {
     border-color: var(--wx-webapp-primary-border);
     box-shadow: 0 0 0 3px var(--wx-webapp-primary-soft);
 }
@@ -555,11 +555,11 @@
     color: var(--wx-webapp-text-2);
 }
 
-.wx-comment-composer--collapsed .wx-comment-composer-form {
+.wx-comment-composer-collapsed .wx-comment-composer-form {
     display: none;
 }
 
-.wx-comment-composer--expanded .wx-comment-composer-trigger {
+.wx-comment-composer-expanded .wx-comment-composer-trigger {
     display: none;
 }
 
@@ -618,7 +618,7 @@
     color: var(--wx-webapp-text-muted);
 }
  
-/* ---- spacer utility ---- */
+/* spacer utility */
 .wx-comment-spacer {
     flex: 1;
 }
