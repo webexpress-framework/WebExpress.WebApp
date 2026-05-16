@@ -43,7 +43,7 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
 
             await Assert.ThrowsAsync<ArgumentNullException>
             (
-                async () => await handler.HandleAsync(null, "{}")
+                async () => await handler.HandleAsync(null, "{}", TestContext.Current.CancellationToken)
             );
         }
 
@@ -61,7 +61,7 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
             var handler = new CollaborativeMessageHandler(manager);
             var source = CreateSocket(Guid.NewGuid(), "domain.a");
 
-            await handler.HandleAsync(source, payload);
+            await handler.HandleAsync(source, payload, TestContext.Current.CancellationToken);
 
             Assert.Empty(manager.Sends);
         }
@@ -76,7 +76,7 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
             var handler = new CollaborativeMessageHandler(manager);
             var source = CreateSocket(Guid.NewGuid(), "domain.a");
 
-            await handler.HandleAsync(source, "{\"type\":");
+            await handler.HandleAsync(source, "{\"type\":", TestContext.Current.CancellationToken);
 
             Assert.Empty(manager.Sends);
         }
@@ -92,7 +92,7 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
             var handler = new CollaborativeMessageHandler(manager);
             var source = CreateSocket(Guid.NewGuid(), "domain.a");
 
-            await handler.HandleAsync(source, "{\"type\":\"webexpress.webapp.change.status\"}");
+            await handler.HandleAsync(source, "{\"type\":\"webexpress.webapp.change.status\"}", TestContext.Current.CancellationToken);
 
             Assert.Empty(manager.Sends);
         }
@@ -108,7 +108,7 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
             var handler = new CollaborativeMessageHandler(manager);
             var source = CreateSocket(Guid.NewGuid(), "domain.a");
 
-            await handler.HandleAsync(source, "{\"type\":\"webexpress.webapp.collaborative.unknown\"}");
+            await handler.HandleAsync(source, "{\"type\":\"webexpress.webapp.collaborative.unknown\"}", TestContext.Current.CancellationToken);
 
             Assert.Empty(manager.Sends);
         }
@@ -127,7 +127,7 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
             var handler = new CollaborativeMessageHandler(manager);
             var source = CreateSocket(Guid.NewGuid(), "domain.a");
 
-            await handler.HandleAsync(source, "{\"type\":\"" + type + "\"}");
+            await handler.HandleAsync(source, "{\"type\":\"" + type + "\"}", TestContext.Current.CancellationToken);
 
             Assert.Empty(manager.Sends);
         }
@@ -148,7 +148,7 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
                 + "\"containerId\":\"collab-1\",\"userId\":\"u-1\","
                 + "\"userName\":\"Alice\",\"status\":\"join\"}";
 
-            await handler.HandleAsync(source, payload);
+            await handler.HandleAsync(source, payload, TestContext.Current.CancellationToken);
 
             var send = Assert.Single(manager.Sends);
             Assert.Equal(CollaborativeMessageTypes.Presence, send.Message.Type);
@@ -177,7 +177,7 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
             var payload = "{\"type\":\"" + CollaborativeMessageTypes.Cursor + "\","
                 + "\"containerId\":\"c1\",\"userId\":\"user-1\",\"x\":100,\"y\":200,\"ts\":42}";
 
-            await handler.HandleAsync(source, payload);
+            await handler.HandleAsync(source, payload, TestContext.Current.CancellationToken);
 
             var send = Assert.Single(manager.Sends);
             Assert.Equal(CollaborativeMessageTypes.Cursor, send.Message.Type);
@@ -206,7 +206,7 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
                 + "\"userName\":\"Bob\",\"userColor\":\"#123456\","
                 + "\"x\":50.5,\"y\":60.25,\"ts\":1234567890}";
 
-            await handler.HandleAsync(source, payload);
+            await handler.HandleAsync(source, payload, TestContext.Current.CancellationToken);
 
             var send = Assert.Single(manager.Sends);
 
@@ -241,7 +241,7 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
                 + "\"connectionId\":\"forged-by-client\",\"connectionid\":\"also-forged\","
                 + "\"messageId\":\"forged-message-id\"}";
 
-            await handler.HandleAsync(source, payload);
+            await handler.HandleAsync(source, payload, TestContext.Current.CancellationToken);
 
             var send = Assert.Single(manager.Sends);
 
@@ -279,7 +279,7 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
 
             var payload = "{\"type\":\"" + type + "\"}";
 
-            await handler.HandleAsync(source, payload);
+            await handler.HandleAsync(source, payload, TestContext.Current.CancellationToken);
 
             var send = Assert.Single(manager.Sends);
             Assert.Equal(type, send.Message.Type);
@@ -302,7 +302,7 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
             var payload = "{\"type\":\"webexpress.webapp.collaborative.cursor\","
                 + "\"connectionId\":\"forged-by-client\"}";
 
-            await handler.HandleAsync(source, payload);
+            await handler.HandleAsync(source, payload, TestContext.Current.CancellationToken);
 
             var send = Assert.Single(manager.Sends);
             Assert.Equal(senderId.ToString("N"), send.Message.ConnectionId);
@@ -323,7 +323,8 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
             await handler.HandleAsync
             (
                 source,
-                "{\"type\":\"webexpress.webapp.collaborative.cursor\"}"
+                "{\"type\":\"webexpress.webapp.collaborative.cursor\"}",
+                TestContext.Current.CancellationToken
             );
 
             var send = Assert.Single(manager.Sends);
@@ -345,7 +346,8 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
             await handler.HandleAsync
             (
                 source,
-                "{\"type\":\"webexpress.webapp.collaborative.cursor\"}"
+                "{\"type\":\"webexpress.webapp.collaborative.cursor\"}",
+                TestContext.Current.CancellationToken
             );
 
             var send = Assert.Single(manager.Sends);
@@ -367,7 +369,8 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
             await handler.HandleAsync
             (
                 source,
-                "{\"type\":\"webexpress.webapp.collaborative.cursor\"}"
+                "{\"type\":\"webexpress.webapp.collaborative.cursor\"}",
+                TestContext.Current.CancellationToken
             );
 
             var send = Assert.Single(manager.Sends);
@@ -390,7 +393,8 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
             await handler.HandleAsync
             (
                 source,
-                "{\"type\":\"webexpress.webapp.collaborative.cursor\"}"
+                "{\"type\":\"webexpress.webapp.collaborative.cursor\"}",
+                TestContext.Current.CancellationToken
             );
 
             var send = Assert.Single(manager.Sends);
@@ -411,7 +415,8 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
             await handler.HandleAsync
             (
                 source,
-                "{\"type\":\"webexpress.webapp.collaborative.cursor\"}"
+                "{\"type\":\"webexpress.webapp.collaborative.cursor\"}",
+                TestContext.Current.CancellationToken
             );
 
             var send = Assert.Single(manager.Sends);
@@ -441,7 +446,7 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
                 + "\"x\":0.42,\"y\":0.18,"
                 + "\"ts\":1715628000000}";
 
-            await handler.HandleAsync(source, payload);
+            await handler.HandleAsync(source, payload, TestContext.Current.CancellationToken);
 
             var send = Assert.Single(manager.Sends);
             using var document = JsonDocument.Parse(send.Message.ToJson());
@@ -480,7 +485,7 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
                 + "\"selectionStart\":11,\"selectionEnd\":11,"
                 + "\"ts\":1715628000000}";
 
-            await handler.HandleAsync(source, payload);
+            await handler.HandleAsync(source, payload, TestContext.Current.CancellationToken);
 
             var send = Assert.Single(manager.Sends);
             using var document = JsonDocument.Parse(send.Message.ToJson());
@@ -516,7 +521,7 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
                 + "\"selectionStart\":7,\"selectionEnd\":7,"
                 + "\"ts\":1715628000000}";
 
-            await handler.HandleAsync(source, payload);
+            await handler.HandleAsync(source, payload, TestContext.Current.CancellationToken);
 
             var send = Assert.Single(manager.Sends);
             using var document = JsonDocument.Parse(send.Message.ToJson());
