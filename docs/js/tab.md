@@ -34,6 +34,7 @@ The initial structure is defined in HTML. The root element is the tab host (`.wx
 | `data-icon`              | Icon CSS class shown in the template picker.                       | `data-icon="fas fa-map"`       |
 | `data-name`              | Display name shown in the template picker.                         | `data-name="Monkey Island"`    |
 | `data-description`       | Optional description shown under the template name in picker menu. | `data-description="Adventure"` |
+| `data-multiplicity`      | Optional maximum number of tab items that may be created from this template. Once the limit is reached, the add button (or this template's entry in the picker menu) is disabled. If omitted, the template is unlimited. | `data-multiplicity="3"`        |
 
 ## REST Data Contract
 
