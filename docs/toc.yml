@@ -2,6 +2,8 @@
   href: index.md
 - name: API Documentation
   href: api/
+- name: JavaScript Components
+  href: js/
 - name: User Guide
   href: user-guide.md
 - name: Tutorials

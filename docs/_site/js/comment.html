@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>CommentCtrl | WebExpress.WebApp </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="CommentCtrl | WebExpress.WebApp ">
+      
+      
+      <link rel="icon" href="../assets/webexpress.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/ReneSchwarzer/WebExpress.WebApp/blob/develop/docs/js/comment.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../assets/webexpress.svg" alt="WebExpress.WebApp">
+            WebExpress.WebApp
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+
+<p><img src="https://raw.githubusercontent.com/webexpress-framework/.github/main/docs/assets/img/banner.png" alt="WebExpress"></p>
+<h1 id="commentctrl">CommentCtrl</h1>
+<p>The <code>CommentCtrl</code> component renders a fully-featured discussion thread for a domain object: a filter/sort toolbar at the top, a list of comments in the middle, and a composer at the bottom. Each comment carries a typed <strong>category</strong> (color-coded), a free-form list of <strong>labels</strong>, <strong>reactions</strong> (emoji), <strong>likes</strong>, optional <strong>pin</strong> state, threaded <strong>replies</strong>, and per-item <strong>edit / delete</strong> actions for the author. The composer reuses the WebExpress <code>EditorCtrl</code>, so authors get the same WYSIWYG affordances they enjoy elsewhere — slash commands (<code>/</code>), mentions (<code>@</code>), markdown shortcuts (<code>**bold**</code>, <code>`code`</code>), and inline link/image insertion.</p>
+<pre><code>   ┌─────────────────────────────────────────────────────────────────┐
+   │ Comments (6)                          2 pinned · 17 likes       │
+   ├─────────────────────────────────────────────────────────────────┤
+   │ [Filter ▼] [Sort: Date ▼] [↓ Desc]      📌 Pinned stay on top   │
+   ├─────────────────────────────────────────────────────────────────┤
+   │ ┌─────────────────────────────────────────────────────────────┐ │
+   │ │ (MP) Max Power · IT Ops · 2026-05-12 09:18      ♥3 ★ ▾ ✎ 🗑 │ │
+   │ │ [Status Update] [Triage] [P1]                 📌 Pinned     │ │
+   │ │ ─────────────────────────────────────────────────────────── │ │
+   │ │ Issue recorded and escalated to Network…                    │ │
+   │ │ ─────────────────────────────────────────────────────────── │ │
+   │ │ 👍 3   🙏 1   [+]                                           │ │
+   │ │ ─────────────────────────────────────────────────────────── │ │
+   │ │ ↳ Replies · 2 replies                                       │ │
+   │ │   (EM) Erika Mustermann · 2026-05-12 09:25                  │ │
+   │ │        Issue recorded and watchers added.                   │ │
+   │ └─────────────────────────────────────────────────────────────┘ │
+   │ … more comments …                                               │
+   ├─────────────────────────────────────────────────────────────────┤
+   │ (MP) Write a new comment                [General ▼]             │
+   │ ┌─────────────────────────────────────────────────────────────┐ │
+   │ │ [EditorCtrl — / for commands, @ for mentions]               │ │
+   │ └─────────────────────────────────────────────────────────────┘ │
+   │ [Labels…]              ⌘/Ctrl+Enter           [ Send ]          │
+   └─────────────────────────────────────────────────────────────────┘
+</code></pre>
+<h2 id="declarative-configuration">Declarative Configuration</h2>
+<p>The control is bootstrapped from a single host element carrying the <code>wx-webapp-comment</code> CSS class. The control reads its configuration from <code>data-</code> attributes on that element, then rewrites the element's contents to render the toolbar, list, and composer.</p>
+<h3 id="container-element-attributes">Container Element Attributes</h3>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>data-uri</code></td>
+<td>REST endpoint for the comment collection of the current object. Required.</td>
+<td><code>data-uri=&quot;/api/comments/INC-00123&quot;</code></td>
+</tr>
+<tr>
+<td><code>data-users-uri</code></td>
+<td>REST endpoint used to resolve author IDs to display names and to power the <code>@</code>-mention picker inside the composer. Required for author resolution and mentions.</td>
+<td><code>data-users-uri=&quot;/api/users&quot;</code></td>
+</tr>
+<tr>
+<td><code>data-current-user</code></td>
+<td>ID of the currently authenticated user. Drives the &quot;this is mine&quot; visual treatment and gates the edit / delete affordances.</td>
+<td><code>data-current-user=&quot;u1&quot;</code></td>
+</tr>
+<tr>
+<td><code>data-image-upload-uri</code></td>
+<td>Optional. When set, the composer's WYSIWYG editor enables image uploads via this endpoint.</td>
+<td><code>data-image-upload-uri=&quot;/api/upload&quot;</code></td>
+</tr>
+<tr>
+<td><code>data-readonly</code></td>
+<td>When <code>&quot;true&quot;</code>, the composer is hidden and per-item actions (like, pin, reactions, replies, edit, delete) are disabled. The list is rendered for reading only.</td>
+<td><code>data-readonly=&quot;true&quot;</code></td>
+</tr>
+<tr>
+<td><code>data-categories</code></td>
+<td>Optional JSON string overriding the default category set. Each entry needs <code>id</code>, <code>i18n</code> (i18n key for the label), <code>color</code> (CSS color), and <code>bg</code> (CSS background).</td>
+<td>see <a href="#categories">Categories</a> below</td>
+</tr>
+</tbody>
+</table>
+<h3 id="rest-contract">REST Contract</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>URL</th>
+<th>Body</th>
+<th>Response</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET</code></td>
+<td><code>{data-uri}</code></td>
+<td>—</td>
+<td><code>Comment[]</code></td>
+<td>Initial load and refresh.</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>{data-uri}</code></td>
+<td><code>{ body, category, labels }</code></td>
+<td><code>Comment</code></td>
+<td>Add a new top-level comment.</td>
+</tr>
+<tr>
+<td><code>PUT</code></td>
+<td><code>{data-uri}/{id}</code></td>
+<td><code>{ body, category, labels }</code></td>
+<td><code>Comment</code></td>
+<td>Edit an existing comment (author only).</td>
+</tr>
+<tr>
+<td><code>DELETE</code></td>
+<td><code>{data-uri}/{id}</code></td>
+<td>—</td>
+<td><code>204 No Content</code></td>
+<td>Delete a comment (author only).</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>{data-uri}/{id}/likes</code></td>
+<td><code>{ on: true \| false }</code></td>
+<td><code>Comment</code></td>
+<td>Toggle the current user's like.</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>{data-uri}/{id}/pin</code></td>
+<td><code>{ on: true \| false }</code></td>
+<td><code>Comment</code></td>
+<td>Toggle pin state.</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>{data-uri}/{id}/reactions</code></td>
+<td><code>{ emoji: &quot;👍&quot; }</code></td>
+<td><code>Comment</code></td>
+<td>Toggle the current user's reaction for that emoji.</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>{data-uri}/{id}/replies</code></td>
+<td><code>{ body }</code></td>
+<td><code>Reply</code></td>
+<td>Add a reply to a comment.</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>{data-users-uri}?ids=u1,u2,u3</code></td>
+<td>—</td>
+<td><code>User[]</code></td>
+<td>Batch-resolve author IDs for rendering.</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>{data-users-uri}?q={search}</code></td>
+<td>—</td>
+<td><code>User[]</code></td>
+<td>Search candidates for the <code>@</code>-mention picker inside the composer.</td>
+</tr>
+</tbody>
+</table>
+<p><code>Comment</code> objects are expected to carry <code>id</code>, <code>author</code>, <code>when</code>, <code>category</code>, <code>labels</code>, <code>body</code> (HTML), <code>pinned</code>, <code>likes</code> (array of user IDs), <code>reactions</code> (<code>{ &quot;👍&quot;: [&quot;u1&quot;,&quot;u2&quot;], … }</code>), <code>edited</code> (<code>{ by, when }</code> or <code>null</code>), <code>collapsed</code>, and <code>replies</code> (<code>Reply[]</code>). <code>Reply</code> objects need <code>id</code>, <code>author</code>, <code>when</code>, and <code>body</code>. <code>User</code> objects need at least <code>id</code>, <code>name</code>, <code>initials</code>, <code>team</code>, and <code>color</code>.</p>
+<h3 id="categories">Categories</h3>
+<p>Each comment carries a category that drives its accent color and is offered as a filter in the toolbar. The default set covers <code>general</code>, <code>question</code>, <code>hint</code>, <code>status</code>, <code>decision</code>, and <code>solution</code>. The label text is resolved via i18n (<code>webexpress.webapp:comment.cat.general</code>, …); the colors are read from CSS variables (<code>--wx-webapp-cat-general</code>, <code>--wx-webapp-cat-general-bg</code>, …) so they can be re-themed without touching JavaScript.</p>
+<p>To use a custom category set, pass a JSON array via <code>data-categories</code>:</p>
+<pre><code class="lang-html">&lt;div class=&quot;wx-webapp-comment&quot;
+     data-uri=&quot;/api/comments/CHG-00045&quot;
+     data-users-uri=&quot;/api/users&quot;
+     data-current-user=&quot;u1&quot;
+     data-categories='[
+        {&quot;id&quot;:&quot;impl&quot;,&quot;i18n&quot;:&quot;my.app:comment.cat.impl&quot;,&quot;color&quot;:&quot;#1e40af&quot;,&quot;bg&quot;:&quot;#dbeafe&quot;},
+        {&quot;id&quot;:&quot;risk&quot;,&quot;i18n&quot;:&quot;my.app:comment.cat.risk&quot;,&quot;color&quot;:&quot;#b45309&quot;,&quot;bg&quot;:&quot;#fef3c7&quot;},
+        {&quot;id&quot;:&quot;signoff&quot;,&quot;i18n&quot;:&quot;my.app:comment.cat.signoff&quot;,&quot;color&quot;:&quot;#047857&quot;,&quot;bg&quot;:&quot;#d1fae5&quot;}
+     ]'&gt;&lt;/div&gt;
+</code></pre>
+<h2 id="programmatic-control">Programmatic Control</h2>
+<p>Once initialized, the <code>CommentCtrl</code> instance is retrievable via <code>getInstanceByElement(element)</code> for refreshing, filtering, or attaching event listeners.</p>
+<pre><code class="lang-javascript">// find the host element in the DOM
+const cmtElement = document.querySelector(&quot;.wx-webapp-comment&quot;);
+
+// retrieve the controller instance associated with the element
+const cmtCtrl = webexpress.webui.Controller.getInstanceByElement(cmtElement);
+
+// force a re-fetch from the server
+if (cmtCtrl) {
+    cmtCtrl.refresh();
+}
+</code></pre>
+<h2 id="events">Events</h2>
+<p>The component dispatches events on the host element whenever the comment thread changes. All events bubble.</p>
+<ul>
+<li><strong><code>webexpress.webapp.Event.COMMENT_ADDED_EVENT</code></strong> — fired after a successful <code>POST</code> to the collection. <code>event.detail</code> contains <code>{ comment }</code>.</li>
+<li><strong><code>webexpress.webapp.Event.COMMENT_UPDATED_EVENT</code></strong> — fired after edit, like-toggle, or pin-toggle. <code>event.detail</code> contains <code>{ comment }</code>.</li>
+<li><strong><code>webexpress.webapp.Event.COMMENT_DELETED_EVENT</code></strong> — fired after a successful <code>DELETE</code>. <code>event.detail</code> contains <code>{ id }</code>.</li>
+<li><strong><code>webexpress.webapp.Event.COMMENT_REACTION_EVENT</code></strong> — fired after the current user toggles a reaction. <code>event.detail</code> contains <code>{ commentId, emoji, reactions }</code>.</li>
+<li><strong><code>webexpress.webapp.Event.COMMENT_REPLY_EVENT</code></strong> — fired after a successful reply <code>POST</code>. <code>event.detail</code> contains <code>{ commentId, reply }</code>.</li>
+</ul>
+<pre><code class="lang-javascript">cmtElement.addEventListener(webexpress.webapp.Event.COMMENT_ADDED_EVENT, (e) =&gt; {
+    console.log(&quot;New comment by&quot;, e.detail.comment.author, &quot;:&quot;, e.detail.comment.body);
+});
+</code></pre>
+<h2 id="composer">Composer</h2>
+<p>The composer is built around the WebExpress <code>EditorCtrl</code>. That means authors get every feature the editor offers out of the box:</p>
+<ul>
+<li><strong>Slash commands (<code>/</code>)</strong> — insert headings, lists, code blocks, dates, horizontal rules, links, images, and addons.</li>
+<li><strong>Mentions (<code>@</code>)</strong> — pick a user from the live picker fed by <code>data-users-uri</code>.</li>
+<li><strong>Markdown shortcuts</strong> — <code>**bold**</code>, <code>`code`</code>, <code># Heading</code>, <code>- item</code>, <code>1. item</code>, <code>&gt; quote</code>, <code>---</code>.</li>
+<li><strong>Bubble menu</strong> — appears on selection for quick formatting.</li>
+<li><strong>Placeholder text</strong> — sourced from the i18n key <code>webexpress.webapp:comment.compose.placeholder</code>.</li>
+</ul>
+<p>Press <code>⌘/Ctrl + Enter</code> to submit. The submit button is disabled while the editor is empty.</p>
+<h2 id="use-case-examples">Use Case Examples</h2>
+<p>A typical setup at the bottom of an object detail page:</p>
+<pre><code class="lang-html">&lt;section class=&quot;obj-section&quot;&gt;
+    &lt;div class=&quot;obj-section__head&quot;&gt;
+        &lt;h3&gt;Kommentare&lt;/h3&gt;
+    &lt;/div&gt;
+
+    &lt;!-- The comment control: bootstraps itself from data-* --&gt;
+    &lt;div class=&quot;wx-webapp-comment&quot;
+         data-uri=&quot;/api/comments/INC-00123&quot;
+         data-users-uri=&quot;/api/users&quot;
+         data-current-user=&quot;u1&quot;
+         data-image-upload-uri=&quot;/api/upload&quot;&gt;&lt;/div&gt;
+&lt;/section&gt;
+</code></pre>
+<p>A read-only thread embedded in a historical / archived view:</p>
+<pre><code class="lang-html">&lt;div class=&quot;wx-webapp-comment&quot;
+     data-uri=&quot;/api/comments/INC-00123&quot;
+     data-users-uri=&quot;/api/users&quot;
+     data-readonly=&quot;true&quot;&gt;&lt;/div&gt;
+</code></pre>
+<p>A thread with a domain-specific category set (e.g. for change requests):</p>
+<pre><code class="lang-html">&lt;div class=&quot;wx-webapp-comment&quot;
+     data-uri=&quot;/api/comments/CHG-00045&quot;
+     data-users-uri=&quot;/api/users&quot;
+     data-current-user=&quot;u1&quot;
+     data-categories='[
+        {&quot;id&quot;:&quot;impl&quot;,&quot;i18n&quot;:&quot;my.app:comment.cat.impl&quot;,&quot;color&quot;:&quot;var(--wx-webapp-cat-hint)&quot;,&quot;bg&quot;:&quot;var(--wx-webapp-cat-hint-bg)&quot;},
+        {&quot;id&quot;:&quot;risk&quot;,&quot;i18n&quot;:&quot;my.app:comment.cat.risk&quot;,&quot;color&quot;:&quot;var(--wx-webapp-cat-question)&quot;,&quot;bg&quot;:&quot;var(--wx-webapp-cat-question-bg)&quot;},
+        {&quot;id&quot;:&quot;signoff&quot;,&quot;i18n&quot;:&quot;my.app:comment.cat.signoff&quot;,&quot;color&quot;:&quot;var(--wx-webapp-cat-solution)&quot;,&quot;bg&quot;:&quot;var(--wx-webapp-cat-solution-bg)&quot;}
+     ]'&gt;&lt;/div&gt;
+</code></pre>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/ReneSchwarzer/WebExpress.WebApp/blob/develop/docs/js/comment.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
