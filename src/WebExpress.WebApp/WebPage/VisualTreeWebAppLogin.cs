@@ -142,7 +142,11 @@ namespace WebExpress.WebApp.WebPage
             html.Body.Add(MessageQueueUri);
             html.Body.Add(Header.Render(renderContext, this));
             html.Body.Add(Toast.Render(renderContext, this));
-            html.Body.Add(login.Render(renderContext, this));
+            html.Body.Add(new HtmlElementTextContentDiv(login.Render(renderContext, this))
+            {
+                Id = "login",
+                Class = "d-flex h-100"
+            });
             html.Body.Add(Footer.Render(renderContext, this));
             html.Body.Add(NotificationPopup.Render(renderContext, this));
 
