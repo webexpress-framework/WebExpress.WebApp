@@ -65,7 +65,7 @@ namespace WebExpress.WebApp.WebPackage
                 }
                 catch (Exception ex)
                 {
-                    _httpServerContext.Log.Exception(ex);
+                    _httpServerContext.Log?.Exception(ex);
                     return PluginPackageOperationResult.Failed
                     (
                         I18N.Translate("webexpress.webapp:setting.plugin.operation.error.internal")
@@ -113,7 +113,7 @@ namespace WebExpress.WebApp.WebPackage
                 }
                 catch (Exception ex)
                 {
-                    _httpServerContext.Log.Exception(ex);
+                    _httpServerContext.Log?.Exception(ex);
                     return PluginPackageOperationResult.Failed
                     (
                         I18N.Translate("webexpress.webapp:setting.plugin.operation.error.internal")
@@ -178,7 +178,7 @@ namespace WebExpress.WebApp.WebPackage
                     package.Id = previousId;
                     package.Metadata = previousMetadata;
                     package.State = previousState;
-                    _httpServerContext.Log.Exception(ex);
+                    _httpServerContext.Log?.Exception(ex);
                     return PluginPackageOperationResult.Failed
                     (
                         I18N.Translate("webexpress.webapp:setting.plugin.operation.error.internal")
@@ -232,7 +232,7 @@ namespace WebExpress.WebApp.WebPackage
                 }
                 catch (Exception ex)
                 {
-                    _httpServerContext.Log.Exception(ex);
+                    _httpServerContext.Log?.Exception(ex);
                     return PluginPackageOperationResult.Failed
                     (
                         I18N.Translate("webexpress.webapp:setting.plugin.operation.error.internal")
@@ -289,7 +289,7 @@ namespace WebExpress.WebApp.WebPackage
                 }
                 catch (Exception ex)
                 {
-                    _httpServerContext.Log.Exception(ex);
+                    _httpServerContext.Log?.Exception(ex);
                     return PluginPackageOperationResult.Failed
                     (
                         I18N.Translate("webexpress.webapp:setting.plugin.operation.error.internal")
