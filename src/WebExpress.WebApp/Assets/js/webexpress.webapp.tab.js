@@ -23,6 +23,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
     _addLi = null;
     _addTabButton = null;
     _addTemplateMenu = null;
+    _templateMenuItems = new Map();
 
     /**
      * Constructor for the REST-enabled TabCtrl class.
@@ -73,6 +74,14 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
             const icon = tpl.dataset.icon || "";
             const name = tpl.dataset.name || id;
             const description = tpl.dataset.description || "";
+            const multiplicityRaw = tpl.dataset.multiplicity;
+            let multiplicity = null;
+            if (multiplicityRaw !== undefined && multiplicityRaw !== null && multiplicityRaw !== "") {
+                const parsed = parseInt(multiplicityRaw, 10);
+                if (!isNaN(parsed) && parsed >= 0) {
+                    multiplicity = parsed;
+                }
+            }
 
             // store template payload for later instantiation
             this._templates.set(id, {
@@ -80,7 +89,8 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
                 html: tpl.innerHTML,
                 icon: icon,
                 name: name,
-                description: description
+                description: description,
+                multiplicity: multiplicity
             });
 
             if (!this._templateOrder.includes(id)) {
@@ -144,10 +154,14 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
                 itemBtn.addEventListener("click", (e) => {
                     e.preventDefault();
                     e.stopPropagation();
+                    if (itemBtn.disabled) {
+                        return;
+                    }
                     this._hideTemplateMenu();
                     this._createNewTab(templateId);
                 });
 
+                this._templateMenuItems.set(templateId, itemBtn);
                 li.appendChild(itemBtn);
                 this._addTemplateMenu.appendChild(li);
             }
@@ -232,6 +246,71 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
     }
 
     /**
+     * Counts how many existing tabs were instantiated from the given template.
+     * @param {string} templateId
+     * @returns {number}
+     */
+    _countTabsByTemplate(templateId) {
+        let count = 0;
+        for (let i = 0; i < this._tabs.length; i++) {
+            if (this._tabs[i].templateId === templateId) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /**
+     * Determines whether the given template can be used to create another tab.
+     * Templates without a defined multiplicity are treated as unlimited.
+     * @param {string} templateId
+     * @returns {boolean}
+     */
+    _isTemplateAvailable(templateId) {
+        const tpl = this._templates.get(templateId);
+        if (!tpl) {
+            return true;
+        }
+        if (tpl.multiplicity === null || tpl.multiplicity === undefined) {
+            return true;
+        }
+        return this._countTabsByTemplate(templateId) < tpl.multiplicity;
+    }
+
+    /**
+     * Updates the disabled state of the add button and template dropdown
+     * entries based on per-template multiplicities.
+     */
+    _updateAddButtonState() {
+        if (this._addTabButton === null) {
+            return;
+        }
+
+        let anyAvailable = false;
+
+        for (let i = 0; i < this._templateOrder.length; i++) {
+            const templateId = this._templateOrder[i];
+            const available = this._isTemplateAvailable(templateId);
+            if (available) {
+                anyAvailable = true;
+            }
+
+            const itemBtn = this._templateMenuItems.get(templateId);
+            if (itemBtn) {
+                itemBtn.disabled = !available;
+                itemBtn.classList.toggle("disabled", !available);
+            }
+        }
+
+        if (this._templateOrder.length === 0) {
+            anyAvailable = true;
+        }
+
+        this._addTabButton.disabled = !anyAvailable;
+        this._addTabButton.classList.toggle("disabled", !anyAvailable);
+    }
+
+    /**
      * Fetches tab data from the configured REST endpoint via GET.
      */
     _receiveData() {
@@ -299,6 +378,11 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
             return;
         }
 
+        // respect template multiplicity limits
+        if (templateId !== null && !this._isTemplateAvailable(templateId)) {
+            return;
+        }
+
         // indicate loading state on the button
         const originalHtml = this._addTabButton.innerHTML;
         this._addTabButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
@@ -347,6 +431,8 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
                 // restore button state
                 this._addTabButton.innerHTML = originalHtml;
                 this._addTabButton.disabled = false;
+                // re-apply multiplicity-based disabled state
+                this._updateAddButtonState();
             });
     }
 
@@ -586,6 +672,9 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         if (this._tabs.length > 0) {
             this.selectTab(this._tabs[0].id);
         }
+
+        // refresh add button state for the loaded tab set
+        this._updateAddButtonState();
     }
 
     /**
@@ -613,10 +702,12 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
             color: item.color || null,
             primaryAction: item.primaryAction || null,
             primaryTarget: item.primaryTarget || null,
+            templateId: item.templateId || null,
             paneElement: pane
         };
 
         this._tabs.push(tabData);
+        this._updateAddButtonState();
 
         // build header using the overridden method
         const navItem = this._buildTabHeader(tabData);
@@ -739,6 +830,9 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
                 this.selectTab(this._tabs[nextIndex].id);
             }
         }
+
+        // refresh the add button availability after the tab list changed
+        this._updateAddButtonState();
 
         // notify external components about tab removal
         this._dispatch(webexpress.webapp.Event.TAB_CLOSED_EVENT, {

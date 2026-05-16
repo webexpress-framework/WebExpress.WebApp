@@ -62,6 +62,54 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
+        /// Tests that the multiplicity property emits a data-multiplicity attribute when set.
+        /// </summary>
+        [Theory]
+        [InlineData(1, @"<div id=""template"" class=""wx-template"" data-multiplicity=""1""></div>")]
+        [InlineData(5, @"<div id=""template"" class=""wx-template"" data-multiplicity=""5""></div>")]
+        public void Multiplicity(int multiplicity, string expected)
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlRestTabTemplate("template")
+            {
+                Multiplicity = _ => multiplicity
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
+
+        /// <summary>
+        /// Tests that omitting the multiplicity property does not emit a data-multiplicity attribute.
+        /// </summary>
+        [Fact]
+        public void MultiplicityUnlimited()
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlRestTabTemplate("template")
+            {
+                Multiplicity = _ => null
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(@"<div id=""template"" class=""wx-template""></div>", html);
+        }
+
+        /// <summary>
         /// Tests that template id can be read through the interface contract.
         /// </summary>
         [Fact]

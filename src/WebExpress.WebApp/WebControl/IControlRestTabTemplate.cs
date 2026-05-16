@@ -33,6 +33,12 @@ namespace WebExpress.WebApp.WebControl
         Func<IRenderControlContext, string> Description { get; }
 
         /// <summary>
+        /// Gets the optional multiplicity limiting how many tab items may be
+        /// instantiated from this template. A null value means unlimited.
+        /// </summary>
+        Func<IRenderControlContext, int?> Multiplicity { get; }
+
+        /// <summary>
         /// Adds one or more items to the tab control.
         /// </summary>
         /// <param name="items">The items to add.</param>

@@ -42,6 +42,12 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, string> Description { get; set; }
 
         /// <summary>
+        /// Gets or sets the optional multiplicity limiting how many tab items
+        /// may be instantiated from this template. A null value means unlimited.
+        /// </summary>
+        public Func<IRenderControlContext, int?> Multiplicity { get; set; }
+
+        /// <summary>
         /// Gets the content of the view control.
         /// </summary>
         public IEnumerable<IControl> Content => _content;
@@ -115,6 +121,7 @@ namespace WebExpress.WebApp.WebControl
             var icon = Icon?.Invoke(renderContext);
             var name = Name?.Invoke(renderContext);
             var description = Description?.Invoke(renderContext);
+            var multiplicity = Multiplicity?.Invoke(renderContext);
             var iconClass = icon is Icon webUiIcon ? webUiIcon.Class : null;
 
             var templateDiv = new HtmlElementTextContentDiv()
@@ -125,6 +132,7 @@ namespace WebExpress.WebApp.WebControl
                 .AddUserAttribute("data-icon", iconClass)
                 .AddUserAttribute("data-name", name)
                 .AddUserAttribute("data-description", description)
+                .AddUserAttribute("data-multiplicity", multiplicity?.ToString(System.Globalization.CultureInfo.InvariantCulture))
                 .Add(content.Select(x => x.Render(renderContext, visualTree)));
 
             bind?.ApplyUserAttributes(templateDiv);

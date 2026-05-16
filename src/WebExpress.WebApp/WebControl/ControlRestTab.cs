@@ -1,10 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using WebExpress.WebApp.WebSection;
+using WebExpress.WebCore;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
+using WebExpress.WebUI.WebFragment;
 using WebExpress.WebUI.WebPage;
+using WebExpress.WebUI.WebSection;
 
 namespace WebExpress.WebApp.WebControl
 {
@@ -92,6 +96,25 @@ namespace WebExpress.WebApp.WebControl
             var bind = Bind?.Invoke(renderContext);
             var resultUri = uri?.BindParameters(renderContext.Request);
             var @readonly = Readonly?.Invoke(renderContext) ?? false;
+            var fragmentManager = WebEx.ComponentHub.FragmentManager;
+            var applicationContext = renderContext?.PageContext?.ApplicationContext;
+
+            // templates
+            var templatePreferences = fragmentManager.GetFragments<IFragmentControlViewItem, SectionTabTemplatePreferences>
+            (
+                applicationContext,
+                [GetType()]
+            );
+            var templatePrimary = fragmentManager.GetFragments<IFragmentControlViewItem, SectionViewItemPrimary>
+            (
+                applicationContext,
+                [GetType()]
+            );
+            var templateSecondary = fragmentManager.GetFragments<IFragmentControlViewItem, SectionViewItemSecondary>
+            (
+                applicationContext,
+                [GetType()]
+            );
 
             var html = new HtmlElementTextContentDiv()
             {
@@ -101,7 +124,10 @@ namespace WebExpress.WebApp.WebControl
             }
                 .AddUserAttribute("data-uri", resultUri?.ToString())
                 .AddUserAttribute("data-readonly", @readonly ? "true" : null)
-                .Add(_templates.Select(x => x.Render(renderContext, visualTree)));
+                .Add(templatePreferences.Select(x => x.Render(renderContext, visualTree)))
+                .Add(templatePrimary.Select(x => x.Render(renderContext, visualTree)))
+                .Add(_templates.Select(x => x.Render(renderContext, visualTree)))
+                .Add(templateSecondary.Select(x => x.Render(renderContext, visualTree)));
 
             bind?.ApplyUserAttributes(html);
 
