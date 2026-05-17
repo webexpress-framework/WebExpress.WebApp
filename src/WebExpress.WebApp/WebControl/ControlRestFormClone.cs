@@ -1,6 +1,6 @@
 ﻿using System;
-using WebExpress.WebCore.WebIcon;
 using WebExpress.WebCore.WebMessage;
+using WebExpress.WebCore.WebTheme;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebIcon;
 
@@ -24,7 +24,7 @@ namespace WebExpress.WebApp.WebControl
         public ControlFormItemButtonSubmit Submit { get; } = new ControlFormItemButtonSubmit
         {
             Text = _ => "webexpress.webapp:clone.label",
-            Icon = rennderContext => new IconClone(rennderContext?.PageContext?.ApplicationContext.IconTheme ?? TypeIconTheme.Default),
+            Icon = renderContext => new IconClone(renderContext.GetIconTheme()),
             Color = _ => new PropertyColorButton(TypeColorButton.Primary)
         };
 

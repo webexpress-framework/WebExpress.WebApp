@@ -1,6 +1,6 @@
 ﻿using System;
-using WebExpress.WebCore.WebIcon;
 using WebExpress.WebCore.WebMessage;
+using WebExpress.WebCore.WebTheme;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebIcon;
 
@@ -32,7 +32,7 @@ namespace WebExpress.WebApp.WebControl
         public ControlFormItemButtonSubmit Submit { get; } = new ControlFormItemButtonSubmit
         {
             Text = _ => "webexpress.webui:delete.label",
-            Icon = rennderContext => new IconTrash(rennderContext?.PageContext?.ApplicationContext.IconTheme ?? TypeIconTheme.Default),
+            Icon = renderContext => new IconTrash(renderContext.GetIconTheme()),
             Color = _ => new PropertyColorButton(TypeColorButton.Danger)
         };
 

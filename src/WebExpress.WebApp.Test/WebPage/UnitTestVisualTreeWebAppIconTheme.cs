@@ -1,61 +1,73 @@
+using System.Reflection;
 using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebPage;
+using WebExpress.WebCore.WebApplication;
 using WebExpress.WebCore.WebIcon;
 using WebExpress.WebCore.WebPage;
 
 namespace WebExpress.WebApp.Test.WebPage
 {
     /// <summary>
-    /// Verifies that the visual trees emit the icon-theme attribute on the
-    /// root html element based on the ApplicationContext setting.
+    /// Verifies that the visual trees pull the icon theme from the first
+    /// registered theme on the application and emit it on the root
+    /// <c>&lt;html data-icon-theme&gt;</c> attribute. The legacy
+    /// <c>IApplicationContext.IconTheme</c> path was removed; the theme is
+    /// now declared via <c>[IconTheme(...)]</c> on the theme class.
     /// </summary>
     [Collection("NonParallelTests")]
     public class UnitTestVisualTreeWebAppIconTheme
     {
         /// <summary>
-        /// Default icon theme leaves the html element without a
-        /// <c>data-icon-theme</c> attribute.
+        /// With no theme registered for the request's application, the
+        /// visual tree falls back to <see cref="TypeIconTheme.Default"/>
+        /// and the html element does not carry a data-icon-theme attribute.
         /// </summary>
         [Fact]
-        public void Render_DefaultTheme_OmitsAttribute()
+        public void Render_NoThemeRegistered_OmitsAttribute()
         {
-            // arrange
+            // arrange - default request mock builds an ad-hoc ApplicationContext
+            // that is not known to the ThemeManager, so no theme resolves.
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
-            var visualTree = new VisualTreeWebApp(componentHub, context.PageContext)
-            {
-                IconTheme = TypeIconTheme.Default
-            };
+            var visualTree = new VisualTreeWebApp(componentHub, context.PageContext);
             var visualContext = new VisualTreeContext(context);
 
             // act
             var html = visualTree.Render(visualContext).ToString();
 
             // validation
+            Assert.Equal(TypeIconTheme.Default, visualTree.IconTheme);
+            Assert.Null(visualTree.Theme);
             Assert.DoesNotContain("data-icon-theme", html);
         }
 
         /// <summary>
-        /// Light icon theme produces a <c>data-icon-theme="light"</c> on the
-        /// root html element so the JavaScript controls can pick it up
-        /// through <c>webexpress.webui.IconTheme.current()</c>.
+        /// With <c>TestThemeA</c> (carrying <c>[IconTheme(Light)]</c>)
+        /// registered for the request's application, the visual tree adopts
+        /// the theme's icon-theme and emits <c>data-icon-theme="light"</c>.
         /// </summary>
         [Fact]
-        public void Render_LightTheme_EmitsAttribute()
+        public void Render_LightThemeRegistered_EmitsAttribute()
         {
-            // arrange
+            // arrange - take the application context the ThemeManager actually
+            // knows about so the theme resolution succeeds.
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var applicationContext = componentHub.ApplicationManager
+                .GetApplications(typeof(TestApplication))
+                .FirstOrDefault();
+
             var context = UnitTestControlFixture.CreateRenderContextMock();
-            var visualTree = new VisualTreeWebApp(componentHub, context.PageContext)
-            {
-                IconTheme = TypeIconTheme.Light
-            };
+            BindPageContextToApplication(context.PageContext, applicationContext);
+
+            var visualTree = new VisualTreeWebApp(componentHub, context.PageContext);
             var visualContext = new VisualTreeContext(context);
 
             // act
             var html = visualTree.Render(visualContext).ToString();
 
             // validation
+            Assert.NotNull(visualTree.Theme);
+            Assert.Equal(TypeIconTheme.Light, visualTree.IconTheme);
             Assert.Contains(@"data-icon-theme=""light""", html);
         }
 
@@ -63,30 +75,35 @@ namespace WebExpress.WebApp.Test.WebPage
         /// Same contract for the dedicated login visual tree.
         /// </summary>
         [Fact]
-        public void Render_LoginLightTheme_EmitsAttribute()
+        public void Render_Login_LightThemeRegistered_EmitsAttribute()
         {
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var applicationContext = componentHub.ApplicationManager
+                .GetApplications(typeof(TestApplication))
+                .FirstOrDefault();
+
             var context = UnitTestControlFixture.CreateRenderContextMock();
-            var visualTree = new VisualTreeWebAppLogin(componentHub, context.PageContext)
-            {
-                IconTheme = TypeIconTheme.Light
-            };
+            BindPageContextToApplication(context.PageContext, applicationContext);
+
+            var visualTree = new VisualTreeWebAppLogin(componentHub, context.PageContext);
             var visualContext = new VisualTreeContext(context);
 
             // act
             var html = visualTree.Render(visualContext).ToString();
 
             // validation
+            Assert.NotNull(visualTree.Theme);
+            Assert.Equal(TypeIconTheme.Light, visualTree.IconTheme);
             Assert.Contains(@"data-icon-theme=""light""", html);
         }
 
         /// <summary>
-        /// Login visual tree without an explicit light theme leaves the
+        /// Login visual tree without a registered theme also leaves the
         /// attribute off.
         /// </summary>
         [Fact]
-        public void Render_LoginDefaultTheme_OmitsAttribute()
+        public void Render_Login_NoThemeRegistered_OmitsAttribute()
         {
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
@@ -98,7 +115,21 @@ namespace WebExpress.WebApp.Test.WebPage
             var html = visualTree.Render(visualContext).ToString();
 
             // validation
+            Assert.Equal(TypeIconTheme.Default, visualTree.IconTheme);
+            Assert.Null(visualTree.Theme);
             Assert.DoesNotContain("data-icon-theme", html);
+        }
+
+        /// <summary>
+        /// Swap the ad-hoc ApplicationContext on the test page context with
+        /// the manager-registered instance so theme lookup succeeds.
+        /// </summary>
+        private static void BindPageContextToApplication(IPageContext pageContext, IApplicationContext applicationContext)
+        {
+            var concreteType = pageContext.GetType();
+            var prop = concreteType.GetProperty(nameof(IPageContext.ApplicationContext),
+                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            prop?.SetValue(pageContext, applicationContext);
         }
     }
 }

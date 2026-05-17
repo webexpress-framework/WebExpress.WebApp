@@ -1,31 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
 using WebExpress.WebApp.WebControl;
-using WebExpress.WebCore.WebIcon;
-using WebExpress.WebCore.WebTheme;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.WebPage
 {
     /// <summary>
-    /// Represents the visual tree of the web application.
+    /// Represents the visual tree of the web application. The active
+    /// <c>Theme</c> and <c>IconTheme</c> are inherited from
+    /// <see cref="IVisualTreeControl"/>; the icon-theme value is emitted on
+    /// the root <c>&lt;html data-icon-theme&gt;</c> attribute so the JS side
+    /// can read it via <c>webexpress.webui.IconTheme.current()</c>.
     /// </summary>
     public interface IVisualTreeWebApp : IVisualTreeControl
     {
-        /// <summary>
-        /// Gets or sets the theme of the web application.
-        /// </summary>
-        IThemeContext Theme { get; }
-
-        /// <summary>
-        /// Gets the icon theme used for the web application. The value is
-        /// emitted on the root <c>&lt;html data-icon-theme&gt;</c> attribute
-        /// and read by the JavaScript controls through
-        /// <c>webexpress.webui.IconTheme.current()</c>.
-        /// </summary>
-        TypeIconTheme IconTheme { get; }
-
         /// <summary>
         /// Gets header control.
         /// </summary>

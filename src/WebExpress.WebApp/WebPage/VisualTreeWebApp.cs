@@ -24,19 +24,6 @@ namespace WebExpress.WebApp.WebPage
     public class VisualTreeWebApp : VisualTreeControl, IVisualTreeWebApp
     {
         /// <summary>
-        /// Gets or sets the theme of the web application.
-        /// </summary>
-        public IThemeContext Theme { get; set; }
-
-        /// <summary>
-        /// Gets or sets the icon theme used for the web application. Resolved
-        /// from <see cref="WebCore.WebApplication.IApplicationContext.IconTheme"/>
-        /// at construction time and emitted on the root
-        /// <c>&lt;html data-icon-theme&gt;</c> attribute by <see cref="Render"/>.
-        /// </summary>
-        public TypeIconTheme IconTheme { get; set; }
-
-        /// <summary>
         /// Gets or sets the URI used for breadcrumb navigation within the application.
         /// </summary>
         public IUri BreadcrumbUri { get; set; }
@@ -116,8 +103,6 @@ namespace WebExpress.WebApp.WebPage
                 .GetUri<WWW.Ws.MessageQueue>(pageContext.ApplicationContext);
             var domains = Domains?.Invoke() ?? pageContext.Domains?.Select(x => x.FullName.ToLower()) ?? [];
 
-            IconTheme = applicationContext?.IconTheme ?? TypeIconTheme.Default;
-
             MessageQueueUri
                 .AddUserAttribute("data-wx-message-queue-url", messageQueueUri?.ToString())
                 .AddUserAttribute("data-wx-domains", string.Join(";", domains));
@@ -129,7 +114,7 @@ namespace WebExpress.WebApp.WebPage
             Breadcrumb.Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Null);
             (Content as ControlWebAppContent).Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None);
 
-            AddCssLink(Theme?.ThemeStyle.ToString() ?? RouteEndpoint.Combine(baseUri, "css/webexpress.webapp.theme.css"));
+            AddCssLink(Theme?.ThemeStyle?.ToString() ?? RouteEndpoint.Combine(baseUri, "css/webexpress.webapp.theme.css"));
         }
 
         /// <summary>

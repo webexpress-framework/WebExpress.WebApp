@@ -201,21 +201,21 @@ namespace WebExpress.WebApp.Test.WebFragment
         /// Test helper for GetFragments assertions.
         /// </summary>
         [Fact]
-        public void GetFragments_RestFormNew_ContentSecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(TestFragmentControlRestFormNew), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<form id=""webexpress-webapp-test-testfragmentcontrolrestformnew"" class=""wx-webapp-restform"" data-method=""POST"" data-mode=""new""><main><div></div></main><div><button type=""submit"" class=""btn me-2 btn-success""><i class=""fas fa-plus me-2""></i>New  </button></div></form>");
+        public void GetFragments_RestFormNew_ContentSecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(TestFragmentControlRestFormNew), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<form id=""webexpress-webapp-test-testfragmentcontrolrestformnew"" class=""wx-webapp-restform"" data-method=""POST"" data-mode=""new""><main><div></div></main><div><button type=""submit"" class=""btn me-2 btn-success""><i class=""wx-icon-light wx-icon-light-plus me-2""></i>New  </button></div></form>");
 
         /// <summary>
         /// Test the get fragments function of the fragment manager.
         /// Test helper for GetFragments assertions.
         /// </summary>
         [Fact]
-        public void GetFragments_RestFormEdit_ContentSecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(TestFragmentControlRestFormEdit), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<form id=""webexpress-webapp-test-testfragmentcontrolrestformedit"" class=""wx-webapp-restform"" data-method=""PUT"" data-mode=""edit""><main><div></div></main><div><button type=""submit"" class=""btn me-2 btn-success""><i class=""fas fa-floppy-disk me-2""></i>Save  </button></div></form>");
+        public void GetFragments_RestFormEdit_ContentSecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(TestFragmentControlRestFormEdit), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<form id=""webexpress-webapp-test-testfragmentcontrolrestformedit"" class=""wx-webapp-restform"" data-method=""PUT"" data-mode=""edit""><main><div></div></main><div><button type=""submit"" class=""btn me-2 btn-success""><i class=""wx-icon-light wx-icon-light-floppy-disk me-2""></i>Save  </button></div></form>");
 
         /// <summary>
         /// Test the get fragments function of the fragment manager.
         /// Test helper for GetFragments assertions.
         /// </summary>
         [Fact]
-        public void GetFragments_RestFormDelete_ContentSecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(TestFragmentControlRestFormDelete), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<form id=""webexpress-webapp-test-testfragmentcontrolrestformdelete"" class=""wx-webapp-restform"" data-method=""DELETE"" data-mode=""delete""><main><div><p>Are you sure you want to delete this item?</p></div></main><div><button type=""submit"" class=""btn me-2 btn-danger""><i class=""fas fa-trash me-2""></i>Delete  </button></div></form>");
+        public void GetFragments_RestFormDelete_ContentSecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(TestFragmentControlRestFormDelete), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<form id=""webexpress-webapp-test-testfragmentcontrolrestformdelete"" class=""wx-webapp-restform"" data-method=""DELETE"" data-mode=""delete""><main><div><p>Are you sure you want to delete this item?</p></div></main><div><button type=""submit"" class=""btn me-2 btn-danger""><i class=""wx-icon-light wx-icon-light-trash me-2""></i>Delete  </button></div></form>");
 
         /// <summary>
         /// Test the get fragments function of the fragment manager.

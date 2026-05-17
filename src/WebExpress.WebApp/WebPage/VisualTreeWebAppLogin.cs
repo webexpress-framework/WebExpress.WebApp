@@ -22,20 +22,6 @@ namespace WebExpress.WebApp.WebPage
     public class VisualTreeWebAppLogin : VisualTreeControl, IVisualTreeWebApp
     {
         /// <summary>
-        /// Gets or sets the theme of the web application.
-        /// </summary>
-        public IThemeContext Theme { get; set; }
-
-        /// <summary>
-        /// Gets or sets the icon theme used for the web application. The
-        /// effective value is taken from
-        /// <see cref="WebCore.WebApplication.IApplicationContext.IconTheme"/>
-        /// at construction time and emitted on the root
-        /// <c>&lt;html data-icon-theme&gt;</c> attribute by <see cref="Render"/>.
-        /// </summary>
-        public TypeIconTheme IconTheme { get; set; }
-
-        /// <summary>
         /// Gets or sets the URI used for breadcrumb navigation within the application.
         /// </summary>
         public IUri BreadcrumbUri { get; set; }
@@ -111,12 +97,10 @@ namespace WebExpress.WebApp.WebPage
             var applicationContext = pageContext?.ApplicationContext;
             var baseUri = RouteEndpoint.Combine(applicationContext?.Route, "webexpress.webapp/assets");
 
-            IconTheme = applicationContext?.IconTheme ?? TypeIconTheme.Default;
-
             Header.Fixed = TypeFixed.Top;
             Header.Styles = ["position: sticky; top: 0; z-index: 99;"];
 
-            AddCssLink(Theme?.ThemeStyle.ToString() ?? RouteEndpoint.Combine(baseUri, "css/webexpress.webapp.theme.css"));
+            AddCssLink(Theme?.ThemeStyle?.ToString() ?? RouteEndpoint.Combine(baseUri, "css/webexpress.webapp.theme.css"));
         }
 
         /// <summary>
