@@ -22,6 +22,31 @@ namespace WebExpress.WebApp.WebMessageQueue
         private readonly IHttpServerContext _httpServerContext;
         private readonly SubscriberDictionary _subscribers = new();
         private readonly SocketDictionary _connections = new();
+        private readonly PopupNotificationDispatcher _popupNotificationDispatcher;
+        private readonly IPopupNotificationHandler _popupNotificationHandler;
+        private readonly ProgressTaskDispatcher _progressTaskDispatcher;
+        private readonly ChatChannelStore _chatChannelStore;
+        private readonly IChatMessageHandler _chatMessageHandler;
+
+        /// <summary>
+        /// Gets the handler for inbound chat messages (send + history
+        /// replay) over the WebSocket.
+        /// </summary>
+        public IChatMessageHandler ChatMessageHandler => _chatMessageHandler;
+
+        /// <summary>
+        /// Gets the popup notification dispatcher that bridges the
+        /// <see cref="WebUI.WebNotification.NotificationManager"/> to this
+        /// transport. Used by <see cref="MessageQueueSocket"/> to replay
+        /// outstanding notifications on (re)connect.
+        /// </summary>
+        public PopupNotificationDispatcher PopupNotificationDispatcher => _popupNotificationDispatcher;
+
+        /// <summary>
+        /// Gets the handler for inbound popup control messages (currently
+        /// the dismiss requests issued when a user closes a notification).
+        /// </summary>
+        public IPopupNotificationHandler PopupNotificationHandler => _popupNotificationHandler;
 
         /// <summary>
         /// Initializes a new instance of the class.
@@ -34,10 +59,16 @@ namespace WebExpress.WebApp.WebMessageQueue
             _componentHub = componentHub;
             _httpServerContext = httpServerContext;
 
-            _httpServerContext.Log.Debug
+            _httpServerContext?.Log?.Debug
             (
                 I18N.Translate("webexpress.webcore:messagequeuemanager.initialization")
             );
+
+            _popupNotificationDispatcher = new PopupNotificationDispatcher(this, _componentHub);
+            _popupNotificationHandler = new PopupNotificationHandler(_componentHub);
+            _progressTaskDispatcher = new ProgressTaskDispatcher(this, _componentHub);
+            _chatChannelStore = new ChatChannelStore();
+            _chatMessageHandler = new ChatMessageHandler(this, _chatChannelStore);
         }
 
         /// <summary>
@@ -186,6 +217,33 @@ namespace WebExpress.WebApp.WebMessageQueue
             }
 
             return this;
+        }
+
+        /// <summary>
+        /// Replays every still-valid popup notification for the connecting
+        /// socket. Forwards to <see cref="PopupNotificationDispatcher"/>.
+        /// </summary>
+        /// <param name="socket">The connecting socket.</param>
+        /// <param name="cancellationToken">
+        /// A token that propagates notification of request cancellation.
+        /// </param>
+        public Task ReplayPopupNotificationsAsync(IMessageQueueSocket socket, CancellationToken cancellationToken = default)
+        {
+            return _popupNotificationDispatcher.ReplayAsync(socket, cancellationToken);
+        }
+
+        /// <summary>
+        /// Replays every active task as a progress task update to the
+        /// connecting socket. Forwards to
+        /// <see cref="ProgressTaskDispatcher"/>.
+        /// </summary>
+        /// <param name="socket">The connecting socket.</param>
+        /// <param name="cancellationToken">
+        /// A token that propagates notification of request cancellation.
+        /// </param>
+        public Task ReplayProgressTasksAsync(IMessageQueueSocket socket, CancellationToken cancellationToken = default)
+        {
+            return _progressTaskDispatcher.ReplayAsync(socket, cancellationToken);
         }
 
         /// <summary>

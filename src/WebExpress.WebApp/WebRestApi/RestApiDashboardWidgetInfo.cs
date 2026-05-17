@@ -9,24 +9,18 @@ namespace WebExpress.WebApp.WebRestApi
     public class RestApiDashboardWidgetInfo : RestApiDashboardWidget
     {
         /// <summary>
-        /// Returns or sets the widget id.
+        /// Gets or sets the widget id.
         /// </summary>
         public override string Id => "widget_info";
 
         /// <summary>
-        /// Returns or sets the title associated with the object.
-        /// </summary>
-        [JsonPropertyName("title")]
-        public string Title { get; set; }
-
-        /// <summary>
-        /// Returns or sets the description associated with this instance.
+        /// Gets or sets the description associated with this instance.
         /// </summary>
         [JsonPropertyName("desc")]
         public string Description { get; set; }
 
         /// <summary>
-        /// Returns or sets the additional widget parameters.
+        /// Gets or sets the additional widget parameters.
         /// </summary>
         [JsonPropertyName("params")]
         public override Dictionary<string, string> Params
@@ -43,7 +37,7 @@ namespace WebExpress.WebApp.WebRestApi
             set
             {
                 // fill strongly-typed props if loaded from json
-                if (value != null)
+                if (value is not null)
                 {
                     if (value.TryGetValue("title", out string value1))
                     {

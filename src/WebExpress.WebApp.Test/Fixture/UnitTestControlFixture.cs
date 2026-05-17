@@ -11,6 +11,7 @@ using WebExpress.WebCore.WebEndpoint;
 using WebExpress.WebCore.WebLog;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebPage;
+using WebExpress.WebCore.WebParameter;
 using WebExpress.WebCore.WebPlugin;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebPage;
@@ -107,7 +108,25 @@ namespace WebExpress.WebApp.Test.Fixture
         {
             var context = CreateHttpContextMock(content);
 
-            var request = context.Request;
+            var request = context.Request as Request;
+
+            var applicationContext = new ApplicationContext();
+
+            var prop = typeof(ApplicationContext).GetProperty
+            (
+                "Route",
+                BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public
+            );
+
+            prop?.SetValue(applicationContext, new RouteEndpoint("/"));
+
+            var property = request.GetType().GetProperty
+            (
+                "ApplicationContext",
+                BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public
+            );
+
+            property?.SetValue(request, applicationContext);
 
             if (!string.IsNullOrEmpty(uri))
             {
@@ -212,10 +231,12 @@ namespace WebExpress.WebApp.Test.Fixture
         /// </summary>
         /// <param name="applicationContext">The application context. If null, defaults to null.</param>
         /// <param name="scopes">The scopes of the page. If null, defaults to null.</param>
+        /// <param name="parameters">The parameters to add to the request.</param>
         /// <returns>A mock render context for testing.</returns>
-        public static IRenderControlContext CreateRenderContextMock(IApplicationContext applicationContext = null, IEnumerable<Type> scopes = null)
+        public static IRenderControlContext CreateRenderContextMock(IApplicationContext applicationContext = null, IEnumerable<Type> scopes = null, params Parameter[] parameters)
         {
             var request = CreateRequestMock();
+            request.AddParameter(parameters);
 
             return new RenderControlContext(null, CreatePageContextMock(applicationContext, scopes), request);
         }

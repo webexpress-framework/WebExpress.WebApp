@@ -14,37 +14,37 @@ namespace WebExpress.WebApp.WebRestApi
         public string Id { get; set; }
 
         /// <summary>
-        /// Returns or sets the name of the associated property of the item that corresponds to the column.
+        /// Gets or sets the name of the associated property of the item that corresponds to the column.
         /// </summary>
         [JsonPropertyName("name")]
         public string Name { get; set; }
 
         /// <summary>
-        /// Returns or sets a value indicating whether the element is visible.
+        /// Gets or sets a value indicating whether the element is visible.
         /// </summary>
         [JsonPropertyName("visible")]
         public bool Visible { get; set; }
 
         /// <summary>
-        /// Returns or sets the label.
+        /// Gets or sets the label.
         /// </summary>
         [JsonPropertyName("label")]
         public string Label { get; set; }
 
         /// <summary>
-        /// Returns or sets the icon.
+        /// Gets or sets the icon.
         /// </summary>
         [JsonPropertyName("icon")]
         public string Icon { get; set; }
 
         /// <summary>
-        /// Returns or sets the width of the table column in percentage, null for auto.
+        /// Gets or sets the width of the table column in percentage, null for auto.
         /// </summary>
         [JsonPropertyName("width")]
         public uint? Width { get; set; }
 
         /// <summary>
-        /// Returns or sets the path to the template file for rendering the column.
+        /// Gets or sets the path to the template file for rendering the column.
         /// </summary>
         [JsonPropertyName("template")]
         public IRestApiTableColumnTemplate Template { get; set; }

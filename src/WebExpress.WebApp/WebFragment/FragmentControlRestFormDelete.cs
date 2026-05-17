@@ -9,10 +9,10 @@ namespace WebExpress.WebApp.WebFragment
     /// <summary>
     /// Represents a fragment control for deleting REST form data.
     /// </summary>
-    public class FragmentControlRestFormDelete : ControlRestFormDelete, IFragmentControl<ControlRestFormDelete>
+    public abstract class FragmentControlRestFormDelete : ControlRestFormDelete, IFragmentControl<ControlRestFormDelete>
     {
         /// <summary>
-        /// Returns the context of the fragment.
+        /// Gets the context of the fragment.
         /// </summary>
         public IFragmentContext FragmentContext { get; private set; }
 

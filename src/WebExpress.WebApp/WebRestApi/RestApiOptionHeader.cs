@@ -12,12 +12,12 @@ namespace WebExpress.WebApp.WebRestApi
         private string _label = "";
 
         /// <summary>
-        /// Returns the type of the element, represented as a string.
+        /// Gets the type of the element, represented as a string.
         /// </summary>
         public virtual string Type => "header";
 
         /// <summary>
-        /// Returns or sets the text.
+        /// Gets or sets the text.
         /// </summary>
         public virtual string Text
         {
@@ -26,7 +26,7 @@ namespace WebExpress.WebApp.WebRestApi
         }
 
         /// <summary>
-        /// Returns the icon.
+        /// Gets or sets the icon.
         /// </summary>
         public virtual string Icon { get; set; }
 

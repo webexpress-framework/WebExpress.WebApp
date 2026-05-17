@@ -15,46 +15,64 @@ namespace WebExpress.WebApp.WebRestApi
         private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
         /// <summary>
-        /// Returns or sets the unique identifier for the entity.
+        /// Gets or sets the unique identifier for the entity.
         /// </summary>
         [JsonPropertyName("id")]
         public string Id { get; set; }
 
         /// <summary>
-        /// Returns or sets the name associated with the object.
+        /// Gets or sets the name associated with the object.
         /// </summary>
         [JsonPropertyName("name")]
         public string Name { get; set; }
 
         /// <summary>
-        /// Returns or sets the current state of the object.
+        /// Gets or sets the current state of the object.
         /// </summary>
         [JsonPropertyName("state")]
         public string State { get; set; }
 
         /// <summary>
-        /// Returns or sets the version identifier for the object.
+        /// Gets or sets the version identifier for the object.
         /// </summary>
         [JsonPropertyName("version")]
         public string Version { get; set; }
 
         /// <summary>
-        /// Returns or sets the description associated with this instance.
+        /// Gets or sets the description associated with this instance.
         /// </summary>
         [JsonPropertyName("description")]
         public string Description { get; set; }
 
         /// <summary>
-        /// Returns or sets the collection of workflow states associated with the workflow.
+        /// Gets or sets the collection of workflow states associated with the workflow.
         /// </summary>
         [JsonPropertyName("states")]
         public IEnumerable<RestApiWorkflowState> States { get; set; }
 
         /// <summary>
-        /// Returns or sets the collection of workflow transitions available in the current context.
+        /// Gets or sets the collection of workflow transitions available in the current context.
         /// </summary>
         [JsonPropertyName("transitions")]
         public IEnumerable<RestApiWorkflowTransition> Transitions { get; set; }
+
+        /// <summary>
+        /// Gets or sets the collection of workflow guards associated with this workflow.
+        /// </summary>
+        [JsonPropertyName("guards")]
+        public IEnumerable<RestApiWorkflowGuard> Guards { get; set; }
+
+        /// <summary>
+        /// Gets or sets the collection of post functions associated with the workflow transition.
+        /// </summary>
+        [JsonPropertyName("postfunctions")]
+        public IEnumerable<RestApiWorkflowPostFunction> PostFunctions { get; set; }
+
+        /// <summary>
+        /// Gets or sets the collection of validators to be applied to the workflow request.
+        /// </summary>
+        [JsonPropertyName("validations")]
+        public IEnumerable<RestApiWorkflowValidator> Validations { get; set; }
 
         /// <summary>
         /// Converts the current instance into a response object.
@@ -70,7 +88,10 @@ namespace WebExpress.WebApp.WebRestApi
                 version = Version,
                 description = Description,
                 states = States,
-                transitions = Transitions
+                transitions = Transitions,
+                guards = Guards,
+                postfunctions = PostFunctions,
+                validations = Validations
             };
 
             var jsonData = JsonSerializer.Serialize(data, _jsonOptions);

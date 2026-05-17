@@ -75,7 +75,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestFormItemInputUnique(null)
             {
-                Name = name
+                Name = _ => name
             };
 
             // act
@@ -100,7 +100,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestFormItemInputUnique(null)
             {
-                Description = description
+                Description = _ => description
             };
 
             // act
@@ -126,7 +126,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestFormItemInputUnique(null)
             {
-                Placeholder = placeholder
+                Placeholder = _ => placeholder
             };
 
             // act
@@ -152,7 +152,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestFormItemInputUnique(null)
             {
-                MinLength = minLength
+                MinLength = _ => minLength
             };
 
             // act
@@ -167,8 +167,8 @@ namespace WebExpress.WebApp.Test.WebControl
         /// </summary>
         [Theory]
         [InlineData(null, @"<div class=""wx-webapp-input-unique""></div>")]
-        [InlineData(0u, @"<div class=""wx-webapp-input-unique""></div>")]
-        [InlineData(10u, @"<div class=""wx-webapp-input-unique""></div>")]
+        [InlineData(0u, @"<div class=""wx-webapp-input-unique"" data-maxlength=""0""></div>")]
+        [InlineData(10u, @"<div class=""wx-webapp-input-unique"" data-maxlength=""10""></div>")]
         public void MaxLength(uint? maxLength, string expected)
         {
             // arrange
@@ -178,7 +178,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestFormItemInputUnique(null)
             {
-                MaxLength = maxLength
+                MaxLength = _ => maxLength
             };
 
             // act
@@ -203,7 +203,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestFormItemInputUnique(null)
             {
-                Required = required
+                Required = _ => required
             };
 
             // act
@@ -218,7 +218,7 @@ namespace WebExpress.WebApp.Test.WebControl
         /// </summary>
         [Theory]
         [InlineData(null, @"<div class=""wx-webapp-input-unique""></div>")]
-        [InlineData("abc.*", @"<div class=""wx-webapp-input-unique""></div>")]
+        [InlineData("abc.*", @"<div class=""wx-webapp-input-unique"" data-pattern=""abc.*""></div>")]
         public void Pattern(string pattern, string expected)
         {
             // arrange
@@ -228,7 +228,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestFormItemInputUnique(null)
             {
-                Pattern = pattern
+                Pattern = _ => pattern
             };
 
             // act
@@ -253,7 +253,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestFormItemInputUnique(null)
             {
-                RestUri = uriString is not null ? new UriEndpoint(uriString) : null
+                RestUri = _ => uriString is not null ? new UriEndpoint(uriString) : null
             };
 
             // act
@@ -332,13 +332,18 @@ namespace WebExpress.WebApp.Test.WebControl
             // arrange
             var validated = false;
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
-            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock
+            (
+                null,
+                null,
+                new Parameter("form", "", ParameterScope.Parameter)
+            );
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestFormItemInputUnique("text-box").Initialize(args =>
             {
                 args.Value.Text = value;
             });
-            var form = new ControlForm()
+            var form = new ControlForm() { Name = _ => "form" }
                 .Add(control)
                 .Validate
                 (
@@ -374,7 +379,12 @@ namespace WebExpress.WebApp.Test.WebControl
             // arrange
             var validated = false;
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
-            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock
+            (
+                null,
+                null,
+                new Parameter("form", "", ParameterScope.Parameter)
+            );
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestFormItemInputUnique("text-box")
                 .Validate
@@ -388,7 +398,7 @@ namespace WebExpress.WebApp.Test.WebControl
                         validated = true;
                     }
                 );
-            var form = new ControlForm()
+            var form = new ControlForm() { Name = _ => "form" }
                 .Add(control);
 
             context.Request.AddParameter(new Parameter(form.Id, context.Request?.Session.Id.ToString(), ParameterScope.Parameter));
@@ -413,14 +423,19 @@ namespace WebExpress.WebApp.Test.WebControl
             // arrange
             var processed = false;
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
-            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock
+            (
+                null,
+                null,
+                new Parameter("form", "", ParameterScope.Parameter)
+            );
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestFormItemInputUnique("text-box")
                 .Initialize(args =>
                 {
                     args.Value.Text = value;
                 });
-            var form = new ControlForm()
+            var form = new ControlForm() { Name = _ => "form" }
                 .Add(control)
                 .Process
                 (
@@ -452,12 +467,17 @@ namespace WebExpress.WebApp.Test.WebControl
             // arrange
             var processed = false;
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
-            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock
+            (
+                null,
+                null,
+                new Parameter("form", "", ParameterScope.Parameter)
+            );
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestFormItemInputUnique("text-box")
                 .Initialize(x => x.Value.Text = value)
                 .Process(x => processed = true);
-            var form = new ControlForm()
+            var form = new ControlForm() { Name = _ => "form" }
                 .Add(control);
 
             context.Request.AddParameter(new Parameter(form.Id, context.Request?.Session.Id.ToString(), ParameterScope.Parameter));

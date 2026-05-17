@@ -8,19 +8,19 @@ namespace WebExpress.WebApp.WebRestApi
     public class RestApiKanbanColumn
     {
         /// <summary>
-        /// Returns or sets the unique identifier for the column.
+        /// Gets or sets the unique identifier for the column.
         /// </summary>
         [JsonPropertyName("id")]
         public string Id { get; set; }
 
         /// <summary>
-        /// Returns or sets the display label associated with this column.
+        /// Gets or sets the display label associated with this column.
         /// </summary>
         [JsonPropertyName("label")]
         public string Label { get; set; }
 
         /// <summary>
-        /// Returns or sets the CSS color value associated with this column.
+        /// Gets or sets the CSS color value associated with this column.
         /// </summary>
         [JsonPropertyName("colorCss")]
         public string ColorCss { get; set; }

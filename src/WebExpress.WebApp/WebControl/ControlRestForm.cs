@@ -1,8 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using WebExpress.WebCore;
 using WebExpress.WebCore.WebHtml;
-using WebExpress.WebCore.WebUri;
+using WebExpress.WebCore.WebMessage;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebFragment;
 using WebExpress.WebUI.WebPage;
@@ -17,10 +18,16 @@ namespace WebExpress.WebApp.WebControl
     public class ControlRestForm : ControlForm
     {
         /// <summary>
-        /// Returns or sets the mode that determines how the form behaves 
+        /// Gets or sets the mode that determines how the form behaves 
         /// or is rendered.
         /// </summary>
-        public TypeRestFormMode Mode { get; set; } = TypeRestFormMode.Default;
+        public virtual Func<IRenderControlFormContext, string> Mode { get; set; }
+
+        /// <summary>
+        /// Gets or sets the function used to retrieve the item identifier for a given render 
+        /// control form context.
+        /// </summary>
+        public Func<IRenderControlFormContext, string> ItemId { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class.
@@ -50,33 +57,16 @@ namespace WebExpress.WebApp.WebControl
         /// <param name="renderContext">The context in which the control is rendered.</param>
         /// <param name="visualTree">The visual tree.</param>
         /// <returns>An HTML node representing the rendered control.</returns>
-        public virtual IHtmlNode Render(IRenderControlFormContext renderContext, IVisualTreeControl visualTree)
-        {
-            return Render(renderContext, visualTree, Items, null, Uri);
-        }
-
-        /// <summary>
-        /// Convert to html.
-        /// </summary>
-        /// <param name="renderContext">The context in which the control is rendered.</param>
-        /// <param name="visualTree">The visual tree representing the control's structure.</param>
-        /// <param name="items">The form items.</param>
-        /// <returns>The control as html.</returns>
         public override IHtmlNode Render(IRenderControlFormContext renderContext, IVisualTreeControl visualTree, IEnumerable<IControlFormItem> items)
         {
-            return Render(renderContext, visualTree, items, null, Uri);
-        }
+            var uri = Uri?.Invoke(renderContext);
+            var mode = Mode?.Invoke(renderContext);
+            var itemLayout = ItemLayout?.Invoke(renderContext) ?? TypeLayoutFormItem.Vertical;
+            var formLayout = FormLayout?.Invoke(renderContext) ?? TypeLayoutForm.Default;
+            var id = ItemId?.Invoke(renderContext);
+            var method = Method?.Invoke(renderContext) ?? RequestMethod.NONE;
+            var role = Role?.Invoke(renderContext);
 
-        /// <summary>
-        /// Converts the control to an HTML representation.
-        /// </summary>
-        /// <param name="renderContext">The context in which the control is rendered.</param>
-        /// <param name="visualTree">The visual tree.</param>
-        /// <param name="items">The form items.</param>
-        /// <param name="id">The unique identifier for the item.</param>
-        /// <returns>An HTML node representing the rendered control.</returns>
-        public virtual IHtmlNode Render(IRenderControlFormContext renderContext, IVisualTreeControl visualTree, IEnumerable<IControlFormItem> items, string id, IUri uri)
-        {
             var resultUri = uri?.BindParameters(renderContext.Request);
 
             // generate html
@@ -85,10 +75,10 @@ namespace WebExpress.WebApp.WebControl
                 Id = Id,
                 Class = Css.Concatenate("wx-webapp-restform", GetClasses()),
                 Style = GetStyles(),
-                Role = Role
+                Role = role
             }
-                .AddUserAttribute("data-method", Method.ToString())
-                .AddUserAttribute("data-mode", Mode.ToMode())
+                .AddUserAttribute("data-method", method.ToString())
+                .AddUserAttribute("data-mode", mode)
                 .AddUserAttribute("data-id", id?.ToString())
                 .AddUserAttribute("data-uri", resultUri?.ToString());
 
@@ -121,14 +111,14 @@ namespace WebExpress.WebApp.WebControl
             var main = new HtmlElementSectionMain();
             var group = default(ControlFormItemGroup);
 
-            group = ItemLayout switch
+            group = itemLayout switch
             {
                 TypeLayoutFormItem.Horizontal => new ControlFormItemGroupHorizontal(),
                 TypeLayoutFormItem.Mix => new ControlFormItemGroupMix(),
                 _ => new ControlFormItemGroupVertical(),
             };
 
-            foreach (var item in Items.Where(x => x is not ControlFormItemInputHidden))
+            foreach (var item in items.Where(x => x is not ControlFormItemInputHidden))
             {
                 group.Items.Add(item);
             }
@@ -137,7 +127,7 @@ namespace WebExpress.WebApp.WebControl
 
             var buttonPannel = new HtmlElementTextContentDiv()
             {
-                Class = FormLayout == TypeLayoutForm.Inline ? "ms-2" : ""
+                Class = formLayout == TypeLayoutForm.Inline ? "ms-2" : ""
             };
             buttonPannel.Add(Buttons.Select(x => x?.Render(renderContext, visualTree)));
 

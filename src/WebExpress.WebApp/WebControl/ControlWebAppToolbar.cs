@@ -22,32 +22,32 @@ namespace WebExpress.WebApp.WebControl
         private readonly List<IControlDropdownItem> _moreSecondary = [];
 
         /// <summary>
-        /// Returns the preferences area.
+        /// Gets the preferences area.
         /// </summary>
         public IEnumerable<IControlToolbarItem> Preferences => _preferences;
 
         /// <summary>
-        /// Returns the primary area.
+        /// Gets the primary area.
         /// </summary>
         public IEnumerable<IControlToolbarItem> Primary => _primary;
 
         /// <summary>
-        /// Returns the secondary area.
+        /// Gets the secondary area.
         /// </summary>
         public IEnumerable<IControlToolbarItem> Secondary => _secondary;
 
         /// <summary>
-        /// Returns the preferences area of the more menu.
+        /// Gets the preferences area of the more menu.
         /// </summary>
         public IEnumerable<IControlDropdownItem> MorePreferences => _morePreferences;
 
         /// <summary>
-        /// Returns the primary area of the more menu.
+        /// Gets the primary area of the more menu.
         /// </summary>
         public IEnumerable<IControlDropdownItem> MorePrimary => _morePrimary;
 
         /// <summary>
-        /// Returns the secondary area of the more menu.
+        /// Gets the secondary area of the more menu.
         /// </summary>
         public IEnumerable<IControlDropdownItem> MoreSecondary => _moreSecondary;
 
@@ -58,7 +58,7 @@ namespace WebExpress.WebApp.WebControl
         public ControlWebAppToolbar(string id = null)
             : base(id)
         {
-            Padding = new PropertySpacingPadding(PropertySpacing.Space.Null);
+            Padding = _ => new PropertySpacingPadding(PropertySpacing.Space.Null);
         }
 
         /// <summary>
@@ -216,7 +216,7 @@ namespace WebExpress.WebApp.WebControl
             var items = GetItems(renderContext);
             var more = GetMore(renderContext);
 
-            Enable = items.Any() || more.Any();
+            var enable = items.Any() || more.Any();
 
             return base.Render(renderContext, visualTree, items, more);
         }
@@ -262,17 +262,17 @@ namespace WebExpress.WebApp.WebControl
                );
 
             var preferencesLeft = preferences
-                .Where(x => x.Alignment == TypeToolbarItemAlignment.Default || x.Alignment == TypeToolbarItemAlignment.Left);
+                .Where(x => x.Alignment?.Invoke(renderContext) == TypeToolbarItemAlignment.Default || x.Alignment?.Invoke(renderContext) == TypeToolbarItemAlignment.Left);
             var preferencesRight = preferences
-                .Where(x => x.Alignment == TypeToolbarItemAlignment.Right);
+                .Where(x => x.Alignment?.Invoke(renderContext) == TypeToolbarItemAlignment.Right);
             var primaryLeft = primary
-                .Where(x => x.Alignment == TypeToolbarItemAlignment.Default || x.Alignment == TypeToolbarItemAlignment.Left);
+                .Where(x => x.Alignment?.Invoke(renderContext) == TypeToolbarItemAlignment.Default || x.Alignment?.Invoke(renderContext) == TypeToolbarItemAlignment.Left);
             var primaryRight = primary
-                .Where(x => x.Alignment == TypeToolbarItemAlignment.Right);
+                .Where(x => x.Alignment?.Invoke(renderContext) == TypeToolbarItemAlignment.Right);
             var secondaryLeft = secondary
-                .Where(x => x.Alignment == TypeToolbarItemAlignment.Default || x.Alignment == TypeToolbarItemAlignment.Left);
+                .Where(x => x.Alignment?.Invoke(renderContext) == TypeToolbarItemAlignment.Default || x.Alignment?.Invoke(renderContext) == TypeToolbarItemAlignment.Left);
             var secondaryRight = secondary
-                .Where(x => x.Alignment == TypeToolbarItemAlignment.Right);
+                .Where(x => x.Alignment?.Invoke(renderContext) == TypeToolbarItemAlignment.Right);
 
             // left
             foreach (var item in preferencesLeft)
@@ -310,7 +310,7 @@ namespace WebExpress.WebApp.WebControl
             {
                 yield return new ControlToolbarItemDivider()
                 {
-                    Alignment = TypeToolbarItemAlignment.Right
+                    Alignment = _ => TypeToolbarItemAlignment.Right
                 };
             }
 
@@ -323,7 +323,7 @@ namespace WebExpress.WebApp.WebControl
             {
                 yield return new ControlToolbarItemDivider()
                 {
-                    Alignment = TypeToolbarItemAlignment.Right
+                    Alignment = _ => TypeToolbarItemAlignment.Right
                 };
             }
 
@@ -377,7 +377,7 @@ namespace WebExpress.WebApp.WebControl
             {
                 yield return new ControlDropdownItemHeader()
                 {
-                    Text = "webexpress.webapp:toolbar.more.title"
+                    Text = _ => "webexpress.webapp:toolbar.more.title"
                 };
             }
 

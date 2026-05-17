@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>TabCtrl | WebExpress.WebApp </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="TabCtrl | WebExpress.WebApp ">
+      
+      
+      <link rel="icon" href="../assets/webexpress.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/ReneSchwarzer/WebExpress.WebApp/blob/develop/docs/js/tab.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../assets/webexpress.svg" alt="WebExpress.WebApp">
+            WebExpress.WebApp
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+
+<p><img src="https://raw.githubusercontent.com/webexpress-framework/.github/main/docs/assets/img/banner.png" alt="WebExpress"></p>
+<h1 id="tabctrl">TabCtrl</h1>
+<p>The <code>webexpress.webapp.TabCtrl</code> component is a REST-enabled tab controller. It extends <code>webexpress.webui.TabCtrl</code>, loads tab data from a REST endpoint, instantiates pane templates, applies declarative bindings, and supports creating/closing tabs via REST requests.</p>
+<pre><code>   ┌─────────────────────────────────────────────────────────────────┐
+   │ [Tab 1]  [Tab 2]  [Tab 3]                            [Toolbar]  │
+   ├─────────────────────────────────────────────────────────────────┤
+   │                                                                 │
+   │ Content for the active tab                                      │
+   │                                                                 │
+   └─────────────────────────────────────────────────────────────────┘
+</code></pre>
+<h2 id="declarative-configuration">Declarative Configuration</h2>
+<p>The initial structure is defined in HTML. The root element is the tab host (<code>.wx-webapp-tab</code>), and children with <code>.wx-template</code> (or native <code>&lt;template&gt;</code>) are used as pane templates.</p>
+<h3 id="container-element-attributes">Container Element Attributes</h3>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>data-layout</code></td>
+<td>Visual style of tabs. Supported values: <code>tab</code>, <code>pill</code>, <code>underline</code>.</td>
+<td><code>data-layout=&quot;underline&quot;</code></td>
+</tr>
+<tr>
+<td><code>data-uri</code></td>
+<td>The uri is used to determine the tabs.</td>
+<td><code>/api/1/tab</code></td>
+</tr>
+<tr>
+<td><code>data-readonly</code></td>
+<td>Disables add/close interactions when set to <code>true</code>.</td>
+<td><code>data-readonly=&quot;true&quot;</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="tab-template-element-attributes">Tab Template Element Attributes</h3>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>Template identifier (<code>templateId</code> reference from REST payload).</td>
+<td><code>id=&quot;monkeyTemplate&quot;</code></td>
+</tr>
+<tr>
+<td><code>data-icon</code></td>
+<td>Icon CSS class shown in the template picker.</td>
+<td><code>data-icon=&quot;fas fa-map&quot;</code></td>
+</tr>
+<tr>
+<td><code>data-name</code></td>
+<td>Display name shown in the template picker.</td>
+<td><code>data-name=&quot;Monkey Island&quot;</code></td>
+</tr>
+<tr>
+<td><code>data-description</code></td>
+<td>Optional description shown under the template name in picker menu.</td>
+<td><code>data-description=&quot;Adventure&quot;</code></td>
+</tr>
+<tr>
+<td><code>data-multiplicity</code></td>
+<td>Optional maximum number of tab items that may be created from this template. Once the limit is reached, the add button (or this template's entry in the picker menu) is disabled. If omitted, the template is unlimited.</td>
+<td><code>data-multiplicity=&quot;3&quot;</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="rest-data-contract">REST Data Contract</h2>
+<h3 id="get-data-uri">GET (<code>data-uri</code>)</h3>
+<p>The controller expects JSON with an <code>items</code> array:</p>
+<pre><code class="lang-json">{
+  &quot;items&quot;: [
+    {
+      &quot;id&quot;: &quot;tab_profile&quot;,
+      &quot;label&quot;: &quot;Profiles&quot;,
+      &quot;name&quot;: &quot;All known profiles&quot;,
+      &quot;icon&quot;: &quot;fas fa-umbrella-beach&quot;,
+      &quot;color&quot;: &quot;text-primary&quot;,
+      &quot;primaryAction&quot;: &quot;open&quot;,
+      &quot;primaryTarget&quot;: &quot;self&quot;,
+      &quot;templateId&quot;: &quot;profileTemplate&quot;,
+      &quot;binding&quot;: {
+        &quot;title&quot;: &quot;Profiles&quot;,
+        &quot;name&quot;: &quot;All known profiles&quot;
+      }
+    }
+  ]
+}
+</code></pre>
+<h3 id="post-create-tab">POST (create tab)</h3>
+<p>When the add button is used, the controller sends:</p>
+<pre><code class="lang-json">{
+  &quot;action&quot;: &quot;create&quot;,
+  &quot;templateId&quot;: &quot;&lt;selected-template-id&gt;&quot;
+}
+</code></pre>
+<p>The response must contain <code>newTab</code>:</p>
+<pre><code class="lang-json">{
+  &quot;newTab&quot;: {
+    &quot;id&quot;: &quot;tab_dynamic_1&quot;,
+    &quot;label&quot;: &quot;New Tab&quot;,
+    &quot;templateId&quot;: &quot;Profile&quot;
+  }
+}
+</code></pre>
+<h3 id="delete-close-tab">DELETE (close tab)</h3>
+<p>Closing a tab sends a <code>DELETE</code> request to:</p>
+<p><code>&lt;data-uri&gt;?id=&lt;tabId&gt;</code></p>
+<h2 id="binding-model">Binding Model</h2>
+<p>The binding model is unified and declarative. There is no split into separate binding systems. A template element declares one or more binding keys in <code>data-wx-bind</code>, and each key can optionally define its own mode, target, and name.</p>
+<p>This allows compact single-key bindings as well as multi-key bindings on the same element, for example:
+<code>data-wx-bind=&quot;uri, title, isActive&quot;</code>.</p>
+<h3 id="value-resolution">Value Resolution</h3>
+<p>For each binding key <code>k</code>, value resolution is:</p>
+<ol>
+<li><code>item.binding[k]</code></li>
+<li><code>item[k]</code></li>
+<li><code>&quot;&quot;</code> (empty string)</li>
+</ol>
+<p>This supports both flat payloads and nested <code>binding</code> payloads.</p>
+<h3 id="core-binding-attribute">Core Binding Attribute</h3>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>data-wx-bind</code></td>
+<td>yes</td>
+<td>Comma-separated list of source keys.</td>
+</tr>
+</tbody>
+</table>
+<p>Example:</p>
+<pre><code class="lang-html">&lt;div data-wx-bind=&quot;uri, title, isActive&quot;&gt;&lt;/div&gt;
+</code></pre>
+<h3 id="per-key-binding-attributes">Per-Key Binding Attributes</h3>
+<p>Each key in <code>data-wx-bind</code> can define specific options:</p>
+<ul>
+<li><code>data-wx-bind-&lt;key&gt;-mode</code></li>
+<li><code>data-wx-bind-&lt;key&gt;-target</code></li>
+<li><code>data-wx-bind-&lt;key&gt;-name</code></li>
+</ul>
+<p>If an option is not defined for a key, defaults apply:</p>
+<ul>
+<li>mode: <code>text</code></li>
+<li>target: <code>self</code></li>
+<li>name: <code>&quot;&quot;</code></li>
+</ul>
+<p>Example for key <code>uri</code>:</p>
+<ul>
+<li><code>data-wx-bind-uri-mode=&quot;attr&quot;</code></li>
+<li><code>data-wx-bind-uri-name=&quot;data-uri&quot;</code></li>
+<li><code>data-wx-bind-uri-target=&quot;.wx-webapp-dashboard&quot;</code></li>
+</ul>
+<h3 id="supported-modes">Supported Modes</h3>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>text</code></td>
+<td>Writes to <code>textContent</code>.</td>
+</tr>
+<tr>
+<td><code>html</code></td>
+<td>Writes to <code>innerHTML</code>.</td>
+</tr>
+<tr>
+<td><code>attr</code></td>
+<td>Writes an HTML attribute (<code>name</code> required).</td>
+</tr>
+<tr>
+<td><code>prop</code></td>
+<td>Writes a DOM property (<code>name</code> required).</td>
+</tr>
+<tr>
+<td><code>class</code></td>
+<td>If <code>name</code> is set: adds class by value; otherwise replaces <code>className</code>.</td>
+</tr>
+<tr>
+<td><code>style</code></td>
+<td>Writes CSS property (<code>name</code> required).</td>
+</tr>
+<tr>
+<td><code>toggle</code></td>
+<td>Toggles class in <code>name</code> by boolean truthiness (<code>name</code> required).</td>
+</tr>
+</tbody>
+</table>
+<h3 id="target-resolution">Target Resolution</h3>
+<ul>
+<li><code>target=&quot;self&quot;</code> binds to the source element itself.</li>
+<li>If a CSS selector is provided, matching nodes inside the pane are selected.</li>
+<li>The source element is always included as fallback target to avoid dropped bindings.</li>
+</ul>
+<h3 id="binding-metadata-cleanup">Binding Metadata Cleanup</h3>
+<p>After binding is applied, binding metadata attributes are removed from the final rendered pane:</p>
+<ul>
+<li><code>data-wx-bind</code></li>
+<li>all <code>data-wx-bind-&lt;key&gt;-mode</code></li>
+<li>all <code>data-wx-bind-&lt;key&gt;-name</code></li>
+<li>all <code>data-wx-bind-&lt;key&gt;-target</code></li>
+</ul>
+<p>This ensures the resulting DOM contains only effective runtime attributes.</p>
+<h2 id="binding-examples">Binding Examples</h2>
+<h3 id="single-key">Single Key</h3>
+<pre><code class="lang-html">&lt;h5
+  data-wx-bind=&quot;title&quot;&gt;
+&lt;/h5&gt;
+</code></pre>
+<pre><code class="lang-html">&lt;a
+  data-wx-bind=&quot;uri&quot;
+  data-wx-bind-uri-mode=&quot;attr&quot;
+  data-wx-bind-uri-name=&quot;href&quot;&gt;
+  Open
+&lt;/a&gt;
+</code></pre>
+<h3 id="multiple-keys-with-per-key-options">Multiple Keys with Per-Key Options</h3>
+<pre><code class="lang-html">&lt;div
+  data-wx-bind=&quot;uri, title, isActive&quot;
+  data-wx-bind-uri-mode=&quot;attr&quot;
+  data-wx-bind-uri-name=&quot;data-uri&quot;
+  data-wx-bind-uri-target=&quot;.wx-webapp-dashboard&quot;
+  data-wx-bind-title-mode=&quot;text&quot;
+  data-wx-bind-title-target=&quot;.title&quot;
+  data-wx-bind-isActive-mode=&quot;toggle&quot;
+  data-wx-bind-isActive-name=&quot;active&quot;
+  data-wx-bind-isActive-target=&quot;.card&quot;&gt;
+
+  &lt;div class=&quot;wx-webapp-dashboard&quot;&gt;&lt;/div&gt;
+  &lt;h5 class=&quot;title&quot;&gt;&lt;/h5&gt;
+  &lt;div class=&quot;card&quot;&gt;&lt;/div&gt;
+&lt;/div&gt;
+</code></pre>
+<h3 id="html-property-and-style-modes">HTML, Property, and Style Modes</h3>
+<pre><code class="lang-html">&lt;div
+  data-wx-bind=&quot;htmlSnippet&quot;
+  data-wx-bind-htmlSnippet-mode=&quot;html&quot;&gt;
+&lt;/div&gt;
+
+&lt;input
+  type=&quot;checkbox&quot;
+  data-wx-bind=&quot;isDisabled&quot;
+  data-wx-bind-isDisabled-mode=&quot;prop&quot;
+  data-wx-bind-isDisabled-name=&quot;disabled&quot;&gt;
+
+&lt;div
+  data-wx-bind=&quot;priorityColor&quot;
+  data-wx-bind-priorityColor-mode=&quot;style&quot;
+  data-wx-bind-priorityColor-name=&quot;border-color&quot;&gt;
+&lt;/div&gt;
+</code></pre>
+<h2 id="programmatic-control">Programmatic Control</h2>
+<p>Once initialized, the <code>TabCtrl</code> instance can be used programmatically.</p>
+<pre><code class="lang-javascript">// find the host element in the dom
+const tabElement = document.getElementById(&quot;myTabs&quot;);
+
+// retrieve the controller instance associated with the element
+const tabCtrl = webexpress.webui.Controller.getInstanceByElement(tabElement);
+
+// programmatically select a specific tab by its id
+if (tabCtrl) {
+    tabCtrl.selectTab(&quot;settings-tab&quot;);
+}
+</code></pre>
+<h2 id="events">Events</h2>
+<p>The component dispatches events for tab interactions:</p>
+<ul>
+<li><p><code>webexpress.webui.Event.SELECTED_TAB_EVENT</code><br>
+Fired when a tab becomes active. <code>detail.tabId</code> contains the selected tab id.</p>
+</li>
+<li><p><code>webexpress.webapp.Event.TAB_ADDED_EVENT</code><br>
+Fired after a tab was created and appended. <code>detail.tabId</code> contains the new tab id.</p>
+</li>
+<li><p><code>webexpress.webapp.Event.TAB_CLOSED_EVENT</code><br>
+Fired after a tab was removed. <code>detail.tabId</code> contains the removed tab id.</p>
+</li>
+</ul>
+<h2 id="use-case-example">Use Case Example</h2>
+<pre><code class="lang-html">&lt;div id=&quot;myTabs&quot; class=&quot;wx-webapp-tab&quot; data-layout=&quot;underline&quot; data-uri=&quot;/api/1/tab&quot;&gt;
+    &lt;div class=&quot;wx-tab-toolbar&quot;&gt;
+        &lt;div class=&quot;btn-group&quot;&gt;
+            &lt;button class=&quot;btn btn-outline-secondary btn-sm&quot;&gt;Action&lt;/button&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div id=&quot;profile-tab&quot; class=&quot;wx-template&quot; data-icon=&quot;fas fa-map&quot; data-name=&quot;Profile&quot; data-description=&quot;Profile&quot;&gt;
+        &lt;h5 data-wx-bind=&quot;title&quot;&gt;&lt;/h5&gt;
+        &lt;p data-wx-bind=&quot;name&quot;&gt;&lt;/p&gt;
+    &lt;/div&gt;
+&lt;/div&gt;
+</code></pre>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/ReneSchwarzer/WebExpress.WebApp/blob/develop/docs/js/tab.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

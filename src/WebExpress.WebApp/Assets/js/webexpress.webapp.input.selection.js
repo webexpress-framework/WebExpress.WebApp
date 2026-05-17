@@ -85,6 +85,9 @@ webexpress.webapp.InputSelectionCtrl = class extends webexpress.webui.InputSelec
                 this._debouncedReceive(term);
             }
         });
+
+        const term = (this._filter && "value" in this._filter) ? this._filter.value : "";
+        this.receiveData(term);
     }
 
     /**

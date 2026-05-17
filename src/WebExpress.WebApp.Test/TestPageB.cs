@@ -14,7 +14,7 @@ namespace WebExpress.WebApp.Test
     public sealed class TestPageB : IPage<VisualTreeWebApp>, IScopeGeneral
     {
         /// <summary>
-        /// Returns or sets the page context.
+        /// Gets or sets the page context.
         /// </summary>
         public IPageContext PageContext { get; private set; }
 

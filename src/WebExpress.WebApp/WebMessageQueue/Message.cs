@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text.Json.Serialization;
 
 namespace WebExpress.WebApp.WebMessageQueue
 {
@@ -12,47 +11,41 @@ namespace WebExpress.WebApp.WebMessageQueue
     public class Message : IMessage
     {
         /// <summary>
-        /// Returns the application-defined message type used for routing and dispatching.
+        /// Gets the application-defined message type used for routing and dispatching.
         /// </summary>
-        [JsonPropertyName("type")]
         public string Type { get; }
 
         /// <summary>
-        /// Returns the unique message identifier used for deduplication or
+        /// Gets the unique message identifier used for deduplication or
         /// request/response correlation.
         /// </summary>
-        [JsonPropertyName("messageid")]
         public string MessageId { get; }
 
         /// <summary>
-        /// Returns the identifier of the application this message belongs to,
+        /// Gets the identifier of the application this message belongs to,
         /// if applicable.
         /// </summary>
-        [JsonPropertyName("applicationid")]
         public string ApplicationId { get; }
 
         /// <summary>
-        /// Returns the socket endpoint identifier this message originates from
+        /// Gets the socket endpoint identifier this message originates from
         /// or is targeted to.
         /// </summary>
-        [JsonPropertyName("socketid")]
         public string SocketId { get; }
 
         /// <summary>
-        /// Returns the connection identifier assigned by the socket manager
+        /// Gets the connection identifier assigned by the socket manager
         /// during registration.
         /// </summary>
-        [JsonPropertyName("connectionid")]
         public string ConnectionId { get; }
 
         /// <summary>
         /// Gets the optional sender identifier associated with this message.
         /// </summary>
-        [JsonPropertyName("sender")]
         public string Sender { get; }
 
         /// <summary>
-        /// Returns the UTC timestamp indicating when the message instance was created.
+        /// Gets the UTC timestamp indicating when the message instance was created.
         /// </summary>
         public DateTime Timestamp { get; }
 
@@ -117,7 +110,7 @@ namespace WebExpress.WebApp.WebMessageQueue
 
             Timestamp = timestamp ?? DateTime.UtcNow;
 
-            Meta = meta != null
+            Meta = meta is not null
                 ? new Dictionary<string, string>(meta)
                 : [];
         }

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>CollaborativeCtrl | WebExpress.WebApp </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="CollaborativeCtrl | WebExpress.WebApp ">
+      
+      
+      <link rel="icon" href="../assets/webexpress.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/ReneSchwarzer/WebExpress.WebApp/blob/develop/docs/js/collaborative.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../assets/webexpress.svg" alt="WebExpress.WebApp">
+            WebExpress.WebApp
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+
+<p><img src="https://raw.githubusercontent.com/webexpress-framework/.github/main/docs/assets/img/banner.png" alt="WebExpress"></p>
+<h1 id="collaborativectrl">CollaborativeCtrl</h1>
+<p>The <code>CollaborativeCtrl</code> extends the existing WebExpress infrastructure by using the already available MessageQueue as a communication channel to make collaborative interactions between multiple users visible in real time. The MessageQueue provides a stable WebSocket connection through which status changes, cursor movements, and text input events can be transmitted. The new control acts as a container that can host arbitrary UI elements while simultaneously visualizing the presence of all currently connected users within this area. When the control is initialized, it establishes a connection to the global MessageQueue that is already available in the system. The control registers itself as a listener for incoming messages and sends its own events through the same channel. The MessageQueue ensures reliable transmission of all relevant data, eliminating the need for additional communication logic.</p>
+<p>Inside the container, all users reported as active via the MessageQueue are displayed. The control receives presence information sent by other clients and updates the visualization accordingly. In addition, the mouse cursor positions of connected users are displayed in real time. Each client sends its current cursor position through the MessageQueue, while the control receives incoming cursor events from other users and renders them as colored overlays inside the container. The rendering is independent of the underlying UI elements, ensuring that interaction with the interface remains unaffected.</p>
+<p>Beyond cursor visualization, the control also supports synchronization of text input. Whenever a user focuses a text field inside the container and begins typing, these input events are transmitted through the MessageQueue to all other clients. The control detects these events, associates them with the corresponding element, and displays the input of other users in real time. This creates a collaborative editing experience that requires no additional backend logic and relies solely on the existing MessageQueue.</p>
+<p>The architecture of the control follows the structure of the existing <code>MessageQueueStatusCtrl</code>. It uses the same mechanisms for registering and deregistering event handlers and follows the typical WebExpress lifecycle. When the control is removed, all listeners are properly deregistered to avoid memory leaks. The logic is modular, keeping presence tracking, cursor tracking, and input synchronization clearly separated. The MessageQueue serves as the central transport mechanism for all events, enabling consistent, low‑latency, and scalable real‑time communication between all connected clients.</p>
+<p>By leveraging the existing MessageQueue, the new control integrates seamlessly into the WebExpress architecture. It requires no additional server components, as the WebSocket infrastructure is already in place. The control extends the existing functionality with collaborative capabilities and provides a foundation for future features such as shared editing, live commenting, or visual annotations within the container. The result is a powerful, extensible, and fully integrated control that enables real‑time collaborative interactions and makes optimal use of the MessageQueue.</p>
+<pre><code>   ┌───────────────────────────────┐
+   │       [User1] [User2] [UserN] │  // user overlay
+   │┌─────────────────────────────┐│
+   ││                             ││  // content
+   ││ Field:                      ││
+   ││ ┌─────────────────────────┐ ││
+   ││ │ input░                  │ ││  // Mouse &amp; Input User1
+   ││ └─────────────────────────┘ ││
+   ││      ▒                      ││  // Mouse User1
+   │└─────────────────────────────┘│  
+   └───────────────────────────────┘
+</code></pre>
+<h2 id="configuration">Configuration</h2>
+<p>Configuration is performed via dataset attributes on the host element:</p>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>data-collaborative-presence</code></td>
+<td>Enables the display of connected users</td>
+</tr>
+<tr>
+<td><code>data-collaborative-cursor</code></td>
+<td>Enables visualization of mouse cursors</td>
+</tr>
+<tr>
+<td><code>data-collaborative-input</code></td>
+<td>Enables synchronization of text input</td>
+</tr>
+<tr>
+<td><code>data-collaborative-color-mode</code></td>
+<td>Defines how user colors are assigned (auto, fixed)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="functionality">Functionality</h2>
+<p>The CollaborativeCtrl provides three central areas of functionality. The most important behaviors are:</p>
+<ul>
+<li>User presence: The control displays all active users connected through the MessageQueue.</li>
+<li>Cursor synchronization: Mouse movements are transmitted in real time and displayed as colored cursors.</li>
+<li>Input synchronization: Text input in contained fields is mirrored live across all clients.</li>
+<li>Overlay rendering: Cursors and user labels are rendered above the container without blocking the UI.</li>
+<li>MessageQueue integration: All events are transmitted through the existing WebSocket infrastructure.</li>
+</ul>
+<h2 id="programmatic-control">Programmatic Control</h2>
+<h3 id="accessing-an-automatically-created-instance">Accessing an Automatically Created Instance</h3>
+<p>When the framework instantiates the controller automatically, the instance can be retrieved via the framework registry and read or updated using vanilla JavaScript:</p>
+<pre><code class="lang-javascript">var el = document.getElementById('collaborative1');
+var ctrl = webexpress.webui.Controller.getInstanceByElement(el);
+
+// Example: retrieve active users
+console.log(ctrl.users);
+</code></pre>
+<h3 id="manual-instantiation">Manual Instantiation</h3>
+<p>Manual instantiation is supported for direct programmatic use:</p>
+<pre><code class="lang-javascript">var el = document.getElementById('collaborative-manual');
+var ctrl = new webexpress.webui.CollaborativeCtrl(el);
+
+// Example: disable cursor display
+ctrl.enableCursor(false);
+</code></pre>
+<h2 id="events">Events</h2>
+<p>The CollaborativeCtrl dispatches its own events that can be consumed by applications:</p>
+<ul>
+<li><code>webexpress.webui.Event.COLLABORATIVE_USER_JOIN</code> – A new user has joined the container</li>
+<li><code>webexpress.webui.Event.COLLABORATIVE_USER_LEAVE</code> – A user has left the container</li>
+<li><code>webexpress.webui.Event.COLLABORATIVE_CURSOR</code> – A cursor update has been received</li>
+<li><code>webexpress.webui.Event.COLLABORATIVE_INPUT</code> – A text input event has been synchronized</li>
+</ul>
+<h2 id="use-case-example">Use Case Example</h2>
+<p>Static usage inside HTML:</p>
+<pre><code class="lang-html">&lt;div id=&quot;collaborative1&quot;
+     class=&quot;wx-webui-collaborative&quot;
+     data-collaborative-presence=&quot;true&quot;
+     data-collaborative-cursor=&quot;true&quot;
+     data-collaborative-input=&quot;true&quot;&gt;
+&lt;/div&gt;
+</code></pre>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/ReneSchwarzer/WebExpress.WebApp/blob/develop/docs/js/collaborative.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -17,7 +17,7 @@ namespace WebExpress.WebApp.WebStatusPage
         protected readonly IStatusPageContext _statusPageContext;
 
         /// <summary>
-        /// Returns the current status message of the operation.
+        /// Gets the current status message of the operation.
         /// </summary>
         public string StatusMessage { get; protected set; }
 
@@ -43,47 +43,47 @@ namespace WebExpress.WebApp.WebStatusPage
         {
             var statusCode = new ControlText()
             {
-                Text = _statusPageContext.StatusCode.ToString(),
-                Format = TypeFormatText.H2,
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.One),
-                Padding = new PropertySpacingPadding(PropertySpacing.Space.Four)
+                Text = _ => _statusPageContext.StatusCode.ToString(),
+                Format = _ => TypeFormatText.H2,
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.One),
+                Padding = _ => new PropertySpacingPadding(PropertySpacing.Space.Four)
             };
 
             var title = new ControlText()
             {
-                Text = I18N.Translate(renderContext, _statusPageContext.StatusTitle),
-                Format = TypeFormatText.H3,
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
+                Text = _ => I18N.Translate(renderContext, _statusPageContext.StatusTitle),
+                Format = _ => TypeFormatText.H3,
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
             };
 
             var description = new ControlText()
             {
-                Text = I18N.Translate(renderContext, _statusPageContext.StatusDescription),
-                Format = TypeFormatText.Markdown,
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
+                Text = _ => I18N.Translate(renderContext, _statusPageContext.StatusDescription),
+                Format = _ => TypeFormatText.Markdown,
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
             };
 
             var message = new ControlPanelCard()
             {
-                BackgroundColor = new PropertyColorBackground(TypeColorBackground.Light)
+                BackgroundColor = _ => new PropertyColorBackground(TypeColorBackground.Light)
             }
                 .Add(new ControlText()
                 {
-                    Text = StatusMessage,
-                    Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
+                    Text = _ => StatusMessage,
+                    Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
                 });
 
             var panel = new ControlPanel()
             {
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Three)
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Three)
             }
                 .Add(title, description, !string.IsNullOrWhiteSpace(StatusMessage) ? message : null);
 
             var flex = new ControlPanelFlex()
             {
-                Layout = TypeLayoutFlex.Inline,
-                Justify = TypeJustifiedFlex.Start,
-                Align = TypeAlignFlex.Stretch
+                Layout = _ => TypeLayoutFlex.Inline,
+                Justify = _ => TypeJustifiedFlex.Start,
+                Align = _ => TypeAlignFlex.Stretch
             }
                 .Add(statusCode, panel);
 

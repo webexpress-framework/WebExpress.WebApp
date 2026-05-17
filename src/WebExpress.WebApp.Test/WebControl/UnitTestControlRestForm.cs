@@ -56,7 +56,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestForm()
             {
-                BackgroundColor = new PropertyColorBackground(color)
+                BackgroundColor = _ => new PropertyColorBackground(color)
             };
 
             // act
@@ -80,7 +80,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestForm()
             {
-                Name = name
+                Name = _ => name
             };
 
             // act
@@ -105,7 +105,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestForm()
             {
-                Uri = uri is not null ? new UriEndpoint(uri) : null
+                Uri = _ => uri is not null ? new UriEndpoint(uri) : null
             };
 
             // act
@@ -133,7 +133,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestForm(null)
             {
-                Method = method
+                Method = _ => method
             };
 
             // act
@@ -159,7 +159,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestForm(null)
             {
-                Mode = mode
+                Mode = _ => mode.ToMode()
             };
 
             // act
@@ -183,7 +183,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestForm()
             {
-                FormLayout = formLayout
+                FormLayout = _ => formLayout
             };
 
             // act
@@ -208,7 +208,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestForm()
             {
-                ItemLayout = itemLayout
+                ItemLayout = _ => itemLayout
             };
 
             // act
@@ -235,7 +235,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestForm()
             {
-                Justify = justify,
+                Justify = _ => justify,
             };
 
             // act
@@ -277,7 +277,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var control = new ControlRestForm();
             control.AddPrimaryButton(new ControlFormItemButtonSubmit("")
             {
-                Text = "sendbutton"
+                Text = _ => "sendbutton"
             });
 
             // act

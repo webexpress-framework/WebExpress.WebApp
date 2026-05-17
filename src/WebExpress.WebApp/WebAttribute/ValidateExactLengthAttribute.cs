@@ -11,12 +11,12 @@ namespace WebExpress.WebApp.WebAttribute
     public sealed class ValidateExactLengthAttribute : Attribute, IValidation
     {
         /// <summary> 
-        /// Returns the exact required length of the string. 
+        /// Gets the exact required length of the string. 
         /// </summary>
         public int Length { get; }
 
         /// <summary> 
-        /// Returns the error message returned when validation fails. 
+        /// Gets the error message returned when validation fails. 
         /// </summary>
         public string Message { get; }
 

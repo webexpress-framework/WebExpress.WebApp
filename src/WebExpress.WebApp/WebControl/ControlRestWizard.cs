@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebUri;
@@ -16,20 +17,26 @@ namespace WebExpress.WebApp.WebControl
         private readonly List<IControlRestWizardPage> _pages = [];
 
         /// <summary>
-        /// Returns the collection of wizard pages associated with the control.
+        /// Gets the collection of wizard pages associated with the control.
         /// </summary>
         public IEnumerable<IControlRestWizardPage> Pages => _pages;
 
         /// <summary>
-        /// Returns or sets the uri that determines the data.
+        /// Gets or sets the uri that determines the data.
         /// </summary>
-        public IUri RestUri { get; set; }
+        public Func<IRenderControlContext, IUri> RestUri { get; set; }
 
         /// <summary>
-        /// Returns or sets the mode that determines how the form behaves 
+        /// Gets or sets the mode that determines how the form behaves 
         /// or is rendered.
         /// </summary>
-        public TypeRestFormMode Mode { get; set; } = TypeRestFormMode.Default;
+        public Func<IRenderControlContext, TypeRestFormMode> Mode { get; set; } = _ => TypeRestFormMode.Default;
+
+        /// <summary>
+        /// Gets a delegate that returns the unique identifier for an item within 
+        /// the specified render control context.
+        /// </summary>
+        public Func<IRenderControlContext, string> ItemId { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class.
@@ -84,7 +91,7 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            return Render(renderContext, visualTree, null, RestUri);
+            return Render(renderContext, visualTree, _pages);
         }
 
         /// <summary>
@@ -92,12 +99,15 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="renderContext">The context in which the control is rendered.</param>
         /// <param name="visualTree">The visual tree.</param>
-        /// <param name="id">The unique identifier for the item.</param>
-        /// <param name="uri">The URI that specifies the RESTful resource to retrieve data from.</param>
+        /// <param name="pages">The pages to render.</param>
         /// <returns>An HTML node representing the rendered control.</returns>
-        public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, string id, IUri uri)
+        public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IEnumerable<IControlRestWizardPage> pages)
         {
+            var uri = RestUri?.Invoke(renderContext);
             var resultUri = uri?.BindParameters(renderContext.Request);
+            var mode = Mode?.Invoke(renderContext) ?? TypeRestFormMode.Default;
+            var itemId = ItemId?.Invoke(renderContext);
+            var role = Role?.Invoke(renderContext);
 
             // generate html
             var html = new HtmlElementFormForm()
@@ -105,10 +115,10 @@ namespace WebExpress.WebApp.WebControl
                 Id = Id,
                 Class = Css.Concatenate("wx-webapp-restwizard", GetClasses()),
                 Style = GetStyles(),
-                Role = Role
+                Role = role
             }
-                .AddUserAttribute("data-mode", Mode.ToMode())
-                .AddUserAttribute("data-id", id?.ToString())
+                .AddUserAttribute("data-mode", mode.ToMode())
+                .AddUserAttribute("data-id", itemId?.ToString())
                 .AddUserAttribute("data-uri", resultUri?.ToString())
                 .Add(_pages.Select(x => x.Render(renderContext, visualTree)));
 

@@ -18,8 +18,14 @@ webexpress.webapp.MessageQueue = new class {
 
         // reconnect state
         this._shouldReconnect = true;
-        this._reconnectDelay = 1000; // start with 1s
+        this._reconnectDelayInitial = 1000; // start with 1s
+        this._reconnectDelay = this._reconnectDelayInitial;
         this._reconnectMax = 15000;  // max 15s
+        this._reconnectTimer = null;
+
+        // remembered for automatic reconnect attempts
+        this._wsUrl = null;
+        this._domains = null;
     }
 
     /**
@@ -55,16 +61,26 @@ webexpress.webapp.MessageQueue = new class {
             this._ws = null;
         }
         this._wsUrl = url || this._wsUrl;
+        if (Array.isArray(domains)) {
+            // first explicit call wins; reconnects reuse the stored domains
+            this._domains = domains;
+        }
         if (!this._wsUrl) {
             this._status = "offline";
             this._lastError = "No WebSocket URL specified";
             return;
         }
 
+        // a manual connect cancels any pending reconnect timer
+        if (this._reconnectTimer) {
+            clearTimeout(this._reconnectTimer);
+            this._reconnectTimer = null;
+        }
+
         let finalUrl = this._wsUrl;
 
-        if (Array.isArray(domains) && domains.length > 0) {
-            const encoded = encodeURIComponent(domains.join(";"));
+        if (Array.isArray(this._domains) && this._domains.length > 0) {
+            const encoded = encodeURIComponent(this._domains.join(";"));
 
             // check if URL already has query parameters
             finalUrl += (finalUrl.includes("?") ? "&" : "?") + "domains=" + encoded;
@@ -86,6 +102,8 @@ webexpress.webapp.MessageQueue = new class {
         this._ws.addEventListener("open", (evt) => {
             this._setStatus("online");
             this._lastError = null;
+            // reset backoff so the next disconnect starts the staircase over
+            this._reconnectDelay = this._reconnectDelayInitial;
         });
 
         this._ws.addEventListener("message", (evt) => {
@@ -135,6 +153,10 @@ webexpress.webapp.MessageQueue = new class {
      */
     disconnect() {
         this._shouldReconnect = false;
+        if (this._reconnectTimer) {
+            clearTimeout(this._reconnectTimer);
+            this._reconnectTimer = null;
+        }
         if (this._ws) {
             this._ws.close();
             this._ws = null;
@@ -145,22 +167,51 @@ webexpress.webapp.MessageQueue = new class {
     /**
      * Schedules an automatic WebSocket reconnect attempt using an exponential
      * backoff strategy. The reconnect is only performed if automatic reconnects
-     * are enabled via `_shouldReconnect`.
+     * are enabled via `_shouldReconnect`. Once a connection succeeds the
+     * backoff resets to its initial value (see `open` handler).
      */
     _scheduleReconnect() {
-        if (!this._shouldReconnect) return;
+        if (!this._shouldReconnect) {
+            return;
+        }
 
-        //const delay = this._reconnectDelay;
-        //console.info(`WebSocket reconnect in ${delay}ms...`);
+        // an already scheduled reconnect should not be queued twice
+        if (this._reconnectTimer) {
+            return;
+        }
 
-        //setTimeout(() => {
-        //    this.connect();
-        //}, delay);
+        const delay = this._reconnectDelay;
 
-        // exponential backoff
-        //this._reconnectDelay = Math.min(this._reconnectDelay * 2, this._reconnectMax);
+        this._reconnectTimer = setTimeout(() => {
+            this._reconnectTimer = null;
+            this.connect(this._wsUrl);
+        }, delay);
+
+        // exponential backoff, capped at _reconnectMax
+        this._reconnectDelay = Math.min(this._reconnectDelay * 2, this._reconnectMax);
     }
 
+
+    /**
+     * Dispatches a synthesized payload to every registered listener
+     * without putting it on the WebSocket. Useful for client-only events
+     * (e.g. a "popup" action that wants to show a local notification
+     * through the existing PopupNotificationCtrl pipeline) without
+     * involving the server.
+     * @param {Object} payload - The synthesized payload object.
+     */
+    dispatchLocal(payload) {
+        if (!payload) {
+            return;
+        }
+        for (let listener of this._listeners) {
+            try {
+                listener(payload);
+            } catch (err) {
+                // listener errors must not interrupt the dispatch loop
+            }
+        }
+    }
 
     /**
      * Sends a message through the active WebSocket connection.
@@ -252,6 +303,48 @@ webexpress.webapp.Event = class {
     static TAB_ADDED_EVENT = "webexpress.webapp.tab.added";
     // Event triggered when a tab is closed dynamically.
     static TAB_CLOSED_EVENT = "webexpress.webapp.tab.closed";
+    // Event triggered when the form editor finishes loading (or reloading) a form.
+    static FORM_EDITOR_LOADED_EVENT = "webexpress.webapp.formeditor.loaded";
+    // Event triggered when a node is added in the form editor.
+    static FORM_EDITOR_NODE_ADDED_EVENT = "webexpress.webapp.formeditor.node.added";
+    // Event triggered when a node is removed in the form editor.
+    static FORM_EDITOR_NODE_REMOVED_EVENT = "webexpress.webapp.formeditor.node.removed";
+    // Event triggered when a node is renamed in the form editor.
+    static FORM_EDITOR_NODE_RENAMED_EVENT = "webexpress.webapp.formeditor.node.renamed";
+    // Event triggered when a node is moved (drag-and-drop) in the form editor.
+    static FORM_EDITOR_NODE_MOVED_EVENT = "webexpress.webapp.formeditor.node.moved";
+    // Event triggered when a tab is added in the form editor.
+    static FORM_EDITOR_TAB_ADDED_EVENT = "webexpress.webapp.formeditor.tab.added";
+    // Event triggered when a tab is renamed in the form editor.
+    static FORM_EDITOR_TAB_RENAMED_EVENT = "webexpress.webapp.formeditor.tab.renamed";
+    // Event triggered when the form editor's layout (two-pane / tree-table / three-pane) changes.
+    static FORM_EDITOR_LAYOUT_CHANGED_EVENT = "webexpress.webapp.formeditor.layout.changed";
+    // Event triggered after a successful structure save.
+    static FORM_EDITOR_SAVED_EVENT = "webexpress.webapp.formeditor.saved";
+    // Event triggered when a structure save fails validation.
+    static FORM_EDITOR_VALIDATION_FAILED_EVENT = "webexpress.webapp.formeditor.validation.failed";
+    // Event triggered when a remote user joins a CollaborativeCtrl container.
+    static COLLABORATIVE_USER_JOIN = "webexpress.webapp.collaborative.user.join";
+    // Event triggered when a remote user leaves a CollaborativeCtrl container.
+    static COLLABORATIVE_USER_LEAVE = "webexpress.webapp.collaborative.user.leave";
+    // Event triggered when a remote cursor position update is received.
+    static COLLABORATIVE_CURSOR = "webexpress.webapp.collaborative.cursor";
+    // Event triggered when a remote input value update is received.
+    static COLLABORATIVE_INPUT = "webexpress.webapp.collaborative.input";
+    // Event triggered when a comment is added
+    static COMMENT_ADDED_EVENT = "webexpress.webapp.comment.added";
+    // Event triggered when a comment is updated
+    static COMMENT_UPDATED_EVENT = "webexpress.webapp.comment.updated";
+    // Event triggered when a comment is deleted
+    static COMMENT_DELETED_EVENT = "webexpress.webapp.comment.deleted";
+    // Event triggered when a reaction is added to a comment
+    static COMMENT_REACTION_EVENT = "webexpress.webapp.comment.reaction";
+    // Event triggered when a reply is added to a comment
+    static COMMENT_REPLY_EVENT = "webexpress.webapp.comment.reply";
+    // Event triggered when an observer is added
+    static OBSERVER_ADDED_EVENT = "webexpress.webapp.observer.added";
+    // Event triggered when an observer is removed
+    static OBSERVER_REMOVED_EVENT = "webexpress.webapp.observer.removed";
 }
 
 // initialize the WebSocket connection after the DOM is fully loaded    

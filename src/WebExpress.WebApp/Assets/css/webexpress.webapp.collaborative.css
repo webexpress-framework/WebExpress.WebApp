@@ -1,0 +1,102 @@
+.wx-collaborative {
+    position: relative;
+}
+
+.wx-collaborative-presence {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+    display: flex;
+    flex-direction: row;
+    gap: 0.25rem;
+    z-index: 10;
+    pointer-events: auto;
+}
+
+.wx-collaborative-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 600;
+    line-height: 1;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    user-select: none;
+    cursor: default;
+}
+
+.wx-collaborative-cursors {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 9;
+}
+
+.wx-collaborative-cursor {
+    position: absolute;
+    transform: translate(-2px, -2px);
+    transition: left 0.08s linear, top 0.08s linear;
+    pointer-events: none;
+    line-height: 0;
+}
+
+.wx-collaborative-cursor svg {
+    display: block;
+}
+
+.wx-collaborative-cursor-label {
+    display: inline-block;
+    margin-left: 0.5rem;
+    padding: 0.05rem 0.35rem;
+    border-radius: 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    line-height: 1.2;
+    color: #fff;
+    white-space: nowrap;
+    vertical-align: top;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.wx-collaborative-carets {
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+    pointer-events: none;
+    z-index: 11;
+}
+
+.wx-collaborative-caret {
+    position: absolute;
+    width: 2px;
+    pointer-events: none;
+    animation: wx-collaborative-caret-blink 1s steps(1) infinite;
+    transition: left 0.08s linear, top 0.08s linear;
+}
+
+.wx-collaborative-caret-label {
+    position: absolute;
+    top: -0.95rem;
+    left: 0;
+    padding: 0.05rem 0.3rem;
+    border-radius: 0.35rem 0.35rem 0.35rem 0;
+    font-size: 0.6rem;
+    line-height: 1;
+    color: #fff;
+    white-space: nowrap;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+@keyframes wx-collaborative-caret-blink {
+    0%, 49% {
+        opacity: 1;
+    }
+    50%, 100% {
+        opacity: 0.25;
+    }
+}

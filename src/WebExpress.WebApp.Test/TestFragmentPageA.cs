@@ -20,7 +20,7 @@ namespace WebExpress.WebApp.Test
         public TestFragmentPageA(IFragmentContext fragmentContext)
             : base(fragmentContext)
         {
-            Add(new ControlText() { Text = "Hello World" });
+            Add(new ControlText() { Text = _ => "Hello World" });
         }
     }
 }

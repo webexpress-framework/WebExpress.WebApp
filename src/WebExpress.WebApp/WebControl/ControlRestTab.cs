@@ -1,9 +1,14 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using WebExpress.WebApp.WebSection;
+using WebExpress.WebCore;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
+using WebExpress.WebUI.WebFragment;
 using WebExpress.WebUI.WebPage;
+using WebExpress.WebUI.WebSection;
 
 namespace WebExpress.WebApp.WebControl
 {
@@ -15,19 +20,24 @@ namespace WebExpress.WebApp.WebControl
         private readonly List<IControlRestTabTemplate> _templates = [];
 
         /// <summary>
-        /// Returns or sets the uri that determines the data.
+        /// Gets or sets the uri that determines the data.
         /// </summary>
-        public IUri RestUri { get; set; }
+        public Func<IRenderControlContext, IUri> RestUri { get; set; }
 
         /// <summary>
-        /// Returns or sets the binding.
+        /// Gets or sets the binding.
         /// </summary>
-        public IBinding Bind { get; set; }
+        public Func<IRenderControlContext, IBinding> Bind { get; set; }
 
         /// <summary>
-        /// Returns the collection of templates associated with the tab.
+        /// Gets the collection of templates associated with the tab.
         /// </summary>
         public IEnumerable<IControlRestTabTemplate> Templates => _templates;
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the control is read-only.
+        /// </summary>
+        public Func<IRenderControlContext, bool> Readonly { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class.
@@ -82,19 +92,29 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            return Render(renderContext, visualTree, RestUri);
-        }
-
-        /// <summary>
-        /// Converts the control to an HTML representation.
-        /// </summary>
-        /// <param name="renderContext">The context in which the control is rendered.</param>
-        /// <param name="visualTree">The visual tree.</param>
-        /// <param name="uri">An optional URI containing parameters to be bound to the rendering context. Can be null.</param>
-        /// <returns>An HTML node representing the rendered control.</returns>
-        public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IUri uri)
-        {
+            var uri = RestUri?.Invoke(renderContext);
+            var bind = Bind?.Invoke(renderContext);
             var resultUri = uri?.BindParameters(renderContext.Request);
+            var @readonly = Readonly?.Invoke(renderContext) ?? false;
+            var fragmentManager = WebEx.ComponentHub.FragmentManager;
+            var applicationContext = renderContext?.PageContext?.ApplicationContext;
+
+            // templates
+            var templatePreferences = fragmentManager.GetFragments<IFragmentControlViewItem, SectionTabTemplatePreferences>
+            (
+                applicationContext,
+                [GetType()]
+            );
+            var templatePrimary = fragmentManager.GetFragments<IFragmentControlViewItem, SectionViewItemPrimary>
+            (
+                applicationContext,
+                [GetType()]
+            );
+            var templateSecondary = fragmentManager.GetFragments<IFragmentControlViewItem, SectionViewItemSecondary>
+            (
+                applicationContext,
+                [GetType()]
+            );
 
             var html = new HtmlElementTextContentDiv()
             {
@@ -103,9 +123,13 @@ namespace WebExpress.WebApp.WebControl
                 Style = GetStyles()
             }
                 .AddUserAttribute("data-uri", resultUri?.ToString())
-                .Add(_templates.Select(x => x.Render(renderContext, visualTree)));
+                .AddUserAttribute("data-readonly", @readonly ? "true" : null)
+                .Add(templatePreferences.Select(x => x.Render(renderContext, visualTree)))
+                .Add(templatePrimary.Select(x => x.Render(renderContext, visualTree)))
+                .Add(_templates.Select(x => x.Render(renderContext, visualTree)))
+                .Add(templateSecondary.Select(x => x.Render(renderContext, visualTree)));
 
-            Bind?.ApplyUserAttributes(html);
+            bind?.ApplyUserAttributes(html);
 
             return html;
         }

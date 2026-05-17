@@ -30,4 +30,28 @@
         /// </summary>
         Delete
     }
+
+    /// <summary>
+    /// Provides extension methods for the <see cref="RestApiCrudMode"/> enumeration.
+    /// </summary>
+    public static class RestApiCrudModeExtensions
+    {
+        /// <summary>
+        /// Converts the enumeration value to a string representation.
+        /// </summary>
+        /// <param name="mode">The mode to convert.</param>
+        /// <returns>A string representation of the mode.</returns>
+        public static string ToMode(this RestApiCrudMode mode)
+        {
+            return mode switch
+            {
+                RestApiCrudMode.Create => "new",
+                RestApiCrudMode.Clone => "new",
+                RestApiCrudMode.Retrieve => "retrieve",
+                RestApiCrudMode.Update => "update",
+                RestApiCrudMode.Delete => "delete",
+                _ => ""
+            };
+        }
+    }
 }

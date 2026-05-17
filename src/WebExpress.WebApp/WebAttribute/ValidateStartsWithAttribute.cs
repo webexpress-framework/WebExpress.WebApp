@@ -11,12 +11,12 @@ namespace WebExpress.WebApp.WebAttribute
     public sealed class ValidateStartsWithAttribute : Attribute, IValidation
     {
         /// <summary> 
-        /// Returns the prefix that the string must start with. 
+        /// Gets the prefix that the string must start with. 
         /// </summary>
         public string Prefix { get; }
 
         /// <summary> 
-        /// Returns the error message returned when validation fails. 
+        /// Gets the error message returned when validation fails. 
         /// </summary>
         public string Message { get; }
 

@@ -9,10 +9,10 @@ namespace WebExpress.WebApp.WebFragment
     /// <summary>
     /// Represents a quickfilter control within a fragment context.
     /// </summary>
-    public class FragmentControlRestQuickfilter : ControlRestQuickfilter, IFragmentControl<ControlRestQuickfilter>
+    public abstract class FragmentControlRestQuickfilter : ControlRestQuickfilter, IFragmentControl<ControlRestQuickfilter>
     {
         /// <summary>
-        /// Returns the context of the fragment.
+        /// Gets the context of the fragment.
         /// </summary>
         public IFragmentContext FragmentContext { get; private set; }
 
@@ -21,7 +21,7 @@ namespace WebExpress.WebApp.WebFragment
         /// </summary>
         /// <param name="fragmentContext">The context of the fragment.</param>
         public FragmentControlRestQuickfilter(IFragmentContext fragmentContext)
-            : base(fragmentContext?.FragmentId?.ToString())
+            : base(fragmentContext?.FragmentId?.ToString()?.Replace(".", "-"))
         {
             FragmentContext = fragmentContext;
         }

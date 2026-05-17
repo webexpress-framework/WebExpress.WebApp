@@ -20,17 +20,17 @@ namespace WebExpress.WebApp.WebControl
         private readonly List<IControlDropdownItem> _secondary = [];
 
         /// <summary>
-        /// Returns the preferences area.
+        /// Gets the preferences area.
         /// </summary>
         public IEnumerable<IControlDropdownItem> Preferences => _preferences;
 
         /// <summary>
-        /// Returns the primary area.
+        /// Gets the primary area.
         /// </summary>
         public IEnumerable<IControlDropdownItem> Primary => _primary;
 
         /// <summary>
-        /// Returns the secondary area.
+        /// Gets the secondary area.
         /// </summary>
         public IEnumerable<IControlDropdownItem> Secondary => _secondary;
 
@@ -41,7 +41,7 @@ namespace WebExpress.WebApp.WebControl
         public ControlWebAppHeadlineMore(string id = null)
             : base(id)
         {
-            Padding = new PropertySpacingPadding(PropertySpacing.Space.Null);
+            Padding = _ => new PropertySpacingPadding(PropertySpacing.Space.Null);
         }
 
         /// <summary>
@@ -129,10 +129,10 @@ namespace WebExpress.WebApp.WebControl
             var settingsCtlr = items.Any() ?
             new ControlDropdown(Id, [.. items])
             {
-                Icon = new IconEllipsisHorizontal(),
-                AlignmentMenu = TypeAlignmentDropdownMenu.Right,
+                Icon = _ => new IconEllipsisHorizontal(),
+                AlignmentMenu = _ => TypeAlignmentDropdownMenu.Right,
                 //BackgroundColor = new PropertyColorButton(TypeColorButton.Dark),
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None)
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None)
             } :
             null;
 
@@ -165,7 +165,7 @@ namespace WebExpress.WebApp.WebControl
             {
                 yield return new ControlDropdownItemHeader()
                 {
-                    Text = "webexpress.webapp:headline.more.title"
+                    Text = _ => "webexpress.webapp:headline.more.title"
                 };
             }
 

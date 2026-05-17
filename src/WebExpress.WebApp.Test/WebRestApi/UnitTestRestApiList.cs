@@ -60,7 +60,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             var items = root.GetProperty("items").EnumerateArray().ToList();
             Assert.Single(items);
 
-            Assert.NotEmpty(items[0].GetProperty("content").GetString());
+            Assert.NotEmpty(items[0].GetProperty("text").GetString());
             Assert.Null(items[0].GetProperty("icon").GetString());
 
             var options = items[0].GetProperty("options").EnumerateArray().ToList();
@@ -70,7 +70,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             Assert.Equal("item", option.GetProperty("type").GetString());
             Assert.Equal("edit", option.GetProperty("command").GetString());
             Assert.Equal("Edit", option.GetProperty("text").GetString());
-            Assert.Equal("fa fa-pen", option.GetProperty("icon").GetString());
+            Assert.Equal("fas fa-pen", option.GetProperty("icon").GetString());
             Assert.Equal("text-primary", option.GetProperty("color").GetString());
             Assert.NotNull(option.GetProperty("id").GetString());
 

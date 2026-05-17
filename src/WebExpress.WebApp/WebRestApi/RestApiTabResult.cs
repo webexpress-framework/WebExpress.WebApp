@@ -15,61 +15,61 @@ namespace WebExpress.WebApp.WebRestApi
         private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
         /// <summary>
-        /// Returns or sets the unique identifier for the tab entity.
+        /// Gets or sets the unique identifier for the tab entity.
         /// </summary>
         [JsonPropertyName("id")]
         public string Id { get; set; }
 
         /// <summary>
-        /// Returns or sets the name/title of the tab.
+        /// Gets or sets the name/title of the tab.
         /// </summary>
         [JsonPropertyName("name")]
         public string Name { get; set; }
 
         /// <summary>
-        /// Returns or sets the label for the tab (e.g., as shown in the UI).
+        /// Gets or sets the label for the tab (e.g., as shown in the UI).
         /// </summary>
         [JsonPropertyName("label")]
         public string Label { get; set; }
 
         /// <summary>
-        /// Returns or sets the icon CSS class for the tab.
+        /// Gets or sets the icon CSS class for the tab.
         /// </summary>
         [JsonPropertyName("icon")]
         public string Icon { get; set; }
 
         /// <summary>
-        /// Returns or sets the template id associated with this tab.
+        /// Gets or sets the template id associated with this tab.
         /// </summary>
         [JsonPropertyName("templateId")]
         public string TemplateId { get; set; }
 
         /// <summary>
-        /// Returns or sets the URI of the tab content (e.g., REST or HTML view).
+        /// Gets or sets the URI of the tab content (e.g., REST or HTML view).
         /// </summary>
         [JsonPropertyName("uri")]
         public string Uri { get; set; }
 
         /// <summary>
-        /// Returns or sets the description for this tab.
+        /// Gets or sets the description for this tab.
         /// </summary>
         [JsonPropertyName("description")]
         public string Description { get; set; }
 
         /// <summary>
-        /// Returns or sets the collection of available tabs (optional, for tab sets).
+        /// Gets or sets the collection of available tabs (optional, for tab sets).
         /// </summary>
         [JsonPropertyName("tabs")]
         public IEnumerable<RestApiTabView> Views { get; set; }
 
         /// <summary>
-        /// Returns or sets the content for this tab, if provided inline (optional).
+        /// Gets or sets the content for this tab, if provided inline (optional).
         /// </summary>
         [JsonPropertyName("content")]
         public string Content { get; set; }
 
         /// <summary>
-        /// Returns or sets additional custom data for the tab.
+        /// Gets or sets additional custom data for the tab.
         /// </summary>
         [JsonPropertyName("data")]
         public object Data { get; set; }

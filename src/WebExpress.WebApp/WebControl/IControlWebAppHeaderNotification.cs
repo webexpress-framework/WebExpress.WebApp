@@ -9,17 +9,17 @@ namespace WebExpress.WebApp.WebControl
     public interface IControlWebAppHeaderNotification : IControl
     {
         /// <summary>
-        /// Returns the preferences area.
+        /// Gets the preferences area.
         /// </summary>
         IEnumerable<IControlDropdownItem> Preferences { get; }
 
         /// <summary>
-        /// Returns the primary area.
+        /// Gets the primary area.
         /// </summary>
         IEnumerable<IControlDropdownItem> Primary { get; }
 
         /// <summary>
-        /// Returns the secondary area.
+        /// Gets the secondary area.
         /// </summary>
         IEnumerable<IControlDropdownItem> Secondary { get; }
 

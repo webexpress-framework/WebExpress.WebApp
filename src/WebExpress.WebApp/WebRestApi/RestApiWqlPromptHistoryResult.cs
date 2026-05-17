@@ -18,7 +18,7 @@ namespace WebExpress.WebApp.WebRestApi
         };
 
         /// <summary>
-        /// Returns or sets the collection of history entries associated with the instance.
+        /// Gets or sets the collection of history entries associated with the instance.
         /// </summary>
         public IEnumerable<string> History { get; set; } = [];
 

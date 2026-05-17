@@ -9,7 +9,7 @@ namespace WebExpress.WebApp.WebRestApi
     public class RestApiOptionSeparator : RestApiOption
     {
         /// <summary>
-        /// Returns the type of the element, represented as a string.
+        /// Gets the type of the element, represented as a string.
         /// </summary>
         public virtual string Type => "divider";
 

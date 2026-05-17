@@ -16,23 +16,15 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
     _pageSize = 50;
     _items = {};
 
-    _orderBy = null;      // current sort property
-    _orderDir = null;     // current sort direction ('asc'/'desc')
+    _orderBy = null;
+    _orderDir = null;
 
-    // fields
     _restUri = "";
     _progressDiv = this._createProgressDiv();
     
-    // placeholder items for loading state
-    _previewItems = [
-        { id: null, editable: false, content: { html: (() => { const w = document.createElement("span"); const s = document.createElement("span"); s.className = "placeholder col-8 placeholder-lg"; w.appendChild(s); return w; })() } },
-        { id: null, editable: false, content: { html: (() => { const w = document.createElement("span"); const s = document.createElement("span"); s.className = "placeholder col-6 placeholder-lg"; w.appendChild(s); return w; })() } },
-        { id: null, editable: false, content: { html: (() => { const w = document.createElement("span"); const s = document.createElement("span"); s.className = "placeholder col-7 placeholder-lg"; w.appendChild(s); return w; })() } }
-    ];
-
     /**
      * Constructor for the REST ListCtrl.
-     * @param {HTMLElement} - element host element.
+     * @param {HTMLElement} element The host element.
      */
     constructor(element) {
         super(element);
@@ -53,17 +45,15 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
         }
 
         // set preview items using base class method
-        this.setItems(this._previewItems.map(pi => {
-            return {
-                id: null,
-                class: null,
-                style: null,
-                color: null,
-                editable: false,
-                content: { content: "", html: (pi.content?.html instanceof Element) ? pi.content.html.cloneNode(true) : null },
-                options: null
-            };
-        }));
+        this.setItems({
+            id: null,
+            class: null,
+            style: null,
+            color: null,
+            editable: false,
+            content: "...",
+            options: null
+        });
 
         this._initPager(element);
         
@@ -75,7 +65,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
      * Retrieves data from the REST endpoint and updates the list.
      */
     _receiveData() {
-        this._progressDiv.style.visibility = "visible";
+        this._progressDiv.style.display = "none";
 
         // abort previous request if present
         if (this._abortController) {
@@ -83,20 +73,15 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
         }
         this._abortController = new AbortController();
 
-        const base = window.location.origin;
-        let urlObj;
-        try {
-            urlObj = new URL(this._restUri, base);
-        } catch (e) {
-            urlObj = new URL(this._restUri, document.baseURI);
-        }
+        // safely construct url using document base uri
+        const urlObj = new URL(this._restUri, document.baseURI);
 
         // set query parameters
         urlObj.searchParams.set("q", this._search || "");
         urlObj.searchParams.set("wql", this._wql || "");
         urlObj.searchParams.set("f", this._filter || "");
-        urlObj.searchParams.set("p", this._page);
-        urlObj.searchParams.set("l", this._pageSize);
+        urlObj.searchParams.set("p", String(this._page));
+        urlObj.searchParams.set("l", String(this._pageSize));
 
         if (this._orderBy) {
             urlObj.searchParams.set("o", this._orderBy);
@@ -110,7 +95,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
         fetch(fetchUrl, { signal: this._abortController.signal })
             .then(res => {
                 if (!res.ok) {
-                    throw new Error("Request failed");
+                    throw new Error("request failed");
                 }
                 return res.json();
             })
@@ -122,7 +107,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
 
                 // emit data arrived event
                 const evt = new CustomEvent(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
-                    response: response
+                    detail: { response: response }
                 });
                 this._element.dispatchEvent(evt);
 
@@ -137,15 +122,22 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
 
                 // update list via base class
                 this.setItems(newItems);
-                
-                this._items = newItems;
+
+                if (this._selectable) {
+                    let selected = this._items.find((i) => i.id === this._selectedItem?.id) || null;
+                    if (!selected && this._items.length > 0) {
+                        selected = this._items[0];
+                        this._handleSelectionChange(selected, null, true);
+                        this._triggerPrimaryAction(selected);
+                    }
+                }
 
                 // update paging display
                 this._syncPagerAndInfo();
                 
                 // notify listeners that data arrived
                 this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
-                    response: responseForUpdate,
+                    response: response,
                     page: this._page
                 });
 
@@ -154,7 +146,10 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
                 this._abortController = null;
             })
             .catch(error => {
-                console.error("The request could not be completed successfully:", error);
+                // ignore abort errors, log others
+                if (error.name !== "AbortError") {
+                    console.error("the request could not be completed successfully:", error);
+                }
                 this._progressDiv.style.visibility = "hidden";
                 this._abortController = null;
             });
@@ -162,8 +157,8 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
 
     /**
      * Maps a server response to internal list item structures.
-     * @param {any} - response server payload.
-     * @returns {Array<Object>} - Normalized items for ListCtrl.
+     * @param {Object} response The server payload.
+     * @returns {Array<Object>} Normalized items for ListCtrl.
      */
     _mapResponseToItems(response) {
         const result = [];
@@ -176,7 +171,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
                         id: null,
                         content: { content: it }
                     });
-                } else if (it && typeof it === "object") {
+                } else if (it !== null && typeof it === "object") {
                     // detect optional html template
                     let htmlEl = null;
                     if (it.html instanceof Element) {
@@ -192,29 +187,21 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
                         class: it.class || null,
                         style: it.style || null,
                         color: it.color || null,
+                        image: it.image || null,
+                        icon: it.icon || null,
+                        uri: it.uri || null,
+                        target: it.target || null,
                         editable: !!it.editable,
-                        rendererType: it.rendererType || it.type || null, // pass through type for templates
+                        rendererType: it.rendererType || it.type || null,
                         rendererOptions: it.rendererOptions || {},
-                        content: {
-                            content: (it.content ?? it.label ?? it.name ?? ""),
-                            html: htmlEl,
-                            image: it.image || null,
-                            icon: it.icon || null,
-                            uri: it.uri || null,
-                            target: it.target || null,
-                            modal: it.modal || null,
-                            objectId: it.objectId || null
-                        },
-                        // action attributes
+                        content: it.text ?? it.label ?? it.name ?? "",
                         primaryAction: it.primaryAction || null,
                         secondaryAction: it.secondaryAction || null,
                         bind: it.bind || null,
-
                         options: Array.isArray(it.options) ? it.options : null
                     });
                 }
             }
-            return result;
         }
 
         return result;
@@ -227,62 +214,58 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
      */
     update() {
         if (this._restUri && this._isVisible()) {
-            this._receiveData(false);
+            this._receiveData();
         }
     }
 
     /**
      * Sets the search filter and reloads the first page (without modifying order or paging settings).
-     * @param {string} pattern - Search pattern (optional, defaults to empty string)
-     * @param {string} [searchType="basic"] - Filter type ("basic" or "wql").
+     * @param {string} pattern The search pattern (optional, defaults to empty string).
+     * @param {string} searchType The filter type ("basic" or "wql").
      */
     search(pattern = "", searchType = "basic") {
         this._search = searchType === "basic" ? pattern : null;
         this._wql = searchType === "wql" ? pattern : null;
         this._page = 0;
         if (this._restUri && this._isVisible()) {
-            this._receiveData(false);
+            this._receiveData();
         }
     }
 
     /**
      * Sets the filter and reloads the first page.
-     * @param {string} pattern - Filter pattern.
+     * @param {string} pattern The filter pattern.
      */
     filter(pattern = "") {
         this._filter = pattern;
         this._page = 0;
 
-        if (this._restUri) {
-            if (this._isVisible()) {
-                this._receiveData();
-            }
+        if (this._restUri && this._isVisible()) {
+            this._receiveData();
         }
     }
     
     /**
      * Sets and loads the page.
-     * @param {string} page - The current page pattern.
+     * @param {number} page The current page index.
      */
     paging(page = 0) {
         this._page = page;
 
-        if (this._restUri) {
-            if (this._isVisible()) {
-                this._receiveData();
-            }
+        if (this._restUri && this._isVisible()) {
+            this._receiveData();
         }
     }
 
     /**
      * Creates an element and assigns bootstrap classes.
-     * @param {string} - tag html tag name.
-     * @param {Array<string>} - classList classes to add.
-     * @returns {HTMLElement} - Created element.
+     * @param {string} tag The html tag name.
+     * @param {Array<string>} classList The classes to add.
+     * @returns {HTMLElement} The created element.
      */
     _createElement(tag, classList = []) {
         const el = document.createElement(tag);
-        if (classList.length) {
+        if (classList.length > 0) {
             el.classList.add(...classList);
         }
         return el;
@@ -290,12 +273,12 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
 
     /**
      * Creates a compact progress bar.
-     * @returns {HTMLDivElement} - Progress container.
+     * @returns {HTMLDivElement} The progress container.
      */
     _createProgressDiv() {
         const div = this._createElement("div", ["progress", "mb-2"]);
         div.setAttribute("role", "status");
-        div.style.height = "0.25rem"; // thin line
+        div.style.height = "0.25rem";
 
         const bar = this._createElement("div", [
             "progress-bar",
@@ -310,23 +293,26 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
     
     /**
      * Initializes or binds a pagination control and an information area.
-     * @param {HTMLElement} host - The host element to search or attach the pager to.
+     * @param {HTMLElement} host The host element to search or attach the pager to.
      */
     _initPager(host) {
-        // find existing pager element
+        // find existing pager element based on dataset
         const paginationId = host.dataset.wxSourcePaging || null;
+        
         const init = () => {
-            this._pagerElement = document.querySelector(paginationId);
-
-            if (this._pagerElement) {
-                this._pagerCtrl = webexpress.webui.Controller.getInstanceByElement(this._pagerElement);
+            if (paginationId) {
+                this._pagerElement = document.querySelector(paginationId);
+                if (this._pagerElement) {
+                    this._pagerCtrl = webexpress.webui.Controller.getInstanceByElement(this._pagerElement);
+                }
             }
-
             this._syncPagerAndInfo();
-        }
+        };
 
         if (document.readyState === "loading") {
-            document.addEventListener("DOMContentLoaded", () => init());
+            document.addEventListener("DOMContentLoaded", () => {
+                init();
+            });
         } else {
             init();
         }
@@ -347,6 +333,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
     _syncPagerAndInfo() {
         const total = Number(this._totalRecords) || 0;
         let totalPages = 1;
+        
         if (this._pageSize > 0) {
             totalPages = Math.max(1, Math.ceil(total / this._pageSize));
         }
@@ -389,9 +376,9 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
             }
         }
 
-        // update textual info
+        // update textual info using template literals
         if (this._infoDiv) {
-            this._infoDiv.textContent = "Page " + (currentPage + 1) + " of " + totalPages + " / " + itemsOnPage + " of " + total + " items";
+            this._infoDiv.textContent = `Page ${currentPage + 1} of ${totalPages} / ${itemsOnPage} of ${total} items`;
         }
     }
     
@@ -414,7 +401,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
         this._page = page;
 
         if (this._infoDiv) {
-            this._infoDiv.textContent = "Page " + (this._page + 1) + " of " + totalPages + " — loading…";
+            this._infoDiv.textContent = `Page ${this._page + 1} of ${totalPages} - loading…`;
         }
 
         this._receiveData();

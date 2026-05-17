@@ -8,7 +8,7 @@ namespace WebExpress.WebApp.WebRestApi
     public interface IRestApiCrudResultDelete : IRestApiResult
     {
         /// <summary>
-        /// Returns or sets the server‑provided message returned after a 
+        /// Gets or sets the server‑provided message returned after a 
         /// delete operation.
         /// </summary>
         string Message { get; set; }

@@ -8,7 +8,7 @@ namespace WebExpress.WebApp.WebRestApi
     public class RestApiTableCell
     {
         /// <summary>
-        /// Returns or sets the content.
+        /// Gets or sets the content.
         /// </summary>
         [JsonPropertyName("content")]
         public object Content { get; set; }

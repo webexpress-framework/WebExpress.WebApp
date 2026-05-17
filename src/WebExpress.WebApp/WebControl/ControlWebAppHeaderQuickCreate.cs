@@ -20,17 +20,17 @@ namespace WebExpress.WebApp.WebControl
         private readonly List<IControlSplitButtonItem> _secondary = [];
 
         /// <summary>
-        /// Returns the preferences area.
+        /// Gets the preferences area.
         /// </summary>
         public IEnumerable<IControlSplitButtonItem> Preferences => _preferences;
 
         /// <summary>
-        /// Returns the primary area.
+        /// Gets the primary area.
         /// </summary>
         public IEnumerable<IControlSplitButtonItem> Primary => _primary;
 
         /// <summary>
-        /// Returns the secondary area.
+        /// Gets the secondary area.
         /// </summary>
         public IEnumerable<IControlSplitButtonItem> Secondary => _secondary;
 
@@ -41,7 +41,7 @@ namespace WebExpress.WebApp.WebControl
         public ControlWebAppHeaderQuickCreate(string id = null)
             : base(id)
         {
-            Padding = new PropertySpacingPadding(PropertySpacing.Space.Null);
+            Padding = _ => new PropertySpacingPadding(PropertySpacing.Space.Null);
         }
 
         /// <summary>
@@ -152,22 +152,20 @@ namespace WebExpress.WebApp.WebControl
                 ? (IControl)new ControlSplitButtonLink(Id)
                 {
                     Classes = ["btn-success"],
-                    Text = I18N.Translate(renderContext, "webexpress.webapp:header.quickcreate.label"),
-                    Uri = firstQuickcreate?.Uri,
-                    OnClick = firstQuickcreate?.OnClick,
-                    PrimaryAction = firstQuickcreate?.PrimaryAction
+                    Text = _ => I18N.Translate(renderContext, "webexpress.webapp:header.quickcreate.label"),
+                    Uri = _ => firstQuickcreate?.Uri?.Invoke(renderContext),
+                    PrimaryAction = _ => firstQuickcreate?.PrimaryAction?.Invoke(renderContext)
                 }
                     .Add(nextQuickcreate)
-                : Preferences.Any()
-                ? new ControlButtonLink(Id)
-                {
-                    Classes = ["btn-success"],
-                    Text = I18N.Translate(renderContext, "webexpress.webapp:header.quickcreate.label"),
-                    Uri = firstQuickcreate?.Uri,
-                    OnClick = firstQuickcreate?.OnClick,
-                    PrimaryAction = firstQuickcreate?.PrimaryAction
-                }
-                : null;
+                : firstQuickcreate is not null
+                    ? new ControlButtonLink(Id)
+                    {
+                        Classes = ["btn-success"],
+                        Text = (c) => I18N.Translate(renderContext, "webexpress.webapp:header.quickcreate.label"),
+                        Uri = _ => firstQuickcreate?.Uri?.Invoke(renderContext),
+                        PrimaryAction = _ => firstQuickcreate?.PrimaryAction?.Invoke(renderContext)
+                    }
+                    : null;
 
             return quickcreate?.Render(renderContext, visualTree);
         }

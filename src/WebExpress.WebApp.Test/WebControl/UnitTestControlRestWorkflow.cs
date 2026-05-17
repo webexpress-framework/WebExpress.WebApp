@@ -1,4 +1,4 @@
-﻿using WebExpress.WebApp.Test.Fixture;
+using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebControl;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebPage;
@@ -50,7 +50,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlRestWorkflow()
             {
-                RestUri = uriString is not null ? new UriEndpoint(uriString) : null
+                RestUri = _ => uriString is not null ? new UriEndpoint(uriString) : null
             };
 
             // act

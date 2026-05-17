@@ -20,12 +20,12 @@ namespace WebExpress.WebApp.WebSettingPage
     public class VisualTreeWebAppSetting : VisualTreeWebApp
     {
         /// <summary>
-        /// Returns the area for setting tab.
+        /// Gets the area for setting tab.
         /// </summary>
         public ControlWebAppSettingTab SettingTab { get; protected set; } = new ControlWebAppSettingTab("wx-settingtab");
 
         /// <summary>
-        /// Returns the sidebar control.
+        /// Gets the sidebar control.
         /// </summary>
         public new ControlWebAppSettingMenu Sidebar { get; protected set; } = new ControlWebAppSettingMenu("wx-settingmenu");
 
@@ -50,8 +50,8 @@ namespace WebExpress.WebApp.WebSettingPage
             var body = new HtmlElementSectionBody();
             var renderContext = new RenderControlContext(context.RenderContext);
 
-            Breadcrumb.Prefix = "webexpress.webapp:setting.label";
-            Breadcrumb.TakeLast = 1;
+            Breadcrumb.Prefix = _ => "webexpress.webapp:setting.label";
+            Breadcrumb.TakeLast = _ => 1;
 
             // head
             html.Head.Title = I18N.Translate(context.Request, Title);
@@ -94,10 +94,10 @@ namespace WebExpress.WebApp.WebSettingPage
                 [Content]
             )
             {
-                Border = new PropertyBorder(true),
-                Orientation = TypeOrientationSplit.Horizontal,
-                SidePanelInitialSize = 350,
-                SidePanelMinSize = 45
+                Border = _ => new PropertyBorder(true),
+                Orientation = _ => TypeOrientationSplit.Horizontal,
+                SidePanelInitialSize = _ => 350,
+                SidePanelMinSize = _ => 45
             };
 
             html.Body.Add

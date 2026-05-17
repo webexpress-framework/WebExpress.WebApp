@@ -21,17 +21,17 @@ namespace WebExpress.WebApp.WebControl
         private readonly List<IControlDropdownItem> _secondary = [];
 
         /// <summary>
-        /// Returns the preferences area.
+        /// Gets the preferences area.
         /// </summary>
         public IEnumerable<IControlDropdownItem> Preferences => _preferences;
 
         /// <summary>
-        /// Returns the primary area.
+        /// Gets the primary area.
         /// </summary>
         public IEnumerable<IControlDropdownItem> Primary => _primary;
 
         /// <summary>
-        /// Returns the secondary area.
+        /// Gets the secondary area.
         /// </summary>
         public IEnumerable<IControlDropdownItem> Secondary => _secondary;
 
@@ -42,7 +42,7 @@ namespace WebExpress.WebApp.WebControl
         public ControlWebAppHeaderAppNavigator(string id = null)
             : base(id)
         {
-            Padding = new PropertySpacingPadding(PropertySpacing.Space.Null);
+            Padding = _ => new PropertySpacingPadding(PropertySpacing.Space.Null);
         }
 
         /// <summary>
@@ -132,13 +132,13 @@ namespace WebExpress.WebApp.WebControl
                 ? (IControl)new ControlDropdown(Id)
                 {
                     Classes = ["wx-appnavigator"],
-                    Icon = new ImageIcon(application?.Icon.ToUri(), new PropertySizeIcon(1, TypeSizeUnit.Em)),
+                    Icon = _ => new ImageIcon(application?.Icon?.ToUri(), new PropertySizeIcon(1, TypeSizeUnit.Em)),
                 }
                     .Add(items)
                 : new ControlImage(Id)
                 {
                     Classes = ["wx-appnavigator"],
-                    Uri = application?.Icon.ToUri()
+                    Uri = _ => application?.Icon?.ToUri()
                 };
 
             return navigatorCtrl?.Render(renderContext, visualTree);
@@ -172,7 +172,7 @@ namespace WebExpress.WebApp.WebControl
             {
                 yield return new ControlDropdownItemHeader()
                 {
-                    Text = I18N.Translate(renderContext, application?.ApplicationName)
+                    Text = _ => I18N.Translate(renderContext, application?.ApplicationName)
                 };
             }
 

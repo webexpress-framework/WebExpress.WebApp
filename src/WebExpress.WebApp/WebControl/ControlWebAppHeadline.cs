@@ -22,37 +22,37 @@ namespace WebExpress.WebApp.WebControl
         private readonly List<IControl> _metadata = [];
 
         /// <summary>
-        /// Returns or sets the title.
+        /// Gets or sets the title.
         /// </summary>
         public string Title { get; set; }
 
         /// <summary>
-        /// Returns the prologue area.
+        /// Gets the prologue area.
         /// </summary>
         public IEnumerable<IControl> Prologue => _prologue;
 
         /// <summary>
-        /// Returns the preferences area.
+        /// Gets the preferences area.
         /// </summary>
         public IEnumerable<IControl> Preferences => _preferences;
 
         /// <summary>
-        /// Returns the primary area.
+        /// Gets the primary area.
         /// </summary>
         public IEnumerable<IControl> Primary => _primary;
 
         /// <summary>
-        /// Returns the secondary area.
+        /// Gets the secondary area.
         /// </summary>
         public IEnumerable<IControl> Secondary => _secondary;
 
         /// <summary>
-        /// Returns the secondary area for the metadata.
+        /// Gets the secondary area for the metadata.
         /// </summary>
         public IEnumerable<IControl> Metadata => _metadata;
 
         /// <summary>
-        /// Returns the more control.
+        /// Gets the more control.
         /// </summary>
         public IControlWebAppHeadlineMore More { get; } = new ControlWebAppHeadlineMore("wx-content-main-headline-more")
         {
@@ -195,6 +195,7 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
+            var role = Role?.Invoke(renderContext);
             var prologue = Prologue.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionHeadlinePrologue>
             (
                 renderContext?.PageContext
@@ -227,46 +228,46 @@ namespace WebExpress.WebApp.WebControl
                     null,
                     prologue.Any() ? new ControlPanelFlex(null, [.. prologue])
                     {
-                        Layout = TypeLayoutFlex.Default,
-                        Align = TypeAlignFlex.Center,
-                        Justify = TypeJustifiedFlex.Start
+                        Layout = _ => TypeLayoutFlex.Default,
+                        Align = _ => TypeAlignFlex.Center,
+                        Justify = _ => TypeJustifiedFlex.Start
                     } : null,
                     new ControlText()
                     {
-                        Text = I18N.Translate
+                        Text = _ => I18N.Translate
                         (
                             renderContext,
                             !string.IsNullOrWhiteSpace(Title)
                                 ? Title
                                 : renderContext.PageContext?.PageTitle
                         ),
-                        Format = TypeFormatText.H2,
-                        Margin = new PropertySpacingMargin(PropertySpacing.Space.None, PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.Null)
+                        Format = _ => TypeFormatText.H2,
+                        Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.None, PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.Null)
                     },
                     preferences.Any() ? new ControlPanelFlex(null, [.. preferences])
                     {
-                        Layout = TypeLayoutFlex.Default,
-                        Align = TypeAlignFlex.Center,
-                        Justify = TypeJustifiedFlex.Start
+                        Layout = _ => TypeLayoutFlex.Default,
+                        Align = _ => TypeAlignFlex.Center,
+                        Justify = _ => TypeJustifiedFlex.Start
                     } : null,
                     primary.Any() ? new ControlPanelFlex(null, [.. primary])
                     {
-                        Layout = TypeLayoutFlex.Default,
-                        Align = TypeAlignFlex.Center,
-                        Justify = TypeJustifiedFlex.Start
+                        Layout = _ => TypeLayoutFlex.Default,
+                        Align = _ => TypeAlignFlex.Center,
+                        Justify = _ => TypeJustifiedFlex.Start
                     } : null,
                     secondary.Any() ? new ControlPanelFlex(null, [.. secondary])
                     {
-                        Layout = TypeLayoutFlex.Default,
-                        Align = TypeAlignFlex.Center,
-                        Justify = TypeJustifiedFlex.End
+                        Layout = _ => TypeLayoutFlex.Default,
+                        Align = _ => TypeAlignFlex.Center,
+                        Justify = _ => TypeJustifiedFlex.End
                     } : null,
                     More
                 )
                 {
-                    Layout = TypeLayoutFlex.Default,
-                    Align = TypeAlignFlex.Center,
-                    Justify = TypeJustifiedFlex.Between
+                    Layout = _ => TypeLayoutFlex.Default,
+                    Align = _ => TypeAlignFlex.Center,
+                    Justify = _ => TypeJustifiedFlex.Between
                 }.Render(renderContext, visualTree),
                 metadata.Any() ? new HtmlElementTextContentDiv
                 (
@@ -281,7 +282,7 @@ namespace WebExpress.WebApp.WebControl
                 Id = Id,
                 Class = Css.Concatenate("", GetClasses()),
                 Style = Style.Concatenate("display: block;", GetStyles()),
-                Role = Role
+                Role = role
             };
         }
     }

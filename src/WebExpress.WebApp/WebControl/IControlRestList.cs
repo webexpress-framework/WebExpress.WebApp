@@ -1,21 +1,17 @@
-﻿using WebExpress.WebCore.WebUri;
+﻿using System;
 using WebExpress.WebUI.WebControl;
+using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
     /// Defines the contract for a REST-backed list control.
     /// </summary>
-    public interface IControlRestList : IControl
+    public interface IControlRestList : IControl, IControlRest
     {
         /// <summary>
-        /// Gets or sets the uri that determines the data.
+        /// Gets the binding.
         /// </summary>
-        IUri RestUri { get; set; }
-
-        /// <summary>
-        /// Returns the binding.
-        /// </summary>
-        IBinding Bind { get; }
+        Func<IRenderControlContext, IBinding> Bind { get; }
     }
 }

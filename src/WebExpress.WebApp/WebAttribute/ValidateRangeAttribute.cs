@@ -11,17 +11,17 @@ namespace WebExpress.WebApp.WebAttribute
     public sealed class ValidateRangeAttribute : Attribute, IValidation
     {
         /// <summary> 
-        /// Returns the minimum allowed numeric value. 
+        /// Gets the minimum allowed numeric value. 
         /// </summary>
         public double Min { get; }
 
         /// <summary> 
-        /// Returns the maximum allowed numeric value. 
+        /// Gets the maximum allowed numeric value. 
         /// </summary>
         public double Max { get; }
 
         /// <summary> 
-        /// Returns the error message returned when validation fails. 
+        /// Gets the error message returned when validation fails. 
         /// </summary>
         public string Message { get; }
 

@@ -18,17 +18,17 @@ namespace WebExpress.WebApp.WebRestApi
         private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
         /// <summary>
-        /// Returns or sets the title associated with the object.
+        /// Gets or sets the title associated with the object.
         /// </summary>
         public string Title { get; set; }
 
         /// <summary>
-        /// Returns or sets the collection of items associated with the tile.
+        /// Gets or sets the collection of items associated with the tile.
         /// </summary>
         public IEnumerable<RestApiTileItem> Items { get; set; }
 
         /// <summary>
-        /// Returns or sets the pagination information for the current API request.
+        /// Gets or sets the pagination information for the current API request.
         /// </summary>
         public RestApiPaginationInfo Pagination { get; set; }
 

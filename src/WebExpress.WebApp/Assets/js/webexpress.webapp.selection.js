@@ -139,13 +139,13 @@ webexpress.webapp.SelectionCtrl = class extends webexpress.webui.SelectionCtrl {
         const label = apiItem.label || apiItem.content || apiItem.name || apiItem.title || "";
         const icon = apiItem.icon || null;
         const image = apiItem.image || apiItem.img || null;
-        const labelColor = apiItem.color || apiItem.labelColor || null;
+        const color = apiItem.color || apiItem.color || null;
         const disabled = Boolean(apiItem.disabled);
 
         return {
             id: id,
             label: label,
-            labelColor: labelColor,
+            color: color,
             icon: icon,
             image: image,
             disabled: disabled,

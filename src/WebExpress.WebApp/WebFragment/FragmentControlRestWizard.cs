@@ -9,10 +9,10 @@ namespace WebExpress.WebApp.WebFragment
     /// <summary>
     /// Represents a wizard control within a fragment context.
     /// </summary>
-    public class FragmentControlRestWizard : ControlRestWizard, IFragmentControl<ControlRestWizard>
+    public abstract class FragmentControlRestWizard : ControlRestWizard, IFragmentControl<ControlRestWizard>
     {
         /// <summary>
-        /// Returns the context of the fragment.
+        /// Gets the context of the fragment.
         /// </summary>
         public IFragmentContext FragmentContext { get; private set; }
 
@@ -21,7 +21,7 @@ namespace WebExpress.WebApp.WebFragment
         /// </summary>
         /// <param name="fragmentContext">The context of the fragment.</param>
         public FragmentControlRestWizard(IFragmentContext fragmentContext)
-            : base(fragmentContext?.FragmentId?.ToString())
+            : base(fragmentContext?.FragmentId?.ToString()?.Replace(".", "-"))
         {
             FragmentContext = fragmentContext;
         }

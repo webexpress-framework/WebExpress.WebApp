@@ -66,6 +66,10 @@
     color: var(--bs-body-color);
 }
 
+[data-bs-theme="dark"] #wx-toast {
+    color: #000;
+}
+
 #wx-breadcrumb {
 }
 
@@ -89,10 +93,21 @@
 }
 
 #wx-split-gutter {
-    background-color: rgba(var(--bs-light-rgb), var(--bs-bg-opacity)) !important;
+    background-color: var(--bs-border-color) !important;
+}
+
+#wx-split-p2 {
+    background: linear-gradient( 180deg, var(--bs-light) 0%, var(--bs-gray-200) 100% );
+}
+
+html[data-bs-theme="dark"] #wx-split-p2 {
+    background: linear-gradient(150deg, var(--bs-dark) 50%, #120348 100%)
 }
 
 #wx-content {
+}
+
+html[data-bs-theme="dark"] #wx-content {
 }
 
 #wx-content-toolbar {
@@ -107,14 +122,26 @@
 #wx-content-main-headline {
 }
 
+#wx-content-main-headline h2 {
+    flex: 1;
+    text-align: left;
+}
+
 #wx-content-main-headline-more {
-    background: var(--bs-white);
+    background: var(--bs-body-bg);
 }
 
 #wx-content-property {
-    background: aliceblue;
+    background: var(--bs-tertiary-bg);
 }
 
 #wx-footer {
-    background: var(--bs-light);
+}
+
+.wx-login {
+    background: linear-gradient( 180deg, var(--bs-light) 0%, var(--bs-gray-200) 100% );
+}
+
+html[data-bs-theme="dark"] .wx-login {
+    background: linear-gradient(150deg, var(--bs-dark) 50%, #120348 100%)
 }

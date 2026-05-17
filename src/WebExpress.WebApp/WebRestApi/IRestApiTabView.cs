@@ -7,28 +7,53 @@
     public interface IRestApiTabView
     {
         /// <summary>
-        /// Returns the unique identifier for the tab view.
+        /// Gets the unique identifier for the tab view.
         /// </summary>
         string Id { get; }
 
         /// <summary>
-        /// Returns the display label associated with the object.
+        /// Gets the display label associated with the object.
         /// </summary>
         string Title { get; }
 
         /// <summary>
-        /// Returnsthe name associated with the object.
+        /// Gets the name associated with the object.
         /// </summary>
         string Name { get; }
 
         /// <summary>
-        /// Returns  the name or path of the icon associated with this instance.
+        /// Gets  the name or path of the icon associated with this instance.
         /// </summary>
         string Icon { get; }
 
         /// <summary>
-        /// Returns the identifier of the template associated with this instance.
+        /// Gets the identifier of the template associated with this instance.
         /// </summary>
         string TemplateId { get; }
+
+        /// <summary>
+        /// Gets the uri associated with this instance.
+        /// </summary>
+        string Uri { get; }
+
+        /// <summary>
+        /// Gets the optional color class associated with this tab.
+        /// </summary>
+        string Color { get; }
+
+        /// <summary>
+        /// Gets the optional primary action identifier associated with this tab.
+        /// </summary>
+        string PrimaryAction { get; }
+
+        /// <summary>
+        /// Gets the optional primary action target associated with this tab.
+        /// </summary>
+        string PrimaryTarget { get; }
+
+        /// <summary>
+        /// Gets the optional binding payload used for template bindings.
+        /// </summary>
+        object Binding { get; }
     }
 }

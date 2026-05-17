@@ -9,10 +9,10 @@ namespace WebExpress.WebApp.WebFragment
     /// <summary>
     /// Represents a kanban control within a fragment context.
     /// </summary>
-    public class FragmentControlRestKanban : ControlRestKanban, IFragmentControl<ControlRestKanban>
+    public abstract class FragmentControlRestKanban : ControlRestKanban, IFragmentControl<ControlRestKanban>
     {
         /// <summary>
-        /// Returns the context of the fragment.
+        /// Gets the context of the fragment.
         /// </summary>
         public IFragmentContext FragmentContext { get; private set; }
 
@@ -21,7 +21,7 @@ namespace WebExpress.WebApp.WebFragment
         /// </summary>
         /// <param name="fragmentContext">The context of the fragment.</param>
         public FragmentControlRestKanban(IFragmentContext fragmentContext)
-            : base(fragmentContext?.FragmentId?.ToString())
+            : base(fragmentContext?.FragmentId?.ToString()?.Replace(".", "-"))
         {
             FragmentContext = fragmentContext;
         }

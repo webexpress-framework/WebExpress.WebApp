@@ -11,13 +11,13 @@ namespace WebExpress.WebApp.WebAttribute
     public sealed class ValidateNotEqualAttribute : Attribute, IValidation
     {
         /// <summary> 
-        /// Returns the value that is not allowed. 
+        /// Gets the value that is not allowed. 
         /// If the validated value equals this value, validation fails. 
         /// </summary>
         public object Disallowed { get; }
 
         /// <summary> 
-        /// Returns the error message returned when validation fails. 
+        /// Gets the error message returned when validation fails. 
         /// </summary>
         public string Message { get; }
 

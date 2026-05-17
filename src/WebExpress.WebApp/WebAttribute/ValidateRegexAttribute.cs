@@ -12,12 +12,12 @@ namespace WebExpress.WebApp.WebAttribute
     public sealed class ValidateRegexAttribute : Attribute, IValidation
     {
         /// <summary> 
-        /// Returns the regular expression pattern that the string must match. 
+        /// Gets the regular expression pattern that the string must match. 
         /// </summary>
         public string Pattern { get; }
 
         /// <summary> 
-        /// Returns the error message returned when validation fails. 
+        /// Gets the error message returned when validation fails. 
         /// </summary>
         public string Message { get; }
 

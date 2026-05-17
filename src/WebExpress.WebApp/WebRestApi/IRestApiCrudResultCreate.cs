@@ -8,12 +8,12 @@ namespace WebExpress.WebApp.WebRestApi
     public interface IRestApiCrudResultCreate : IRestApiResult
     {
         /// <summary>
-        /// Returns the item.
+        /// Gets the item.
         /// </summary>
         object Data { get; }
 
         /// <summary>
-        /// Returns the server‑provided message returned after a 
+        /// Gets the server‑provided message returned after a 
         /// create operation.
         /// </summary>
         string Message { get; }

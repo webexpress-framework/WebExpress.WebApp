@@ -1,4 +1,6 @@
-﻿using WebExpress.WebCore.WebMessage;
+﻿using System;
+using WebExpress.WebCore.WebMessage;
+using WebExpress.WebCore.WebTheme;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebIcon;
 
@@ -11,13 +13,19 @@ namespace WebExpress.WebApp.WebControl
     public class ControlRestFormEdit : ControlRestForm
     {
         /// <summary>
-        /// Returns the submit button control for the form.
+        /// Gets or sets the mode that determines how the form behaves 
+        /// or is rendered.
+        /// </summary>
+        public override Func<IRenderControlFormContext, string> Mode => _ => TypeRestFormMode.Edit.ToMode();
+
+        /// <summary>
+        /// Gets the submit button control for the form.
         /// </summary>
         public ControlFormItemButtonSubmit Submit { get; } = new ControlFormItemButtonSubmit
         {
-            Text = "webexpress.webui:edit.label",
-            Icon = new IconSave(),
-            Color = new PropertyColorButton(TypeColorButton.Success)
+            Text = _ => "webexpress.webui:edit.label",
+            Icon = renderContext => new IconFloppyDisk(renderContext.GetIconTheme()),
+            Color = _ => new PropertyColorButton(TypeColorButton.Success)
         };
 
         /// <summary>
@@ -27,8 +35,7 @@ namespace WebExpress.WebApp.WebControl
         public ControlRestFormEdit(string id = null)
             : base(id)
         {
-            Mode = TypeRestFormMode.Edit;
-            Method = RequestMethod.PUT;
+            Method = _ => RequestMethod.PUT;
 
             AddPrimaryButton(Submit);
         }

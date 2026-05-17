@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebMessage;
@@ -19,7 +20,7 @@ namespace WebExpress.WebApp.WebRestApi
         where TIndexItem : IIndexItem
     {
         /// <summary>
-        /// Returns or sets the title associated with the current object.
+        /// Gets or sets the title associated with the current object.
         /// </summary>
         public string Title { get; set; }
 
@@ -77,8 +78,10 @@ namespace WebExpress.WebApp.WebRestApi
 
             try
             {
+                var templateId = ExtractTemplateId(request);
+
                 // persist or sync content
-                var newView = CreateView(context, request);
+                var newView = CreateView(context, request, templateId);
 
                 var data = new
                 {
@@ -99,6 +102,46 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 return new ResponseBadRequest(new StatusMessage($"Error processing POST request: {ex.Message}"));
             }
+        }
+
+        /// <summary>
+        /// Extracts the optional template id from request parameter or JSON request body.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns>The template id if provided; otherwise null.</returns>
+        protected virtual string ExtractTemplateId(IRequest request)
+        {
+            var templateId = request?.GetParameter("templateId")?.Value;
+            if (!string.IsNullOrWhiteSpace(templateId))
+            {
+                return templateId;
+            }
+
+            if (request is not Request typedRequest || typedRequest.Content is null || typedRequest.Content.Length == 0)
+            {
+                return null;
+            }
+
+            try
+            {
+                var json = Encoding.UTF8.GetString(typedRequest.Content);
+                if (string.IsNullOrWhiteSpace(json))
+                {
+                    return null;
+                }
+
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.TryGetProperty("templateId", out var templateIdProperty))
+                {
+                    return templateIdProperty.GetString();
+                }
+            }
+            catch
+            {
+                // ignore invalid json and continue without template id
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -175,6 +218,25 @@ namespace WebExpress.WebApp.WebRestApi
         protected virtual IRestApiTabView CreateView(IQueryContext context, IRequest request)
         {
             return null;
+        }
+
+        /// <summary>
+        /// Creates a new instance of a REST API tab view and optionally applies a template id.
+        /// </summary>
+        /// <param name="context">The query context.</param>
+        /// <param name="request">The request.</param>
+        /// <param name="templateId">The optional template id from client request.</param>
+        /// <returns>A tab view instance.</returns>
+        protected virtual IRestApiTabView CreateView(IQueryContext context, IRequest request, string templateId)
+        {
+            var view = CreateView(context, request);
+
+            if (!string.IsNullOrWhiteSpace(templateId) && view is RestApiTabView tabView)
+            {
+                tabView.TemplateId = templateId;
+            }
+
+            return view;
         }
 
         /// <summary>

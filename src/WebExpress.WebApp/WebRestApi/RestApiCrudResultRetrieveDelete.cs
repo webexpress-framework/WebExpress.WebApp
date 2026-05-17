@@ -16,7 +16,7 @@ namespace WebExpress.WebApp.WebRestApi
         };
 
         /// <summary>
-        /// Returns or sets the confirmation item for the delete prompt.
+        /// Gets or sets the confirmation item for the delete prompt.
         /// </summary>
         public string ConfirmItem { get; set; }
 
@@ -31,7 +31,6 @@ namespace WebExpress.WebApp.WebRestApi
             var jsonData = JsonSerializer.Serialize(new
             {
                 data = Data,
-                title = Title,
                 prolog = Prolog,
                 confirmItem = ConfirmItem
             }, _jsonOptions);

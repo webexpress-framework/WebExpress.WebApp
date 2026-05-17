@@ -43,16 +43,16 @@ namespace WebExpress.WebApp.WWW.Settings.System
             // add a title for the general statistics section
             panel.AddPrimary(new ControlText()
             {
-                Text = I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.group.statistics.label"),
-                TextColor = new PropertyColorText(TypeColorText.Info),
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two)
+                Text = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.group.statistics.label"),
+                TextColor = _ => new PropertyColorText(TypeColorText.Info),
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two)
             });
 
             // create a table to display scalar metric values
             var statsTable = new ControlTable()
             {
-                Striped = TypeStripedTable.Row,
-                SuppressHeaders = true
+                Striped = _ => TypeStripedTable.Row,
+                SuppressHeaders = _ => true
             };
 
             statsTable.AddColumn("");
@@ -63,12 +63,12 @@ namespace WebExpress.WebApp.WWW.Settings.System
             (
                 new ControlTableCell()
                 {
-                    Text = I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.currenttime")
+                    Text = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.currenttime")
                 },
                 new ControlTableCellPanel().Add(new ControlText()
                 {
-                    Text = DateTime.Now.ToString(renderContext.Request.Culture),
-                    Format = TypeFormatText.Code
+                    Text = _ => DateTime.Now.ToString(renderContext.Request.Culture),
+                    Format = _ => TypeFormatText.Code
                 })
             );
 
@@ -77,12 +77,12 @@ namespace WebExpress.WebApp.WWW.Settings.System
             (
                 new ControlTableCell()
                 {
-                    Text = I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.uptime")
+                    Text = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.uptime")
                 },
                 new ControlTableCellPanel().Add(new ControlText()
                 {
-                    Text = (DateTime.Now - WebExpress.WebCore.HttpServer.ExecutionTime).ToString(@"dd\.hh\:mm\:ss"),
-                    Format = TypeFormatText.Code
+                    Text = _ => (DateTime.Now - WebExpress.WebCore.HttpServer.ExecutionTime).ToString(@"dd\.hh\:mm\:ss"),
+                    Format = _ => TypeFormatText.Code
                 })
             );
 
@@ -97,12 +97,12 @@ namespace WebExpress.WebApp.WWW.Settings.System
             (
                 new ControlTableCell()
                 {
-                    Text = I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.totalrequests")
+                    Text = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.totalrequests")
                 },
                 new ControlTableCellPanel().Add(new ControlText()
                 {
-                    Text = totalRequests.ToString(),
-                    Format = TypeFormatText.Code
+                    Text = _ => totalRequests.ToString(),
+                    Format = _ => TypeFormatText.Code
                 })
             );
 
@@ -134,20 +134,20 @@ namespace WebExpress.WebApp.WWW.Settings.System
             // chart 1: traffic (requests and errors)
             panel.AddPrimary(new ControlText()
             {
-                Text = I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.group.chart.traffic.label"),
-                TextColor = new PropertyColorText(TypeColorText.Info),
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two)
+                Text = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.group.chart.traffic.label"),
+                TextColor = _ => new PropertyColorText(TypeColorText.Info),
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two)
             });
 
             var chartTraffic = new ControlChart()
             {
-                Type = TypeChart.Line,
-                Height = 300,
-                Responsive = true,
-                MaintainAspectRatio = false,
-                TitleDisplay = false,
-                LegendDisplay = true,
-                YBeginAtZero = true
+                Type = _ => TypeChart.Line,
+                Height = _ => 300,
+                Responsive = _ => true,
+                MaintainAspectRatio = _ => false,
+                TitleDisplay = _ => false,
+                LegendDisplay = _ => true,
+                YBeginAtZero = _ => true
             };
 
             chartTraffic.AddLabel(labels);
@@ -177,20 +177,20 @@ namespace WebExpress.WebApp.WWW.Settings.System
             // chart 2: performance (duration in ms)
             panel.AddPrimary(new ControlText()
             {
-                Text = I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.group.chart.performance.label"),
-                TextColor = new PropertyColorText(TypeColorText.Info),
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two)
+                Text = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.group.chart.performance.label"),
+                TextColor = _ => new PropertyColorText(TypeColorText.Info),
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two)
             });
 
             var chartPerformance = new ControlChart()
             {
-                Type = TypeChart.Line,
-                Height = 300,
-                Responsive = true,
-                MaintainAspectRatio = false,
-                TitleDisplay = false,
-                LegendDisplay = true,
-                YBeginAtZero = true
+                Type = _ => TypeChart.Line,
+                Height = _ => 300,
+                Responsive = _ => true,
+                MaintainAspectRatio = _ => false,
+                TitleDisplay = _ => false,
+                LegendDisplay = _ => true,
+                YBeginAtZero = _ => true
             };
 
             chartPerformance.AddLabel(labels);
@@ -228,20 +228,20 @@ namespace WebExpress.WebApp.WWW.Settings.System
             // chart 3: resources (cpu % and memory mb)
             panel.AddPrimary(new ControlText()
             {
-                Text = I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.group.chart.resources.label"),
-                TextColor = new PropertyColorText(TypeColorText.Info),
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two)
+                Text = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.group.chart.resources.label"),
+                TextColor = _ => new PropertyColorText(TypeColorText.Info),
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two)
             });
 
             var chartResources = new ControlChart()
             {
-                Type = TypeChart.Line,
-                Height = 300,
-                Responsive = true,
-                MaintainAspectRatio = false,
-                TitleDisplay = false,
-                LegendDisplay = true,
-                YBeginAtZero = true
+                Type = _ => TypeChart.Line,
+                Height = _ => 300,
+                Responsive = _ => true,
+                MaintainAspectRatio = _ => false,
+                TitleDisplay = _ => false,
+                LegendDisplay = _ => true,
+                YBeginAtZero = _ => true
             };
 
             chartResources.AddLabel(labels);

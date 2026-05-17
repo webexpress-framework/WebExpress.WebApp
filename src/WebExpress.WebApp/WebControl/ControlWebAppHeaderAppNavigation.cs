@@ -19,17 +19,17 @@ namespace WebExpress.WebApp.WebControl
         private readonly List<IControlNavigationItem> _secondary = [];
 
         /// <summary>
-        /// Returns the preferences area.
+        /// Gets the preferences area.
         /// </summary>
         public IEnumerable<IControlNavigationItem> Preferences => _preferences;
 
         /// <summary>
-        /// Returns the primary area.
+        /// Gets the primary area.
         /// </summary>
         public IEnumerable<IControlNavigationItem> Primary => _primary;
 
         /// <summary>
-        /// Returns the secondary area.
+        /// Gets the secondary area.
         /// </summary>
         public IEnumerable<IControlNavigationItem> Secondary => _secondary;
 
@@ -40,7 +40,7 @@ namespace WebExpress.WebApp.WebControl
         public ControlWebAppHeaderAppNavigation(string id = null)
             : base(id)
         {
-            Padding = new PropertySpacingPadding(PropertySpacing.Space.Null);
+            Padding = _ => new PropertySpacingPadding(PropertySpacing.Space.Null);
         }
 
         /// <summary>

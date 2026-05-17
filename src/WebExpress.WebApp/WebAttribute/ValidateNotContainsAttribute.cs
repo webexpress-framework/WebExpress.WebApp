@@ -11,12 +11,12 @@ namespace WebExpress.WebApp.WebAttribute
     public sealed class ValidateNotContainsAttribute : Attribute, IValidation
     {
         /// <summary> 
-        /// Returns the substring that must not appear in the validated string. 
+        /// Gets the substring that must not appear in the validated string. 
         /// </summary>
         public string Substring { get; }
 
         /// <summary> 
-        /// Returns the error message returned when validation fails. 
+        /// Gets the error message returned when validation fails. 
         /// </summary>
         public string Message { get; }
 

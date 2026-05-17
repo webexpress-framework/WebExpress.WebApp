@@ -10,12 +10,12 @@ namespace WebExpress.WebApp.WebControl
     public class ControlRestModalProgressTask : ControlModal
     {
         /// <summary>
-        /// Returns or sets the progress bar.
+        /// Gets or sets the progress bar.
         /// </summary>
         private ControlProgress Progress { get; set; }
 
         /// <summary>
-        /// Returns or sets the progress message.
+        /// Gets or sets the progress message.
         /// </summary>
         private ControlText Message { get; set; }
 
@@ -28,15 +28,15 @@ namespace WebExpress.WebApp.WebControl
         {
             Progress = new ControlProgress($"progressbar-{Id}")
             {
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two),
-                Color = new PropertyColorProgress(TypeColorProgress.Primary),
-                Format = TypeFormatProgress.Animated
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two),
+                Color = _ => new PropertyColorProgress(TypeColorProgress.Primary),
+                Format = _ => TypeFormatProgress.Animated
             };
 
             Message = new ControlText($"message-{Id}")
             {
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.Two),
-                TextColor = new PropertyColorText(TypeColorText.Secondary)
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two),
+                TextColor = _ => new PropertyColorText(TypeColorText.Secondary)
             };
 
             //Fade = false;

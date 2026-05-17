@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using WebExpress.WebApp.WebControl;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebUri;
@@ -11,37 +12,37 @@ namespace WebExpress.WebApp.WebApiControl
     /// <summary>
     /// Represents a form input control that ensures uniqueness.
     /// </summary>
-    public class ControlRestFormItemInputUnique : ControlFormItemInput<ControlFormInputValueString>
+    public class ControlRestFormItemInputUnique : ControlFormItemInput<ControlFormInputValueString>, IControlRest
     {
         /// <summary>
-        /// Returns or sets the uri that determines the options.
+        /// Gets or sets the uri that determines the options.
         /// </summary>
-        public IUri RestUri { get; set; }
+        public Func<IRenderControlContext, IUri> RestUri { get; set; }
 
         /// <summary>
-        /// Returns or sets the description.
+        /// Gets or sets the description.
         /// </summary>
-        public string Description { get; set; }
+        public Func<IRenderControlContext, string> Description { get; set; }
 
         /// <summary>
-        /// Returns or sets a placeholder text.
+        /// Gets or sets a placeholder text.
         /// </summary>
-        public string Placeholder { get; set; }
+        public Func<IRenderControlContext, string> Placeholder { get; set; }
 
         /// <summary>
-        /// Returns or sets the minimum length.
+        /// Gets or sets the minimum length.
         /// </summary>
-        public uint? MinLength { get; set; }
+        public Func<IRenderControlContext, uint?> MinLength { get; set; }
 
         /// <summary>
-        /// Returns or sets the maximum length.
+        /// Gets or sets the maximum length.
         /// </summary>
-        public uint? MaxLength { get; set; }
+        public Func<IRenderControlContext, uint?> MaxLength { get; set; }
 
         /// <summary>
-        /// Returns or sets a search pattern that checks the content.
+        /// Gets or sets a search pattern that checks the content.
         /// </summary>
-        public string Pattern { get; set; }
+        public Func<IRenderControlContext, string> Pattern { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class with an automatically assigned ID.
@@ -69,17 +70,25 @@ namespace WebExpress.WebApp.WebApiControl
         public override IHtmlNode Render(IRenderControlFormContext renderContext, IVisualTreeControl visualTree)
         {
             var value = renderContext.GetValue<ControlFormInputValueString>(this);
+            var name = Name?.Invoke(renderContext);
+            var restUri = RestUri?.Invoke(renderContext)?.BindParameters(renderContext?.Request);
+            var placeholder = Placeholder?.Invoke(renderContext);
+            var minLength = MinLength?.Invoke(renderContext);
+            var maxLength = MaxLength?.Invoke(renderContext);
+            var pattern = Pattern?.Invoke(renderContext);
 
             var html = new HtmlElementTextContentDiv()
             {
                 Id = Id,
                 Class = "wx-webapp-input-unique"
             }
-                .AddUserAttribute("name", Name)
-                .AddUserAttribute("placeholder", I18N.Translate(renderContext, Placeholder))
-                .AddUserAttribute("data-minlength", MinLength >= 0 ? MinLength.ToString() : null)
+                .AddUserAttribute("name", name)
+                .AddUserAttribute("placeholder", I18N.Translate(renderContext, placeholder))
+                .AddUserAttribute("data-minlength", minLength >= 0 ? minLength.ToString() : null)
+                .AddUserAttribute("data-maxlength", maxLength >= 0 ? maxLength.ToString() : null)
+                .AddUserAttribute("data-pattern", pattern)
                 .AddUserAttribute("data-value", value?.Text)
-                .AddUserAttribute("data-uri", RestUri?.ToString());
+                .AddUserAttribute("data-uri", restUri?.ToString());
 
             return html;
         }
@@ -95,13 +104,15 @@ namespace WebExpress.WebApp.WebApiControl
         {
             var validationResults = new List<ValidationResult>(base.Validate(renderContext));
             var value = renderContext.GetValue<ControlFormInputValueString>(this)?.Text;
+            var disabled = Disabled?.Invoke(renderContext) ?? false;
+            var required = Required?.Invoke(renderContext) ?? false;
 
-            if (Disabled)
+            if (disabled)
             {
                 return [];
             }
 
-            if (Required && string.IsNullOrWhiteSpace(value))
+            if (required && string.IsNullOrWhiteSpace(value))
             {
                 validationResults.AddRange(new ValidationResult(TypeInputValidity.Error, "webexpress.webui:form.inputtextbox.validation.required"));
 

@@ -523,33 +523,108 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
     }
 
     /**
-     * Initialize listeners that persist column/row order changes.
+     * Initialize listeners that persist column / row layout changes (order,
+     * width, visibility) to the configured REST endpoint.
+     *
+     * Column changes are funneled through {@link _schedulePersist} (which is
+     * invoked by reorder, visibility and resize interactions in the base
+     * control), so a single override produces a debounced snapshot covering
+     * all three dimensions. Row reordering is handled separately because the
+     * base control does not include row order in its persisted state.
+     *
      * @param {HTMLElement} element - the host element to attach listeners to.
      */
     _initPersistenceListeners(element) {
-        const notifyStateChange = (type) => {
-            const colOrder = this._columns.filter((c) => c.visible).map((c) => c.id).join(",");
-            const rowOrder = this._rows.map((r) => r.id).join(",");
+        const dispatchUpdate = (type) => {
             this._dispatch(webexpress.webui.Event.UPDATED_EVENT, {
                 type: type,
-                columnOrder: colOrder,
-                rowOrder: rowOrder
+                columns: this._snapshotColumns(),
+                rowOrder: this._rows.map((r) => r.id).join(",")
             });
-            if (this._restUri) {
-                if (type === "row-reorder") {
-                    this._sendStateToServer({ r: rowOrder });
-                } else {
-                    this._sendStateToServer({ c: colOrder });
-                }
-            }
         };
-        element.addEventListener(webexpress.webui.Event.COLUMN_REORDER_EVENT, () => notifyStateChange("column-reorder"));
-        element.addEventListener(webexpress.webui.Event.COLUMN_VISIBILITY_EVENT, () => notifyStateChange("column-visibility"));
-        element.addEventListener(webexpress.webui.Event.ROW_REORDER_EVENT, () => notifyStateChange("row-reorder"));
+
+        // Intercept the base control's persistence hook so every column-side
+        // change (reorder, visibility, width) is mirrored to the server.
+        const basePersist = this._schedulePersist ? this._schedulePersist.bind(this) : null;
+        this._schedulePersist = () => {
+            if (basePersist) {
+                basePersist();
+            }
+            this._scheduleColumnSync();
+        };
+
+        element.addEventListener(webexpress.webui.Event.COLUMN_REORDER_EVENT, () => dispatchUpdate("column-reorder"));
+        element.addEventListener(webexpress.webui.Event.COLUMN_VISIBILITY_EVENT, () => dispatchUpdate("column-visibility"));
+        element.addEventListener(webexpress.webui.Event.ROW_REORDER_EVENT, () => {
+            dispatchUpdate("row-reorder");
+            this._scheduleRowSync();
+        });
     }
 
     /**
-     * Send a small state payload to the configured REST endpoint using PUT.
+     * Build a serializable description of the current column layout.
+     * The position in the returned array reflects the display order.
+     * @returns {Array<{id: string, visible: boolean, width: (number|null)}>}
+     */
+    _snapshotColumns() {
+        return (this._columns || []).map((c) => {
+            let width = null;
+            if (typeof c.width === "number" && isFinite(c.width)) {
+                width = Math.round(c.width);
+            } else if (typeof c.width === "string" && c.width !== "" && c.width !== "auto") {
+                const parsed = parseInt(c.width, 10);
+                if (!isNaN(parsed)) {
+                    width = parsed;
+                }
+            }
+
+            return {
+                id: c.id,
+                visible: c.visible !== false,
+                width: width
+            };
+        });
+    }
+
+    /**
+     * Debounce column-state updates to avoid flooding the server while the
+     * user is actively dragging a column resize handle.
+     */
+    _scheduleColumnSync() {
+        if (!this._restUri) {
+            return;
+        }
+        if (this._columnSyncTimer) {
+            clearTimeout(this._columnSyncTimer);
+        }
+        this._columnSyncTimer = setTimeout(() => {
+            this._columnSyncTimer = null;
+            this._sendStateToServer({ c: this._snapshotColumns() });
+        }, 300);
+    }
+
+    /**
+     * Debounce row-order updates so a burst of reorders sends only one
+     * request.
+     */
+    _scheduleRowSync() {
+        if (!this._restUri) {
+            return;
+        }
+        if (this._rowSyncTimer) {
+            clearTimeout(this._rowSyncTimer);
+        }
+        this._rowSyncTimer = setTimeout(() => {
+            this._rowSyncTimer = null;
+            this._sendStateToServer({ r: this._rows.map((r) => r.id).filter((id) => id != null) });
+        }, 300);
+    }
+
+    /**
+     * Send a state payload to the configured REST endpoint using PUT.
+     * The payload uses the same shape consumed by
+     * <c>RestApiTable.Configure</c>:
+     * <c>{ "c": [{ "id", "visible", "width" }, ...], "r": ["rowId", ...] }</c>.
      * @param {Object} stateObj - JSON-serializable object representing the state.
      */
     _sendStateToServer(stateObj) {

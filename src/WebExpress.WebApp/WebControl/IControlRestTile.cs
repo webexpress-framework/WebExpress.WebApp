@@ -1,21 +1,17 @@
-﻿using WebExpress.WebCore.WebUri;
+﻿using System;
 using WebExpress.WebUI.WebControl;
+using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
     /// Defines the contract for a REST-backed tile control.
     /// </summary>
-    public interface IControlRestTile : IControl
+    public interface IControlRestTile : IControl, IControlRest
     {
         /// <summary>
-        /// Returns or sets the uri that determines the data.
+        /// Gets or sets the binding.
         /// </summary>
-        IUri RestUri { get; }
-
-        /// <summary>
-        /// Returns or sets the binding.
-        /// </summary>
-        IBinding Bind { get; }
+        Func<IRenderControlContext, IBinding> Bind { get; }
     }
 }

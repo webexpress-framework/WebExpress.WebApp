@@ -2,6 +2,7 @@
 using System.Text.Json;
 using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.Test.Model;
+using WebExpress.WebCore.WebParameter;
 
 namespace WebExpress.WebApp.Test.WebRestApi
 {
@@ -106,7 +107,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             Assert.Equal("item", option.GetProperty("type").GetString());
             Assert.Equal("edit", option.GetProperty("command").GetString());
             Assert.Equal("Edit", option.GetProperty("text").GetString());
-            Assert.Equal("fa fa-pen", option.GetProperty("icon").GetString());
+            Assert.Equal("fas fa-pen", option.GetProperty("icon").GetString());
             Assert.Equal("text-primary", option.GetProperty("color").GetString());
             Assert.NotNull(option.GetProperty("id").GetString());
 
@@ -116,7 +117,166 @@ namespace WebExpress.WebApp.Test.WebRestApi
         }
 
         /// <summary>
-        /// Verifies that the template tag functionality correctly retrieves and 
+        /// Verifies that a JSON Configure payload reorders the columns, applies
+        /// width and visibility, and pushes the resolved layout through
+        /// <c>UpdateColumns</c>. Columns omitted by the client must be appended
+        /// at the tail and marked hidden.
+        /// </summary>
+        [Fact]
+        public void Configure_JsonBody_AppliesColumnLayout()
+        {
+            // arrange
+            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var table = new TestRestApiTable([], "Title");
+            var body = "{\"c\":[" +
+                "{\"id\":\"state\",\"visible\":true,\"width\":120}," +
+                "{\"id\":\"key\",\"visible\":false,\"width\":null}," +
+                "{\"id\":\"names\",\"visible\":true,\"width\":200}]," +
+                "\"r\":[\"r1\",\"r2\"]}";
+            var content = $@"PUT /test HTTP/1.1
+Host: localhost
+Content-Type: application/json
+
+{body}";
+            var request = UnitTestControlFixture.CreateRequestMock(content, "/test");
+
+            // act
+            var response = table.Configure(request);
+
+            // validation
+            Assert.NotNull(response);
+            Assert.Equal(200, response.Status);
+
+            Assert.NotNull(table.LastColumnUpdate);
+            Assert.Equal(4, table.LastColumnUpdate.Count);
+
+            Assert.Equal("state", table.LastColumnUpdate[0].Id);
+            Assert.True(table.LastColumnUpdate[0].Visible);
+            Assert.Equal(120u, table.LastColumnUpdate[0].Width);
+
+            Assert.Equal("key", table.LastColumnUpdate[1].Id);
+            Assert.False(table.LastColumnUpdate[1].Visible);
+            Assert.Null(table.LastColumnUpdate[1].Width);
+
+            Assert.Equal("names", table.LastColumnUpdate[2].Id);
+            Assert.True(table.LastColumnUpdate[2].Visible);
+            Assert.Equal(200u, table.LastColumnUpdate[2].Width);
+
+            // description was not in the payload - appended at the tail, hidden
+            Assert.Equal("description", table.LastColumnUpdate[3].Id);
+            Assert.False(table.LastColumnUpdate[3].Visible);
+
+            Assert.NotNull(table.LastRowUpdate);
+            Assert.Equal(["r1", "r2"], table.LastRowUpdate);
+        }
+
+        /// <summary>
+        /// Verifies that unknown and duplicate column ids in the payload are
+        /// silently ignored: only ids returned by <c>RetrieveColums</c> survive
+        /// validation, and each column appears at most once in the resolved
+        /// layout.
+        /// </summary>
+        [Fact]
+        public void Configure_JsonBody_IgnoresUnknownAndDuplicateIds()
+        {
+            // arrange
+            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var table = new TestRestApiTable([], "Title");
+            var body = "{\"c\":[" +
+                "{\"id\":\"key\",\"visible\":true,\"width\":80}," +
+                "{\"id\":\"does-not-exist\",\"visible\":true,\"width\":50}," +
+                "{\"id\":\"KEY\",\"visible\":false,\"width\":999}]}";
+            var content = $@"PUT /test HTTP/1.1
+Host: localhost
+Content-Type: application/json
+
+{body}";
+            var request = UnitTestControlFixture.CreateRequestMock(content, "/test");
+
+            // act
+            var response = table.Configure(request);
+
+            // validation
+            Assert.Equal(200, response.Status);
+            Assert.NotNull(table.LastColumnUpdate);
+
+            // 1 valid + 3 untouched columns appended hidden = 4
+            Assert.Equal(4, table.LastColumnUpdate.Count);
+            Assert.Equal("key", table.LastColumnUpdate[0].Id);
+            Assert.True(table.LastColumnUpdate[0].Visible);
+            Assert.Equal(80u, table.LastColumnUpdate[0].Width);
+
+            Assert.All(table.LastColumnUpdate.Skip(1), c => Assert.False(c.Visible));
+            Assert.Equal(["names", "state", "description"], table.LastColumnUpdate.Skip(1).Select(c => c.Id));
+
+            // row hook untouched
+            Assert.Null(table.LastRowUpdate);
+        }
+
+        /// <summary>
+        /// Verifies that the URL-encoded parameter fallback (parallel
+        /// <c>c</c>/<c>v</c>/<c>w</c>/<c>r</c> arrays) is wired through to
+        /// <c>UpdateColumns</c>/<c>UpdateRows</c> when no JSON body is supplied.
+        /// </summary>
+        [Fact]
+        public void Configure_UrlEncodedFallback_AppliesLayout()
+        {
+            // arrange
+            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var table = new TestRestApiTable([], "Title");
+            var request = UnitTestControlFixture.CreateRequestMock();
+            request.AddParameter(new Parameter("c", "names,state", ParameterScope.Parameter));
+            request.AddParameter(new Parameter("v", "1,0", ParameterScope.Parameter));
+            request.AddParameter(new Parameter("w", "150,", ParameterScope.Parameter));
+            request.AddParameter(new Parameter("r", "row-a,row-b", ParameterScope.Parameter));
+
+            // act
+            var response = table.Configure(request);
+
+            // validation
+            Assert.Equal(200, response.Status);
+            Assert.NotNull(table.LastColumnUpdate);
+            Assert.Equal(4, table.LastColumnUpdate.Count);
+
+            Assert.Equal("names", table.LastColumnUpdate[0].Id);
+            Assert.True(table.LastColumnUpdate[0].Visible);
+            Assert.Equal(150u, table.LastColumnUpdate[0].Width);
+
+            Assert.Equal("state", table.LastColumnUpdate[1].Id);
+            Assert.False(table.LastColumnUpdate[1].Visible);
+            Assert.Null(table.LastColumnUpdate[1].Width);
+
+            // remaining columns appended at the tail, hidden
+            Assert.Equal(["key", "description"], table.LastColumnUpdate.Skip(2).Select(c => c.Id));
+            Assert.All(table.LastColumnUpdate.Skip(2), c => Assert.False(c.Visible));
+
+            Assert.Equal(["row-a", "row-b"], table.LastRowUpdate);
+        }
+
+        /// <summary>
+        /// Verifies that a Configure request without column or row data does not
+        /// invoke the <c>UpdateColumns</c>/<c>UpdateRows</c> hooks and still
+        /// returns a successful response.
+        /// </summary>
+        [Fact]
+        public void Configure_EmptyPayload_DoesNotInvokeHooks()
+        {
+            // arrange
+            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var table = new TestRestApiTable([], "Title");
+            var request = UnitTestControlFixture.CreateRequestMock();
+
+            // act
+            var response = table.Configure(request);
+
+            // validation
+            Assert.Equal(200, response.Status);
+            Assert.Null(table.LastColumnUpdate);
+            Assert.Null(table.LastRowUpdate);
+        }
+
+        /// <summary>
+        /// Verifies that the template tag functionality correctly retrieves and
         /// validates table column data in a REST API scenario.
         /// </summary>
         [Fact]

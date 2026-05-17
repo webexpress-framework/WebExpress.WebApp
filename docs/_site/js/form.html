@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>RestFormCtrl | WebExpress.WebApp </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="RestFormCtrl | WebExpress.WebApp ">
+      
+      
+      <link rel="icon" href="../assets/webexpress.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/ReneSchwarzer/WebExpress.WebApp/blob/develop/docs/js/form.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../assets/webexpress.svg" alt="WebExpress.WebApp">
+            WebExpress.WebApp
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="restformctrl">RestFormCtrl</h1>
+
+<p><code>RestFormCtrl</code> is a controller that modernizes a traditional HTML form by replacing standard submit behavior with an asynchronous JSON request. It offers client-side validation, inline validation messages, and integrates with the <code>webexpress</code> event system. Additionally, the form can be initially populated with data from an API.</p>
+<p>Decoupling form presentation from data processing provides significant advantages over classic server-side form submits:</p>
+<ul>
+<li><strong>Single-Page Application (SPA) Feeling:</strong> The page does not need to reload upon submission. The user retains context, scroll position, and focus.</li>
+<li><strong>Structured Data:</strong> Data is sent as a typed JSON object. This facilitates backend processing compared to <code>x-www-form-urlencoded</code> and enables complex, nested structures.</li>
+<li><strong>Precise Feedback:</strong> Validation errors from the server can be mapped exactly to the affected fields without re-rendering the form.</li>
+<li><strong>Status Feedback:</strong> Events allow easy visualization of loading states (e.g., &quot;Saving...&quot;) while the form is locked to prevent duplicate entries.</li>
+</ul>
+<h2 id="data-population-strategies">Data Population Strategies</h2>
+<p>The controller supports two ways to load data into the form. These can also be combined (hybrid approach).</p>
+<ol>
+<li><strong>Server-Side Rendering (Recommended for Initial Load):</strong> The most performant method is to deliver the HTML form already populated from the server. Here, the template engine sets the <code>value</code> attributes of inputs and the <code>checked</code> status of checkboxes directly in the HTML.</li>
+<li><strong>Population via REST API (Client-Side):</strong> Using the <code>data-api</code> attribute, the controller can be instructed to execute a GET request after initialization to retrieve the data.</li>
+</ol>
+<h2 id="declarative-configuration">Declarative Configuration</h2>
+<p>The behavior of REST-based forms is defined entirely through declarative configuration using <code>data-*</code> attributes on the <code>&lt;form&gt;</code> element. By attaching the class <code>wx-webapp-restform</code>, the controller automatically interprets these attributes to determine how the form should load, validate, submit, and handle errors. This approach minimizes the need for custom JavaScript and ensures a consistent, predictable workflow across different forms. The following table outlines the available attributes and their specific roles in controlling form functionality.</p>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>data-api</code></td>
+<td>URL of the endpoint to which data is sent. If not set, <code>action</code> is used.</td>
+</tr>
+<tr>
+<td><code>data-method</code></td>
+<td>HTTP method for submission. Overrides the form's <code>method</code> attribute.</td>
+</tr>
+<tr>
+<td><code>data-json</code></td>
+<td>Determines whether data is sent as JSON (<code>true</code>) or <code>x-www-form-urlencoded</code> (<code>false</code>).</td>
+</tr>
+<tr>
+<td><code>data-validate-on-submit</code></td>
+<td>Enables client-side validation before sending.</td>
+</tr>
+<tr>
+<td><code>data-show-inline-errors</code></td>
+<td>Displays error messages directly below the affected fields.</td>
+</tr>
+<tr>
+<td><code>data-mode</code></td>
+<td>Force <code>new</code>, <code>edit</code> or <code>delete</code></td>
+</tr>
+<tr>
+<td><code>data-id</code></td>
+<td>Primary key for Edit/Delete; appended as query parameter.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="functionality-and-behavior">Functionality and Behavior</h2>
+<p>The form controller manages the complete lifecycle of user interactions, from initialization to error handling. Its behavior ensures that forms are consistently prepared, validated, and submitted in a reliable way, while providing meaningful feedback to users. The following points outline the core aspects of how the controller operates, including setup, validation, submission flow, and error management.</p>
+<ul>
+<li><p><strong>Initialization &amp; Hydration</strong></p>
+<ul>
+<li>Upon loading, a container for global error messages (<code>.restform-error-container</code>) is created if it does not yet exist.</li>
+<li>The controller retrieves the data and automatically populates the form fields.</li>
+</ul>
+</li>
+<li><p><strong>Validation</strong></p>
+<ul>
+<li>The controller uses the native HTML5 validation API (<code>required</code>, <code>pattern</code>, <code>min</code>/<code>max</code>, <code>type=&quot;email&quot;</code>, etc.).</li>
+<li>In case of errors, submission is prevented, the first invalid field is focused, and an error message is displayed.</li>
+<li>Specific validations for email patterns are additionally checked to compensate for browser inconsistencies.</li>
+</ul>
+</li>
+<li><p><strong>Submission</strong></p>
+<ul>
+<li>The browser's standard submit is prevented.</li>
+<li>All form fields (except <code>type=&quot;file&quot;</code>) are serialized into a JSON object.</li>
+<li>Checkbox groups and multi-selects are correctly processed as arrays or booleans.</li>
+<li>During the submission process, the form is locked (<code>disabled</code>) and receives the CSS class <code>.restform-submitting</code>.</li>
+</ul>
+</li>
+<li><p><strong>Error Handling</strong></p>
+<ul>
+<li><strong>Client-side:</strong> Inline error messages are displayed directly at the field (<code>aria-invalid=&quot;true&quot;</code>).</li>
+<li><strong>Server-side:</strong> If the server responds with status <code>400</code> and a JSON object <code>{ errors: { fieldName: &quot;Message&quot; } }</code>, these errors are assigned to the corresponding fields.</li>
+<li><strong>Global:</strong> Other errors (network, Server 500) are displayed in a global alert box above the form.</li>
+</ul>
+</li>
+</ul>
+<h2 id="programmatic-control">Programmatic Control</h2>
+<p>The instance can be retrieved to manually control the form or register external hooks.</p>
+<h3 id="accessing-an-automatically-created-instance">Accessing an Automatically Created Instance</h3>
+<p>For forms declared in HTML, the associated RestFormCtrl instance is retrieved via the <code>getInstanceByElement(element)</code> method of the central <code>webexpress.webui.Controller</code>.</p>
+<pre><code class="lang-javascript">// find the host form element in the DOM
+const formEl = document.getElementById('my-form');
+
+// retrieve the RestFormCtrl instance associated with the element
+const restForm = webexpress.webui.Controller.getInstanceByElement(formEl);
+
+// change options and register hooks programmatically
+if (restForm) {
+    // set onSuccess hook to run after a successful submit
+    // note: hooks run inside try/catch in the controller; avoid throwing here
+    restForm.options.onSuccess = function(json, response) {
+        // navigate or show a notification
+        window.location.href = '/success';
+    };
+
+    // add a beforeSend hook to mutate or cancel the payload
+    restForm.options.beforeSend = function(payload, element) {
+        // attach a timestamp and return the modified payload
+        payload.ts = Date.now();
+        return payload; // return false to cancel submit
+    };
+
+    // trigger validation manually
+    const valid = restForm.validate();
+    if (valid) {
+        // submit programmatically
+        restForm.submit();
+    }
+
+    // clear visible errors
+    restForm.clear();
+}
+</code></pre>
+<h3 id="manual-instantiation">Manual Instantiation</h3>
+<p>A RestFormCtrl can also be created entirely programmatically and attached to a host element. This is useful for dynamic UI scenarios.</p>
+<pre><code class="lang-javascript">// find or create a container element for the form
+const container = document.getElementById('dynamic-form-container');
+
+// create a form element and append it to the container
+const form = document.createElement('form');
+form.className = 'wx-webapp-restform';
+form.setAttribute('data-api', '/api/items');
+container.appendChild(form);
+
+// instantiate RestFormCtrl manually for the newly created form
+const dynamicRestForm = new webexpress.webapp.RestFormCtrl(form);
+
+// set hooks and call methods as needed
+if (dynamicRestForm) {
+    dynamicRestForm.options.onSuccess = function(json, response) {
+        // show a confirmation or update UI
+        console.log('saved', json);
+    };
+
+    // optionally prefill and then submit
+    dynamicRestForm.load().then(function() {
+        // submit after load completes if desired
+        dynamicRestForm.submit();
+    }).catch(function(e) {
+        // handle load errors
+        console.error(e);
+    });
+}
+</code></pre>
+<h2 id="accessibility">Accessibility</h2>
+<p>To ensure that forms are usable and inclusive for all users, accessibility features are integrated directly into the interaction flow. These measures help screen readers, assistive technologies, and keyboard navigation provide clear feedback and maintain a consistent user experience. The following points outline how error handling, status management, and focus control are implemented to meet accessibility standards.</p>
+<ul>
+<li><strong>Error Messages:</strong>
+<ul>
+<li>Invalid fields receive the attribute <code>aria-invalid=&quot;true&quot;</code>.</li>
+<li>The error message is linked to the input field via <code>aria-describedby</code>.</li>
+</ul>
+</li>
+<li><strong>Status:</strong>
+<ul>
+<li>During loading or submission, all interactive elements are disabled to prevent inconsistent states.</li>
+</ul>
+</li>
+<li><strong>Focus Management:</strong>
+<ul>
+<li>In the event of validation errors, focus is automatically set to the first affected field.</li>
+</ul>
+</li>
+</ul>
+<h2 id="events">Events</h2>
+<p>The form controller communicates its internal lifecycle through a series of dispatched webexpress.webui.Event types. These events provide hooks for developers to monitor and react to key stages such as data requests, asynchronous operations, successful submissions, or error handling. Each event constant is triggered at a specific point in the process and carries a detailed payload that can be used for logging, UI updates, or custom logic. The following table summarizes the available events, their triggers, and the associated payload structure.</p>
+<table>
+<thead>
+<tr>
+<th>Event Constant</th>
+<th>Trigger</th>
+<th>Detail Payload</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DATA_REQUESTED_EVENT</code></td>
+<td>Start of load/submit.</td>
+<td><code>{ type: &quot;load&quot;|&quot;submit&quot;, url }</code></td>
+</tr>
+<tr>
+<td><code>TASK_START_EVENT</code></td>
+<td>Async start.</td>
+<td><code>{ name: &quot;loading&quot;|&quot;submitting&quot; }</code></td>
+</tr>
+<tr>
+<td><code>TASK_FINISH_EVENT</code></td>
+<td>Async end.</td>
+<td><code>{ name: &quot;loading&quot;|&quot;submitting&quot; }</code></td>
+</tr>
+<tr>
+<td><code>DATA_ARRIVED_EVENT</code></td>
+<td>Data received.</td>
+<td><code>{ data, status, type: &quot;load&quot;|&quot;submit&quot; }</code></td>
+</tr>
+<tr>
+<td><code>CHANGE_VALUE_EVENT</code></td>
+<td>Form populated (load).</td>
+<td><code>{ source: &quot;load&quot;, data }</code></td>
+</tr>
+<tr>
+<td><code>UPLOAD_SUCCESS_EVENT</code></td>
+<td>Submit succeeded (2xx).</td>
+<td><code>{ response, status, form }</code></td>
+</tr>
+<tr>
+<td><code>UPLOAD_ERROR_EVENT</code></td>
+<td>Error (network, validation, 5xx).</td>
+<td><code>{ error|response, type: &quot;validation&quot;|undefined }</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="examples">Examples</h2>
+<p>The following examples illustrate how to use REST-based forms within a web application. They show different scenarios, such as automatically loading and updating user profile data with the PUT method, or handling deletion requests with a static confirmation message.</p>
+<p><strong>Form with Automatic Loading and PUT Method:</strong></p>
+<p>This example demonstrates a form that automatically loads the current profile data and submits updates to the API using the PUT method. It is ideal for edit functions such as updating user information. In addition to validating the username, the user can also manage newsletter subscription preferences. Errors are displayed in a dedicated container, and changes are saved via a clearly marked button.</p>
+<pre><code class="lang-html">&lt;form id=&quot;profile-edit&quot;
+      class=&quot;wx-webapp-restform&quot;
+      data-api=&quot;/api/profile&quot;
+      data-method=&quot;PUT&quot;&gt;
+  &lt;div class=&quot;restform-error-container&quot;&gt;&lt;/div&gt;
+  &lt;div class=&quot;mb-3&quot;&gt;
+    &lt;label for=&quot;username&quot;&gt;Username&lt;/label&gt;
+    &lt;input type=&quot;text&quot; name=&quot;username&quot; class=&quot;form-control&quot; required minlength=&quot;3&quot;&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;form-check&quot;&gt;
+    &lt;input class=&quot;form-check-input&quot; type=&quot;checkbox&quot; name=&quot;newsletter&quot; id=&quot;newsletter&quot;&gt;
+    &lt;label class=&quot;form-check-label&quot; for=&quot;newsletter&quot;&gt;Subscribe to newsletter&lt;/label&gt;
+  &lt;/div&gt;
+  &lt;button type=&quot;submit&quot; class=&quot;btn btn-success&quot;&gt;Save&lt;/button&gt;
+&lt;/form&gt;
+</code></pre>
+<p><strong>Delete form without data load (static notice only, with <code>&lt;confirm&gt;</code>):</strong></p>
+<p>The second example illustrates a delete form that does not require loading data beforehand. Instead, a static confirmation message is shown through the <confirm> element once the action has been successfully completed. Before deletion, the user is prompted with a clear confirmation question and can proceed deliberately using the red Delete button.</confirm></p>
+<pre><code class="lang-html">&lt;form id=&quot;user-delete&quot;
+      class=&quot;wx-webapp-restform&quot;
+      data-api=&quot;/api/users&quot;
+      data-mode=&quot;delete&quot;
+      data-id=&quot;42&quot;&gt;
+  &lt;confirm&gt;
+    &lt;div class=&quot;alert alert-success&quot;&gt;User was successfully deleted.&lt;/div&gt;
+  &lt;/confirm&gt;
+  &lt;p&gt;Do you really want to delete this user?&lt;/p&gt;
+  &lt;button type=&quot;submit&quot; class=&quot;btn btn-danger&quot;&gt;Delete&lt;/button&gt;
+&lt;/form&gt;
+</code></pre>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/ReneSchwarzer/WebExpress.WebApp/blob/develop/docs/js/form.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

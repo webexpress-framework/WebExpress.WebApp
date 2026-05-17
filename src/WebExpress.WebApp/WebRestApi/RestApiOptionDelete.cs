@@ -1,8 +1,10 @@
 ﻿using System.Collections.Generic;
 using WebExpress.WebCore.Internationalization;
+using WebExpress.WebCore.WebIcon;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
+using WebExpress.WebUI.WebIcon;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -12,42 +14,42 @@ namespace WebExpress.WebApp.WebRestApi
     public class RestApiOptionDelete : RestApiOption
     {
         /// <summary>
-        /// Returns the type of the element, represented as a string.
+        /// Gets the type of the element, represented as a string.
         /// </summary>
         public virtual string Type => "item";
 
         /// <summary>
-        /// Returns or sets the command.
+        /// Gets or sets the command.
         /// </summary>
         public virtual string Command => "delete";
 
         /// <summary>
-        /// Returns the text.
+        /// Gets the text.
         /// </summary>
         public virtual string Text => I18N.Translate(Request, "webexpress.webui:delete.label");
 
         /// <summary>
-        /// Returns the icon.
+        /// Gets the icon.
         /// </summary>
-        public virtual string Icon => "fa fa-trash";
+        public virtual IIcon Icon { get; set; } = new IconTrash();
 
         /// <summary>
-        /// Returns the edit form uri.
+        /// Gets the edit form uri.
         /// </summary>
         public virtual IUri Uri { get; set; }
 
         /// <summary>
-        /// Returns or sets the text color.
+        /// Gets the text color.
         /// </summary>
         public virtual string Color => "text-danger";
 
         /// <summary>
-        /// Returns or sets the primary action, typically invoked on a single click.
+        /// Gets or sets the primary action, typically invoked on a single click.
         /// </summary>
         public virtual IAction PrimaryAction { get; set; }
 
         /// <summary>
-        /// Returns or sets the secondary action, typically invoked on a double‑click.
+        /// Gets or sets the secondary action, typically invoked on a double‑click.
         /// </summary>
         public virtual IAction SecondaryAction { get; set; }
 
@@ -74,7 +76,7 @@ namespace WebExpress.WebApp.WebRestApi
             json["type"] = Type;
             json["command"] = Command;
             json["text"] = Text;
-            json["icon"] = Icon;
+            json["icon"] = (Icon as Icon)?.Class;
             json["color"] = Color;
 
             if (Uri is not null)
@@ -82,12 +84,12 @@ namespace WebExpress.WebApp.WebRestApi
                 json["uri"] = Uri.ToString();
             }
 
-            if (PrimaryAction != null)
+            if (PrimaryAction is not null)
             {
                 json["primaryAction"] = PrimaryAction.ToJson();
             }
 
-            if (SecondaryAction != null)
+            if (SecondaryAction is not null)
             {
                 json["secondaryAction"] = SecondaryAction.ToJson();
             }

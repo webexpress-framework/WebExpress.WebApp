@@ -67,8 +67,10 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
         const root = document.createElement("div");
         root.className = "wx-restwizard-root";
 
+        const container = this._element.querySelector(".modal-body") || this._element;
+
         // extract non-page elements to keep them in the form
-        const staticElements = Array.from(this._element.children).filter((child) => {
+        const staticElements = Array.from(container.children).filter((child) => {
             if (child === this._formErrorContainer || child === this._confirmContainer || child === this._formPrologContainer) {
                 return false;
             }
@@ -95,7 +97,7 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
 
         // progress indicator
         this._wizardProgressContainer = document.createElement("div");
-        this._wizardProgressContainer.className = "wx-restwizard-progress d-flex justify-content-between mb-4";
+        this._wizardProgressContainer.className = "wx-restwizard-progress mb-4";
         root.appendChild(this._wizardProgressContainer);
 
         // pages container
@@ -107,14 +109,9 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
         }
         root.appendChild(this._pagesContainer);
 
+        const modalFooter = this._element.querySelector(".modal-footer");
+
         // action buttons
-        const actionsContainer = document.createElement("div");
-        actionsContainer.className = "wx-restwizard-actions d-flex gap-2 justify-content-between";
-
-        const leftGroup = document.createElement("div");
-        const rightGroup = document.createElement("div");
-        rightGroup.className = "d-flex gap-2";
-
         this._btnPrev = document.createElement("button");
         this._btnPrev.type = "button";
         this._btnPrev.className = "btn btn-outline-secondary";
@@ -136,15 +133,36 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
         this._btnFinish.className = "btn btn-success";
         this._btnFinish.textContent = this._i18n("webexpress.webapp:wizard.finish") || "Abschließen";
 
-        leftGroup.appendChild(this._btnPrev);
-        rightGroup.appendChild(this._btnNext);
-        rightGroup.appendChild(this._btnFinish);
+        if (modalFooter) {
+            // hide original submit button
+            const existingSubmit = modalFooter.querySelector('[type="submit"], button[name="submit"]');
+            if (existingSubmit) {
+                existingSubmit.style.display = "none";
+            }
+            
+            this._btnPrev.classList.add("me-auto"); // push to the left in flex layout
+            modalFooter.insertBefore(this._btnPrev, modalFooter.firstChild);
+            
+            modalFooter.appendChild(this._btnNext);
+            modalFooter.appendChild(this._btnFinish);
+        } else {
+            const actionsContainer = document.createElement("div");
+            actionsContainer.className = "wx-restwizard-actions d-flex gap-2 justify-content-between";
 
-        actionsContainer.appendChild(leftGroup);
-        actionsContainer.appendChild(rightGroup);
-        root.appendChild(actionsContainer);
+            const leftGroup = document.createElement("div");
+            const rightGroup = document.createElement("div");
+            rightGroup.className = "d-flex gap-2";
 
-        this._element.appendChild(root);
+            leftGroup.appendChild(this._btnPrev);
+            rightGroup.appendChild(this._btnNext);
+            rightGroup.appendChild(this._btnFinish);
+
+            actionsContainer.appendChild(leftGroup);
+            actionsContainer.appendChild(rightGroup);
+            root.appendChild(actionsContainer);
+        }
+
+        container.appendChild(root);
     }
 
     /**
@@ -334,15 +352,12 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
             // build progress step for active/non-skipped pages
             if (!page.skipped) {
                 const stepEl = document.createElement("div");
-                stepEl.className = "flex-fill text-center p-2 border-bottom";
+                stepEl.className = "wx-restwizard-step";
                 
                 if (i === this._currentIndex) {
-                    stepEl.classList.add("border-primary", "fw-bold", "text-primary");
-                    stepEl.style.borderBottomWidth = "3px";
+                    stepEl.classList.add("active");
                 } else if (i < this._currentIndex) {
-                    stepEl.classList.add("text-success");
-                } else {
-                    stepEl.classList.add("text-muted");
+                    stepEl.classList.add("completed");
                 }
                 
                 stepEl.textContent = page.title;
@@ -361,7 +376,7 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
 
         // prev button is visible if we are not on the first page
         if (this._btnPrev) {
-            this._btnPrev.style.display = this._currentIndex > 0 ? "block" : "none";
+            this._btnPrev.style.display = this._currentIndex > 0 ? "" : "none";
         }
         
         // determine if current page is the last non-skipped page
@@ -376,9 +391,9 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
         if (this._btnNext && this._btnFinish) {
             if (isLastPage) {
                 this._btnNext.style.display = "none";
-                this._btnFinish.style.display = "block";
+                this._btnFinish.style.display = "";
             } else {
-                this._btnNext.style.display = "block";
+                this._btnNext.style.display = "";
                 this._btnFinish.style.display = "none";
             }
         }

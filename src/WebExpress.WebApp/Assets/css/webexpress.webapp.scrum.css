@@ -1,0 +1,609 @@
+/*
+ * Scrum styles for the backlog and active sprint controls.
+ * Aligned with the bootstrap variables and the existing WebUI controls.
+ */
+
+/* --------------------------------------------------------------- backlog */
+.wx-scrum-backlog {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.wx-scrum-backlog-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.wx-scrum-backlog-toolbar .wx-scrum-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 0;
+    flex-grow: 1;
+    color: var(--bs-heading-color, #212529);
+}
+
+.wx-scrum-section {
+    background: var(--bs-body-bg, #fff);
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 0.375rem;
+    overflow: hidden;
+}
+
+.wx-scrum-section-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.875rem;
+    background: var(--bs-tertiary-bg, #f8f9fa);
+    border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+    font-weight: 600;
+    font-size: 0.825rem;
+}
+
+.wx-scrum-section-head .wx-scrum-section-name {
+    flex-grow: 1;
+}
+
+.wx-scrum-section-head .wx-scrum-section-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--bs-secondary-color, #6c757d);
+    font-weight: 400;
+    font-size: 0.75rem;
+}
+
+.wx-scrum-sprint-menu {
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    background: var(--bs-body-bg, #fff);
+    color: var(--bs-body-color, #212529);
+}
+
+.wx-scrum-sprint-menu:hover,
+.wx-scrum-sprint-menu:focus-visible {
+    background: var(--bs-tertiary-bg, #f8f9fa);
+    color: var(--bs-body-color, #212529);
+    border-color: var(--bs-border-color, #dee2e6);
+}
+
+.wx-scrum-ctx-item {
+    color: var(--bs-body-color, #212529);
+    border: 1px solid transparent;
+}
+
+.wx-scrum-ctx-item:hover,
+.wx-scrum-ctx-item:focus-visible {
+    background: var(--bs-tertiary-bg, #f8f9fa);
+    color: var(--bs-body-color, #212529);
+    border-color: var(--bs-border-color, #dee2e6);
+}
+
+.wx-scrum-ctx-item:disabled {
+    color: var(--bs-secondary-color, #6c757d);
+    opacity: 0.65;
+}
+
+.wx-scrum-section-head .wx-scrum-status {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    padding: 0.05rem 0.4rem;
+    border-radius: 0.2rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.wx-scrum-status.active {
+    background: rgba(25, 135, 84, 0.12);
+    color: #198754;
+}
+
+.wx-scrum-status.planned {
+    background: rgba(13, 110, 253, 0.12);
+    color: #0d6efd;
+}
+
+.wx-scrum-status.closed {
+    background: rgba(108, 117, 125, 0.12);
+    color: #6c757d;
+}
+
+.wx-scrum-row {
+    display: grid;
+    grid-template-columns: 24px 90px 1fr auto auto auto;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.5rem 0.875rem;
+    border-bottom: 1px solid var(--bs-border-color-translucent, #e9ecef);
+    cursor: pointer;
+    transition: background-color 0.1s ease-in-out;
+    font-size: 0.85rem;
+
+    /* prevent native text selection while shift-clicking rows */
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.wx-scrum-row:last-child {
+    border-bottom: 0;
+}
+
+.wx-scrum-row:hover {
+    background: var(--bs-tertiary-bg, #f8f9fa);
+}
+
+/* focus style for keyboard rank adjustments */
+.wx-scrum-row:focus-visible {
+    outline: 2px solid var(--bs-primary, #0d6efd);
+    outline-offset: -2px;
+    background: var(--bs-tertiary-bg, #f8f9fa);
+}
+
+/* selected state */
+.wx-scrum-row.wx-scrum-row-active,
+.wx-scrum-row.active {
+    background: rgba(13, 110, 253, 0.10);
+    box-shadow: inset 3px 0 0 var(--bs-primary, #0d6efd);
+}
+
+.wx-scrum-row.wx-scrum-row-active:hover,
+.wx-scrum-row.active:hover {
+    background: rgba(13, 110, 253, 0.14);
+}
+
+.wx-scrum-row.dragging {
+    opacity: 0.4;
+}
+
+/* precise drop indicators for row reordering */
+.wx-scrum-row.wx-drop-before {
+    box-shadow: inset 0 2px 0 var(--bs-primary, #0d6efd);
+}
+
+.wx-scrum-row.wx-drop-after {
+    box-shadow: inset 0 -2px 0 var(--bs-primary, #0d6efd);
+}
+
+.wx-scrum-row .wx-scrum-type {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 0.2rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.wx-scrum-type.story {
+    background: #198754;
+}
+
+.wx-scrum-type.task {
+    background: #0d6efd;
+}
+
+.wx-scrum-type.bug {
+    background: #dc3545;
+}
+
+.wx-scrum-type.spike {
+    background: #6f42c1;
+}
+
+.wx-scrum-row .wx-scrum-key {
+    font-family: var(--bs-font-monospace, monospace);
+    font-size: 0.75rem;
+    color: var(--bs-secondary-color, #6c757d);
+}
+
+.wx-scrum-row .wx-scrum-row-title {
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.wx-scrum-row .wx-scrum-prio {
+    font-family: var(--bs-font-monospace, monospace);
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0 0.25rem;
+    border-radius: 0.2rem;
+}
+
+.wx-scrum-prio.P1 {
+    background: rgba(220, 53, 69, 0.12);
+    color: #dc3545;
+}
+
+.wx-scrum-prio.P2 {
+    background: rgba(255, 193, 7, 0.18);
+    color: #b45309;
+}
+
+.wx-scrum-prio.P3 {
+    background: rgba(13, 110, 253, 0.10);
+    color: #0d6efd;
+}
+
+.wx-scrum-prio.P4 {
+    background: rgba(108, 117, 125, 0.10);
+    color: #6c757d;
+}
+
+.wx-scrum-row .wx-scrum-points {
+    font-family: var(--bs-font-monospace, monospace);
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: var(--bs-tertiary-bg, #f8f9fa);
+    border-radius: 999px;
+    padding: 0.05rem 0.45rem;
+    min-width: 28px;
+    text-align: center;
+}
+
+.wx-scrum-row .wx-scrum-add-sprint {
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    background: var(--bs-body-bg, #fff);
+    color: var(--bs-primary, #0d6efd);
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 0.25rem;
+    padding: 0.15rem 0.5rem;
+}
+
+.wx-scrum-row .wx-scrum-add-sprint:hover {
+    background: rgba(13, 110, 253, 0.08);
+}
+
+.wx-scrum-empty {
+    padding: 1rem;
+    text-align: center;
+    color: var(--bs-secondary-color, #6c757d);
+    font-size: 0.85rem;
+}
+
+.wx-scrum-drop-target {
+    background: rgba(13, 110, 253, 0.05);
+    outline: 2px dashed rgba(13, 110, 253, 0.4);
+    outline-offset: -2px;
+}
+
+/* dark mode */
+[data-bs-theme="dark"] .wx-scrum-row:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+[data-bs-theme="dark"] .wx-scrum-row.wx-scrum-row-active,
+[data-bs-theme="dark"] .wx-scrum-row.active {
+    background: rgba(13, 110, 253, 0.18);
+}
+
+[data-bs-theme="dark"] .wx-scrum-row.wx-scrum-row-active:hover,
+[data-bs-theme="dark"] .wx-scrum-row.active:hover {
+    background: rgba(13, 110, 253, 0.24);
+}
+
+[data-bs-theme="dark"] .wx-scrum-section {
+    background: var(--bs-body-bg, #1d1f23);
+}
+
+[data-bs-theme="dark"] .wx-scrum-sprint-menu {
+    background: var(--bs-tertiary-bg, #2b3035);
+    color: var(--bs-body-color, #dee2e6);
+    border-color: var(--bs-border-color, #495057);
+}
+
+[data-bs-theme="dark"] .wx-scrum-sprint-menu:hover,
+[data-bs-theme="dark"] .wx-scrum-sprint-menu:focus-visible {
+    background: color-mix(in srgb, var(--bs-tertiary-bg, #2b3035) 80%, white 20%);
+    color: var(--bs-body-color, #dee2e6);
+    border-color: var(--bs-primary, #0d6efd);
+}
+
+[data-bs-theme="dark"] .wx-scrum-ctx-item {
+    color: var(--bs-body-color, #dee2e6);
+}
+
+[data-bs-theme="dark"] .wx-scrum-ctx-item:hover,
+[data-bs-theme="dark"] .wx-scrum-ctx-item:focus-visible {
+    background: color-mix(in srgb, var(--bs-tertiary-bg, #2b3035) 80%, white 20%);
+    color: var(--bs-body-color, #dee2e6);
+    border-color: var(--bs-primary, #0d6efd);
+}
+
+[data-bs-theme="dark"] .wx-scrum-ctx-item:disabled {
+    color: var(--bs-secondary-color, #adb5bd);
+    opacity: 0.6;
+}
+
+/* --------------------------------------------------------------- sprint overview */
+.wx-scrum-sprint {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr 1fr 1fr;
+    gap: 1rem;
+    background: var(--bs-body-bg, #fff);
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 0.375rem;
+    padding: 0.875rem 1rem;
+    cursor: pointer;
+    transition: box-shadow 0.15s ease-in-out, border-color 0.15s ease-in-out;
+}
+
+.wx-scrum-sprint:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border-color: var(--bs-primary, #0d6efd);
+}
+
+/* loading / error states span the full card */
+.wx-scrum-sprint-state {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.25rem;
+    color: var(--bs-secondary-color, #6c757d);
+    font-size: 0.875rem;
+}
+
+.wx-scrum-sprint-error {
+    color: #dc3545;
+}
+
+.wx-scrum-sprint-error .wx-scrum-sprint-retry {
+    margin-left: auto;
+}
+
+.wx-scrum-sprint-sec {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
+.wx-scrum-sprint-eyebrow {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--bs-secondary-color, #6c757d);
+    font-weight: 600;
+}
+
+.wx-scrum-sprint-name {
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.wx-scrum-sprint-day {
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--bs-secondary-color, #6c757d);
+    background: var(--bs-tertiary-bg, #f8f9fa);
+    padding: 0.05rem 0.4rem;
+    border-radius: 0.2rem;
+}
+
+.wx-scrum-sprint-goal {
+    font-size: 0.825rem;
+    color: var(--bs-secondary-color, #6c757d);
+    line-height: 1.45;
+    overflow: hidden;
+}
+
+.wx-scrum-sprint-metric {
+    display: flex;
+    align-items: baseline;
+    gap: 0.375rem;
+}
+
+.wx-scrum-sprint-metric .num {
+    font-size: 1.4rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.wx-scrum-sprint-metric .denom {
+    font-size: 0.8rem;
+    color: var(--bs-secondary-color, #6c757d);
+}
+
+.wx-scrum-sprint-bar {
+    height: 6px;
+    background: var(--bs-tertiary-bg, #f0f1f3);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 0.25rem;
+}
+
+.wx-scrum-sprint-bar > span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, #0d6efd, #20c997);
+    border-radius: 999px;
+}
+
+.wx-scrum-sprint-bar.warn > span {
+    background: linear-gradient(90deg, #ffc107, #fd7e14);
+}
+
+.wx-scrum-sprint-caption {
+    font-size: 0.72rem;
+    color: var(--bs-secondary-color, #6c757d);
+}
+
+.wx-scrum-sprint-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-top: 0.25rem;
+}
+
+.wx-scrum-sprint-chip {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.7rem;
+    background: var(--bs-tertiary-bg, #f8f9fa);
+    color: var(--bs-secondary-color, #6c757d);
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    padding: 0.05rem 0.35rem;
+    border-radius: 0.2rem;
+    font-family: var(--bs-font-monospace, monospace);
+}
+
+.wx-scrum-sprint-burndown {
+    margin-top: 0.25rem;
+    width: 100%;
+    height: 50px;
+    overflow: visible;
+}
+
+.wx-scrum-sprint-burndown .ideal {
+    stroke: var(--bs-border-color, #dee2e6);
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
+    fill: none;
+}
+
+.wx-scrum-sprint-burndown .actual {
+    stroke: var(--bs-primary, #0d6efd);
+    stroke-width: 1.75;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.wx-scrum-sprint-burndown .marker {
+    fill: var(--bs-primary, #0d6efd);
+}
+
+.wx-scrum-sprint-burndown .point {
+    fill: var(--bs-primary, #0d6efd);
+    opacity: 0.55;
+    transition: opacity 0.1s ease-in-out, r 0.1s ease-in-out;
+    cursor: help;
+}
+
+.wx-scrum-sprint-burndown .point:hover {
+    opacity: 1;
+    r: 3;
+}
+
+.wx-scrum-sprint-burndown .today {
+    stroke: var(--bs-secondary-color, #6c757d);
+    stroke-width: 1;
+    stroke-dasharray: 2 2;
+    opacity: 0.55;
+}
+
+@media (max-width: 1100px) {
+    .wx-scrum-sprint {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+    .wx-scrum-sprint {
+        grid-template-columns: 1fr;
+    }
+    .wx-scrum-row {
+        grid-template-columns: 18px 70px 1fr auto;
+    }
+    .wx-scrum-row > *:nth-child(n+5) {
+        display: none;
+    }
+}
+
+/* --------------------------------------------------------------- dialog */
+.wx-scrum-dialog-scrim {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 22, 28, 0.45);
+    z-index: 1050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: wx-scrum-fade 0.15s ease-out;
+}
+
+@keyframes wx-scrum-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.wx-scrum-dialog {
+    background: var(--bs-body-bg, #fff);
+    border-radius: 0.5rem;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.18);
+    width: min(480px, 92vw);
+    display: flex;
+    flex-direction: column;
+    color: var(--bs-body-color, #212529);
+}
+
+.wx-scrum-dialog-head {
+    padding: 0.875rem 1.125rem 0.75rem;
+    border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.wx-scrum-dialog-head h2 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    flex-grow: 1;
+}
+
+.wx-scrum-dialog-close {
+    border: none;
+    background: transparent;
+    font-size: 1.1rem;
+    line-height: 1;
+    color: var(--bs-secondary-color, #6c757d);
+    cursor: pointer;
+}
+
+.wx-scrum-dialog-body {
+    padding: 1rem 1.125rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.wx-scrum-dialog-body label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--bs-secondary-color, #6c757d);
+    margin-bottom: 0.15rem;
+    display: block;
+}
+
+.wx-scrum-dialog-body .wx-scrum-field {
+    display: flex;
+    flex-direction: column;
+}
+
+.wx-scrum-dialog-body .wx-scrum-field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.wx-scrum-dialog-foot {
+    padding: 0.75rem 1.125rem 0.875rem;
+    border-top: 1px solid var(--bs-border-color, #dee2e6);
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}

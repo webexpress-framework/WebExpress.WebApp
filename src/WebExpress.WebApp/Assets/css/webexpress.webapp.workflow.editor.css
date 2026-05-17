@@ -1,0 +1,715 @@
+/*
+ * Workflow editor styles.
+ *
+ * Centralised stylesheet for the WorkflowEditorCtrl. The editor is split
+ * horizontally between the designer canvas (main pane) and the inline
+ * properties panel (side pane). All design tokens (palette, spacing, radii,
+ * shadows) are declared as CSS custom properties on `.wx-workflow-editor`
+ * so a host application can override them per theme without touching this
+ * file. The class names mirror the KleeneStar Workflows.html prototype
+ * (props / prop-row / prop-section / rule-list) translated to the
+ * `wx-workflow-editor-` namespace, so visual hierarchy and behaviour stay
+ * consistent with the design handoff.
+ */
+
+/* ───────── Design tokens ───────── */
+.wx-workflow-editor {
+    --wx-we-bg:            var(--bs-body-bg, #fff);
+    --wx-we-surface:       var(--bs-body-bg, #fff);
+    --wx-we-surface-2:     var(--bs-tertiary-bg, var(--bs-secondary-bg, #f5f7fa));
+    --wx-we-surface-3:     var(--bs-secondary-bg, #eef0f4);
+    --wx-we-border:        var(--bs-border-color, #dee2e6);
+    --wx-we-divider:       color-mix(in oklab, var(--wx-we-border) 80%, transparent);
+    --wx-we-text-1:        var(--bs-body-color, #1f2328);
+    --wx-we-text-2:        var(--bs-secondary-color, color-mix(in oklab, var(--bs-body-color, #1f2328) 75%, var(--bs-body-bg, #fff)));
+    --wx-we-text-3:        color-mix(in oklab, var(--bs-body-color, #1f2328) 60%, var(--bs-body-bg, #fff));
+    --wx-we-text-muted:    color-mix(in oklab, var(--bs-body-color, #1f2328) 45%, var(--bs-body-bg, #fff));
+    --wx-we-primary:       var(--bs-primary, #0d6efd);
+    --wx-we-primary-soft:  color-mix(in oklab, var(--wx-we-primary) 12%, var(--wx-we-bg));
+    --wx-we-primary-strong:color-mix(in oklab, var(--wx-we-primary) 35%, var(--wx-we-bg));
+    --wx-we-success:       var(--bs-success, #198754);
+    --wx-we-danger:        var(--bs-danger, #dc3545);
+    --wx-we-warning:       var(--bs-warning, #f59e0b);
+
+    --wx-we-radius-sm:     6px;
+    --wx-we-radius:        8px;
+    --wx-we-radius-lg:     12px;
+    --wx-we-shadow-sm:     0 1px 2px rgba(0,0,0,0.04);
+    --wx-we-shadow-md:     0 8px 24px rgba(20, 24, 35, 0.10);
+
+    --wx-we-space-1:       4px;
+    --wx-we-space-2:       8px;
+    --wx-we-space-3:       12px;
+    --wx-we-space-4:       16px;
+
+    --wx-we-font-mono:     var(--bs-font-monospace, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+
+    /* override-friendly host height; falls back to the parent's intrinsic size. */
+    --wx-we-host-min-height: 480px;
+}
+
+[data-bs-theme="dark"] .wx-workflow-editor {
+    --wx-we-shadow-md: 0 10px 28px rgba(0, 0, 0, 0.5);
+}
+
+/* ───────── Host element ───────── */
+.wx-webapp-workflow-editor.wx-workflow-editor {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: var(--wx-we-host-min-height);
+    height: 100%;
+    background: var(--wx-we-bg);
+    color: var(--wx-we-text-1);
+    border: 1px solid var(--wx-we-border);
+    border-radius: var(--wx-we-radius);
+    overflow: hidden;
+}
+
+/* The Split host fills the remaining vertical space. */
+.wx-workflow-editor-split {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* ───────── Canvas pane (main) ───────── */
+.wx-workflow-editor-canvas {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    background: var(--wx-we-bg);
+}
+
+/* The graph editor toolbar is positioned by GraphEditorCtrl; we add a soft
+   underline so it visually anchors the canvas. */
+.wx-workflow-editor-canvas .wx-graph-simple-toolbar {
+    border-bottom: 1px solid var(--wx-we-divider);
+    background: var(--wx-we-surface-2);
+}
+
+/* The collapse toggle inside the toolbar uses the existing wx-simple-btn
+   styles; the active visual is asserted via this state class so screen
+   readers get a hint the panel is hidden. */
+.wx-workflow-editor-toggle.is-collapsed {
+    background: var(--wx-we-primary-soft);
+    color: var(--wx-we-primary);
+}
+
+/* ───────── Properties pane (side) ───────── */
+.wx-workflow-editor-props-pane {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    background: var(--wx-we-surface);
+    border-left: 1px solid var(--wx-we-divider);
+}
+
+.wx-workflow-editor-props-pane--collapsed {
+    display: none !important;
+}
+
+.wx-workflow-editor-props-host {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+}
+
+/* ───────── Properties view (mirrors prototype `.props`) ───────── */
+.wx-workflow-editor-props {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--wx-we-surface);
+}
+
+.wx-workflow-editor-props__head {
+    padding: var(--wx-we-space-3) var(--wx-we-space-4);
+    border-bottom: 1px solid var(--wx-we-divider);
+    background: var(--wx-we-surface);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.wx-workflow-editor-props__eyebrow {
+    font-size: 11px;
+    color: var(--wx-we-text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    margin-bottom: var(--wx-we-space-1);
+}
+
+.wx-workflow-editor-props__title {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    word-break: break-word;
+}
+
+.wx-workflow-editor-props__subtitle {
+    margin-top: var(--wx-we-space-1);
+    font-size: 12px;
+    color: var(--wx-we-text-3);
+    font-family: var(--wx-we-font-mono);
+}
+
+.wx-workflow-editor-props__body {
+    padding: var(--wx-we-space-4);
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--wx-we-space-3);
+}
+
+.wx-workflow-editor-props__hint {
+    font-size: 13px;
+    color: var(--wx-we-text-3);
+    line-height: 1.5;
+}
+
+.wx-workflow-editor-props__danger {
+    margin-top: var(--wx-we-space-2);
+}
+
+/* ───────── Preflight indicator (empty-state status block) ───────── */
+.wx-workflow-editor-preflight {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--wx-we-space-2);
+    padding: var(--wx-we-space-2) var(--wx-we-space-3);
+    border-radius: var(--wx-we-radius);
+    border: 1px solid var(--wx-we-divider);
+    background: var(--wx-we-surface-2);
+    font-size: 12.5px;
+    color: var(--wx-we-text-2);
+}
+
+.wx-workflow-editor-preflight > .fas,
+.wx-workflow-editor-preflight > .far {
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.wx-workflow-editor-preflight__text {
+    line-height: 1.4;
+}
+
+.wx-workflow-editor-preflight--ok {
+    background: color-mix(in oklab, var(--wx-we-success) 10%, var(--wx-we-bg));
+    border-color: color-mix(in oklab, var(--wx-we-success) 35%, var(--wx-we-border));
+    color: color-mix(in oklab, var(--wx-we-success) 75%, var(--wx-we-text-1));
+}
+
+.wx-workflow-editor-preflight--ok > .fas {
+    color: var(--wx-we-success);
+}
+
+.wx-workflow-editor-preflight--warn {
+    background: color-mix(in oklab, var(--wx-we-warning) 12%, var(--wx-we-bg));
+    border-color: color-mix(in oklab, var(--wx-we-warning) 40%, var(--wx-we-border));
+    color: color-mix(in oklab, var(--wx-we-warning) 30%, var(--wx-we-text-1));
+}
+
+.wx-workflow-editor-preflight--warn > .fas {
+    color: var(--wx-we-warning);
+}
+
+/* Empty-state quick-add button row */
+.wx-workflow-editor-props__add-action {
+    margin-top: var(--wx-we-space-1);
+}
+
+/* ───────── Rule editor tabs (transition properties) ───────── */
+.wx-workflow-editor-tabs {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--wx-we-border);
+    border-radius: var(--wx-we-radius);
+    background: var(--wx-we-surface);
+    overflow: hidden;
+}
+
+.wx-workflow-editor-tabs__nav {
+    display: flex;
+    background: var(--wx-we-surface-2);
+    border-bottom: 1px solid var(--wx-we-divider);
+}
+
+.wx-workflow-editor-tabs__tab {
+    flex: 1 1 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--wx-we-space-1);
+    padding: var(--wx-we-space-2) var(--wx-we-space-2);
+    border: 0;
+    background: transparent;
+    color: var(--wx-we-text-3);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+}
+
+.wx-workflow-editor-tabs__tab:hover,
+.wx-workflow-editor-tabs__tab:focus-visible {
+    color: var(--wx-we-text-1);
+    outline: none;
+}
+
+.wx-workflow-editor-tabs__tab.is-active {
+    background: var(--wx-we-surface);
+    color: var(--wx-we-primary);
+    border-bottom-color: var(--wx-we-primary);
+}
+
+.wx-workflow-editor-tabs__label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wx-workflow-editor-tabs__tab > .wx-workflow-editor-badge {
+    margin-left: 2px;
+}
+
+.wx-workflow-editor-tabs__panel {
+    padding: var(--wx-we-space-2) var(--wx-we-space-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--wx-we-space-2);
+}
+
+.wx-workflow-editor-rule-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--wx-we-space-2);
+}
+
+.wx-workflow-editor-rule-panel__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--wx-we-space-1);
+}
+
+/* ───────── Property rows (mirror prototype `.prop-row`) ───────── */
+.wx-workflow-editor-prop-row {
+    display: grid;
+    grid-template-columns: 92px 1fr;
+    align-items: center;
+    gap: var(--wx-we-space-2);
+    font-size: 12.5px;
+}
+
+.wx-workflow-editor-prop-row__label {
+    color: var(--wx-we-text-3);
+    font-weight: 500;
+}
+
+.wx-workflow-editor-prop-row__value {
+    font-weight: 500;
+    color: var(--wx-we-text-1);
+    word-break: break-word;
+}
+
+.wx-workflow-editor-prop-row__value--mono {
+    font-family: var(--wx-we-font-mono);
+    font-size: 12px;
+    color: var(--wx-we-text-3);
+}
+
+.wx-workflow-editor-prop-row__input {
+    width: 100%;
+    height: 30px;
+    font-size: 12.5px;
+    padding: 2px var(--wx-we-space-2);
+    border-radius: var(--wx-we-radius-sm);
+    border: 1px solid var(--wx-we-border);
+    background: var(--wx-we-surface);
+    color: var(--wx-we-text-1);
+    box-sizing: border-box;
+}
+
+.wx-workflow-editor-prop-row__input:focus {
+    outline: none;
+    border-color: var(--wx-we-primary);
+    box-shadow: 0 0 0 3px var(--wx-we-primary-soft);
+}
+
+.wx-workflow-editor-prop-row__color {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--wx-we-space-2);
+}
+
+.wx-workflow-editor-prop-row__swatch {
+    width: 22px;
+    height: 22px;
+    border-radius: var(--wx-we-radius-sm);
+    border: 1px solid var(--wx-we-border);
+    flex-shrink: 0;
+}
+
+.wx-workflow-editor-prop-row__color-input {
+    width: 32px;
+    height: 26px;
+    padding: 0;
+    border: 1px solid var(--wx-we-border);
+    border-radius: var(--wx-we-radius-sm);
+    background: var(--wx-we-surface);
+    cursor: pointer;
+}
+
+/* ───────── Sections (mirror prototype `.prop-section`) ───────── */
+.wx-workflow-editor-prop-section {
+    border: 1px solid var(--wx-we-border);
+    border-radius: var(--wx-we-radius);
+    overflow: hidden;
+    background: var(--wx-we-surface);
+}
+
+.wx-workflow-editor-prop-section__head {
+    padding: var(--wx-we-space-2) var(--wx-we-space-3);
+    background: var(--wx-we-surface-2);
+    border-bottom: 1px solid var(--wx-we-divider);
+    display: flex;
+    align-items: center;
+    gap: var(--wx-we-space-2);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--wx-we-text-2);
+}
+
+.wx-workflow-editor-prop-section__head > .fas,
+.wx-workflow-editor-prop-section__head > .far {
+    color: var(--wx-we-text-3);
+    font-size: 12px;
+}
+
+.wx-workflow-editor-prop-section__body {
+    padding: var(--wx-we-space-2) var(--wx-we-space-3);
+    font-size: 12px;
+    color: var(--wx-we-text-2);
+    display: flex;
+    flex-direction: column;
+    gap: var(--wx-we-space-1);
+}
+
+.wx-workflow-editor-prop-section__empty {
+    color: var(--wx-we-text-muted);
+    font-style: italic;
+    padding: var(--wx-we-space-1) 0;
+}
+
+.wx-workflow-editor-prop-section__item {
+    display: flex;
+    align-items: center;
+    gap: var(--wx-we-space-2);
+    padding: 6px var(--wx-we-space-2);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--wx-we-radius-sm);
+    cursor: pointer;
+    color: var(--wx-we-text-1);
+    text-align: left;
+    font: inherit;
+}
+
+.wx-workflow-editor-prop-section__item:hover,
+.wx-workflow-editor-prop-section__item:focus {
+    background: var(--wx-we-surface-2);
+    border-color: var(--wx-we-divider);
+    outline: none;
+}
+
+.wx-workflow-editor-prop-section__item-label {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+.wx-workflow-editor-prop-section__item-side {
+    color: var(--wx-we-text-3);
+    font-size: 11px;
+    font-family: var(--wx-we-font-mono);
+}
+
+/* ───────── Count badge ───────── */
+.wx-workflow-editor-badge {
+    background: var(--wx-we-primary-soft);
+    color: var(--wx-we-primary);
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 10.5px;
+    font-weight: 600;
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+}
+
+.wx-workflow-editor-badge--zero {
+    background: var(--wx-we-surface-3);
+    color: var(--wx-we-text-3);
+}
+
+/* ───────── Rule editor (mirrors prototype `.rule-list`) ───────── */
+.wx-workflow-editor-rule-add {
+    position: relative;
+}
+
+.wx-workflow-editor-rule-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--wx-we-space-1);
+}
+
+.wx-workflow-editor-rule-list__item {
+    display: flex;
+    align-items: center;
+    gap: var(--wx-we-space-2);
+    padding: 6px var(--wx-we-space-2);
+    background: var(--wx-we-surface);
+    border: 1px solid var(--wx-we-border);
+    border-radius: var(--wx-we-radius-sm);
+    font-size: 12px;
+}
+
+.wx-workflow-editor-rule-list__item:hover {
+    background: var(--wx-we-surface-2);
+}
+
+.wx-workflow-editor-rule-list__num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--wx-we-text-3);
+    background: var(--wx-we-surface-2);
+    border-radius: var(--wx-we-radius-sm);
+    font-family: var(--wx-we-font-mono);
+    flex-shrink: 0;
+}
+
+.wx-workflow-editor-rule-list__kind {
+    font-family: var(--wx-we-font-mono);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--wx-we-text-3);
+    background: var(--wx-we-surface-2);
+    padding: 1px 6px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+.wx-workflow-editor-rule-list__text {
+    flex: 1 1 auto;
+    color: var(--wx-we-text-1);
+    font-family: var(--wx-we-font-mono);
+    font-size: 11.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wx-workflow-editor-rule-list__actions {
+    display: inline-flex;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.wx-workflow-editor-rule-list__btn {
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    background: transparent;
+    color: var(--wx-we-text-3);
+    cursor: pointer;
+    border-radius: var(--wx-we-radius-sm);
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+}
+
+.wx-workflow-editor-rule-list__btn:hover {
+    background: var(--wx-we-surface-2);
+    color: var(--wx-we-text-1);
+}
+
+.wx-workflow-editor-rule-list__btn--danger:hover {
+    background: color-mix(in oklab, var(--wx-we-danger) 12%, transparent);
+    color: var(--wx-we-danger);
+}
+
+/* ───────── Rule picker dropdown ───────── */
+.wx-workflow-editor-rule-picker {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: var(--wx-we-space-1);
+    min-width: 260px;
+    background: var(--wx-we-surface);
+    border: 1px solid var(--wx-we-border);
+    border-radius: var(--wx-we-radius);
+    box-shadow: var(--wx-we-shadow-md);
+    z-index: 50;
+    padding: var(--wx-we-space-1);
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.wx-workflow-editor-rule-picker__empty {
+    padding: var(--wx-we-space-2);
+    font-size: 12px;
+    color: var(--wx-we-text-muted);
+    font-style: italic;
+}
+
+.wx-workflow-editor-rule-picker__item {
+    display: flex;
+    align-items: center;
+    gap: var(--wx-we-space-2);
+    width: 100%;
+    padding: 6px var(--wx-we-space-2);
+    border: 0;
+    background: transparent;
+    border-radius: var(--wx-we-radius-sm);
+    cursor: pointer;
+    text-align: left;
+    color: var(--wx-we-text-1);
+}
+
+.wx-workflow-editor-rule-picker__item:hover,
+.wx-workflow-editor-rule-picker__item:focus {
+    background: var(--wx-we-surface-2);
+    outline: none;
+}
+
+.wx-workflow-editor-rule-picker__kind {
+    font-family: var(--wx-we-font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--wx-we-text-3);
+    background: var(--wx-we-surface-2);
+    padding: 1px 5px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+.wx-workflow-editor-rule-picker__text {
+    font-size: 12px;
+    color: var(--wx-we-text-2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ───────── Buttons ───────── */
+.wx-workflow-editor-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--wx-we-space-1);
+    border: 1px solid var(--wx-we-border);
+    background: var(--wx-we-surface);
+    color: var(--wx-we-text-1);
+    border-radius: var(--wx-we-radius-sm);
+    padding: 4px var(--wx-we-space-2);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.wx-workflow-editor-btn:hover,
+.wx-workflow-editor-btn:focus-visible {
+    background: var(--wx-we-surface-2);
+    outline: none;
+}
+
+.wx-workflow-editor-btn--ghost {
+    background: transparent;
+    border-color: transparent;
+    color: var(--wx-we-primary);
+}
+
+.wx-workflow-editor-btn--ghost:hover,
+.wx-workflow-editor-btn--ghost:focus-visible {
+    background: var(--wx-we-primary-soft);
+}
+
+.wx-workflow-editor-btn--danger {
+    color: var(--wx-we-danger);
+    border-color: color-mix(in oklab, var(--wx-we-danger) 30%, var(--wx-we-border));
+    background: transparent;
+}
+
+.wx-workflow-editor-btn--danger:hover,
+.wx-workflow-editor-btn--danger:focus-visible {
+    background: color-mix(in oklab, var(--wx-we-danger) 12%, transparent);
+}
+
+/* ───────── Responsive ───────── */
+@media (max-width: 720px) {
+    .wx-webapp-workflow-editor.wx-workflow-editor {
+        --wx-we-host-min-height: 360px;
+    }
+
+    .wx-workflow-editor-split {
+        flex-direction: column;
+    }
+
+    .wx-workflow-editor-props-pane {
+        border-left: 0;
+        border-top: 1px solid var(--wx-we-divider);
+        max-height: 50vh;
+    }
+
+    .wx-workflow-editor-prop-row {
+        grid-template-columns: 1fr;
+    }
+
+    .wx-workflow-editor-prop-row__label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+}
+
+/* ───────── Accessibility ───────── */
+@media (prefers-reduced-motion: reduce) {
+    .wx-workflow-editor-prop-row__input,
+    .wx-workflow-editor-prop-section__item,
+    .wx-workflow-editor-rule-list__item,
+    .wx-workflow-editor-btn,
+    .wx-workflow-editor-rule-picker__item {
+        transition: none !important;
+    }
+}
+
+@media (prefers-contrast: more) {
+    .wx-workflow-editor {
+        --wx-we-divider: var(--wx-we-border);
+    }
+    .wx-workflow-editor-prop-row__input:focus {
+        box-shadow: 0 0 0 2px var(--wx-we-primary);
+    }
+}
+
+/* Visible focus rings for keyboard users. */
+.wx-workflow-editor *:focus-visible {
+    outline: 2px solid var(--wx-we-primary);
+    outline-offset: 1px;
+}

@@ -19,12 +19,12 @@ namespace WebExpress.WebApp.WebRestApi
         };
 
         /// <summary>
-        /// Returns or sets the title associated with the Kanban board.
+        /// Gets or sets the title associated with the Kanban board.
         /// </summary>
         public string Title { get; set; }
 
         /// <summary>
-        /// Returns or sets the collection of columns defined for the Kanban board.
+        /// Gets or sets the collection of columns defined for the Kanban board.
         /// </summary>
         [JsonPropertyName("columns")]
         public IEnumerable<RestApiDashboardColumn> Columns { get; set; }

@@ -1,5 +1,4 @@
-﻿using WebExpress.WebCore.WebUri;
-using WebExpress.WebUI.WebControl;
+﻿using WebExpress.WebUI.WebControl;
 
 namespace WebExpress.WebApp.WebControl
 {
@@ -7,11 +6,7 @@ namespace WebExpress.WebApp.WebControl
     /// Represents a control for composing and editing WQL expressions with REST-based suggestions, 
     /// syntax validation, and history navigation.
     /// </summary>
-    public interface IControlRestWqlPrompt : IControl
+    public interface IControlRestWqlPrompt : IControl, IControlRest
     {
-        /// <summary>
-        /// Returns the uri that determines the data.
-        /// </summary>
-        IUri RestUri { get; }
     }
 }

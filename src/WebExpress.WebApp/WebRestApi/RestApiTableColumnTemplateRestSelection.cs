@@ -23,22 +23,22 @@ namespace WebExpress.WebApp.WebRestApi
         public string Type => "rest_selection";
 
         /// <summary>
-        /// Returns or sets a value indicating whether the current object can be edited.
+        /// Gets or sets a value indicating whether the current object can be edited.
         /// </summary>
         public bool Editable { get; private set; }
 
         /// <summary>
-        /// Returns or sets the color tag associated with the type.
+        /// Gets or sets the color tag associated with the type.
         /// </summary>
         public TypeColorTag Color { get; private set; }
 
         /// <summary>
-        /// Returns or sets the placeholder text to display when the input field is empty.
+        /// Gets or sets the placeholder text to display when the input field is empty.
         /// </summary>
         public string Placeholder { get; private set; }
 
         /// <summary>
-        /// Returns or sets the URI associated with this instance.
+        /// Gets or sets the URI associated with this instance.
         /// </summary>
         public IUri Uri { get; set; }
 

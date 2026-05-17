@@ -8,17 +8,140 @@
 }
 
     .wx-popupnotification > div {
+        /* fade and slide the popup in when it first appears so it does
+           not pop into existence */
+        animation: wx-popup-in 220ms ease-out both;
+        transform-origin: top right;
+        position: relative;
+        padding: 0.85rem 2.5rem 0.85rem 0.85rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.18), 0 0.1rem 0.25rem rgba(0, 0, 0, 0.1);
     }
-        .wx-popupnotification > div > .d-flex {
-            align-items: flex-start;
+
+        .wx-popupnotification > div > .wx-popup-heading {
+            margin: 0 0 0.35rem 0;
+            font-size: 1rem;
+            font-weight: 600;
+            line-height: 1.25;
         }
-        
-            .wx-popupnotification > div > .d-flex > img {
-                max-width: 80px;
-                padding-top: 0.5em;
-                padding-right: 1em;
+
+        .wx-popupnotification > div > .wx-popup-heading:empty {
+            display: none;
+        }
+
+        .wx-popupnotification > div > .wx-popup-content {
+            align-items: flex-start;
+            gap: 0.65rem;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+            .wx-popupnotification > div > .wx-popup-content > .wx-popup-icon {
+                flex: 0 0 auto;
+                max-width: 48px;
+                max-height: 48px;
+                margin-top: 0.15rem;
             }
 
-            .wx-popupnotification > div > .progress {
-                height: 3px;
+            .wx-popupnotification > div > .wx-popup-content > .wx-popup-icon-empty {
+                display: none;
             }
+
+            .wx-popupnotification > div > .wx-popup-content > .wx-popup-message {
+                flex: 1 1 auto;
+                min-width: 0;
+                word-wrap: break-word;
+            }
+
+        .wx-popupnotification > div > .progress {
+            height: 3px;
+            margin-top: 0.55rem;
+            background-color: rgba(0, 0, 0, 0.08);
+        }
+
+        /* close button - Font Awesome icon, anchored top-right */
+        .wx-popupnotification > div > .wx-popup-close {
+            position: absolute;
+            top: 0.4rem;
+            right: 0.4rem;
+            width: 1.75rem;
+            height: 1.75rem;
+            padding: 0;
+            background: transparent;
+            border: none;
+            border-radius: 50%;
+            color: inherit;
+            opacity: 0.55;
+            line-height: 1;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.15s ease-in-out, background-color 0.15s ease-in-out, transform 0.15s ease-in-out;
+        }
+
+            .wx-popupnotification > div > .wx-popup-close > i {
+                font-size: 0.95rem;
+                line-height: 1;
+            }
+
+            .wx-popupnotification > div > .wx-popup-close:hover {
+                opacity: 1;
+                background-color: rgba(0, 0, 0, 0.08);
+            }
+
+            .wx-popupnotification > div > .wx-popup-close:focus-visible {
+                outline: 2px solid currentColor;
+                outline-offset: 1px;
+                opacity: 1;
+            }
+
+            .wx-popupnotification > div > .wx-popup-close:active {
+                transform: scale(0.92);
+            }
+
+    /* applied by the JS controller right before the element is removed.
+       The animation finishes (animationend), then the JS detaches the
+       node from the DOM. */
+    .wx-popupnotification > div.wx-popup-hiding {
+        animation: wx-popup-out 260ms ease-in forwards;
+        pointer-events: none;
+    }
+
+@keyframes wx-popup-in {
+    from {
+        opacity: 0;
+        transform: translateY(-12px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes wx-popup-out {
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        max-height: 30em;
+        margin-bottom: 1rem;
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-12px) scale(0.96);
+        max-height: 0;
+        margin-bottom: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        border-width: 0;
+    }
+}
+
+/* respect reduced-motion preference - keep the controller's hide-class
+   path intact but skip the visible animation */
+@media (prefers-reduced-motion: reduce) {
+    .wx-popupnotification > div,
+    .wx-popupnotification > div.wx-popup-hiding {
+        animation-duration: 1ms !important;
+    }
+}

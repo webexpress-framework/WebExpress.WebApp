@@ -8,19 +8,19 @@ namespace WebExpress.WebApp.WebRestApi
     public class RestApiKanbanCard
     {
         /// <summary>
-        /// Returns or sets the unique identifier for the card.
+        /// Gets or sets the unique identifier for the card.
         /// </summary>
         [JsonPropertyName("id")]
         public string Id { get; set; }
 
         /// <summary>
-        /// Returns or sets the display label associated with the card.
+        /// Gets or sets the display label associated with the card.
         /// </summary>
         [JsonPropertyName("label")]
         public string Label { get; set; }
 
         /// <summary>
-        /// Returns or sets the HTML content associated with this card.
+        /// Gets or sets the HTML content associated with this card.
         /// </summary>
         [JsonPropertyName("html")]
         public string Html { get; set; }
@@ -32,13 +32,13 @@ namespace WebExpress.WebApp.WebRestApi
         public string ColumnId { get; set; }
 
         /// <summary>
-        /// Returns or sets the unique identifier of the swimlane.
+        /// Gets or sets the unique identifier of the swimlane.
         /// </summary>
         [JsonPropertyName("swimlaneId")]
         public string SwimlaneId { get; set; }
 
         /// <summary>
-        /// Returns or sets the CSS color value associated with this card.
+        /// Gets or sets the CSS color value associated with this card.
         /// </summary>
         [JsonPropertyName("colorCss")]
         public string ColorCss { get; set; }

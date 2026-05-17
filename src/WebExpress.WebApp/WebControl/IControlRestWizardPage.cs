@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using WebExpress.WebCore.WebPage;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
@@ -11,18 +12,17 @@ namespace WebExpress.WebApp.WebControl
     public interface IControlRestWizardPage : IWebUIElement<IRenderControlContext, IVisualTreeControl>
     {
         /// <summary>
-        /// Returns the form layout.
+        /// Gets the form layout.
         /// </summary>
-        TypeLayoutForm FormLayout { get; }
+        Func<IRenderControlContext, TypeLayoutForm> FormLayout { get; }
 
         /// <summary>
-        /// Returns the item layout.
+        /// Gets the item layout.
         /// </summary>
-        TypeLayoutFormItem ItemLayout { get; }
-
+        Func<IRenderControlContext, TypeLayoutFormItem> ItemLayout { get; }
 
         /// <summary>
-        /// Returns the collection of form items contained in this control.
+        /// Gets the collection of form items contained in this control.
         /// </summary>
         IEnumerable<IControlFormItem> Items { get; }
 

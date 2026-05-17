@@ -26,17 +26,17 @@ namespace WebExpress.WebApp.WebIndex
             _httpServerContext = httpServerContext;
             _componentHub = componentHub;
 
-            _componentHub.PluginManager.AddPlugin += (s, pluginContext) =>
+            _componentHub?.PluginManager?.AddPlugin += (s, pluginContext) =>
             {
                 Register(pluginContext);
             };
 
-            _componentHub.PluginManager.RemovePlugin += (s, pluginContext) =>
+            _componentHub?.PluginManager?.RemovePlugin += (s, pluginContext) =>
             {
                 Remove(pluginContext);
             };
 
-            _httpServerContext.Log.Debug
+            _httpServerContext?.Log?.Debug
             (
                 I18N.Translate("webexpress.webapp:indexmanager.initialization")
             );

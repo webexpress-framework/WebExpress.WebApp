@@ -8,6 +8,7 @@ using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebComponent;
 using WebExpress.WebCore.WebEndpoint;
 using WebExpress.WebCore.WebHtml;
+using WebExpress.WebCore.WebIcon;
 using WebExpress.WebCore.WebPage;
 using WebExpress.WebCore.WebTheme;
 using WebExpress.WebCore.WebUri;
@@ -23,17 +24,12 @@ namespace WebExpress.WebApp.WebPage
     public class VisualTreeWebApp : VisualTreeControl, IVisualTreeWebApp
     {
         /// <summary>
-        /// Returns or sets the theme of the web application.
-        /// </summary>
-        public IThemeContext Theme { get; set; }
-
-        /// <summary>
-        /// Returns or sets the URI used for breadcrumb navigation within the application.
+        /// Gets or sets the URI used for breadcrumb navigation within the application.
         /// </summary>
         public IUri BreadcrumbUri { get; set; }
 
         /// <summary>
-        /// Returns the HTML element that contains the URI of the message queue used by the application.
+        /// Gets the HTML element that contains the URI of the message queue used by the application.
         /// </summary>
         public HtmlElementTextContentDiv MessageQueueUri { get; } = new HtmlElementTextContentDiv()
         {
@@ -41,48 +37,54 @@ namespace WebExpress.WebApp.WebPage
         };
 
         /// <summary>
-        /// Returns header control.
+        /// Gets header control.
         /// </summary>
         public ControlWebAppHeader Header { get; } = new ControlWebAppHeader("wx-header");
 
         /// <summary>
-        /// Returns the area for the toast messages control.
+        /// Gets the area for the toast messages control.
         /// </summary>
         public ControlWebAppToastnotification Toast { get; protected set; } = new ControlWebAppToastnotification("wx-toast");
 
         /// <summary>
-        /// Returns the range for the path specification.
+        /// Gets the range for the path specification.
         /// </summary>
         public ControlBreadcrumb Breadcrumb { get; protected set; } = new ControlBreadcrumb("wx-breadcrumb");
 
         /// <summary>
-        /// Returns the area for prologue.
+        /// Gets the area for prologue.
         /// </summary>
         public ControlWebAppPrologue Prologue { get; protected set; } = new ControlWebAppPrologue("wx-prologue");
 
         /// <summary>
-        /// Returns the sidebar control.
+        /// Gets the sidebar control.
         /// </summary>
         public IControlWebAppSidebar Sidebar { get; protected set; } = new ControlWebAppSidebar("wx-sidebar");
 
 
         /// <summary>
-        /// Returns the content control.
+        /// Gets the content control.
         /// </summary>
         public new IControlWebAppContent Content { get; protected set; } = new ControlWebAppContent("wx-content");
 
         /// <summary>
-        /// Returns the footer control.
+        /// Gets the area for epilogue.
+        /// </summary>
+        public ControlWebAppEpilogue Epilogue { get; protected set; } = new ControlWebAppEpilogue("wx-epilogue");
+
+        /// <summary>
+        /// Gets the footer control.
         /// </summary>
         public IControlWebAppFooter Footer { get; protected set; } = new ControlWebAppFooter("wx-footer");
 
         /// <summary>
-        /// Returns the control for displaying notification popups via API.
+        /// Gets the control for displaying notification popups. Notifications
+        /// are pushed live by the server through the MessageQueue WebSocket.
         /// </summary>
-        public ControlRestPopupNotification NotificationPopup { get; protected set; } = new ControlRestPopupNotification("wx-notificationpopup");
+        public ControlPopupNotification NotificationPopup { get; protected set; } = new ControlPopupNotification("wx-notificationpopup");
 
         /// <summary>
-        /// Returns or sets a delegate that returns the collection of domain names associated with 
+        /// Gets or sets a delegate that returns the collection of domain names associated with 
         /// the current context.
         /// </summary>
         public Func<IEnumerable<string>> Domains { get; set; }
@@ -99,7 +101,7 @@ namespace WebExpress.WebApp.WebPage
             var baseUri = RouteEndpoint.Combine(applicationContext?.Route, "webexpress.webapp/assets");
             var messageQueueUri = componentHub.SitemapManager
                 .GetUri<WWW.Ws.MessageQueue>(pageContext.ApplicationContext);
-            var domains = Domains?.Invoke() ?? pageContext.Domains.Select(x => x.FullName.ToLower());
+            var domains = Domains?.Invoke() ?? pageContext.Domains?.Select(x => x.FullName.ToLower()) ?? [];
 
             MessageQueueUri
                 .AddUserAttribute("data-wx-message-queue-url", messageQueueUri?.ToString())
@@ -108,11 +110,43 @@ namespace WebExpress.WebApp.WebPage
             Header.Fixed = TypeFixed.Top;
             Header.Styles = ["position: sticky; top: 0; z-index: 99;"];
 
-            Breadcrumb.Uri = pageContext?.Route?.ToUri();
-            Breadcrumb.Margin = new PropertySpacingMargin(PropertySpacing.Space.Null);
-            (Content as ControlWebAppContent).Margin = new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None);
+            Breadcrumb.Uri = renderContext => BreadcrumbUri ?? renderContext?.Request?.Uri;
+            Breadcrumb.Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Null);
+            (Content as ControlWebAppContent).Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None);
 
-            AddCssLink(Theme?.ThemeStyle.ToString() ?? RouteEndpoint.Combine(baseUri, "css/webexpress.webapp.theme.css"));
+            // Default css link from the resolved theme (or framework fallback).
+            // Subsequent UseTheme<T>() calls swap this out via OnThemeChanged.
+            _fallbackThemeStyleUri = RouteEndpoint.Combine(baseUri, "css/webexpress.webapp.theme.css");
+            AddCssLink(Theme?.ThemeStyle?.ToString() ?? _fallbackThemeStyleUri);
+        }
+
+        /// <summary>
+        /// Cached fallback theme-style uri used when a theme has no
+        /// <c>ThemeStyle</c> declared.
+        /// </summary>
+        private string _fallbackThemeStyleUri;
+
+        /// <summary>
+        /// Replaces the previous theme's css link with the new one when the
+        /// user (or a derived page) calls <c>UseTheme&lt;T&gt;()</c> to
+        /// override the application's default theme. The framework fallback
+        /// is used when the new theme does not declare a <c>ThemeStyle</c>.
+        /// </summary>
+        /// <param name="previousTheme">The theme that was active before the swap.</param>
+        /// <param name="newTheme">The newly selected theme.</param>
+        protected override void OnThemeChanged(IThemeContext previousTheme, IThemeContext newTheme)
+        {
+            var previousUri = previousTheme?.ThemeStyle?.ToString() ?? _fallbackThemeStyleUri;
+            var newUri = newTheme?.ThemeStyle?.ToString() ?? _fallbackThemeStyleUri;
+
+            if (!string.IsNullOrEmpty(previousUri))
+            {
+                RemoveCssLink(previousUri);
+            }
+            if (!string.IsNullOrEmpty(newUri))
+            {
+                AddCssLink(newUri);
+            }
         }
 
         /// <summary>
@@ -140,19 +174,23 @@ namespace WebExpress.WebApp.WebPage
             Header.AppTitle.SetTitle(html.Head.Title);
             if (Theme?.ThemeMode == ThemeMode.Dark)
             {
-                html.Body.AddUserAttribute("data-bs-theme", "dark");
+                html.AddUserAttribute("data-bs-theme", "dark");
+            }
+            if (IconTheme == TypeIconTheme.Light)
+            {
+                html.AddUserAttribute("data-icon-theme", "light");
             }
 
             var preferences = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionBodyPreferences>
             (
                 renderContext?.PageContext
             );
-            var breadcrumbUri = BreadcrumbUri ?? renderContext?.Request?.Uri;
+
             html.Body.Add(preferences.Select(x => x.Render(renderContext, this)));
             html.Body.Add(MessageQueueUri);
             html.Body.Add(Header.Render(renderContext, this));
             html.Body.Add(Toast.Render(renderContext, this));
-            html.Body.Add(Breadcrumb.Render(renderContext, this, breadcrumbUri));
+            html.Body.Add(Breadcrumb.Render(renderContext, this));
             html.Body.Add(Prologue.Render(renderContext, this));
 
             var primary = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionBodyPrimary>
@@ -168,10 +206,10 @@ namespace WebExpress.WebApp.WebPage
                 [Content]
             )
             {
-                Border = new PropertyBorder(true),
-                Orientation = TypeOrientationSplit.Horizontal,
-                SidePanelInitialSize = 350,
-                SidePanelMinSize = 45
+                Border = _ => new PropertyBorder(true),
+                Orientation = _ => TypeOrientationSplit.Horizontal,
+                SidePanelInitialSize = _ => 350,
+                SidePanelMinSize = _ => 45
             };
 
             html.Body.Add
@@ -180,6 +218,8 @@ namespace WebExpress.WebApp.WebPage
                     .AddUserAttribute("data-wx-primary-action", "split")
                     .AddUserAttribute("data-wx-primary-target", $"#wx-split-button-toggle")
             );
+
+            html.Body.Add(Epilogue.Render(renderContext, this));
             html.Body.Add(Footer.Render(renderContext, this));
             html.Body.Add(NotificationPopup.Render(renderContext, this));
 

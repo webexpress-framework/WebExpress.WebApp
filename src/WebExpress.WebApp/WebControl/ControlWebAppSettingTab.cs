@@ -22,17 +22,17 @@ namespace WebExpress.WebApp.WebControl
         private readonly List<IControlNavigationItem> _secondary = [];
 
         /// <summary>
-        /// Returns the preferences area.
+        /// Gets the preferences area.
         /// </summary>
         public IEnumerable<IControlNavigationItem> Preferences => _preferences;
 
         /// <summary>
-        /// Returns the primary area.
+        /// Gets the primary area.
         /// </summary>
         public IEnumerable<IControlNavigationItem> Primary => _primary;
 
         /// <summary>
-        /// Returns the secondary area.
+        /// Gets the secondary area.
         /// </summary>
         public IEnumerable<IControlNavigationItem> Secondary => _secondary;
 
@@ -43,7 +43,7 @@ namespace WebExpress.WebApp.WebControl
         public ControlWebAppSettingTab(string id = null)
             : base(id)
         {
-            Padding = new PropertySpacingPadding(PropertySpacing.Space.Null);
+            Padding = _ => new PropertySpacingPadding(PropertySpacing.Space.Null);
         }
 
         /// <summary>
@@ -109,17 +109,18 @@ namespace WebExpress.WebApp.WebControl
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
             var items = GetItems(renderContext);
+            //var enable = Enable?.Invoke(renderContext) ?? true;
 
-            Enable = items.Count() > 1;
+            var enable = items.Count() > 1;
 
-            if (!Enable)
+            if (!enable)
             {
                 return null;
             }
 
             return new ControlNavigation(Id, [.. items])
             {
-                Layout = TypeLayoutTab.Tab
+                Layout = _ => TypeLayoutTab.Tab
             }.Render(renderContext, visualTree);
         }
 
@@ -139,11 +140,11 @@ namespace WebExpress.WebApp.WebControl
                 (
                     x => new ControlNavigationItemLink()
                     {
-                        Text = I18N.Translate(renderContext, x?.Name),
-                        Uri = settingPageManager.GetFirstSettingPage(appicationContext, x)?
+                        Text = _ => I18N.Translate(renderContext, x?.Name),
+                        Uri = _ => settingPageManager.GetFirstSettingPage(appicationContext, x)?
                             .Route?
                             .ToUri(),
-                        Active = settingPageContext.SettingCategory == x ? TypeActive.Active : TypeActive.None
+                        Active = _ => settingPageContext.SettingCategory == x ? TypeActive.Active : TypeActive.None
                     }
                 ).OrderBy(x => x.Title);
 

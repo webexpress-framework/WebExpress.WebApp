@@ -10,12 +10,12 @@ namespace WebExpress.WebApp.WebControl
     public class ControlWebAppContent : Control, IControlWebAppContent
     {
         /// <summary>
-        /// Returns the toolbar.
+        /// Gets the toolbar.
         /// </summary>
         public IControlWebAppToolbar Toolbar { get; } = new ControlWebAppToolbar("wx-content-toolbar");
 
         /// <summary>
-        /// Returns the main panel.
+        /// Gets the main panel.
         /// </summary>
         public IControlWebAppMain MainPanel { get; } = new ControlWebAppMain("wx-content-main")
         {
@@ -23,7 +23,7 @@ namespace WebExpress.WebApp.WebControl
         };
 
         /// <summary>
-        /// Returns the page properties.
+        /// Gets the page properties.
         /// </summary>
         public IControlWebAppProperty Property { get; } = new ControlWebAppProperty("wx-content-property");
 
@@ -48,10 +48,10 @@ namespace WebExpress.WebApp.WebControl
             //if (Property)
             var split = new ControlPanelSplit("wx-splitter-content")
             {
-                Orientation = TypeOrientationSplit.Horizontal,
-                SidePanelInitialSize = 350,
-                SidePanelMinSize = 150,
-                Order = TypeSplitOrder.MainSide
+                Orientation = _ => TypeOrientationSplit.Horizontal,
+                SidePanelInitialSize = _ => 350,
+                SidePanelMinSize = _ => 150,
+                Order = _ => TypeSplitOrder.MainSide
 
             }
              .AddMainPanel(MainPanel)

@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>FormEditorCtrl | WebExpress.WebApp </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="FormEditorCtrl | WebExpress.WebApp ">
+      
+      
+      <link rel="icon" href="../assets/webexpress.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/ReneSchwarzer/WebExpress.WebApp/blob/develop/docs/js/form-editor.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../assets/webexpress.svg" alt="WebExpress.WebApp">
+            WebExpress.WebApp
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+
+<p><img src="https://raw.githubusercontent.com/webexpress-framework/.github/main/docs/assets/img/banner.png" alt="WebExpress"></p>
+<h1 id="formeditorctrl">FormEditorCtrl</h1>
+<p>The <code>FormEditorCtrl</code> is a self-contained visual editor for form definitions. It hosts a tab bar, a structure tree (with drag-and-drop, inline rename, keyboard navigation and a QuickAdd picker), an optional live preview pane that re-renders the active tab as a real form, and an optional palette pane (in three-pane layout). Configuration is done declaratively via <code>data-</code> attributes on the host element; behaviour is driven entirely client-side and persisted to a REST endpoint.</p>
+<pre><code>   ┌─────────────────────────────────────────────────────────────┐
+   │  FormName  v3       [ Two-pane | Tree | Three-pane ]  [Hide]│
+   ├─────────────────────────────────────────────────────────────┤
+   │ [ Details ] [ Environment ] [ Attachments ]   [+ Add tab]   │
+   ├─────────────────────────────┬───────────────────────────────┤
+   │       Live preview          │   Structure · Details         │
+   │  ┌──────────────────────┐   │   ▾ Title          string     │
+   │  │ Title:  ___________  │   │   ▾ Status         enum       │
+   │  │ Status: ◯ ◉ ○ ○      │   │   ▸ Group: Reported by/When   │
+   │  └──────────────────────┘   │   …                           │
+   │                             │   [Quick add… ____]  [+ Add]  │
+   │                             │   ↑↓ Navigate  F2 Rename …    │
+   └─────────────────────────────┴───────────────────────────────┘
+</code></pre>
+<h2 id="declarative-configuration">Declarative Configuration</h2>
+<p>The editor is configured entirely via <code>data-</code> attributes on the host element. The element must carry the class <code>wx-webui-form-editor</code> (the <code>ControlFormEditor</code> C# control sets this automatically).</p>
+<h3 id="container-attributes">Container Attributes</h3>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>data-form-id</code></td>
+<td>Identifier of the form to load on startup. When omitted, the editor renders an empty placeholder structure.</td>
+<td><code>data-form-id=&quot;b3f02a…&quot;</code></td>
+</tr>
+<tr>
+<td><code>data-rest-url</code></td>
+<td>Base URL of the form-structure REST endpoint. Used for both initial load (<code>GET /item/{id}</code>) and autosave (<code>PUT /item/{id}</code>). Omit for offline-mock mode.</td>
+<td><code>data-rest-url=&quot;/api/1/FormStructure&quot;</code></td>
+</tr>
+<tr>
+<td><code>data-field-catalog-url</code></td>
+<td>URL of the field-catalog endpoint used by the QuickAdd picker. When omitted, only a small built-in catalog is offered.</td>
+<td><code>data-field-catalog-url=&quot;/api/1/FormFieldCatalog&quot;</code></td>
+</tr>
+<tr>
+<td><code>data-layout</code></td>
+<td>Initial layout. One of <code>two-pane</code> (default), <code>tree-table</code>, <code>three-pane</code>.</td>
+<td><code>data-layout=&quot;three-pane&quot;</code></td>
+</tr>
+<tr>
+<td><code>data-preview</code></td>
+<td>Whether the live preview pane is shown initially. Defaults to <code>true</code>.</td>
+<td><code>data-preview=&quot;false&quot;</code></td>
+</tr>
+<tr>
+<td><code>data-indent</code></td>
+<td>Tree indent in pixels. Clamped to <code>8</code>–<code>32</code>. Defaults to <code>18</code>.</td>
+<td><code>data-indent=&quot;22&quot;</code></td>
+</tr>
+<tr>
+<td><code>data-readonly</code></td>
+<td>When <code>true</code>, suppresses all mutation UI (no add/remove/drag/rename) and skips REST writes.</td>
+<td><code>data-readonly=&quot;true&quot;</code></td>
+</tr>
+<tr>
+<td><code>data-initial-structure</code></td>
+<td>Optional inline JSON snapshot matching <code>FormStructureDto</code>. When set, it takes precedence over <code>data-form-id</code> and skips the initial REST load. Useful for SSR and offline demos.</td>
+<td><code>data-initial-structure='{&quot;tabs&quot;:[…]}'</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="wire-format">Wire format</h3>
+<p>The editor exchanges JSON shapes that mirror the <code>WebExpress.WebApp.WebForm.Dto</code> payloads exactly. A field node looks like <code>{&quot;id&quot;:&quot;…&quot;,&quot;kind&quot;:&quot;field&quot;,&quot;name&quot;:&quot;Title&quot;,&quot;type&quot;:&quot;string&quot;,&quot;required&quot;:true}</code>; a group node like <code>{&quot;id&quot;:&quot;…&quot;,&quot;kind&quot;:&quot;group&quot;,&quot;layout&quot;:&quot;horizontal&quot;,&quot;label&quot;:&quot;Reported&quot;,&quot;children&quot;:[…]}</code>. Field types are one of <code>string</code>, <code>text</code>, <code>timestamp</code>, <code>ref</code>, <code>enum</code>, <code>tags</code>, <code>number</code>, <code>file</code>. Group layouts are one of <code>vertical</code>, <code>horizontal</code>, <code>mix</code>, <code>col-vertical</code>, <code>col-horizontal</code>, <code>col-mix</code>.</p>
+<h2 id="programmatic-control">Programmatic Control</h2>
+<p>Once initialized, the editor can be programmatically controlled via its controller instance.</p>
+<h3 id="accessing-an-automatically-created-instance">Accessing an Automatically Created Instance</h3>
+<p>For form editors defined declaratively in HTML, the associated instance is retrieved via the <code>getInstanceByElement(element)</code> method of the central <code>webexpress.webui.Controller</code>.</p>
+<pre><code class="lang-javascript">// find the host element in the DOM
+const host = document.getElementById('myFormEditor');
+
+// retrieve the controller instance associated with the element
+const editor = webexpress.webui.Controller.getInstanceByElement(host);
+
+// switch to three-pane layout
+if (editor) {
+    editor.layout = 'three-pane';
+}
+
+// add a new field to the active tab
+editor.addNode({ kind: 'field', name: 'Severity', type: 'enum', required: true });
+
+// dump the current in-memory structure
+console.log(editor.getStructure());
+</code></pre>
+<h3 id="manual-instantiation">Manual Instantiation</h3>
+<p>A form editor can also be created entirely programmatically and attached to a host element.</p>
+<pre><code class="lang-javascript">const host = document.getElementById('form-editor');
+host.classList.add('wx-webui-form-editor', 'wx-form-editor');
+host.dataset.restUrl = '/api/1/FormStructure';
+host.dataset.formId = '00000000-0000-0000-0000-000000000001';
+
+const editor = new webexpress.webui.FormEditorCtrl(host);
+</code></pre>
+<h3 id="public-api">Public API</h3>
+<table>
+<thead>
+<tr>
+<th>Member</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>formId</code> (get)</td>
+<td>Id of the form currently loaded.</td>
+</tr>
+<tr>
+<td><code>layout</code> (get/set)</td>
+<td>Active designer layout (<code>two-pane</code> / <code>tree-table</code> / <code>three-pane</code>).</td>
+</tr>
+<tr>
+<td><code>preview</code> (get/set)</td>
+<td>Whether the live preview pane is shown.</td>
+</tr>
+<tr>
+<td><code>indent</code> (get/set)</td>
+<td>Tree indent in pixels (clamped to <code>8</code>–<code>32</code>).</td>
+</tr>
+<tr>
+<td><code>loadForm(formId)</code></td>
+<td>Loads (or reloads) a form by id, fetching it from <code>data-rest-url</code> if configured.</td>
+</tr>
+<tr>
+<td><code>addTab()</code></td>
+<td>Adds a new empty tab and selects it.</td>
+</tr>
+<tr>
+<td><code>addNode(spec)</code></td>
+<td>Adds a field or group node to the active tab. Triggers an autosave.</td>
+</tr>
+<tr>
+<td><code>removeNode(nodeId)</code></td>
+<td>Removes the node with the given id. Triggers an autosave.</td>
+</tr>
+<tr>
+<td><code>renameNode(nodeId, name)</code></td>
+<td>Renames a tab, group, or field. Triggers an autosave.</td>
+</tr>
+<tr>
+<td><code>getStructure()</code></td>
+<td>Returns a deep clone of the current in-memory structure.</td>
+</tr>
+<tr>
+<td><code>render()</code></td>
+<td>Triggers a full re-render of header, tabs and body.</td>
+</tr>
+<tr>
+<td><code>destroy()</code></td>
+<td>Releases global event listeners (keyboard, outside-click) and cancels pending autosave.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="events">Events</h2>
+<p>The component dispatches standardized events to inform the application about interactions.</p>
+<ul>
+<li><strong><code>webexpress.webui.Event.FORM_EDITOR_LOADED_EVENT</code></strong>: Fired after a form's structure has been loaded (or reloaded) into the editor. Detail: <code>{ structure }</code>.</li>
+<li><strong><code>webexpress.webui.Event.FORM_EDITOR_NODE_ADDED_EVENT</code></strong>: Fired after a new field or group has been added. Detail: <code>{ node }</code>.</li>
+<li><strong><code>webexpress.webui.Event.FORM_EDITOR_NODE_REMOVED_EVENT</code></strong>: Fired after a node has been removed. Detail: <code>{ id }</code>.</li>
+<li><strong><code>webexpress.webui.Event.FORM_EDITOR_NODE_RENAMED_EVENT</code></strong>: Fired after a node's label / field name has been changed. Detail: <code>{ id, name }</code>.</li>
+<li><strong><code>webexpress.webui.Event.FORM_EDITOR_NODE_MOVED_EVENT</code></strong>: Fired after a drag-and-drop reorder. Detail: <code>{ nodeId, targetId, position }</code> where <code>position</code> is one of <code>before</code> / <code>after</code> / <code>into</code>.</li>
+<li><strong><code>webexpress.webui.Event.FORM_EDITOR_TAB_ADDED_EVENT</code></strong>: Fired after a new tab has been created. Detail: <code>{ tab }</code>.</li>
+<li><strong><code>webexpress.webui.Event.FORM_EDITOR_TAB_RENAMED_EVENT</code></strong>: Fired after a tab has been renamed. Detail: <code>{ tabId, name }</code>.</li>
+<li><strong><code>webexpress.webui.Event.FORM_EDITOR_LAYOUT_CHANGED_EVENT</code></strong>: Fired after the designer layout has changed. Detail: <code>{ layout }</code>.</li>
+<li><strong><code>webexpress.webui.Event.FORM_EDITOR_SAVED_EVENT</code></strong>: Fired after a successful <code>PUT</code> against the structure endpoint. Detail: the JSON response body.</li>
+<li><strong><code>webexpress.webui.Event.FORM_EDITOR_VALIDATION_FAILED_EVENT</code></strong>: Fired when the server rejected a structure save. Detail: the JSON error body (containing <code>validation</code>).</li>
+</ul>
+<h2 id="keyboard-shortcuts">Keyboard Shortcuts</h2>
+<p>When the structure tree has focus (no inline rename is active and no input is focused outside the editor):</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>↑</code> / <code>↓</code></td>
+<td>Move selection up / down</td>
+</tr>
+<tr>
+<td><code>←</code> / <code>→</code></td>
+<td>Collapse / expand a group</td>
+</tr>
+<tr>
+<td><code>F2</code></td>
+<td>Begin inline rename of selection</td>
+</tr>
+<tr>
+<td><code>Del</code></td>
+<td>Delete the selected node</td>
+</tr>
+<tr>
+<td><code>N</code></td>
+<td>Focus the QuickAdd picker input</td>
+</tr>
+</tbody>
+</table>
+<h2 id="use-case-examples">Use Case Examples</h2>
+<h3 id="rest-backed-editor">REST-backed editor</h3>
+<pre><code class="lang-html">&lt;div id=&quot;bug-default-form-editor&quot;
+     class=&quot;wx-webui-form-editor&quot;
+     data-form-id=&quot;00000000-0000-0000-0000-000000000001&quot;
+     data-rest-url=&quot;/api/1/FormStructure&quot;
+     data-field-catalog-url=&quot;/api/1/FormFieldCatalog&quot;
+     data-layout=&quot;two-pane&quot;&gt;
+&lt;/div&gt;
+</code></pre>
+<h3 id="offline-preview-seeded-with-an-inline-structure">Offline preview seeded with an inline structure</h3>
+<pre><code class="lang-html">&lt;div class=&quot;wx-webui-form-editor&quot;
+     data-layout=&quot;three-pane&quot;
+     data-initial-structure='{
+       &quot;formId&quot;: &quot;demo&quot;,
+       &quot;formName&quot;: &quot;DefaultForm&quot;,
+       &quot;className&quot;: &quot;Bug&quot;,
+       &quot;version&quot;: 1,
+       &quot;tabs&quot;: [{
+         &quot;id&quot;: &quot;t1&quot;,
+         &quot;name&quot;: &quot;Details&quot;,
+         &quot;children&quot;: [
+           { &quot;id&quot;: &quot;n1&quot;, &quot;kind&quot;: &quot;field&quot;, &quot;name&quot;: &quot;Title&quot;, &quot;type&quot;: &quot;string&quot;, &quot;required&quot;: true },
+           { &quot;id&quot;: &quot;n2&quot;, &quot;kind&quot;: &quot;field&quot;, &quot;name&quot;: &quot;Description&quot;, &quot;type&quot;: &quot;text&quot; }
+         ]
+       }]
+     }'&gt;
+&lt;/div&gt;
+</code></pre>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/ReneSchwarzer/WebExpress.WebApp/blob/develop/docs/js/form-editor.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

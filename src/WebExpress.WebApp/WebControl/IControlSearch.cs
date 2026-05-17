@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 
 namespace WebExpress.WebApp.WebControl
@@ -12,15 +11,10 @@ namespace WebExpress.WebApp.WebControl
     /// prompt, normalizes their payloads and re-emits a unified
     /// webexpress.webui.Event.CHANGE_FILTER_EVENT.
     /// </summary>
-    public interface IControlSearch : IControl
+    public interface IControlSearch : IControl, IControlRest
     {
         /// <summary>
-        /// Returns the uri that determines the data.
-        /// </summary>
-        IUri RestUri { get; }
-
-        /// <summary>
-        /// Returns the content of the control (e.g., save button).
+        /// Gets the content of the control (e.g., save button).
         /// </summary>
         IEnumerable<IControl> Content { get; }
 

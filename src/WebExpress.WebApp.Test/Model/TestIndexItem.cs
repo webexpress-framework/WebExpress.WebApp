@@ -11,7 +11,7 @@ namespace WebExpress.WebApp.Test.Model
     public class TestIndexItem : IIndexItem
     {
         /// <summary>
-        /// Returns or sets the unique identifier of the current entity.
+        /// Gets or sets the unique identifier of the current entity.
         /// </summary>
         public Guid Id { get; set; }
 
@@ -21,27 +21,27 @@ namespace WebExpress.WebApp.Test.Model
         public string Key { get; set; }
 
         /// <summary>
-        /// Returns or sets the collection of names associated with the current entity.
+        /// Gets or sets the collection of names associated with the current entity.
         /// </summary>
         public IEnumerable<string> Names { get; set; }
 
         /// <summary>
-        /// Returns or sets the state of the current entity.
+        /// Gets or sets the state of the current entity.
         /// </summary>
         public string State { get; set; }
 
         /// <summary>
-        /// Returns or sets the description of the current entity.
+        /// Gets or sets the description of the current entity.
         /// </summary>
         public string Description { get; set; }
 
         /// <summary>
-        /// Returns or sets the icon associated with the table row.
+        /// Gets or sets the icon associated with the table row.
         /// </summary>
         public IIcon Icon { get; set; }
 
         /// <summary>
-        /// Returns or sets the URI associated with the table row.
+        /// Gets or sets the URI associated with the table row.
         /// </summary>
         public IUri Uri { get; set; }
     }

@@ -1,5 +1,7 @@
-﻿using WebExpress.WebCore.WebUri;
+﻿using System;
+using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
+using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.WebControl
 {
@@ -9,8 +11,8 @@ namespace WebExpress.WebApp.WebControl
     public interface IControlRest : IControl
     {
         /// <summary>
-        /// Returns the uri that determines the data.
+        /// Gets the uri that determines the data.
         /// </summary>
-        public IUri RestUri { get; }
+        public Func<IRenderControlContext, IUri> RestUri { get; }
     }
 }

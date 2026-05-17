@@ -9,10 +9,10 @@ namespace WebExpress.WebApp.WebFragment
     /// <summary>
     /// Represents a fragment control for cloning REST form data.
     /// </summary>
-    public class FragmentControlRestFormClone : ControlRestFormClone, IFragmentControl<ControlRestFormClone>
+    public abstract class FragmentControlRestFormClone : ControlRestFormClone, IFragmentControl<ControlRestFormClone>
     {
         /// <summary>
-        /// Returns the context of the fragment.
+        /// Gets the context of the fragment.
         /// </summary>
         public IFragmentContext FragmentContext { get; private set; }
 

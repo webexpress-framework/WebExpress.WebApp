@@ -8,17 +8,17 @@ namespace WebExpress.WebApp.WebControl
     public interface IControlWebAppContent : IControl
     {
         /// <summary>
-        /// Returns the toolbar.
+        /// Gets the toolbar.
         /// </summary>
         IControlWebAppToolbar Toolbar { get; }
 
         /// <summary>
-        /// Returns the main panel.
+        /// Gets the main panel.
         /// </summary>
         IControlWebAppMain MainPanel { get; }
 
         /// <summary>
-        /// Returns the page properties.
+        /// Gets the page properties.
         /// </summary>
         IControlWebAppProperty Property { get; }
     }

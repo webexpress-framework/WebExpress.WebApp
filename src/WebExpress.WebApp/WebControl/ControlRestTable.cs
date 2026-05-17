@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
@@ -12,20 +13,20 @@ namespace WebExpress.WebApp.WebControl
     public class ControlRestTable : ControlPanel, IControlRestTable
     {
         /// <summary>
-        /// Returns or sets the uri that determines the data.
+        /// Gets or sets the uri that determines the data.
         /// </summary>
-        public IUri RestUri { get; set; }
+        public Func<IRenderControlContext, IUri> RestUri { get; set; }
 
         /// <summary>
         /// Retruns or sets the number of items to display on each page in a 
         /// paginated collection.
         /// </summary>
-        public uint PageSize { get; set; }
+        public Func<IRenderControlContext, uint> PageSize { get; set; }
 
         /// <summary>
-        /// Returns or sets the binding.
+        /// Gets or sets the binding.
         /// </summary>
-        public IBinding Bind { get; set; }
+        public Func<IRenderControlContext, IBinding> Bind { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class.
@@ -43,17 +44,9 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            return Render(renderContext, visualTree, RestUri);
-        }
-
-        /// <summary>
-        /// Converts the control to an HTML representation.
-        /// </summary>
-        /// <param name="renderContext">The context in which the control is rendered.</param>
-        /// <param name="uri">The uri that determines the data.</param>
-        /// <returns>An HTML node representing the rendered control.</returns>
-        public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IUri uri)
-        {
+            var uri = RestUri?.Invoke(renderContext);
+            var pageSize = PageSize?.Invoke(renderContext);
+            var bind = Bind?.Invoke(renderContext);
             var resultUri = uri?.BindParameters(renderContext.Request);
 
             var html = new HtmlElementTextContentDiv()
@@ -63,9 +56,9 @@ namespace WebExpress.WebApp.WebControl
                 Style = GetStyles()
             }
                 .AddUserAttribute("data-uri", resultUri?.ToString())
-                .AddUserAttribute("data-page-size", PageSize > 0 ? PageSize.ToString() : null);
+                .AddUserAttribute("data-page-size", pageSize > 0 ? pageSize.ToString() : null);
 
-            Bind?.ApplyUserAttributes(html);
+            bind?.ApplyUserAttributes(html);
 
             return new HtmlList(html, Content.Select
             (

@@ -1,0 +1,178 @@
+{
+  "source_base_path": "C:/Users/Rene/source/repos/WebExpress/WebExpress.WebApp/docs",
+  "xrefmap": "xrefmap.yml",
+  "files": [
+    {
+      "type": "Resource",
+      "output": {
+        "resource": {
+          "relative_path": "index.json"
+        }
+      }
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "api/toc.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/toc.html"
+        },
+        ".json": {
+          "relative_path": "api/toc.json"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "assets/webexpress.ico",
+      "output": {
+        "resource": {
+          "relative_path": "assets/webexpress.ico"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "assets/webexpress.svg",
+      "output": {
+        "resource": {
+          "relative_path": "assets/webexpress.svg"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "index.md",
+      "output": {
+        ".html": {
+          "relative_path": "index.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "js/collaborative.md",
+      "output": {
+        ".html": {
+          "relative_path": "js/collaborative.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "js/comment.md",
+      "output": {
+        ".html": {
+          "relative_path": "js/comment.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "js/form-editor.md",
+      "output": {
+        ".html": {
+          "relative_path": "js/form-editor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "js/form.md",
+      "output": {
+        ".html": {
+          "relative_path": "js/form.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "js/index.md",
+      "output": {
+        ".html": {
+          "relative_path": "js/index.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "js/observer.md",
+      "output": {
+        ".html": {
+          "relative_path": "js/observer.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "js/tab.md",
+      "output": {
+        ".html": {
+          "relative_path": "js/tab.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "js/toc.yml",
+      "output": {
+        ".html": {
+          "relative_path": "js/toc.html"
+        },
+        ".json": {
+          "relative_path": "js/toc.json"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "toc.yml",
+      "output": {
+        ".html": {
+          "relative_path": "toc.html"
+        },
+        ".json": {
+          "relative_path": "toc.json"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "tutorials.md",
+      "output": {
+        ".html": {
+          "relative_path": "tutorials.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "user-guide.md",
+      "output": {
+        ".html": {
+          "relative_path": "user-guide.html"
+        }
+      },
+      "version": ""
+    }
+  ],
+  "groups": [
+    {
+      "xrefmap": "xrefmap.yml"
+    }
+  ]
+}

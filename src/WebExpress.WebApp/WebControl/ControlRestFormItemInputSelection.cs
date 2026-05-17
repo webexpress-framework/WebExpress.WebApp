@@ -1,4 +1,6 @@
-﻿using WebExpress.WebCore.WebHtml;
+﻿using System;
+using WebExpress.WebApp.WebControl;
+using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
@@ -8,22 +10,22 @@ namespace WebExpress.WebApp.WebApiControl
     /// <summary>
     /// Represents a form item input selection that retrieves options from a specified URI.
     /// </summary>
-    public class ControlRestFormItemInputSelection : ControlFormItemInputSelection
+    public class ControlRestFormItemInputSelection : ControlFormItemInputSelection, IControlRest
     {
         /// <summary>
-        /// Returns or sets the uri that determines the options.
+        /// Gets or sets the uri that determines the options.
         /// </summary>
-        public IUri RestUri { get; set; }
+        public Func<IRenderControlContext, IUri> RestUri { get; set; }
 
         /// <summary>
-        /// Returns or sets the binding.
+        /// Gets or sets the binding.
         /// </summary>
-        public IBinding Bind { get; set; }
+        public new Func<IRenderControlContext, IBinding> Bind { get; set; }
 
         /// <summary>
-        /// Returns or sets the maximum number of entries to display (default 25).
+        /// Gets or sets the maximum number of entries to display (default 25).
         /// </summary>
-        public int MaxItems { get; set; } = -1;
+        public Func<IRenderControlContext, int> MaxItems { get; set; } = _ => -1;
 
         /// <summary>
         /// Initializes a new instance of the class with an automatically assigned ID.
@@ -51,13 +53,17 @@ namespace WebExpress.WebApp.WebApiControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlFormContext renderContext, IVisualTreeControl visualTree)
         {
+            var restUri = RestUri?.Invoke(renderContext)?.BindParameters(renderContext?.Request);
+            var maxItems = MaxItems?.Invoke(renderContext) ?? -1;
+            var bind = Bind?.Invoke(renderContext);
+
             var html = base.Render(renderContext, visualTree)
                 .AddClass("wx-webapp-input-selection")
                 .RemoveClass("wx-webui-input-selection")
-                .AddUserAttribute("data-uri", RestUri?.ToString())
-                .AddUserAttribute("data-maxItems", MaxItems > 0 ? MaxItems.ToString() : null);
+                .AddUserAttribute("data-uri", restUri?.ToString())
+                .AddUserAttribute("data-maxItems", maxItems > 0 ? maxItems.ToString() : null);
 
-            Bind?.ApplyUserAttributes(html);
+            bind?.ApplyUserAttributes(html);
 
             return html;
         }

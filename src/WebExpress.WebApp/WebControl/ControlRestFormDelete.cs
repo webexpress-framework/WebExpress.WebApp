@@ -1,4 +1,6 @@
-﻿using WebExpress.WebCore.WebMessage;
+﻿using System;
+using WebExpress.WebCore.WebMessage;
+using WebExpress.WebCore.WebTheme;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebIcon;
 
@@ -11,21 +13,27 @@ namespace WebExpress.WebApp.WebControl
     public class ControlRestFormDelete : ControlRestForm
     {
         /// <summary>
-        /// Returns or sets the static text content displayed by the control form item.
+        /// Gets or sets the mode that determines how the form behaves 
+        /// or is rendered.
+        /// </summary>
+        public override Func<IRenderControlFormContext, string> Mode => _ => TypeRestFormMode.Delete.ToMode();
+
+        /// <summary>
+        /// Gets or sets the static text content displayed by the control form item.
         /// </summary>
         public ControlFormItemStaticText Content { get; set; } = new ControlFormItemStaticText()
         {
-            Text = "webexpress.webui:delete.description"
+            Text = _ => "webexpress.webui:delete.description"
         };
 
         /// <summary>
-        /// Returns the submit button control for the form.
+        /// Gets the submit button control for the form.
         /// </summary>
         public ControlFormItemButtonSubmit Submit { get; } = new ControlFormItemButtonSubmit
         {
-            Text = "webexpress.webui:delete.label",
-            Icon = new IconTrash(),
-            Color = new PropertyColorButton(TypeColorButton.Danger)
+            Text = _ => "webexpress.webui:delete.label",
+            Icon = renderContext => new IconTrash(renderContext.GetIconTheme()),
+            Color = _ => new PropertyColorButton(TypeColorButton.Danger)
         };
 
         /// <summary>
@@ -35,8 +43,7 @@ namespace WebExpress.WebApp.WebControl
         public ControlRestFormDelete(string id = null)
             : base(id)
         {
-            Mode = TypeRestFormMode.Delete;
-            Method = RequestMethod.DELETE;
+            Method = _ => RequestMethod.DELETE;
 
             Add(Content);
             AddPrimaryButton(Submit);

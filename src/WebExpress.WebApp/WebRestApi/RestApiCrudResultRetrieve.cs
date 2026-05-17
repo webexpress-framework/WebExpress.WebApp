@@ -16,17 +16,12 @@ namespace WebExpress.WebApp.WebRestApi
         };
 
         /// <summary>
-        /// Returns or sets the item.
+        /// Gets or sets the item.
         /// </summary>
         public object Data { get; set; }
 
         /// <summary>
-        /// Returns or sets the title.
-        /// </summary>
-        public string Title { get; set; }
-
-        /// <summary>
-        /// Returns or sets the prolog for the item.
+        /// Gets or sets the prolog for the item.
         /// </summary>
         public string Prolog { get; set; }
 
@@ -48,7 +43,6 @@ namespace WebExpress.WebApp.WebRestApi
             var jsonData = JsonSerializer.Serialize(new
             {
                 data = Data,
-                title = Title,
                 prolog = Prolog,
             }, _jsonOptions);
 

@@ -17,7 +17,7 @@ namespace WebExpress.WebApp.WebControl
         public ControlWebAppHeaderAppTitle(string id = null)
             : base(id)
         {
-            Decoration = TypeTextDecoration.None;
+            Decoration = _ => TypeTextDecoration.None;
         }
 
         /// <summary>
@@ -29,7 +29,7 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>The current instance for method chaining.</returns>
         public IControlWebAppHeaderAppTitle SetTitle(string title)
         {
-            Title = title;
+            Title = _ => title;
 
             return this;
         }
@@ -42,12 +42,14 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
+            var role = Role?.Invoke(renderContext);
+
             var apptitle = new ControlText()
             {
-                Text = I18N.Translate(renderContext, renderContext.PageContext?.ApplicationContext?.ApplicationName),
-                Format = TypeFormatText.H1,
-                Padding = new PropertySpacingPadding(PropertySpacing.Space.One),
-                Margin = new PropertySpacingMargin(PropertySpacing.Space.None, PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.Null)
+                Text = _ => I18N.Translate(renderContext, renderContext.PageContext?.ApplicationContext?.ApplicationName),
+                Format = _ => TypeFormatText.H1,
+                Padding = _ => new PropertySpacingPadding(PropertySpacing.Space.One),
+                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.None, PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.Null)
             };
 
             return new HtmlElementTextSemanticsA(apptitle.Render(renderContext, visualTree))
@@ -56,7 +58,7 @@ namespace WebExpress.WebApp.WebControl
                 Href = renderContext?.PageContext?.ApplicationContext?.Route?.ToString(),
                 Class = Css.Concatenate("", GetClasses()),
                 Style = Style.Concatenate("", GetStyles()),
-                Role = Role
+                Role = role
             };
         }
     }

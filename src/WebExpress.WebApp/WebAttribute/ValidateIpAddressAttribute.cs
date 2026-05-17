@@ -12,7 +12,7 @@ namespace WebExpress.WebApp.WebAttribute
     public sealed class ValidateIpAddressAttribute : Attribute, IValidation
     {
         /// <summary> 
-        /// Returns the error message returned when validation fails. 
+        /// Gets the error message returned when validation fails. 
         /// </summary>
         public string Message { get; }
 

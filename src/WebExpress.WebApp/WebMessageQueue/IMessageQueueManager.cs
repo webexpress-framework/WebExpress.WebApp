@@ -79,5 +79,43 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// The current instance to support method chaining.
         /// </returns>
         Task<IMessageQueueManager> SendAsync(IAddress address, IMessage message, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Sends every still-valid popup notification visible to the given
+        /// socket's session/application back through that socket. Called
+        /// from <c>MessageQueueSocket.OnConnectedAsync</c> so a freshly
+        /// connecting or reconnecting client receives notifications it
+        /// missed while offline.
+        /// </summary>
+        /// <param name="socket">The (re)connecting socket.</param>
+        /// <param name="cancellationToken">
+        /// A token that propagates notification of request cancellation.
+        /// </param>
+        Task ReplayPopupNotificationsAsync(IMessageQueueSocket socket, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Gets the handler for inbound popup control messages such as
+        /// dismiss requests. May be <c>null</c> when popup notifications
+        /// are not configured.
+        /// </summary>
+        IPopupNotificationHandler PopupNotificationHandler { get; }
+
+        /// <summary>
+        /// Sends the current state of every active task back through the
+        /// connecting socket so a freshly arriving client receives the
+        /// snapshot of every long-running operation it would otherwise
+        /// miss.
+        /// </summary>
+        /// <param name="socket">The (re)connecting socket.</param>
+        /// <param name="cancellationToken">
+        /// A token that propagates notification of request cancellation.
+        /// </param>
+        Task ReplayProgressTasksAsync(IMessageQueueSocket socket, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Gets the handler for inbound chat messages and history replay
+        /// requests. May be <c>null</c> when chat is not configured.
+        /// </summary>
+        IChatMessageHandler ChatMessageHandler { get; }
     }
 }

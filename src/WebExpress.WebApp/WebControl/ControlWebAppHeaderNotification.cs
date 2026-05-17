@@ -21,17 +21,17 @@ namespace WebExpress.WebApp.WebControl
         private readonly List<IControlDropdownItem> _secondary = [];
 
         /// <summary>
-        /// Returns the preferences area.
+        /// Gets the preferences area.
         /// </summary>
         public IEnumerable<IControlDropdownItem> Preferences => _preferences;
 
         /// <summary>
-        /// Returns the primary area.
+        /// Gets the primary area.
         /// </summary>
         public IEnumerable<IControlDropdownItem> Primary => _primary;
 
         /// <summary>
-        /// Returns the secondary area.
+        /// Gets the secondary area.
         /// </summary>
         public IEnumerable<IControlDropdownItem> Secondary => _secondary;
 
@@ -42,7 +42,7 @@ namespace WebExpress.WebApp.WebControl
         public ControlWebAppHeaderNotification(string id)
             : base(id)
         {
-            Padding = new PropertySpacingPadding(PropertySpacing.Space.Null);
+            Padding = _ => new PropertySpacingPadding(PropertySpacing.Space.Null);
         }
 
         /// <summary>
@@ -131,9 +131,9 @@ namespace WebExpress.WebApp.WebControl
                 ? new ControlDropdown(Id)
                 {
                     Classes = ["wx-app-dropdown"],
-                    Icon = new IconBell(),
-                    AlignmentMenu = TypeAlignmentDropdownMenu.Right,
-                    Margin = new PropertySpacingMargin
+                    Icon = _ => new IconBell(),
+                    AlignmentMenu = _ => TypeAlignmentDropdownMenu.Right,
+                    Margin = _ => new PropertySpacingMargin
                     (
                         PropertySpacing.Space.Two,
                         PropertySpacing.Space.None,
@@ -173,7 +173,7 @@ namespace WebExpress.WebApp.WebControl
             {
                 yield return new ControlDropdownItemHeader()
                 {
-                    Text = I18N.Translate(renderContext.Request, "webexpress.webapp:header.notification.label")
+                    Text = _ => I18N.Translate(renderContext.Request, "webexpress.webapp:header.notification.label")
                 };
             }
 
