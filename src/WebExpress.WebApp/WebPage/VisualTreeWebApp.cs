@@ -114,7 +114,39 @@ namespace WebExpress.WebApp.WebPage
             Breadcrumb.Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Null);
             (Content as ControlWebAppContent).Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None);
 
-            AddCssLink(Theme?.ThemeStyle?.ToString() ?? RouteEndpoint.Combine(baseUri, "css/webexpress.webapp.theme.css"));
+            // Default css link from the resolved theme (or framework fallback).
+            // Subsequent UseTheme<T>() calls swap this out via OnThemeChanged.
+            _fallbackThemeStyleUri = RouteEndpoint.Combine(baseUri, "css/webexpress.webapp.theme.css");
+            AddCssLink(Theme?.ThemeStyle?.ToString() ?? _fallbackThemeStyleUri);
+        }
+
+        /// <summary>
+        /// Cached fallback theme-style uri used when a theme has no
+        /// <c>ThemeStyle</c> declared.
+        /// </summary>
+        private string _fallbackThemeStyleUri;
+
+        /// <summary>
+        /// Replaces the previous theme's css link with the new one when the
+        /// user (or a derived page) calls <c>UseTheme&lt;T&gt;()</c> to
+        /// override the application's default theme. The framework fallback
+        /// is used when the new theme does not declare a <c>ThemeStyle</c>.
+        /// </summary>
+        /// <param name="previousTheme">The theme that was active before the swap.</param>
+        /// <param name="newTheme">The newly selected theme.</param>
+        protected override void OnThemeChanged(IThemeContext previousTheme, IThemeContext newTheme)
+        {
+            var previousUri = previousTheme?.ThemeStyle?.ToString() ?? _fallbackThemeStyleUri;
+            var newUri = newTheme?.ThemeStyle?.ToString() ?? _fallbackThemeStyleUri;
+
+            if (!string.IsNullOrEmpty(previousUri))
+            {
+                RemoveCssLink(previousUri);
+            }
+            if (!string.IsNullOrEmpty(newUri))
+            {
+                AddCssLink(newUri);
+            }
         }
 
         /// <summary>

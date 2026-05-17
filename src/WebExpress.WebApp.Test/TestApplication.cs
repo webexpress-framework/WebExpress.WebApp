@@ -12,6 +12,7 @@ namespace WebExpress.WebApp.Test
     [ContextPath("/app")]
     [AssetPath("/asset")]
     [DataPath("/data")]
+    [Theme<TestThemeA>]
     public sealed class TestApplication : IApplication
     {
         /// <summary>
