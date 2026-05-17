@@ -14,7 +14,17 @@ namespace WebExpress.WebApp.Test
         private readonly IEnumerable<TestIndexItem> _testData;
 
         /// <summary>
-        /// Initializes a new instance of the TestRestApiTable class with the specified data 
+        /// Gets the last column layout received via <see cref="Configure"/>.
+        /// </summary>
+        public IReadOnlyList<RestApiTableColumn> LastColumnUpdate { get; private set; }
+
+        /// <summary>
+        /// Gets the last row order received via <see cref="Configure"/>.
+        /// </summary>
+        public IReadOnlyList<string> LastRowUpdate { get; private set; }
+
+        /// <summary>
+        /// Initializes a new instance of the TestRestApiTable class with the specified data
         /// and table title.
         /// </summary>
         /// <param name="data">
@@ -27,6 +37,27 @@ namespace WebExpress.WebApp.Test
         {
             _testData = data;
             Title = title;
+        }
+
+        /// <summary>
+        /// Captures the column layout produced by <see cref="Configure"/> so tests
+        /// can assert that order, visibility and width were forwarded correctly.
+        /// </summary>
+        /// <param name="columns">The resolved, ordered column layout.</param>
+        /// <param name="request">The triggering request.</param>
+        protected override void UpdateColumns(IEnumerable<RestApiTableColumn> columns, IRequest request)
+        {
+            LastColumnUpdate = columns?.ToList();
+        }
+
+        /// <summary>
+        /// Captures the row order produced by <see cref="Configure"/>.
+        /// </summary>
+        /// <param name="rowIds">The row identifiers in the order chosen by the user.</param>
+        /// <param name="request">The triggering request.</param>
+        protected override void UpdateRows(IEnumerable<string> rowIds, IRequest request)
+        {
+            LastRowUpdate = rowIds?.ToList();
         }
 
         /// <summary>

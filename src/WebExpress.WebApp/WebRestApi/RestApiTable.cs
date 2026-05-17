@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebMessage;
@@ -19,6 +20,11 @@ namespace WebExpress.WebApp.WebRestApi
     public abstract class RestApiTable<TIndexItem> : IRestApi
         where TIndexItem : IIndexItem
     {
+        private static readonly JsonSerializerOptions _configurePayloadJsonOptions = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
+
         /// <summary>
         /// Gets or sets the title associated with the current object.
         /// </summary>
@@ -125,8 +131,12 @@ namespace WebExpress.WebApp.WebRestApi
         }
 
         /// <summary>
-        /// Handles configuration for column order or row order via POST/PUT using parameters 
-        /// "c" and/or "r". Only visible column/row ids, no hidden flag; omitted columns are hidden.
+        /// Handles configuration of column layout (order, width, visibility) and
+        /// row order via POST/PUT. Accepts either a JSON body of the form
+        /// <c>{ "c": [{"id":"col1","visible":true,"width":120}, ...], "r": ["row1", ...] }</c>
+        /// or the legacy URL-encoded parameters <c>c</c>/<c>v</c>/<c>w</c>/<c>r</c>
+        /// where each value is comma-separated and indexed by position.
+        /// Columns omitted from the payload are appended at the tail and marked as hidden.
         /// </summary>
         /// <param name="request">Current HTTP request.</param>
         /// <returns>Response indicating configuration status.</returns>
@@ -136,8 +146,64 @@ namespace WebExpress.WebApp.WebRestApi
         {
             try
             {
-                var c = request.GetParameter("c")?.Value; // column ids (comma-separated)
-                var r = request.GetParameter("r")?.Value; // row ids (comma-separated)
+                var payload = ReadConfigurePayload(request);
+
+                if (payload?.Columns is { Count: > 0 })
+                {
+                    var available = (RetrieveColums(request) ?? []).ToList();
+                    var lookup = available.ToDictionary(c => c.Id, StringComparer.OrdinalIgnoreCase);
+
+                    var resolved = new List<RestApiTableColumn>(available.Count);
+                    var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                    foreach (var update in payload.Columns)
+                    {
+                        if (string.IsNullOrWhiteSpace(update?.Id) ||
+                            !lookup.TryGetValue(update.Id, out var template) ||
+                            !seen.Add(template.Id))
+                        {
+                            continue;
+                        }
+
+                        resolved.Add(new RestApiTableColumn
+                        {
+                            Id = template.Id,
+                            Name = template.Name,
+                            Label = template.Label,
+                            Icon = template.Icon,
+                            Template = template.Template,
+                            Visible = update.Visible ?? template.Visible,
+                            Width = update.Width
+                        });
+                    }
+
+                    // append columns the client did not include at the tail and mark them as hidden
+                    foreach (var column in available)
+                    {
+                        if (seen.Contains(column.Id))
+                        {
+                            continue;
+                        }
+
+                        resolved.Add(new RestApiTableColumn
+                        {
+                            Id = column.Id,
+                            Name = column.Name,
+                            Label = column.Label,
+                            Icon = column.Icon,
+                            Template = column.Template,
+                            Visible = false,
+                            Width = column.Width
+                        });
+                    }
+
+                    UpdateColumns(resolved, request);
+                }
+
+                if (payload?.Rows is { Count: > 0 })
+                {
+                    UpdateRows(payload.Rows, request);
+                }
 
                 return new ResponseOK();
             }
@@ -145,6 +211,109 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 return new ResponseBadRequest(new StatusMessage($"Error in configuration: {ex}"));
             }
+        }
+
+        /// <summary>
+        /// Persists the user-defined column layout produced by
+        /// <see cref="Configure"/>. The default implementation is a no-op;
+        /// derived classes should override it to write the layout to the
+        /// underlying store (session, user profile, database, ...).
+        /// </summary>
+        /// <param name="columns">
+        /// The full list of columns in the order chosen by the user. Each entry
+        /// carries the user-defined <see cref="RestApiTableColumn.Visible"/> and
+        /// <see cref="RestApiTableColumn.Width"/> values. Columns the client did
+        /// not include are appended at the tail with <c>Visible = false</c>.
+        /// </param>
+        /// <param name="request">The triggering request.</param>
+        protected virtual void UpdateColumns(IEnumerable<RestApiTableColumn> columns, IRequest request)
+        {
+        }
+
+        /// <summary>
+        /// Persists the user-defined row order produced by <see cref="Configure"/>.
+        /// The default implementation is a no-op; derived classes should override
+        /// it when row reordering needs to be remembered.
+        /// </summary>
+        /// <param name="rowIds">The row identifiers in the order chosen by the user.</param>
+        /// <param name="request">The triggering request.</param>
+        protected virtual void UpdateRows(IEnumerable<string> rowIds, IRequest request)
+        {
+        }
+
+        /// <summary>
+        /// Extracts the column / row configuration payload from the request,
+        /// supporting both an <c>application/json</c> body and the URL-encoded
+        /// <c>c</c>/<c>v</c>/<c>w</c>/<c>r</c> parameters as a fallback.
+        /// </summary>
+        /// <param name="request">The triggering request.</param>
+        /// <returns>
+        /// The deserialized payload, or <see langword="null"/> if the request
+        /// carried no recognizable configuration.
+        /// </returns>
+        private static RestApiTableConfigurePayload ReadConfigurePayload(IRequest request)
+        {
+            if (request is Request raw &&
+                raw.Content is { Length: > 0 } content &&
+                raw.Header?.ContentType?.Contains("application/json", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                try
+                {
+                    var fromBody = JsonSerializer.Deserialize<RestApiTableConfigurePayload>(content, _configurePayloadJsonOptions);
+                    if (fromBody is not null && ((fromBody.Columns?.Count ?? 0) > 0 || (fromBody.Rows?.Count ?? 0) > 0))
+                    {
+                        return fromBody;
+                    }
+                }
+                catch (JsonException)
+                {
+                    // fall through to parameter parsing
+                }
+            }
+
+            var ids = request.GetParameter("c")?.Value?
+                .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries) ?? [];
+            var visibles = request.GetParameter("v")?.Value?
+                .Split(',', StringSplitOptions.TrimEntries) ?? [];
+            var widths = request.GetParameter("w")?.Value?
+                .Split(',', StringSplitOptions.TrimEntries) ?? [];
+            var rows = request.GetParameter("r")?.Value?
+                .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+
+            if (ids.Length == 0 && (rows is null || rows.Length == 0))
+            {
+                return null;
+            }
+
+            var columns = new List<RestApiTableColumnUpdate>(ids.Length);
+            for (var i = 0; i < ids.Length; i++)
+            {
+                bool? visible = null;
+                if (i < visibles.Length && !string.IsNullOrWhiteSpace(visibles[i]))
+                {
+                    visible = visibles[i] == "1" ||
+                        visibles[i].Equals("true", StringComparison.OrdinalIgnoreCase);
+                }
+
+                uint? width = null;
+                if (i < widths.Length && uint.TryParse(widths[i], out var parsed))
+                {
+                    width = parsed;
+                }
+
+                columns.Add(new RestApiTableColumnUpdate
+                {
+                    Id = ids[i],
+                    Visible = visible,
+                    Width = width
+                });
+            }
+
+            return new RestApiTableConfigurePayload
+            {
+                Columns = columns,
+                Rows = rows
+            };
         }
 
         /// <summary>
