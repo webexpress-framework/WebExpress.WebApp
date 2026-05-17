@@ -1,6 +1,5 @@
 using System;
 using WebExpress.WebCore.WebHtml;
-using WebExpress.WebCore.WebIcon;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
@@ -88,7 +87,6 @@ namespace WebExpress.WebApp.WebControl
             var usersUri = UsersUri?.Invoke(renderContext)?.BindParameters(renderContext.Request);
             var imageUploadUri = ImageUploadUri?.Invoke(renderContext)?.BindParameters(renderContext.Request);
             var readOnly = Readonly?.Invoke(renderContext) ?? false;
-            var iconTheme = renderContext?.PageContext?.ApplicationContext?.IconTheme ?? TypeIconTheme.Default;
 
             return new HtmlElementTextContentDiv()
             {
@@ -102,8 +100,7 @@ namespace WebExpress.WebApp.WebControl
                 .AddUserAttribute("data-current-user", CurrentUser?.Invoke(renderContext))
                 .AddUserAttribute("data-image-upload-uri", imageUploadUri?.ToString())
                 .AddUserAttribute("data-readonly", readOnly ? "true" : null)
-                .AddUserAttribute("data-categories", Categories?.Invoke(renderContext))
-                .AddUserAttribute("data-icon-theme", iconTheme == TypeIconTheme.Light ? "light" : null);
+                .AddUserAttribute("data-categories", Categories?.Invoke(renderContext));
         }
     }
 }

@@ -8,6 +8,7 @@ using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebComponent;
 using WebExpress.WebCore.WebEndpoint;
 using WebExpress.WebCore.WebHtml;
+using WebExpress.WebCore.WebIcon;
 using WebExpress.WebCore.WebPage;
 using WebExpress.WebCore.WebTheme;
 using WebExpress.WebCore.WebUri;
@@ -26,6 +27,14 @@ namespace WebExpress.WebApp.WebPage
         /// Gets or sets the theme of the web application.
         /// </summary>
         public IThemeContext Theme { get; set; }
+
+        /// <summary>
+        /// Gets or sets the icon theme used for the web application. Resolved
+        /// from <see cref="WebCore.WebApplication.IApplicationContext.IconTheme"/>
+        /// at construction time and emitted on the root
+        /// <c>&lt;html data-icon-theme&gt;</c> attribute by <see cref="Render"/>.
+        /// </summary>
+        public TypeIconTheme IconTheme { get; set; }
 
         /// <summary>
         /// Gets or sets the URI used for breadcrumb navigation within the application.
@@ -107,6 +116,8 @@ namespace WebExpress.WebApp.WebPage
                 .GetUri<WWW.Ws.MessageQueue>(pageContext.ApplicationContext);
             var domains = Domains?.Invoke() ?? pageContext.Domains?.Select(x => x.FullName.ToLower()) ?? [];
 
+            IconTheme = applicationContext?.IconTheme ?? TypeIconTheme.Default;
+
             MessageQueueUri
                 .AddUserAttribute("data-wx-message-queue-url", messageQueueUri?.ToString())
                 .AddUserAttribute("data-wx-domains", string.Join(";", domains));
@@ -147,6 +158,10 @@ namespace WebExpress.WebApp.WebPage
             if (Theme?.ThemeMode == ThemeMode.Dark)
             {
                 html.AddUserAttribute("data-bs-theme", "dark");
+            }
+            if (IconTheme == TypeIconTheme.Light)
+            {
+                html.AddUserAttribute("data-icon-theme", "light");
             }
 
             var preferences = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionBodyPreferences>

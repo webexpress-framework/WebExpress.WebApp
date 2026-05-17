@@ -58,35 +58,35 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Per-affordance icon mapping. The first entry is used when the host
-     * carries <c>data-icon-theme="light"</c>; otherwise the FontAwesome
-     * variant is used. The shape mirrors the WebUI icon split (see
-     * <c>webexpress.webui.table.js</c> / <c>ControlRestTable</c>).
+     * Per-affordance icon mapping. The active theme is resolved at lookup
+     * time through {@link webexpress.webui.Ctrl#_iconClass}, which reads the
+     * page-wide <c>&lt;html data-icon-theme&gt;</c> attribute and falls back
+     * to whichever variant is supplied when one is missing.
      */
     static ICONS = {
-        likeFilled:   { light: "wx-icon-light wx-icon-light-heart",         fa: "fas fa-heart" },
-        likeOutline:  { light: "wx-icon-light wx-icon-light-heart",         fa: "far fa-heart" },
-        pin:          { light: "wx-icon-light wx-icon-light-thumbtack",     fa: "fas fa-thumbtack" },
-        chevronDown:  { light: "wx-icon-light wx-icon-light-chevron-down",  fa: "fas fa-chevron-down" },
-        chevronRight: { light: "wx-icon-light wx-icon-light-chevron-right", fa: "fas fa-chevron-right" },
-        edit:         { light: "wx-icon-light wx-icon-light-pen",           fa: "fas fa-pen" },
-        delete:       { light: "wx-icon-light wx-icon-light-trash",         fa: "fas fa-trash" },
-        reply:        { light: "wx-icon-light wx-icon-light-share-nodes",   fa: "fas fa-reply" },
-        plus:         { light: "wx-icon-light wx-icon-light-plus",          fa: "fas fa-plus" }
+        likeFilled:   { fa: "fas fa-heart",         light: "wx-icon-light wx-icon-light-heart" },
+        likeOutline:  { fa: "far fa-heart",         light: "wx-icon-light wx-icon-light-heart" },
+        pin:          { fa: "fas fa-thumbtack",     light: "wx-icon-light wx-icon-light-thumbtack" },
+        chevronDown:  { fa: "fas fa-chevron-down",  light: "wx-icon-light wx-icon-light-chevron-down" },
+        chevronRight: { fa: "fas fa-chevron-right", light: "wx-icon-light wx-icon-light-chevron-right" },
+        edit:         { fa: "fas fa-pen",           light: "wx-icon-light wx-icon-light-pen" },
+        delete:       { fa: "fas fa-trash",         light: "wx-icon-light wx-icon-light-trash" },
+        reply:        { fa: "fas fa-reply",         light: "wx-icon-light wx-icon-light-share-nodes" },
+        plus:         { fa: "fas fa-plus",          light: "wx-icon-light wx-icon-light-plus" }
     };
 
     /**
-     * Resolves an affordance name to a concrete CSS class string, honoring
-     * the active icon theme.
+     * Resolves an affordance name to a concrete CSS class string for the
+     * active icon theme.
      * @param {string} name - Affordance key into {@link CommentCtrl.ICONS}.
      * @returns {string} The CSS class string for an <c>&lt;i&gt;</c> element.
      */
-    _iconClass(name) {
+    _affordanceIconClass(name) {
         const entry = webexpress.webapp.CommentCtrl.ICONS[name];
         if (!entry) {
             return "fas fa-question";
         }
-        return this._iconTheme === "light" ? entry.light : entry.fa;
+        return this._iconClass(entry.fa, entry.light);
     }
 
     /**
@@ -101,7 +101,6 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
         this._currentUser = element.dataset.currentUser || null;
         this._imageUploadUri = element.dataset.imageUploadUri || null;
         this._readonly = element.dataset.readonly === "true";
-        this._iconTheme = element.dataset.iconTheme === "light" ? "light" : null;
 
         // categories are sourced from the REST API ({uri}/categories) unless
         // a static override is supplied via the data-categories attribute
@@ -137,7 +136,6 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
         element.removeAttribute("data-image-upload-uri");
         element.removeAttribute("data-readonly");
         element.removeAttribute("data-categories");
-        element.removeAttribute("data-icon-theme");
         element.classList.add("wx-comment");
 
         this._buildDom();
@@ -256,7 +254,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
         const pinnedNote = document.createElement("span");
         pinnedNote.className = "wx-comment-pinned-note";
         const pinnedNoteIcon = document.createElement("i");
-        pinnedNoteIcon.className = this._iconClass("pin");
+        pinnedNoteIcon.className = this._affordanceIconClass("pin");
         pinnedNoteIcon.setAttribute("aria-hidden", "true");
         pinnedNote.appendChild(pinnedNoteIcon);
         pinnedNote.appendChild(document.createTextNode(" " + this._i18n("webexpress.webapp:comment.pinned-on-top", "Pinned comments stay on top")));
@@ -523,7 +521,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
                     <span class="wx-comment-author">${this._esc(author.name)}</span>
                     ${author.team ? `<span class="wx-comment-team">· ${this._esc(author.team)}</span>` : ""}
                     <span class="wx-comment-when${comment.edited ? " wx-comment-when-edited" : ""}">${this._esc(comment.when)}</span>
-                    ${comment.pinned ? `<span class="wx-comment-pinned"><i class="${this._iconClass("pin")}" aria-hidden="true"></i> ${this._esc(this._i18n("webexpress.webapp:comment.pinned", "Pinned"))}</span>` : ""}
+                    ${comment.pinned ? `<span class="wx-comment-pinned"><i class="${this._affordanceIconClass("pin")}" aria-hidden="true"></i> ${this._esc(this._i18n("webexpress.webapp:comment.pinned", "Pinned"))}</span>` : ""}
                 </div>
                 <div class="wx-comment-labels">
                     <span class="wx-comment-category" style="color:${cat.color};background:${cat.bg}">${this._esc(this._i18n(cat.i18n, cat.id))}</span>
@@ -536,7 +534,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
         const actions = document.createElement("div");
         actions.className = "wx-comment-head-actions";
 
-        const likeBtn = this._iconBtn(this._iconClass(liked ? "likeFilled" : "likeOutline"), liked
+        const likeBtn = this._iconBtn(this._affordanceIconClass(liked ? "likeFilled" : "likeOutline"), liked
             ? this._i18n("webexpress.webapp:comment.like.remove", "Unlike")
             : this._i18n("webexpress.webapp:comment.like", "Like"));
         likeBtn.classList.toggle("wx-comment-action-liked", liked);
@@ -547,14 +545,14 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
         likeBtn.addEventListener("click", () => this._toggleLike(comment));
         actions.appendChild(likeBtn);
 
-        const pinBtn = this._iconBtn(this._iconClass("pin"), comment.pinned
+        const pinBtn = this._iconBtn(this._affordanceIconClass("pin"), comment.pinned
             ? this._i18n("webexpress.webapp:comment.pin.remove", "Unpin")
             : this._i18n("webexpress.webapp:comment.pin", "Pin"));
         pinBtn.classList.toggle("wx-comment-action-pinned", !!comment.pinned);
         pinBtn.addEventListener("click", () => this._togglePin(comment));
         actions.appendChild(pinBtn);
 
-        const collapseBtn = this._iconBtn(this._iconClass(collapsed ? "chevronRight" : "chevronDown"), collapsed
+        const collapseBtn = this._iconBtn(this._affordanceIconClass(collapsed ? "chevronRight" : "chevronDown"), collapsed
             ? this._i18n("webexpress.webapp:comment.expand", "Expand")
             : this._i18n("webexpress.webapp:comment.collapse", "Collapse"));
         collapseBtn.addEventListener("click", () => {
@@ -564,14 +562,14 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
         actions.appendChild(collapseBtn);
 
         if (isMe && !this._readonly) {
-            const editBtn = this._iconBtn(this._iconClass("edit"), this._i18n("webexpress.webapp:comment.edit", "Edit"));
+            const editBtn = this._iconBtn(this._affordanceIconClass("edit"), this._i18n("webexpress.webapp:comment.edit", "Edit"));
             editBtn.addEventListener("click", () => {
                 this._editingId = editing ? null : comment.id;
                 this._renderList();
             });
             actions.appendChild(editBtn);
 
-            const delBtn = this._iconBtn(this._iconClass("delete"), this._i18n("webexpress.webapp:comment.delete", "Delete"));
+            const delBtn = this._iconBtn(this._affordanceIconClass("delete"), this._i18n("webexpress.webapp:comment.delete", "Delete"));
             delBtn.addEventListener("click", () => this._confirmDelete(comment, wrap));
             actions.appendChild(delBtn);
         }
@@ -599,7 +597,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
         replyBtn.type = "button";
         replyBtn.className = "wx-comment-reply-btn";
         const replyIcon = document.createElement("i");
-        replyIcon.className = this._iconClass("reply");
+        replyIcon.className = this._affordanceIconClass("reply");
         replyIcon.setAttribute("aria-hidden", "true");
         replyBtn.appendChild(replyIcon);
         replyBtn.appendChild(document.createTextNode(" " + this._i18n("webexpress.webapp:comment.reply", "Reply")));
@@ -688,7 +686,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
             addBtn.title = this._i18n("webexpress.webapp:comment.reaction.add", "Add reaction");
             addBtn.setAttribute("aria-label", addBtn.title);
             const addBtnIcon = document.createElement("i");
-            addBtnIcon.className = this._iconClass("plus");
+            addBtnIcon.className = this._affordanceIconClass("plus");
             addBtnIcon.setAttribute("aria-hidden", "true");
             addBtn.appendChild(addBtnIcon);
 

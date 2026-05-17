@@ -119,7 +119,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         this._addTabButton.className = "nav-link text-primary";
         this._addTabButton.type = "button";
         this._addTabButton.setAttribute("role", "tab");
-        this._addTabButton.innerHTML = '<i class="fas fa-plus"></i>';
+        this._addTabButton.innerHTML = `<i class="${this._iconClass("fas fa-plus", "wx-icon-light-plus")}"></i>`;
 
         const hasMultipleTemplates = this._templateOrder.length > 1;
         if (hasMultipleTemplates) {
@@ -385,7 +385,10 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
 
         // indicate loading state on the button
         const originalHtml = this._addTabButton.innerHTML;
-        this._addTabButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        // spinner animation is FontAwesome-only - the light theme has no
+        // animated SVG equivalent so _iconClass falls back to FA in both
+        // themes, which is intentional here.
+        this._addTabButton.innerHTML = `<i class="${this._iconClass("fas fa-spinner fa-spin", null)}"></i>`;
         this._addTabButton.disabled = true;
 
         const fetchUrl = this._resolveUrl(this._restUri);

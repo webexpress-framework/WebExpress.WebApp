@@ -122,7 +122,7 @@ class PopupNotificationCtrl extends webexpress.webui.Ctrl {
         closeButton.className = "wx-popup-close";
         closeButton.setAttribute("aria-label", "Close");
         closeButton.setAttribute("title", "Close");
-        closeButton.innerHTML = '<i class="fas fa-times" aria-hidden="true"></i>';
+        closeButton.innerHTML = `<i class="${this._iconClass("fas fa-times", "wx-icon-light-xmark")}" aria-hidden="true"></i>`;
         closeButton.addEventListener("click", (e) => {
             e.preventDefault();
             e.stopPropagation();
