@@ -10,5 +10,6 @@ This section documents the JavaScript controllers and client-side behavior used 
 - [CommentCtrl](comment.md)
 - [RestFormCtrl](form.md)
 - [RestFormEditorCtrl](form-editor.md)
+- [DropdownTheme](theme-selector.md)
 - [ObserverCtrl](observer.md)
 - [TabCtrl](tab.md)

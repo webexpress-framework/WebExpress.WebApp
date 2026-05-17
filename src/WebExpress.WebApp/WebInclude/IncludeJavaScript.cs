@@ -19,6 +19,7 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/js/webexpress.webapp.comment.composer.js")]
     [Asset("/assets/js/webexpress.webapp.dashboard.js")]
     [Asset("/assets/js/webexpress.webapp.dropdown.js")]
+    [Asset("/assets/js/webexpress.webapp.dropdown.theme.js")]
     [Asset("/assets/js/webexpress.webapp.input.selection.js")]
     [Asset("/assets/js/webexpress.webapp.input.tile.js")]
     [Asset("/assets/js/webexpress.webapp.input.password.js")]

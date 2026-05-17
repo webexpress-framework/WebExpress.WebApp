@@ -8,6 +8,8 @@
   href: form.md
 - name: RestFormEditorCtrl
   href: form-editor.md
+- name: InputSelectionTheme
+  href: theme-selector.md
 - name: ObserverCtrl
   href: observer.md
 - name: TabCtrl
