@@ -14,7 +14,7 @@
 		<EnableDynamicLoading>true</EnableDynamicLoading>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<Description>Provide a business application template for the WebExpress web server.</Description>
-		<PackageVersion>0.0.11-alpha</PackageVersion>
+		<PackageVersion>2.0.0-alpha</PackageVersion>
 		<PackageProjectUrl>https://github.com/ReneSchwarzer/WebExpress</PackageProjectUrl>
 		<PackageIcon>icon.png</PackageIcon>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
@@ -48,8 +48,8 @@
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(Configuration)' != 'DebugLocal'">
-		<PackageReference Include="WebExpress.WebUI" Version="0.0.11-alpha" />
-		<PackageReference Include="WebExpress.WebIndex" Version="0.0.11-alpha" />
+		<PackageReference Include="WebExpress.WebUI" Version="2.0.0-alpha" />
+		<PackageReference Include="WebExpress.WebIndex" Version="2.0.0-alpha" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(Configuration)' == 'DebugLocal'">
