@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using WebExpress.WebApp.WebFragment;
 using WebExpress.WebApp.WebSection;
 using WebExpress.WebCore;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
-using WebExpress.WebUI.WebFragment;
 using WebExpress.WebUI.WebPage;
 using WebExpress.WebUI.WebSection;
 
@@ -100,17 +100,17 @@ namespace WebExpress.WebApp.WebControl
             var applicationContext = renderContext?.PageContext?.ApplicationContext;
 
             // templates
-            var templatePreferences = fragmentManager.GetFragments<IFragmentControlViewItem, SectionTabTemplatePreferences>
+            var templatePreferences = fragmentManager.GetFragments<IFragmentControlRestTabTemplate, SectionTabTemplatePreferences>
             (
                 applicationContext,
                 [GetType()]
             );
-            var templatePrimary = fragmentManager.GetFragments<IFragmentControlViewItem, SectionViewItemPrimary>
+            var templatePrimary = fragmentManager.GetFragments<IFragmentControlRestTabTemplate, SectionViewItemPrimary>
             (
                 applicationContext,
                 [GetType()]
             );
-            var templateSecondary = fragmentManager.GetFragments<IFragmentControlViewItem, SectionViewItemSecondary>
+            var templateSecondary = fragmentManager.GetFragments<IFragmentControlRestTabTemplate, SectionViewItemSecondary>
             (
                 applicationContext,
                 [GetType()]
