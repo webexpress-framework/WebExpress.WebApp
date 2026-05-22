@@ -46,23 +46,27 @@ namespace WebExpress.WebApp.WebPage
 
         /// <summary>
         /// Gets the range for the path specification.
+        /// The login view does not show a breadcrumb, so this is always <c>null</c>.
         /// </summary>
-        public ControlBreadcrumb Breadcrumb => throw new NotImplementedException();
+        public ControlBreadcrumb Breadcrumb => null;
 
         /// <summary>
         /// Gets the area for prologue.
+        /// The login view does not show a prologue, so this is always <c>null</c>.
         /// </summary>
-        public ControlWebAppPrologue Prologue => throw new NotImplementedException();
+        public ControlWebAppPrologue Prologue => null;
 
         /// <summary>
         /// Gets the sidebar control.
+        /// The login view does not show a sidebar, so this is always <c>null</c>.
         /// </summary>
-        public IControlWebAppSidebar Sidebar => throw new NotImplementedException();
+        public IControlWebAppSidebar Sidebar => null;
 
         /// <summary>
         /// Gets the content control.
+        /// The login view renders its content directly in <see cref="Render"/>; this is always <c>null</c>.
         /// </summary>
-        public new IControlWebAppContent Content => throw new NotImplementedException();
+        public new IControlWebAppContent Content => null;
 
         /// <summary>
         /// Gets the footer control.

@@ -47,8 +47,8 @@ namespace WebExpress.WebApp.WebRestApi
         public IResponse Retrieve(IRequest request)
         {
             // read paging and filters; support both "filter" (frontend) and "search" (compat)
-            var pageNumber = Convert.ToInt32(request.GetParameter("p")?.Value ?? "0");
-            var pageSize = Convert.ToInt32(request.GetParameter("l")?.Value ?? "50");
+            var pageNumber = request.ParseIntParameter("p", 0);
+            var pageSize = request.ParseIntParameter("l", 50);
             var search = request.GetParameter("q")?.Value ?? string.Empty;
             var wql = request.GetParameter("wql")?.Value ?? null;
             var filters = request.GetParameter("f")?.Value?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries) ?? [];

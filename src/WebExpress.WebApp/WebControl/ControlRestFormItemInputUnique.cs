@@ -119,12 +119,12 @@ namespace WebExpress.WebApp.WebApiControl
                 return validationResults;
             }
 
-            if (!string.IsNullOrWhiteSpace(MinLength?.ToString()) && Convert.ToInt32(MinLength) > value?.Length)
+            if (value is not null && int.TryParse(MinLength?.ToString(), out var minLength) && minLength > value.Length)
             {
                 validationResults.AddRange(new ValidationResult(TypeInputValidity.Error, string.Format(I18N.Translate(renderContext, "webexpress.webui:form.inputtextbox.validation.min"), MinLength)));
             }
 
-            if (!string.IsNullOrWhiteSpace(MaxLength?.ToString()) && Convert.ToInt32(MaxLength) < value?.Length)
+            if (value is not null && int.TryParse(MaxLength?.ToString(), out var maxLength) && maxLength < value.Length)
             {
                 validationResults.AddRange(new ValidationResult(TypeInputValidity.Error, string.Format(I18N.Translate(renderContext, "webexpress.webui:form.inputtextbox.validation.max"), MaxLength)));
             }

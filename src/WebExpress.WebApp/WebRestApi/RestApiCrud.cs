@@ -118,9 +118,9 @@ namespace WebExpress.WebApp.WebRestApi
                 // extract 'id' parameter if present
                 var id = request.GetParameter<ParameterId>()?.Value ?? string.Empty;
                 // current page number
-                var pageNumber = Convert.ToInt32(request.GetParameter("p")?.Value ?? "0");
+                var pageNumber = request.ParseIntParameter("p", 0);
                 // number of items per page
-                var pageSize = Convert.ToInt32(request.GetParameter("s")?.Value ?? "50");
+                var pageSize = request.ParseIntParameter("s", 50);
                 var modeParam = request.GetParameter("mode")?.Value ?? "default";
                 var mode = modeParam switch
                 {

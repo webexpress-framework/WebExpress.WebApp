@@ -122,12 +122,12 @@ namespace WebExpress.WebApp.WebRestApi
                 // clear failed attempts on successful login
                 FailedAttempts.TryRemove(normalizedUser, out _);
 
-                var sessinId = GenerateSession(identity, request);
+                var sessionId = GenerateSession(identity, request);
 
                 return new RestApiSessionResult
                 {
                     Success = true,
-                    SessionId = sessinId,
+                    SessionId = sessionId,
                     Message = I18N.Translate("webexpress.webapp:login.success")
                 }.ToResponse();
             }
