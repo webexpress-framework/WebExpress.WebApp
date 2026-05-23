@@ -119,8 +119,8 @@ namespace WebExpress.WebApp.WebControl
             var html = new HtmlElementTextContentDiv()
             {
                 Id = Id,
-                Class = Css.Concatenate("wx-webapp-tab", GetClasses()),
-                Style = GetStyles()
+                Class = Css.Concatenate("wx-webapp-tab", GetClasses(renderContext)),
+                Style = GetStyles(renderContext)
             }
                 .AddUserAttribute("data-uri", resultUri?.ToString())
                 .AddUserAttribute("data-readonly", @readonly ? "true" : null)

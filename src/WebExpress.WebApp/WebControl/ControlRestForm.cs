@@ -73,8 +73,8 @@ namespace WebExpress.WebApp.WebControl
             var form = new HtmlElementFormForm()
             {
                 Id = Id,
-                Class = Css.Concatenate("wx-webapp-restform", GetClasses()),
-                Style = GetStyles(),
+                Class = Css.Concatenate("wx-webapp-restform", GetClasses(renderContext)),
+                Style = GetStyles(renderContext),
                 Role = role
             }
                 .AddUserAttribute("data-method", method.ToString())

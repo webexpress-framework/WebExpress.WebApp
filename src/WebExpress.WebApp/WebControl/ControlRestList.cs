@@ -51,8 +51,8 @@ namespace WebExpress.WebApp.WebControl
             var html = new HtmlElementTextContentDiv()
             {
                 Id = Id,
-                Class = Css.Concatenate("wx-webapp-list", GetClasses()),
-                Style = GetStyles()
+                Class = Css.Concatenate("wx-webapp-list", GetClasses(renderContext)),
+                Style = GetStyles(renderContext)
             }
                 .AddUserAttribute("data-title", I18N.Translate(renderContext, title))
                 .AddUserAttribute("data-sortable", sortable ? "true" : null)

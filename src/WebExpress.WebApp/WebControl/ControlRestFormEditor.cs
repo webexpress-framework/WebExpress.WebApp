@@ -69,7 +69,7 @@ namespace WebExpress.WebApp.WebControl
             {
                 Id = Id,
                 Class = Css.Concatenate("wx-webapp-restform-editor", classes),
-                Style = GetStyles(),
+                Style = GetStyles(renderContext),
                 Role = role
             }
                 .AddUserAttribute("data-rest-url", restUri?.ToString())

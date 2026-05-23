@@ -53,8 +53,8 @@ namespace WebExpress.WebApp.WebControl
             var html = new HtmlElementTextContentDiv()
             {
                 Id = Id,
-                Class = Css.Concatenate("wx-webapp-quickfilter", GetClasses()),
-                Style = GetStyles()
+                Class = Css.Concatenate("wx-webapp-quickfilter", GetClasses(renderContext)),
+                Style = GetStyles(renderContext)
             }
                 .AddUserAttribute("data-uri", resultUri?.ToString())
                 .Add(items.Select(x => x.Render(renderContext, visualTree)));

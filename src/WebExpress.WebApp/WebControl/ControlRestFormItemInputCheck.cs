@@ -70,8 +70,8 @@ namespace WebExpress.WebApp.WebApiControl
 
             var html = new HtmlElementTextContentDiv()
             {
-                Class = Css.Concatenate("wx-webapp-input-check", layout?.ToClass(), inline ? "form-check-inline" : null, GetClasses()),
-                Style = GetStyles()
+                Class = Css.Concatenate("wx-webapp-input-check", layout?.ToClass(), inline ? "form-check-inline" : null, GetClasses(renderContext)),
+                Style = GetStyles(renderContext)
             }
                 .Add(new HtmlElementFieldInput()
                 {

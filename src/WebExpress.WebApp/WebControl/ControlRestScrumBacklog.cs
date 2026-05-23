@@ -103,8 +103,8 @@ namespace WebExpress.WebApp.WebControl
             var html = new HtmlElementTextContentDiv()
             {
                 Id = Id,
-                Class = Css.Concatenate("wx-webapp-scrum-backlog", GetClasses()),
-                Style = GetStyles()
+                Class = Css.Concatenate("wx-webapp-scrum-backlog", GetClasses(renderContext)),
+                Style = GetStyles(renderContext)
             }
                 .AddUserAttribute("data-rest-uri", resultUri?.ToString())
                 .AddUserAttribute("data-title", I18N.Translate(renderContext, title))

@@ -52,8 +52,8 @@ namespace WebExpress.WebApp.WebControl
             var html = new HtmlElementTextContentDiv()
             {
                 Id = Id,
-                Class = Css.Concatenate("wx-webapp-table", GetClasses()),
-                Style = GetStyles()
+                Class = Css.Concatenate("wx-webapp-table", GetClasses(renderContext)),
+                Style = GetStyles(renderContext)
             }
                 .AddUserAttribute("data-uri", resultUri?.ToString())
                 .AddUserAttribute("data-page-size", pageSize > 0 ? pageSize.ToString() : null);

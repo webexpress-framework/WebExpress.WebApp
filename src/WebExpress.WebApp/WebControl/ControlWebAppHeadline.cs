@@ -280,8 +280,8 @@ namespace WebExpress.WebApp.WebControl
             )
             {
                 Id = Id,
-                Class = Css.Concatenate("", GetClasses()),
-                Style = Style.Concatenate("display: block;", GetStyles()),
+                Class = Css.Concatenate("", GetClasses(renderContext)),
+                Style = Style.Concatenate("display: block;", GetStyles(renderContext)),
                 Role = role
             };
         }

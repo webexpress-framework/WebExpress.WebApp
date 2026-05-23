@@ -56,8 +56,8 @@ namespace WebExpress.WebApp.WebControl
             {
                 Id = Id,
                 Href = renderContext?.PageContext?.ApplicationContext?.Route?.ToString(),
-                Class = Css.Concatenate("", GetClasses()),
-                Style = Style.Concatenate("", GetStyles()),
+                Class = Css.Concatenate("", GetClasses(renderContext)),
+                Style = Style.Concatenate("", GetStyles(renderContext)),
                 Role = role
             };
         }

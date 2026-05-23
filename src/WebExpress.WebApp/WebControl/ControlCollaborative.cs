@@ -119,8 +119,8 @@ namespace WebExpress.WebApp.WebControl
             var html = new HtmlElementTextContentDiv()
             {
                 Id = Id,
-                Class = Css.Concatenate("wx-webapp-collaborative", GetClasses()),
-                Style = GetStyles(),
+                Class = Css.Concatenate("wx-webapp-collaborative", GetClasses(renderContext)),
+                Style = GetStyles(renderContext),
                 Role = role
             }
                 .AddUserAttribute("data-collaborative-presence", presence ? null : "false")

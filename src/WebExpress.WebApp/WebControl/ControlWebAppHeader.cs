@@ -16,7 +16,7 @@ namespace WebExpress.WebApp.WebControl
         public new virtual PropertyColorNavbar TextColor
         {
             get => (PropertyColorNavbar)GetPropertyObject();
-            set => SetProperty(value, () => value?.ToClass(), () => value?.ToStyle());
+            set => SetProperty(value, (renderContext) => value?.ToClass(), (renderContext) => value?.ToStyle());
         }
 
         /// <summary>
@@ -25,7 +25,7 @@ namespace WebExpress.WebApp.WebControl
         public virtual TypeFixed Fixed
         {
             get => (TypeFixed)GetProperty(TypeFixed.None);
-            set => SetProperty(value, () => value.ToClass());
+            set => SetProperty(value, (renderContext) => value.ToClass());
         }
 
         /// <summary>
@@ -34,7 +34,7 @@ namespace WebExpress.WebApp.WebControl
         public virtual TypeSticky Sticky
         {
             get => (TypeSticky)GetProperty(TypeSticky.None);
-            set => SetProperty(value, () => value.ToClass());
+            set => SetProperty(value, (renderContext) => value.ToClass());
         }
 
         /// <summary>
@@ -133,8 +133,8 @@ namespace WebExpress.WebApp.WebControl
             return new HtmlElementSectionHeader(content.Render(renderContext, visualTree))
             {
                 Id = Id,
-                Class = Css.Concatenate("navbar", GetClasses()),
-                Style = Style.Concatenate("display: block;", GetStyles()),
+                Class = Css.Concatenate("navbar", GetClasses(renderContext)),
+                Style = Style.Concatenate("display: block;", GetStyles(renderContext)),
                 Role = role
             };
         }

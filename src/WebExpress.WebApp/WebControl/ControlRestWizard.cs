@@ -113,8 +113,8 @@ namespace WebExpress.WebApp.WebControl
             var html = new HtmlElementFormForm()
             {
                 Id = Id,
-                Class = Css.Concatenate("wx-webapp-restwizard", GetClasses()),
-                Style = GetStyles(),
+                Class = Css.Concatenate("wx-webapp-restwizard", GetClasses(renderContext)),
+                Style = GetStyles(renderContext),
                 Role = role
             }
                 .AddUserAttribute("data-mode", mode.ToMode())

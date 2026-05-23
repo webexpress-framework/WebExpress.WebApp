@@ -101,8 +101,8 @@ namespace WebExpress.WebApp.WebControl
             var html = new HtmlElementTextContentDiv()
             {
                 Id = Id,
-                Class = Css.Concatenate("wx-webapp-search", GetClasses()),
-                Style = GetStyles()
+                Class = Css.Concatenate("wx-webapp-search", GetClasses(renderContext)),
+                Style = GetStyles(renderContext)
             }
                 .AddUserAttribute("data-uri", resultUri?.ToString())
                 .Add(controls.Select(x => x.Render(renderContext, visualTree)));

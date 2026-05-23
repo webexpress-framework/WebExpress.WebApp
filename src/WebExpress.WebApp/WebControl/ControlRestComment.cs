@@ -91,8 +91,8 @@ namespace WebExpress.WebApp.WebControl
             return new HtmlElementTextContentDiv()
             {
                 Id = Id,
-                Class = Css.Concatenate("wx-webapp-comment", GetClasses()),
-                Style = GetStyles(),
+                Class = Css.Concatenate("wx-webapp-comment", GetClasses(renderContext)),
+                Style = GetStyles(renderContext),
                 Role = Role?.Invoke(renderContext)
             }
                 .AddUserAttribute("data-uri", restUri?.ToString())

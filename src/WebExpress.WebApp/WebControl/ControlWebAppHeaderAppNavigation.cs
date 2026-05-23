@@ -140,8 +140,8 @@ namespace WebExpress.WebApp.WebControl
 
             return new ControlPanelOverflow(Id)
             {
-                Classes = [Css.Concatenate("wx-appnavigation", GetClasses())],
-                Styles = [GetStyles()]
+                Classes = [Css.Concatenate("wx-appnavigation", GetClasses(renderContext))],
+                Styles = [GetStyles(renderContext)]
             }
                 .Add(preferences)
                 .Add(primary)
