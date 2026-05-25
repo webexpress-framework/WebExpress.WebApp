@@ -29,6 +29,13 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, IBinding> Bind { get; set; }
 
         /// <summary>
+        /// Gets or sets a value indicating whether rows in the table can be reordered
+        /// interactively via drag-and-drop. When enabled, the client emits a PUT to the
+        /// configured REST endpoint with the new row order (see <c>RestApiTable.Configure</c>).
+        /// </summary>
+        public Func<IRenderControlContext, bool> MovableRow { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The control id.</param>
@@ -56,7 +63,8 @@ namespace WebExpress.WebApp.WebControl
                 Style = GetStyles(renderContext)
             }
                 .AddUserAttribute("data-uri", resultUri?.ToString())
-                .AddUserAttribute("data-page-size", pageSize > 0 ? pageSize.ToString() : null);
+                .AddUserAttribute("data-page-size", pageSize > 0 ? pageSize.ToString() : null)
+                .AddUserAttribute("data-movable-row", MovableRow?.Invoke(renderContext) == true ? "true" : null);
 
             bind?.ApplyUserAttributes(html);
 

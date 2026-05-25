@@ -20,5 +20,11 @@ namespace WebExpress.WebApp.WebControl
         /// Gets the binding.
         /// </summary>
         Func<IRenderControlContext, IBinding> Bind { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether rows in the table can be reordered
+        /// interactively via drag-and-drop.
+        /// </summary>
+        Func<IRenderControlContext, bool> MovableRow { get; }
     }
 }
