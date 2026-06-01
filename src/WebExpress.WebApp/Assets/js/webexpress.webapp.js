@@ -345,6 +345,10 @@ webexpress.webapp.Event = class {
     static OBSERVER_ADDED_EVENT = "webexpress.webapp.observer.added";
     // Event triggered when an observer is removed
     static OBSERVER_REMOVED_EVENT = "webexpress.webapp.observer.removed";
+    // Event triggered when a tag is added
+    static TAG_ADDED_EVENT = "webexpress.webapp.tag.added";
+    // Event triggered when a tag is removed
+    static TAG_REMOVED_EVENT = "webexpress.webapp.tag.removed";
 }
 
 // initialize the WebSocket connection after the DOM is fully loaded    

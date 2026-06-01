@@ -239,5 +239,9 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "comment.cat.hint": "Hinweis",
     "comment.cat.status": "Status-Update",
     "comment.cat.decision": "Entscheidung",
-    "comment.cat.solution": "Lösung"
+    "comment.cat.solution": "Lösung",
+
+    // tags
+    "tag.title": "Schlagwörter",
+    "tag.edit": "Schlagwörter bearbeiten"
 });

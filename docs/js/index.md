@@ -13,3 +13,4 @@ This section documents the JavaScript controllers and client-side behavior used 
 - [DropdownTheme](theme-selector.md)
 - [ObserverCtrl](observer.md)
 - [TabCtrl](tab.md)
+- [TagCtrl](tag.md)
