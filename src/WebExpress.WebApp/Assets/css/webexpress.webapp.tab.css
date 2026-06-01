@@ -1,0 +1,50 @@
+/* Drag-to-reorder affordance for ControlRestTab (MovableTab).
+   The classes below are applied by webexpress.webapp.TabCtrl at runtime to the
+   individual tab headers, so they are scoped directly (not under the host
+   element's registered class, which the controller removes on init). */
+
+.wx-webapp-tab-grip {
+    cursor: grab;
+    user-select: none;
+    margin-right: 0.35rem;
+    vertical-align: middle;
+    color: var(--bs-secondary-color, #6c757d);
+    line-height: 1;
+}
+
+.wx-webapp-tab-grip:hover {
+    color: var(--bs-body-color);
+}
+
+.wx-webapp-tab-grip:active {
+    cursor: grabbing;
+}
+
+/* show the grip and the close icon only while hovering the tab button;
+   visibility (not display) keeps the layout stable so the tab does not jump */
+.nav-link .wx-webapp-tab-grip,
+.nav-link .wx-webapp-tab-close {
+    visibility: hidden;
+}
+
+.nav-link:hover .wx-webapp-tab-grip,
+.nav-link:hover .wx-webapp-tab-close {
+    visibility: visible;
+}
+
+.wx-webapp-tab-close:hover {
+    color: var(--bs-body-color);
+}
+
+.nav-item.wx-webapp-tab-movable.wx-webapp-tab-dragging {
+    opacity: 0.5;
+}
+
+/* drop indicators on the side where the dragged tab would be inserted */
+.nav-item.wx-webapp-tab-movable.wx-webapp-tab-drop-before {
+    box-shadow: inset 2px 0 0 0 var(--bs-primary);
+}
+
+.nav-item.wx-webapp-tab-movable.wx-webapp-tab-drop-after {
+    box-shadow: inset -2px 0 0 0 var(--bs-primary);
+}

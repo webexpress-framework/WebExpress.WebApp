@@ -26,6 +26,13 @@ namespace WebExpress.WebApp.WebControl
         Func<IRenderControlContext, bool> Readonly { get; }
 
         /// <summary>
+        /// Gets a value indicating whether the tabs can be reordered via drag
+        /// and drop. When <see langword="true"/>, each tab header gets a ⠿ grip
+        /// handle and the new order is persisted to the REST endpoint.
+        /// </summary>
+        Func<IRenderControlContext, bool> MovableTab { get; }
+
+        /// <summary>
         /// Adds one or more templates to the tab control.
         /// </summary>
         /// <param name="templates">The templates to add.</param>

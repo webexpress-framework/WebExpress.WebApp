@@ -40,6 +40,14 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, bool> Readonly { get; set; }
 
         /// <summary>
+        /// Gets or sets a value indicating whether the tabs can be reordered via
+        /// drag and drop. When <see langword="true"/>, each tab header gets a ⠿
+        /// grip handle and the new order is persisted to the REST endpoint via a
+        /// <c>PUT</c> carrying the ordered tab ids.
+        /// </summary>
+        public Func<IRenderControlContext, bool> MovableTab { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The control id.</param>
@@ -96,6 +104,7 @@ namespace WebExpress.WebApp.WebControl
             var bind = Bind?.Invoke(renderContext);
             var resultUri = uri?.BindParameters(renderContext.Request);
             var @readonly = Readonly?.Invoke(renderContext) ?? false;
+            var movableTab = MovableTab?.Invoke(renderContext) ?? false;
             var fragmentManager = WebEx.ComponentHub.FragmentManager;
             var applicationContext = renderContext?.PageContext?.ApplicationContext;
 
@@ -124,6 +133,7 @@ namespace WebExpress.WebApp.WebControl
             }
                 .AddUserAttribute("data-uri", resultUri?.ToString())
                 .AddUserAttribute("data-readonly", @readonly ? "true" : null)
+                .AddUserAttribute("data-movable-tab", movableTab ? "true" : null)
                 .Add(templatePreferences.Select(x => x.Render(renderContext, visualTree)))
                 .Add(templatePrimary.Select(x => x.Render(renderContext, visualTree)))
                 .Add(_templates.Select(x => x.Render(renderContext, visualTree)))

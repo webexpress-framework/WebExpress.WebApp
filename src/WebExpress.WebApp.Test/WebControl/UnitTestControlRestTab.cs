@@ -84,5 +84,30 @@ namespace WebExpress.WebApp.Test.WebControl
             // validation
             AssertExtensions.EqualWithPlaceholders(expected, html);
         }
+
+        /// <summary>
+        /// Tests that the MovableTab flag emits a data-movable-tab attribute only when true.
+        /// </summary>
+        [Theory]
+        [InlineData(false, @"<div id=""*"" class=""wx-webapp-tab""></div>")]
+        [InlineData(true, @"<div id=""*"" class=""wx-webapp-tab"" data-movable-tab=""true""></div>")]
+        public void MovableTab(bool movable, string expected)
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlRestTab()
+            {
+                MovableTab = _ => movable
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
     }
 }

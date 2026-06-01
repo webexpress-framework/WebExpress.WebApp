@@ -12,8 +12,12 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
     // configuration
     _restUri = "";
     _readonly = false;
+    _movableTab = false;
     _templates = new Map();
     _templateOrder = [];
+
+    // drag & drop reorder state
+    _dragTabId = null;
 
     // request state
     _isLoading = false;
@@ -35,12 +39,16 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
 
         this._restUri = element.dataset.uri || "";
         this._readonly = element.dataset.readonly === "true";
+        this._movableTab = element.dataset.movableTab === "true";
 
         if (element.hasAttribute("data-uri")) {
             element.removeAttribute("data-uri");
         }
         if (element.hasAttribute("data-readonly")) {
             element.removeAttribute("data-readonly");
+        }
+        if (element.hasAttribute("data-movable-tab")) {
+            element.removeAttribute("data-movable-tab");
         }
 
         // extract and store templates
@@ -740,6 +748,11 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         // call the base class implementation first
         const li = super._buildTabHeader(tab);
 
+        // add the drag-to-reorder grip when enabled
+        if (this._movableTab && !this._readonly) {
+            this._makeTabMovable(li, tab);
+        }
+
         if (this._readonly) {
             return li;
         }
@@ -748,9 +761,11 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
 
         if (a !== null) {
             const closeBtn = document.createElement("span");
-            closeBtn.className = "ms-2 text-muted fw-bold";
+            closeBtn.className = "wx-webapp-tab-close ms-2 text-muted";
             closeBtn.style.cursor = "pointer";
-            closeBtn.textContent = "x";
+            closeBtn.title = this._i18n("webexpress.webui:close", "Close");
+            closeBtn.setAttribute("aria-label", closeBtn.title);
+            closeBtn.innerHTML = `<i class="${this._iconClass("fas fa-xmark", "wx-icon-light-xmark")}"></i>`;
 
             // attach event listener to remove the tab
             closeBtn.addEventListener("click", (e) => {
@@ -763,6 +778,232 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         }
 
         return li;
+    }
+
+    /**
+     * Adds a ⠿ drag handle to a tab header and wires the drag & drop reorder
+     * behavior. Only the grip starts a drag, so clicking the tab to select it
+     * keeps working.
+     * @param {HTMLElement} li - The tab header list item.
+     * @param {Object} tab - The Tab model.
+     */
+    _makeTabMovable(li, tab) {
+        li.classList.add("wx-webapp-tab-movable");
+
+        // ⠿ grip handle
+        const grip = document.createElement("span");
+        grip.className = "wx-webapp-tab-grip";
+        grip.textContent = "⠿";
+        grip.title = this._i18n("webexpress.webapp:tab.move", "Reorder tab");
+        grip.setAttribute("aria-label", grip.title);
+        grip.draggable = true;
+
+        // clicking the grip must not select or activate the tab
+        grip.addEventListener("click", (e) => e.stopPropagation());
+        grip.addEventListener("dragstart", (e) => this._onTabDragStart(e, tab, li));
+        grip.addEventListener("dragend", () => this._onTabDragEnd(li));
+
+        // place the grip inside the tab (nav-link), in front of icon/label,
+        // so it sits within the tab frame
+        const a = li.querySelector(".nav-link");
+        if (a !== null) {
+            a.insertBefore(grip, a.firstChild);
+        } else {
+            li.insertBefore(grip, li.firstChild);
+        }
+
+        // the whole header is a drop target
+        li.addEventListener("dragover", (e) => this._onTabDragOver(e, li));
+        li.addEventListener("drop", (e) => this._onTabDrop(e, tab, li));
+    }
+
+    /**
+     * Starts a tab drag from the grip.
+     * @param {DragEvent} e - The dragstart event.
+     * @param {Object} tab - The dragged tab model.
+     * @param {HTMLElement} li - The dragged tab header.
+     */
+    _onTabDragStart(e, tab, li) {
+        this._dragTabId = tab.id;
+        li.classList.add("wx-webapp-tab-dragging");
+
+        if (e.dataTransfer) {
+            e.dataTransfer.effectAllowed = "move";
+            try {
+                e.dataTransfer.setData("text/plain", tab.id);
+            } catch (err) {
+                // some browsers restrict setData; the drag still works via _dragTabId
+            }
+        }
+    }
+
+    /**
+     * Ends a tab drag and clears the visual state.
+     * @param {HTMLElement} li - The dragged tab header.
+     */
+    _onTabDragEnd(li) {
+        li.classList.remove("wx-webapp-tab-dragging");
+        this._clearDropIndicators();
+        this._dragTabId = null;
+    }
+
+    /**
+     * Handles dragover on a tab header, showing a drop indicator on the side
+     * the dragged tab would be inserted.
+     * @param {DragEvent} e - The dragover event.
+     * @param {HTMLElement} li - The hovered tab header.
+     */
+    _onTabDragOver(e, li) {
+        if (this._dragTabId === null) {
+            return;
+        }
+
+        e.preventDefault();
+        if (e.dataTransfer) {
+            e.dataTransfer.dropEffect = "move";
+        }
+
+        const rect = li.getBoundingClientRect();
+        const after = e.clientX > rect.left + rect.width / 2;
+
+        this._clearDropIndicators();
+        li.classList.add(after ? "wx-webapp-tab-drop-after" : "wx-webapp-tab-drop-before");
+    }
+
+    /**
+     * Handles a drop on a tab header and reorders the tabs accordingly.
+     * @param {DragEvent} e - The drop event.
+     * @param {Object} tab - The target tab model.
+     * @param {HTMLElement} li - The target tab header.
+     */
+    _onTabDrop(e, tab, li) {
+        if (this._dragTabId === null) {
+            return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const draggedId = this._dragTabId;
+        const targetId = tab.id;
+
+        this._clearDropIndicators();
+
+        if (draggedId === targetId) {
+            return;
+        }
+
+        const rect = li.getBoundingClientRect();
+        const after = e.clientX > rect.left + rect.width / 2;
+
+        this._moveTab(draggedId, targetId, after);
+    }
+
+    /**
+     * Moves a tab in the DOM and the model relative to a target tab, then
+     * persists the new order.
+     * @param {string} draggedId - The id of the dragged tab.
+     * @param {string} targetId - The id of the target tab.
+     * @param {boolean} after - Whether to insert after (true) or before (false) the target.
+     */
+    _moveTab(draggedId, targetId, after) {
+        if (this._navElement === null) {
+            return;
+        }
+
+        const draggedLi = this._findTabLi(draggedId);
+        const targetLi = this._findTabLi(targetId);
+        if (draggedLi === null || targetLi === null || draggedLi === targetLi) {
+            return;
+        }
+
+        // reorder the dom
+        if (after) {
+            targetLi.parentNode.insertBefore(draggedLi, targetLi.nextSibling);
+        } else {
+            targetLi.parentNode.insertBefore(draggedLi, targetLi);
+        }
+
+        // reorder the model
+        const fromIndex = this._tabs.findIndex((t) => t.id === draggedId);
+        if (fromIndex >= 0) {
+            const moved = this._tabs.splice(fromIndex, 1)[0];
+            let toIndex = this._tabs.findIndex((t) => t.id === targetId);
+            if (toIndex < 0) {
+                toIndex = this._tabs.length;
+            } else if (after) {
+                toIndex += 1;
+            }
+            this._tabs.splice(toIndex, 0, moved);
+        }
+
+        this._persistOrder();
+    }
+
+    /**
+     * Finds a tab header list item by its tab id.
+     * @param {string} tabId - The tab id.
+     * @returns {HTMLElement|null} The list item, or null when not found.
+     */
+    _findTabLi(tabId) {
+        if (this._navElement === null) {
+            return null;
+        }
+
+        const escaped = (window.CSS && typeof CSS.escape === "function") ? CSS.escape(tabId) : tabId;
+        const link = this._navElement.querySelector(".nav-link[data-tab-id=\"" + escaped + "\"]");
+
+        return link !== null ? link.closest("li") : null;
+    }
+
+    /**
+     * Clears all drop indicators from the tab headers.
+     */
+    _clearDropIndicators() {
+        if (this._navElement === null) {
+            return;
+        }
+
+        const marked = this._navElement.querySelectorAll(".wx-webapp-tab-drop-before, .wx-webapp-tab-drop-after");
+        for (let i = 0; i < marked.length; i++) {
+            marked[i].classList.remove("wx-webapp-tab-drop-before", "wx-webapp-tab-drop-after");
+        }
+    }
+
+    /**
+     * Persists the current tab order to the server via PUT.
+     */
+    _persistOrder() {
+        if (this._restUri === "") {
+            return;
+        }
+
+        const order = this._tabs.map((t) => t.id);
+        const fetchUrl = this._resolveUrl(this._restUri);
+
+        fetch(fetchUrl, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                action: "reorder",
+                order: order
+            })
+        })
+            .then((res) => {
+                if (res.ok === false) {
+                    throw new Error("reorder request failed: " + res.status);
+                }
+
+                // notify external components about the new order
+                this._dispatch(webexpress.webapp.Event.TAB_REORDERED_EVENT, {
+                    order: order
+                });
+            })
+            .catch((err) => {
+                console.error("failed to persist tab order:", err);
+            });
     }
 
     /**

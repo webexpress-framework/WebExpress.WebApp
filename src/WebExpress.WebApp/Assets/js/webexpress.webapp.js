@@ -303,6 +303,9 @@ webexpress.webapp.Event = class {
     static TAB_ADDED_EVENT = "webexpress.webapp.tab.added";
     // Event triggered when a tab is closed dynamically.
     static TAB_CLOSED_EVENT = "webexpress.webapp.tab.closed";
+
+    // Event triggered when the tab order changes via drag and drop
+    static TAB_REORDERED_EVENT = "webexpress.webapp.tab.reordered";
     // Event triggered when the form editor finishes loading (or reloading) a form.
     static FORM_EDITOR_LOADED_EVENT = "webexpress.webapp.formeditor.loaded";
     // Event triggered when a node is added in the form editor.

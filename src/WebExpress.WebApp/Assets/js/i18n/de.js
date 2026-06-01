@@ -241,6 +241,9 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "comment.cat.decision": "Entscheidung",
     "comment.cat.solution": "Lösung",
 
+    // tabs
+    "tab.move": "Tab verschieben",
+
     // tags
     "tag.title": "Schlagwörter",
     "tag.edit": "Schlagwörter bearbeiten"

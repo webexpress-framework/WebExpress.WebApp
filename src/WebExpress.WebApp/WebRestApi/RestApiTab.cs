@@ -173,6 +173,104 @@ namespace WebExpress.WebApp.WebRestApi
         }
 
         /// <summary>
+        /// Handles PUT requests to persist a new tab order. The request body is
+        /// expected to carry an <c>order</c> array of tab ids in their new
+        /// sequence (sent by the client-side controller when tabs are
+        /// reordered via drag and drop).
+        /// </summary>
+        /// <param name="request">The incoming REST request.</param>
+        /// <returns>HTTP 204 (No Content) on success, otherwise an error response.</returns>
+        [Method(RequestMethod.PUT)]
+        public IResponse Update(IRequest request)
+        {
+            using var context = CreateContext();
+
+            try
+            {
+                var order = ExtractOrder(request);
+                if (order is null || order.Count == 0)
+                {
+                    return new ResponseBadRequest(new StatusMessage("Missing order payload for tab reordering."));
+                }
+
+                var reordered = ReorderViews(order, context, request);
+
+                return reordered
+                    ? new ResponseNoContent()
+                    : new ResponseBadRequest(new StatusMessage("Tab reordering failed."));
+            }
+            catch (Exception ex)
+            {
+                return new ResponseBadRequest(new StatusMessage($"Error processing PUT request: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// Extracts the ordered list of tab ids from the JSON request body's
+        /// <c>order</c> array.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns>The ordered tab ids, or null when none are present.</returns>
+        protected virtual IReadOnlyList<string> ExtractOrder(IRequest request)
+        {
+            if (request is not Request typedRequest || typedRequest.Content is null || typedRequest.Content.Length == 0)
+            {
+                return null;
+            }
+
+            try
+            {
+                var json = Encoding.UTF8.GetString(typedRequest.Content);
+                if (string.IsNullOrWhiteSpace(json))
+                {
+                    return null;
+                }
+
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.TryGetProperty("order", out var orderProperty) && orderProperty.ValueKind == JsonValueKind.Array)
+                {
+                    var order = new List<string>();
+                    foreach (var element in orderProperty.EnumerateArray())
+                    {
+                        var value = element.GetString();
+                        if (!string.IsNullOrWhiteSpace(value))
+                        {
+                            order.Add(value);
+                        }
+                    }
+
+                    return order;
+                }
+            }
+            catch
+            {
+                // ignore invalid json
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Persists a new tab order. Override this method in a derived class to
+        /// implement custom reordering logic. The default implementation is a
+        /// no-op that reports failure.
+        /// </summary>
+        /// <param name="order">The ordered list of tab ids in their new sequence.</param>
+        /// <param name="context">
+        /// The context in which the query is executed. Provides additional
+        /// information or constraints for the operation. Cannot be null.
+        /// </param>
+        /// <param name="request">The incoming request.</param>
+        /// <returns>
+        /// <see langword="true"/> when the order was applied; otherwise
+        /// <see langword="false"/>.
+        /// </returns>
+        protected virtual bool ReorderViews(IReadOnlyList<string> order, IQueryContext context, IRequest request)
+        {
+            return false;
+        }
+
+        /// <summary>
         /// Creates a new instance of an object that implements the IQueryContext interface.
         /// </summary>
         /// <returns>

@@ -241,6 +241,9 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "comment.cat.decision": "Decision",
     "comment.cat.solution": "Solution",
 
+    // tabs
+    "tab.move": "Reorder tab",
+
     // tags
     "tag.title": "Tags",
     "tag.edit": "Edit tags"

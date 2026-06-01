@@ -25,6 +25,7 @@ The initial structure is defined in HTML. The root element is the tab host (`.wx
 |`data-layout` |Visual style of tabs. Supported values: `tab`, `pill`, `underline`.                                            | `data-layout="underline"`
 |`data-uri`    |The uri is used to determine the tabs.   | `/api/1/tab`
 |`data-readonly`|Disables add/close interactions when set to `true`. | `data-readonly="true"`
+|`data-movable-tab`|Enables drag-and-drop reordering of the tabs when set to `true`. Each tab header gets a ⠿ grip handle; dropping persists the new order via `PUT`. | `data-movable-tab="true"`
 
 ### Tab Template Element Attributes
 
@@ -91,6 +92,19 @@ The response must contain `newTab`:
 Closing a tab sends a `DELETE` request to:
 
 `<data-uri>?id=<tabId>`
+
+### PUT (reorder tabs)
+
+When `data-movable-tab="true"` and the user drags a tab to a new position, the controller sends a `PUT` to `<data-uri>` with the full ordered list of tab ids:
+
+```json
+{
+  "action": "reorder",
+  "order": ["tab_pirates", "tab_island", "tab_inventory", "tab_secrets"]
+}
+```
+
+The server applies the order and answers `204 No Content`. On the server side, derive from `RestApiTab<TIndexItem>` and override `ReorderViews(order, context, request)`.
 
 ## Binding Model
 
@@ -255,6 +269,9 @@ The component dispatches events for tab interactions:
 
 - `webexpress.webapp.Event.TAB_CLOSED_EVENT`  
   Fired after a tab was removed. `detail.tabId` contains the removed tab id.
+
+- `webexpress.webapp.Event.TAB_REORDERED_EVENT`  
+  Fired after the tabs were reordered via drag and drop and the new order was persisted. `detail.order` contains the array of tab ids in their new sequence.
 
 ## Use Case Example
 
