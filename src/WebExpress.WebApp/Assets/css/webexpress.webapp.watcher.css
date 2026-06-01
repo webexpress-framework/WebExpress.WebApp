@@ -1,4 +1,4 @@
-wx-observer {
+.wx-watcher {
     display: inline-flex;
     align-items: center;
     flex-wrap: wrap;
@@ -6,14 +6,14 @@ wx-observer {
     position: relative;
 }
  
-.wx-observer-row {
+.wx-watcher-row {
     display: inline-flex;
     align-items: center;
     gap: 6px;
     flex-wrap: wrap;
 }
  
-.wx-observer-avatar {
+.wx-watcher-avatar {
     width: 24px;
     height: 24px;
     border-radius: 50%;
@@ -29,16 +29,16 @@ wx-observer {
     transition: transform 0.1s, box-shadow 0.1s;
 }
  
-.wx-observer-avatar:hover {
+.wx-watcher-avatar:hover {
     transform: translateY(-1px);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
 }
  
-.wx-observer-avatar:disabled {
+.wx-watcher-avatar:disabled {
     cursor: default;
 }
  
-.wx-observer-more {
+.wx-watcher-more {
     font-size: 11px;
     color: var(--wx-webapp-text-3);
     background: var(--wx-webapp-surface-2);
@@ -48,7 +48,7 @@ wx-observer {
     font-family: var(--wx-webapp-font-mono);
 }
  
-.wx-observer-add {
+.wx-watcher-add {
     width: 24px;
     height: 24px;
     border-radius: 50%;
@@ -64,12 +64,12 @@ wx-observer {
     padding: 0;
 }
  
-.wx-observer-add:hover {
+.wx-watcher-add:hover {
     border-color: var(--wx-webapp-primary);
     color: var(--wx-webapp-primary);
 }
 
-.wx-observer-dropdown {
+.wx-watcher-dropdown {
     position: absolute;
     top: 100%;
     left: 0;
@@ -86,7 +86,7 @@ wx-observer {
     flex-direction: column;
 }
  
-.wx-observer-search {
+.wx-watcher-search {
     width: 100%;
     padding: 8px 10px;
     border: 0;
@@ -96,13 +96,13 @@ wx-observer {
     outline: none;
 }
  
-.wx-observer-results {
+.wx-watcher-results {
     overflow-y: auto;
     flex: 1;
     max-height: 260px;
 }
  
-.wx-observer-result {
+.wx-watcher-result {
     display: grid;
     grid-template-columns: 28px 1fr;
     gap: 10px;
@@ -117,15 +117,15 @@ wx-observer {
     align-items: center;
 }
  
-.wx-observer-result:last-child {
+.wx-watcher-result:last-child {
     border-bottom: 0;
 }
  
-.wx-observer-result:hover {
+.wx-watcher-result:hover {
     background: var(--wx-webapp-surface-2);
 }
  
-.wx-observer-result-avatar {
+.wx-watcher-result-avatar {
     width: 24px;
     height: 24px;
     border-radius: 50%;
@@ -137,25 +137,25 @@ wx-observer {
     color: #1d2230;
 }
  
-.wx-observer-result-body {
+.wx-watcher-result-body {
     display: flex;
     flex-direction: column;
     gap: 1px;
     min-width: 0;
 }
  
-.wx-observer-result-name {
+.wx-watcher-result-name {
     font-size: 13px;
     color: var(--wx-webapp-text);
     font-weight: 500;
 }
  
-.wx-observer-result-team {
+.wx-watcher-result-team {
     font-size: 11px;
     color: var(--wx-webapp-text-3);
 }
  
-.wx-observer-empty {
+.wx-watcher-empty {
     padding: 16px;
     text-align: center;
     color: var(--wx-webapp-text-3);

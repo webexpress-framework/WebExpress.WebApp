@@ -1,5 +1,5 @@
 /**
- * A control showing the watchers/observers of an object as a row of avatars,
+ * A control showing the watchers of an object as a row of avatars,
  * with an inline dropdown to add new ones via live search.
  *
  * Each avatar is interactive: hover for the name, click to remove (when the
@@ -7,8 +7,8 @@
  * with a search input that queries `data-users-uri` and lists candidates.
  *
  * Declarative configuration:
- *   <div class="wx-webapp-observer"
- *        data-uri="/api/observers/INC-00123"
+ *   <div class="wx-webapp-watcher"
+ *        data-uri="/api/watchers/INC-00123"
  *        data-users-uri="/api/users"></div>
  *
  * REST contract:
@@ -18,12 +18,12 @@
  *   GET  {users-uri}?q=…                    → [{ id, name, team, initials, color }]
  *
  * Events dispatched on the host element:
- *   webexpress.webapp.Event.OBSERVER_ADDED_EVENT   detail: { user }
- *   webexpress.webapp.Event.OBSERVER_REMOVED_EVENT detail: { user }
+ *   webexpress.webapp.Event.WATCHER_ADDED_EVENT   detail: { user }
+ *   webexpress.webapp.Event.WATCHER_REMOVED_EVENT detail: { user }
  */
-webexpress.webapp.ObserverCtrl = class extends webexpress.webui.Ctrl {
+webexpress.webapp.WatcherCtrl = class extends webexpress.webui.Ctrl {
     /**
-     * Construct a new ObserverCtrl.
+     * Construct a new WatcherCtrl.
      * @param {HTMLElement} element - host element.
      */
     constructor(element) {
@@ -35,7 +35,7 @@ webexpress.webapp.ObserverCtrl = class extends webexpress.webui.Ctrl {
         this._readonly = element.dataset.readonly === "true";
 
         // state
-        this._observers = [];
+        this._watchers = [];
         this._dropdownOpen = false;
         this._searchTimer = null;
 
@@ -45,7 +45,7 @@ webexpress.webapp.ObserverCtrl = class extends webexpress.webui.Ctrl {
         element.removeAttribute("data-users-uri");
         element.removeAttribute("data-max-visible");
         element.removeAttribute("data-readonly");
-        element.classList.add("wx-observer");
+        element.classList.add("wx-watcher");
 
         this._buildDom();
         this._attachEventHandlers();
@@ -57,27 +57,27 @@ webexpress.webapp.ObserverCtrl = class extends webexpress.webui.Ctrl {
      */
     _buildDom() {
         this._row = document.createElement("div");
-        this._row.className = "wx-observer-row";
+        this._row.className = "wx-watcher-row";
 
         this._addBtn = document.createElement("button");
         this._addBtn.type = "button";
-        this._addBtn.className = "wx-observer-add";
-        this._addBtn.title = this._i18n("webexpress.webapp:observer.add", "Add observer");
+        this._addBtn.className = "wx-watcher-add";
+        this._addBtn.title = this._i18n("webexpress.webapp:watcher.add", "Add watcher");
         this._addBtn.setAttribute("aria-label", this._addBtn.title);
         this._addBtn.textContent = "+";
 
         this._dropdown = document.createElement("div");
-        this._dropdown.className = "wx-observer-dropdown";
+        this._dropdown.className = "wx-watcher-dropdown";
         this._dropdown.style.display = "none";
 
         this._searchInput = document.createElement("input");
         this._searchInput.type = "text";
-        this._searchInput.className = "wx-observer-search";
-        this._searchInput.placeholder = this._i18n("webexpress.webapp:observer.search.placeholder", "Search person…");
+        this._searchInput.className = "wx-watcher-search";
+        this._searchInput.placeholder = this._i18n("webexpress.webapp:watcher.search.placeholder", "Search person…");
         this._searchInput.autocomplete = "off";
 
         this._resultsList = document.createElement("div");
-        this._resultsList.className = "wx-observer-results";
+        this._resultsList.className = "wx-watcher-results";
 
         this._dropdown.appendChild(this._searchInput);
         this._dropdown.appendChild(this._resultsList);
@@ -126,55 +126,55 @@ webexpress.webapp.ObserverCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Loads observers from the configured URI and renders them.
+     * Loads watchers from the configured URI and renders them.
      */
     async _load() {
         if (!this._uri) {
-            this._observers = [];
+            this._watchers = [];
             this._render();
             return;
         }
         try {
             const res = await fetch(this._uri, { headers: { "Accept": "application/json" } });
             if (!res.ok) throw new Error(res.statusText);
-            this._observers = await res.json();
+            this._watchers = await res.json();
         } catch (e) {
-            console.warn("ObserverCtrl: load failed", e);
-            this._observers = [];
+            console.warn("WatcherCtrl: load failed", e);
+            this._watchers = [];
         }
         this._render();
     }
 
     /**
-     * Renders the avatar row from `this._observers`.
+     * Renders the avatar row from `this._watchers`.
      */
     _render() {
         this._row.replaceChildren();
-        const visible = this._observers.slice(0, this._maxVisible);
-        const overflow = this._observers.length - visible.length;
+        const visible = this._watchers.slice(0, this._maxVisible);
+        const overflow = this._watchers.length - visible.length;
 
         for (const u of visible) {
             this._row.appendChild(this._makeAvatar(u));
         }
         if (overflow > 0) {
             const more = document.createElement("span");
-            more.className = "wx-observer-more";
+            more.className = "wx-watcher-more";
             more.textContent = "+" + overflow;
-            more.title = this._observers.slice(this._maxVisible).map(u => u.name).join(", ");
+            more.title = this._watchers.slice(this._maxVisible).map(u => u.name).join(", ");
             this._row.appendChild(more);
         }
     }
 
     /**
      * Builds a single avatar element for a user.
-     * Click on the avatar removes the observer (unless readonly).
+     * Click on the avatar removes the watcher (unless readonly).
      * @param {Object} user - The user record.
      * @returns {HTMLElement}
      */
     _makeAvatar(user) {
         const av = document.createElement("button");
         av.type = "button";
-        av.className = "wx-observer-avatar";
+        av.className = "wx-watcher-avatar";
         av.title = user.name + (user.team ? " · " + user.team : "");
         av.setAttribute("aria-label", av.title);
         av.style.background = user.color || "#888";
@@ -219,7 +219,7 @@ webexpress.webapp.ObserverCtrl = class extends webexpress.webui.Ctrl {
 
     /**
      * Queries the users-URI and renders candidate rows.
-     * Candidates that are already observers are excluded.
+     * Candidates that are already watchers are excluded.
      * @param {string} q - Free-text query.
      */
     async _search(q) {
@@ -233,29 +233,29 @@ webexpress.webapp.ObserverCtrl = class extends webexpress.webui.Ctrl {
             if (!res.ok) throw new Error(res.statusText);
             users = await res.json();
         } catch (e) {
-            console.warn("ObserverCtrl: search failed", e);
+            console.warn("WatcherCtrl: search failed", e);
         }
 
-        const known = new Set(this._observers.map(u => u.id));
+        const known = new Set(this._watchers.map(u => u.id));
         const candidates = users.filter(u => !known.has(u.id));
 
         this._resultsList.replaceChildren();
         if (candidates.length === 0) {
             const empty = document.createElement("div");
-            empty.className = "wx-observer-empty";
-            empty.textContent = this._i18n("webexpress.webapp:observer.no.matches", "No matches");
+            empty.className = "wx-watcher-empty";
+            empty.textContent = this._i18n("webexpress.webapp:watcher.no.matches", "No matches");
             this._resultsList.appendChild(empty);
             return;
         }
         for (const u of candidates) {
             const row = document.createElement("button");
             row.type = "button";
-            row.className = "wx-observer-result";
+            row.className = "wx-watcher-result";
             row.innerHTML = `
-                <span class="wx-observer-result-avatar" style="background:${u.color || "#888"}">${u.initials || (u.name || "?").slice(0, 2).toUpperCase()}</span>
-                <span class="wx-observer-result-body">
-                    <span class="wx-observer-result-name">${this._esc(u.name)}</span>
-                    ${u.team ? `<span class="wx-observer-result-team">${this._esc(u.team)}</span>` : ""}
+                <span class="wx-watcher-result-avatar" style="background:${u.color || "#888"}">${u.initials || (u.name || "?").slice(0, 2).toUpperCase()}</span>
+                <span class="wx-watcher-result-body">
+                    <span class="wx-watcher-result-name">${this._esc(u.name)}</span>
+                    ${u.team ? `<span class="wx-watcher-result-team">${this._esc(u.team)}</span>` : ""}
                 </span>
             `;
             row.addEventListener("click", () => this._add(u));
@@ -264,7 +264,7 @@ webexpress.webapp.ObserverCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Adds an observer through POST and updates the UI.
+     * Adds an watcher through POST and updates the UI.
      * @param {Object} user
      */
     async _add(user) {
@@ -280,16 +280,16 @@ webexpress.webapp.ObserverCtrl = class extends webexpress.webui.Ctrl {
             });
             if (!res.ok) throw new Error(res.statusText);
             const created = await res.json();
-            this._observers.push(created);
+            this._watchers.push(created);
             this._render();
-            this._dispatch(webexpress.webapp.Event.OBSERVER_ADDED_EVENT, { user: created });
+            this._dispatch(webexpress.webapp.Event.WATCHER_ADDED_EVENT, { user: created });
         } catch (e) {
-            console.warn("ObserverCtrl: add failed", e);
+            console.warn("WatcherCtrl: add failed", e);
         }
     }
 
     /**
-     * Removes an observer through DELETE and updates the UI.
+     * Removes an watcher through DELETE and updates the UI.
      * @param {Object} user
      */
     async _remove(user) {
@@ -299,11 +299,11 @@ webexpress.webapp.ObserverCtrl = class extends webexpress.webui.Ctrl {
         try {
             const res = await fetch(this._uri + "/" + encodeURIComponent(user.id), { method: "DELETE" });
             if (!res.ok && res.status !== 204) throw new Error(res.statusText);
-            this._observers = this._observers.filter(u => u.id !== user.id);
+            this._watchers = this._watchers.filter(u => u.id !== user.id);
             this._render();
-            this._dispatch(webexpress.webapp.Event.OBSERVER_REMOVED_EVENT, { user });
+            this._dispatch(webexpress.webapp.Event.WATCHER_REMOVED_EVENT, { user });
         } catch (e) {
-            console.warn("ObserverCtrl: remove failed", e);
+            console.warn("WatcherCtrl: remove failed", e);
         }
     }
 
@@ -317,13 +317,13 @@ webexpress.webapp.ObserverCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Gets the current list of observers.
+     * Gets the current list of watchers.
      * @returns {Array<Object>}
      */
     get value() {
-        return this._observers.slice();
+        return this._watchers.slice();
     }
 };
 
 // register for declarative auto-init
-webexpress.webui.Controller.registerClass("wx-webapp-observer", webexpress.webapp.ObserverCtrl);
+webexpress.webui.Controller.registerClass("wx-webapp-watcher", webexpress.webapp.WatcherCtrl);

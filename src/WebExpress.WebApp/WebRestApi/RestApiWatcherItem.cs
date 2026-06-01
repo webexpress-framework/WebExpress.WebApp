@@ -3,26 +3,26 @@ using System.Text.Json.Serialization;
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Represents a single observer (a.k.a. watcher) record as exposed by
+    /// Represents a single watcher (a.k.a. watcher) record as exposed by
     /// the REST API and rendered by the client-side
-    /// <c>webexpress.webapp.ObserverCtrl</c>.
+    /// <c>webexpress.webapp.WatcherCtrl</c>.
     /// </summary>
-    public class RestApiObserverItem
+    public class RestApiWatcherItem
     {
         /// <summary>
-        /// Gets or sets the unique identifier of the observer.
+        /// Gets or sets the unique identifier of the watcher.
         /// </summary>
         [JsonPropertyName("id")]
         public string Id { get; set; }
 
         /// <summary>
-        /// Gets or sets the display name of the observer.
+        /// Gets or sets the display name of the watcher.
         /// </summary>
         [JsonPropertyName("name")]
         public string Name { get; set; }
 
         /// <summary>
-        /// Gets or sets the optional team or group label of the observer.
+        /// Gets or sets the optional team or group label of the watcher.
         /// </summary>
         [JsonPropertyName("team")]
         public string Team { get; set; }

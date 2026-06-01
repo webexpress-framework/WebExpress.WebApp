@@ -7,16 +7,16 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Renders the host element for an observer (watcher) avatar row. The
+    /// Renders the host element for an watcher avatar row. The
     /// control only emits the placeholder div; the actual avatar row, the
     /// "+" affordance and the search dropdown are built by the client-side
-    /// <c>webexpress.webapp.ObserverCtrl</c>, which talks to the configured
-    /// REST endpoint to load, add and remove observers.
+    /// <c>webexpress.webapp.WatcherCtrl</c>, which talks to the configured
+    /// REST endpoint to load, add and remove watchers.
     /// </summary>
-    public class ControlRestObserver : Control
+    public class ControlRestWatcher : Control
     {
         /// <summary>
-        /// Gets or sets the REST URI that backs this observer surface. The
+        /// Gets or sets the REST URI that backs this watcher surface. The
         /// JS controller issues
         /// <c>GET/POST {Uri}</c> and
         /// <c>DELETE {Uri}/{userId}</c>.
@@ -48,7 +48,7 @@ namespace WebExpress.WebApp.WebControl
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">Optional host element id.</param>
-        public ControlRestObserver(string id = null)
+        public ControlRestWatcher(string id = null)
             : base(id)
         {
         }
@@ -75,7 +75,7 @@ namespace WebExpress.WebApp.WebControl
             return new HtmlElementTextContentDiv()
             {
                 Id = Id,
-                Class = Css.Concatenate("wx-webapp-observer", GetClasses(renderContext)),
+                Class = Css.Concatenate("wx-webapp-watcher", GetClasses(renderContext)),
                 Style = GetStyles(renderContext),
                 Role = Role?.Invoke(renderContext)
             }

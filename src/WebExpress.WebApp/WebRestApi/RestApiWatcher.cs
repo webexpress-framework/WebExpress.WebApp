@@ -14,10 +14,10 @@ using WebExpress.WebIndex.Wql;
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Abstract base class for an observer (watcher) REST endpoint.
+    /// Abstract base class for an watcher REST endpoint.
     /// </summary>
     /// <typeparam name="TIndexItem">Type of the index item.</typeparam>
-    public abstract class RestApiObserver<TIndexItem> : IRestApi
+    public abstract class RestApiWatcher<TIndexItem> : IRestApi
         where TIndexItem : IIndexItem
     {
         private static readonly JsonSerializerOptions _jsonOptions = new()
@@ -28,7 +28,7 @@ namespace WebExpress.WebApp.WebRestApi
 
         /// <summary>
         /// Handles the <c>GET</c> entry point. Returns the full list of
-        /// observers attached to the entity addressed by the request.
+        /// watchers attached to the entity addressed by the request.
         /// </summary>
         /// <param name="request">The incoming request.</param>
         /// <returns>The HTTP response.</returns>
@@ -63,9 +63,9 @@ namespace WebExpress.WebApp.WebRestApi
                 query = query.WithPaging(pageNumber * pageSize, pageSize);
 
                 using var context = CreateContext();
-                var observers = RetrieveObservers(query, context, request) ?? [];
+                var watchers = RetrieveWatchers(query, context, request) ?? [];
 
-                return Json(observers);
+                return Json(watchers);
             }
             catch (Exception ex)
             {
@@ -74,7 +74,7 @@ namespace WebExpress.WebApp.WebRestApi
         }
 
         /// <summary>
-        /// Handles <c>POST {base}</c>: adds an observer.
+        /// Handles <c>POST {base}</c>: adds an watcher.
         /// </summary>
         /// <param name="request">The incoming request.</param>
         /// <returns>The HTTP response.</returns>
@@ -90,13 +90,13 @@ namespace WebExpress.WebApp.WebRestApi
                     return new ResponseNotFound();
                 }
 
-                var payload = GetPayload<RestApiObserverPayload>(request);
+                var payload = GetPayload<RestApiWatcherPayload>(request);
                 if (payload is null || string.IsNullOrWhiteSpace(payload.UserId))
                 {
                     return new ResponseBadRequest(new StatusMessage("missing or invalid payload."));
                 }
 
-                var added = AddObserver(payload.UserId, context, request);
+                var added = AddWatcher(payload.UserId, context, request);
                 return added is null
                     ? new ResponseNotFound()
                     : Json(added);
@@ -108,7 +108,7 @@ namespace WebExpress.WebApp.WebRestApi
         }
 
         /// <summary>
-        /// Handles <c>DELETE {base}/{userId}</c>: removes an observer.
+        /// Handles <c>DELETE {base}/{userId}</c>: removes an watcher.
         /// </summary>
         /// <param name="request">The incoming request.</param>
         /// <returns>The HTTP response.</returns>
@@ -124,7 +124,7 @@ namespace WebExpress.WebApp.WebRestApi
                     return new ResponseNotFound();
                 }
 
-                var removed = RemoveObserver(segments[0], context, request);
+                var removed = RemoveWatcher(segments[0], context, request);
                 return removed
                     ? new ResponseNoContent()
                     : new ResponseNotFound();
@@ -147,7 +147,7 @@ namespace WebExpress.WebApp.WebRestApi
         }
 
         /// <summary>
-        /// Returns the current set of observers to be rendered by the
+        /// Returns the current set of watchers to be rendered by the
         /// client-side controller.
         /// </summary>
         /// <param name="query">
@@ -160,11 +160,11 @@ namespace WebExpress.WebApp.WebRestApi
         /// be null.
         /// </param>
         /// <param name="request">The incoming request.</param>
-        /// <returns>The observers.</returns>
-        protected abstract IEnumerable<RestApiObserverItem> RetrieveObservers(IQuery<TIndexItem> query, IQueryContext context, IRequest request);
+        /// <returns>The watchers.</returns>
+        protected abstract IEnumerable<RestApiWatcherItem> RetrieveWatchers(IQuery<TIndexItem> query, IQueryContext context, IRequest request);
 
         /// <summary>
-        /// Persists a newly added observer.
+        /// Persists a newly added watcher.
         /// </summary>
         /// <param name="userId">The id of the user to be added.</param>
         /// <param name="context">
@@ -174,13 +174,13 @@ namespace WebExpress.WebApp.WebRestApi
         /// </param>
         /// <param name="request">The incoming request.</param>
         /// <returns>
-        /// The added observer record, or <see langword="null"/> when the 
+        /// The added watcher record, or <see langword="null"/> when the 
         /// user cannot be resolved.
         /// </returns>
-        protected abstract RestApiObserverItem AddObserver(string userId, IQueryContext context, IRequest request);
+        protected abstract RestApiWatcherItem AddWatcher(string userId, IQueryContext context, IRequest request);
 
         /// <summary>
-        /// Removes an observer.
+        /// Removes an watcher.
         /// </summary>
         /// <param name="userId">The id of the user to be removed.</param>
         /// <param name="context">
@@ -190,9 +190,9 @@ namespace WebExpress.WebApp.WebRestApi
         /// </param>
         /// <param name="request">The incoming request.</param>
         /// <returns>
-        /// <see langword="true"/> when the observer existed and was removed.
+        /// <see langword="true"/> when the watcher existed and was removed.
         /// </returns>
-        protected abstract bool RemoveObserver(string userId, IQueryContext context, IRequest request);
+        protected abstract bool RemoveWatcher(string userId, IQueryContext context, IRequest request);
 
         /// <summary>
         /// Applies filtering criteria to the specified query based on the provided WQL statement.

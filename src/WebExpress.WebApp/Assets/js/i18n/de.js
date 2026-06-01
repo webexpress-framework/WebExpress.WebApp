@@ -188,13 +188,13 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "scrum.field.capacity": "Kapazität (Pts)",
     "scrum.dialog.create": "Erstellen",
 
-    // observer
-    "observer.title": "Beobachter",
-    "observer.add": "Beobachter hinzufügen",
-    "observer.remove": "Beobachter entfernen",
-    "observer.search.placeholder": "Person suchen…",
-    "observer.empty": "Keine Beobachter",
-    "observer.no.matches": "Keine Treffer",
+    // watcher
+    "watcher.title": "Beobachter",
+    "watcher.add": "Beobachter hinzufügen",
+    "watcher.remove": "Beobachter entfernen",
+    "watcher.search.placeholder": "Person suchen…",
+    "watcher.empty": "Keine Beobachter",
+    "watcher.no.matches": "Keine Treffer",
 
     // commnts
     "comment.title": "Kommentare",

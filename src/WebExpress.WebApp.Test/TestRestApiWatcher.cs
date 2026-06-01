@@ -6,32 +6,32 @@ using WebExpress.WebIndex.Queries;
 namespace WebExpress.WebApp.Test
 {
     /// <summary>
-    /// Provides a minimal in-memory implementation of <see cref="RestApiObserver"/>
+    /// Provides a minimal in-memory implementation of <see cref="RestApiWatcher"/>
     /// used to exercise the base class's HTTP wiring and sub-path routing.
     /// </summary>
-    public sealed class TestRestApiObserver : RestApiObserver<TestIndexItem>
+    public sealed class TestRestApiWatcher : RestApiWatcher<TestIndexItem>
     {
-        private readonly List<RestApiObserverItem> _observers;
-        private readonly IDictionary<string, RestApiObserverItem> _directory;
+        private readonly List<RestApiWatcherItem> _watchers;
+        private readonly IDictionary<string, RestApiWatcherItem> _directory;
 
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
-        /// <param name="seed">Optional seed of pre-existing observers.</param>
-        /// <param name="directory">Optional directory of resolvable users (id → record). When omitted, the seeded observers themselves act as the directory.</param>
-        public TestRestApiObserver(IEnumerable<RestApiObserverItem> seed = null, IDictionary<string, RestApiObserverItem> directory = null)
+        /// <param name="seed">Optional seed of pre-existing watchers.</param>
+        /// <param name="directory">Optional directory of resolvable users (id → record). When omitted, the seeded watchers themselves act as the directory.</param>
+        public TestRestApiWatcher(IEnumerable<RestApiWatcherItem> seed = null, IDictionary<string, RestApiWatcherItem> directory = null)
         {
-            _observers = seed?.ToList() ?? [];
-            _directory = directory ?? _observers.ToDictionary(x => x.Id, x => x);
+            _watchers = seed?.ToList() ?? [];
+            _directory = directory ?? _watchers.ToDictionary(x => x.Id, x => x);
         }
 
         /// <summary>
-        /// Gets the observers currently held in memory.
+        /// Gets the watchers currently held in memory.
         /// </summary>
-        public IReadOnlyList<RestApiObserverItem> Observers => _observers;
+        public IReadOnlyList<RestApiWatcherItem> Watchers => _watchers;
 
         /// <summary>
-        /// Returns the current set of observers to be rendered by the
+        /// Returns the current set of watchers to be rendered by the
         /// client-side controller.
         /// </summary>
         /// <param name="query">
@@ -44,11 +44,11 @@ namespace WebExpress.WebApp.Test
         /// be null.
         /// </param>
         /// <param name="request">The incoming request.</param>
-        /// <returns>The observers.</returns>
-        protected override IEnumerable<RestApiObserverItem> RetrieveObservers(IQuery<TestIndexItem> query, IQueryContext context, IRequest request) => _observers;
+        /// <returns>The watchers.</returns>
+        protected override IEnumerable<RestApiWatcherItem> RetrieveWatchers(IQuery<TestIndexItem> query, IQueryContext context, IRequest request) => _watchers;
 
         /// <summary>
-        /// Persists a newly added observer.
+        /// Persists a newly added watcher.
         /// </summary>
         /// <param name="userId">The id of the user to be added.</param>
         /// <param name="context">
@@ -58,27 +58,27 @@ namespace WebExpress.WebApp.Test
         /// </param>
         /// <param name="request">The incoming request.</param>
         /// <returns>
-        /// The added observer record, or <see langword="null"/> when the 
+        /// The added watcher record, or <see langword="null"/> when the 
         /// user cannot be resolved.
         /// </returns>
-        protected override RestApiObserverItem AddObserver(string userId, IQueryContext context, IRequest request)
+        protected override RestApiWatcherItem AddWatcher(string userId, IQueryContext context, IRequest request)
         {
             if (!_directory.TryGetValue(userId, out var user))
             {
                 return null;
             }
 
-            if (_observers.Any(x => x.Id == userId))
+            if (_watchers.Any(x => x.Id == userId))
             {
                 return user;
             }
 
-            _observers.Add(user);
+            _watchers.Add(user);
             return user;
         }
 
         /// <summary>
-        /// Removes an observer.
+        /// Removes an watcher.
         /// </summary>
         /// <param name="userId">The id of the user to be removed.</param>
         /// <param name="context">
@@ -88,17 +88,17 @@ namespace WebExpress.WebApp.Test
         /// </param>
         /// <param name="request">The incoming request.</param>
         /// <returns>
-        /// <see langword="true"/> when the observer existed and was removed.
+        /// <see langword="true"/> when the watcher existed and was removed.
         /// </returns>
-        protected override bool RemoveObserver(string userId, IQueryContext context, IRequest request)
+        protected override bool RemoveWatcher(string userId, IQueryContext context, IRequest request)
         {
-            var existing = _observers.FirstOrDefault(x => x.Id == userId);
+            var existing = _watchers.FirstOrDefault(x => x.Id == userId);
             if (existing is null)
             {
                 return false;
             }
 
-            _observers.Remove(existing);
+            _watchers.Remove(existing);
             return true;
         }
     }

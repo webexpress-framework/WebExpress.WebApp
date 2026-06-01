@@ -7,27 +7,27 @@ namespace WebExpress.WebApp.Test.WebRestApi
 {
     /// <summary>
     /// Provides unit tests for verifying the behavior of the
-    /// <see cref="RestApiObserver"/> abstract endpoint, exercised through
-    /// the in-memory <see cref="TestRestApiObserver"/> implementation.
+    /// <see cref="RestApiWatcher"/> abstract endpoint, exercised through
+    /// the in-memory <see cref="TestRestApiWatcher"/> implementation.
     /// </summary>
     [Collection("NonParallelTests")]
-    public class UnitTestRestApiObserver
+    public class UnitTestRestApiWatcher
     {
         /// <summary>
         /// Verifies that <c>GET</c> returns the full list of seeded
-        /// observers as a flat JSON array.
+        /// watchers as a flat JSON array.
         /// </summary>
         [Fact]
-        public void Retrieve_ReturnsSeededObservers()
+        public void Retrieve_ReturnsSeededWatchers()
         {
             // arrange
             _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
-            var seed = new List<RestApiObserverItem>
+            var seed = new List<RestApiWatcherItem>
             {
                 new() { Id = "u1", Name = "Guybrush",   Team = "Pirate", Initials = "GT", Color = "#1d4ed8" },
                 new() { Id = "u2", Name = "Elaine",     Team = "Governor", Initials = "EM", Color = "#7c3aed" }
             };
-            var api = new TestRestApiObserver(seed);
+            var api = new TestRestApiWatcher(seed);
             var request = UnitTestControlFixture.CreateRequestMock("", "https://example.com/");
 
             // act
@@ -56,7 +56,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
         {
             // arrange
             _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
-            var api = new TestRestApiObserver();
+            var api = new TestRestApiWatcher();
             var request = UnitTestControlFixture.CreateRequestMock("", "https://example.com/u1");
 
             // act
@@ -69,18 +69,18 @@ namespace WebExpress.WebApp.Test.WebRestApi
 
         /// <summary>
         /// Verifies that <c>POST</c> resolves the user id against the
-        /// directory and appends the observer to the backing store.
+        /// directory and appends the watcher to the backing store.
         /// </summary>
         [Fact]
-        public void Create_AddsObserver()
+        public void Create_AddsWatcher()
         {
             // arrange
             _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
-            var directory = new Dictionary<string, RestApiObserverItem>
+            var directory = new Dictionary<string, RestApiWatcherItem>
             {
                 ["u1"] = new() { Id = "u1", Name = "Guybrush", Team = "Pirate", Initials = "GT", Color = "#1d4ed8" }
             };
-            var api = new TestRestApiObserver(directory: directory);
+            var api = new TestRestApiWatcher(directory: directory);
             var request = UnitTestControlFixture.CreateRequestMock
             (
                 "POST / HTTP/1.1\r\n" +
@@ -104,7 +104,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             Assert.Equal("u1", root.GetProperty("id").GetString());
             Assert.Equal("Guybrush", root.GetProperty("name").GetString());
 
-            Assert.Single(api.Observers);
+            Assert.Single(api.Watchers);
         }
 
         /// <summary>
@@ -115,7 +115,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
         {
             // arrange
             _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
-            var api = new TestRestApiObserver();
+            var api = new TestRestApiWatcher();
             var request = UnitTestControlFixture.CreateRequestMock
             (
                 "POST / HTTP/1.1\r\n" +
@@ -142,7 +142,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
         {
             // arrange
             _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
-            var api = new TestRestApiObserver();
+            var api = new TestRestApiWatcher();
             var request = UnitTestControlFixture.CreateRequestMock("", "https://example.com/");
 
             // act
@@ -155,18 +155,18 @@ namespace WebExpress.WebApp.Test.WebRestApi
 
         /// <summary>
         /// Verifies that <c>DELETE {userId}</c> returns 204 when the
-        /// observer existed and removes it from the backing store.
+        /// watcher existed and removes it from the backing store.
         /// </summary>
         [Fact]
-        public void Delete_RemovesExistingObserver()
+        public void Delete_RemovesExistingWatcher()
         {
             // arrange
             _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
-            var seed = new List<RestApiObserverItem>
+            var seed = new List<RestApiWatcherItem>
             {
                 new() { Id = "u1", Name = "Guybrush", Team = "Pirate", Initials = "GT", Color = "#1d4ed8" }
             };
-            var api = new TestRestApiObserver(seed);
+            var api = new TestRestApiWatcher(seed);
             var request = UnitTestControlFixture.CreateRequestMock("", "https://example.com/u1");
 
             // act
@@ -175,7 +175,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             // validation
             Assert.NotNull(result);
             Assert.Equal(204, result.Status);
-            Assert.Empty(api.Observers);
+            Assert.Empty(api.Watchers);
         }
 
         /// <summary>
@@ -187,11 +187,11 @@ namespace WebExpress.WebApp.Test.WebRestApi
         {
             // arrange
             _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
-            var seed = new List<RestApiObserverItem>
+            var seed = new List<RestApiWatcherItem>
             {
                 new() { Id = "u1", Name = "Guybrush", Team = "Pirate", Initials = "GT", Color = "#1d4ed8" }
             };
-            var api = new TestRestApiObserver(seed);
+            var api = new TestRestApiWatcher(seed);
             var request = UnitTestControlFixture.CreateRequestMock("", "https://example.com/ghost");
 
             // act
@@ -200,7 +200,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             // validation
             Assert.NotNull(result);
             Assert.Equal(404, result.Status);
-            Assert.Single(api.Observers);
+            Assert.Single(api.Watchers);
         }
 
         /// <summary>
@@ -211,7 +211,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
         {
             // arrange
             _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
-            var api = new TestRestApiObserver();
+            var api = new TestRestApiWatcher();
             var request = UnitTestControlFixture.CreateRequestMock("", "https://example.com/");
 
             // act

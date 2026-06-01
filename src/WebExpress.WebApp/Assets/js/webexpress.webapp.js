@@ -341,10 +341,10 @@ webexpress.webapp.Event = class {
     static COMMENT_REACTION_EVENT = "webexpress.webapp.comment.reaction";
     // Event triggered when a reply is added to a comment
     static COMMENT_REPLY_EVENT = "webexpress.webapp.comment.reply";
-    // Event triggered when an observer is added
-    static OBSERVER_ADDED_EVENT = "webexpress.webapp.observer.added";
-    // Event triggered when an observer is removed
-    static OBSERVER_REMOVED_EVENT = "webexpress.webapp.observer.removed";
+    // Event triggered when a watcher is added
+    static WATCHER_ADDED_EVENT = "webexpress.webapp.watcher.added";
+    // Event triggered when a watcher is removed
+    static WATCHER_REMOVED_EVENT = "webexpress.webapp.watcher.removed";
     // Event triggered when a tag is added
     static TAG_ADDED_EVENT = "webexpress.webapp.tag.added";
     // Event triggered when a tag is removed
