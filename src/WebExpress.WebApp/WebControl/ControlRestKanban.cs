@@ -17,6 +17,26 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, IUri> RestUri { get; set; }
 
         /// <summary>
+        /// Gets or sets a value indicating whether the column headers can be
+        /// renamed inline (smart-edit). The new column layout is persisted to
+        /// the REST endpoint.
+        /// </summary>
+        public Func<IRenderControlContext, bool> EditableColumn { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the columns can be reordered
+        /// via drag and drop (⠿ grip). The new order is persisted to the REST
+        /// endpoint.
+        /// </summary>
+        public Func<IRenderControlContext, bool> MovableColumn { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the columns can be deleted.
+        /// The new column layout is persisted to the REST endpoint.
+        /// </summary>
+        public Func<IRenderControlContext, bool> DeletableColumn { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The control id.</param>
@@ -35,6 +55,9 @@ namespace WebExpress.WebApp.WebControl
         {
             var uri = RestUri?.Invoke(renderContext);
             var resultUri = uri?.BindParameters(renderContext.Request);
+            var editableColumn = EditableColumn?.Invoke(renderContext) ?? false;
+            var movableColumn = MovableColumn?.Invoke(renderContext) ?? false;
+            var deletableColumn = DeletableColumn?.Invoke(renderContext) ?? false;
 
             var html = new HtmlElementTextContentDiv()
             {
@@ -42,7 +65,10 @@ namespace WebExpress.WebApp.WebControl
                 Class = Css.Concatenate("wx-webapp-kanban", GetClasses(renderContext)),
                 Style = GetStyles(renderContext)
             }
-                .AddUserAttribute("data-uri", resultUri?.ToString());
+                .AddUserAttribute("data-uri", resultUri?.ToString())
+                .AddUserAttribute("data-editable-column", editableColumn ? "true" : null)
+                .AddUserAttribute("data-movable-column", movableColumn ? "true" : null)
+                .AddUserAttribute("data-deletable-column", deletableColumn ? "true" : null);
 
             return html;
         }

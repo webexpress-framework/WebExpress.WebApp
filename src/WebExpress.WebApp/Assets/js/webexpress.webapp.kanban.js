@@ -143,6 +143,17 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
                 this._sendStateToServer(payload);
             }
         });
+
+        // column rename / reorder / delete is dispatched as a change-value event
+        const changeEvent = (evRoot && evRoot.CHANGE_VALUE_EVENT) ? evRoot.CHANGE_VALUE_EVENT : "webexpress.webui.change.value";
+        element.addEventListener(changeEvent, (e) => {
+            if (e.detail && e.detail.id === this._element.id && e.detail.action === "columns") {
+                this._sendStateToServer({
+                    action: "columns",
+                    columns: e.detail.columns
+                });
+            }
+        });
     }
 
     /**

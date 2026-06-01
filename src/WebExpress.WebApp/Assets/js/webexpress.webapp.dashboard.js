@@ -116,7 +116,9 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
             if (e.detail && e.detail.id === this._element.id) {
                 const payload = {
                     action: e.detail.action,
-                    layout: e.detail.layout
+                    layout: e.detail.layout,
+                    // column rename / reorder / delete carries the full column list
+                    columns: e.detail.columns
                 };
                 this._sendStateToServer(payload);
             }

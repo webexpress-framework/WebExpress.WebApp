@@ -244,6 +244,11 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     // tabs
     "tab.move": "Tab verschieben",
 
+    // columns (dashboard / kanban)
+    "column.edit": "Spalte umbenennen",
+    "column.move": "Spalte verschieben",
+    "column.delete": "Spalte löschen",
+
     // tags
     "tag.title": "Schlagwörter",
     "tag.edit": "Schlagwörter bearbeiten"

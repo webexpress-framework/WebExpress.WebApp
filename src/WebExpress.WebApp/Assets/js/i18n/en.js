@@ -244,6 +244,11 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     // tabs
     "tab.move": "Reorder tab",
 
+    // columns (dashboard / kanban)
+    "column.edit": "Rename column",
+    "column.move": "Reorder column",
+    "column.delete": "Delete column",
+
     // tags
     "tag.title": "Tags",
     "tag.edit": "Edit tags"
