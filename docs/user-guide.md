@@ -7,8 +7,8 @@ features. Follow the links below to begin your journey.
 # Getting started
 To get started with `WebExpress.WebApp`, use the following guides:
 
-- [Installation Guide](https://github.com/webexpress-framework/WebExpress/blob/main/doc/installation_guide.md) 
-- [Development Guide](https://github.com/webexpress-framework/WebExpress/blob/main/doc/development_guide.md)
+- [Installation Guide](https://github.com/webexpress-framework/WebExpress/blob/main/docs/installation_guide.md) 
+- [Development Guide](https://github.com/webexpress-framework/WebExpress/blob/main/docs/development_guide.md)
 - [WebExpress.WebCore API Documentation](https://webexpress-framework.github.io/WebExpress.WebCore/) 
 - [WebExpress.WebUI API Documentation](https://webexpress-framework.github.io/WebExpress.WebUI/) 
 - [WebExpress.WebApp API Documentation](https://webexpress-framework.github.io/WebExpress.WebApp/) 
