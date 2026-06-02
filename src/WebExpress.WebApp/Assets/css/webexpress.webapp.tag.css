@@ -35,7 +35,9 @@
 /* editable tag surface inside the modal: autocomplete dropdown
    (display is set explicitly so it overrides the inherited WebUI
    ".wx-tag > ul { display: inline-flex }" rule; the JS toggles visibility via
-   the inline style display:none) */
+   the inline style display:none). The host modal is opened non-scrollable (see
+   TagCtrl._openEditor / ModalCtrl data-scrollable) so the modal body does not
+   clip this absolutely positioned overlay. */
 .wx-webapp-tag-editor {
     position: relative;
 }
@@ -46,7 +48,7 @@
     left: 0;
     right: 0;
     top: 100%;
-    z-index: 1080; /* above the bootstrap modal */
+    z-index: 1080; /* above sibling modal content */
     margin: 0.125rem 0 0 0;
     padding: 0.25rem 0;
     list-style: none;

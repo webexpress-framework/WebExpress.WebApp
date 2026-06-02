@@ -391,6 +391,7 @@ webexpress.webapp.TagCtrl = class extends webexpress.webui.TagCtrl {
         }
         content.appendChild(editorHost);
         host.appendChild(content);
+        host.setAttribute("data-scrollable", "false");
 
         document.body.appendChild(host);
 
