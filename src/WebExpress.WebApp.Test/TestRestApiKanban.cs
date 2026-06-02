@@ -22,6 +22,27 @@ namespace WebExpress.WebApp.Test
         }
 
         /// <summary>
+        /// Gets the action of the most recent column-layout update.
+        /// </summary>
+        public string LastAction { get; private set; }
+
+        /// <summary>
+        /// Gets the columns of the most recent column-layout update.
+        /// </summary>
+        public IReadOnlyList<RestApiLayoutColumn> LastColumns { get; private set; }
+
+        /// <summary>
+        /// Captures the column-layout update for verification.
+        /// </summary>
+        /// <param name="layout">The layout payload.</param>
+        /// <param name="request">The incoming request.</param>
+        protected override void UpdtaeColumns(RestApiDashboardLayout layout, IRequest request)
+        {
+            LastAction = layout?.Action;
+            LastColumns = layout?.Columns;
+        }
+
+        /// <summary>
         /// Retrieves the collection of dashboard columns.
         /// </summary>
         /// <param name="request">

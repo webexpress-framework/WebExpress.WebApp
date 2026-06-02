@@ -57,5 +57,41 @@ namespace WebExpress.WebApp.Test.WebRestApi
             var cards = root.GetProperty("items").EnumerateArray().ToList();
             Assert.Empty(cards);
         }
+
+        /// <summary>
+        /// Verifies that a PUT carrying a column-layout change (rename / reorder /
+        /// delete) reaches the column-update hook with the ordered column list.
+        /// </summary>
+        [Fact]
+        public void UpdateColumnLayout()
+        {
+            // arrange
+            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var api = new TestRestApiKanban();
+            var request = UnitTestControlFixture.CreateRequestMock
+            (
+                "PUT / HTTP/1.1\r\n" +
+                "Host: localhost\r\n" +
+                "Content-Type: application/json\r\n" +
+                "\r\n" +
+                "{\"action\":\"columns\",\"columns\":[{\"id\":\"a\",\"title\":\"Alpha\",\"size\":\"1fr\"},{\"id\":\"b\",\"title\":\"Beta\"}]}",
+                "https://example.com/"
+            );
+
+            // act
+            var result = api.Update(request);
+
+            // validation
+            Assert.NotNull(result);
+            Assert.Equal(200, result.Status);
+            Assert.Equal("columns", api.LastAction);
+            Assert.NotNull(api.LastColumns);
+            Assert.Equal(2, api.LastColumns.Count);
+            Assert.Equal("a", api.LastColumns[0].Id);
+            Assert.Equal("Alpha", api.LastColumns[0].Title);
+            Assert.Equal("1fr", api.LastColumns[0].Size);
+            Assert.Equal("b", api.LastColumns[1].Id);
+            Assert.Equal("Beta", api.LastColumns[1].Title);
+        }
     }
 }

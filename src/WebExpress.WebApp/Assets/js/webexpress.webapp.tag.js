@@ -75,33 +75,10 @@ webexpress.webapp.TagEditorCtrl = class extends webexpress.webui.InputTagCtrl {
         };
         document.addEventListener("click", this._outsideClickHandler);
 
-        // initial load of the existing tags
-        if (this._apiEndpoint) {
-            this._loadTags();
-        }
-    }
-
-    /**
-     * Loads the tags currently attached to the object from the REST endpoint.
-     * @returns {Promise<void>} Resolves when the tags are loaded.
-     */
-    async _loadTags() {
-        try {
-            const res = await fetch(this._apiEndpoint, {
-                method: "GET",
-                headers: { "Accept": "application/json" }
-            });
-
-            if (!res.ok) {
-                throw new Error("http " + res.status);
-            }
-
-            const json = await res.json();
-            // assigning to value re-renders via the base setter
-            this.value = webexpress.webapp._toTagValues(json);
-        } catch (err) {
-            console.error("failed to load tags:", err);
-        }
+        // no initial GET here: the outer TagCtrl seeds the editor with the
+        // current tags via the data-value attribute, so re-fetching the same
+        // list on every modal open would be a redundant round-trip. additions
+        // and deletions are still persisted through POST / DELETE below.
     }
 
     /**
