@@ -9,19 +9,9 @@
  * - webexpress.webui.Event.DATA_ARRIVED_EVENT
  */
 webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
-    _search = "";
-    _wql = "";
-    _filter = "";
-    _page = 0;
-    _pageSize = 50;
-    _items = {};
-
-    _orderBy = null;
-    _orderDir = null;
-
     _restUri = "";
     _progressDiv = this._createProgressDiv();
-    
+
     /**
      * Constructor for the REST ListCtrl.
      * @param {HTMLElement} element The host element.
@@ -29,10 +19,30 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
     constructor(element) {
         super(element);
 
+        // canonical state for the list: a single source of truth that the
+        // accessors below read from and write to. seeded from the optional
+        // data-wx-state island.
+        this._store = new webexpress.webapp.Store(Object.assign({
+            search: "",
+            wql: "",
+            filter: "",
+            page: 0,
+            pageSize: 50,
+            orderBy: null,
+            orderDir: null,
+            total: 0,
+            loading: false,
+            error: null
+        }, webexpress.webapp.Data.readState(element)));
+
         // read rest uri and clean attribute
-        this._restUri = element.dataset.uri || "";
         element.removeAttribute("data-uri");
-        
+
+        // data service: the configured island authored in C# through .Service().
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+        this._service = islandServices.data;
+        this._restUri = this._service ? this._service.baseUri : "";
+
         element.className = "wx-list";
 
         // insert progress at top
@@ -56,103 +66,107 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
         });
 
         this._initPager(element);
-        
+
         // initial data load
-        this._receiveData();
+        this._load();
     }
 
+    // state accessors backed by the store, so the single source of truth is the
+    // store while the inherited pager and selection logic keeps reading fields
+
+    get _search() { return this._store.getState().search; }
+    set _search(value) { this._store.setState({ search: value }); }
+
+    get _wql() { return this._store.getState().wql; }
+    set _wql(value) { this._store.setState({ wql: value }); }
+
+    get _filter() { return this._store.getState().filter; }
+    set _filter(value) { this._store.setState({ filter: value }); }
+
+    get _page() { return this._store.getState().page; }
+    set _page(value) { this._store.setState({ page: value }); }
+
+    get _pageSize() { return this._store.getState().pageSize; }
+    set _pageSize(value) { this._store.setState({ pageSize: value }); }
+
+    get _orderBy() { return this._store.getState().orderBy; }
+    set _orderBy(value) { this._store.setState({ orderBy: value }); }
+
+    get _orderDir() { return this._store.getState().orderDir; }
+    set _orderDir(value) { this._store.setState({ orderDir: value }); }
+
+    get _totalRecords() { return this._store.getState().total; }
+    set _totalRecords(value) { this._store.setState({ total: value }); }
+
     /**
-     * Retrieves data from the REST endpoint and updates the list.
+     * Retrieves data from the REST endpoint through the data service and updates
+     * the list. A superseded query is cancelled by the service, so a stale
+     * response arrives as an abort result and is ignored here.
+     * @returns {Promise<void>} Resolves when the load completes.
      */
-    _receiveData() {
+    async _load() {
         this._progressDiv.style.display = "none";
 
-        // abort previous request if present
-        if (this._abortController) {
-            this._abortController.abort("search replaced");
+        if (!this._service) {
+            return;
         }
-        this._abortController = new AbortController();
 
-        // safely construct url using document base uri
-        const urlObj = new URL(this._restUri, document.baseURI);
+        this._store.setState({ loading: true, error: null });
 
-        // set query parameters
-        urlObj.searchParams.set("q", this._search || "");
-        urlObj.searchParams.set("wql", this._wql || "");
-        urlObj.searchParams.set("f", this._filter || "");
-        urlObj.searchParams.set("p", String(this._page));
-        urlObj.searchParams.set("l", String(this._pageSize));
+        const params = webexpress.webapp.listModel.queryParams(this._store.getState());
+        const result = await this._service.query(params);
 
-        if (this._orderBy) {
-            urlObj.searchParams.set("o", this._orderBy);
-            if (this._orderDir) {
-                urlObj.searchParams.set("d", this._orderDir);
+        if (!result.ok) {
+            // ignore aborts (a newer query replaced this one); report the rest
+            if (result.error.kind !== "abort") {
+                console.error("the request could not be completed successfully:", result.error.message);
+                this._store.setState({ loading: false, error: result.error });
+            }
+            this._progressDiv.style.visibility = "hidden";
+            return;
+        }
+
+        const response = result.data;
+
+        // reduce paging information into the store (single source of truth)
+        this._store.setState(webexpress.webapp.listModel.reduceResponse(this._store.getState(), response));
+
+        // emit data arrived event (kept identical for existing listeners)
+        const evt = new CustomEvent(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
+            detail: { response: response }
+        });
+        this._element.dispatchEvent(evt);
+
+        // remove placeholder state
+        const listUl = this._element.querySelector("ul.wx-list");
+        if (listUl) {
+            listUl.classList.remove("placeholder-glow");
+        }
+
+        // map response into list items and update the view
+        const newItems = webexpress.webapp.listModel.mapItems(response);
+        this.setItems(newItems);
+
+        if (this._selectable) {
+            let selected = this._items.find((i) => i.id === this._selectedItem?.id) || null;
+            if (!selected && this._items.length > 0) {
+                selected = this._items[0];
+                this._handleSelectionChange(selected, null, true);
+                this._triggerPrimaryAction(selected);
             }
         }
 
-        const fetchUrl = this._restUri.startsWith("http") ? urlObj.href : (urlObj.pathname + urlObj.search);
+        // update paging display
+        this._syncPagerAndInfo();
 
-        fetch(fetchUrl, { signal: this._abortController.signal })
-            .then(res => {
-                if (!res.ok) {
-                    throw new Error("request failed");
-                }
-                return res.json();
-            })
-            .then(response => {
-                // extract paging information from server response
-                this._totalRecords = Number(response.total ?? response.totalCount ?? response.count ?? 0) || 0;
-                this._page = Number(response.page ?? this._page ?? 0) || 0;
-                this._pageSize = Number(response.pageSize ?? this._pageSize ?? 50) || 50;
+        // notify listeners that data arrived
+        this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
+            response: response,
+            page: this._page
+        });
 
-                // emit data arrived event
-                const evt = new CustomEvent(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
-                    detail: { response: response }
-                });
-                this._element.dispatchEvent(evt);
-
-                // remove placeholder state
-                const listUl = this._element.querySelector("ul.wx-list");
-                if (listUl) {
-                    listUl.classList.remove("placeholder-glow");
-                }
-
-                // map response into list items
-                const newItems = this._mapResponseToItems(response);
-
-                // update list via base class
-                this.setItems(newItems);
-
-                if (this._selectable) {
-                    let selected = this._items.find((i) => i.id === this._selectedItem?.id) || null;
-                    if (!selected && this._items.length > 0) {
-                        selected = this._items[0];
-                        this._handleSelectionChange(selected, null, true);
-                        this._triggerPrimaryAction(selected);
-                    }
-                }
-
-                // update paging display
-                this._syncPagerAndInfo();
-                
-                // notify listeners that data arrived
-                this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
-                    response: response,
-                    page: this._page
-                });
-
-                // hide progress
-                this._progressDiv.style.visibility = "hidden";
-                this._abortController = null;
-            })
-            .catch(error => {
-                // ignore abort errors, log others
-                if (error.name !== "AbortError") {
-                    console.error("the request could not be completed successfully:", error);
-                }
-                this._progressDiv.style.visibility = "hidden";
-                this._abortController = null;
-            });
+        // hide progress
+        this._progressDiv.style.visibility = "hidden";
     }
 
     /**
@@ -161,50 +175,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
      * @returns {Array<Object>} Normalized items for ListCtrl.
      */
     _mapResponseToItems(response) {
-        const result = [];
-
-        // handle response.items array
-        if (Array.isArray(response?.items)) {
-            for (const it of response.items) {
-                if (typeof it === "string") {
-                    result.push({
-                        id: null,
-                        content: { content: it }
-                    });
-                } else if (it !== null && typeof it === "object") {
-                    // detect optional html template
-                    let htmlEl = null;
-                    if (it.html instanceof Element) {
-                        htmlEl = it.html.cloneNode(true);
-                    } else if (typeof it.html === "string") {
-                        const tmp = document.createElement("span");
-                        tmp.innerHTML = it.html;
-                        htmlEl = tmp.firstElementChild ? tmp : null;
-                    }
-
-                    result.push({
-                        id: it.id || null,
-                        class: it.class || null,
-                        style: it.style || null,
-                        color: it.color || null,
-                        image: it.image || null,
-                        icon: it.icon || null,
-                        uri: it.uri || null,
-                        target: it.target || null,
-                        editable: !!it.editable,
-                        rendererType: it.rendererType || it.type || null,
-                        rendererOptions: it.rendererOptions || {},
-                        content: it.text ?? it.label ?? it.name ?? "",
-                        primaryAction: it.primaryAction || null,
-                        secondaryAction: it.secondaryAction || null,
-                        bind: it.bind || null,
-                        options: Array.isArray(it.options) ? it.options : null
-                    });
-                }
-            }
-        }
-
-        return result;
+        return webexpress.webapp.listModel.mapItems(response);
     }
 
     /**
@@ -214,7 +185,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
      */
     update() {
         if (this._restUri && this._isVisible()) {
-            this._receiveData();
+            this._load();
         }
     }
 
@@ -228,7 +199,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
         this._wql = searchType === "wql" ? pattern : null;
         this._page = 0;
         if (this._restUri && this._isVisible()) {
-            this._receiveData();
+            this._load();
         }
     }
 
@@ -241,10 +212,10 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
         this._page = 0;
 
         if (this._restUri && this._isVisible()) {
-            this._receiveData();
+            this._load();
         }
     }
-    
+
     /**
      * Sets and loads the page.
      * @param {number} page The current page index.
@@ -253,7 +224,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
         this._page = page;
 
         if (this._restUri && this._isVisible()) {
-            this._receiveData();
+            this._load();
         }
     }
 
@@ -290,7 +261,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
         div.appendChild(bar);
         return div;
     }
-    
+
     /**
      * Initializes or binds a pagination control and an information area.
      * @param {HTMLElement} host The host element to search or attach the pager to.
@@ -298,7 +269,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
     _initPager(host) {
         // find existing pager element based on dataset
         const paginationId = host.dataset.wxSourcePaging || null;
-        
+
         const init = () => {
             if (paginationId) {
                 this._pagerElement = document.querySelector(paginationId);
@@ -316,13 +287,13 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
         } else {
             init();
         }
-        
+
         // create info div to show totals and current page details
         this._infoDiv = document.createElement("div");
         this._infoDiv.className = "text-muted small";
         this._infoDiv.style.marginTop = "0.25rem";
         this._infoDiv.textContent = "";
-        
+
         host.appendChild(this._infoDiv);
     }
 
@@ -333,7 +304,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
     _syncPagerAndInfo() {
         const total = Number(this._totalRecords) || 0;
         let totalPages = 1;
-        
+
         if (this._pageSize > 0) {
             totalPages = Math.max(1, Math.ceil(total / this._pageSize));
         }
@@ -381,7 +352,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
             this._infoDiv.textContent = `Page ${currentPage + 1} of ${totalPages} / ${itemsOnPage} of ${total} items`;
         }
     }
-    
+
     /**
      * Handles page changes coming from external or internal pagination controls.
      * @param {number} targetPage Zero-based page index.
@@ -393,7 +364,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
         if (page < 0) {
             page = 0;
         }
-        
+
         if (page >= totalPages) {
             page = totalPages - 1;
         }
@@ -404,7 +375,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
             this._infoDiv.textContent = `Page ${this._page + 1} of ${totalPages} - loading…`;
         }
 
-        this._receiveData();
+        this._load();
     }
 };
 

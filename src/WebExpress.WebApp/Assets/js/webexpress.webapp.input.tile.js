@@ -174,12 +174,12 @@ webexpress.webapp.InputTileCtrl = class extends webexpress.webui.InputTileCtrl {
             url += separator + "q=" + encodeURIComponent(filter);
         }
 
-        fetch(url)
+        webexpress.webapp.ServiceRegistry.request(url)
             .then((res) => {
                 if (!res.ok) {
                     throw new Error("Request failed");
                 }
-                return res.json();
+                return res.data;
             })
             .then((response) => {
                 let tiles = [];

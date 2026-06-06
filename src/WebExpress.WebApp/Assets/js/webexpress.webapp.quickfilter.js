@@ -54,12 +54,17 @@ webexpress.webapp.QuickFilterCtrl = class extends webexpress.webui.QuickFilterCt
             ? urlObj.href
             : (urlObj.pathname + urlObj.search);
 
-        fetch(fetchUrl, { signal: this._abortController.signal })
+        webexpress.webapp.ServiceRegistry.request(fetchUrl, { signal: this._abortController.signal })
             .then((res) => {
+                if (res.error && res.error.kind === "abort") {
+                    const abort = new Error("aborted");
+                    abort.name = "AbortError";
+                    throw abort;
+                }
                 if (!res.ok) {
                     throw new Error("REST quick filter request failed");
                 }
-                return res.json();
+                return res.data;
             })
             .then((response) => {
                 // register new filters to the global filter registry if available

@@ -53,12 +53,12 @@ webexpress.webapp.InputCascadingCtrl = class extends webexpress.webui.InputCasca
         }
 
         // perform fetch and normalize response
-        return fetch(url, { method: "GET", credentials: "same-origin" })
+        return webexpress.webapp.ServiceRegistry.request(url, { method: "GET", credentials: "same-origin" })
             .then(function (resp) {
                 if (!resp.ok) {
                     throw new Error("Network response was not ok");
                 }
-                return resp.json();
+                return resp.data;
             })
             .then(function (data) {
                 // expect data to be an array of nodes; normalize shape

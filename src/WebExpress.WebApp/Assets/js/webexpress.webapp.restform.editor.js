@@ -332,14 +332,14 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
         try {
-            const res = await fetch(this._restUrl, {
+            const res = await webexpress.webapp.ServiceRegistry.request(this._restUrl, {
                 method: "GET",
                 headers: { "Accept": "application/json" }
             });
             if (!res.ok) {
                 return;
             }
-            const json = await res.json();
+            const json = res.data;
             this._structure = json.structure || json.data || json;
             this._fieldCatalog = json.catalog;
         } catch (e) {
@@ -1694,7 +1694,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
         try {
-            const res = await fetch(this._restUrl, {
+            const res = await webexpress.webapp.ServiceRegistry.request(this._restUrl, {
                 method: "PUT",
                 headers: {
                     "Accept": "application/json",
@@ -1703,12 +1703,11 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
                 body: JSON.stringify(this._structure)
             });
             if (!res.ok) {
-                let body = null;
-                try { body = await res.json(); } catch { body = null; }
+                const body = res.data;
                 this._dispatch(webexpress.webapp.Event.FORM_EDITOR_VALIDATION_FAILED_EVENT, body || { status: res.status });
                 return;
             }
-            const body = await res.json();
+            const body = res.data;
             if (body && body.data && typeof body.data.version === "number") {
                 this._structure.version = body.data.version;
                 this._renderHeader();

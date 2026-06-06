@@ -274,10 +274,10 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
      */
     async _loadHistoryFromApi(retryCount = 0) {
         try {
-            const resp = await fetch(this._apiUri + "/history");
+            const resp = await webexpress.webapp.ServiceRegistry.request(this._apiUri + "/history");
 
             if (resp.ok) {
-                const data = await resp.json();
+                const data = resp.data;
                 this._history = Array.isArray(data.history) ? data.history : [];
                 this._historyIndex = this._history.length;
 
@@ -343,10 +343,10 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         const fetchUrl = this._apiUri.startsWith("http") ? urlObj.href : (urlObj.pathname + urlObj.search);
 
         try {
-            const analyzeResp = await fetch(fetchUrl, { signal: this._abortController.signal });
+            const analyzeResp = await webexpress.webapp.ServiceRegistry.request(fetchUrl, { signal: this._abortController.signal });
 
             if (analyzeResp.ok) {
-                const analyzeData = await analyzeResp.json();
+                const analyzeData = analyzeResp.data;
 
                 if (analyzeData.isValidSoFar) {
                     this._setValidState();

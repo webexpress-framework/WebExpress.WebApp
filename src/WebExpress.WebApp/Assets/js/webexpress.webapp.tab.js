@@ -19,10 +19,6 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
     // drag & drop reorder state
     _dragTabId = null;
 
-    // request state
-    _isLoading = false;
-    _abortController = null;
-
     // dom nodes for dynamic elements
     _addLi = null;
     _addTabButton = null;
@@ -37,7 +33,13 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         // initialize base class structure
         super(element);
 
-        this._restUri = element.dataset.uri || "";
+        // canonical ui state: a single source of truth for the loading flag,
+        // seeded from the optional data-wx-state island
+        this._store = new webexpress.webapp.Store(Object.assign({
+            loading: false,
+            error: null
+        }, webexpress.webapp.Data.readState(element)));
+
         this._readonly = element.dataset.readonly === "true";
         this._movableTab = element.dataset.movableTab === "true";
 
@@ -50,6 +52,13 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         if (element.hasAttribute("data-movable-tab")) {
             element.removeAttribute("data-movable-tab");
         }
+
+        // data service: a configured island when present, otherwise a legacy
+        // descriptor. its query, create, update and remove operations back the
+        // list, create, reorder and close requests.
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+        this._service = islandServices.data;
+        this._restUri = this._service ? this._service.baseUri : "";
 
         // extract and store templates
         this._extractTemplates();
@@ -69,6 +78,12 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         }
     }
 
+    // loading flag accessor backed by the store, so the single source of truth
+    // is the store
+
+    get _isLoading() { return this._store.getState().loading; }
+    set _isLoading(value) { this._store.setState({ loading: value }); }
+
     /**
      * Extracts template definitions from the element and removes them from the DOM.
      */
@@ -82,14 +97,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
             const icon = tpl.dataset.icon || "";
             const name = tpl.dataset.name || id;
             const description = tpl.dataset.description || "";
-            const multiplicityRaw = tpl.dataset.multiplicity;
-            let multiplicity = null;
-            if (multiplicityRaw !== undefined && multiplicityRaw !== null && multiplicityRaw !== "") {
-                const parsed = parseInt(multiplicityRaw, 10);
-                if (!isNaN(parsed) && parsed >= 0) {
-                    multiplicity = parsed;
-                }
-            }
+            const multiplicity = webexpress.webapp.tabModel.parseMultiplicity(tpl.dataset.multiplicity);
 
             // store template payload for later instantiation
             this._templates.set(id, {
@@ -275,14 +283,8 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
      * @returns {boolean}
      */
     _isTemplateAvailable(templateId) {
-        const tpl = this._templates.get(templateId);
-        if (!tpl) {
-            return true;
-        }
-        if (tpl.multiplicity === null || tpl.multiplicity === undefined) {
-            return true;
-        }
-        return this._countTabsByTemplate(templateId) < tpl.multiplicity;
+        return webexpress.webapp.tabModel.isTemplateAvailable(
+            this._templates.get(templateId), this._countTabsByTemplate(templateId));
     }
 
     /**
@@ -321,64 +323,45 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
     /**
      * Fetches tab data from the configured REST endpoint via GET.
      */
-    _receiveData() {
-        if (this._restUri === "") {
+    async _receiveData() {
+        if (this._restUri === "" || !this._service) {
             return;
         }
 
-        if (this._abortController !== null) {
-            // abort previous running requests
-            this._abortController.abort("search replaced");
-        }
-
-        this._abortController = new AbortController();
         this._isLoading = true;
         this._element.classList.add("placeholder-glow");
 
-        const fetchUrl = this._resolveUrl(this._restUri);
+        const result = await this._service.query({});
 
-        fetch(fetchUrl, { signal: this._abortController.signal })
-            .then((res) => {
-                if (res.ok === false) {
-                    throw new Error("request failed");
-                }
-                return res.json();
-            })
-            .then((response) => {
-                let newTabs = [];
-                if (Array.isArray(response.items)) {
-                    newTabs = response.items;
-                }
+        if (!result.ok) {
+            // a superseded query arrives as an abort result and is ignored
+            if (result.error.kind === "abort") {
+                return;
+            }
 
-                this.updateData(newTabs);
+            console.error("request failed:", result.error.message);
+            this._element.classList.remove("placeholder-glow");
+            this._isLoading = false;
+            return;
+        }
 
-                // remove loading indicators
-                this._element.classList.remove("placeholder-glow");
-                this._isLoading = false;
-                this._abortController = null;
-            })
-            .catch((error) => {
-                if (error.name === "AbortError") {
-                    return;
-                }
+        this.updateData(webexpress.webapp.tabModel.mapTabs(result.data));
 
-                console.error("request failed:", error);
-                this._element.classList.remove("placeholder-glow");
-                this._isLoading = false;
-                this._abortController = null;
-            });
+        // remove loading indicators
+        this._element.classList.remove("placeholder-glow");
+        this._isLoading = false;
     }
 
     /**
      * Sends a POST request to the server to create a new tab and appends it to the UI.
      * @param {string|null} templateId - Optional template id to create the tab from.
      */
-    _createNewTab(templateId = null) {
+    async _createNewTab(templateId = null) {
         if (this._readonly) {
             return;
         }
 
-        if (this._restUri === "") {
+        if (this._restUri === "" || !this._service) {
             return;
         }
 
@@ -399,34 +382,11 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         this._addTabButton.innerHTML = `<i class="${this._iconClass("fas fa-spinner fa-spin", null)}"></i>`;
         this._addTabButton.disabled = true;
 
-        const fetchUrl = this._resolveUrl(this._restUri);
+        const result = await this._service.create(webexpress.webapp.tabModel.createBody(templateId));
 
-        fetch(fetchUrl, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                action: "create",
-                templateId: templateId
-            })
-        })
-            .then((res) => {
-                if (res.ok === false) {
-                    throw new Error("post request failed");
-                }
-                return res.json();
-            })
-            .then((response) => {
-                const newTab = response.newTab;
-                if (!newTab) {
-                    throw new Error("post response did not contain newTab");
-                }
-
-                if (!newTab.templateId && templateId) {
-                    newTab.templateId = templateId;
-                }
-
+        if (result.ok) {
+            const newTab = webexpress.webapp.tabModel.extractNewTab(result.data, templateId);
+            if (newTab) {
                 this._renderSingleTab(newTab);
                 this.selectTab(newTab.id);
 
@@ -434,40 +394,18 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
                 this._dispatch(webexpress.webapp.Event.TAB_ADDED_EVENT, {
                     tabId: newTab.id
                 });
-            })
-            .catch((error) => {
-                console.error("failed to create new tab:", error);
-            })
-            .finally(() => {
-                // restore button state
-                this._addTabButton.innerHTML = originalHtml;
-                this._addTabButton.disabled = false;
-                // re-apply multiplicity-based disabled state
-                this._updateAddButtonState();
-            });
-    }
-
-    /**
-     * Resolves a potentially relative URI to a fully qualified URL string.
-     * @param {string} uri - The URI to resolve.
-     * @returns {string} The fully qualified URL.
-     */
-    _resolveUrl(uri) {
-        const base = window.location.origin;
-        let urlObj;
-
-        try {
-            urlObj = new URL(uri, base);
-        } catch (error) {
-            // fallback to document base uri if parsing fails
-            urlObj = new URL(uri, document.baseURI);
+            } else {
+                console.error("failed to create new tab:", "post response did not contain newTab");
+            }
+        } else {
+            console.error("failed to create new tab:", result.error.message);
         }
 
-        if (uri.startsWith("http")) {
-            return urlObj.href;
-        }
-
-        return urlObj.pathname + urlObj.search;
+        // restore button state
+        this._addTabButton.innerHTML = originalHtml;
+        this._addTabButton.disabled = false;
+        // re-apply multiplicity-based disabled state
+        this._updateAddButtonState();
     }
 
     /**
@@ -974,36 +912,22 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
      * Persists the current tab order to the server via PUT.
      */
     _persistOrder() {
-        if (this._restUri === "") {
+        if (this._restUri === "" || !this._service) {
             return;
         }
 
         const order = this._tabs.map((t) => t.id);
-        const fetchUrl = this._resolveUrl(this._restUri);
 
-        fetch(fetchUrl, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                action: "reorder",
-                order: order
-            })
-        })
-            .then((res) => {
-                if (res.ok === false) {
-                    throw new Error("reorder request failed: " + res.status);
-                }
-
+        this._service.update(webexpress.webapp.tabModel.reorderBody(order)).then((result) => {
+            if (result.ok) {
                 // notify external components about the new order
                 this._dispatch(webexpress.webapp.Event.TAB_REORDERED_EVENT, {
                     order: order
                 });
-            })
-            .catch((err) => {
-                console.error("failed to persist tab order:", err);
-            });
+            } else if (result.error.kind !== "abort") {
+                console.error("failed to persist tab order:", result.error.message);
+            }
+        });
     }
 
     /**
@@ -1016,18 +940,13 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         }
 
         // send delete request to the server before removing the tab locally
-        if (this._restUri && tabId) {
-            const fetchUrl = this._resolveUrl(this._restUri + "?id=" + encodeURIComponent(tabId));
-            fetch(fetchUrl, { method: "DELETE" })
-                .then((res) => {
-                    if (!res.ok) {
-                        throw new Error("failed to delete tab: " + res.status);
-                    }
-                })
-                .catch((err) => {
+        if (this._restUri && tabId && this._service) {
+            this._service.remove({ params: { id: tabId } }).then((result) => {
+                if (!result.ok && result.error.kind !== "abort") {
                     // optionally show error, but still remove tab from ui to ensure responsiveness
-                    console.error("delete request failed (still removing tab locally):", err);
-                });
+                    console.error("delete request failed (still removing tab locally):", result.error.message);
+                }
+            });
         }
 
         let closedIndex = -1;

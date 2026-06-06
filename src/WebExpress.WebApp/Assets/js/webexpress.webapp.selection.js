@@ -100,13 +100,19 @@ webexpress.webapp.SelectionCtrl = class extends webexpress.webui.SelectionCtrl {
         const init = this._buildRequestInit(term, this._abortCtrl.signal);
 
         // perform request using fetch api
-        fetch(url, init)
+        webexpress.webapp.ServiceRegistry.request(url, init)
             .then((res) => {
+                // ignore superseded requests that a newer keystroke aborted
+                if (res.error && res.error.kind === "abort") {
+                    const abort = new Error("aborted");
+                    abort.name = "AbortError";
+                    throw abort;
+                }
                 // check http status
                 if (!res.ok) {
                     throw new Error(`http ${res.status}`);
                 }
-                return res.json();
+                return res.data;
             })
             .then((response) => {
                 const rawData = response.items || [];
@@ -134,30 +140,7 @@ webexpress.webapp.SelectionCtrl = class extends webexpress.webui.SelectionCtrl {
      * @returns {Object} A normalized item compatible with the selection list.
      */
     _mapApiItem(apiItem) {
-        // choose field aliases defensively
-        const id = apiItem.id || null;
-        const label = apiItem.label || apiItem.content || apiItem.name || apiItem.title || "";
-        const icon = apiItem.icon || null;
-        const image = apiItem.image || apiItem.img || null;
-        const color = apiItem.color || apiItem.color || null;
-        const disabled = Boolean(apiItem.disabled);
-
-        return {
-            id: id,
-            label: label,
-            color: color,
-            icon: icon,
-            image: image,
-            disabled: disabled,
-
-            // action attributes mapping
-            primaryAction: apiItem.primaryAction || null,
-            primaryTarget: apiItem.primaryTarget || null,
-            primaryUri: apiItem.primaryUri || apiItem.uri || apiItem.url || null,
-            secondaryAction: apiItem.secondaryAction || null,
-            secondaryTarget: apiItem.secondaryTarget || null,
-            secondaryUri: apiItem.secondaryUri || null
-        };
+        return webexpress.webapp.selectionModel.mapApiItem(apiItem);
     }
 
     /**
@@ -166,14 +149,13 @@ webexpress.webapp.SelectionCtrl = class extends webexpress.webui.SelectionCtrl {
      * @returns {string} The composed request URL.
      */
     _buildUrl(term) {
-        if (this._httpMethod !== "GET") {
-            return this._apiEndpoint;
-        }
-        const hasQuery = this._apiEndpoint.includes("?");
-        const sep = hasQuery ? "&" : "?";
-        const qp = `${encodeURIComponent(this._queryParam)}=${encodeURIComponent(term)}`;
-        const pp = `${encodeURIComponent(this._pageParam)}=${encodeURIComponent(this._page)}`;
-        return `${this._apiEndpoint}${sep}${qp}&${pp}`;
+        return webexpress.webapp.selectionModel.buildUrl({
+            apiEndpoint: this._apiEndpoint,
+            httpMethod: this._httpMethod,
+            queryParam: this._queryParam,
+            pageParam: this._pageParam,
+            page: this._page
+        }, term);
     }
 
     /**
@@ -183,25 +165,12 @@ webexpress.webapp.SelectionCtrl = class extends webexpress.webui.SelectionCtrl {
      * @returns {RequestInit} The fetch init object.
      */
     _buildRequestInit(term, signal) {
-        const headers = { "Accept": "application/json" };
-        if (this._httpMethod === "POST") {
-            headers["Content-Type"] = "application/json";
-            return {
-                method: "POST",
-                headers: headers,
-                body: JSON.stringify({
-                    [this._queryParam]: term,
-                    [this._pageParam]: this._page
-                }),
-                signal: signal
-            };
-        } else {
-            return {
-                method: "GET",
-                headers: headers,
-                signal: signal
-            };
-        }
+        return webexpress.webapp.selectionModel.buildRequestInit({
+            httpMethod: this._httpMethod,
+            queryParam: this._queryParam,
+            pageParam: this._pageParam,
+            page: this._page
+        }, term, signal);
     }
 };
 

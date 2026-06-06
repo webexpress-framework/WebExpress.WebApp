@@ -31,6 +31,12 @@ webexpress.webapp.LoginCtrl = class extends webexpress.webui.LoginCtrl {
         this._retryCountdown = 0;
         this._failedAttempts = 0;
 
+        // data service used to post the credentials through the service layer;
+        // a configured island when present, otherwise a service for the endpoint
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+        this._service = islandServices.data ||
+            webexpress.webapp.ServiceRegistry.create({ kind: "rest", baseUri: this._apiEndpoint || "" });
+
         // add error container before the form
         this._errorContainer = document.createElement("div");
         this._errorContainer.className = "alert alert-danger";
@@ -47,7 +53,7 @@ webexpress.webapp.LoginCtrl = class extends webexpress.webui.LoginCtrl {
      * instead of the basic auth approach in the base class.
      */
     _attachEventHandlers() {
-        this._form.addEventListener("submit", (e) => {
+        this._form.addEventListener("submit", async (e) => {
             e.preventDefault();
 
             // block submission if currently processing, locked out or in countdown
@@ -81,73 +87,78 @@ webexpress.webapp.LoginCtrl = class extends webexpress.webui.LoginCtrl {
                 username: username
             });
 
-            fetch(this._apiEndpoint, {
+            const result = await this._service.request(this._apiEndpoint, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json; charset=utf-8"
                 },
                 body: JSON.stringify({ username, password })
-            }).then((response) => {
-                return response.json().then((data) => {
-                    this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, data);
+            });
 
-                    if (data.success) {
-                        // reset failed attempts on successful login
-                        this._failedAttempts = 0;
+            const data = result.data;
 
-                        if (data.sessionId) {
-                            document.cookie = "session=" + encodeURIComponent(data.sessionId) + "; path=/";
-                        }
-
-                        if (this._redirectUri) {
-                            window.location.href = this._redirectUri;
-                        } else {
-                            window.location.reload();
-                        }
-
-                        return;
-                    }
-
-                    // increase failed attempts counter
-                    this._failedAttempts++;
-
-                    // permanently lock form after 5 failed attempts
-                    if (this._failedAttempts >= 5) {
-                        this._showError(this._i18n("webexpress.webapp:login.error.locked", "Account is locked due to too many failed attempts."));
-                        this._submitting = false;
-                        this._loginBtn.disabled = true;
-                        this._loginBtn.textContent = this._i18n("webexpress.webapp:login.locked", "Locked");
-                        return;
-                    }
-
-                    // apply exponential penalty starting from the 3rd attempt
-                    if (this._failedAttempts >= 3) {
-                        // base penalty is 30 seconds, doubles with each subsequent fail
-                        const basePenalty = 30;
-                        const multiplier = Math.pow(2, this._failedAttempts - 3);
-                        const penaltySeconds = basePenalty * multiplier;
-
-                        this._startRetryCountdown(
-                            penaltySeconds,
-                            this._i18n("webexpress.webapp:login.error.ratelimit", "Too many failed attempts. Please wait."),
-                            submitLabel
-                        );
-
-                        return;
-                    }
-
-                    // normal authentication failed response
-                    this._showError(data.message || this._i18n("webexpress.webapp:login.error.invalid", "Invalid username or password."));
-                    this._submitting = false;
-                    this._loginBtn.disabled = false;
-                    this._loginBtn.textContent = submitLabel;
-                });
-            }).catch(() => {
+            // a network error or an unparseable response is reported generically,
+            // matching the historical catch behaviour
+            if (data === null || data === undefined) {
                 this._showError(this._i18n("webexpress.webapp:error.generic", "An error occurred."));
                 this._submitting = false;
                 this._loginBtn.disabled = false;
                 this._loginBtn.textContent = submitLabel;
-            });
+                return;
+            }
+
+            this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, data);
+
+            if (data.success) {
+                // reset failed attempts on successful login
+                this._failedAttempts = 0;
+
+                if (data.sessionId) {
+                    document.cookie = "session=" + encodeURIComponent(data.sessionId) + "; path=/";
+                }
+
+                if (this._redirectUri) {
+                    window.location.href = this._redirectUri;
+                } else {
+                    window.location.reload();
+                }
+
+                return;
+            }
+
+            // increase failed attempts counter
+            this._failedAttempts++;
+
+            // permanently lock form after 5 failed attempts
+            if (this._failedAttempts >= 5) {
+                this._showError(this._i18n("webexpress.webapp:login.error.locked", "Account is locked due to too many failed attempts."));
+                this._submitting = false;
+                this._loginBtn.disabled = true;
+                this._loginBtn.textContent = this._i18n("webexpress.webapp:login.locked", "Locked");
+                return;
+            }
+
+            // apply exponential penalty starting from the 3rd attempt
+            if (this._failedAttempts >= 3) {
+                // base penalty is 30 seconds, doubles with each subsequent fail
+                const basePenalty = 30;
+                const multiplier = Math.pow(2, this._failedAttempts - 3);
+                const penaltySeconds = basePenalty * multiplier;
+
+                this._startRetryCountdown(
+                    penaltySeconds,
+                    this._i18n("webexpress.webapp:login.error.ratelimit", "Too many failed attempts. Please wait."),
+                    submitLabel
+                );
+
+                return;
+            }
+
+            // normal authentication failed response
+            this._showError(data.message || this._i18n("webexpress.webapp:login.error.invalid", "Invalid username or password."));
+            this._submitting = false;
+            this._loginBtn.disabled = false;
+            this._loginBtn.textContent = submitLabel;
         });
     }
 

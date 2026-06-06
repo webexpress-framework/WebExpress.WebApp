@@ -15,8 +15,13 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
     constructor(element) {
         super(element);
 
-        this._restUri = element.dataset.uri || "";
         element.removeAttribute("data-uri");
+
+        // the load keeps its own abort and loading state through the shared
+        // request; the layout state save flows through this rest service
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+        this._service = islandServices.data;
+        this._restUri = this._service ? this._service.baseUri : "";
 
         this._initRestPersistence(element);
 
@@ -51,12 +56,17 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
 
         const fetchUrl = this._restUri.startsWith("http") ? urlObj.href : (urlObj.pathname + urlObj.search);
 
-        fetch(fetchUrl, { signal: this._abortController.signal })
+        webexpress.webapp.ServiceRegistry.request(fetchUrl, { signal: this._abortController.signal })
             .then((res) => {
+                if (res.error && res.error.kind === "abort") {
+                    const abort = new Error("aborted");
+                    abort.name = "AbortError";
+                    throw abort;
+                }
                 if (!res.ok) {
                     throw new Error("request failed");
                 }
-                return res.json();
+                return res.data;
             })
             .then((response) => {
                 this.updateData(response);
@@ -78,28 +88,9 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
      * @param {Object} data - The json payload containing columns and layout.
      */
     updateData(data) {
-        if (data.columns) {
-            this._columns = data.columns.map((col) => {
-                return {
-                    id: col.id,
-                    label: col.label || "",
-                    size: col.size || "1fr",
-                    widgets: (col.widgets || []).map((w, i) => {
-                        return {
-                            instanceId: "wx_inst_" + col.id + "_" + i + "_" + Date.now(),
-                            id: w.id,
-                            label: w.label || null,
-                            icon: w.icon || null,
-                            image: w.image || null,
-                            color: w.color || null,
-                            removable: w.removable !== false,
-                            movable: w.movable !== false,
-                            html: w.html || "",
-                            params: w.params || {}
-                        };
-                    })
-                };
-            });
+        const columns = webexpress.webapp.dashboardModel.normalizeColumns(data);
+        if (columns) {
+            this._columns = columns;
         }
         this.render();
     }
@@ -134,12 +125,10 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
             return;
         }
 
-        fetch(this._restUri, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        }).catch((err) => {
-            console.error("dashboard update state failed", err);
+        this._service.update(payload).then((r) => {
+            if (!r.ok) {
+                console.error("dashboard update state failed", r.error);
+            }
         });
     }
 

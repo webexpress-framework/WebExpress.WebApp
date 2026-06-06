@@ -11,7 +11,7 @@
  * - webexpress.webui.Event.UPLOAD_SUCCESS_EVENT
  * - webexpress.webui.Event.UPLOAD_ERROR_EVENT
  */
-webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
+webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
     /**
      * Create a new RestFormCtrl instance.
      * Configuration is read strictly from data-attributes on the form element.
@@ -19,16 +19,39 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
      * @param {HTMLFormElement} element The form element to enhance.
      */
     constructor(element) {
-        super(element);
+        const ds = element.dataset;
+        const api = ds.uri || ds.url || ds.api || null;
 
-        const ds = this._element.dataset;
+        // data service used for the load and the submit; the form shapes its own
+        // requests (see restFormModel) and routes them through the service. a
+        // configured island when present, otherwise a legacy descriptor that
+        // carries the form endpoint. the Data base aborts the service on teardown.
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+        const services = {
+            data: islandServices.data ||
+                webexpress.webapp.ServiceRegistry.create(webexpress.webapp.restFormModel.legacyDescriptor(api))
+        };
+
+        // canonical ui state: a single source of truth for the transient flags,
+        // exposed through the accessors below. seeded from the optional
+        // data-wx-state island.
+        const initialState = Object.assign({
+            loading: false,
+            submitting: false,
+            mode: "new"
+        }, webexpress.webapp.Data.readState(element));
+
+        super(element, { state: initialState, services });
+
+        this._service = this.useService("data");
+
         const parseBool = (val, defaultVal) => {
             return val === "true" ? true : (val === "false" ? false : defaultVal);
         };
 
         this.options = {
             id: ds.id || null,
-            api: ds.uri || ds.url || ds.api || null,
+            api: api,
             method: (ds.method || this._element.method || "POST").toUpperCase(),
             headers: {},
             json: parseBool(ds.json, true),
@@ -60,8 +83,6 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
         
         this._element.classList.add("wx-restform");
 
-        this._submitting = false;
-        this._loading = false;
         this._fieldErrorMap = new Map();
         this._confirmHtml = null;
 
@@ -80,6 +101,18 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
 
         this._init();
     }
+
+    // transient ui state accessors backed by the store, so the single source of
+    // truth is the store while the existing logic keeps reading fields
+
+    get _loading() { return this._store.getState().loading; }
+    set _loading(value) { this._store.setState({ loading: value }); }
+
+    get _submitting() { return this._store.getState().submitting; }
+    set _submitting(value) { this._store.setState({ submitting: value }); }
+
+    get mode() { return this._store.getState().mode; }
+    set mode(value) { this._store.setState({ mode: value }); }
 
     /**
      * Initialize control: attach event listeners and trigger data loading if configured.
@@ -250,23 +283,20 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
         this._dispatch(webexpress.webui.Event.TASK_START_EVENT, { name: "loading" });
 
         try {
-            let url = new URL(this.options.api, window.location.origin);
-            if (this.options.id) {
-                url.searchParams.append("id", String(this.options.id || ""));
-            }
-            url.searchParams.append("mode", this.mode);
+            const url = webexpress.webapp.restFormModel.buildLoadUrl(
+                this.options.api, this.options.id, this.mode, window.location.origin);
 
-            const resp = await fetch(url.toString(), {
+            const result = await this._service.request(url, {
                 method: "GET",
                 headers: { "Accept": "application/json" },
                 credentials: this.options.credentials || "same-origin"
             });
 
-            if (!resp.ok) {
-                throw new Error(this._i18n("webexpress.webapp:error.load_failed", { status: resp.status }));
+            if (!result.ok) {
+                throw new Error(this._i18n("webexpress.webapp:error.load_failed", { status: result.status }));
             }
 
-            const json = await resp.json();
+            const json = result.data;
             const dataObj = (json && typeof json === "object") ? json : {};
             const formData = dataObj.data || (Object.keys(dataObj).length ? dataObj : null);
 
@@ -282,10 +312,10 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
             }
 
             if (typeof this.options.onLoadSuccess === "function") {
-                this.options.onLoadSuccess(json, resp);
+                this.options.onLoadSuccess(json, result.response);
             }
 
-            this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, { data: json, status: resp.status });
+            this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, { data: json, status: result.status });
             this._dispatch(webexpress.webui.Event.CHANGE_VALUE_EVENT, { source: "load", data: json });
 
         } catch (error) {
@@ -537,15 +567,16 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
             }
         }
 
-        const { url, init } = this._prepareRequest(endpoint, payload);
+        const { url, init } = webexpress.webapp.restFormModel.buildRequest(
+            endpoint, this.options, payload, window.location.origin);
 
         this._setSubmitting(true);
         this._dispatch(webexpress.webui.Event.TASK_START_EVENT, { name: "submitting" });
         this._dispatch(webexpress.webui.Event.DATA_REQUESTED_EVENT, { type: "submit", url: url });
 
         try {
-            const resp = await fetch(url, init);
-            await this._handleResponse(resp);
+            const result = await this._service.request(url, init);
+            this._handleResult(result);
         } catch (error) {
             if (typeof this.options.onError === "function") {
                 this.options.onError(error);
@@ -564,146 +595,71 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
      * @returns {{url: string, init: Object}} Request configuration.
      */
     _prepareRequest(endpoint, payload) {
-        const method = this.options.method;
-        const init = {
-            method: method,
-            headers: Object.assign({}, this.options.headers),
-            credentials: this.options.credentials || "same-origin"
-        };
-
-        const urlObj = new URL(endpoint, window.location.origin);
-        let requestUrl = endpoint;
-
-        const appendParams = (target, data) => {
-            for (const [k, v] of Object.entries(data)) {
-                const values = Array.isArray(v) ? v : [v];
-                values.forEach((val) => {
-                    target.searchParams.append(k, val == null ? "" : String(val));
-                });
-            }
-        };
-
-        if (["GET", "HEAD", "DELETE"].includes(method)) {
-            // remove content-type for these methods
-            Object.keys(init.headers).forEach((h) => {
-                if (h.toLowerCase() === "content-type") {
-                    delete init.headers[h];
-                }
-            });
-
-            if (method === "DELETE") {
-                const idParam = this.options.id || payload.id || payload.Id;
-                if (idParam) {
-                    urlObj.searchParams.append("id", String(idParam));
-                }
-            } else {
-                appendParams(urlObj, payload);
-            }
-            requestUrl = urlObj.toString();
-        } else {
-            // post/put/patch
-            if (this.options.json) {
-                init.body = JSON.stringify(payload);
-                if (!Object.keys(init.headers).some((k) => {
-                    return k.toLowerCase() === "content-type";
-                })) {
-                    init.headers["Content-Type"] = "application/json; charset=utf-8";
-                }
-            } else {
-                const params = new URLSearchParams();
-                for (const [k, v] of Object.entries(payload)) {
-                    const values = Array.isArray(v) ? v : [v];
-                    values.forEach((val) => {
-                        params.append(k, val == null ? "" : String(val));
-                    });
-                }
-                init.body = params.toString();
-                if (!Object.keys(init.headers).some((k) => {
-                    return k.toLowerCase() === "content-type";
-                })) {
-                    init.headers["Content-Type"] = "application/x-www-form-urlencoded; charset=utf-8";
-                }
-            }
-
-            if (this.options.id) {
-                if (!urlObj.searchParams.has("id")) {
-                    urlObj.searchParams.append("id", String(this.options.id));
-                    requestUrl = urlObj.toString();
-                }
-            }
-        }
-
-        return { url: requestUrl, init: init };
+        return webexpress.webapp.restFormModel.buildRequest(endpoint, this.options, payload, window.location.origin);
     }
 
     /**
-     * Handles the fetch response parsing and UI updates.
-     * @param {Response} resp The fetch response object.
+     * Handles a normalised service result by classifying it into a success, a
+     * validation or a system error outcome and updating the UI accordingly. The
+     * classification and the server error normalisation are pure and live in
+     * restFormModel; the DOM updates stay here. A system error is thrown so the
+     * submit caller reports it through its catch.
+     * @param {object} result - The normalised service result.
      */
-    async _handleResponse(resp) {
-        let json = null;
-        const contentType = resp.headers.get("content-type") || "";
+    _handleResult(result) {
+        const json = result.data;
+        const classification = webexpress.webapp.restFormModel.classifyResponse(result.ok, result.status, json);
 
-        if (contentType.includes("application/json")) {
-            try {
-                json = await resp.json();
-            } catch (e) {
-                // ignore json parse error on empty body
-            }
-        } else {
-            try {
-                json = { text: await resp.text() };
-            } catch (e) {
-                // ignore
-            }
-        }
-
-        if (resp.ok) {
+        if (classification.kind === "success") {
             this.clearErrors();
             if (typeof this.options.onSuccess === "function") {
-                this.options.onSuccess(json, resp);
+                this.options.onSuccess(json, result.response);
             }
 
-            this._dispatch(webexpress.webui.Event.UPLOAD_SUCCESS_EVENT, { response: json, status: resp.status, form: this._element });
+            this._dispatch(webexpress.webui.Event.UPLOAD_SUCCESS_EVENT, { response: json, status: result.status, form: this._element });
             this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, { type: "submit", data: json });
 
-            const dataBlock = (json && json.data) ? json.data : json;
-            const confirmHtml = (dataBlock && dataBlock.confirmHtml) || (json && json.confirmHtml);
-            const message = (dataBlock && dataBlock.message) || (json && (json.confirmMessage || json.message));
-
-            if (json && (!json.message || json.hideForm === true)) {
+            if (classification.closeModal) {
                 this._closeEnclosingModal();
-            } else {
-                if (confirmHtml) {
-                    this._showConfirm(String(confirmHtml));
-                } else if (message) {
-                    this._showConfirm(String(message));
-                } else if (this._confirmHtml) {
-                    this._showConfirm(null);
+            } else if (classification.confirmHtml) {
+                this._showConfirm(String(classification.confirmHtml));
+            } else if (classification.message) {
+                this._showConfirm(String(classification.message));
+            } else if (this._confirmHtml) {
+                this._showConfirm(null);
+            }
+        } else if (classification.kind === "validation") {
+            this.clearErrors();
+
+            const messages = [];
+            for (const e of (classification.errors || [])) {
+                if (e.field) {
+                    const field = this._findFieldByName(e.field);
+                    if (field) {
+                        this._showFieldError(field, e.message);
+                    }
                 }
+                messages.push(e.message);
             }
-        } else if (resp.status === 400) {
-            // handle validation errors
-            if (Array.isArray(json)) {
-                this._applyServerArrayErrors(json);
-            } else if (json && json.errors) {
-                this._applyServerFieldErrors(json.errors);
-            } else {
-                const msg = (json && (json.message || json.error)) || this._i18n("webexpress.webapp:validation.failed");
-                this._displayAggregatedErrors([typeof msg === "object" ? JSON.stringify(msg) : msg]);
+
+            if (messages.length === 0) {
+                const fallback = classification.message || this._i18n("webexpress.webapp:validation.failed");
+                messages.push(typeof fallback === "object" ? JSON.stringify(fallback) : fallback);
             }
+
+            this._displayAggregatedErrors(messages);
 
             if (typeof this.options.onError === "function") {
-                this.options.onError(json, resp);
+                this.options.onError(json, result.response);
             }
-            this._dispatch(webexpress.webui.Event.UPLOAD_ERROR_EVENT, { type: "validation", response: json, status: resp.status, form: this._element });
+            this._dispatch(webexpress.webui.Event.UPLOAD_ERROR_EVENT, { type: "validation", response: json, status: result.status, form: this._element });
         } else {
             // handle system errors
             const message = this._i18n("webexpress.webapp:error.request_failed")
-                .replace("{status}", resp.status);
+                .replace("{status}", result.status);
             const err = new Error(message);
-            err.status = resp.status;
-            err.response = resp;
+            err.status = result.status;
+            err.response = result.response;
             err.payload = json;
             throw err;
         }
@@ -738,56 +694,6 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
         } else {
             this._element.classList.remove("wx-restform-submitting");
         }
-    }
-
-    /**
-     * Applies server-side field errors provided as a key-value map.
-     * @param {Object} errors A map of fieldName → message returned by the server.
-     */
-    _applyServerFieldErrors(errors) {
-        this.clearErrors();
-        if (!errors || typeof errors !== "object") {
-            return;
-        }
-
-        const messages = [];
-        for (const [name, msg] of Object.entries(errors)) {
-            const field = this._findFieldByName(name);
-            if (field) {
-                this._showFieldError(field, msg);
-            }
-            messages.push(msg);
-        }
-        this._displayAggregatedErrors(messages);
-    }
-
-    /**
-     * Applies server-side validation errors provided as an array.
-     * @param {Array} errorsArray The array of validation error objects returned by the server.
-     */
-    _applyServerArrayErrors(errorsArray) {
-        this.clearErrors();
-        if (!Array.isArray(errorsArray)) {
-            return;
-        }
-
-        const messages = [];
-        for (const err of errorsArray) {
-            if (!err) {
-                continue;
-            }
-            const msg = err.message || err.msg || err.Message || JSON.stringify(err);
-            const fieldName = err.field || err.Field;
-
-            if (fieldName) {
-                const field = this._findFieldByName(fieldName);
-                if (field) {
-                    this._showFieldError(field, msg);
-                }
-            }
-            messages.push(msg);
-        }
-        this._displayAggregatedErrors(messages);
     }
 
     /**

@@ -28,6 +28,11 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
         this._searchPlaceholder = element.dataset.searchplaceholder || this._i18n(
             "webexpress.webapp:dropdown.search.placeholder", "");
 
+        // data service used to fetch the dropdown items through the service layer
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+        this._service = islandServices.data ||
+            webexpress.webapp.ServiceRegistry.create({ kind: "rest", baseUri: this._apiEndpoint || "" });
+
         // dynamic items storage
         this._allItems = [];
         this._searchTerm = "";
@@ -332,12 +337,12 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
                 init.body = JSON.stringify(body);
             }
 
-            const res = await fetch(url, init);
+            const res = await this._service.request(url, init);
             if (!res.ok) {
                 throw new Error("http error " + res.status);
             }
 
-            const json = await res.json();
+            const json = res.data;
             const rawItems = json.items;
 
             this._allItems = rawItems.map((x) => { return this._mapApiItem(x); });

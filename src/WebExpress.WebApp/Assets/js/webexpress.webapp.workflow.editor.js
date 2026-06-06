@@ -62,7 +62,12 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
         super(element);
 
         const ds = element.dataset;
-        this._restUri = ds.uri || "";
+
+        // the load keeps its own abort and loading state through the shared
+        // request; the debounced autosave PUT flows through this rest service
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+        this._service = islandServices.data;
+        this._restUri = this._service ? this._service.baseUri : "";
 
         element.removeAttribute("data-uri");
         element.classList.add("wx-workflow-editor");
@@ -232,26 +237,21 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
         }
         const fetchUrl = this._restUri.startsWith("http") ? urlObj.href : (urlObj.pathname + urlObj.search);
 
-        fetch(fetchUrl, { signal: this._abortController.signal })
+        webexpress.webapp.ServiceRegistry.request(fetchUrl, { signal: this._abortController.signal })
             .then(res => {
+                if (res.error && res.error.kind === "abort") {
+                    const abort = new Error("aborted");
+                    abort.name = "AbortError";
+                    throw abort;
+                }
                 if (!res.ok) {
                     throw new Error("workflow editor: load request failed (" + res.status + ")");
                 }
-                return res.json();
+                return res.data;
             })
             .then(response => {
-                this._meta = {
-                    id: response.id || "",
-                    name: response.name || "",
-                    state: response.state || "",
-                    version: response.version || "",
-                    description: response.description || ""
-                };
-                this._catalog = {
-                    guards: Array.isArray(response.guards) ? response.guards : [],
-                    validations: Array.isArray(response.validations) ? response.validations : [],
-                    postfunctions: Array.isArray(response.postfunctions) ? response.postfunctions : []
-                };
+                this._meta = webexpress.webapp.workflowEditorModel.normalizeMeta(response);
+                this._catalog = webexpress.webapp.workflowEditorModel.normalizeCatalog(response);
                 this.model = this._fromWireFormat(response);
                 this._element.classList.remove("placeholder-glow");
                 this._isLoading = false;
@@ -276,23 +276,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
      * @returns {{nodes: Array, edges: Array}}
      */
     _fromWireFormat(response) {
-        const nodesIn = Array.isArray(response.nodes)
-            ? response.nodes
-            : (Array.isArray(response.states) ? response.states : []);
-        const edgesIn = Array.isArray(response.edges)
-            ? response.edges
-            : (Array.isArray(response.transitions) ? response.transitions : []);
-
-        const nodes = nodesIn.map(n => Object.assign({}, n));
-        const edges = edgesIn.map(e => {
-            const out = Object.assign({}, e);
-            // accept the prototype's source/target alias for compatibility
-            if (out.from === undefined && out.source !== undefined) { out.from = out.source; }
-            if (out.to === undefined && out.target !== undefined) { out.to = out.target; }
-            return out;
-        });
-
-        return { nodes, edges };
+        return webexpress.webapp.workflowEditorModel.fromWireFormat(response);
     }
 
     /**
@@ -404,31 +388,14 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
             }
         }
 
-        const payload = {
-            id: this._meta.id,
-            name: this._meta.name,
-            state: this._meta.state,
-            version: this._meta.version,
-            description: this._meta.description,
-            nodes: this._model.nodes,
-            edges: this._model.edges,
-            // mirror payload using the REST wire names so backends that prefer
-            // states / transitions can read either field.
-            states: this._model.nodes,
-            transitions: this._model.edges
-        };
+        const payload = webexpress.webapp.workflowEditorModel.toWirePayload(this._meta, this._model);
 
-        fetch(this._restUri, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        })
+        this._service.update(payload)
             .then(res => {
                 if (!res.ok) {
                     console.warn("workflow editor: save returned " + res.status);
                 }
-            })
-            .catch(err => console.error("workflow editor: save failed", err));
+            });
     }
 
     /**

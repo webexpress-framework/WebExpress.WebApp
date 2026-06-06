@@ -60,7 +60,7 @@ webexpress.webapp.DropdownTheme = class extends webexpress.webui.DropdownCtrl {
      * @returns {Promise<void>}
      */
     async _fetchThemes() {
-        const res = await fetch(this._apiEndpoint, {
+        const res = await webexpress.webapp.ServiceRegistry.request(this._apiEndpoint, {
             method: "GET",
             headers: { "Accept": "application/json" },
             credentials: "same-origin"
@@ -69,20 +69,14 @@ webexpress.webapp.DropdownTheme = class extends webexpress.webui.DropdownCtrl {
             throw new Error("http error " + res.status);
         }
 
-        const json = await res.json();
-        const rawItems = Array.isArray(json && json.items) ? json.items : [];
-        const selected = (json && typeof json.selected === "string" && json.selected.length > 0)
-            ? json.selected
-            : null;
-
-        // map each raw item to the structure the base DropdownCtrl renderer
-        // expects (see _createMenuItem in webexpress.webui.dropdown.js).
-        const items = rawItems.map((it) => this._mapItem(it));
+        const json = res.data;
+        const themes = webexpress.webapp.dropdownThemeModel.normalizeThemes(json);
+        const items = themes.items;
 
         // pick the active theme: cookie selection wins, otherwise the first
         // item is chosen so the dropdown is never blank.
         const fallback = items.length > 0 ? items[0].id : null;
-        this._activeId = selected || fallback;
+        this._activeId = themes.selected || fallback;
 
         // re-render with the live items and the active theme as the label.
         const activeItem = items.find((it) => it.id === this._activeId) || null;
@@ -100,17 +94,7 @@ webexpress.webapp.DropdownTheme = class extends webexpress.webui.DropdownCtrl {
      * @returns {Object} normalised menu item.
      */
     _mapItem(apiItem) {
-        const id = apiItem && apiItem.id ? String(apiItem.id) : null;
-        const text = (apiItem && (apiItem.content || apiItem.name || apiItem.label || apiItem.title)) || id || "";
-        return {
-            id: id,
-            uri: "javascript:void(0);",
-            text: text,
-            icon: apiItem && apiItem.icon ? apiItem.icon : null,
-            image: apiItem && apiItem.image ? apiItem.image : null,
-            data: [],
-            aria: []
-        };
+        return webexpress.webapp.dropdownThemeModel.mapItem(apiItem);
     }
 
     /**
@@ -133,7 +117,7 @@ webexpress.webapp.DropdownTheme = class extends webexpress.webui.DropdownCtrl {
         const body = new URLSearchParams();
         body.set("v", themeId);
 
-        fetch(this._apiEndpoint, {
+        webexpress.webapp.ServiceRegistry.request(this._apiEndpoint, {
             method: "PUT",
             headers: {
                 "Accept": "application/json",

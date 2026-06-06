@@ -16,7 +16,7 @@ The `webexpress.webapp.DropdownTheme` is a REST-backed theme picker that extends
 
 ## Declarative Configuration
 
-The control is rendered server-side by `ControlRestSelectionTheme`. Manual HTML usage is also supported:
+The control is rendered server-side by `ControlDataSelectionTheme`. Manual HTML usage is also supported:
 
 |Attribute                |Description
 |-------------------------|-----------------------------------------------------------------
@@ -74,7 +74,7 @@ public sealed class ThemeApi : RestApiTheme
 }
 
 // 2. drop the selector onto a page - it is a standalone dropdown:
-new ControlRestSelectionTheme("themeSelector")
+new ControlDataSelectionTheme("themeSelector")
 {
     RestUri = _ => sitemapManager.GetUri<ThemeApi>(applicationContext)
 };

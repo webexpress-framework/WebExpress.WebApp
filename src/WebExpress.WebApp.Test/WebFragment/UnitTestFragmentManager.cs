@@ -187,35 +187,35 @@ namespace WebExpress.WebApp.Test.WebFragment
         /// Test helper for GetFragments assertions.
         /// </summary>
         [Fact]
-        public void GetFragments_RestTable_ContentSecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(FragmentControlRestTable), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<div id=""webexpress-webapp-test-testfragmentcontrolresttable"" class=""wx-webapp-table""></div>");
+        public void GetFragments_RestTable_ContentSecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(FragmentControlDataTable), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<div id=""webexpress-webapp-test-testfragmentcontroldatatable"" class=""wx-webapp-table""></div>");
 
         /// <summary>
         /// Test the get fragments function of the fragment manager.
         /// Test helper for GetFragments assertions.
         /// </summary>
         [Fact]
-        public void GetFragments_RestDropdown_ContentSecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(FragmentControlRestDropdown), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<div id=""webexpress-webapp-test-testfragmentcontrolrestdropdown"" class=""wx-webapp-dropdown"" role=""button""></div>");
+        public void GetFragments_RestDropdown_ContentSecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(FragmentControlDataDropdown), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<div id=""webexpress-webapp-test-testfragmentcontroldatadropdown"" class=""wx-webapp-dropdown"" role=""button""></div>");
 
         /// <summary>
         /// Test the get fragments function of the fragment manager.
         /// Test helper for GetFragments assertions.
         /// </summary>
         [Fact]
-        public void GetFragments_RestFormNew_ContentSecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(TestFragmentControlRestFormNew), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<form id=""webexpress-webapp-test-testfragmentcontrolrestformnew"" class=""wx-webapp-restform"" data-method=""POST"" data-mode=""new""><main><div></div></main><div><button type=""submit"" class=""btn me-2 btn-success""><i class=""wx-icon-light wx-icon-light-plus me-2""></i>New  </button></div></form>");
+        public void GetFragments_RestFormNew_ContentSecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(TestFragmentControlDataFormNew), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<form id=""webexpress-webapp-test-testfragmentcontroldataformnew"" class=""wx-webapp-restform"" data-method=""POST"" data-mode=""new""><main><div></div></main><div><button type=""submit"" class=""btn me-2 btn-success""><i class=""wx-icon-light wx-icon-light-plus me-2""></i>New  </button></div></form>");
 
         /// <summary>
         /// Test the get fragments function of the fragment manager.
         /// Test helper for GetFragments assertions.
         /// </summary>
         [Fact]
-        public void GetFragments_RestFormEdit_ContentSecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(TestFragmentControlRestFormEdit), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<form id=""webexpress-webapp-test-testfragmentcontrolrestformedit"" class=""wx-webapp-restform"" data-method=""PUT"" data-mode=""edit""><main><div></div></main><div><button type=""submit"" class=""btn me-2 btn-success""><i class=""wx-icon-light wx-icon-light-floppy-disk me-2""></i>Save  </button></div></form>");
+        public void GetFragments_RestFormEdit_ContentSecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(TestFragmentControlDataFormEdit), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<form id=""webexpress-webapp-test-testfragmentcontroldataformedit"" class=""wx-webapp-restform"" data-method=""PUT"" data-mode=""edit""><main><div></div></main><div><button type=""submit"" class=""btn me-2 btn-success""><i class=""wx-icon-light wx-icon-light-floppy-disk me-2""></i>Save  </button></div></form>");
 
         /// <summary>
         /// Test the get fragments function of the fragment manager.
         /// Test helper for GetFragments assertions.
         /// </summary>
         [Fact]
-        public void GetFragments_RestFormDelete_ContentSecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(TestFragmentControlRestFormDelete), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<form id=""webexpress-webapp-test-testfragmentcontrolrestformdelete"" class=""wx-webapp-restform"" data-method=""DELETE"" data-mode=""delete""><main><div><p>Are you sure you want to delete this item?</p></div></main><div><button type=""submit"" class=""btn me-2 btn-danger""><i class=""wx-icon-light wx-icon-light-trash me-2""></i>Delete  </button></div></form>");
+        public void GetFragments_RestFormDelete_ContentSecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(TestFragmentControlDataFormDelete), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<form id=""webexpress-webapp-test-testfragmentcontroldataformdelete"" class=""wx-webapp-restform"" data-method=""DELETE"" data-mode=""delete""><main><div><p>Are you sure you want to delete this item?</p></div></main><div><button type=""submit"" class=""btn me-2 btn-danger""><i class=""wx-icon-light wx-icon-light-trash me-2""></i>Delete  </button></div></form>");
 
         /// <summary>
         /// Test the get fragments function of the fragment manager.
@@ -236,28 +236,28 @@ namespace WebExpress.WebApp.Test.WebFragment
         /// Test helper for GetFragments assertions.
         /// </summary>
         [Fact]
-        public void GetFragments_RestQuickfilter_ContentSecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(FragmentControlRestQuickfilter), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<div id=""webexpress-webapp-test-testfragmentcontrolrestquickfilter"" class=""wx-webapp-quickfilter""></div>");
+        public void GetFragments_RestQuickfilter_ContentSecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(FragmentControlDataQuickfilter), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<div id=""webexpress-webapp-test-testfragmentcontroldataquickfilter"" class=""wx-webapp-quickfilter""></div>");
 
         /// <summary>
         /// Test the get fragments function of the fragment manager.
         /// Test helper for GetFragments assertions.
         /// </summary>
         [Fact]
-        public void GetFragments_RestDashboard_ContentSecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(FragmentControlRestDashboard), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<div id=""webexpress-webapp-test-testfragmentcontrolrestdashboard"" class=""wx-webapp-dashboard""></div>");
+        public void GetFragments_RestDashboard_ContentSecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(FragmentControlDataDashboard), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<div id=""webexpress-webapp-test-testfragmentcontroldatadashboard"" class=""wx-webapp-dashboard""></div>");
 
         /// <summary>
         /// Test the get fragments function of the fragment manager.
         /// Test helper for GetFragments assertions.
         /// </summary>
         [Fact]
-        public void GetFragments_RestWizard_ContentSecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(FragmentControlRestWizard), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<form id=""webexpress-webapp-test-testfragmentcontrolrestwizard"" class=""wx-webapp-restwizard""></form>");
+        public void GetFragments_RestWizard_ContentSecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(FragmentControlDataWizard), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<form id=""webexpress-webapp-test-testfragmentcontroldatawizard"" class=""wx-webapp-restwizard""></form>");
 
         /// <summary>
         /// Test the get fragments function of the fragment manager.
         /// Test helper for GetFragments assertions.
         /// </summary>
         [Fact]
-        public void GetFragments_RestWorkflow_ContentSecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(FragmentControlRestWorkflow), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<div id=""webexpress-webapp-test-testfragmentcontrolrestworkflow"" class=""wx-webapp-workflow-editor""></div>");
+        public void GetFragments_RestWorkflow_ContentSecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(FragmentControlDataWorkflow), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<div id=""webexpress-webapp-test-testfragmentcontroldataworkflow"" class=""wx-webapp-workflow-editor""></div>");
 
         /// <summary>
         /// Test the render function of the fragment manager.
@@ -283,7 +283,7 @@ namespace WebExpress.WebApp.Test.WebFragment
         }
 
         /// <summary>
-        /// Verifies FragmentControlRestTabTemplate retrieval in isolation.
+        /// Verifies FragmentControlDataTabTemplate retrieval in isolation.
         /// </summary>
         [Fact]
         public void GetFragments_RestTabTemplate()
@@ -312,18 +312,18 @@ namespace WebExpress.WebApp.Test.WebFragment
             };
 
             // act
-            var fragments = (IEnumerable<object>)getFragmentsMethod.MakeGenericMethod(typeof(FragmentControlRestTabTemplate), typeof(SectionContentSecondary))
+            var fragments = (IEnumerable<object>)getFragmentsMethod.MakeGenericMethod(typeof(FragmentControlDataTabTemplate), typeof(SectionContentSecondary))
                 .Invoke(componentHub.FragmentManager, parameters);
-            var controls = Enumerable.Cast<IFragmentControlRestTabTemplate>(fragments).ToList();
+            var controls = Enumerable.Cast<IFragmentControlDataTabTemplate>(fragments).ToList();
             var html = controls.Select(x => x.Render(renderContext, visualTree)).ToList();
 
             // validation
             Assert.Single(html);
-            AssertExtensions.EqualWithPlaceholders(@"<div id=""webexpress-webapp-test-testfragmentcontrolresttabtemplate"" class=""wx-template""></div>", html.FirstOrDefault()?.ToString()?.Trim());
+            AssertExtensions.EqualWithPlaceholders(@"<div id=""webexpress-webapp-test-testfragmentcontroldatatabtemplate"" class=""wx-template""></div>", html.FirstOrDefault()?.ToString()?.Trim());
         }
 
         /// <summary>
-        /// Verifies IFragmentControlRestTabTemplate retrieval in isolation.
+        /// Verifies IFragmentControlDataTabTemplate retrieval in isolation.
         /// </summary>
         [Fact]
         public void GetFragments_IRestTabTemplate()
@@ -352,14 +352,14 @@ namespace WebExpress.WebApp.Test.WebFragment
             };
 
             // act
-            var fragments = (IEnumerable<object>)getFragmentsMethod.MakeGenericMethod(typeof(IFragmentControlRestTabTemplate), typeof(SectionContentSecondary))
+            var fragments = (IEnumerable<object>)getFragmentsMethod.MakeGenericMethod(typeof(IFragmentControlDataTabTemplate), typeof(SectionContentSecondary))
                 .Invoke(componentHub.FragmentManager, parameters);
-            var controls = Enumerable.Cast<IFragmentControlRestTabTemplate>(fragments).ToList();
+            var controls = Enumerable.Cast<IFragmentControlDataTabTemplate>(fragments).ToList();
             var html = controls.Select(x => x.Render(renderContext, visualTree)).ToList();
 
             // validation
             Assert.Single(html);
-            AssertExtensions.EqualWithPlaceholders(@"<div id=""webexpress-webapp-test-testfragmentcontrolresttabtemplate"" class=""wx-template""></div>", html.FirstOrDefault()?.ToString()?.Trim());
+            AssertExtensions.EqualWithPlaceholders(@"<div id=""webexpress-webapp-test-testfragmentcontroldatatabtemplate"" class=""wx-template""></div>", html.FirstOrDefault()?.ToString()?.Trim());
         }
 
         /// <summary>
@@ -391,9 +391,9 @@ namespace WebExpress.WebApp.Test.WebFragment
             };
 
             // act
-            var fragments = (IEnumerable<object>)getFragmentsMethod.MakeGenericMethod(typeof(FragmentControlRestTabTemplate), typeof(SectionContentSecondary))
+            var fragments = (IEnumerable<object>)getFragmentsMethod.MakeGenericMethod(typeof(FragmentControlDataTabTemplate), typeof(SectionContentSecondary))
                 .Invoke(componentHub.FragmentManager, parameters);
-            var controls = Enumerable.Cast<IFragmentControlRestTabTemplate>(fragments).ToList();
+            var controls = Enumerable.Cast<IFragmentControlDataTabTemplate>(fragments).ToList();
 
             // validation
             Assert.Empty(controls);

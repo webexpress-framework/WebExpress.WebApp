@@ -86,4 +86,4 @@ tagElement.addEventListener(webexpress.webapp.Event.TAG_ADDED_EVENT, (e) => {
 
 ## Read-only Mode
 
-Setting `data-readonly="true"` (or `Readonly = _ => true` on the `ControlRestTag`) suppresses the "+" button, leaving a pure read-only chip display with no way to open the editing modal. This is useful for surfaces that should display tags without allowing edits.
+Setting `data-readonly="true"` (or `Readonly = _ => true` on the `ControlDataTag`) suppresses the "+" button, leaving a pure read-only chip display with no way to open the editing modal. This is useful for surfaces that should display tags without allowing edits.

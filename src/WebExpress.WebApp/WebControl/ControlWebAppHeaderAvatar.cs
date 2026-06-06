@@ -14,7 +14,7 @@ namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
     /// Avatar control for a web app header. Uses the avatar image as the interactive menu
-    /// button via <see cref="ControlRestAvatarDropdown"/> and supports dynamic item loading
+    /// button via <see cref="ControlDataAvatarDropdown"/> and supports dynamic item loading
     /// through a REST API endpoint.
     /// </summary>
     public class ControlWebAppHeaderAvatar : Control, IControlWebAppHeaderAvatar

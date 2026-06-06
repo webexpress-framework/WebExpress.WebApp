@@ -84,9 +84,9 @@ webexpress.webui.DialogPanels.register("workflow-validator-management", {
         renderList();
 
         if (ctx.fetchUri !== "") {
-            fetch(ctx.fetchUri)
+            webexpress.webapp.ServiceRegistry.request(ctx.fetchUri)
                 .then((res) => { 
-                    return res.json(); 
+                    return res.data;
                 })
                 .then((data) => {
                     modal.availableTemplates = Array.isArray(data.items) ? data.items : data;

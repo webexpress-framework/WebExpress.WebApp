@@ -26,7 +26,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestComment(id)
+            var control = new ControlDataComment(id)
             {
             };
 
@@ -37,29 +37,6 @@ namespace WebExpress.WebApp.Test.WebControl
             AssertExtensions.EqualWithPlaceholders(expected, html);
         }
 
-        /// <summary>
-        /// Tests the RestUri property of the comment control.
-        /// </summary>
-        [Theory]
-        [InlineData(null, @"<div class=""wx-webapp-comment""></div>")]
-        [InlineData("https://example.com/api/comments/INC-00123", @"<div class=""wx-webapp-comment"" data-uri=""https://example.com/api/comments/INC-00123""></div>")]
-        public void RestUri(string uriString, string expected)
-        {
-            // arrange
-            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
-            var context = UnitTestControlFixture.CreateRenderContextMock();
-            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestComment()
-            {
-                RestUri = _ => uriString is not null ? new UriEndpoint(uriString) : null
-            };
-
-            // act
-            var html = control.Render(context, visualTree);
-
-            // validation
-            AssertExtensions.EqualWithPlaceholders(expected, html);
-        }
 
         /// <summary>
         /// Tests the UsersUri property of the comment control.
@@ -73,7 +50,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestComment()
+            var control = new ControlDataComment()
             {
                 UsersUri = _ => uriString is not null ? new UriEndpoint(uriString) : null
             };
@@ -99,7 +76,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestComment()
+            var control = new ControlDataComment()
             {
                 CurrentUser = _ => user
             };
@@ -124,7 +101,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestComment()
+            var control = new ControlDataComment()
             {
                 Readonly = _ => readOnly
             };
@@ -147,7 +124,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestComment()
+            var control = new ControlDataComment()
             {
                 ImageUploadUri = _ => new UriEndpoint("https://example.com/api/upload")
             };
@@ -170,7 +147,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestComment("c")
+            var control = new ControlDataComment("c")
             {
                 Categories = _ => "{\"general\":{\"id\":\"general\"}}"
             };
@@ -192,9 +169,8 @@ namespace WebExpress.WebApp.Test.WebControl
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestComment("c1")
+            var control = new ControlDataComment("c1")
             {
-                RestUri = _ => new UriEndpoint("https://example.com/api/comments/INC-1"),
                 UsersUri = _ => new UriEndpoint("https://example.com/api/users"),
                 CurrentUser = _ => "u-alice",
                 ImageUploadUri = _ => new UriEndpoint("https://example.com/api/upload"),
@@ -205,7 +181,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var html = control.Render(context, visualTree);
 
             // validation
-            AssertExtensions.EqualWithPlaceholders(@"<div id=""c1"" class=""wx-webapp-comment"" data-uri=""https://example.com/api/comments/INC-1"" data-users-uri=""https://example.com/api/users"" data-current-user=""u-alice"" data-image-upload-uri=""https://example.com/api/upload""></div>", html);
+            AssertExtensions.EqualWithPlaceholders(@"<div id=""c1"" class=""wx-webapp-comment"" data-users-uri=""https://example.com/api/users"" data-current-user=""u-alice"" data-image-upload-uri=""https://example.com/api/upload""></div>", html);
         }
 
         /// <summary>
@@ -219,7 +195,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestComment()
+            var control = new ControlDataComment()
             {
                 Enable = _ => false
             };

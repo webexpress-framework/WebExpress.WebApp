@@ -38,7 +38,12 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
     constructor(element) {
         super(element);
 
-        this._restUri = element.dataset.uri || "";
+
+        // the load keeps its own abort and loading state through the shared
+        // request; the state save flows through this rest service
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+        this._service = islandServices.data;
+        this._restUri = this._service ? this._service.baseUri : "";
 
         if (element.dataset.pageSize) {
             this._pageSize = parseInt(element.dataset.pageSize, 10);
@@ -243,32 +248,22 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
 
         const fetchUrl = this._restUri.startsWith("http") ? urlObj.href : (urlObj.pathname + urlObj.search);
 
-        fetch(fetchUrl, { signal: this._abortController.signal })
+        webexpress.webapp.ServiceRegistry.request(fetchUrl, { signal: this._abortController.signal })
             .then((res) => {
+                if (res.error && res.error.kind === "abort") {
+                    const abort = new Error("aborted");
+                    abort.name = "AbortError";
+                    throw abort;
+                }
                 if (!res.ok) {
                     throw new Error("Request failed");
                 }
-                return res.json();
+                return res.data;
             })
             .then((response) => {
-                const totalFromResponse = response.total ?? null;
+                const newItems = webexpress.webapp.tileModel.sliceItems(response.items, this._pageSize);
 
-                let newItems = [];
-                if (Array.isArray(response.items)) {
-                    newItems = response.items;
-                }
-                
-                if (newItems.length > this._pageSize) {
-                    newItems = newItems.slice(0, this._pageSize);
-                }
-
-                const receivedItems = newItems.length;
-
-                if (totalFromResponse !== null) {
-                    this._totalRecords = Number(totalFromResponse) || 0;
-                } else {
-                    this._totalRecords = (this._page * this._pageSize) + receivedItems;
-                }
+                this._totalRecords = webexpress.webapp.tileModel.reduceTotal(response, newItems.length, this._page, this._pageSize);
 
                 const responseForUpdate = Object.assign({}, response, { items: newItems });
 
@@ -314,42 +309,7 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
             return;
         }
 
-        let items = [];
-        if (response.items) {
-            items = response.items;
-        }
-
-        const mappedTiles = items.map((item) => {
-            let isVisible = true;
-            if (typeof item.visible === "boolean") {
-                isVisible = item.visible;
-            }
-            
-            let opts = null;
-            if (Array.isArray(item.options)) {
-                opts = item.options;
-            }
-
-            return {
-                id: item.id || null,
-                label: item.label || item.title || item.name || "",
-                html: item.text || item.description || item.content || null,
-                class: item.class || null,
-                icon: item.icon || null,
-                image: item.image || null,
-                colorCss: item.colorCss || item.color || null,
-                colorStyle: item.colorStyle || item.style || null,
-                visible: isVisible,
-                primaryAction: item.primaryAction || null,
-                secondaryAction: item.secondaryAction || null,
-                bind: item.bind || null,
-                options: opts,
-                _lc_id: null,
-                _lc_label: null
-            };
-        });
-
-        this._tiles = mappedTiles;
+        this._tiles = webexpress.webapp.tileModel.mapTiles(response);
 
         if (response.meta) {
             if (response.meta.sort) {
@@ -400,12 +360,10 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
             return;
         }
 
-        fetch(this._restUri, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(stateObj)
-        }).catch((err) => {
-            console.error("TileCtrl update state failed", err);
+        this._service.update(stateObj).then((r) => {
+            if (!r.ok) {
+                console.error("TileCtrl update state failed", r.error);
+            }
         });
     }
 

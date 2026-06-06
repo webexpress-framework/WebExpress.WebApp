@@ -23,16 +23,30 @@
  *   webexpress.webapp.Event.COMMENT_ADDED_EVENT
  *     detail: { comment, uri }
  */
-webexpress.webapp.CommentComposerCtrl = class extends webexpress.webui.Ctrl {
+webexpress.webapp.CommentComposerCtrl = class extends webexpress.webapp.Data {
 
     /**
      * Construct a new CommentComposerCtrl.
      * @param {HTMLElement} element - host element.
      */
     constructor(element) {
-        super(element);
+        const uri = element.dataset.uri || null;
 
-        this._uri = element.dataset.uri || null;
+        // categories are sourced from the REST API ({uri}/categories) unless
+        // a static override is supplied via the data-categories attribute.
+        // the categories load uses the shared request against the categories
+        // url; the new comment is posted through this rest service. a configured
+        // island service is preferred over the legacy descriptor, and the Data
+        // base aborts the service on teardown.
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+        const services = {
+            data: islandServices.data ||
+                webexpress.webapp.ServiceRegistry.create(webexpress.webapp.commentComposerModel.legacyDescriptor(uri))
+        };
+
+        super(element, { services });
+
+        this._uri = uri;
         this._usersUri = element.dataset.usersUri || null;
         this._currentUser = element.dataset.currentUser || null;
         this._imageUploadUri = element.dataset.imageUploadUri || null;
@@ -40,8 +54,8 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webui.Ctrl {
         this._placeholder = element.dataset.placeholder
             || this._i18n("webexpress.webapp:comment.composer.trigger", "Write a comment…");
 
-        // categories are sourced from the REST API ({uri}/categories) unless
-        // a static override is supplied via the data-categories attribute.
+        this._service = this.useService("data");
+
         this._categoriesPreset = false;
         this._categories = {};
         if (element.dataset.categories) {
@@ -85,11 +99,10 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
         try {
-            const sep = this._uri.endsWith("/") ? "" : "/";
-            const url = this._uri + sep + "categories";
-            const res = await fetch(url, { headers: { "Accept": "application/json" } });
-            if (!res.ok) throw new Error(res.statusText);
-            this._categories = this._normalizeCategories(await res.json());
+            const url = webexpress.webapp.commentComposerModel.categoriesUrl(this._uri);
+            const res = await webexpress.webapp.ServiceRegistry.request(url, { headers: { "Accept": "application/json" } });
+            if (!res.ok) throw new Error(res.error ? res.error.message : String(res.status));
+            this._categories = this._normalizeCategories(res.data);
             this._rebuildCategoryOptions();
         } catch (e) {
             console.warn("CommentComposerCtrl: categories load failed", e);
@@ -103,19 +116,7 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webui.Ctrl {
      * @returns {Object<string, Object>}
      */
     _normalizeCategories(input) {
-        if (!input) {
-            return {};
-        }
-        if (Array.isArray(input)) {
-            const obj = {};
-            for (const c of input) {
-                if (c && c.id) {
-                    obj[c.id] = c;
-                }
-            }
-            return obj;
-        }
-        return input;
+        return webexpress.webapp.commentComposerModel.normalizeCategories(input);
     }
 
     /**
@@ -338,17 +339,13 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webui.Ctrl {
         }
         const body = this._editorRef ? this._editorRef.value : this._editorHost.innerHTML;
         const category = this._catSelect.value;
-        const labels = this._labelsInput.value.split(",").map(s => s.trim()).filter(Boolean);
+        const labels = webexpress.webapp.commentComposerModel.parseLabels(this._labelsInput.value);
 
         this._submitBtn.disabled = true;
         try {
-            const res = await fetch(this._uri, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Accept": "application/json" },
-                body: JSON.stringify({ body, category, labels })
-            });
-            if (!res.ok) throw new Error(res.statusText);
-            const created = await res.json();
+            const res = await this._service.create({ body, category, labels });
+            if (!res.ok) throw new Error(res.error ? res.error.message : String(res.status));
+            const created = res.data;
             this._dispatch(webexpress.webapp.Event.COMMENT_ADDED_EVENT, { comment: created, uri: this._uri });
             this._collapse();
         } catch (e) {

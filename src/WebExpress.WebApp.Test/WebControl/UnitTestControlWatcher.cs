@@ -26,7 +26,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestWatcher(id);
+            var control = new ControlDataWatcher(id);
 
             // act
             var html = control.Render(context, visualTree);
@@ -47,7 +47,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestWatcher()
+            var control = new ControlDataWatcher()
             {
                 RestUri = _ => uriString is not null ? new UriEndpoint(uriString) : null
             };
@@ -71,7 +71,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestWatcher()
+            var control = new ControlDataWatcher()
             {
                 UsersUri = _ => uriString is not null ? new UriEndpoint(uriString) : null
             };
@@ -96,7 +96,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestWatcher()
+            var control = new ControlDataWatcher()
             {
                 MaxVisible = _ => maxVisible
             };
@@ -121,7 +121,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestWatcher()
+            var control = new ControlDataWatcher()
             {
                 Readonly = _ => readOnly
             };
@@ -143,7 +143,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestWatcher("o1")
+            var control = new ControlDataWatcher("o1")
             {
                 RestUri = _ => new UriEndpoint("https://example.com/api/watchers/INC-1"),
                 UsersUri = _ => new UriEndpoint("https://example.com/api/users"),
@@ -169,7 +169,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestWatcher()
+            var control = new ControlDataWatcher()
             {
                 Enable = _ => false
             };

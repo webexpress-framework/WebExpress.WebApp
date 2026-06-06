@@ -30,7 +30,7 @@
  * - webexpress.webui.Event.SELECT_EVENT (or "wx:select-sprint" fallback)
  *   when the sprint card is clicked
  */
-webexpress.webapp.ScrumSprintCtrl = class extends webexpress.webui.Ctrl {
+webexpress.webapp.ScrumSprintCtrl = class extends webexpress.webapp.Data {
 
     static SVG_NS = "http://www.w3.org/2000/svg";
     static CHART_W = 160;
@@ -38,31 +38,58 @@ webexpress.webapp.ScrumSprintCtrl = class extends webexpress.webui.Ctrl {
     static OVERBOOK_THRESHOLD = 0.10; // 10% delta vs ideal counts as ahead/behind
 
     _restUri = null;
-    _sprint = null;
-    _state = "idle"; // "idle" | "loading" | "error"
-    _error = null;
 
     /**
      * Initializes the sprint overview control.
      * @param {HTMLElement} element - The host element.
      */
     constructor(element) {
-        super(element);
+        // seed the sprint state from the optional data-wx-state island before
+        // super, so the component store owns the sprint, the load status and the
+        // error. The single sprint load uses the shared request, so no service
+        // map is needed.
+        const initialState = Object.assign(
+            { sprint: null, status: "idle", error: null },
+            webexpress.webapp.Data.readState(element)
+        );
+
+        super(element, { state: initialState });
 
         this._restUri = element.dataset.restUri || element.getAttribute("data-rest-uri") || null;
         element.removeAttribute("data-rest-uri");
+        element.removeAttribute("data-wx-state");
         element.classList.add("wx-scrum-sprint");
 
         // dispatch a select event when the card is clicked (ignoring inner controls)
         element.addEventListener("click", (e) => this._onCardClick(e));
 
-        if (this._restUri) {
-            this._load();
-        } else {
+        // without an endpoint and without a seed, fall back to the inline config
+        if (!this._restUri && !this._sprint) {
             this._parseStaticConfig();
-            this.render();
+        }
+
+        // subscribe and perform the first render from the seeded, parsed or empty
+        // state; Component._apply calls the existing imperative render method
+        this.mount();
+
+        // load from the endpoint only when the server did not seed the sprint
+        if (this._restUri && !this._sprint) {
+            this._load();
         }
     }
+
+    // the sprint, the load status and the error are backed by the component store,
+    // so the store is the single source of truth and a change re-renders through
+    // the subscription that mount established
+
+    get _sprint() { return this.state.sprint; }
+    set _sprint(value) { this.setState({ sprint: value || null }); }
+
+    get _state() { return this.state.status; }
+    set _state(value) { this.setState({ status: value }); }
+
+    get _error() { return this.state.error; }
+    set _error(value) { this.setState({ error: value }); }
 
     /**
      * Returns the currently displayed sprint.
@@ -77,10 +104,7 @@ webexpress.webapp.ScrumSprintCtrl = class extends webexpress.webui.Ctrl {
      * @param {Object} sprint - The sprint payload.
      */
     set sprint(sprint) {
-        this._sprint = sprint || null;
-        this._state = "idle";
-        this._error = null;
-        this.render();
+        this.setState({ sprint: sprint || null, status: "idle", error: null });
     }
 
     /**
@@ -119,26 +143,23 @@ webexpress.webapp.ScrumSprintCtrl = class extends webexpress.webui.Ctrl {
         this._state = "loading";
         this._error = null;
         this._dispatch(webexpress.webui.Event.DATA_REQUESTED_EVENT, { uri: this._restUri });
-        this.render();
 
-        fetch(this._restUri, { headers: { "Accept": "application/json" } })
+        webexpress.webapp.ServiceRegistry.request(this._restUri, { headers: { "Accept": "application/json" } })
             .then((r) => {
                 if (!r.ok) {
                     throw new Error("HTTP " + r.status);
                 }
-                return r.json();
+                return r.data;
             })
             .then((data) => {
                 this._sprint = data || null;
                 this._state = "idle";
                 this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, { uri: this._restUri });
-                this.render();
             })
             .catch((err) => {
                 console.error("ScrumSprintCtrl: failed to load data", err);
                 this._state = "error";
                 this._error = err;
-                this.render();
             });
     }
 

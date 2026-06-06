@@ -16,7 +16,7 @@ webexpress.webui.Actions.register("logout", {
             target = "/";
         }
 
-        fetch(uri, {
+        webexpress.webapp.ServiceRegistry.request(uri, {
             method: "DELETE",
             headers: {
                 "Content-Type": "application/json; charset=utf-8"
@@ -49,12 +49,19 @@ webexpress.webui.Actions.register("plugin-package", {
         }
 
         var handleResponse = function (response) {
+            // response is the normalised service result, not a raw Response; the
+            // body is already parsed into data and a non-json body is wrapped as
+            // { text }. On failure prefer the parsed text, then the error message.
             if (!response.ok) {
-                return response.text().then(function (text) {
-                    throw new Error(text || ("Request failed with status " + response.status + " for " + method + " " + uri));
-                });
+                var detail = "";
+                if (response.data && typeof response.data === "object" && typeof response.data.text === "string") {
+                    detail = response.data.text;
+                } else if (response.error && response.error.message) {
+                    detail = response.error.message;
+                }
+                throw new Error(detail || ("Request failed with status " + response.status + " for " + method + " " + uri));
             }
-            return response.json().catch(function () { return {}; });
+            return (response.data && typeof response.data === "object") ? response.data : {};
         };
 
         var handleResult = function (payload) {
@@ -87,7 +94,7 @@ webexpress.webui.Actions.register("plugin-package", {
                 var formData = new FormData();
                 formData.append("file", input.files[0], input.files[0].name);
 
-                fetch(uri, {
+                webexpress.webapp.ServiceRegistry.request(uri, {
                     method: method,
                     body: formData
                 }).then(handleResponse).then(handleResult).catch(handleError).finally(cleanup);
@@ -97,7 +104,7 @@ webexpress.webui.Actions.register("plugin-package", {
             return;
         }
 
-        fetch(uri, {
+        webexpress.webapp.ServiceRegistry.request(uri, {
             method: method
         }).then(handleResponse).then(handleResult).catch(handleError);
     }

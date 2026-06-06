@@ -24,7 +24,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
             var context = UnitTestControlFixture.CreateRenderContextMock(application);
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestAvatarDropdown(id)
+            var control = new ControlDataAvatarDropdown(id)
             {
             };
 
@@ -48,7 +48,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
             var context = UnitTestControlFixture.CreateRenderContextMock(application);
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestAvatarDropdown()
+            var control = new ControlDataAvatarDropdown()
             {
                 RestUri = _ => uriString is not null ? new UriEndpoint(uriString) : null
             };

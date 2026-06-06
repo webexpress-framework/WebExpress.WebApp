@@ -1,0 +1,81 @@
+﻿using System;
+using System.Linq;
+using WebExpress.WebApp.WebData;
+using WebExpress.WebCore.Internationalization;
+using WebExpress.WebCore.WebHtml;
+using WebExpress.WebUI.WebControl;
+using WebExpress.WebUI.WebPage;
+
+namespace WebExpress.WebApp.WebControl
+{
+    /// <summary>
+    /// Represents a control panel for API list interactions.
+    /// </summary>
+    public class ControlDataList : ControlList, IControlDataList, IDataIsland
+    {
+        /// <summary>
+        /// Gets or sets the binding.
+        /// </summary>
+        public Func<IRenderControlContext, IBinding> Bind { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional data service descriptor. When set, the
+        /// control emits a data-wx-service island that the JavaScript engine
+        /// consumes in preference to the legacy data-uri fallback, which keeps
+        /// the endpoint and parameter knowledge authored in C#. When not set, the
+        /// control behaves exactly as before and the client uses its legacy
+        /// descriptor. See WebExpress/docs/view-state-service.md.
+        /// </summary>
+        public Func<IRenderControlContext, DataServiceDescriptor> ServiceFactory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional initial state. When set, the control emits a
+        /// data-wx-state island that the JavaScript Component seeds its store
+        /// from on the first render, so the first paint can avoid a round trip.
+        /// See WebExpress/docs/view-state-service.md.
+        /// </summary>
+        public Func<IRenderControlContext, DataState> StateFactory { get; set; }
+
+        /// <summary>
+        /// Initializes a new instance of the class.
+        /// </summary>
+        /// <param name="id">The control id.</param>
+        public ControlDataList(string id = null)
+            : base(id ?? RandomId.Create())
+        {
+        }
+
+        /// <summary>
+        /// Converts the control to an HTML representation.
+        /// </summary>
+        /// <param name="renderContext">The context in which the control is rendered.</param>
+        /// <param name="visualTree">The visual tree.</param>
+        /// <returns>An HTML node representing the rendered control.</returns>
+        public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
+        {
+            var selectable = Selectable?.Invoke(renderContext) ?? false;
+            var title = Title?.Invoke(renderContext);
+            var sortable = Sortable?.Invoke(renderContext) ?? false;
+            var layout = Layout?.Invoke(renderContext);
+            var bind = Bind?.Invoke(renderContext);
+
+            var html = new HtmlElementTextContentDiv()
+            {
+                Id = Id,
+                Class = Css.Concatenate("wx-webapp-list", GetClasses(renderContext)),
+                Style = GetStyles(renderContext)
+            }
+                .AddUserAttribute("data-title", I18N.Translate(renderContext, title))
+                .AddUserAttribute("data-sortable", sortable ? "true" : null)
+                .AddUserAttribute("data-selectable", selectable ? "true" : null)
+                .AddUserAttribute("data-layout", layout?.ToClass())
+                .Add(Items.Select(x => x.Render(renderContext, visualTree)));
+
+            html.EmitDataIslands(this, renderContext);
+
+            bind?.ApplyUserAttributes(html);
+
+            return html;
+        }
+    }
+}

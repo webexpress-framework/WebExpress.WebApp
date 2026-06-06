@@ -117,7 +117,7 @@ namespace WebExpress.WebApp.WebPage
             var html = new HtmlElementRootHtml();
             var body = new HtmlElementSectionBody();
             var renderContext = new RenderControlContext(context.RenderContext);
-            var login = new ControlRestLogin()
+            var login = new ControlDataLogin()
             {
                 RestUri = _ => LoginUri,
                 Padding = _ => new PropertySpacingPadding(PropertySpacing.Space.Five)

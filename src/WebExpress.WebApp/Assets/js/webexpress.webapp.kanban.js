@@ -7,7 +7,6 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
 
     // configuration
     _restUri = "";
-    _abortController = null;
 
     /**
      * Initializes the REST Kanban control.
@@ -16,8 +15,19 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
      constructor(element) {
         super(element);
 
-        this._restUri = element.dataset.uri || "";
+        // canonical ui state: a single source of truth for the loading flag,
+        // seeded from the optional data-wx-state island
+        this._store = new webexpress.webapp.Store(Object.assign({
+            loading: false
+        }, webexpress.webapp.Data.readState(element)));
+
         element.removeAttribute("data-uri");
+
+        // data service: a configured island when present, otherwise a legacy
+        // descriptor. its query loads the board, its update persists changes.
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+        this._service = islandServices.data;
+        this._restUri = this._service ? this._service.baseUri : "";
 
         this._initRestPersistence(element);
 
@@ -26,54 +36,41 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
         }
     }
 
+    // loading flag accessor backed by the store, so the single source of truth
+    // is the store
+
+    get _loading() { return this._store.getState().loading; }
+    set _loading(value) { this._store.setState({ loading: value }); }
+
     /**
      * Fetches the board data including columns, swimlanes, and cards.
      */
-    _receiveData() {
-        if (!this._restUri) {
+    async _receiveData() {
+        if (!this._restUri || !this._service) {
             return;
         }
 
-        if (this._abortController) {
-            this._abortController.abort("search replaced");
-        }
-        
-        this._abortController = new AbortController();
+        this._loading = true;
         this._element.classList.add("placeholder-glow");
 
-        const base = window.location.origin;
-        let urlObj;
-        
-        try {
-            urlObj = new URL(this._restUri, base);
-        } catch (e) {
-            urlObj = new URL(this._restUri, document.baseURI);
+        const result = await this._service.query({});
+
+        if (!result.ok) {
+            // a superseded query arrives as an abort result and is ignored
+            if (result.error.kind === "abort") {
+                return;
+            }
+            // log error and reset state
+            console.error("kanban load failed:", result.error.message);
+            this._element.classList.remove("placeholder-glow");
+            this._loading = false;
+            return;
         }
 
-        const fetchUrl = this._restUri.startsWith("http") ? urlObj.href : (urlObj.pathname + urlObj.search);
+        this.updateData(result.data);
 
-        fetch(fetchUrl, { signal: this._abortController.signal })
-            .then((res) => {
-                if (!res.ok) {
-                    throw new Error("request failed");
-                }
-                return res.json();
-            })
-            .then((response) => {
-                this.updateData(response);
-                
-                this._element.classList.remove("placeholder-glow");
-                this._abortController = null;
-            })
-            .catch((error) => {
-                if (error.name === "AbortError") {
-                    return;
-                }
-                // log error and reset state
-                console.error("kanban load failed:", error);
-                this._element.classList.remove("placeholder-glow");
-                this._abortController = null;
-            });
+        this._element.classList.remove("placeholder-glow");
+        this._loading = false;
     }
     
     /**
@@ -81,44 +78,16 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
      * @param {Object} data - The json payload containing columns, swimlanes, and items.
      */
     updateData(data) {
-        // parse column configuration
-        if (data.columns) {
-            this._columns = data.columns.map((col) => {
-                return {
-                    id: col.id,
-                    label: col.label,
-                    size: col.size || "1fr"
-                };
-            });
-        }
+        const board = webexpress.webapp.kanbanModel.normalizeBoard(data);
 
-        // parse swimlane configuration including the expanded state
-        if (data.swimlanes) {
-            this._swimlanes = data.swimlanes.map((lane) => {
-                return {
-                    id: lane.id,
-                    label: lane.label,
-                    expanded: lane.expanded !== false
-                };
-            });
+        if (board.columns) {
+            this._columns = board.columns;
         }
-
-        // parse card items
-        if (data.items) {
-            this._cards = data.items.map((item) => {
-                return {
-                    id: item.id,
-                    columnId: item.columnId,
-                    swimlaneId: item.swimlaneId,
-                    label: item.label || "",
-                    html: item.html || "",
-                    colorCss: item.colorCss || "",
-                    icon: item.icon || null,
-                    image: item.image || null,
-                    primaryAction: item.primaryAction || {},
-                    secondaryAction: item.secondaryAction || {}
-                };
-            });
+        if (board.swimlanes) {
+            this._swimlanes = board.swimlanes;
+        }
+        if (board.cards) {
+            this._cards = board.cards;
         }
 
         // redraw the control with new data
@@ -161,17 +130,15 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
      * @param {Object} payload The data payload containing card position info.
      */
     _sendStateToServer(payload) {
-        if (!this._restUri) {
+        if (!this._restUri || !this._service) {
             return;
         }
 
-        fetch(this._restUri, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        }).catch((err) => {
-            // log failed update request
-            console.error("kanban update state failed", err);
+        this._service.update(payload).then((result) => {
+            if (!result.ok && result.error.kind !== "abort") {
+                // log failed update request
+                console.error("kanban update state failed", result.error.message);
+            }
         });
     }
 
