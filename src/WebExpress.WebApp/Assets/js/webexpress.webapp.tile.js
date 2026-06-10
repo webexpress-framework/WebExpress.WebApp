@@ -10,20 +10,8 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
     // configuration
     _restUri = "";
 
-    // request state
-    _orderBy = null;
-    _orderDir = null;
-    _filter = "";
-    _search = "";
-    _wql = "";
-    _page = 0;
-    _pageSize = 50;
-    _totalRecords = 0;
-    _isLoading = false;
+    // received data
     _items = {};
-
-    // async helpers
-    _abortController = null;
 
     // pager & info
     _pagerWrapper = null;
@@ -38,18 +26,31 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
     constructor(element) {
         super(element);
 
+        // canonical state for the tiles: a single source of truth that the
+        // accessors below read from and write to. seeded from the optional
+        // data-wx-state island.
+        this._store = new webexpress.webapp.Store(Object.assign({
+            search: "",
+            wql: "",
+            filter: "",
+            page: 0,
+            pageSize: 50,
+            orderBy: null,
+            orderDir: null,
+            total: 0,
+            loading: false,
+            error: null
+        }, webexpress.webapp.Data.readState(element)));
 
-        // the load keeps its own abort and loading state through the shared
-        // request; the state save flows through this rest service
+        // data service: the configured island authored in C# through .Service().
+        // the load queries through it, the state save flows through its update.
         const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
         this._service = islandServices.data;
         this._restUri = this._service ? this._service.baseUri : "";
 
         if (element.dataset.pageSize) {
-            this._pageSize = parseInt(element.dataset.pageSize, 10);
-            if (isNaN(this._pageSize) || this._pageSize <= 0) {
-                this._pageSize = 50;
-            }
+            const pageSize = parseInt(element.dataset.pageSize, 10);
+            this._pageSize = isNaN(pageSize) || pageSize <= 0 ? 50 : pageSize;
         }
 
         element.removeAttribute("data-uri");
@@ -63,6 +64,37 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
             this._receiveData();
         }
     }
+
+    // state accessors backed by the store, so the single source of truth is
+    // the store while the inherited pager and rendering logic keeps reading
+    // fields
+
+    get _search() { return this._store.getState().search; }
+    set _search(value) { this._store.setState({ search: value }); }
+
+    get _wql() { return this._store.getState().wql; }
+    set _wql(value) { this._store.setState({ wql: value }); }
+
+    get _filter() { return this._store.getState().filter; }
+    set _filter(value) { this._store.setState({ filter: value }); }
+
+    get _page() { return this._store.getState().page; }
+    set _page(value) { this._store.setState({ page: value }); }
+
+    get _pageSize() { return this._store.getState().pageSize; }
+    set _pageSize(value) { this._store.setState({ pageSize: value }); }
+
+    get _orderBy() { return this._store.getState().orderBy; }
+    set _orderBy(value) { this._store.setState({ orderBy: value }); }
+
+    get _orderDir() { return this._store.getState().orderDir; }
+    set _orderDir(value) { this._store.setState({ orderDir: value }); }
+
+    get _totalRecords() { return this._store.getState().total; }
+    set _totalRecords(value) { this._store.setState({ total: value }); }
+
+    get _isLoading() { return this._store.getState().loading; }
+    set _isLoading(value) { this._store.setState({ loading: value }); }
 
     /**
      * Initializes or binds a pagination control and an information area.
@@ -107,11 +139,13 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
             totalPages = Math.max(1, Math.ceil(total / this._pageSize));
         }
 
-        // clamp current page to available range
+        // clamp current page to available range. the upper bound only applies
+        // when the total is known, so a page seeded through the data-wx-state
+        // island survives until the first response reports the real total
         if (this._page < 0) {
             this._page = 0;
         }
-        if (this._page >= totalPages) {
+        if (total > 0 && this._page >= totalPages) {
             this._page = totalPages - 1;
         }
 
@@ -192,111 +226,59 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
     }
 
     /**
-     * Fetches data from the configured REST endpoint.
+     * Retrieves data from the REST endpoint through the data service. The
+     * logical query parameters are mapped to their wire names by the service
+     * descriptor, and a superseded query is cancelled by the service, so a
+     * stale response arrives as an abort result and is ignored here.
+     * @returns {Promise<void>} Resolves when the load completes.
      */
-    _receiveData() {
+    async _receiveData() {
         if (!this._restUri) {
             return;
         }
 
-        if (this._abortController) {
-            this._abortController.abort("search replaced");
-        }
-        
-        this._abortController = new AbortController();
-        this._isLoading = true;
-        
+        this._store.setState({ loading: true, error: null });
         this._toggleProgress(true);
-
         this._element.classList.add("placeholder-glow");
 
-        const base = window.location.origin;
-        let urlObj;
-        try {
-            urlObj = new URL(this._restUri, base);
-        } catch (e) {
-            urlObj = new URL(this._restUri, document.baseURI);
-        }
+        const params = webexpress.webapp.tileModel.queryParams(this._store.getState());
+        const result = await this._service.query(params);
 
-        if (this._filter) {
-            urlObj.searchParams.set("f", this._filter);
-        } else {
-            urlObj.searchParams.set("f", "");
-        }
-
-        if (this._search) {
-            urlObj.searchParams.set("q", this._search);
-        } else {
-            urlObj.searchParams.set("q", "");
-        }
-        
-        if (this._wql) {
-            urlObj.searchParams.set("wql", this._wql);
-        } else {
-            urlObj.searchParams.set("wql", "");
-        }
-        
-        urlObj.searchParams.set("p", this._page);
-        urlObj.searchParams.set("l", this._pageSize);
-
-        if (this._orderBy) {
-            urlObj.searchParams.set("o", this._orderBy);
-            if (this._orderDir) {
-                urlObj.searchParams.set("d", this._orderDir);
+        if (!result.ok) {
+            // ignore aborts (a newer query replaced this one); report the rest
+            if (result.error.kind !== "abort") {
+                console.error("TileCtrl Request failed:", result.error.message);
+                this._store.setState({ loading: false, error: result.error });
+                this._element.classList.remove("placeholder-glow");
+                this._toggleProgress(false);
             }
+            return;
         }
 
-        const fetchUrl = this._restUri.startsWith("http") ? urlObj.href : (urlObj.pathname + urlObj.search);
+        const response = result.data;
+        const newItems = webexpress.webapp.tileModel.sliceItems(response.items, this._pageSize);
 
-        webexpress.webapp.ServiceRegistry.request(fetchUrl, { signal: this._abortController.signal })
-            .then((res) => {
-                if (res.error && res.error.kind === "abort") {
-                    const abort = new Error("aborted");
-                    abort.name = "AbortError";
-                    throw abort;
-                }
-                if (!res.ok) {
-                    throw new Error("Request failed");
-                }
-                return res.data;
-            })
-            .then((response) => {
-                const newItems = webexpress.webapp.tileModel.sliceItems(response.items, this._pageSize);
+        this._totalRecords = webexpress.webapp.tileModel.reduceTotal(response, newItems.length, this._page, this._pageSize);
 
-                this._totalRecords = webexpress.webapp.tileModel.reduceTotal(response, newItems.length, this._page, this._pageSize);
+        const responseForUpdate = Object.assign({}, response, { items: newItems });
 
-                const responseForUpdate = Object.assign({}, response, { items: newItems });
+        this.updateData(responseForUpdate);
 
-                this.updateData(responseForUpdate);
+        this._items = newItems;
 
-                this._items = newItems;
-                
-                // notify listeners that data arrived
-                this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
-                    response: responseForUpdate,
-                    page: this._page
-                });
+        // notify listeners that data arrived
+        this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
+            response: responseForUpdate,
+            page: this._page
+        });
 
-                setTimeout(() => {
-                    this._syncPagerAndInfo();
-                }, 0);
+        setTimeout(() => {
+            this._syncPagerAndInfo();
+        }, 0);
 
-                this._element.classList.remove("placeholder-glow");
-                this._isLoading = false;
-                this._abortController = null;
-                this._toggleProgress(false);
-            })
-            .catch((error) => {
-                if (error.name === "AbortError") {
-                    return;
-                }
-
-                console.error("TileCtrl Request failed:", error);
-                this._element.classList.remove("placeholder-glow");
-                this._isLoading = false;
-                this._abortController = null;
-                this._toggleProgress(false);
-            });
+        this._element.classList.remove("placeholder-glow");
+        this._store.setState({ loading: false, error: null });
+        this._toggleProgress(false);
     }
 
     /**
@@ -380,31 +362,43 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
     }
 
     /**
+     * Dispatches an intent against the tile's store and service, mirroring
+     * the dispatch surface of the Data base, so that the search, paging and
+     * filter binds and the dispatch action all feed the same unidirectional
+     * loop.
+     * @param {string} name The intent name.
+     * @param {*} payload The intent payload.
+     * @returns {*} The return value of the intent effect, when present.
+     */
+    dispatch(name, payload) {
+        return webexpress.webapp.Intents.dispatch(name, {
+            store: this._store,
+            payload: payload,
+            services: { data: this._service },
+            component: this,
+            element: this._element
+        });
+    }
+
+    /**
+     * Loads the tiles when the control is backed by a service and visible.
+     * Intent effects call this after their reducer updated the store.
+     * @returns {Promise<void>|undefined} Resolves when the load completes.
+     */
+    load() {
+        if (this._restUri && this._isVisible()) {
+            return this._receiveData();
+        }
+        return undefined;
+    }
+
+    /**
      * Sets the search filter and reloads the first page.
      * @param {string} pattern - Search pattern.
      * @param {string} [searchType="basic"] - Filter type.
      */
     search(pattern = "", searchType = "basic") {
-        if (searchType === "basic") {
-            this._search = pattern;
-            this._wql = null;
-        } else {
-            if (searchType === "wql") {
-                this._search = null;
-                this._wql = pattern;
-            } else {
-                this._search = null;
-                this._wql = null;
-            }
-        }
-        
-        this._page = 0;
-
-        if (this._restUri) {
-            if (this._isVisible()) {
-                this._receiveData();
-            }
-        }
+        this.dispatch("tile/search", { pattern: pattern, searchType: searchType });
     }
 
     /**
@@ -412,28 +406,15 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
      * @param {string} pattern - Filter pattern.
      */
     filter(pattern = "") {
-        this._filter = pattern;
-        this._page = 0;
-
-        if (this._restUri) {
-            if (this._isVisible()) {
-                this._receiveData();
-            }
-        }
+        this.dispatch("tile/filter", { pattern: pattern });
     }
-    
+
     /**
      * Sets and loads the page.
      * @param {string} page - The current page pattern.
      */
     paging(page = 0) {
-        this._page = page;
-
-        if (this._restUri) {
-            if (this._isVisible()) {
-                this._receiveData();
-            }
-        }
+        this.dispatch("tile/page", { page: page });
     }
 };
 

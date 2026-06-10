@@ -23,6 +23,10 @@ namespace WebExpress.WebApp.WebData
         private string _updateMethod;
         private readonly List<KeyValuePair<string, string>> _query = new();
         private readonly List<KeyValuePair<string, string>> _response = new();
+        private readonly List<KeyValuePair<string, string>> _headers = new();
+        private readonly List<KeyValuePair<int, string>> _errors = new();
+        private int _retryCount;
+        private int _retryDelayMilliseconds;
 
         /// <summary>
         /// Initializes a new instance for the named service.
@@ -96,6 +100,45 @@ namespace WebExpress.WebApp.WebData
         }
 
         /// <summary>
+        /// Adds a request header the service sends with every call.
+        /// </summary>
+        /// <param name="name">The header name.</param>
+        /// <param name="value">The header value.</param>
+        /// <returns>The builder for chaining.</returns>
+        public DataServiceBuilder Header(string name, string value)
+        {
+            _headers.Add(new KeyValuePair<string, string>(name, value));
+            return this;
+        }
+
+        /// <summary>
+        /// Maps an http status code to a message key, so the failure message
+        /// stays server-authored and localizable.
+        /// </summary>
+        /// <param name="status">The http status code.</param>
+        /// <param name="message">The message or message key.</param>
+        /// <returns>The builder for chaining.</returns>
+        public DataServiceBuilder Error(int status, string message)
+        {
+            _errors.Add(new KeyValuePair<int, string>(status, message));
+            return this;
+        }
+
+        /// <summary>
+        /// Declares the retry policy for retriable failures, which are network
+        /// errors and http 5xx responses.
+        /// </summary>
+        /// <param name="count">The number of automatic retries.</param>
+        /// <param name="delayMilliseconds">The delay between retries.</param>
+        /// <returns>The builder for chaining.</returns>
+        public DataServiceBuilder Retry(int count, int delayMilliseconds = 0)
+        {
+            _retryCount = count;
+            _retryDelayMilliseconds = delayMilliseconds;
+            return this;
+        }
+
+        /// <summary>
         /// Builds the descriptor, resolving the endpoint in the given render context.
         /// </summary>
         /// <param name="renderContext">The context in which the control is rendered.</param>
@@ -125,13 +168,32 @@ namespace WebExpress.WebApp.WebData
                 descriptor = descriptor.MapResponse(pair.Key, pair.Value);
             }
 
+            foreach (var pair in _headers)
+            {
+                descriptor = descriptor.WithHeader(pair.Key, pair.Value);
+            }
+
+            foreach (var pair in _errors)
+            {
+                descriptor = descriptor.MapError(pair.Key, pair.Value);
+            }
+
+            if (_retryCount > 0)
+            {
+                descriptor = descriptor.WithRetry(_retryCount, _retryDelayMilliseconds);
+            }
+
             return descriptor;
         }
     }
 
     /// <summary>
     /// Collects the mapping of logical query parameter names to their wire names,
-    /// for the fluent <see cref="DataServiceBuilder.Query"/> surface.
+    /// for the fluent <see cref="DataServiceBuilder.Query"/> surface. The logical
+    /// names form the closed vocabulary of the framework (see the naming table in
+    /// WebExpress/docs/view-state-service.md), so each carries a typed helper
+    /// whose default wire name is the historical one; the generic
+    /// <see cref="Map"/> stays available for bespoke parameters.
     /// </summary>
     public class DataQueryMap
     {
@@ -148,6 +210,62 @@ namespace WebExpress.WebApp.WebData
             Pairs.Add(new KeyValuePair<string, string>(logical, wire));
             return this;
         }
+
+        /// <summary>
+        /// Maps the search pattern parameter.
+        /// </summary>
+        /// <param name="wire">The wire name, default "q".</param>
+        /// <returns>The map for chaining.</returns>
+        public DataQueryMap Search(string wire = "q") => Map("search", wire);
+
+        /// <summary>
+        /// Maps the structured query parameter.
+        /// </summary>
+        /// <param name="wire">The wire name, default "wql".</param>
+        /// <returns>The map for chaining.</returns>
+        public DataQueryMap Wql(string wire = "wql") => Map("wql", wire);
+
+        /// <summary>
+        /// Maps the filter parameter.
+        /// </summary>
+        /// <param name="wire">The wire name, default "f".</param>
+        /// <returns>The map for chaining.</returns>
+        public DataQueryMap Filter(string wire = "f") => Map("filter", wire);
+
+        /// <summary>
+        /// Maps the page index parameter.
+        /// </summary>
+        /// <param name="wire">The wire name, default "p".</param>
+        /// <returns>The map for chaining.</returns>
+        public DataQueryMap Page(string wire = "p") => Map("page", wire);
+
+        /// <summary>
+        /// Maps the page size parameter.
+        /// </summary>
+        /// <param name="wire">The wire name, default "l".</param>
+        /// <returns>The map for chaining.</returns>
+        public DataQueryMap PageSize(string wire = "l") => Map("pageSize", wire);
+
+        /// <summary>
+        /// Maps the order field parameter.
+        /// </summary>
+        /// <param name="wire">The wire name, default "o".</param>
+        /// <returns>The map for chaining.</returns>
+        public DataQueryMap OrderBy(string wire = "o") => Map("orderBy", wire);
+
+        /// <summary>
+        /// Maps the order direction parameter.
+        /// </summary>
+        /// <param name="wire">The wire name, default "d".</param>
+        /// <returns>The map for chaining.</returns>
+        public DataQueryMap OrderDir(string wire = "d") => Map("orderDir", wire);
+
+        /// <summary>
+        /// Maps the id parameter.
+        /// </summary>
+        /// <param name="wire">The wire name, default "id".</param>
+        /// <returns>The map for chaining.</returns>
+        public DataQueryMap Id(string wire = "id") => Map("id", wire);
     }
 
     /// <summary>

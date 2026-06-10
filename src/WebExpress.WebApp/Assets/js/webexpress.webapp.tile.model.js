@@ -24,6 +24,35 @@ webexpress.webapp.tileModel = {
     },
 
     /**
+     * Builds the logical query parameters from the current state. The search,
+     * wql and filter parameters are always included (the historical tile
+     * request carried them even when empty), the order parameters only when an
+     * order field is set.
+     * @param {object} state - The tile state.
+     * @returns {object} The logical query parameters.
+     */
+    queryParams(state) {
+        state = state || {};
+
+        const params = {
+            search: state.search || "",
+            wql: state.wql || "",
+            filter: state.filter || "",
+            page: state.page || 0,
+            pageSize: state.pageSize || 50
+        };
+
+        if (state.orderBy) {
+            params.orderBy = state.orderBy;
+            if (state.orderDir) {
+                params.orderDir = state.orderDir;
+            }
+        }
+
+        return params;
+    },
+
+    /**
      * Caps the received items to a single page, returning the array unchanged
      * when it already fits and tolerating a missing or malformed list.
      * @param {Array<object>} items - The received items.

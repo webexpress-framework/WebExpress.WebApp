@@ -425,3 +425,286 @@ test("component destroy stops further renders", () => {
 
     assert.equal(component.renders, rendersAfterMount);
 });
+
+// Multiple services per component
+
+test("service registry parses an island array into named services", () => {
+    const { wxapp, createElement } = loadEngine();
+    const element = createElement("div");
+    element.setAttribute("data-wx-service", JSON.stringify([
+        { name: "load", kind: "rest", baseUri: "/api/form" },
+        { name: "submit", kind: "rest", baseUri: "/api/form" }
+    ]));
+
+    const services = wxapp.ServiceRegistry.fromElement(element);
+
+    assert.ok(services.load);
+    assert.ok(services.submit);
+    assert.equal(typeof services.load.query, "function");
+    assert.equal(typeof services.submit.create, "function");
+});
+
+// Retry policy and error channel
+
+test("rest service retries a retriable failure per the descriptor policy", async () => {
+    const { wxapp, setFetch } = loadEngine();
+    let calls = 0;
+    setFetch(async () => {
+        calls += 1;
+        if (calls === 1) {
+            return { ok: false, status: 503 };
+        }
+        return { ok: true, status: 200, json: async () => ({ items: [] }) };
+    });
+
+    const service = new wxapp.RestService({
+        name: "data",
+        baseUri: "/api/orders",
+        retry: { count: 1, delayMs: 0 }
+    });
+
+    const result = await service.query({});
+
+    assert.equal(calls, 2);
+    assert.equal(result.ok, true);
+});
+
+test("rest service does not retry a non retriable failure", async () => {
+    const { wxapp, setFetch } = loadEngine();
+    let calls = 0;
+    setFetch(async () => {
+        calls += 1;
+        return { ok: false, status: 404 };
+    });
+
+    const service = new wxapp.RestService({
+        name: "data",
+        baseUri: "/api/orders",
+        retry: { count: 3, delayMs: 0 }
+    });
+
+    const result = await service.query({});
+
+    assert.equal(calls, 1);
+    assert.equal(result.ok, false);
+});
+
+test("error channel reports a failure with the mapped message key", async () => {
+    const { wxapp, setFetch, document } = loadEngine();
+    setFetch(async () => ({ ok: false, status: 404 }));
+
+    const reported = [];
+    document.addEventListener("webexpress.webapp.service.error", (event) => reported.push(event.detail));
+
+    const service = new wxapp.RestService({
+        name: "data",
+        baseUri: "/api/orders",
+        errors: { "404": "webexpress.webapp:error.notfound" }
+    });
+
+    const result = await service.query({});
+
+    assert.equal(result.error.message, "webexpress.webapp:error.notfound");
+    assert.equal(reported.length, 1);
+    assert.equal(reported[0].service, "data");
+    assert.equal(reported[0].kind, "http");
+    assert.equal(reported[0].status, 404);
+    assert.equal(reported[0].message, "webexpress.webapp:error.notfound");
+});
+
+test("error channel stays silent on success and on abort", async () => {
+    const { wxapp, setFetch, document } = loadEngine();
+
+    const reported = [];
+    document.addEventListener("webexpress.webapp.service.error", (event) => reported.push(event.detail));
+
+    setFetch(async () => ({ ok: true, status: 200, json: async () => ({}) }));
+    const service = new wxapp.RestService({ name: "data", baseUri: "/api/orders" });
+    await service.query({});
+
+    setFetch(async () => { const error = new Error("aborted"); error.name = "AbortError"; throw error; });
+    await service.query({});
+
+    assert.equal(reported.length, 0);
+});
+
+// Templates
+
+test("component without a render uses the referenced registered template", () => {
+    const { wxapp, createElement } = loadEngine();
+
+    wxapp.Templates.register("orders-view", (state) => wxapp.h("p", { class: "t" }, String(state.count)));
+
+    class Probe extends wxapp.Data {
+        constructor(element) {
+            super(element);
+            this.mount();
+        }
+    }
+
+    const element = createElement("div");
+    element.setAttribute("data-wx-template", "orders-view");
+    element.setAttribute("data-wx-state", JSON.stringify({ count: 3 }));
+    const component = new Probe(element);
+
+    assert.equal(element.childNodes.length, 1);
+    assert.equal(element.childNodes[0].tagName, "P");
+    assert.equal(element.childNodes[0].textContent, "3");
+
+    component.setState({ count: 4 });
+    component.store.flush();
+
+    assert.equal(element.childNodes[0].textContent, "4");
+});
+
+// State and model binds
+
+test("state bind reflects a store path as text", () => {
+    const { wx, wxapp, createElement, document } = loadEngine();
+
+    class Probe extends wxapp.Data {
+        constructor(element, options) {
+            super(element, options);
+            this.mount();
+        }
+    }
+
+    const host = createElement("div");
+    host.id = "orders";
+    document.body.appendChild(host);
+    const component = new Probe(host, { state: { total: 7 } });
+    wx.Controller.getInstanceByElement = (el) => (el === host ? component : null);
+
+    const label = createElement("span");
+    label.setAttribute("data-wx-bind", "state");
+    label.setAttribute("data-wx-bind-store", "orders");
+    label.setAttribute("data-wx-bind-path", "total");
+    document.body.appendChild(label);
+
+    wx.Binds.get("state").bind(label);
+    assert.equal(label.textContent, "7");
+
+    component.setState({ total: 9 });
+    component.store.flush();
+    assert.equal(label.textContent, "9");
+});
+
+test("model bind patches the store on input and reflects store changes", () => {
+    const { wx, wxapp, createElement, document } = loadEngine();
+
+    class Probe extends wxapp.Data {
+        constructor(element, options) {
+            super(element, options);
+            this.mount();
+        }
+    }
+
+    const host = createElement("div");
+    host.id = "form";
+    document.body.appendChild(host);
+    const component = new Probe(host, { state: { model: { name: "Guybrush" } } });
+    wx.Controller.getInstanceByElement = (el) => (el === host ? component : null);
+
+    const input = createElement("input");
+    input.setAttribute("data-wx-bind", "model");
+    input.setAttribute("data-wx-bind-store", "form");
+    input.setAttribute("data-wx-model", "model.name");
+    document.body.appendChild(input);
+
+    wx.Binds.get("model").bind(input);
+    assert.equal(input.value, "Guybrush");
+
+    input.value = "LeChuck";
+    input.dispatchEvent({ type: "input" });
+    component.store.flush();
+    assert.equal(component.state.model.name, "LeChuck");
+
+    component.setState({ model: { name: "Elaine" } });
+    component.store.flush();
+    assert.equal(input.value, "Elaine");
+});
+
+test("binds resolve a component that mounts after the bind", () => {
+    const { wx, wxapp, createElement, document } = loadEngine();
+
+    const label = createElement("span");
+    label.setAttribute("data-wx-bind", "state");
+    label.setAttribute("data-wx-bind-store", "late");
+    label.setAttribute("data-wx-bind-path", "total");
+    document.body.appendChild(label);
+
+    wx.Binds.get("state").bind(label);
+
+    class Probe extends wxapp.Data {
+        constructor(element, options) {
+            super(element, options);
+            this.mount();
+        }
+    }
+
+    const host = createElement("div");
+    host.id = "late";
+    document.body.appendChild(host);
+    const component = new Probe(host, { state: { total: 42 } });
+    wx.Controller.getInstanceByElement = (el) => (el === host ? component : null);
+
+    // the component announces its mount through a bubbling document event;
+    // the stub document does not bubble, so the event is replayed on it
+    document.dispatchEvent({ type: "webexpress.webapp.data.mount", detail: { component } });
+
+    assert.equal(label.textContent, "42");
+});
+
+// Query intents of the data query families
+
+test("query intents reduce state and trigger the load for list, table and tile", () => {
+    const { wxapp } = loadEngine();
+
+    for (const domain of ["list", "table", "tile"]) {
+        const store = new wxapp.Store({ search: "", wql: "", filter: "", page: 3 });
+        let loads = 0;
+        const component = { load() { loads += 1; } };
+
+        wxapp.Intents.dispatch(domain + "/search", { store, payload: { pattern: "guybrush", searchType: "basic" }, component });
+        assert.equal(store.getState().search, "guybrush", domain);
+        assert.equal(store.getState().wql, null, domain);
+        assert.equal(store.getState().page, 0, domain);
+        assert.equal(loads, 1, domain);
+
+        wxapp.Intents.dispatch(domain + "/search", { store, payload: { pattern: "monkey", searchType: "wql" }, component });
+        assert.equal(store.getState().search, null, domain);
+        assert.equal(store.getState().wql, "monkey", domain);
+        assert.equal(loads, 2, domain);
+
+        wxapp.Intents.dispatch(domain + "/page", { store, payload: { page: 2 }, component });
+        assert.equal(store.getState().page, 2, domain);
+        assert.equal(loads, 3, domain);
+
+        wxapp.Intents.dispatch(domain + "/filter", { store, payload: { pattern: "insult" }, component });
+        assert.equal(store.getState().filter, "insult", domain);
+        assert.equal(store.getState().page, 0, domain);
+        assert.equal(loads, 4, domain);
+    }
+});
+
+test("rest service maps the closed vocabulary to default wire names without a query mapping", async () => {
+    const { wxapp, setFetch } = loadEngine();
+    let capturedUrl = null;
+    setFetch(async (url) => {
+        capturedUrl = url;
+        return { ok: true, status: 200, json: async () => ({ items: [] }) };
+    });
+
+    // the common GET/PUT descriptor shape carries no query mapping; the
+    // logical names still travel as the historical wire names
+    const service = new wxapp.RestService({ name: "data", baseUri: "/api/tiles", method: "GET", updateMethod: "PUT" });
+    await service.query({ search: "abc", filter: "", page: 1, pageSize: 25, orderBy: "label", orderDir: "asc" });
+
+    assert.match(capturedUrl, /q=abc/);
+    assert.match(capturedUrl, /f=/);
+    assert.match(capturedUrl, /p=1/);
+    assert.match(capturedUrl, /l=25/);
+    assert.match(capturedUrl, /o=label/);
+    assert.match(capturedUrl, /d=asc/);
+    assert.doesNotMatch(capturedUrl, /search=/);
+});

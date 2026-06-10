@@ -36,6 +36,77 @@ webexpress.webapp.ServiceResult = {
 };
 
 /**
+ * The global error channel of the service layer. Every service reports its
+ * non abort failures here, which dispatches the
+ * "webexpress.webapp.service.error" CustomEvent on the document so that an
+ * unexpected failure is observable in one place without crashing a component.
+ * An optional toast presents the failure through the existing popup
+ * notification pipeline; it is opt in through the toast flag because
+ * components that render their error state inline would otherwise present the
+ * failure twice.
+ */
+webexpress.webapp.ErrorChannel = new class {
+    /**
+     * Creates the channel.
+     */
+    constructor() {
+        this.toast = false;
+    }
+
+    /**
+     * Reports a failed service result. Dispatches the
+     * "webexpress.webapp.service.error" event and optionally shows a toast.
+     * @param {object} result - The normalised failure result.
+     * @param {object} [context={}] - The reporting context: service, operation.
+     */
+    report(result, context = {}) {
+        const error = (result && result.error) || {};
+        const detail = {
+            service: context.service || null,
+            operation: context.operation || null,
+            kind: error.kind || "unknown",
+            status: error.status || 0,
+            message: error.message || "",
+            retriable: !!error.retriable,
+            result: result
+        };
+
+        document.dispatchEvent(new CustomEvent("webexpress.webapp.service.error", { detail: detail }));
+
+        if (this.toast) {
+            this._notify(detail);
+        }
+    }
+
+    /**
+     * Shows the failure as a popup notification through the local message
+     * queue, reusing the PopupNotificationCtrl pipeline.
+     * @param {object} detail - The reported error detail.
+     */
+    _notify(detail) {
+        const queue = webexpress.webapp.MessageQueue;
+
+        if (!queue || typeof queue.dispatchLocal !== "function") {
+            return;
+        }
+
+        queue.dispatchLocal({
+            type: "webexpress.webapp.popup.show",
+            notification: {
+                id: "service-error-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8),
+                heading: detail.service ? "Service \"" + detail.service + "\"" : "Service",
+                message: detail.message || "request failed",
+                type: "alert-danger",
+                icon: null,
+                durability: 5000,
+                progress: -1,
+                created: new Date().toISOString()
+            }
+        });
+    }
+};
+
+/**
  * Base class for services. It holds the descriptor configuration and provides
  * a no operation abort. Concrete services implement the operations they
  * support and call into the network.
@@ -91,7 +162,8 @@ webexpress.webapp.Service = class {
  *     query: { search: "q", page: "p", pageSize: "l" },
  *     response: { items: "items", total: "total" },
  *     headers: { ... },
- *     errors: { "404": "webexpress.webapp:error.notfound" }
+ *     errors: { "404": "webexpress.webapp:error.notfound" },
+ *     retry: { count: 2, delayMs: 300 }
  *   }
  */
 webexpress.webapp.RestService = class extends webexpress.webapp.Service {
@@ -102,6 +174,7 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
     constructor(descriptor) {
         super(descriptor);
         this._abort = null;
+        this._generation = 0;
     }
 
     /**
@@ -213,7 +286,7 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
             if (!response.ok) {
                 const mapped = this._descriptor.errors && this._descriptor.errors[String(response.status)];
                 const message = mapped || ("request failed with status " + response.status);
-                return {
+                const result = {
                     ok: false,
                     data: data,
                     error: { kind: "http", status: response.status, message: message, retriable: response.status >= 500 },
@@ -221,6 +294,8 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
                     response: response,
                     contentType: contentType
                 };
+                webexpress.webapp.ErrorChannel.report(result, { service: this._name, operation: (init && init.method) || "GET" });
+                return result;
             }
 
             return { ok: true, data: data, error: null, status: response.status, response: response, contentType: contentType };
@@ -229,6 +304,9 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
             const result = webexpress.webapp.ServiceResult.fail(kind, 0, networkError ? networkError.message : "network error", kind === "network");
             result.response = null;
             result.contentType = "";
+            if (kind !== "abort") {
+                webexpress.webapp.ErrorChannel.report(result, { service: this._name, operation: (init && init.method) || "GET" });
+            }
             return result;
         }
     }
@@ -250,7 +328,29 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
     }
 
     /**
-     * Builds the request url from the base uri and the mapped query parameters.
+     * The default wire names of the closed logical query vocabulary (see the
+     * naming table in WebExpress/docs/view-state-service.md). A descriptor
+     * without an explicit query mapping speaks the common REST interaction
+     * model of WebExpress.WebApp, so the logical names map to the historical
+     * wire names rather than leaking onto the wire verbatim.
+     */
+    static get defaultQueryMap() {
+        return {
+            search: "q",
+            wql: "wql",
+            filter: "f",
+            page: "p",
+            pageSize: "l",
+            orderBy: "o",
+            orderDir: "d",
+            id: "id"
+        };
+    }
+
+    /**
+     * Builds the request url from the base uri and the mapped query
+     * parameters. The descriptor mapping wins, the default vocabulary covers
+     * the rest, and an unknown logical name passes through verbatim.
      * @param {object} params - Logical query parameters.
      * @param {string} [path] - An optional path segment appended to the base.
      * @returns {string} The request url, absolute or root relative.
@@ -259,13 +359,14 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
         const base = (this._descriptor.baseUri || "") + (path ? path : "");
         const url = new URL(base, document.baseURI);
         const map = this._descriptor.query || {};
+        const defaults = webexpress.webapp.RestService.defaultQueryMap;
 
         for (const logical of Object.keys(params || {})) {
             const value = params[logical];
             if (value === undefined || value === null) {
                 continue;
             }
-            const wire = map[logical] || logical;
+            const wire = map[logical] || defaults[logical] || logical;
             url.searchParams.set(wire, String(value));
         }
 
@@ -273,14 +374,59 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
     }
 
     /**
-     * Performs a request and normalises the outcome. A superseded abortable
-     * request is cancelled, and the abort channel is only cleared when the
-     * request that owns it completes, so that a newer request is not affected.
+     * Performs a request, honours the declared retry policy and reports the
+     * final failure to the error channel. A retriable failure, which is a
+     * network error or an http 5xx response, is retried up to the configured
+     * count with the configured delay. A retry that has been superseded by a
+     * newer abortable request gives up with an abort result, so a stale retry
+     * never races a fresh query. Aborts are never reported, because an abort
+     * is the expected consequence of a newer request replacing an older one.
      * @param {string} method - The http method.
      * @param {object} request - The request descriptor.
      * @returns {Promise<object>} A normalised result.
      */
     async _send(method, request) {
+        const retry = this._descriptor.retry || {};
+        const attempts = 1 + Math.max(0, Number(retry.count) || 0);
+        const delay = Math.max(0, Number(retry.delayMs) || 0);
+        const generation = request.abortable ? ++this._generation : null;
+
+        let result = null;
+
+        for (let attempt = 0; attempt < attempts; attempt++) {
+            if (attempt > 0 && delay > 0) {
+                await new Promise((resolve) => setTimeout(resolve, delay));
+            }
+
+            if (generation !== null && generation !== this._generation) {
+                result = webexpress.webapp.ServiceResult.fail("abort", 0, "request was superseded", false);
+                break;
+            }
+
+            result = await this._sendOnce(method, request);
+
+            if (result.ok || !result.error || !result.error.retriable || result.error.kind === "abort") {
+                break;
+            }
+        }
+
+        if (!result.ok && result.error && result.error.kind !== "abort") {
+            webexpress.webapp.ErrorChannel.report(result, { service: this._name, operation: method });
+        }
+
+        return result;
+    }
+
+    /**
+     * Performs a single request and normalises the outcome. A superseded
+     * abortable request is cancelled, and the abort channel is only cleared
+     * when the request that owns it completes, so that a newer request is not
+     * affected.
+     * @param {string} method - The http method.
+     * @param {object} request - The request descriptor.
+     * @returns {Promise<object>} A normalised result.
+     */
+    async _sendOnce(method, request) {
         let abort = null;
 
         if (request.abortable) {

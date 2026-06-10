@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using WebExpress.WebApp.WebData;
@@ -33,14 +34,40 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, bool> MovableRow { get; set; }
 
         /// <summary>
-        /// Gets or sets the optional data service descriptor. When set, the
-        /// control emits a data-wx-service island that the JavaScript engine
-        /// consumes in preference to the legacy data-uri fallback, which keeps
-        /// the endpoint and parameter knowledge authored in C#. When not set, the
-        /// control behaves exactly as before and the client uses its legacy
-        /// descriptor. See WebExpress/docs/view-state-service.md.
+        /// Gets the data service descriptors of the control, emitted together as
+        /// the data-wx-service island that the JavaScript engine consumes in
+        /// preference to the legacy data-uri fallback, which keeps the endpoint
+        /// and parameter knowledge authored in C#. When empty, the control
+        /// behaves exactly as before and the client uses its legacy descriptor.
+        /// See WebExpress/docs/view-state-service.md.
         /// </summary>
-        public Func<IRenderControlContext, DataServiceDescriptor> ServiceFactory { get; set; }
+        public IList<Func<IRenderControlContext, DataServiceDescriptor>> ServiceFactories { get; } = [];
+
+        /// <summary>
+        /// Gets or sets the single data service descriptor, as a convenience for
+        /// the common control with exactly one service. Reading returns the
+        /// first declared service, assigning replaces all declared services.
+        /// </summary>
+        public Func<IRenderControlContext, DataServiceDescriptor> ServiceFactory
+        {
+            get => ServiceFactories.Count > 0 ? ServiceFactories[0] : null;
+            set
+            {
+                ServiceFactories.Clear();
+
+                if (value != null)
+                {
+                    ServiceFactories.Add(value);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the optional template reference, emitted as the
+        /// data-wx-template attribute that the client Templates registry
+        /// resolves into a registered view.
+        /// </summary>
+        public Func<IRenderControlContext, string> TemplateFactory { get; set; }
 
         /// <summary>
         /// Gets or sets the optional initial state, emitted as the data-wx-state island.

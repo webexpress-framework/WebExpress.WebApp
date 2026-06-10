@@ -38,6 +38,22 @@ test("slice items caps to the page size and tolerates non arrays", () => {
     assert.deepEqual(wxapp.tileModel.sliceItems(null, 5), []);
 });
 
+test("query params always carry search, wql and filter and include order only when set", () => {
+    const { wxapp } = load();
+
+    assert.deepEqual(
+        wxapp.tileModel.queryParams({ search: "abc", page: 2, pageSize: 25 }),
+        { search: "abc", wql: "", filter: "", page: 2, pageSize: 25 });
+
+    assert.deepEqual(
+        wxapp.tileModel.queryParams({ orderBy: "label", orderDir: "desc" }),
+        { search: "", wql: "", filter: "", page: 0, pageSize: 50, orderBy: "label", orderDir: "desc" });
+
+    assert.deepEqual(
+        wxapp.tileModel.queryParams(null),
+        { search: "", wql: "", filter: "", page: 0, pageSize: 50 });
+});
+
 test("reduce total uses the response total and otherwise infers it", () => {
     const { wxapp } = load();
     assert.equal(wxapp.tileModel.reduceTotal({ total: 42 }, 10, 0, 50), 42);

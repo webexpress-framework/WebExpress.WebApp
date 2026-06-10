@@ -67,6 +67,33 @@ namespace WebExpress.WebApp.WebData
         public IDictionary<string, string> Response { get; } = new Dictionary<string, string>();
 
         /// <summary>
+        /// Gets the additional request headers the service sends, for example an
+        /// api version header. The Accept and Content-Type headers are managed
+        /// by the client service itself.
+        /// </summary>
+        public IDictionary<string, string> Headers { get; } = new Dictionary<string, string>();
+
+        /// <summary>
+        /// Gets the mapping of http status codes to message keys, for example
+        /// 404 to "webexpress.webapp:error.notfound". The client service surfaces
+        /// the mapped message in its normalized error, so the messages stay
+        /// server-authored and localizable.
+        /// </summary>
+        public IDictionary<string, string> Errors { get; } = new Dictionary<string, string>();
+
+        /// <summary>
+        /// Gets or sets the number of automatic retries the client service
+        /// performs for retriable failures, which are network errors and http
+        /// 5xx responses. The default of zero disables retrying.
+        /// </summary>
+        public int RetryCount { get; set; }
+
+        /// <summary>
+        /// Gets or sets the delay in milliseconds between automatic retries.
+        /// </summary>
+        public int RetryDelayMilliseconds { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="name">The logical service name.</param>
@@ -229,6 +256,45 @@ namespace WebExpress.WebApp.WebData
         }
 
         /// <summary>
+        /// Adds a request header the service sends with every call.
+        /// </summary>
+        /// <param name="name">The header name.</param>
+        /// <param name="value">The header value.</param>
+        /// <returns>The descriptor for chaining.</returns>
+        public DataServiceDescriptor WithHeader(string name, string value)
+        {
+            Headers[name] = value;
+            return this;
+        }
+
+        /// <summary>
+        /// Maps an http status code to a message key, so the failure message
+        /// stays server-authored and localizable.
+        /// </summary>
+        /// <param name="status">The http status code.</param>
+        /// <param name="message">The message or message key.</param>
+        /// <returns>The descriptor for chaining.</returns>
+        public DataServiceDescriptor MapError(int status, string message)
+        {
+            Errors[status.ToString()] = message;
+            return this;
+        }
+
+        /// <summary>
+        /// Declares the retry policy for retriable failures, which are network
+        /// errors and http 5xx responses.
+        /// </summary>
+        /// <param name="count">The number of automatic retries.</param>
+        /// <param name="delayMilliseconds">The delay between retries.</param>
+        /// <returns>The descriptor for chaining.</returns>
+        public DataServiceDescriptor WithRetry(int count, int delayMilliseconds = 0)
+        {
+            RetryCount = count;
+            RetryDelayMilliseconds = delayMilliseconds;
+            return this;
+        }
+
+        /// <summary>
         /// Serializes the descriptor into the compact JSON island that the
         /// JavaScript ServiceRegistry consumes. Empty parts are omitted so the
         /// island stays small. The caller is responsible for HTML attribute
@@ -262,6 +328,25 @@ namespace WebExpress.WebApp.WebData
             if (Response.Count > 0)
             {
                 map["response"] = Response;
+            }
+
+            if (Headers.Count > 0)
+            {
+                map["headers"] = Headers;
+            }
+
+            if (Errors.Count > 0)
+            {
+                map["errors"] = Errors;
+            }
+
+            if (RetryCount > 0)
+            {
+                map["retry"] = new Dictionary<string, int>
+                {
+                    ["count"] = RetryCount,
+                    ["delayMs"] = RetryDelayMilliseconds
+                };
             }
 
             return JsonSerializer.Serialize(map, IslandOptions);

@@ -20,10 +20,12 @@ namespace WebExpress.WebApp.Test.WebInclude
         private const string Store = "/assets/js/webexpress.webapp.store.js";
         private const string Service = "/assets/js/webexpress.webapp.service.js";
         private const string Renderer = "/assets/js/webexpress.webapp.renderer.js";
+        private const string Template = "/assets/js/webexpress.webapp.template.js";
         private const string Intent = "/assets/js/webexpress.webapp.intent.js";
         private const string Data = "/assets/js/webexpress.webapp.data.js";
         private const string ServiceDefault = "/assets/js/service/default.js";
         private const string IntentDefault = "/assets/js/intent/default.js";
+        private const string BindDefault = "/assets/js/bind/default.js";
         private const string FirstControl = "/assets/js/webexpress.webapp.avatar.dropdown.js";
 
         /// <summary>
@@ -58,10 +60,12 @@ namespace WebExpress.WebApp.Test.WebInclude
         [InlineData(Store)]
         [InlineData(Service)]
         [InlineData(Renderer)]
+        [InlineData(Template)]
         [InlineData(Intent)]
         [InlineData(Data)]
         [InlineData(ServiceDefault)]
         [InlineData(IntentDefault)]
+        [InlineData(BindDefault)]
         public void Registered(string assetPath)
         {
             Assert.Contains(assetPath, GetAssetOrder());
@@ -76,10 +80,12 @@ namespace WebExpress.WebApp.Test.WebInclude
         [InlineData(Store)]
         [InlineData(Service)]
         [InlineData(Renderer)]
+        [InlineData(Template)]
         [InlineData(Intent)]
         [InlineData(Data)]
         [InlineData(ServiceDefault)]
         [InlineData(IntentDefault)]
+        [InlineData(BindDefault)]
         public void Embedded(string assetPath)
         {
             var suffix = assetPath.Substring("/assets/".Length).Replace('/', '.');
@@ -101,6 +107,7 @@ namespace WebExpress.WebApp.Test.WebInclude
             int store = order.IndexOf(Store);
             int service = order.IndexOf(Service);
             int renderer = order.IndexOf(Renderer);
+            int template = order.IndexOf(Template);
             int intent = order.IndexOf(Intent);
             int data = order.IndexOf(Data);
             int firstControl = order.IndexOf(FirstControl);
@@ -110,7 +117,8 @@ namespace WebExpress.WebApp.Test.WebInclude
 
             Assert.True(store < service, "service must load after store");
             Assert.True(service < renderer, "renderer must load after service");
-            Assert.True(renderer < intent, "intent must load after renderer");
+            Assert.True(renderer < template, "template must load after renderer");
+            Assert.True(template < intent, "intent must load after template");
             Assert.True(intent < data, "the data base must load after intent");
 
             Assert.True(firstControl >= 0, "a control must be registered");
@@ -128,11 +136,14 @@ namespace WebExpress.WebApp.Test.WebInclude
 
             int service = order.IndexOf(Service);
             int intent = order.IndexOf(Intent);
+            int data = order.IndexOf(Data);
             int serviceDefault = order.IndexOf(ServiceDefault);
             int intentDefault = order.IndexOf(IntentDefault);
+            int bindDefault = order.IndexOf(BindDefault);
 
             Assert.True(serviceDefault > service, "service default must load after the service engine");
             Assert.True(intentDefault > intent, "intent default must load after the intent engine");
+            Assert.True(bindDefault > data, "bind default must load after the data base it resolves");
         }
     }
 }

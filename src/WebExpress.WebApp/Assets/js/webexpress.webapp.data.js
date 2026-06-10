@@ -43,6 +43,8 @@ webexpress.webapp.Data = class extends webexpress.webui.Ctrl {
         }
 
         this._services = options.services || webexpress.webapp.ServiceRegistry.fromElement(element);
+        this._templateId = options.template
+            || (element && typeof element.getAttribute === "function" ? element.getAttribute("data-wx-template") : null);
     }
 
     /**
@@ -114,19 +116,45 @@ webexpress.webapp.Data = class extends webexpress.webui.Ctrl {
             this.onMount(this._store.getState());
         }
 
+        // announce the mount, so binds that target this component can resolve
+        // its store even when they were bound before the component existed
+        if (this._element && typeof this._element.dispatchEvent === "function") {
+            this._element.dispatchEvent(new CustomEvent("webexpress.webapp.data.mount", {
+                bubbles: true,
+                detail: { component: this }
+            }));
+        }
+
         return this;
     }
 
     /**
      * Renders the current state into the render root and runs onUpdate after
      * the first render. The first render is driven by mount and runs onMount
-     * instead of onUpdate.
+     * instead of onUpdate. A view referenced through data-wx-template is the
+     * C# authored view of the component and wins; otherwise the subclass
+     * render method is used (the Ctrl base carries a no operation render, so
+     * the template could never win the other way around). A virtual node tree
+     * is patched by the keyed reconciler, a DOM node replaces the content of
+     * the render root.
      * @param {object} state - The current state.
      */
     _apply(state) {
-        if (typeof this.render === "function" && webexpress.webapp.Renderer) {
-            const tree = this.render(state);
-            if (tree !== undefined && tree !== null) {
+        let tree;
+        const template = this._templateId && webexpress.webapp.Templates
+            ? webexpress.webapp.Templates.resolve(this._templateId)
+            : null;
+
+        if (template) {
+            tree = template(state, this);
+        } else if (typeof this.render === "function") {
+            tree = this.render(state);
+        }
+
+        if (tree !== undefined && tree !== null) {
+            if (typeof Node !== "undefined" && tree instanceof Node) {
+                (this._renderRoot || this._element).replaceChildren(tree);
+            } else if (webexpress.webapp.Renderer) {
                 webexpress.webapp.Renderer.patch(this._renderRoot || this._element, tree);
             }
         }

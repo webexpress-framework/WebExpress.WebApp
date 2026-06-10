@@ -226,11 +226,13 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
             totalPages = Math.max(1, Math.ceil(total / this._pageSize));
         }
 
-        // clamp current page to available range
+        // clamp current page to available range. the upper bound only applies
+        // when the total is known, so a page seeded through the data-wx-state
+        // island survives until the first response reports the real total
         if (this._page < 0) {
             this._page = 0;
         }
-        if (this._page >= totalPages) {
+        if (total > 0 && this._page >= totalPages) {
             this._page = totalPages - 1;
         }
 
@@ -536,29 +538,43 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
     }
 
     /**
+     * Dispatches an intent against the table's store and service, mirroring
+     * the dispatch surface of the Data base, so that the search, paging and
+     * filter binds and the dispatch action all feed the same unidirectional
+     * loop.
+     * @param {string} name The intent name.
+     * @param {*} payload The intent payload.
+     * @returns {*} The return value of the intent effect, when present.
+     */
+    dispatch(name, payload) {
+        return webexpress.webapp.Intents.dispatch(name, {
+            store: this._store,
+            payload: payload,
+            services: { data: this._service },
+            component: this,
+            element: this._element
+        });
+    }
+
+    /**
+     * Loads the table when it is backed by a service and visible. Intent
+     * effects call this after their reducer updated the store.
+     * @returns {Promise<void>|undefined} Resolves when the load completes.
+     */
+    load() {
+        if (this._restUri && this._isVisible()) {
+            return this._load();
+        }
+        return undefined;
+    }
+
+    /**
      * Sets the search filter and reloads the first page.
      * @param {string} pattern - Search pattern
      * @param {string} [searchType="basic"] -  Filter type ("basic" or "wql").
      */
     search(pattern = "", searchType = "basic") {
-        if (searchType === "basic") {
-            this._search = pattern;
-            this._wql = null;
-        } else if (searchType === "wql") {
-            this._search = null;
-            this._wql = pattern;
-        } else {
-            this._search = null;
-            this._wql = null;
-        }
-
-        this._page = 0;
-
-        if (this._restUri) {
-            if (this._isVisible()) {
-                this._load();
-            }
-        }
+        this.dispatch("table/search", { pattern: pattern, searchType: searchType });
     }
 
     /**
@@ -566,14 +582,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
      * @param {string} pattern - Filter pattern.
      */
     filter(pattern = "") {
-        this._filter = pattern;
-        this._page = 0;
-
-        if (this._restUri) {
-            if (this._isVisible()) {
-                this._load();
-            }
-        }
+        this.dispatch("table/filter", { pattern: pattern });
     }
 
     /**
@@ -581,13 +590,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
      * @param {string} page - The current page pattern.
      */
     paging(page = 0) {
-        this._page = page;
-
-        if (this._restUri) {
-            if (this._isVisible()) {
-                this._load();
-            }
-        }
+        this.dispatch("table/page", { page: page });
     }
 
     /**

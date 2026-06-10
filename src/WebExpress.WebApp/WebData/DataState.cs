@@ -54,6 +54,37 @@ namespace WebExpress.WebApp.WebData
         }
 
         /// <summary>
+        /// Sets the initial page index. The key belongs to the closed state
+        /// vocabulary of the data controls, so it is typed rather than spelled
+        /// as a string at the call site.
+        /// </summary>
+        /// <param name="page">The page index.</param>
+        /// <returns>The state for chaining.</returns>
+        public DataState Page(int page) => Set("page", page);
+
+        /// <summary>
+        /// Sets the initial page size.
+        /// </summary>
+        /// <param name="pageSize">The page size.</param>
+        /// <returns>The state for chaining.</returns>
+        public DataState PageSize(int pageSize) => Set("pageSize", pageSize);
+
+        /// <summary>
+        /// Sets the initial search pattern.
+        /// </summary>
+        /// <param name="search">The search pattern.</param>
+        /// <returns>The state for chaining.</returns>
+        public DataState Search(string search) => Set("search", search);
+
+        /// <summary>
+        /// Embeds server side initial data, so the first paint needs no round
+        /// trip and the component skips the load on mount.
+        /// </summary>
+        /// <param name="items">The initial items.</param>
+        /// <returns>The state for chaining.</returns>
+        public DataState Items(object items) => Set("items", items);
+
+        /// <summary>
         /// Serializes the state into the compact JSON island that the JavaScript
         /// Component seeds its store from. The caller is responsible for HTML
         /// attribute encoding when the result is written into a data-wx-state

@@ -116,5 +116,43 @@ namespace WebExpress.WebApp.Test.WebData
 
             Assert.Equal("{\"name\":\"data\",\"kind\":\"rest\",\"baseUri\":\"\",\"method\":\"GET\"}", json);
         }
+
+        /// <summary>
+        /// Tests that the declared policies, which are the request headers, the
+        /// status to message mapping and the retry policy, are emitted in the
+        /// island shape that the JavaScript RestService consumes.
+        /// </summary>
+        [Fact]
+        public void PoliciesAreEmittedWhenSet()
+        {
+            var json = DataServiceDescriptor.Rest("data")
+                .WithBaseUri("/api/x")
+                .WithMethod("GET")
+                .WithHeader("X-Api-Version", "1")
+                .MapError(404, "webexpress.webapp:error.notfound")
+                .WithRetry(2, 300)
+                .ToIsland();
+
+            Assert.Equal(
+                "{\"name\":\"data\",\"kind\":\"rest\",\"baseUri\":\"/api/x\",\"method\":\"GET\"," +
+                "\"headers\":{\"X-Api-Version\":\"1\"}," +
+                "\"errors\":{\"404\":\"webexpress.webapp:error.notfound\"}," +
+                "\"retry\":{\"count\":2,\"delayMs\":300}}",
+                json);
+        }
+
+        /// <summary>
+        /// Tests that the policies stay omitted when they are not declared, so
+        /// the island keeps its historical compact shape.
+        /// </summary>
+        [Fact]
+        public void PoliciesAreOmittedByDefault()
+        {
+            var json = DataServiceDescriptor.Rest("data").WithBaseUri("/api/x").ToIsland();
+
+            Assert.DoesNotContain("headers", json);
+            Assert.DoesNotContain("errors", json);
+            Assert.DoesNotContain("retry", json);
+        }
     }
 }

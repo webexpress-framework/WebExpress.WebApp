@@ -15,9 +15,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createDocument } from "./dom-stub.mjs";
 
+// the harness lives in WebExpress.WebApp/src/WebExpress.WebApp.Test/JsTest and
+// loads the shipped engine sources from the sibling WebExpress.WebApp project
 const here = path.dirname(fileURLToPath(import.meta.url));
-const assetsJs = path.resolve(here, "..", "src", "WebExpress.WebUI", "Assets", "js");
-const webappAssetsJs = path.resolve(here, "..", "..", "WebExpress.WebApp", "src", "WebExpress.WebApp", "Assets", "js");
+const webappAssetsJs = path.resolve(here, "..", "..", "WebExpress.WebApp", "Assets", "js");
 
 /**
  * Resolves the absolute path of a WebExpress.WebApp asset by file name, so that
@@ -35,16 +36,28 @@ const ENGINE_FILES = [
     "webexpress.webapp.store.js",
     "webexpress.webapp.service.js",
     "webexpress.webapp.renderer.js",
+    "webexpress.webapp.template.js",
     "webexpress.webapp.intent.js",
     "webexpress.webapp.data.js",
     "service/default.js",
-    "intent/default.js"
+    "intent/default.js",
+    "bind/default.js"
 ];
 
 // a minimal Ctrl base, defined inside the context, that mirrors the parts of
 // webexpress.webui.Ctrl the Component relies on, without the DOM heavy runtime
 const BOOTSTRAP = `
     var webexpress = { webui: {}, webapp: {} };
+    // a minimal CustomEvent so the engine's mount and error events construct
+    // without a browser runtime
+    class CustomEvent {
+        constructor(type, init) {
+            init = init || {};
+            this.type = type;
+            this.detail = init.detail;
+            this.bubbles = !!init.bubbles;
+        }
+    }
     webexpress.webui.Ctrl = class {
         constructor(element) { this._element = element; }
         render() { }
@@ -68,6 +81,14 @@ const BOOTSTRAP = `
         getInstance() { return null; },
         getInstanceByElement() { return null; },
         getClosestInstance() { return null; }
+    };
+    // a minimal Binds registry so the webapp bind defaults, which register the
+    // state and model binds, can be loaded and exercised in the harness
+    webexpress.webui.Binds = {
+        _binds: new Map(),
+        register(name, definition) { this._binds.set(name, definition); return this; },
+        get(name) { return this._binds.get(name) || null; },
+        unregister(name) { this._binds.delete(name); }
     };
     // event name constants live in the full webexpress.webui.js, which the engine
     // harness does not load; an empty map lets controls dispatch without throwing
@@ -103,6 +124,12 @@ export function loadEngine(options = {}) {
         const full = path.join(webappAssetsJs, file);
         const code = fs.readFileSync(full, "utf8");
         vm.runInContext(code, sandbox, { filename: full });
+    }
+
+    // optional test specific bootstrap, for example a base class stub that an
+    // application control file extends, run before the extra files load
+    if (options.bootstrap) {
+        vm.runInContext(options.bootstrap, sandbox, { filename: "test-bootstrap" });
     }
 
     // optional additional modules (for example application level helpers),

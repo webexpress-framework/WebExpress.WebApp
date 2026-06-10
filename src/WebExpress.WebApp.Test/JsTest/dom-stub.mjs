@@ -80,6 +80,10 @@ class Element {
         return node;
     }
 
+    prepend(node) {
+        this.insertBefore(node, this.childNodes[0] || null);
+    }
+
     removeChild(node) {
         const index = this.childNodes.indexOf(node);
         if (index !== -1) { this.childNodes.splice(index, 1); }
@@ -172,20 +176,58 @@ function makeStyle() {
 }
 
 /**
- * Creates a fresh document stub.
+ * Finds an element with the given id in a subtree.
+ * @param {Element} node - The subtree root.
+ * @param {string} id - The id to find.
+ * @returns {Element|null} The element or null.
+ */
+function findById(node, id) {
+    if (node.nodeType === 1 && node.id === id) {
+        return node;
+    }
+    for (const child of node.childNodes || []) {
+        const found = findById(child, id);
+        if (found) {
+            return found;
+        }
+    }
+    return null;
+}
+
+/**
+ * Creates a fresh document stub. The document carries a body, an id lookup
+ * over the body subtree and working event listeners, so the engine's global
+ * channels (for example the service error event and the component mount
+ * event) can be exercised.
  * @returns {object} The document stub.
  */
 export function createDocument() {
+    const body = new Element("body");
+    const listeners = {};
+
     return {
         baseURI: "http://localhost/",
         readyState: "complete",
         cookie: "",
+        body,
         createElement(tag) { return new Element(tag); },
         createElementNS(namespace, tag) { return new Element(tag); },
         createDocumentFragment() { return new Element("#document-fragment"); },
         createTextNode(text) { return new TextNode(text); },
-        addEventListener() {},
-        removeEventListener() {}
+        getElementById(id) { return findById(body, String(id)); },
+        querySelector() { return null; },
+        querySelectorAll() { return []; },
+        addEventListener(type, handler) {
+            (listeners[type] || (listeners[type] = new Set())).add(handler);
+        },
+        removeEventListener(type, handler) {
+            if (listeners[type]) { listeners[type].delete(handler); }
+        },
+        dispatchEvent(event) {
+            const set = listeners[event.type];
+            if (set) { Array.from(set).forEach((fn) => fn(event)); }
+            return true;
+        }
     };
 }
 

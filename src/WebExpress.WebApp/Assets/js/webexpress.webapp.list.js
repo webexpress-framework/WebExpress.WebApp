@@ -190,17 +190,42 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
     }
 
     /**
+     * Dispatches an intent against the list's store and service, mirroring the
+     * dispatch surface of the Data base, so that the search, paging and filter
+     * binds and the dispatch action all feed the same unidirectional loop.
+     * @param {string} name The intent name.
+     * @param {*} payload The intent payload.
+     * @returns {*} The return value of the intent effect, when present.
+     */
+    dispatch(name, payload) {
+        return webexpress.webapp.Intents.dispatch(name, {
+            store: this._store,
+            payload: payload,
+            services: { data: this._service },
+            component: this,
+            element: this._element
+        });
+    }
+
+    /**
+     * Loads the list when it is backed by a service and visible. Intent
+     * effects call this after their reducer updated the store.
+     * @returns {Promise<void>|undefined} Resolves when the load completes.
+     */
+    load() {
+        if (this._restUri && this._isVisible()) {
+            return this._load();
+        }
+        return undefined;
+    }
+
+    /**
      * Sets the search filter and reloads the first page (without modifying order or paging settings).
      * @param {string} pattern The search pattern (optional, defaults to empty string).
      * @param {string} searchType The filter type ("basic" or "wql").
      */
     search(pattern = "", searchType = "basic") {
-        this._search = searchType === "basic" ? pattern : null;
-        this._wql = searchType === "wql" ? pattern : null;
-        this._page = 0;
-        if (this._restUri && this._isVisible()) {
-            this._load();
-        }
+        this.dispatch("list/search", { pattern: pattern, searchType: searchType });
     }
 
     /**
@@ -208,12 +233,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
      * @param {string} pattern The filter pattern.
      */
     filter(pattern = "") {
-        this._filter = pattern;
-        this._page = 0;
-
-        if (this._restUri && this._isVisible()) {
-            this._load();
-        }
+        this.dispatch("list/filter", { pattern: pattern });
     }
 
     /**
@@ -221,11 +241,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
      * @param {number} page The current page index.
      */
     paging(page = 0) {
-        this._page = page;
-
-        if (this._restUri && this._isVisible()) {
-            this._load();
-        }
+        this.dispatch("list/page", { page: page });
     }
 
     /**
@@ -309,11 +325,13 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
             totalPages = Math.max(1, Math.ceil(total / this._pageSize));
         }
 
-        // clamp current page to available range
+        // clamp current page to available range. the upper bound only applies
+        // when the total is known, so a page seeded through the data-wx-state
+        // island survives until the first response reports the real total
         if (this._page < 0) {
             this._page = 0;
         }
-        if (this._page >= totalPages) {
+        if (total > 0 && this._page >= totalPages) {
             this._page = totalPages - 1;
         }
 

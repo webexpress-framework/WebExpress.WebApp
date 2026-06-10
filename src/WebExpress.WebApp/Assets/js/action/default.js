@@ -184,3 +184,76 @@ webexpress.webui.Actions.register("popup", {
         }
     }
 });
+
+/**
+ * Dispatch action - sends a named intent with a payload to the store of a
+ * target Data component, part of the View, State and Service architecture.
+ * It is the bridge that lets any actionable element feed the unidirectional
+ * loop without touching the component's DOM or services directly.
+ *
+ * Supported attributes:
+ *   data-wx-{primary|secondary}-intent  - the intent name (required)
+ *   data-wx-{primary|secondary}-target  - id of the target component
+ *                                         (optional, default: the nearest
+ *                                         ancestor component)
+ *   data-wx-{primary|secondary}-payload - a json payload (optional)
+ *
+ * Example:
+ *   <button type="button"
+ *           data-wx-primary-action="dispatch"
+ *           data-wx-primary-intent="list/page"
+ *           data-wx-primary-target="orders"
+ *           data-wx-primary-payload='{"page":0}'>First page</button>
+ */
+webexpress.webui.Actions.register("dispatch", {
+    execute: function (element, prefix, controller, event) {
+        if (event && typeof event.preventDefault === "function") {
+            event.preventDefault();
+        }
+
+        function attr(name) {
+            return element.getAttribute("data-wx-" + prefix + "-" + name);
+        }
+
+        var intent = attr("intent");
+        if (!intent) {
+            console.warn("dispatch action without intent", element);
+            return;
+        }
+
+        var payload = null;
+        var payloadRaw = attr("payload");
+        if (payloadRaw) {
+            try {
+                payload = JSON.parse(payloadRaw);
+            } catch (error) {
+                console.warn("dispatch action with invalid payload", element, error);
+                return;
+            }
+        }
+
+        // resolve the target component: an explicit target id wins, otherwise
+        // the nearest ancestor component is used
+        var component = null;
+        var targetId = attr("target");
+        if (targetId) {
+            var host = document.getElementById(targetId);
+            component = host ? controller.getInstanceByElement(host) : null;
+        } else {
+            var current = element;
+            while (current && !component) {
+                var instance = controller.getInstanceByElement(current);
+                if (instance && typeof instance.dispatch === "function") {
+                    component = instance;
+                }
+                current = current.parentElement;
+            }
+        }
+
+        if (component && typeof component.dispatch === "function") {
+            component.dispatch(intent, payload);
+        } else {
+            console.warn("dispatch action found no target component", element);
+        }
+    }
+});
