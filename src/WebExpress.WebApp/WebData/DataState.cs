@@ -77,6 +77,16 @@ namespace WebExpress.WebApp.WebData
         public DataState Search(string search) => Set("search", search);
 
         /// <summary>
+        /// Sets the identifier of the resource the control binds to, for
+        /// example the workflow an editor loads and saves. The id is purely
+        /// logical here, the wire name of the matching query parameter stays
+        /// with the service descriptor.
+        /// </summary>
+        /// <param name="id">The resource identifier.</param>
+        /// <returns>The state for chaining.</returns>
+        public DataState Id(string id) => Set("id", id);
+
+        /// <summary>
         /// Embeds server side initial data, so the first paint needs no round
         /// trip and the component skips the load on mount.
         /// </summary>
