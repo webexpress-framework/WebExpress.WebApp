@@ -14,10 +14,13 @@ class TextNode {
         this.parentNode = null;
         this._text = String(text);
     }
+    get nodeName() { return "#text"; }
     get textContent() { return this._text; }
     set textContent(value) { this._text = String(value); }
     get nodeValue() { return this._text; }
     set nodeValue(value) { this._text = String(value); }
+    get data() { return this._text; }
+    set data(value) { this._text = String(value); }
 }
 
 class ClassList {
@@ -51,6 +54,11 @@ class Element {
     }
 
     get firstChild() { return this.childNodes[0] || null; }
+
+    get nodeName() { return this.tagName; }
+
+    get innerText() { return this.textContent; }
+    set innerText(value) { this.textContent = value; }
 
     get id() { return this._id; }
     set id(value) { this._id = value == null ? null : String(value); }
@@ -157,6 +165,8 @@ class Element {
         if (set) { Array.from(set).forEach((fn) => fn(event)); }
         return true;
     }
+
+    focus() { }
 }
 
 /**

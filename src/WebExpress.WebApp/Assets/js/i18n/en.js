@@ -62,6 +62,7 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "wql.error.network": "Network error during validation.",
     "wql.error.label": "Invalid WQL syntax.",
     "wql.no.suggestions": "No suggestions.",
+    "wql.clear": "Clear input",
     "wql.type.input": "Input",
     "wql.type.attribute": "Attribute",
     "wql.type.operator": "Operator",
