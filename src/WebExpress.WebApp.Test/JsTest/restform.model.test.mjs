@@ -141,7 +141,7 @@ test("model feeds a service request and classifies the result end to end", async
         return { ok: true, status: 200, headers: { get: () => "application/json" }, json: async () => ({ message: "saved" }) };
     });
 
-    const service = wxapp.ServiceRegistry.create(wxapp.restFormModel.legacyDescriptor("/api/form"));
+    const service = wxapp.ServiceRegistry.create({ name: "data", kind: "rest", baseUri: "/api/form" });
     const built = wxapp.restFormModel.buildRequest(
         "/api/form", { method: "POST", json: true, headers: {}, id: 7 }, { name: "a" }, "http://localhost");
 

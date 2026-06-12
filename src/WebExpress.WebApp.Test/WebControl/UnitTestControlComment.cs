@@ -1,4 +1,5 @@
 using WebExpress.WebApp.Test.Fixture;
+using WebExpress.WebApp.WebData;
 using WebExpress.WebApp.WebControl;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebPage;
@@ -43,7 +44,7 @@ namespace WebExpress.WebApp.Test.WebControl
         /// </summary>
         [Theory]
         [InlineData(null, @"<div class=""wx-webapp-comment""></div>")]
-        [InlineData("https://example.com/api/users", @"<div class=""wx-webapp-comment"" data-users-uri=""https://example.com/api/users""></div>")]
+        [InlineData("https://example.com/api/users", @"<div class=""wx-webapp-comment""><wx-service hidden name=""users"" kind=""rest"" base-uri=""https://example.com/api/users"" method=""GET""></wx-service></div>")]
         public void UsersUri(string uriString, string expected)
         {
             // arrange
@@ -52,7 +53,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlDataComment()
             {
-                UsersUri = _ => uriString is not null ? new UriEndpoint(uriString) : null
+                ServiceFactory = uriString is not null ? _ => DataServiceDescriptor.Rest("users").WithBaseUri(uriString).WithMethod("GET") : null
             };
 
             // act
@@ -126,14 +127,14 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlDataComment()
             {
-                ImageUploadUri = _ => new UriEndpoint("https://example.com/api/upload")
+                ServiceFactory = _ => DataServiceDescriptor.Rest("upload").WithBaseUri("https://example.com/api/upload").WithMethod("POST")
             };
 
             // act
             var html = control.Render(context, visualTree);
 
             // validation
-            AssertExtensions.EqualWithPlaceholders(@"<div class=""wx-webapp-comment"" data-image-upload-uri=""https://example.com/api/upload""></div>", html);
+            AssertExtensions.EqualWithPlaceholders(@"<div class=""wx-webapp-comment""><wx-service hidden name=""upload"" kind=""rest"" base-uri=""https://example.com/api/upload"" method=""POST""></wx-service></div>", html);
         }
 
         /// <summary>
@@ -171,9 +172,12 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlDataComment("c1")
             {
-                UsersUri = _ => new UriEndpoint("https://example.com/api/users"),
+                ServiceFactories =
+                {
+                    _ => DataServiceDescriptor.Rest("users").WithBaseUri("https://example.com/api/users").WithMethod("GET"),
+                    _ => DataServiceDescriptor.Rest("upload").WithBaseUri("https://example.com/api/upload").WithMethod("POST")
+                },
                 CurrentUser = _ => "u-alice",
-                ImageUploadUri = _ => new UriEndpoint("https://example.com/api/upload"),
                 Readonly = _ => false
             };
 
@@ -181,7 +185,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var html = control.Render(context, visualTree);
 
             // validation
-            AssertExtensions.EqualWithPlaceholders(@"<div id=""c1"" class=""wx-webapp-comment"" data-users-uri=""https://example.com/api/users"" data-current-user=""u-alice"" data-image-upload-uri=""https://example.com/api/upload""></div>", html);
+            AssertExtensions.EqualWithPlaceholders(@"<div id=""c1"" class=""wx-webapp-comment"" data-current-user=""u-alice""><wx-service hidden name=""users"" kind=""rest"" base-uri=""https://example.com/api/users"" method=""GET""></wx-service><wx-service hidden name=""upload"" kind=""rest"" base-uri=""https://example.com/api/upload"" method=""POST""></wx-service></div>", html);
         }
 
         /// <summary>

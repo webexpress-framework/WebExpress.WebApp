@@ -14,17 +14,6 @@ webexpress.webapp = webexpress.webapp || {}
  */
 webexpress.webapp.commentModel = {
     /**
-     * Builds the service descriptor for the comment endpoint. The id is carried
-     * in the path, not the query, so only the base uri is configured. PUT is
-     * used for the edit operation.
-     * @param {string} uri - The REST endpoint backing the comments.
-     * @returns {object} A rest service descriptor.
-     */
-    legacyDescriptor(uri) {
-        return { name: "data", kind: "rest", baseUri: uri || "", method: "GET", updateMethod: "PUT" };
-    },
-
-    /**
      * Accepts either an array of category descriptors or an object keyed by
      * category id and returns the canonical object form keyed by id.
      * @param {Array|object} input - The category set.

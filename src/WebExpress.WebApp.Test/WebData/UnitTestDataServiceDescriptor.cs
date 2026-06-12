@@ -3,75 +3,68 @@ using WebExpress.WebApp.WebData;
 namespace WebExpress.WebApp.Test.WebData
 {
     /// <summary>
-    /// Tests the C# service descriptor that serializes into the data-wx-service
-    /// island. This is the first C# artifact of the View, State and Service
-    /// architecture, so the test pins the island shape that the JavaScript
-    /// ServiceRegistry consumes, in particular that it matches the JavaScript
-    /// legacyDescriptor fallback of the list control.
+    /// Tests the C# service descriptor that renders into the wx-service island
+    /// element. The test pins the island shape that the JavaScript
+    /// ServiceRegistry consumes: the scalar parts as attributes and the query,
+    /// response, header and error mappings as child elements.
     /// </summary>
     public class UnitTestDataServiceDescriptor
     {
         /// <summary>
-        /// Tests that the list data descriptor serializes into exactly the island
-        /// that mirrors webexpress.webapp.listModel.legacyDescriptor.
+        /// Tests that the list data descriptor renders the historical list
+        /// query and response names as mapping elements.
         /// </summary>
         [Fact]
-        public void ListDataIslandMatchesTheLegacyDescriptor()
+        public void ListDataIslandCarriesTheListMappings()
         {
-            var json = DataServiceDescriptor.ListData("/api/orders").ToIsland();
+            var island = DataServiceDescriptor.ListData("/api/orders").ToIslandElement().ToString();
 
-            Assert.Equal(
-                "{\"name\":\"data\",\"kind\":\"rest\",\"baseUri\":\"/api/orders\",\"method\":\"GET\"," +
-                "\"query\":{\"search\":\"q\",\"wql\":\"wql\",\"filter\":\"f\",\"page\":\"p\",\"pageSize\":\"l\",\"orderBy\":\"o\",\"orderDir\":\"d\"}," +
-                "\"response\":{\"items\":\"items\",\"total\":\"total\"}}",
-                json);
+            Assert.Contains("<wx-service hidden name=\"data\" kind=\"rest\" base-uri=\"/api/orders\" method=\"GET\">", island);
+            Assert.Contains("<wx-query name=\"search\" wire=\"q\"></wx-query>", island);
+            Assert.Contains("<wx-query name=\"pageSize\" wire=\"l\"></wx-query>", island);
+            Assert.Contains("<wx-response name=\"items\" wire=\"items\"></wx-response>", island);
+            Assert.Contains("<wx-response name=\"total\" wire=\"total\"></wx-response>", island);
         }
 
         /// <summary>
-        /// Tests that the table data descriptor serializes into exactly the
-        /// island that mirrors webexpress.webapp.tableModel.legacyDescriptor,
-        /// including the put update method and the rows response key.
+        /// Tests that the table data descriptor carries the put update method
+        /// and the rows response key.
         /// </summary>
         [Fact]
-        public void TableDataIslandMatchesTheLegacyDescriptor()
+        public void TableDataIslandCarriesTheTableMappings()
         {
-            var json = DataServiceDescriptor.TableData("/api/orders").ToIsland();
+            var island = DataServiceDescriptor.TableData("/api/orders").ToIslandElement().ToString();
 
-            Assert.Equal(
-                "{\"name\":\"data\",\"kind\":\"rest\",\"baseUri\":\"/api/orders\",\"method\":\"GET\",\"updateMethod\":\"PUT\"," +
-                "\"query\":{\"search\":\"q\",\"wql\":\"wql\",\"filter\":\"f\",\"page\":\"p\",\"pageSize\":\"l\",\"orderBy\":\"o\",\"orderDir\":\"d\"}," +
-                "\"response\":{\"rows\":\"rows\",\"total\":\"total\"}}",
-                json);
+            Assert.Contains("update-method=\"PUT\"", island);
+            Assert.Contains("<wx-response name=\"rows\" wire=\"rows\"></wx-response>", island);
         }
 
         /// <summary>
         /// Tests that the common data descriptor (load with GET, persist with
-        /// PUT, no query or response mapping) serializes into the shape the
-        /// kanban, tile, dashboard, comment, scrum backlog and workflow controls
-        /// share.
+        /// PUT, no query or response mapping) renders the shape the kanban,
+        /// tile, dashboard, comment, scrum backlog and workflow controls share.
         /// </summary>
         [Fact]
         public void DataIslandIsTheCommonGetPutShape()
         {
-            var json = DataServiceDescriptor.Data("/api/x").ToIsland();
+            var island = DataServiceDescriptor.Data("/api/x").ToIslandElement().ToString();
 
-            Assert.Equal("{\"name\":\"data\",\"kind\":\"rest\",\"baseUri\":\"/api/x\",\"method\":\"GET\",\"updateMethod\":\"PUT\"}", json);
+            Assert.Contains("<wx-service hidden name=\"data\" kind=\"rest\" base-uri=\"/api/x\" method=\"GET\" update-method=\"PUT\">", island);
+            Assert.DoesNotContain("<wx-query", island);
+            Assert.DoesNotContain("<wx-response", island);
         }
 
         /// <summary>
-        /// Tests that the tab data descriptor serializes into exactly the island
-        /// that mirrors webexpress.webapp.tabModel.legacyDescriptor, with the id
-        /// query mapping and the items response mapping.
+        /// Tests that the tab data descriptor carries the id query mapping and
+        /// the items response mapping.
         /// </summary>
         [Fact]
-        public void TabDataIslandMatchesTheLegacyDescriptor()
+        public void TabDataIslandCarriesTheTabMappings()
         {
-            var json = DataServiceDescriptor.TabData("/api/tabs").ToIsland();
+            var island = DataServiceDescriptor.TabData("/api/tabs").ToIslandElement().ToString();
 
-            Assert.Equal(
-                "{\"name\":\"data\",\"kind\":\"rest\",\"baseUri\":\"/api/tabs\",\"method\":\"GET\",\"updateMethod\":\"PUT\"," +
-                "\"query\":{\"id\":\"id\"},\"response\":{\"items\":\"items\"}}",
-                json);
+            Assert.Contains("<wx-query name=\"id\" wire=\"id\"></wx-query>", island);
+            Assert.Contains("<wx-response name=\"items\" wire=\"items\"></wx-response>", island);
         }
 
         /// <summary>
@@ -81,12 +74,16 @@ namespace WebExpress.WebApp.Test.WebData
         [Fact]
         public void RestOmitsEmptyParts()
         {
-            var json = DataServiceDescriptor.Rest("data")
+            var island = DataServiceDescriptor.Rest("data")
                 .WithBaseUri("/api/x")
                 .WithMethod("GET")
-                .ToIsland();
+                .ToIslandElement()
+                .ToString();
 
-            Assert.Equal("{\"name\":\"data\",\"kind\":\"rest\",\"baseUri\":\"/api/x\",\"method\":\"GET\"}", json);
+            Assert.Contains("<wx-service hidden name=\"data\" kind=\"rest\" base-uri=\"/api/x\" method=\"GET\">", island);
+            Assert.DoesNotContain("update-method", island);
+            Assert.DoesNotContain("<wx-query", island);
+            Assert.DoesNotContain("<wx-response", island);
         }
 
         /// <summary>
@@ -96,25 +93,26 @@ namespace WebExpress.WebApp.Test.WebData
         [Fact]
         public void UpdateMethodIsEmittedWhenSet()
         {
-            var json = DataServiceDescriptor.Rest("data")
+            var island = DataServiceDescriptor.Rest("data")
                 .WithBaseUri("/api/x")
                 .WithMethod("GET")
                 .WithUpdateMethod("PUT")
-                .ToIsland();
+                .ToIslandElement()
+                .ToString();
 
-            Assert.Equal("{\"name\":\"data\",\"kind\":\"rest\",\"baseUri\":\"/api/x\",\"method\":\"GET\",\"updateMethod\":\"PUT\"}", json);
+            Assert.Contains("update-method=\"PUT\"", island);
         }
 
         /// <summary>
-        /// Tests that a missing base uri serializes as an empty string rather than
-        /// a null, so the JavaScript RestService always has a usable base.
+        /// Tests that a missing base uri omits the attribute, which the
+        /// JavaScript island parser restores as an empty base.
         /// </summary>
         [Fact]
-        public void MissingBaseUriBecomesEmptyString()
+        public void MissingBaseUriOmitsTheAttribute()
         {
-            var json = DataServiceDescriptor.Rest("data").WithMethod("GET").ToIsland();
+            var island = DataServiceDescriptor.Rest("data").WithMethod("GET").ToIslandElement().ToString();
 
-            Assert.Equal("{\"name\":\"data\",\"kind\":\"rest\",\"baseUri\":\"\",\"method\":\"GET\"}", json);
+            Assert.DoesNotContain("base-uri", island);
         }
 
         /// <summary>
@@ -125,34 +123,33 @@ namespace WebExpress.WebApp.Test.WebData
         [Fact]
         public void PoliciesAreEmittedWhenSet()
         {
-            var json = DataServiceDescriptor.Rest("data")
+            var island = DataServiceDescriptor.Rest("data")
                 .WithBaseUri("/api/x")
                 .WithMethod("GET")
                 .WithHeader("X-Api-Version", "1")
                 .MapError(404, "webexpress.webapp:error.notfound")
                 .WithRetry(2, 300)
-                .ToIsland();
+                .ToIslandElement()
+                .ToString();
 
-            Assert.Equal(
-                "{\"name\":\"data\",\"kind\":\"rest\",\"baseUri\":\"/api/x\",\"method\":\"GET\"," +
-                "\"headers\":{\"X-Api-Version\":\"1\"}," +
-                "\"errors\":{\"404\":\"webexpress.webapp:error.notfound\"}," +
-                "\"retry\":{\"count\":2,\"delayMs\":300}}",
-                json);
+            Assert.Contains("retry-count=\"2\"", island);
+            Assert.Contains("retry-delay=\"300\"", island);
+            Assert.Contains("<wx-header name=\"X-Api-Version\" value=\"1\"></wx-header>", island);
+            Assert.Contains("<wx-error status=\"404\" message=\"webexpress.webapp:error.notfound\"></wx-error>", island);
         }
 
         /// <summary>
         /// Tests that the policies stay omitted when they are not declared, so
-        /// the island keeps its historical compact shape.
+        /// the island keeps its compact shape.
         /// </summary>
         [Fact]
         public void PoliciesAreOmittedByDefault()
         {
-            var json = DataServiceDescriptor.Rest("data").WithBaseUri("/api/x").ToIsland();
+            var island = DataServiceDescriptor.Rest("data").WithBaseUri("/api/x").ToIslandElement().ToString();
 
-            Assert.DoesNotContain("headers", json);
-            Assert.DoesNotContain("errors", json);
-            Assert.DoesNotContain("retry", json);
+            Assert.DoesNotContain("wx-header", island);
+            Assert.DoesNotContain("wx-error", island);
+            Assert.DoesNotContain("retry-count", island);
         }
     }
 }

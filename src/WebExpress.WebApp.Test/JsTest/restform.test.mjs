@@ -6,8 +6,8 @@
  * gains the base teardown that aborts the service. The form keeps its imperative
  * render and submit flow.
  *
- * The tests omit the data-uri so the constructor performs no load (load() returns
- * early without an api), which keeps the lift assertions free of async I/O.
+ * The load test omits the form mode triggers so the constructor performs no
+ * load, which keeps the lift assertions free of async I/O.
  *
  * Run with Node 18 or newer from the jstest folder:
  *   node --test
@@ -15,7 +15,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert";
-import { loadEngine, webappAsset } from "./harness.mjs";
+import { loadEngine, webappAsset, appendServiceIsland, appendStateIsland } from "./harness.mjs";
 
 function load(options) {
     return loadEngine(Object.assign(
@@ -30,25 +30,31 @@ function load(options) {
 }
 
 test("restform extends the data base and resolves its service", () => {
-    const { wxapp, createElement, setFetch } = load();
+    const { wxapp, createElement, setFetch, document } = load();
     setFetch(async () => ({ ok: true, status: 200, headers: { get: () => "application/json" }, json: async () => ({}) }));
 
     const element = createElement("form");
+    appendServiceIsland(document, element, { name: "data", kind: "rest", baseUri: "/api/form" });
+
+    // the configured endpoint triggers the initial load, which needs the full
+    // browser form runtime; the lift assertions only cover the wiring
+    wxapp.RestFormCtrl.prototype.load = async function () { };
 
     const ctrl = new wxapp.RestFormCtrl(element);
 
     assert.ok(ctrl instanceof wxapp.Data);
     assert.equal(typeof ctrl.store, "object");
     assert.ok(ctrl.useService("data"));
+    assert.equal(ctrl.options.api, "/api/form");
     assert.equal(ctrl.mode, "new");
 });
 
-test("restform seeds its ui state from the data-wx-state island", () => {
-    const { wxapp, createElement, setFetch } = load();
+test("restform seeds its ui state from the wx-state island", () => {
+    const { wxapp, createElement, setFetch, document } = load();
     setFetch(async () => ({ ok: true, status: 200, headers: { get: () => "application/json" }, json: async () => ({}) }));
 
     const element = createElement("form");
-    element.setAttribute("data-wx-state", JSON.stringify({ submitting: true }));
+    appendStateIsland(document, element, { submitting: true });
 
     const ctrl = new wxapp.RestFormCtrl(element);
 

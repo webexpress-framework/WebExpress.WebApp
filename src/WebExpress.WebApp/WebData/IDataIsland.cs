@@ -7,11 +7,11 @@ namespace WebExpress.WebApp.WebData
     /// <summary>
     /// Marks a WebApp control as data bound. A data bound control declares an
     /// optional initial state, one or more data service descriptors and an
-    /// optional template reference, which it emits as the data-wx-state,
-    /// data-wx-service and data-wx-template islands that the JavaScript engine
-    /// consumes (webexpress.webapp.Data seeds its store from the state island,
-    /// webexpress.webapp.ServiceRegistry resolves the service island,
-    /// webexpress.webapp.Templates resolves the template reference).
+    /// optional template reference, which it emits as hidden wx-state and
+    /// wx-service island elements plus the data-wx-template attribute that the
+    /// JavaScript engine consumes (webexpress.webapp.Data seeds its store from
+    /// the state island, webexpress.webapp.ServiceRegistry resolves the service
+    /// islands, webexpress.webapp.Templates resolves the template reference).
     /// The emission itself is shared through the EmitDataIslands extension, so a
     /// control only declares the members and calls the extension from Render.
     ///
@@ -23,18 +23,17 @@ namespace WebExpress.WebApp.WebData
     public interface IDataIsland
     {
         /// <summary>
-        /// Gets or sets the optional initial state, emitted as the data-wx-state
-        /// island. When null or empty, no island is emitted and the client loads
-        /// on mount.
+        /// Gets or sets the optional initial state, emitted as the wx-state
+        /// island element. When null or empty, no island is emitted and the
+        /// client loads on mount.
         /// </summary>
         Func<IRenderControlContext, DataState> StateFactory { get; set; }
 
         /// <summary>
-        /// Gets the data service descriptors of the control, emitted together as
-        /// the data-wx-service island: a single object for one service and a
-        /// json array for several, which the JavaScript ServiceRegistry resolves
-        /// into a map of named services. When empty, no island is emitted and
-        /// the client uses its legacy descriptor fallback.
+        /// Gets the data service descriptors of the control, emitted as one
+        /// wx-service island element per service, which the JavaScript
+        /// ServiceRegistry resolves into a map of named services. When empty,
+        /// no island is emitted.
         /// </summary>
         IList<Func<IRenderControlContext, DataServiceDescriptor>> ServiceFactories { get; }
 

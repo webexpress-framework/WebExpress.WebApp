@@ -20,21 +20,16 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
      */
     constructor(element) {
         const ds = element.dataset;
-        const api = ds.uri || ds.url || ds.api || null;
 
         // data service used for the load and the submit; the form shapes its own
-        // requests (see restFormModel) and routes them through the service. a
-        // configured island when present, otherwise a legacy descriptor that
-        // carries the form endpoint. the Data base aborts the service on teardown.
-        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
-        const services = {
-            data: islandServices.data ||
-                webexpress.webapp.ServiceRegistry.create(webexpress.webapp.restFormModel.legacyDescriptor(api))
-        };
+        // requests (see restFormModel) and routes them through the service. the
+        // endpoint is authored in C# through the wx-service island, and the Data
+        // base aborts the service on teardown.
+        const services = webexpress.webapp.ServiceRegistry.fromElement(element);
 
         // canonical ui state: a single source of truth for the transient flags,
         // exposed through the accessors below. seeded from the optional
-        // data-wx-state island.
+        // wx-state island.
         const initialState = Object.assign({
             loading: false,
             submitting: false,
@@ -51,7 +46,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
 
         this.options = {
             id: ds.id || null,
-            api: api,
+            api: this._service ? this._service.baseUri : null,
             method: (ds.method || this._element.method || "POST").toUpperCase(),
             headers: {},
             json: parseBool(ds.json, true),
@@ -67,7 +62,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
         this.mode = ["new", "edit", "delete"].includes(mode) ? mode : (this.options.id ? "edit" : "new");
 
         // cleanup attributes
-        ["data-api", "data-method", "data-json", "data-validate-on-submit", "data-show-inline-errors", "data-mode"]
+        ["data-method", "data-json", "data-validate-on-submit", "data-show-inline-errors", "data-mode"]
             .forEach((attr) => {
                 this._element.removeAttribute(attr);
             });

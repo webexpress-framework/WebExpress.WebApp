@@ -76,6 +76,9 @@ function loadPrompt(options = {}) {
     vm.runInContext(BOOTSTRAP, sandbox, { filename: "bootstrap" });
 
     sandbox.webexpress.webapp.ServiceRegistry = {
+        // the prompt resolves its endpoint from the wx-service island; the
+        // stub serves the configured data service without the full engine
+        fromElement: () => ({ data: { baseUri: "/api/items" } }),
         request: async (url, init) => {
             requests.push(url);
             return options.response ? options.response(url) : { ok: false };
@@ -85,7 +88,6 @@ function loadPrompt(options = {}) {
     vm.runInContext(fs.readFileSync(promptJs, "utf8"), sandbox, { filename: promptJs });
 
     const host = document.createElement("div");
-    host.dataset.uri = "/api/items";
     const ctrl = new sandbox.webexpress.webapp.WqlPromptCtrl(host);
 
     return { ctrl, document, requests };

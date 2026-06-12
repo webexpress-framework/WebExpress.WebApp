@@ -1,4 +1,4 @@
-﻿using System.Net.Http;
+using System.Net.Http;
 using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebControl;
 using WebExpress.WebApp.WebData;
@@ -31,20 +31,21 @@ namespace WebExpress.WebApp.Test.WebData
                 .Query(q => q.Map("search", "q").Map("page", "p"))
                 .Response(r => r.Items("items").Total("total"))
                 .Build(null)
-                .ToIsland();
+                .ToIslandElement()
+                .ToString();
 
             // validation
-            Assert.Contains("\"name\":\"data\"", island);
-            Assert.Contains("\"method\":\"GET\"", island);
-            Assert.Contains("\"updateMethod\":\"PUT\"", island);
-            Assert.Contains("\"search\":\"q\"", island);
-            Assert.Contains("\"items\":\"items\"", island);
-            Assert.Contains("\"total\":\"total\"", island);
+            Assert.Contains("name=\"data\"", island);
+            Assert.Contains("method=\"GET\"", island);
+            Assert.Contains("update-method=\"PUT\"", island);
+            Assert.Contains("<wx-query name=\"search\" wire=\"q\"></wx-query>", island);
+            Assert.Contains("<wx-response name=\"items\" wire=\"items\"></wx-response>", island);
+            Assert.Contains("<wx-response name=\"total\" wire=\"total\"></wx-response>", island);
         }
 
         /// <summary>
         /// Tests that the fluent State extension makes the control emit the
-        /// data-wx-state island.
+        /// wx-state island element.
         /// </summary>
         [Fact]
         public void FluentStateEmitsTheStateIsland()
@@ -57,15 +58,17 @@ namespace WebExpress.WebApp.Test.WebData
                 .State(s => s.Set("page", 0).Set("pageSize", 25));
 
             // act
-            var html = control.Render(context, visualTree);
+            var html = control.Render(context, visualTree).ToString();
 
             // validation
-            AssertExtensions.EqualWithPlaceholders(@"<div id=""myList"" class=""wx-webapp-list"" data-wx-state=""*""></div>", html);
+            Assert.Contains("<wx-state hidden>", html);
+            Assert.Contains("<wx-prop name=\"page\" type=\"number\">0</wx-prop>", html);
+            Assert.Contains("<wx-prop name=\"pageSize\" type=\"number\">25</wx-prop>", html);
         }
 
         /// <summary>
         /// Tests that the fluent Service extension makes the control emit the
-        /// data-wx-service island with the declared, HTML-encoded shape.
+        /// wx-service island element with the declared shape.
         /// </summary>
         [Fact]
         public void FluentServiceEmitsTheServiceIsland()
@@ -81,19 +84,18 @@ namespace WebExpress.WebApp.Test.WebData
             var html = control.Render(context, visualTree).ToString();
 
             // validation
-            Assert.Contains("data-wx-service=", html);
-            Assert.Contains("&quot;name&quot;:&quot;data&quot;", html);
-            Assert.Contains("&quot;method&quot;:&quot;GET&quot;", html);
+            Assert.Contains("<wx-service hidden name=\"data\"", html);
+            Assert.Contains("method=\"GET\"", html);
+            Assert.Contains("<wx-response name=\"items\" wire=\"items\"></wx-response>", html);
         }
 
         /// <summary>
-        /// Tests that two declared services emit one data-wx-service island that
-        /// carries a json array of both descriptors, which is the shape a form
-        /// with a load and a submit service produces and that
-        /// ServiceRegistry.fromElement already consumes.
+        /// Tests that two declared services emit one wx-service island element
+        /// per service, which is the shape a form with a load and a submit
+        /// service produces and that ServiceRegistry.fromElement consumes.
         /// </summary>
         [Fact]
-        public void TwoServicesEmitOneIslandArray()
+        public void TwoServicesEmitTwoIslands()
         {
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
@@ -106,10 +108,9 @@ namespace WebExpress.WebApp.Test.WebData
             // act
             var html = control.Render(context, visualTree).ToString();
 
-            // validation: the island is an array carrying both named services
-            Assert.Contains("data-wx-service=\"[", html);
-            Assert.Contains("&quot;name&quot;:&quot;load&quot;", html);
-            Assert.Contains("&quot;name&quot;:&quot;submit&quot;", html);
+            // validation: one island element per named service
+            Assert.Contains("<wx-service hidden name=\"load\"", html);
+            Assert.Contains("<wx-service hidden name=\"submit\"", html);
         }
 
         /// <summary>
@@ -147,13 +148,19 @@ namespace WebExpress.WebApp.Test.WebData
                 .Query(q => q.Search().Wql().Filter().Page().PageSize().OrderBy().OrderDir())
                 .Response(r => r.Items().Total())
                 .Build(null)
-                .ToIsland();
+                .ToIslandElement()
+                .ToString();
 
             // validation: identical to the historical list mapping
-            Assert.Contains(
-                "\"query\":{\"search\":\"q\",\"wql\":\"wql\",\"filter\":\"f\",\"page\":\"p\",\"pageSize\":\"l\",\"orderBy\":\"o\",\"orderDir\":\"d\"}",
-                island);
-            Assert.Contains("\"response\":{\"items\":\"items\",\"total\":\"total\"}", island);
+            Assert.Contains("<wx-query name=\"search\" wire=\"q\"></wx-query>", island);
+            Assert.Contains("<wx-query name=\"wql\" wire=\"wql\"></wx-query>", island);
+            Assert.Contains("<wx-query name=\"filter\" wire=\"f\"></wx-query>", island);
+            Assert.Contains("<wx-query name=\"page\" wire=\"p\"></wx-query>", island);
+            Assert.Contains("<wx-query name=\"pageSize\" wire=\"l\"></wx-query>", island);
+            Assert.Contains("<wx-query name=\"orderBy\" wire=\"o\"></wx-query>", island);
+            Assert.Contains("<wx-query name=\"orderDir\" wire=\"d\"></wx-query>", island);
+            Assert.Contains("<wx-response name=\"items\" wire=\"items\"></wx-response>", island);
+            Assert.Contains("<wx-response name=\"total\" wire=\"total\"></wx-response>", island);
         }
 
         /// <summary>
@@ -164,10 +171,11 @@ namespace WebExpress.WebApp.Test.WebData
         public void TypedStateHelpersSetTheVocabulary()
         {
             // act
-            var island = DataState.Create().Page(0).PageSize(25).ToIsland();
+            var island = DataState.Create().Page(0).PageSize(25).ToIslandElement().ToString();
 
             // validation
-            Assert.Equal("{\"page\":0,\"pageSize\":25}", island);
+            Assert.Contains("<wx-prop name=\"page\" type=\"number\">0</wx-prop>", island);
+            Assert.Contains("<wx-prop name=\"pageSize\" type=\"number\">25</wx-prop>", island);
         }
 
         /// <summary>

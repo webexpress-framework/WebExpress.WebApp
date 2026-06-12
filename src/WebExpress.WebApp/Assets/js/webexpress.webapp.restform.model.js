@@ -12,16 +12,6 @@ webexpress.webapp = webexpress.webapp || {}
  */
 webexpress.webapp.restFormModel = {
     /**
-     * Builds the minimal service descriptor for the form endpoint. The form
-     * shapes its own requests, so only the base uri is needed.
-     * @param {string} api - The REST endpoint backing the form.
-     * @returns {object} A rest service descriptor.
-     */
-    legacyDescriptor(api) {
-        return { name: "data", kind: "rest", baseUri: api || "" };
-    },
-
-    /**
      * Builds the load url, which carries the optional id and the mode as query
      * parameters, matching the historical behaviour.
      * @param {string} api - The form endpoint.

@@ -21,17 +21,6 @@ function load(options) {
     ));
 }
 
-test("legacy descriptor lists with get, updates with put and maps the id", () => {
-    const { wxapp } = load();
-    const descriptor = wxapp.tabModel.legacyDescriptor("/api/tabs");
-
-    assert.equal(descriptor.kind, "rest");
-    assert.equal(descriptor.baseUri, "/api/tabs");
-    assert.equal(descriptor.method, "GET");
-    assert.equal(descriptor.updateMethod, "PUT");
-    assert.deepEqual(descriptor.query, { id: "id" });
-});
-
 test("map tabs reads the items array and tolerates a missing one", () => {
     const { wxapp } = load();
 
@@ -94,7 +83,15 @@ test("model drives the four operations through a service end to end", async () =
         return { ok: true, status: 204 };
     });
 
-    const service = wxapp.ServiceRegistry.create(wxapp.tabModel.legacyDescriptor("/api/tabs"));
+    const service = wxapp.ServiceRegistry.create({
+        name: "data",
+        kind: "rest",
+        baseUri: "/api/tabs",
+        method: "GET",
+        updateMethod: "PUT",
+        query: { id: "id" },
+        response: { items: "items" }
+    });
 
     const list = await service.query({});
     assert.equal(calls[0].method, "GET");

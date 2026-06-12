@@ -16,13 +16,20 @@ webexpress.webapp.SelectionCtrl = class extends webexpress.webui.SelectionCtrl {
      * @param {HTMLElement} element - The DOM element for the selection control.
      */
     constructor(element) {
+        // consume the island before the base constructor parses the children
+        // as selection items; the read caches on the element
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+
         super(element);
+
+        // the endpoint is configured through the wx-service island
+        this._service = islandServices.data || null;
+        if (this._service) {
+            this._apiEndpoint = this._service.baseUri;
+        }
 
         // read configuration from dataset
         if (element && element.dataset) {
-            if (typeof element.dataset.uri === "string") {
-                this._apiEndpoint = element.dataset.uri;
-            }
             if (typeof element.dataset.method === "string") {
                 const m = element.dataset.method.trim().toUpperCase();
                 if (m === "POST" || m === "GET") {
@@ -66,7 +73,6 @@ webexpress.webapp.SelectionCtrl = class extends webexpress.webui.SelectionCtrl {
     _cleanupDataAttributes(element) {
         // remove only known configuration attributes to avoid unintended side effects
         const attrs = [
-            "data-uri",
             "data-method",
             "data-query-param",
             "data-page-param",

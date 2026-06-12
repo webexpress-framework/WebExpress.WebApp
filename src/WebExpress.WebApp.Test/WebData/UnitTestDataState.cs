@@ -3,50 +3,58 @@ using WebExpress.WebApp.WebData;
 namespace WebExpress.WebApp.Test.WebData
 {
     /// <summary>
-    /// Tests the C# control state that serializes into the data-wx-state island.
-    /// The island is consumed by the engine through
+    /// Tests the C# control state that renders into the wx-state island
+    /// element. The island is consumed by the engine through
     /// webexpress.webapp.Data.readState, so the test pins the shape that the
     /// component seeds its store from.
     /// </summary>
     public class UnitTestDataState
     {
         /// <summary>
-        /// Tests that keys and numeric values serialize in insertion order.
+        /// Tests that keys render in insertion order and numbers carry their
+        /// type marker so the client restores them losslessly.
         /// </summary>
         [Fact]
-        public void SetSerializesValuesByType()
+        public void SetRendersValuesByType()
         {
-            var json = DataState.Create().Set("page", 0).Set("pageSize", 50).ToIsland();
+            var island = DataState.Create().Set("page", 0).Set("pageSize", 50).ToIslandElement().ToString();
 
-            Assert.Equal("{\"page\":0,\"pageSize\":50}", json);
+            Assert.StartsWith("<wx-state hidden>", island.TrimStart());
+            Assert.Contains("<wx-prop name=\"page\" type=\"number\">0</wx-prop>", island);
+            Assert.Contains("<wx-prop name=\"pageSize\" type=\"number\">50</wx-prop>", island);
+            Assert.True(island.IndexOf("\"page\"") < island.IndexOf("\"pageSize\""));
         }
 
         /// <summary>
-        /// Tests that strings, booleans and arrays are supported as state values.
+        /// Tests that strings, booleans and arrays are supported as state
+        /// values: strings carry no marker, booleans and structured values
+        /// carry theirs.
         /// </summary>
         [Fact]
         public void SupportsStringsBooleansAndArrays()
         {
-            var json = DataState.Create()
-                .Set("search", "")
+            var island = DataState.Create()
+                .Set("search", "treasure")
                 .Set("loading", false)
                 .Set("items", new[] { "a", "b" })
-                .ToIsland();
+                .ToIslandElement()
+                .ToString();
 
-            Assert.Equal("{\"search\":\"\",\"loading\":false,\"items\":[\"a\",\"b\"]}", json);
+            Assert.Contains("<wx-prop name=\"search\">treasure</wx-prop>", island);
+            Assert.Contains("<wx-prop name=\"loading\" type=\"boolean\">false</wx-prop>", island);
+            Assert.Contains("<wx-prop name=\"items\" type=\"json\">[&quot;a&quot;,&quot;b&quot;]</wx-prop>", island);
         }
 
         /// <summary>
-        /// Tests that an empty state reports empty and serializes to an empty
-        /// object, so the control can omit the island.
+        /// Tests that an empty state reports empty, so the control can omit the
+        /// island.
         /// </summary>
         [Fact]
-        public void EmptyStateIsEmptyAndSerializesToAnEmptyObject()
+        public void EmptyStateIsEmpty()
         {
             var state = DataState.Create();
 
             Assert.True(state.IsEmpty);
-            Assert.Equal("{}", state.ToIsland());
         }
 
         /// <summary>
@@ -55,9 +63,10 @@ namespace WebExpress.WebApp.Test.WebData
         [Fact]
         public void LaterSetReplacesEarlierValue()
         {
-            var json = DataState.Create().Set("page", 0).Set("page", 3).ToIsland();
+            var island = DataState.Create().Set("page", 0).Set("page", 3).ToIslandElement().ToString();
 
-            Assert.Equal("{\"page\":3}", json);
+            Assert.Contains("<wx-prop name=\"page\" type=\"number\">3</wx-prop>", island);
+            Assert.DoesNotContain(">0</wx-prop>", island);
         }
     }
 }

@@ -6,16 +6,15 @@
  * remove-on-click affordance is enabled). The "+" button opens a dropdown
  * with a search input that queries `data-users-uri` and lists candidates.
  *
- * Declarative configuration:
- *   <div class="wx-webapp-watcher"
- *        data-uri="/api/watchers/INC-00123"
- *        data-users-uri="/api/users"></div>
+ * Declarative configuration: the host carries a wx-service island named
+ * "data" for the watcher endpoint and an optional second island named
+ * "users" for the candidate search.
  *
  * REST contract:
- *   GET  {uri}                              → [{ id, name, team, initials, color }]
- *   POST {uri}            body { userId }   → { id, name, team, initials, color }
- *   DELETE {uri}/{userId}                   → 204
- *   GET  {users-uri}?q=…                    → [{ id, name, team, initials, color }]
+ *   GET  {data}                             → [{ id, name, team, initials, color }]
+ *   POST {data}           body { userId }   → { id, name, team, initials, color }
+ *   DELETE {data}/{userId}                  → 204
+ *   GET  {users}?q=…                        → [{ id, name, team, initials, color }]
  *
  * Events dispatched on the host element:
  *   webexpress.webapp.Event.WATCHER_ADDED_EVENT   detail: { user }
@@ -27,37 +26,26 @@ webexpress.webapp.WatcherCtrl = class extends webexpress.webapp.Data {
      * @param {HTMLElement} element - host element.
      */
     constructor(element) {
-        // resolve the data service (a configured island when present, otherwise a
-        // legacy descriptor) and the initial state before super, so the Component
-        // seeds its store from the optional data-wx-state island and owns the
-        // service map. The cross endpoint user search keeps using the shared
-        // request.
-        const uri = element.dataset.uri || null;
-        const island = webexpress.webapp.ServiceRegistry.fromElement(element);
-        const services = island.data
-            ? island
-            : { data: webexpress.webapp.ServiceRegistry.create(webexpress.webapp.watcherModel.legacyDescriptor(uri)) };
+        // resolve the services and the initial state before super, so the
+        // Component seeds its store from the optional wx-state island and owns
+        // the service map
+        const services = webexpress.webapp.ServiceRegistry.fromElement(element);
         const initialState = Object.assign({ watchers: [] }, webexpress.webapp.Data.readState(element));
 
         super(element, { state: initialState, services: services });
 
-        this._uri = uri;
-        this._usersUri = element.dataset.usersUri || null;
         this._maxVisible = parseInt(element.dataset.maxVisible || "6", 10);
         this._readonly = element.dataset.readonly === "true";
         this._service = this.useService("data");
+        this._users = this.useService("users");
 
         this._dropdownOpen = false;
         this._searchTimer = null;
 
         // clean host
         element.textContent = "";
-        element.removeAttribute("data-uri");
-        element.removeAttribute("data-users-uri");
         element.removeAttribute("data-max-visible");
         element.removeAttribute("data-readonly");
-        element.removeAttribute("data-wx-state");
-        element.removeAttribute("data-wx-service");
         element.classList.add("wx-watcher");
 
         this._buildDom();
@@ -177,7 +165,7 @@ webexpress.webapp.WatcherCtrl = class extends webexpress.webapp.Data {
      * Loads watchers from the configured URI and renders them.
      */
     async _load() {
-        if (!this._uri) {
+        if (!this._service) {
             this._watchers = [];
             return;
         }
@@ -269,13 +257,12 @@ webexpress.webapp.WatcherCtrl = class extends webexpress.webapp.Data {
      * @param {string} q - Free-text query.
      */
     async _search(q) {
-        if (!this._usersUri) {
+        if (!this._users) {
             return;
         }
         let users = [];
         try {
-            const url = webexpress.webapp.watcherModel.searchUrl(this._usersUri, q);
-            const res = await webexpress.webapp.ServiceRegistry.request(url, { headers: { "Accept": "application/json" } });
+            const res = await this._users.query({ search: q });
             if (!res.ok) throw new Error(res.error ? res.error.message : String(res.status));
             users = res.data;
         } catch (e) {
@@ -314,7 +301,7 @@ webexpress.webapp.WatcherCtrl = class extends webexpress.webapp.Data {
      */
     async _add(user) {
         this._closeDropdown();
-        if (!this._uri) {
+        if (!this._service) {
             return;
         }
         try {
@@ -333,7 +320,7 @@ webexpress.webapp.WatcherCtrl = class extends webexpress.webapp.Data {
      * @param {Object} user
      */
     async _remove(user) {
-        if (!this._uri) {
+        if (!this._service) {
             return;
         }
         try {

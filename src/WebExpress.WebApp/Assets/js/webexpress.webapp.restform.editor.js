@@ -78,9 +78,13 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
     constructor(element) {
         super(element);
 
+        // the endpoint is authored in C# through the wx-service island
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+        this._service = islandServices.data || null;
+        this._restUrl = this._service ? this._service.baseUri : null;
+
         // initialize properties from data attributes
         const ds = element.dataset;
-        this._restUrl = ds.restUrl || null;
         this._previewOn = ds.preview !== "false";
         const indent = parseInt(ds.indent, 10);
         this._indent = isFinite(indent) ? Math.min(32, Math.max(8, indent)) : 18;

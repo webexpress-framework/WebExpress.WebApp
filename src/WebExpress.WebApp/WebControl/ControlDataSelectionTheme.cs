@@ -1,7 +1,8 @@
 using System;
+using System.Collections.Generic;
 using WebExpress.WebApp.WebApiControl;
+using WebExpress.WebApp.WebData;
 using WebExpress.WebCore.WebHtml;
-using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
@@ -14,7 +15,7 @@ namespace WebExpress.WebApp.WebControl
     /// Unlike the original form-item variant, this control is a standalone
     /// dropdown (<see cref="ControlDropdown"/>) that does not need to live
     /// inside a <see cref="ControlForm"/>. The dropdown shell is emitted as
-    /// <c>wx-webapp-dropdown-theme</c> wired to the supplied <c>RestUri</c>;
+    /// <c>wx-webapp-dropdown-theme</c> wired to the declared data service;
     /// the JS layer (<c>webexpress.webapp.DropdownTheme</c>) fetches the
     /// theme list on initialisation, marks the currently active theme as the
     /// dropdown's label, and persists a user pick through
@@ -29,13 +30,45 @@ namespace WebExpress.WebApp.WebControl
     /// different theme - never to "no theme".
     /// </para>
     /// </summary>
-    public class ControlDataSelectionTheme : ControlDropdown, IControlData
+    public class ControlDataSelectionTheme : ControlDropdown, IControlData, IDataIsland
     {
         /// <summary>
-        /// REST URI exposing a <c>RestApiTheme</c>-compatible endpoint
-        /// (GET returns the theme list, PUT/POST stores the selection).
+        /// Gets the data service descriptors of the control, emitted as
+        /// wx-service island elements. The data service exposes a
+        /// <c>RestApiTheme</c>-compatible endpoint (GET returns the theme list,
+        /// PUT stores the selection).
         /// </summary>
-        public Func<IRenderControlContext, IUri> RestUri { get; set; }
+        public IList<Func<IRenderControlContext, DataServiceDescriptor>> ServiceFactories { get; } = [];
+
+        /// <summary>
+        /// Gets or sets the single data service descriptor, as a convenience for
+        /// the common control with exactly one service. Reading returns the
+        /// first declared service, assigning replaces all declared services.
+        /// </summary>
+        public Func<IRenderControlContext, DataServiceDescriptor> ServiceFactory
+        {
+            get => ServiceFactories.Count > 0 ? ServiceFactories[0] : null;
+            set
+            {
+                ServiceFactories.Clear();
+
+                if (value != null)
+                {
+                    ServiceFactories.Add(value);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the optional template reference, emitted as the
+        /// data-wx-template attribute.
+        /// </summary>
+        public Func<IRenderControlContext, string> TemplateFactory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional initial state, emitted as the wx-state island.
+        /// </summary>
+        public Func<IRenderControlContext, DataState> StateFactory { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class with an automatically
@@ -59,19 +92,17 @@ namespace WebExpress.WebApp.WebControl
         /// Converts the control to an HTML representation. Promotes the
         /// dropdown shell to the theme-specific class so the JS controller
         /// registered under <c>wx-webapp-dropdown-theme</c> picks it up and
-        /// attaches the REST URI as <c>data-uri</c>.
+        /// resolves the theme endpoint from the wx-service island.
         /// </summary>
         /// <param name="renderContext">The rendering context.</param>
         /// <param name="visualTree">The visual tree.</param>
         /// <returns>An html node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            var restUri = RestUri?.Invoke(renderContext)?.BindParameters(renderContext?.Request);
-
             var html = base.Render(renderContext, visualTree)
                 .AddClass("wx-webapp-dropdown-theme")
                 .RemoveClass("wx-webui-dropdown")
-                .AddUserAttribute("data-uri", restUri?.ToString());
+                .EmitDataIslands(this, renderContext);
 
             return html;
         }

@@ -1,7 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using WebExpress.WebApp.WebControl;
+using WebExpress.WebApp.WebData;
 using WebExpress.WebCore.WebHtml;
-using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
@@ -10,12 +11,43 @@ namespace WebExpress.WebApp.WebApiControl
     /// <summary>
     /// Represents a form item input selection that retrieves options from a specified URI.
     /// </summary>
-    public class ControlDataFormItemInputSelection : ControlFormItemInputSelection, IControlData
+    public class ControlDataFormItemInputSelection : ControlFormItemInputSelection, IControlData, IDataIsland
     {
         /// <summary>
-        /// Gets or sets the uri that determines the options.
+        /// Gets the data service descriptors of the control, emitted as
+        /// wx-service island elements. The data service queries the options.
         /// </summary>
-        public Func<IRenderControlContext, IUri> RestUri { get; set; }
+        public IList<Func<IRenderControlContext, DataServiceDescriptor>> ServiceFactories { get; } = [];
+
+        /// <summary>
+        /// Gets or sets the single data service descriptor, as a convenience for
+        /// the common control with exactly one service. Reading returns the
+        /// first declared service, assigning replaces all declared services.
+        /// </summary>
+        public Func<IRenderControlContext, DataServiceDescriptor> ServiceFactory
+        {
+            get => ServiceFactories.Count > 0 ? ServiceFactories[0] : null;
+            set
+            {
+                ServiceFactories.Clear();
+
+                if (value != null)
+                {
+                    ServiceFactories.Add(value);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the optional template reference, emitted as the
+        /// data-wx-template attribute.
+        /// </summary>
+        public Func<IRenderControlContext, string> TemplateFactory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional initial state, emitted as the wx-state island.
+        /// </summary>
+        public Func<IRenderControlContext, DataState> StateFactory { get; set; }
 
         /// <summary>
         /// Gets or sets the binding.
@@ -53,14 +85,13 @@ namespace WebExpress.WebApp.WebApiControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlFormContext renderContext, IVisualTreeControl visualTree)
         {
-            var restUri = RestUri?.Invoke(renderContext)?.BindParameters(renderContext?.Request);
             var maxItems = MaxItems?.Invoke(renderContext) ?? -1;
             var bind = Bind?.Invoke(renderContext);
 
             var html = base.Render(renderContext, visualTree)
                 .AddClass("wx-webapp-input-selection")
                 .RemoveClass("wx-webui-input-selection")
-                .AddUserAttribute("data-uri", restUri?.ToString())
+                .EmitDataIslands(this, renderContext)
                 .AddUserAttribute("data-maxItems", maxItems > 0 ? maxItems.ToString() : null);
 
             bind?.ApplyUserAttributes(html);

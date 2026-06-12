@@ -12,25 +12,6 @@ webexpress.webapp = webexpress.webapp || {}
  */
 webexpress.webapp.tabModel = {
     /**
-     * Builds the legacy service descriptor used when the host element does not
-     * carry a data-wx-service island. All four operations target the same
-     * endpoint; the id query parameter is used by the close (delete) operation.
-     * @param {string} restUri - The REST endpoint backing the tabs.
-     * @returns {object} A rest service descriptor.
-     */
-    legacyDescriptor(restUri) {
-        return {
-            name: "data",
-            kind: "rest",
-            baseUri: restUri || "",
-            method: "GET",
-            updateMethod: "PUT",
-            query: { id: "id" },
-            response: { items: "items" }
-        };
-    },
-
-    /**
      * Extracts the tab list from the server response.
      * @param {object} response - The raw server response.
      * @returns {Array<object>} The tab items, or an empty array.

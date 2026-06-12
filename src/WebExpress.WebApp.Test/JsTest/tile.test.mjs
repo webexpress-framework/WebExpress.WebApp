@@ -3,7 +3,7 @@
  *
  * They instantiate the real webexpress.webapp.TileCtrl on the DOM stub with a
  * stubbed WebUI tile base and assert that the control seeds its store from
- * the data-wx-state island, queries through the configured data service with
+ * the wx-state island, queries through the configured data service with
  * the default wire vocabulary, and routes search, filter and paging through
  * the tile domain intents.
  *
@@ -13,7 +13,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert";
-import { loadEngine, webappAsset } from "./harness.mjs";
+import { loadEngine, webappAsset, appendServiceIsland, appendStateIsland } from "./harness.mjs";
 
 // the webapp tile extends the static WebUI tile, which the engine harness does
 // not load; the stub carries the members the webapp control calls
@@ -45,11 +45,11 @@ function load(options) {
  */
 function createHost(engine, state) {
     const element = engine.createElement("div");
-    element.setAttribute("data-wx-service", JSON.stringify({
+    appendServiceIsland(engine.document, element, {
         name: "data", kind: "rest", baseUri: "/api/tiles", method: "GET", updateMethod: "PUT"
-    }));
+    });
     if (state) {
-        element.setAttribute("data-wx-state", JSON.stringify(state));
+        appendStateIsland(engine.document, element, state);
     }
     return element;
 }

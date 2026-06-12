@@ -14,17 +14,6 @@ webexpress.webapp = webexpress.webapp || {}
  */
 webexpress.webapp.scrumBacklogModel = {
     /**
-     * Builds the legacy service descriptor used when the host element does not
-     * carry a data-wx-service island. The board is loaded with GET and changes
-     * are persisted with POST (create), PUT (update) and DELETE on a path.
-     * @param {string} uri - The REST endpoint backing the backlog.
-     * @returns {object} A rest service descriptor.
-     */
-    legacyDescriptor(uri) {
-        return { name: "data", kind: "rest", baseUri: uri || "", method: "GET", updateMethod: "PUT" };
-    },
-
-    /**
      * Normalises a board response into its sprints and items, tolerating a
      * missing or malformed payload so the renderer always receives arrays.
      * @param {object} data - The raw board response.

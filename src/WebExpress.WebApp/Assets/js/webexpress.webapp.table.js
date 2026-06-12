@@ -46,16 +46,20 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
 
     /**
      * Construct a new TableCtrl instance.
-     * Reads configuration from the element's data attributes:
-     * - data-uri: REST endpoint
-     * - data-page-size: number of rows per page
+     * The endpoint comes from the wx-service island; data-page-size configures
+     * the number of rows per page.
      * @param {HTMLElement} element - The host DOM element for this controller.
      */
     constructor(element) {
+        // consume the islands before the base constructor reshapes the
+        // children; later reads are served from the element cache
+        webexpress.webapp.Data.readState(element);
+        webexpress.webapp.ServiceRegistry.fromElement(element);
+
         super(element);
 
         // canonical state: a single source of truth that the accessors below
-        // read from and write to. seeded from the optional data-wx-state island.
+        // read from and write to. seeded from the optional wx-state island.
         this._store = new webexpress.webapp.Store(Object.assign({
             search: "",
             wql: "",
@@ -69,10 +73,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
             error: null
         }, webexpress.webapp.Data.readState(element)));
 
-        element.removeAttribute("data-uri");
-
-        // data service: a configured island when present, otherwise a legacy
-        // descriptor that reproduces the historical query parameter names
+        // data service from the wx-service island
         const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
         this._service = islandServices.data;
         this._restUri = this._service ? this._service.baseUri : "";

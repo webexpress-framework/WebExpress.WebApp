@@ -1,5 +1,6 @@
 ﻿using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebControl;
+using WebExpress.WebApp.WebData;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
@@ -91,13 +92,12 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
-        /// Tests the uri property of the rest form control.
+        /// Tests the declared data service of the rest form control.
         /// </summary>
         [Theory]
         [InlineData(null, @"<form id=""*"" class=""wx-webapp-restform"" *>*</form>")]
-        [InlineData("", @"<form id=""*"" class=""wx-webapp-restform"" * data-uri=""/"">*</form>")]
-        [InlineData("http://localhost:8080/webui", @"<form id=""*"" class=""wx-webapp-restform"" * data-uri=""http://localhost:8080/webui"">*</form>")]
-        public void Uri(string uri, string expected)
+        [InlineData("http://localhost:8080/webui", @"<form id=""*"" class=""wx-webapp-restform"" *><wx-service hidden name=""data"" kind=""rest"" base-uri=""http://localhost:8080/webui""></wx-service>*</form>")]
+        public void DataService(string uri, string expected)
         {
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
@@ -105,7 +105,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlDataForm()
             {
-                Uri = _ => uri is not null ? new UriEndpoint(uri) : null
+                ServiceFactory = uri is not null ? _ => DataServiceDescriptor.FormData(uri) : null
             };
 
             // act

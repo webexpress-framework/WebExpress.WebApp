@@ -13,13 +13,14 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
      * @param {HTMLElement} element - The root element.
      */
     constructor(element) {
-        super(element);
+        // consume the islands before the base constructor reshapes the
+        // children; the read caches on the element
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
 
-        element.removeAttribute("data-uri");
+        super(element);
 
         // the load keeps its own abort and loading state through the shared
         // request; the layout state save flows through this rest service
-        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
         this._service = islandServices.data;
         this._restUri = this._service ? this._service.baseUri : "";
 

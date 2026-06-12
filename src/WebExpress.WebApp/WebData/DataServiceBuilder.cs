@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using WebExpress.WebCore;
 using WebExpress.WebCore.WebEndpoint;
+using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.WebData
@@ -48,6 +49,21 @@ namespace WebExpress.WebApp.WebData
         {
             _endpoint = renderContext => WebEx.ComponentHub.SitemapManager
                 .GetUri<TEndpoint>(renderContext?.PageContext?.ApplicationContext)?.ToString();
+            return this;
+        }
+
+        /// <summary>
+        /// Declares the service endpoint by a resolved uri, for hosts whose
+        /// endpoint arrives at runtime (for example the login visual tree or an
+        /// identity provider) rather than through an endpoint type. The endpoint
+        /// knowledge still travels through the service island, so the wire
+        /// contract stays identical to the typed declaration.
+        /// </summary>
+        /// <param name="uri">The endpoint resolver.</param>
+        /// <returns>The builder for chaining.</returns>
+        public DataServiceBuilder Uri(Func<IRenderControlContext, IUri> uri)
+        {
+            _endpoint = renderContext => uri?.Invoke(renderContext)?.ToString();
             return this;
         }
 

@@ -9,11 +9,15 @@ webexpress.webapp.QuickFilterCtrl = class extends webexpress.webui.QuickFilterCt
      * @param {HTMLElement} element - the root element for the control.
      */
     constructor(element) {
+        // consume the island before the base constructor parses the children
+        // as filter items; the read caches on the element
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+
         super(element);
 
-        // extract REST endpoint URI from data attribute
-        this._restUri = element.dataset.uri || "";
-        element.removeAttribute("data-uri");
+        // the endpoint is authored in C# through the wx-service island
+        this._service = islandServices.data || null;
+        this._restUri = this._service ? this._service.baseUri : "";
         this._abortController = null;
 
         // initial load if a REST endpoint is defined

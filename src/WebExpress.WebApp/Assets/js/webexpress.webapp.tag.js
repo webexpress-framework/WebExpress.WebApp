@@ -45,13 +45,18 @@ webexpress.webapp.TagEditorCtrl = class extends webexpress.webui.InputTagCtrl {
      * @param {HTMLElement} element - Host element for the editor.
      */
     constructor(element) {
+        // consume the island before the base constructor parses the children
+        // as chips; the read caches on the element
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+
         super(element);
 
         // styling hook (the base added wx-tag / form-control)
         element.classList.add("wx-webapp-tag-editor");
 
-        // read configuration (left intact by the base class)
-        this._apiEndpoint = element.dataset.uri || null;
+        // the endpoint is configured through the wx-service island
+        this._service = islandServices.data || null;
+        this._apiEndpoint = this._service ? this._service.baseUri : null;
         this._suggestDebounceMs = 200;
         this._suggestTimer = null;
         this._suggestions = [];
@@ -308,13 +313,19 @@ webexpress.webapp.TagCtrl = class extends webexpress.webui.TagCtrl {
      * @param {HTMLElement} element - Host element for the tag control.
      */
     constructor(element) {
+        // consume the island before the base constructor parses the children
+        // as chips; the read caches on the element
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+
         super(element);
 
         // styling hook (the registered "wx-webapp-tag" selector is removed by
         // the controller on instantiation, so re-add it for the css)
         element.classList.add("wx-webapp-tag");
 
-        this._apiEndpoint = element.dataset.uri || null;
+        // the endpoint is authored in C# through the wx-service island
+        this._service = islandServices.data || null;
+        this._apiEndpoint = this._service ? this._service.baseUri : null;
         this._readonly = element.dataset.readonly === "true";
         this._placeholder = element.getAttribute("placeholder") || "";
 
@@ -374,10 +385,13 @@ webexpress.webapp.TagCtrl = class extends webexpress.webui.TagCtrl {
         content.className = "wx-modal-content px-3 py-4";
 
         // editor host carries the current tags as a seed and the REST endpoint
+        // as a client built wx-service island, matching the server emission
         const editorHost = document.createElement("div");
         editorHost.className = "wx-webapp-tag-editor";
         if (this._apiEndpoint) {
-            editorHost.dataset.uri = this._apiEndpoint;
+            editorHost.appendChild(webexpress.webapp.ServiceRegistry.islandElement({
+                name: "data", kind: "rest", baseUri: this._apiEndpoint, method: "GET"
+            }));
         }
         editorHost.setAttribute("data-value", this._tags.join(";"));
         if (this._placeholder) {

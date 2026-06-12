@@ -17,11 +17,16 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
      * @param {HTMLElement} element The host element.
      */
     constructor(element) {
+        // consume the islands before the base constructor reshapes the
+        // children; later reads are served from the element cache
+        webexpress.webapp.Data.readState(element);
+        webexpress.webapp.ServiceRegistry.fromElement(element);
+
         super(element);
 
         // canonical state for the list: a single source of truth that the
         // accessors below read from and write to. seeded from the optional
-        // data-wx-state island.
+        // wx-state island.
         this._store = new webexpress.webapp.Store(Object.assign({
             search: "",
             wql: "",
@@ -34,9 +39,6 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
             loading: false,
             error: null
         }, webexpress.webapp.Data.readState(element)));
-
-        // read rest uri and clean attribute
-        element.removeAttribute("data-uri");
 
         // data service: the configured island authored in C# through .Service().
         const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);

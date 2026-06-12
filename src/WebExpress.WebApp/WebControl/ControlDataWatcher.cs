@@ -1,6 +1,7 @@
 using System;
+using System.Collections.Generic;
+using WebExpress.WebApp.WebData;
 using WebExpress.WebCore.WebHtml;
-using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
@@ -11,24 +12,46 @@ namespace WebExpress.WebApp.WebControl
     /// control only emits the placeholder div; the actual avatar row, the
     /// "+" affordance and the search dropdown are built by the client-side
     /// <c>webexpress.webapp.WatcherCtrl</c>, which talks to the configured
-    /// REST endpoint to load, add and remove watchers.
+    /// data and users services to load, add, remove and resolve watchers.
     /// </summary>
-    public class ControlDataWatcher : Control
+    public class ControlDataWatcher : Control, IDataIsland
     {
         /// <summary>
-        /// Gets or sets the REST URI that backs this watcher surface. The
-        /// JS controller issues
-        /// <c>GET/POST {Uri}</c> and
-        /// <c>DELETE {Uri}/{userId}</c>.
+        /// Gets the data service descriptors of the control, emitted as
+        /// wx-service island elements: the data service backs the watcher list
+        /// and the optional users service backs the candidate search.
         /// </summary>
-        public Func<IRenderControlContext, IUri> RestUri { get; set; }
+        public IList<Func<IRenderControlContext, DataServiceDescriptor>> ServiceFactories { get; } = [];
 
         /// <summary>
-        /// Gets or sets the URI used to resolve candidate users in the
-        /// "+" dropdown. The JS controller calls <c>{UsersUri}?q=…</c> to
-        /// list candidates as the user types.
+        /// Gets or sets the single data service descriptor, as a convenience for
+        /// the common control with exactly one service. Reading returns the
+        /// first declared service, assigning replaces all declared services.
         /// </summary>
-        public Func<IRenderControlContext, IUri> UsersUri { get; set; }
+        public Func<IRenderControlContext, DataServiceDescriptor> ServiceFactory
+        {
+            get => ServiceFactories.Count > 0 ? ServiceFactories[0] : null;
+            set
+            {
+                ServiceFactories.Clear();
+
+                if (value != null)
+                {
+                    ServiceFactories.Add(value);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the optional template reference, emitted as the
+        /// data-wx-template attribute.
+        /// </summary>
+        public Func<IRenderControlContext, string> TemplateFactory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional initial state, emitted as the wx-state island.
+        /// </summary>
+        public Func<IRenderControlContext, DataState> StateFactory { get; set; }
 
         /// <summary>
         /// Gets or sets the maximum number of avatars shown inline before
@@ -67,8 +90,6 @@ namespace WebExpress.WebApp.WebControl
                 return null;
             }
 
-            var restUri = RestUri?.Invoke(renderContext)?.BindParameters(renderContext.Request);
-            var usersUri = UsersUri?.Invoke(renderContext)?.BindParameters(renderContext.Request);
             var maxVisible = MaxVisible?.Invoke(renderContext);
             var readOnly = Readonly?.Invoke(renderContext) ?? false;
 
@@ -79,8 +100,7 @@ namespace WebExpress.WebApp.WebControl
                 Style = GetStyles(renderContext),
                 Role = Role?.Invoke(renderContext)
             }
-                .AddUserAttribute("data-uri", restUri?.ToString())
-                .AddUserAttribute("data-users-uri", usersUri?.ToString())
+                .EmitDataIslands(this, renderContext)
                 .AddUserAttribute("data-max-visible", maxVisible?.ToString())
                 .AddUserAttribute("data-readonly", readOnly ? "true" : null);
         }

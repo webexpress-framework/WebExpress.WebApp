@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using WebExpress.WebApp.WebData;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebHtml;
-using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
@@ -18,16 +18,44 @@ namespace WebExpress.WebApp.WebControl
     /// endpoint to load, add and delete tags. Autocomplete suggestions are
     /// served by the same endpoint via the <c>q</c> query parameter.
     /// </summary>
-    public class ControlDataTag : Control, IControlData
+    public class ControlDataTag : Control, IControlData, IDataIsland
     {
         /// <summary>
-        /// Gets or sets the REST endpoint that backs this tag surface. The JS
-        /// controller issues <c>GET {Uri}</c> to load the current tags,
-        /// <c>GET {Uri}?q={term}</c> to fetch autocomplete suggestions,
-        /// <c>POST {Uri}</c> to add a tag and <c>DELETE {Uri}/{value}</c> to
-        /// remove one.
+        /// Gets the data service descriptors of the control, emitted as
+        /// wx-service island elements. The data service backs the load, the
+        /// autocomplete, the add and the remove of the tag surface.
         /// </summary>
-        public Func<IRenderControlContext, IUri> RestUri { get; set; }
+        public IList<Func<IRenderControlContext, DataServiceDescriptor>> ServiceFactories { get; } = [];
+
+        /// <summary>
+        /// Gets or sets the single data service descriptor, as a convenience for
+        /// the common control with exactly one service. Reading returns the
+        /// first declared service, assigning replaces all declared services.
+        /// </summary>
+        public Func<IRenderControlContext, DataServiceDescriptor> ServiceFactory
+        {
+            get => ServiceFactories.Count > 0 ? ServiceFactories[0] : null;
+            set
+            {
+                ServiceFactories.Clear();
+
+                if (value != null)
+                {
+                    ServiceFactories.Add(value);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the optional template reference, emitted as the
+        /// data-wx-template attribute.
+        /// </summary>
+        public Func<IRenderControlContext, string> TemplateFactory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional initial state, emitted as the wx-state island.
+        /// </summary>
+        public Func<IRenderControlContext, DataState> StateFactory { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether the surface is read-only.
@@ -78,7 +106,6 @@ namespace WebExpress.WebApp.WebControl
                 return null;
             }
 
-            var restUri = RestUri?.Invoke(renderContext)?.BindParameters(renderContext.Request);
             var readOnly = Readonly?.Invoke(renderContext) ?? false;
             var placeholder = Placeholder?.Invoke(renderContext);
             var color = Color?.Invoke(renderContext);
@@ -94,7 +121,7 @@ namespace WebExpress.WebApp.WebControl
                 Style = GetStyles(renderContext),
                 Role = Role?.Invoke(renderContext)
             }
-                .AddUserAttribute("data-uri", restUri?.ToString())
+                .EmitDataIslands(this, renderContext)
                 .AddUserAttribute("placeholder", I18N.Translate(renderContext.Request?.Culture, placeholder))
                 .AddUserAttribute("data-value", string.IsNullOrEmpty(dataValue) ? null : dataValue)
                 .AddUserAttribute("data-readonly", readOnly ? "true" : null)

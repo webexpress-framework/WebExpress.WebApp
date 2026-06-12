@@ -2,10 +2,9 @@
  * Headless unit tests for the watcher model helpers (View, State and Service).
  *
  * These cover the pure logic extracted from webexpress.webapp.watcher.js, namely
- * the legacy descriptor, the list normalisation, the user search url, the
- * candidate filtering and the removal helpers, plus an end to end path that
- * loads watchers with a query, adds one with a create and deletes one with a
- * remove through a service.
+ * the list normalisation, the candidate filtering and the removal helpers, plus
+ * an end to end path that loads watchers with a query, adds one with a create
+ * and deletes one with a remove through a service.
  *
  * Run with Node 18 or newer from the jstest folder:
  *   node --test
@@ -22,28 +21,11 @@ function load(options) {
     ));
 }
 
-test("legacy descriptor loads with get and uses put for the update", () => {
-    const { wxapp } = load();
-    const descriptor = wxapp.watcherModel.legacyDescriptor("/api/watchers/INC-1");
-
-    assert.equal(descriptor.kind, "rest");
-    assert.equal(descriptor.baseUri, "/api/watchers/INC-1");
-    assert.equal(descriptor.method, "GET");
-    assert.equal(descriptor.updateMethod, "PUT");
-});
-
 test("normalize list passes an array through and defaults to empty", () => {
     const { wxapp } = load();
     assert.deepEqual(wxapp.watcherModel.normalizeList([{ id: "a" }]), [{ id: "a" }]);
     assert.deepEqual(wxapp.watcherModel.normalizeList(null), []);
     assert.deepEqual(wxapp.watcherModel.normalizeList({ id: "a" }), []);
-});
-
-test("search url appends the query with the correct separator and encoding", () => {
-    const { wxapp } = load();
-    assert.equal(wxapp.watcherModel.searchUrl("/api/users", "a b"), "/api/users?q=a%20b");
-    assert.equal(wxapp.watcherModel.searchUrl("/api/users?team=x", "y"), "/api/users?team=x&q=y");
-    assert.equal(wxapp.watcherModel.searchUrl("/api/users", null), "/api/users?q=");
 });
 
 test("candidates excludes existing watchers and tolerates non arrays", () => {
@@ -80,7 +62,7 @@ test("model loads, adds and removes a watcher through a service end to end", asy
         return { ok: true, status: 204 };
     });
 
-    const service = wxapp.ServiceRegistry.create(wxapp.watcherModel.legacyDescriptor("/api/watchers"));
+    const service = wxapp.ServiceRegistry.create({ name: "data", kind: "rest", baseUri: "/api/watchers", method: "GET", updateMethod: "PUT" });
 
     const loaded = await service.query({});
     assert.equal(calls[0].method, "GET");

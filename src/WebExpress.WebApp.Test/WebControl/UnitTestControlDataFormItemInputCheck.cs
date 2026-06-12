@@ -1,4 +1,5 @@
 using WebExpress.WebApp.Test.Fixture;
+using WebExpress.WebApp.WebData;
 using WebExpress.WebApp.WebApiControl;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
@@ -163,13 +164,13 @@ namespace WebExpress.WebApp.Test.WebControl
 
         /// <summary>
         /// Tests the RestUri property of the REST check control. Verifies that
-        /// the configured endpoint is exposed via the <c>data-uri</c> attribute
-        /// on the root element so the client-side module can target it for
+        /// the configured endpoint is exposed via the wx-service island on the
+        /// root element so the client-side module can target it for
         /// GET (initial read) and POST (state changes).
         /// </summary>
         [Theory]
         [InlineData(null, @"<div class=""wx-webapp-input-check form-check""><input type=""checkbox"" class=""form-check-input""><label class=""form-check-label""></label></div>")]
-        [InlineData("https://example.com/api/check", @"<div class=""wx-webapp-input-check form-check"" data-uri=""https://example.com/api/check""><input type=""checkbox"" class=""form-check-input""><label class=""form-check-label""></label></div>")]
+        [InlineData("https://example.com/api/check", @"<div class=""wx-webapp-input-check form-check""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/check"" method=""GET""></wx-service><input type=""checkbox"" class=""form-check-input""><label class=""form-check-label""></label></div>")]
         public void RestUri(string uriString, string expected)
         {
             // arrange
@@ -179,7 +180,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlDataFormItemInputCheck(null)
             {
-                RestUri = _ => uriString is not null ? new UriEndpoint(uriString) : null
+                ServiceFactory = uriString is not null ? _ => DataServiceDescriptor.QueryData(uriString) : null
             };
 
             // act
@@ -203,7 +204,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlDataFormItemInputCheck("chk")
             {
-                RestUri = _ => new UriEndpoint("https://example.com/api/check")
+                ServiceFactory = _ => DataServiceDescriptor.QueryData("https://example.com/api/check")
             };
             var form = new ControlForm().Add(control);
 
@@ -212,7 +213,7 @@ namespace WebExpress.WebApp.Test.WebControl
 
             // validation
             AssertExtensions.EqualWithPlaceholders(
-                @"*<div class=""wx-webapp-input-check form-check"" data-uri=""https://example.com/api/check""><input id=""chk"" name=""chk"" type=""checkbox"" class=""form-check-input""><label class=""form-check-label"" for=""chk""></label></div>*",
+                @"*<div class=""wx-webapp-input-check form-check""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/check"" method=""GET""></wx-service><input id=""chk"" name=""chk"" type=""checkbox"" class=""form-check-input""><label class=""form-check-label"" for=""chk""></label></div>*",
                 html);
         }
 
@@ -233,7 +234,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlDataFormItemInputCheck("chk")
             {
-                RestUri = _ => new UriEndpoint("https://example.com/api/check"),
+                ServiceFactory = _ => DataServiceDescriptor.QueryData("https://example.com/api/check"),
                 InitialChecked = _ => initial
             };
             var form = new ControlForm().Add(control);
@@ -243,7 +244,7 @@ namespace WebExpress.WebApp.Test.WebControl
 
             // validation
             AssertExtensions.EqualWithPlaceholders(
-                $@"*<div class=""wx-webapp-input-check form-check"" data-uri=""https://example.com/api/check"" data-value=""{expectedValue}"">{expectedInput}<label class=""form-check-label"" for=""chk""></label></div>*",
+                $@"*<div class=""wx-webapp-input-check form-check"" data-value=""{expectedValue}""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/check"" method=""GET""></wx-service>{expectedInput}<label class=""form-check-label"" for=""chk""></label></div>*",
                 html);
         }
     }

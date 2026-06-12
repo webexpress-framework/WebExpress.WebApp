@@ -1,8 +1,9 @@
 using System;
+using System.Collections.Generic;
 using WebExpress.WebApp.WebControl;
+using WebExpress.WebApp.WebData;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebHtml;
-using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
@@ -10,25 +11,56 @@ namespace WebExpress.WebApp.WebApiControl
 {
     /// <summary>
     /// Represents a REST-backed checkbox form input control. The current
-    /// checked state is retrieved from the REST endpoint referenced by
-    /// <see cref="RestUri"/> when the control is rendered without an
-    /// initial value. If <see cref="InitialChecked"/> is set, it takes
-    /// precedence and no GET request is issued. Subsequent state changes
-    /// are forwarded to the same endpoint via POST.
+    /// checked state is retrieved from the configured data service when the
+    /// control is rendered without an initial value. If
+    /// <see cref="InitialChecked"/> is set, it takes precedence and no GET
+    /// request is issued. Subsequent state changes are forwarded to the same
+    /// endpoint via POST.
     /// </summary>
-    public class ControlDataFormItemInputCheck : ControlFormItemInputCheck, IControlData
+    public class ControlDataFormItemInputCheck : ControlFormItemInputCheck, IControlData, IDataIsland
     {
         /// <summary>
-        /// Gets or sets the uri of the REST endpoint used to read and
-        /// persist the checked state.
+        /// Gets the data service descriptors of the control, emitted as
+        /// wx-service island elements. The data service reads and persists the
+        /// checked state.
         /// </summary>
-        public Func<IRenderControlContext, IUri> RestUri { get; set; }
+        public IList<Func<IRenderControlContext, DataServiceDescriptor>> ServiceFactories { get; } = [];
+
+        /// <summary>
+        /// Gets or sets the single data service descriptor, as a convenience for
+        /// the common control with exactly one service. Reading returns the
+        /// first declared service, assigning replaces all declared services.
+        /// </summary>
+        public Func<IRenderControlContext, DataServiceDescriptor> ServiceFactory
+        {
+            get => ServiceFactories.Count > 0 ? ServiceFactories[0] : null;
+            set
+            {
+                ServiceFactories.Clear();
+
+                if (value != null)
+                {
+                    ServiceFactories.Add(value);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the optional template reference, emitted as the
+        /// data-wx-template attribute.
+        /// </summary>
+        public Func<IRenderControlContext, string> TemplateFactory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional initial state, emitted as the wx-state island.
+        /// </summary>
+        public Func<IRenderControlContext, DataState> StateFactory { get; set; }
 
         /// <summary>
         /// Gets or sets the initial checked state. When set, the client
-        /// uses this value instead of issuing a GET request against
-        /// <see cref="RestUri"/>. When left unset, the client performs a
-        /// GET to retrieve the current state.
+        /// uses this value instead of issuing a GET request against the
+        /// data service. When left unset, the client performs a GET to
+        /// retrieve the current state.
         /// </summary>
         public Func<IRenderControlContext, bool?> InitialChecked { get; set; }
 
@@ -57,7 +89,6 @@ namespace WebExpress.WebApp.WebApiControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlFormContext renderContext, IVisualTreeControl visualTree)
         {
-            var restUri = RestUri?.Invoke(renderContext)?.BindParameters(renderContext?.Request);
             var initialChecked = InitialChecked?.Invoke(renderContext);
 
             var hasInitialValue = initialChecked.HasValue;
@@ -91,7 +122,7 @@ namespace WebExpress.WebApp.WebApiControl
                         string.Empty :
                         I18N.Translate(renderContext.Request?.Culture, description)
                     )))
-                .AddUserAttribute("data-uri", restUri?.ToString())
+                .EmitDataIslands(this, renderContext)
                 .AddUserAttribute("data-value", hasInitialValue ? (isChecked ? "true" : "false") : null);
 
             return html;

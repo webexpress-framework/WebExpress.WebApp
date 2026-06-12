@@ -22,16 +22,6 @@ function load(options) {
     ));
 }
 
-test("legacy descriptor loads with get and uses put for the update", () => {
-    const { wxapp } = load();
-    const descriptor = wxapp.dashboardModel.legacyDescriptor("/api/dash");
-
-    assert.equal(descriptor.kind, "rest");
-    assert.equal(descriptor.baseUri, "/api/dash");
-    assert.equal(descriptor.method, "GET");
-    assert.equal(descriptor.updateMethod, "PUT");
-});
-
 test("normalize columns maps columns and widgets with defaults", () => {
     const { wxapp } = load();
     const cols = wxapp.dashboardModel.normalizeColumns({
@@ -74,7 +64,7 @@ test("model loads the dashboard and persists the state through a service end to 
         return { ok: true, status: 200, json: async () => ({}) };
     });
 
-    const service = wxapp.ServiceRegistry.create(wxapp.dashboardModel.legacyDescriptor("/api/dash"));
+    const service = wxapp.ServiceRegistry.create({ name: "data", kind: "rest", baseUri: "/api/dash", method: "GET", updateMethod: "PUT" });
 
     const loaded = await service.query({});
     assert.equal(calls[0].method, "GET");

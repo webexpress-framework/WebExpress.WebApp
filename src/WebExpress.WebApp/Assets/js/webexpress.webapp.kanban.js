@@ -13,18 +13,21 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
      * @param {HTMLElement} element The root element.
      */
      constructor(element) {
+        // consume the islands before the base constructor reshapes the
+        // children; later reads are served from the element cache
+        webexpress.webapp.Data.readState(element);
+        webexpress.webapp.ServiceRegistry.fromElement(element);
+
         super(element);
 
         // canonical ui state: a single source of truth for the loading flag,
-        // seeded from the optional data-wx-state island
+        // seeded from the optional wx-state island
         this._store = new webexpress.webapp.Store(Object.assign({
             loading: false
         }, webexpress.webapp.Data.readState(element)));
 
-        element.removeAttribute("data-uri");
-
-        // data service: a configured island when present, otherwise a legacy
-        // descriptor. its query loads the board, its update persists changes.
+        // data service from the wx-service island. its query loads the board,
+        // its update persists changes.
         const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
         this._service = islandServices.data;
         this._restUri = this._service ? this._service.baseUri : "";

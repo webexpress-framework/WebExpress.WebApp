@@ -1,4 +1,5 @@
-﻿using WebExpress.WebApp.Test.Fixture;
+using WebExpress.WebApp.Test.Fixture;
+using WebExpress.WebApp.WebData;
 using WebExpress.WebApp.WebApiControl;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
@@ -140,7 +141,7 @@ namespace WebExpress.WebApp.Test.WebControl
         /// </summary>
         [Theory]
         [InlineData(null, @"<div class=""wx-webapp-input-selection""></div>")]
-        [InlineData("https://example.com/api/data", @"<div class=""wx-webapp-input-selection"" data-uri=""https://example.com/api/data""></div>")]
+        [InlineData("https://example.com/api/data", @"<div class=""wx-webapp-input-selection""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/data"" method=""GET""></wx-service></div>")]
         public void RestUri(string uriString, string expected)
         {
             // arrange
@@ -150,7 +151,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlDataFormItemInputSelection(null)
             {
-                RestUri = _ => uriString is not null ? new UriEndpoint(uriString) : null
+                ServiceFactory = uriString is not null ? _ => DataServiceDescriptor.QueryData(uriString) : null
             };
 
             // act

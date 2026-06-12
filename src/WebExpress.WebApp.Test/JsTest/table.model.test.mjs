@@ -20,19 +20,6 @@ function load(options) {
     ));
 }
 
-test("legacy descriptor maps logical names and uses PUT for the update", () => {
-    const { wxapp } = load();
-    const descriptor = wxapp.tableModel.legacyDescriptor("/api/table");
-
-    assert.equal(descriptor.kind, "rest");
-    assert.equal(descriptor.baseUri, "/api/table");
-    assert.equal(descriptor.method, "GET");
-    assert.equal(descriptor.updateMethod, "PUT");
-    assert.deepEqual(descriptor.query, {
-        search: "q", wql: "wql", filter: "f", page: "p", pageSize: "l", orderBy: "o", orderDir: "d"
-    });
-});
-
 test("query params include order only when an order field is set", () => {
     const { wxapp } = load();
 
@@ -123,7 +110,15 @@ test("model feeds a rest service for both the query and the put update", async (
         return { ok: true, status: 204 };
     });
 
-    const service = wxapp.ServiceRegistry.create(wxapp.tableModel.legacyDescriptor("/api/table"));
+    const service = wxapp.ServiceRegistry.create({
+        name: "data",
+        kind: "rest",
+        baseUri: "/api/table",
+        method: "GET",
+        updateMethod: "PUT",
+        query: { search: "q", wql: "wql", filter: "f", page: "p", pageSize: "l", orderBy: "o", orderDir: "d" },
+        response: { rows: "rows", total: "total" }
+    });
     const state = { search: "x", wql: "", filter: "", page: 0, pageSize: 50, orderBy: "name", orderDir: "asc" };
 
     const queryResult = await service.query(wxapp.tableModel.queryParams(state));

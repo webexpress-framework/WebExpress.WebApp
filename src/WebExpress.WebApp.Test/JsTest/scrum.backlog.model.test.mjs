@@ -24,16 +24,6 @@ function load(options) {
     ));
 }
 
-test("legacy descriptor loads with get and uses put for the update", () => {
-    const { wxapp } = load();
-    const descriptor = wxapp.scrumBacklogModel.legacyDescriptor("/api/backlog");
-
-    assert.equal(descriptor.kind, "rest");
-    assert.equal(descriptor.baseUri, "/api/backlog");
-    assert.equal(descriptor.method, "GET");
-    assert.equal(descriptor.updateMethod, "PUT");
-});
-
 test("normalize data returns sprint and item arrays and tolerates absence", () => {
     const { wxapp } = load();
     const norm = wxapp.scrumBacklogModel.normalizeData({ sprints: [{ id: "s1" }], items: [{ id: "i1" }] });
@@ -134,7 +124,7 @@ test("model loads, persists and deletes through a service end to end", async () 
         return { ok: true, status: 200, json: async () => ({ ok: true }) };
     });
 
-    const service = wxapp.ServiceRegistry.create(wxapp.scrumBacklogModel.legacyDescriptor("/api/backlog"));
+    const service = wxapp.ServiceRegistry.create({ name: "data", kind: "rest", baseUri: "/api/backlog", method: "GET", updateMethod: "PUT" });
 
     const loaded = await service.query({});
     const norm = wxapp.scrumBacklogModel.normalizeData(loaded.data);

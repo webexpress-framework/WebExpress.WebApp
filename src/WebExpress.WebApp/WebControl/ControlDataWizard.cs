@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using WebExpress.WebApp.WebData;
 using WebExpress.WebCore.WebHtml;
-using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
@@ -12,7 +12,7 @@ namespace WebExpress.WebApp.WebControl
     /// Represents a form that retrieves and displays data wizard from 
     /// a RESTful resource specified by a URI.
     /// </summary>
-    public class ControlDataWizard : ControlPanel, IControlDataWizard
+    public class ControlDataWizard : ControlPanel, IControlDataWizard, IDataIsland
     {
         private readonly List<IControlDataWizardPage> _pages = [];
 
@@ -22,9 +22,41 @@ namespace WebExpress.WebApp.WebControl
         public IEnumerable<IControlDataWizardPage> Pages => _pages;
 
         /// <summary>
-        /// Gets or sets the uri that determines the data.
+        /// Gets the data service descriptors of the control, emitted as
+        /// wx-service island elements. The data service backs the step and
+        /// submit requests of the wizard.
         /// </summary>
-        public Func<IRenderControlContext, IUri> RestUri { get; set; }
+        public IList<Func<IRenderControlContext, DataServiceDescriptor>> ServiceFactories { get; } = [];
+
+        /// <summary>
+        /// Gets or sets the single data service descriptor, as a convenience for
+        /// the common control with exactly one service. Reading returns the
+        /// first declared service, assigning replaces all declared services.
+        /// </summary>
+        public Func<IRenderControlContext, DataServiceDescriptor> ServiceFactory
+        {
+            get => ServiceFactories.Count > 0 ? ServiceFactories[0] : null;
+            set
+            {
+                ServiceFactories.Clear();
+
+                if (value != null)
+                {
+                    ServiceFactories.Add(value);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the optional template reference, emitted as the
+        /// data-wx-template attribute.
+        /// </summary>
+        public Func<IRenderControlContext, string> TemplateFactory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional initial state, emitted as the wx-state island.
+        /// </summary>
+        public Func<IRenderControlContext, DataState> StateFactory { get; set; }
 
         /// <summary>
         /// Gets or sets the mode that determines how the form behaves 
@@ -103,8 +135,6 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IEnumerable<IControlDataWizardPage> pages)
         {
-            var uri = RestUri?.Invoke(renderContext);
-            var resultUri = uri?.BindParameters(renderContext.Request);
             var mode = Mode?.Invoke(renderContext) ?? TypeRestFormMode.Default;
             var itemId = ItemId?.Invoke(renderContext);
             var role = Role?.Invoke(renderContext);
@@ -119,8 +149,8 @@ namespace WebExpress.WebApp.WebControl
             }
                 .AddUserAttribute("data-mode", mode.ToMode())
                 .AddUserAttribute("data-id", itemId?.ToString())
-                .AddUserAttribute("data-uri", resultUri?.ToString())
-                .Add(_pages.Select(x => x.Render(renderContext, visualTree)));
+                .Add(_pages.Select(x => x.Render(renderContext, visualTree)))
+                .EmitDataIslands(this, renderContext);
 
             return html;
         }

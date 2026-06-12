@@ -20,19 +20,6 @@ function load(options) {
     ));
 }
 
-test("legacy descriptor maps logical names to the historical wire names", () => {
-    const { wxapp } = load();
-    const descriptor = wxapp.listModel.legacyDescriptor("/api/orders");
-
-    assert.equal(descriptor.kind, "rest");
-    assert.equal(descriptor.baseUri, "/api/orders");
-    assert.equal(descriptor.method, "GET");
-    assert.deepEqual(descriptor.query, {
-        search: "q", wql: "wql", filter: "f", page: "p", pageSize: "l", orderBy: "o", orderDir: "d"
-    });
-    assert.deepEqual(descriptor.response, { items: "items", total: "total" });
-});
-
 test("query params always include the base fields and omit order when unset", () => {
     const { wxapp } = load();
     const params = wxapp.listModel.queryParams({ search: "abc", page: 3, pageSize: 25 });
@@ -101,7 +88,14 @@ test("model feeds a rest service with the legacy parameter names end to end", as
         return { ok: true, status: 200, json: async () => ({ items: [{ id: 1, text: "a" }], total: 1 }) };
     });
 
-    const service = wxapp.ServiceRegistry.create(wxapp.listModel.legacyDescriptor("/api/orders"));
+    const service = wxapp.ServiceRegistry.create({
+        name: "data",
+        kind: "rest",
+        baseUri: "/api/orders",
+        method: "GET",
+        query: { search: "q", wql: "wql", filter: "f", page: "p", pageSize: "l", orderBy: "o", orderDir: "d" },
+        response: { items: "items", total: "total" }
+    });
     const state = { search: "abc", wql: "", filter: "x", page: 2, pageSize: 25, orderBy: "name", orderDir: "asc" };
 
     const result = await service.query(wxapp.listModel.queryParams(state));

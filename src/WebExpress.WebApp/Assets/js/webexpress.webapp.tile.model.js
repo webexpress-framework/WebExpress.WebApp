@@ -13,17 +13,6 @@ webexpress.webapp = webexpress.webapp || {}
  */
 webexpress.webapp.tileModel = {
     /**
-     * Builds the legacy service descriptor used when the host element does not
-     * carry a data-wx-service island. The tiles are loaded with GET and the
-     * state is persisted with PUT.
-     * @param {string} uri - The REST endpoint backing the tiles.
-     * @returns {object} A rest service descriptor.
-     */
-    legacyDescriptor(uri) {
-        return { name: "data", kind: "rest", baseUri: uri || "", method: "GET", updateMethod: "PUT" };
-    },
-
-    /**
      * Builds the logical query parameters from the current state. The search,
      * wql and filter parameters are always included (the historical tile
      * request carried them even when empty), the order parameters only when an

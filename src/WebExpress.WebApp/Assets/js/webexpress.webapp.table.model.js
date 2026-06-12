@@ -11,34 +11,6 @@ webexpress.webapp = webexpress.webapp || {}
  */
 webexpress.webapp.tableModel = {
     /**
-     * Builds the legacy service descriptor used when the host element does not
-     * carry a data-wx-service island. It reproduces the historical query
-     * parameter names and uses PUT for the layout state update, which matches
-     * the historical behaviour.
-     * @param {string} restUri - The REST endpoint backing the table.
-     * @returns {object} A rest service descriptor.
-     */
-    legacyDescriptor(restUri) {
-        return {
-            name: "data",
-            kind: "rest",
-            baseUri: restUri || "",
-            method: "GET",
-            updateMethod: "PUT",
-            query: {
-                search: "q",
-                wql: "wql",
-                filter: "f",
-                page: "p",
-                pageSize: "l",
-                orderBy: "o",
-                orderDir: "d"
-            },
-            response: { rows: "rows", total: "total" }
-        };
-    },
-
-    /**
      * Builds the logical query parameters from the current state. The order
      * parameters are only included when an order field is set.
      * @param {object} state - The table state.

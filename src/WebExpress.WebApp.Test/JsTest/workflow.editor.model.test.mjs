@@ -23,16 +23,6 @@ function load(options) {
     ));
 }
 
-test("legacy descriptor loads with get and uses put for the update", () => {
-    const { wxapp } = load();
-    const descriptor = wxapp.workflowEditorModel.legacyDescriptor("/api/wf");
-
-    assert.equal(descriptor.kind, "rest");
-    assert.equal(descriptor.baseUri, "/api/wf");
-    assert.equal(descriptor.method, "GET");
-    assert.equal(descriptor.updateMethod, "PUT");
-});
-
 test("normalize meta and catalog read fields and default them", () => {
     const { wxapp } = load();
     const meta = wxapp.workflowEditorModel.normalizeMeta({ id: "w1", name: "W" });
@@ -101,7 +91,7 @@ test("model loads and persists the workflow through a service end to end", async
         return { ok: true, status: 200, json: async () => ({}) };
     });
 
-    const service = wxapp.ServiceRegistry.create(wxapp.workflowEditorModel.legacyDescriptor("/api/wf"));
+    const service = wxapp.ServiceRegistry.create({ name: "data", kind: "rest", baseUri: "/api/wf", method: "GET", updateMethod: "PUT" });
 
     const loaded = await service.query({});
     const meta = wxapp.workflowEditorModel.normalizeMeta(loaded.data);

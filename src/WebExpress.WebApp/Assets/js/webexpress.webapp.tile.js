@@ -24,11 +24,16 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
      * @param {HTMLElement} element The DOM element associated with the control.
      */
     constructor(element) {
+        // consume the islands before the base constructor reshapes the
+        // children; later reads are served from the element cache
+        webexpress.webapp.Data.readState(element);
+        webexpress.webapp.ServiceRegistry.fromElement(element);
+
         super(element);
 
         // canonical state for the tiles: a single source of truth that the
         // accessors below read from and write to. seeded from the optional
-        // data-wx-state island.
+        // wx-state island.
         this._store = new webexpress.webapp.Store(Object.assign({
             search: "",
             wql: "",
@@ -53,7 +58,6 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
             this._pageSize = isNaN(pageSize) || pageSize <= 0 ? 50 : pageSize;
         }
 
-        element.removeAttribute("data-uri");
         element.removeAttribute("data-page-size");
 
         this._initProgressBar(element);

@@ -21,16 +21,6 @@ function load(options) {
     ));
 }
 
-test("legacy descriptor loads with get and uses put for the update", () => {
-    const { wxapp } = load();
-    const descriptor = wxapp.tileModel.legacyDescriptor("/api/tiles");
-
-    assert.equal(descriptor.kind, "rest");
-    assert.equal(descriptor.baseUri, "/api/tiles");
-    assert.equal(descriptor.method, "GET");
-    assert.equal(descriptor.updateMethod, "PUT");
-});
-
 test("slice items caps to the page size and tolerates non arrays", () => {
     const { wxapp } = load();
     assert.deepEqual(wxapp.tileModel.sliceItems([1, 2, 3], 2), [1, 2]);
@@ -100,7 +90,7 @@ test("model loads tiles and persists the state through a service end to end", as
         return { ok: true, status: 200, json: async () => ({}) };
     });
 
-    const service = wxapp.ServiceRegistry.create(wxapp.tileModel.legacyDescriptor("/api/tiles"));
+    const service = wxapp.ServiceRegistry.create({ name: "data", kind: "rest", baseUri: "/api/tiles", method: "GET", updateMethod: "PUT" });
 
     const loaded = await service.query({});
     assert.equal(calls[0].method, "GET");

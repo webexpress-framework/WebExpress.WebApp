@@ -1,6 +1,6 @@
 using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebControl;
-using WebExpress.WebCore.WebUri;
+using WebExpress.WebApp.WebData;
 using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.Test.WebControl
@@ -33,10 +33,11 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
-        /// Tests that the rest uri property is rendered as a data attribute.
+        /// Tests that the declared data service is rendered as the wx-service
+        /// island element.
         /// </summary>
         [Fact]
-        public void RestUri()
+        public void DataService()
         {
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
@@ -44,7 +45,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlDataFormEditor()
             {
-                RestUri = _ => new UriEndpoint("/api/1/FormStructure")
+                ServiceFactory = _ => DataServiceDescriptor.FormData("/api/1/FormStructure")
             };
 
             // act
@@ -52,7 +53,7 @@ namespace WebExpress.WebApp.Test.WebControl
 
             // validation
             AssertExtensions.EqualWithPlaceholders(
-                @"<div class=""wx-webapp-restform-editor"" data-rest-url=""/api/1/FormStructure""></div>",
+                @"<div class=""wx-webapp-restform-editor""><wx-service hidden name=""data"" kind=""rest"" base-uri=""/api/1/FormStructure""></wx-service></div>",
                 html);
         }
 
@@ -144,7 +145,7 @@ namespace WebExpress.WebApp.Test.WebControl
             Assert.Equal(ControlDataFormEditor._defaultIndent, control.Indent?.Invoke(null));
             Assert.True(control.Preview?.Invoke(null));
             Assert.False(control.Readonly?.Invoke(null) ?? false);
-            Assert.Null(control.RestUri?.Invoke(null));
+            Assert.Null(control.ServiceFactory);
         }
     }
 }

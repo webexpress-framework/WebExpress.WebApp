@@ -3,7 +3,7 @@
  * Component base (View, State and Service). The control keeps its own imperative
  * render flow; the lift gives it the component store (UI state plus the seedable
  * comments), the service map and lifecycle. The tests assert that it extends
- * Component, seeds its comments from the data-wx-state island and skips the
+ * Component, seeds its comments from the wx-state island and skips the
  * comment load in that case, and otherwise loads from the service.
  *
  * Run with Node 18 or newer from the jstest folder:
@@ -12,7 +12,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert";
-import { loadEngine, webappAsset } from "./harness.mjs";
+import { loadEngine, webappAsset, appendServiceIsland, appendStateIsland } from "./harness.mjs";
 
 function load(options) {
     return loadEngine(Object.assign(
@@ -56,15 +56,15 @@ test("comment extends the component base", () => {
     assert.equal(typeof ctrl.store, "object");
 });
 
-test("comment seeds its comments from the data-wx-state island and skips the load", async () => {
-    const { wxapp, createElement, setFetch } = load();
+test("comment seeds its comments from the wx-state island and skips the load", async () => {
+    const { wxapp, createElement, setFetch, document } = load();
     let fetchCount = 0;
     setFetch(async () => { fetchCount++; return { ok: true, status: 200, headers: { get: () => "application/json" }, json: async () => [] }; });
 
     const element = createElement("div");
-    element.setAttribute("data-wx-service", JSON.stringify({ name: "data", kind: "rest", baseUri: "/api/comments", method: "GET", updateMethod: "PUT" }));
+    appendServiceIsland(document, element, { name: "data", kind: "rest", baseUri: "/api/comments", method: "GET", updateMethod: "PUT" });
     element.dataset.categories = PRESET_CATEGORIES;
-    element.setAttribute("data-wx-state", JSON.stringify({ comments: [SEED_COMMENT] }));
+    appendStateIsland(document, element, { comments: [SEED_COMMENT] });
 
     const ctrl = new wxapp.CommentCtrl(element);
 
@@ -76,12 +76,12 @@ test("comment seeds its comments from the data-wx-state island and skips the loa
 });
 
 test("comment loads from the service when no state island is present", async () => {
-    const { wxapp, createElement, setFetch } = load();
+    const { wxapp, createElement, setFetch, document } = load();
     let fetchCount = 0;
     setFetch(async () => { fetchCount++; return { ok: true, status: 200, headers: { get: () => "application/json" }, json: async () => [] }; });
 
     const element = createElement("div");
-    element.setAttribute("data-wx-service", JSON.stringify({ name: "data", kind: "rest", baseUri: "/api/comments", method: "GET", updateMethod: "PUT" }));
+    appendServiceIsland(document, element, { name: "data", kind: "rest", baseUri: "/api/comments", method: "GET", updateMethod: "PUT" });
     element.dataset.categories = PRESET_CATEGORIES;
 
     const ctrl = new wxapp.CommentCtrl(element);

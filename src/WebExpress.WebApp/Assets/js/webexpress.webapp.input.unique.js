@@ -15,12 +15,15 @@ webexpress.webapp.InputUniqueCtrl = class extends webexpress.webui.Ctrl {
     constructor(element) {
         super(element);
 
-        // read configuration from attributes
+        // read configuration from attributes; the endpoint is authored in C#
+        // through the wx-service island
         const el = this._element;
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(el);
+        this._service = islandServices.data || null;
         this._fieldId = el.getAttribute("id");
         this._fieldName = el.getAttribute("name") || "unique";
         this._initialValue = el.getAttribute("data-value") || null;
-        this._url = el.getAttribute("data-uri") || el.getAttribute("data-url") || "";
+        this._url = this._service ? this._service.baseUri : "";
         this._method = (el.getAttribute("data-method") || "GET").toUpperCase();
         this._param = el.getAttribute("data-param") || "v";
         this._responseField = el.getAttribute("data-response-field") || "available";
@@ -52,8 +55,6 @@ webexpress.webapp.InputUniqueCtrl = class extends webexpress.webui.Ctrl {
             "name",
             "placeholder",
             "data-value",
-            "data-url",
-            "data-uri",
             "data-method",
             "data-param",
             "data-response-field",

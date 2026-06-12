@@ -30,11 +30,16 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
      * @param {HTMLElement} element - The DOM element associated with the control.
      */
     constructor(element) {
+        // consume the islands before the base constructor reshapes the
+        // children; later reads are served from the element cache
+        webexpress.webapp.Data.readState(element);
+        webexpress.webapp.ServiceRegistry.fromElement(element);
+
         // initialize base class structure
         super(element);
 
         // canonical ui state: a single source of truth for the loading flag,
-        // seeded from the optional data-wx-state island
+        // seeded from the optional wx-state island
         this._store = new webexpress.webapp.Store(Object.assign({
             loading: false,
             error: null
@@ -43,9 +48,6 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         this._readonly = element.dataset.readonly === "true";
         this._movableTab = element.dataset.movableTab === "true";
 
-        if (element.hasAttribute("data-uri")) {
-            element.removeAttribute("data-uri");
-        }
         if (element.hasAttribute("data-readonly")) {
             element.removeAttribute("data-readonly");
         }

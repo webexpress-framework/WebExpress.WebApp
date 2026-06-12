@@ -28,10 +28,10 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
      * @param {HTMLElement} element - The host element.
      */
     constructor(element) {
-        // resolve the data service (a configured island or a legacy descriptor)
-        // and seed the sprints and items from the optional data-wx-state island
-        // before super, so the component owns the store and the service map; the
-        // model builds the descriptor, the sprint and item paths and the bodies
+        // resolve the data service and seed the sprints and items from the
+        // optional wx-state island before super, so the component owns the
+        // store and the service map; the model builds the sprint and item
+        // paths and the bodies
         const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
         const services = islandServices;
         const initialState = Object.assign({ sprints: [], items: [] }, webexpress.webapp.Data.readState(element));

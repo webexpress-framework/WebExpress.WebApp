@@ -157,3 +157,88 @@ export async function tick() {
     await Promise.resolve();
     await Promise.resolve();
 }
+
+/**
+ * Appends a wx-service island element to a host, mirroring the C# emission in
+ * DataServiceDescriptor.ToIslandElement, so the control tests configure their
+ * hosts through the same channel the server renders.
+ * @param {object} document - The document stub of the loaded engine.
+ * @param {object} element - The host element.
+ * @param {object} descriptor - The service descriptor shape.
+ * @returns {object} The island element.
+ */
+export function appendServiceIsland(document, element, descriptor) {
+    descriptor = descriptor || {};
+
+    const island = document.createElement("wx-service");
+    island.setAttribute("hidden", "");
+    island.setAttribute("name", descriptor.name || "data");
+    island.setAttribute("kind", descriptor.kind || "rest");
+    island.setAttribute("base-uri", descriptor.baseUri || "");
+
+    if (descriptor.method) {
+        island.setAttribute("method", descriptor.method);
+    }
+    if (descriptor.updateMethod) {
+        island.setAttribute("update-method", descriptor.updateMethod);
+    }
+    if (descriptor.retry) {
+        island.setAttribute("retry-count", String(descriptor.retry.count));
+        island.setAttribute("retry-delay", String(descriptor.retry.delayMs || 0));
+    }
+
+    const mappings = [
+        ["wx-query", "name", "wire", descriptor.query],
+        ["wx-response", "name", "wire", descriptor.response],
+        ["wx-header", "name", "value", descriptor.headers],
+        ["wx-error", "status", "message", descriptor.errors]
+    ];
+
+    for (const [tag, keyAttribute, valueAttribute, mapping] of mappings) {
+        for (const [key, value] of Object.entries(mapping || {})) {
+            const child = document.createElement(tag);
+            child.setAttribute(keyAttribute, key);
+            child.setAttribute(valueAttribute, value);
+            island.appendChild(child);
+        }
+    }
+
+    element.appendChild(island);
+    return island;
+}
+
+/**
+ * Appends a wx-state island element to a host, mirroring the C# emission in
+ * DataState.ToIslandElement, with the same type markers the engine coerces.
+ * @param {object} document - The document stub of the loaded engine.
+ * @param {object} element - The host element.
+ * @param {object} state - The initial state values.
+ * @returns {object} The island element.
+ */
+export function appendStateIsland(document, element, state) {
+    const island = document.createElement("wx-state");
+    island.setAttribute("hidden", "");
+
+    for (const [name, value] of Object.entries(state || {})) {
+        const prop = document.createElement("wx-prop");
+        prop.setAttribute("name", name);
+
+        if (typeof value === "number") {
+            prop.setAttribute("type", "number");
+            prop.textContent = String(value);
+        } else if (typeof value === "boolean") {
+            prop.setAttribute("type", "boolean");
+            prop.textContent = String(value);
+        } else if (typeof value === "string") {
+            prop.textContent = value;
+        } else {
+            prop.setAttribute("type", "json");
+            prop.textContent = JSON.stringify(value);
+        }
+
+        island.appendChild(prop);
+    }
+
+    element.appendChild(island);
+    return island;
+}

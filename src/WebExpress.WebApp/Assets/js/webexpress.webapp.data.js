@@ -6,11 +6,11 @@ webexpress.webapp = webexpress.webapp || {}
  *
  * A Component extends the existing Ctrl base and ties together a Store, a set
  * of services, a render function and the lifecycle. It seeds its store from the
- * data-wx-state island, resolves its services from the data-wx-service island,
- * exposes a dispatch method for intents and runs the onMount, onUpdate and
- * onUnmount hooks. Existing controls migrate to extend Component, while Ctrl
- * stays available for trivial controls that hold no state and perform no
- * network access.
+ * wx-state island element, resolves its services from the wx-service island
+ * elements, exposes a dispatch method for intents and runs the onMount,
+ * onUpdate and onUnmount hooks. Existing controls migrate to extend Component,
+ * while Ctrl stays available for trivial controls that hold no state and
+ * perform no network access.
  *
  * A subclass implements render(state) to return a virtual node tree, which the
  * renderer patches into the render root. A subclass that prefers imperative
@@ -197,27 +197,82 @@ webexpress.webapp.Data = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Reads and parses the data-wx-state island of a host element.
+     * Reads the wx-state island of a host element and returns the initial
+     * state. Each wx-prop child carries the state key as its name attribute
+     * and the value as its text, with an optional type marker (number,
+     * boolean, json) restoring non-string values. The island is consumed on
+     * the first read and the parsed state is cached on the element, so a
+     * control and its component base can both seed from the same island. Each
+     * call returns a fresh shallow copy, so a caller may extend the result.
      * @param {HTMLElement} element - The host element.
      * @returns {object} The parsed initial state, or an empty object.
      */
     static readState(element) {
-        if (!element || typeof element.getAttribute !== "function") {
+        if (!element || typeof element.removeChild !== "function") {
             return {};
         }
 
-        const raw = element.getAttribute("data-wx-state");
-
-        if (!raw) {
-            return {};
+        if (element._wxState === undefined) {
+            element._wxState = webexpress.webapp.Data._consumeStateIslands(element);
         }
 
-        try {
-            const parsed = JSON.parse(raw);
-            return (parsed && typeof parsed === "object") ? parsed : {};
-        } catch (error) {
-            console.warn("invalid data-wx-state island", error);
-            return {};
+        return Object.assign({}, element._wxState);
+    }
+
+    /**
+     * Parses and removes the wx-state island elements of a host element. Only
+     * direct children are read, so a nested data bound control keeps its own
+     * islands.
+     * @param {HTMLElement} element - The host element.
+     * @returns {object} The parsed state.
+     */
+    static _consumeStateIslands(element) {
+        const state = {};
+        const islands = Array.from(element.childNodes || [])
+            .filter((node) => node.nodeType === 1 && node.tagName === "WX-STATE");
+
+        for (const island of islands) {
+            for (const prop of Array.from(island.childNodes || [])) {
+                if (prop.nodeType !== 1 || prop.tagName !== "WX-PROP") {
+                    continue;
+                }
+                const name = prop.getAttribute("name");
+                if (!name) {
+                    continue;
+                }
+                state[name] = webexpress.webapp.Data._coerceStateValue(prop.getAttribute("type"), prop.textContent);
+            }
+            element.removeChild(island);
+        }
+
+        return state;
+    }
+
+    /**
+     * Restores a state value from its island text by the declared type marker.
+     * Strings are the default and carry no marker, mirroring the formatting in
+     * the C# DataState island emission.
+     * @param {string|null} type - The type marker (number, boolean, json) or null.
+     * @param {string} text - The island text.
+     * @returns {*} The restored value.
+     */
+    static _coerceStateValue(type, text) {
+        const value = text == null ? "" : text;
+
+        switch (type) {
+            case "number":
+                return Number(value);
+            case "boolean":
+                return value === "true";
+            case "json":
+                try {
+                    return JSON.parse(value);
+                } catch (error) {
+                    console.warn("invalid wx-prop json value", error);
+                    return null;
+                }
+            default:
+                return value;
         }
     }
 };

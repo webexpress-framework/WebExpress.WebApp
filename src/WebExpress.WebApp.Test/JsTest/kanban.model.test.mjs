@@ -20,16 +20,6 @@ function load(options) {
     ));
 }
 
-test("legacy descriptor loads with get and persists with put", () => {
-    const { wxapp } = load();
-    const descriptor = wxapp.kanbanModel.legacyDescriptor("/api/board");
-
-    assert.equal(descriptor.kind, "rest");
-    assert.equal(descriptor.baseUri, "/api/board");
-    assert.equal(descriptor.method, "GET");
-    assert.equal(descriptor.updateMethod, "PUT");
-});
-
 test("normalize board maps columns, swimlanes and cards with defaults", () => {
     const { wxapp } = load();
     const board = wxapp.kanbanModel.normalizeBoard({
@@ -73,7 +63,7 @@ test("model loads the board and persists a move through a service", async () => 
         return { ok: true, status: 200, json: async () => ({}) };
     });
 
-    const service = wxapp.ServiceRegistry.create(wxapp.kanbanModel.legacyDescriptor("/api/board"));
+    const service = wxapp.ServiceRegistry.create({ name: "data", kind: "rest", baseUri: "/api/board", method: "GET", updateMethod: "PUT" });
 
     const loaded = await service.query({});
     assert.equal(calls[0].method, "GET");

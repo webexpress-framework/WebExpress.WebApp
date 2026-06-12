@@ -12,7 +12,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert";
-import { loadEngine, webappAsset } from "./harness.mjs";
+import { loadEngine, webappAsset, appendServiceIsland } from "./harness.mjs";
 
 function load(options) {
     return loadEngine(Object.assign(
@@ -29,11 +29,11 @@ function load(options) {
 const PRESET_CATEGORIES = JSON.stringify([{ id: "general", i18n: "", color: "#000", bg: "#fff" }]);
 
 test("comment composer extends the data base and resolves its service", () => {
-    const { wxapp, createElement, setFetch } = load();
+    const { wxapp, createElement, setFetch, document } = load();
     setFetch(async () => ({ ok: true, status: 200, headers: { get: () => "application/json" }, json: async () => ({}) }));
 
     const element = createElement("div");
-    element.dataset.uri = "/api/comments/INC-1";
+    appendServiceIsland(document, element, { name: "data", kind: "rest", baseUri: "/api/comments/INC-1", method: "GET", updateMethod: "PUT" });
     element.dataset.categories = PRESET_CATEGORIES;
 
     const ctrl = new wxapp.CommentComposerCtrl(element);
@@ -44,11 +44,11 @@ test("comment composer extends the data base and resolves its service", () => {
 });
 
 test("comment composer destroy tears down without throwing", () => {
-    const { wxapp, createElement, setFetch } = load();
+    const { wxapp, createElement, setFetch, document } = load();
     setFetch(async () => ({ ok: true, status: 200, headers: { get: () => "application/json" }, json: async () => ({}) }));
 
     const element = createElement("div");
-    element.dataset.uri = "/api/comments/INC-1";
+    appendServiceIsland(document, element, { name: "data", kind: "rest", baseUri: "/api/comments/INC-1", method: "GET", updateMethod: "PUT" });
     element.dataset.categories = PRESET_CATEGORIES;
 
     const ctrl = new wxapp.CommentComposerCtrl(element);

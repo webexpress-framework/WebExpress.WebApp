@@ -17,8 +17,10 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
      */
     constructor(element) {
         super(element);
-        // api uri for back-end operations
-        this._apiUri = this._element.dataset.uri || null;
+        // api endpoint for back-end operations, authored through the wx-service island
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+        this._service = islandServices.data || null;
+        this._apiUri = this._service ? this._service.baseUri : null;
 
         // internal history state
         this._history = [];

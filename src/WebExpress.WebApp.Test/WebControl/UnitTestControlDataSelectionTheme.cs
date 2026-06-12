@@ -1,4 +1,5 @@
 using WebExpress.WebApp.Test.Fixture;
+using WebExpress.WebApp.WebData;
 using WebExpress.WebApp.WebControl;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebPage;
@@ -60,11 +61,11 @@ namespace WebExpress.WebApp.Test.WebControl
 
         /// <summary>
         /// The REST URI carried by <see cref="ControlDataSelectionTheme.RestUri"/>
-        /// is emitted on <c>data-uri</c>.
+        /// is emitted as the wx-service island.
         /// </summary>
         [Theory]
         [InlineData(null, @"<div id=""themePicker"" class=""wx-webapp-dropdown-theme"" role=""button""></div>")]
-        [InlineData("https://example.com/api/themes", @"<div id=""themePicker"" class=""wx-webapp-dropdown-theme"" role=""button"" data-uri=""https://example.com/api/themes""></div>")]
+        [InlineData("https://example.com/api/themes", @"<div id=""themePicker"" class=""wx-webapp-dropdown-theme"" role=""button""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/themes"" method=""GET"" update-method=""PUT""></wx-service></div>")]
         public void RestUri_RendersAsDataUri(string uri, string expected)
         {
             // arrange
@@ -73,7 +74,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlDataSelectionTheme("themePicker")
             {
-                RestUri = _ => uri is not null ? new UriEndpoint(uri) : null
+                ServiceFactory = uri is not null ? _ => DataServiceDescriptor.Data(uri) : null
             };
 
             // act

@@ -1,6 +1,7 @@
 using System;
+using System.Collections.Generic;
+using WebExpress.WebApp.WebData;
 using WebExpress.WebCore.WebHtml;
-using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
@@ -16,20 +17,45 @@ namespace WebExpress.WebApp.WebControl
     /// <c>COMMENT_ADDED_EVENT</c> so that any sibling
     /// <see cref="ControlDataComment"/> on the same page picks it up.
     /// </summary>
-    public class ControlDataCommentComposer : Control
+    public class ControlDataCommentComposer : Control, IDataIsland
     {
         /// <summary>
-        /// Gets or sets the REST URI the composer POSTs new comments to.
-        /// The JS controller issues <c>POST {Uri}</c> with the payload
-        /// <c>{ body, category, labels }</c>.
+        /// Gets the data service descriptors of the control, emitted as
+        /// wx-service island elements: the data service receives the new
+        /// comment, the optional users service resolves mentions and the
+        /// optional upload service receives inline images.
         /// </summary>
-        public Func<IRenderControlContext, IUri> RestUri { get; set; }
+        public IList<Func<IRenderControlContext, DataServiceDescriptor>> ServiceFactories { get; } = [];
 
         /// <summary>
-        /// Gets or sets the URI used to resolve user records for mentions
-        /// inside the rich-text editor.
+        /// Gets or sets the single data service descriptor, as a convenience for
+        /// the common control with exactly one service. Reading returns the
+        /// first declared service, assigning replaces all declared services.
         /// </summary>
-        public Func<IRenderControlContext, IUri> UsersUri { get; set; }
+        public Func<IRenderControlContext, DataServiceDescriptor> ServiceFactory
+        {
+            get => ServiceFactories.Count > 0 ? ServiceFactories[0] : null;
+            set
+            {
+                ServiceFactories.Clear();
+
+                if (value != null)
+                {
+                    ServiceFactories.Add(value);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the optional template reference, emitted as the
+        /// data-wx-template attribute.
+        /// </summary>
+        public Func<IRenderControlContext, string> TemplateFactory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional initial state, emitted as the wx-state island.
+        /// </summary>
+        public Func<IRenderControlContext, DataState> StateFactory { get; set; }
 
         /// <summary>
         /// Gets or sets the id of the currently signed-in user. Forwarded
@@ -37,12 +63,6 @@ namespace WebExpress.WebApp.WebControl
         /// can be filtered per user.
         /// </summary>
         public Func<IRenderControlContext, string> CurrentUser { get; set; }
-
-        /// <summary>
-        /// Gets or sets the URI of an upload endpoint that the embedded
-        /// rich-text editor can post images to.
-        /// </summary>
-        public Func<IRenderControlContext, IUri> ImageUploadUri { get; set; }
 
         /// <summary>
         /// Gets or sets the id of the category that is pre-selected when
@@ -88,10 +108,6 @@ namespace WebExpress.WebApp.WebControl
                 return null;
             }
 
-            var restUri = RestUri?.Invoke(renderContext)?.BindParameters(renderContext.Request);
-            var usersUri = UsersUri?.Invoke(renderContext)?.BindParameters(renderContext.Request);
-            var imageUploadUri = ImageUploadUri?.Invoke(renderContext)?.BindParameters(renderContext.Request);
-
             return new HtmlElementTextContentDiv()
             {
                 Id = Id,
@@ -99,10 +115,8 @@ namespace WebExpress.WebApp.WebControl
                 Style = GetStyles(renderContext),
                 Role = Role?.Invoke(renderContext)
             }
-                .AddUserAttribute("data-uri", restUri?.ToString())
-                .AddUserAttribute("data-users-uri", usersUri?.ToString())
+                .EmitDataIslands(this, renderContext)
                 .AddUserAttribute("data-current-user", CurrentUser?.Invoke(renderContext))
-                .AddUserAttribute("data-image-upload-uri", imageUploadUri?.ToString())
                 .AddUserAttribute("data-default-category", DefaultCategory?.Invoke(renderContext))
                 .AddUserAttribute("data-placeholder", Placeholder?.Invoke(renderContext))
                 .AddUserAttribute("data-categories", Categories?.Invoke(renderContext));

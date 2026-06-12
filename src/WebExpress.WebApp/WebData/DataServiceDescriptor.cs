@@ -1,5 +1,7 @@
 using System.Collections.Generic;
-using System.Text.Json;
+using System.Globalization;
+using System.Net;
+using WebExpress.WebCore.WebHtml;
 
 namespace WebExpress.WebApp.WebData
 {
@@ -8,22 +10,18 @@ namespace WebExpress.WebApp.WebData
     /// and Service component. The descriptor is the single source of truth for
     /// endpoint knowledge: it carries the service name, the base address, the
     /// HTTP methods and the mapping of logical query and response names to their
-    /// wire names. It serializes into the compact data-wx-service JSON island
-    /// that the JavaScript ServiceRegistry consumes, so the client carries no
-    /// hard-coded endpoint or parameter knowledge.
+    /// wire names. It renders into the hidden wx-service island element that the
+    /// JavaScript ServiceRegistry consumes, so the client carries no hard-coded
+    /// endpoint or parameter knowledge.
     ///
     /// This is a C# artifact of the architecture described in
     /// WebExpress/docs/view-state-service.md (section 3.2). Controls opt into the
     /// emission by implementing IDataIsland and calling EmitDataIslands, which
-    /// turns the declared service and state into the data-wx-service and
-    /// data-wx-state islands beside the legacy attributes.
+    /// turns the declared services and state into wx-service and wx-state island
+    /// elements at the start of the host element.
     /// </summary>
     public class DataServiceDescriptor
     {
-        private static readonly JsonSerializerOptions IslandOptions = new()
-        {
-            WriteIndented = false
-        };
 
         /// <summary>
         /// Gets the logical service name, for example "data". The component
@@ -199,6 +197,48 @@ namespace WebExpress.WebApp.WebData
         }
 
         /// <summary>
+        /// Creates the data service descriptor for a control that only queries
+        /// its endpoint with GET, which is the shape the dropdowns, the inputs,
+        /// the quickfilter, the search surfaces, the tag, the watcher and the
+        /// scrum sprint share.
+        /// </summary>
+        /// <param name="baseUri">The resolved endpoint.</param>
+        /// <returns>The configured descriptor.</returns>
+        public static DataServiceDescriptor QueryData(string baseUri)
+        {
+            return Rest("data")
+                .WithBaseUri(baseUri)
+                .WithMethod("GET");
+        }
+
+        /// <summary>
+        /// Creates the data service descriptor for a control that submits to its
+        /// endpoint with POST, which is the shape the login form uses.
+        /// </summary>
+        /// <param name="baseUri">The resolved endpoint.</param>
+        /// <returns>The configured descriptor.</returns>
+        public static DataServiceDescriptor SubmitData(string baseUri)
+        {
+            return Rest("data")
+                .WithBaseUri(baseUri)
+                .WithMethod("POST");
+        }
+
+        /// <summary>
+        /// Creates the data service descriptor for a form surface, which shapes
+        /// its own requests against the base address (load url, submit method
+        /// and body are built per request), so the descriptor carries only the
+        /// endpoint.
+        /// </summary>
+        /// <param name="baseUri">The resolved endpoint.</param>
+        /// <returns>The configured descriptor.</returns>
+        public static DataServiceDescriptor FormData(string baseUri)
+        {
+            return Rest("data")
+                .WithBaseUri(baseUri);
+        }
+
+        /// <summary>
         /// Sets the base address.
         /// </summary>
         /// <param name="baseUri">The base address.</param>
@@ -295,61 +335,65 @@ namespace WebExpress.WebApp.WebData
         }
 
         /// <summary>
-        /// Serializes the descriptor into the compact JSON island that the
-        /// JavaScript ServiceRegistry consumes. Empty parts are omitted so the
-        /// island stays small. The caller is responsible for HTML attribute
-        /// encoding when the result is written into a data-wx-service attribute.
+        /// Renders the descriptor into the hidden wx-service island element that
+        /// the JavaScript ServiceRegistry consumes. The scalar parts become
+        /// attributes, the query, response, header and error mappings become
+        /// child elements, and empty parts are omitted so the island stays small.
         /// </summary>
-        /// <returns>The compact JSON representation.</returns>
-        public string ToIsland()
+        /// <returns>The island element.</returns>
+        public HtmlElement ToIslandElement()
         {
-            var map = new Dictionary<string, object>
-            {
-                ["name"] = Name,
-                ["kind"] = string.IsNullOrEmpty(Kind) ? "rest" : Kind,
-                ["baseUri"] = BaseUri ?? string.Empty
-            };
-
-            if (!string.IsNullOrEmpty(Method))
-            {
-                map["method"] = Method;
-            }
-
-            if (!string.IsNullOrEmpty(UpdateMethod))
-            {
-                map["updateMethod"] = UpdateMethod;
-            }
-
-            if (Query.Count > 0)
-            {
-                map["query"] = Query;
-            }
-
-            if (Response.Count > 0)
-            {
-                map["response"] = Response;
-            }
-
-            if (Headers.Count > 0)
-            {
-                map["headers"] = Headers;
-            }
-
-            if (Errors.Count > 0)
-            {
-                map["errors"] = Errors;
-            }
+            var island = new HtmlElement("wx-service");
+            island.AddUserAttribute("hidden");
+            island.AddUserAttribute("name", Encode(Name));
+            island.AddUserAttribute("kind", Encode(string.IsNullOrEmpty(Kind) ? "rest" : Kind));
+            island.AddUserAttribute("base-uri", Encode(BaseUri));
+            island.AddUserAttribute("method", Encode(Method));
+            island.AddUserAttribute("update-method", Encode(UpdateMethod));
 
             if (RetryCount > 0)
             {
-                map["retry"] = new Dictionary<string, int>
-                {
-                    ["count"] = RetryCount,
-                    ["delayMs"] = RetryDelayMilliseconds
-                };
+                island.AddUserAttribute("retry-count", RetryCount.ToString(CultureInfo.InvariantCulture));
+                island.AddUserAttribute("retry-delay", RetryDelayMilliseconds.ToString(CultureInfo.InvariantCulture));
             }
 
-            return JsonSerializer.Serialize(map, IslandOptions);
+            AddMappingElements(island, "wx-query", "name", "wire", Query);
+            AddMappingElements(island, "wx-response", "name", "wire", Response);
+            AddMappingElements(island, "wx-header", "name", "value", Headers);
+            AddMappingElements(island, "wx-error", "status", "message", Errors);
+
+            return island;
+        }
+
+        /// <summary>
+        /// Adds one child element per mapping entry, with the key and value as
+        /// the given attribute names.
+        /// </summary>
+        /// <param name="island">The island element.</param>
+        /// <param name="elementName">The child element name.</param>
+        /// <param name="keyAttribute">The attribute carrying the mapping key.</param>
+        /// <param name="valueAttribute">The attribute carrying the mapping value.</param>
+        /// <param name="mapping">The mapping entries.</param>
+        private static void AddMappingElements(HtmlElement island, string elementName, string keyAttribute, string valueAttribute, IDictionary<string, string> mapping)
+        {
+            foreach (var entry in mapping)
+            {
+                var child = new HtmlElement(elementName);
+                child.AddUserAttribute(keyAttribute, Encode(entry.Key));
+                child.AddUserAttribute(valueAttribute, Encode(entry.Value));
+                island.Add(child);
+            }
+        }
+
+        /// <summary>
+        /// HTML encodes an attribute value, because the html attribute writer
+        /// emits values verbatim.
+        /// </summary>
+        /// <param name="value">The raw value.</param>
+        /// <returns>The encoded value, or null when absent.</returns>
+        private static string Encode(string value)
+        {
+            return string.IsNullOrEmpty(value) ? null : WebUtility.HtmlEncode(value);
         }
     }
 }

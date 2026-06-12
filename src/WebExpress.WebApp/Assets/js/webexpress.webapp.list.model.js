@@ -11,33 +11,6 @@ webexpress.webapp = webexpress.webapp || {}
  */
 webexpress.webapp.listModel = {
     /**
-     * Builds the legacy service descriptor used when the host element does not
-     * carry a data-wx-service island. It reproduces the historical query
-     * parameter names of the list control so that the migration is behaviour
-     * preserving until the descriptor is authored in C# in a later phase.
-     * @param {string} restUri - The REST endpoint backing the list.
-     * @returns {object} A rest service descriptor.
-     */
-    legacyDescriptor(restUri) {
-        return {
-            name: "data",
-            kind: "rest",
-            baseUri: restUri || "",
-            method: "GET",
-            query: {
-                search: "q",
-                wql: "wql",
-                filter: "f",
-                page: "p",
-                pageSize: "l",
-                orderBy: "o",
-                orderDir: "d"
-            },
-            response: { items: "items", total: "total" }
-        };
-    },
-
-    /**
      * Builds the logical query parameters from the current state. The order
      * parameters are only included when an order field is set, which matches
      * the historical behaviour.

@@ -1,5 +1,6 @@
 using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebControl;
+using WebExpress.WebApp.WebData;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
@@ -42,7 +43,7 @@ namespace WebExpress.WebApp.Test.WebControl
         /// </summary>
         [Theory]
         [InlineData(null, @"<div class=""wx-webapp-tag""></div>")]
-        [InlineData("https://example.com/api/tags/INC-1", @"<div class=""wx-webapp-tag"" data-uri=""https://example.com/api/tags/INC-1""></div>")]
+        [InlineData("https://example.com/api/tags/INC-1", @"<div class=""wx-webapp-tag""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/tags/INC-1"" method=""GET""></wx-service></div>")]
         public void RestUri(string uriString, string expected)
         {
             // arrange
@@ -51,7 +52,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlDataTag()
             {
-                RestUri = _ => uriString is not null ? new UriEndpoint(uriString) : null
+                ServiceFactory = uriString is not null ? _ => DataServiceDescriptor.QueryData(uriString) : null
             };
 
             // act
@@ -202,7 +203,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlDataTag("t1")
             {
-                RestUri = _ => new UriEndpoint("https://example.com/api/tags/INC-1"),
+                ServiceFactory = _ => DataServiceDescriptor.QueryData("https://example.com/api/tags/INC-1"),
                 Placeholder = _ => "add tag",
                 Value = _ => ["alpha", "beta"],
                 Readonly = _ => true,
@@ -213,7 +214,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var html = control.Render(context, visualTree);
 
             // validation
-            AssertExtensions.EqualWithPlaceholders(@"<div id=""t1"" class=""wx-webapp-tag"" data-uri=""https://example.com/api/tags/INC-1"" placeholder=""add tag"" data-value=""alpha;beta"" data-readonly=""true"" data-color-css=""wx-tag-primary""></div>", html);
+            AssertExtensions.EqualWithPlaceholders(@"<div id=""t1"" class=""wx-webapp-tag"" placeholder=""add tag"" data-value=""alpha;beta"" data-readonly=""true"" data-color-css=""wx-tag-primary""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/tags/INC-1"" method=""GET""></wx-service></div>", html);
         }
 
         /// <summary>

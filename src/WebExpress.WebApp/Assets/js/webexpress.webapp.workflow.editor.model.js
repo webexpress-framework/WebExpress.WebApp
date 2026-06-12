@@ -14,17 +14,6 @@ webexpress.webapp = webexpress.webapp || {}
  */
 webexpress.webapp.workflowEditorModel = {
     /**
-     * Builds the legacy service descriptor used when the host element does not
-     * carry a data-wx-service island. The workflow is loaded with GET and the
-     * autosave persists it with PUT.
-     * @param {string} uri - The REST endpoint backing the workflow.
-     * @returns {object} A rest service descriptor.
-     */
-    legacyDescriptor(uri) {
-        return { name: "data", kind: "rest", baseUri: uri || "", method: "GET", updateMethod: "PUT" };
-    },
-
-    /**
      * Reads the workflow meta fields out of a response, defaulting each to an
      * empty string.
      * @param {object} response - The raw workflow response.

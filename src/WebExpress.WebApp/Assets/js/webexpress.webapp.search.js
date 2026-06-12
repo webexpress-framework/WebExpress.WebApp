@@ -24,11 +24,14 @@ webexpress.webapp.SearchCtrl = class extends webexpress.webui.Ctrl {
             this._initialMode = element.dataset.initial;
         }
 
-        this._uri = this._element.dataset.uri || null;
+        // the endpoint is authored in C# through the wx-service island; read it
+        // before the host is cleared, because the read consumes the island
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+        this._service = islandServices.data || null;
+        this._uri = this._service ? this._service.baseUri : null;
 
         // clean up the dom element and set base classes for styling
         element.textContent = "";
-        element.removeAttribute("data-uri");
         element.removeAttribute("data-initial");
 
         // hosts and children
@@ -128,11 +131,14 @@ webexpress.webapp.SearchCtrl = class extends webexpress.webui.Ctrl {
             this._basicCtrl = null;
         }
 
-        // wql wrapper and dataset uri
+        // wql wrapper, configured through a client built wx-service island so
+        // the nested prompt reads the same channel the server emits
         const wqlWrapper = document.createElement("div");
         wqlWrapper.className = "wx-webapp-wql-host";
         if (this._uri) {
-            wqlWrapper.dataset.uri = this._uri;
+            wqlWrapper.appendChild(webexpress.webapp.ServiceRegistry.islandElement({
+                name: "data", kind: "rest", baseUri: this._uri, method: "GET"
+            }));
         }
         // ensure wql wrapper fills width
         wqlWrapper.style.width = "100%";

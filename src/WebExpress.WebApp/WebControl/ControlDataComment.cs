@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Net;
 using WebExpress.WebApp.WebData;
 using WebExpress.WebCore.WebHtml;
-using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
@@ -18,12 +17,6 @@ namespace WebExpress.WebApp.WebControl
     /// </summary>
     public class ControlDataComment : Control, IDataIsland
     {
-        /// <summary>
-        /// Gets or sets the URI used to resolve user records referenced by
-        /// authors, likes, reactions and replies. The JS controller calls
-        /// <c>{UsersUri}?ids=u1,u2,…</c> to warm its user cache.
-        /// </summary>
-        public Func<IRenderControlContext, IUri> UsersUri { get; set; }
 
         /// <summary>
         /// Gets or sets the id of the currently signed-in user. It is used
@@ -31,11 +24,6 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         public Func<IRenderControlContext, string> CurrentUser { get; set; }
 
-        /// <summary>
-        /// Gets or sets the URI of an upload endpoint that the embedded
-        /// rich-text editor can post images to.
-        /// </summary>
-        public Func<IRenderControlContext, IUri> ImageUploadUri { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether the surface is read-only.
@@ -115,8 +103,6 @@ namespace WebExpress.WebApp.WebControl
                 return null;
             }
 
-            var usersUri = UsersUri?.Invoke(renderContext)?.BindParameters(renderContext.Request);
-            var imageUploadUri = ImageUploadUri?.Invoke(renderContext)?.BindParameters(renderContext.Request);
             var readOnly = Readonly?.Invoke(renderContext) ?? false;
 
             return new HtmlElementTextContentDiv()
@@ -126,9 +112,7 @@ namespace WebExpress.WebApp.WebControl
                 Style = GetStyles(renderContext),
                 Role = Role?.Invoke(renderContext)
             }
-                .AddUserAttribute("data-users-uri", usersUri?.ToString())
                 .AddUserAttribute("data-current-user", CurrentUser?.Invoke(renderContext))
-                .AddUserAttribute("data-image-upload-uri", imageUploadUri?.ToString())
                 .AddUserAttribute("data-readonly", readOnly ? "true" : null)
                 .AddUserAttribute("data-categories", Categories?.Invoke(renderContext))
                 .EmitDataIslands(this, renderContext);

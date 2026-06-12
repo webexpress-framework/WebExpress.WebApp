@@ -3,7 +3,7 @@
  * webexpress.webui.DropdownCtrl with the persistence semantics required by
  * webexpress.webapp.WebRestApi.RestApiTheme:
  *
- * - On initialisation fetches the theme list via GET <data-uri>; the
+ * - On initialisation fetches the theme list via GET on the data service; the
  *   response is the same { items, selected } envelope RestApiTheme emits.
  * - The selected theme (or the first item when nothing is selected
  *   server-side) is mirrored as the dropdown's button label so exactly one
@@ -21,10 +21,15 @@ webexpress.webapp.DropdownTheme = class extends webexpress.webui.DropdownCtrl {
      * @param {HTMLElement} element - the host DOM element.
      */
     constructor(element) {
+        // consume the island before the base constructor parses the children
+        // as menu items; the read caches on the element
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+
         super(element);
 
-        // configuration
-        this._apiEndpoint = element.dataset.uri || null;
+        // configuration: the endpoint is authored in C# through the wx-service island
+        this._service = islandServices.data || null;
+        this._apiEndpoint = this._service ? this._service.baseUri : null;
         this._reloadOnChange = element.dataset.reloadOnChange !== "false";
 
         // currently active theme id (mirrors the wx-theme cookie); used both

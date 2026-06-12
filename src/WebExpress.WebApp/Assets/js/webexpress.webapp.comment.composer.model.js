@@ -13,17 +13,6 @@ webexpress.webapp = webexpress.webapp || {}
  */
 webexpress.webapp.commentComposerModel = {
     /**
-     * Builds the legacy service descriptor used when the host element does not
-     * carry a data-wx-service island. The comment is posted with POST against
-     * the base uri.
-     * @param {string} uri - The REST endpoint backing the comments.
-     * @returns {object} A rest service descriptor.
-     */
-    legacyDescriptor(uri) {
-        return { name: "data", kind: "rest", baseUri: uri || "", method: "GET", updateMethod: "PUT" };
-    },
-
-    /**
      * Builds the categories url, appending the categories segment with a single
      * separating slash regardless of a trailing slash on the base uri.
      * @param {string} uri - The base comments uri.

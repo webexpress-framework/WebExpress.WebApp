@@ -15,14 +15,14 @@ webexpress.webapp.LoginCtrl = class extends webexpress.webui.LoginCtrl {
      * @param {HTMLElement} element - The host element for the login control.
      */
     constructor(element) {
+        // consume the island before the base constructor builds the form
+        // around the children; the read caches on the element
+        webexpress.webapp.ServiceRegistry.fromElement(element);
+
         super(element);
 
         // read rest-specific configuration
-        this._apiEndpoint = element.dataset.uri || null;
         this._redirectUri = element.dataset.redirect || null;
-
-        // clean up rest-specific data attributes
-        element.removeAttribute("data-uri");
         element.removeAttribute("data-redirect");
 
         // internal state for rate limiting and account locking
@@ -32,10 +32,10 @@ webexpress.webapp.LoginCtrl = class extends webexpress.webui.LoginCtrl {
         this._failedAttempts = 0;
 
         // data service used to post the credentials through the service layer;
-        // a configured island when present, otherwise a service for the endpoint
+        // the endpoint is authored in C# through the wx-service island
         const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
-        this._service = islandServices.data ||
-            webexpress.webapp.ServiceRegistry.create({ kind: "rest", baseUri: this._apiEndpoint || "" });
+        this._service = islandServices.data || null;
+        this._apiEndpoint = this._service ? this._service.baseUri : null;
 
         // add error container before the form
         this._errorContainer = document.createElement("div");

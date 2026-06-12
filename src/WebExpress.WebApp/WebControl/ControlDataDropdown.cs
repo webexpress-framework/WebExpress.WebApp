@@ -1,8 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using WebExpress.WebApp.WebControl;
+using WebExpress.WebApp.WebData;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebHtml;
-using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
@@ -11,12 +12,43 @@ namespace WebExpress.WebApp.WebApiControl
     /// <summary>
     /// Represents a dropdown control that can be rendered as HTML within a RESTful web application context.
     /// </summary>
-    public class ControlDataDropdown : ControlDropdown, IControlData
+    public class ControlDataDropdown : ControlDropdown, IControlData, IDataIsland
     {
         /// <summary>
-        /// Gets or sets the REST API endpoint used to populate the dropdown.
+        /// Gets the data service descriptors of the control, emitted as
+        /// wx-service island elements. The data service populates the dropdown.
         /// </summary>
-        public Func<IRenderControlContext, IUri> RestUri { get; set; }
+        public IList<Func<IRenderControlContext, DataServiceDescriptor>> ServiceFactories { get; } = [];
+
+        /// <summary>
+        /// Gets or sets the single data service descriptor, as a convenience for
+        /// the common control with exactly one service. Reading returns the
+        /// first declared service, assigning replaces all declared services.
+        /// </summary>
+        public Func<IRenderControlContext, DataServiceDescriptor> ServiceFactory
+        {
+            get => ServiceFactories.Count > 0 ? ServiceFactories[0] : null;
+            set
+            {
+                ServiceFactories.Clear();
+
+                if (value != null)
+                {
+                    ServiceFactories.Add(value);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the optional template reference, emitted as the
+        /// data-wx-template attribute.
+        /// </summary>
+        public Func<IRenderControlContext, string> TemplateFactory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional initial state, emitted as the wx-state island.
+        /// </summary>
+        public Func<IRenderControlContext, DataState> StateFactory { get; set; }
 
         /// <summary>
         /// Gets or sets the maximum number of entries to display (default 25).
@@ -45,7 +77,6 @@ namespace WebExpress.WebApp.WebApiControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            var restUri = RestUri?.Invoke(renderContext);
             var maxItems = MaxItems?.Invoke(renderContext) ?? -1;
             var searchPlaceholder = SearchPlaceholder?.Invoke(renderContext);
 
@@ -53,7 +84,7 @@ namespace WebExpress.WebApp.WebApiControl
             var html = base.Render(renderContext, visualTree)
                 .AddClass("wx-webapp-dropdown")
                 .RemoveClass("wx-webui-dropdown")
-                .AddUserAttribute("data-uri", restUri?.ToString())
+                .EmitDataIslands(this, renderContext)
                 .AddUserAttribute("data-maxItems", maxItems > 0 ? maxItems.ToString() : null)
                 .AddUserAttribute("data-searchPlaceholder", I18N.Translate(renderContext, searchPlaceholder));
 

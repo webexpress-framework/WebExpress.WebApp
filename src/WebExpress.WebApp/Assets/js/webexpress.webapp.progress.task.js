@@ -61,7 +61,6 @@ webexpress.webapp.ProgressTaskCtrl = class extends webexpress.webui.Ctrl {
         // cleanup and setup DOM
         element.innerHTML = "";
         element.removeAttribute("data-interval");
-        element.removeAttribute("data-uri");
         element.removeAttribute("data-size");
         element.removeAttribute("data-show-on-start");
         element.removeAttribute("data-hide-on-finish");

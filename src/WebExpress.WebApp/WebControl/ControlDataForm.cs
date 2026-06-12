@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using WebExpress.WebApp.WebData;
 using WebExpress.WebCore;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebMessage;
@@ -15,10 +16,47 @@ namespace WebExpress.WebApp.WebControl
     /// Represents a form that retrieves and displays data from 
     /// a RESTful resource specified by a URI.
     /// </summary>
-    public class ControlDataForm : ControlForm
+    public class ControlDataForm : ControlForm, IDataIsland
     {
         /// <summary>
-        /// Gets or sets the mode that determines how the form behaves 
+        /// Gets the data service descriptors of the control, emitted as
+        /// wx-service island elements. The data service backs the load and the
+        /// submit of the form.
+        /// </summary>
+        public IList<Func<IRenderControlContext, DataServiceDescriptor>> ServiceFactories { get; } = [];
+
+        /// <summary>
+        /// Gets or sets the single data service descriptor, as a convenience for
+        /// the common control with exactly one service. Reading returns the
+        /// first declared service, assigning replaces all declared services.
+        /// </summary>
+        public Func<IRenderControlContext, DataServiceDescriptor> ServiceFactory
+        {
+            get => ServiceFactories.Count > 0 ? ServiceFactories[0] : null;
+            set
+            {
+                ServiceFactories.Clear();
+
+                if (value != null)
+                {
+                    ServiceFactories.Add(value);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the optional template reference, emitted as the
+        /// data-wx-template attribute.
+        /// </summary>
+        public Func<IRenderControlContext, string> TemplateFactory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional initial state, emitted as the wx-state island.
+        /// </summary>
+        public Func<IRenderControlContext, DataState> StateFactory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the mode that determines how the form behaves
         /// or is rendered.
         /// </summary>
         public virtual Func<IRenderControlFormContext, string> Mode { get; set; }
@@ -59,15 +97,12 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlFormContext renderContext, IVisualTreeControl visualTree, IEnumerable<IControlFormItem> items)
         {
-            var uri = Uri?.Invoke(renderContext);
             var mode = Mode?.Invoke(renderContext);
             var itemLayout = ItemLayout?.Invoke(renderContext) ?? TypeLayoutFormItem.Vertical;
             var formLayout = FormLayout?.Invoke(renderContext) ?? TypeLayoutForm.Default;
             var id = ItemId?.Invoke(renderContext);
             var method = Method?.Invoke(renderContext) ?? RequestMethod.NONE;
             var role = Role?.Invoke(renderContext);
-
-            var resultUri = uri?.BindParameters(renderContext.Request);
 
             // generate html
             var form = new HtmlElementFormForm()
@@ -79,8 +114,9 @@ namespace WebExpress.WebApp.WebControl
             }
                 .AddUserAttribute("data-method", method.ToString())
                 .AddUserAttribute("data-mode", mode)
-                .AddUserAttribute("data-id", id?.ToString())
-                .AddUserAttribute("data-uri", resultUri?.ToString());
+                .AddUserAttribute("data-id", id?.ToString());
+
+            form.EmitDataIslands(this, renderContext);
 
             var header = new HtmlElementSectionHeader();
 

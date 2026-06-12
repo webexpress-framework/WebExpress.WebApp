@@ -2,7 +2,7 @@
  * Headless tests for the scrum sprint control after it was lifted onto the
  * Component base (View, State and Service). The control keeps its own imperative
  * render method, which Component._apply calls on every state change. The tests
- * assert that it extends Component, seeds its sprint from the data-wx-state
+ * assert that it extends Component, seeds its sprint from the wx-state
  * island and skips the network load in that case, and otherwise loads from the
  * shared request.
  *
@@ -12,7 +12,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert";
-import { loadEngine, webappAsset } from "./harness.mjs";
+import { loadEngine, webappAsset, appendServiceIsland, appendStateIsland } from "./harness.mjs";
 
 function load(options) {
     return loadEngine(Object.assign(
@@ -30,11 +30,11 @@ function settle() {
 }
 
 test("scrum sprint extends the component base", () => {
-    const { wxapp, createElement, setFetch } = load();
+    const { wxapp, createElement, setFetch, document } = load();
     setFetch(async () => ({ ok: true, status: 200, json: async () => ({}) }));
 
     const element = createElement("div");
-    element.dataset.restUri = "/api/sprint";
+    appendServiceIsland(document, element, { name: "data", kind: "rest", baseUri: "/api/sprint", method: "GET" });
 
     const ctrl = new wxapp.ScrumSprintCtrl(element);
 
@@ -42,16 +42,16 @@ test("scrum sprint extends the component base", () => {
     assert.equal(typeof ctrl.store, "object");
 });
 
-test("scrum sprint seeds from the data-wx-state island and skips the load", async () => {
-    const { wxapp, createElement, setFetch } = load();
+test("scrum sprint seeds from the wx-state island and skips the load", async () => {
+    const { wxapp, createElement, setFetch, document } = load();
     let fetchCount = 0;
     setFetch(async () => { fetchCount++; return { ok: true, status: 200, json: async () => ({}) }; });
 
     const element = createElement("div");
-    element.dataset.restUri = "/api/sprint";
-    element.setAttribute("data-wx-state", JSON.stringify({
+    appendServiceIsland(document, element, { name: "data", kind: "rest", baseUri: "/api/sprint", method: "GET" });
+    appendStateIsland(document, element, {
         sprint: { name: "Sprint 24", goal: "MVP", committedPoints: 47, completedPoints: 18, capacity: 60, daysTotal: 14, daysElapsed: 7 }
-    }));
+    });
 
     const ctrl = new wxapp.ScrumSprintCtrl(element);
 
@@ -65,7 +65,7 @@ test("scrum sprint seeds from the data-wx-state island and skips the load", asyn
 });
 
 test("scrum sprint loads from the service when no state island is present", async () => {
-    const { wxapp, createElement, setFetch } = load();
+    const { wxapp, createElement, setFetch, document } = load();
     let fetchCount = 0;
     setFetch(async () => {
         fetchCount++;
@@ -73,7 +73,7 @@ test("scrum sprint loads from the service when no state island is present", asyn
     });
 
     const element = createElement("div");
-    element.dataset.restUri = "/api/sprint";
+    appendServiceIsland(document, element, { name: "data", kind: "rest", baseUri: "/api/sprint", method: "GET" });
 
     const ctrl = new wxapp.ScrumSprintCtrl(element);
     assert.equal(ctrl.sprint, null);

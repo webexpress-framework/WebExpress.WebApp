@@ -1,5 +1,6 @@
 using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebControl;
+using WebExpress.WebApp.WebData;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebPage;
 
@@ -40,7 +41,7 @@ namespace WebExpress.WebApp.Test.WebControl
         /// </summary>
         [Theory]
         [InlineData(null, @"<div class=""wx-webapp-watcher""></div>")]
-        [InlineData("https://example.com/api/watchers/INC-00123", @"<div class=""wx-webapp-watcher"" data-uri=""https://example.com/api/watchers/INC-00123""></div>")]
+        [InlineData("https://example.com/api/watchers/INC-00123", @"<div class=""wx-webapp-watcher""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/watchers/INC-00123"" method=""GET"" update-method=""PUT""></wx-service></div>")]
         public void RestUri(string uriString, string expected)
         {
             // arrange
@@ -49,7 +50,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlDataWatcher()
             {
-                RestUri = _ => uriString is not null ? new UriEndpoint(uriString) : null
+                ServiceFactory = uriString is not null ? _ => DataServiceDescriptor.Data(uriString) : null
             };
 
             // act
@@ -64,7 +65,7 @@ namespace WebExpress.WebApp.Test.WebControl
         /// </summary>
         [Theory]
         [InlineData(null, @"<div class=""wx-webapp-watcher""></div>")]
-        [InlineData("https://example.com/api/users", @"<div class=""wx-webapp-watcher"" data-users-uri=""https://example.com/api/users""></div>")]
+        [InlineData("https://example.com/api/users", @"<div class=""wx-webapp-watcher""><wx-service hidden name=""users"" kind=""rest"" base-uri=""https://example.com/api/users"" method=""GET""></wx-service></div>")]
         public void UsersUri(string uriString, string expected)
         {
             // arrange
@@ -73,7 +74,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlDataWatcher()
             {
-                UsersUri = _ => uriString is not null ? new UriEndpoint(uriString) : null
+                ServiceFactory = uriString is not null ? _ => DataServiceDescriptor.Rest("users").WithBaseUri(uriString).WithMethod("GET") : null
             };
 
             // act
@@ -145,8 +146,11 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlDataWatcher("o1")
             {
-                RestUri = _ => new UriEndpoint("https://example.com/api/watchers/INC-1"),
-                UsersUri = _ => new UriEndpoint("https://example.com/api/users"),
+                ServiceFactories =
+                {
+                    _ => DataServiceDescriptor.Data("https://example.com/api/watchers/INC-1"),
+                    _ => DataServiceDescriptor.Rest("users").WithBaseUri("https://example.com/api/users").WithMethod("GET")
+                },
                 MaxVisible = _ => 5,
                 Readonly = _ => true
             };
@@ -155,7 +159,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var html = control.Render(context, visualTree);
 
             // validation
-            AssertExtensions.EqualWithPlaceholders(@"<div id=""o1"" class=""wx-webapp-watcher"" data-uri=""https://example.com/api/watchers/INC-1"" data-users-uri=""https://example.com/api/users"" data-max-visible=""5"" data-readonly=""true""></div>", html);
+            AssertExtensions.EqualWithPlaceholders(@"<div id=""o1"" class=""wx-webapp-watcher"" data-max-visible=""5"" data-readonly=""true""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/watchers/INC-1"" method=""GET"" update-method=""PUT""></wx-service><wx-service hidden name=""users"" kind=""rest"" base-uri=""https://example.com/api/users"" method=""GET""></wx-service></div>", html);
         }
 
         /// <summary>

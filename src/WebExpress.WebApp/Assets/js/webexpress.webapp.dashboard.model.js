@@ -13,17 +13,6 @@ webexpress.webapp = webexpress.webapp || {}
  */
 webexpress.webapp.dashboardModel = {
     /**
-     * Builds the legacy service descriptor used when the host element does not
-     * carry a data-wx-service island. The dashboard is loaded with GET and the
-     * layout state is persisted with PUT.
-     * @param {string} uri - The REST endpoint backing the dashboard.
-     * @returns {object} A rest service descriptor.
-     */
-    legacyDescriptor(uri) {
-        return { name: "data", kind: "rest", baseUri: uri || "", method: "GET", updateMethod: "PUT" };
-    },
-
-    /**
      * Normalises a dashboard response into its columns and widgets, assigning a
      * fresh instance id to each widget. Returns null when the response carries no
      * columns, so the caller can leave the current layout untouched, which

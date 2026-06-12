@@ -35,7 +35,6 @@ class PopupNotificationCtrl extends webexpress.webui.Ctrl {
         // clean up the host element so it can host the alert stack
         element.innerHTML = "";
         element.removeAttribute("data-interval");
-        element.removeAttribute("data-uri");
         element.classList.add("wx-popupnotification");
         this._element = element;
 

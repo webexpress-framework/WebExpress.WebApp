@@ -8,22 +8,23 @@ namespace WebExpress.WebApp.WebData
 {
     /// <summary>
     /// The shared emission helper for data bound controls. It turns the declared
-    /// state, services and template of an <see cref="IDataIsland"/> into the
-    /// additive data attribute contract: the data-wx-state island that the engine
-    /// seeds its store from, the data-wx-service island that the ServiceRegistry
-    /// resolves into configured services (a single object for one service, a json
-    /// array for several) and the data-wx-template reference that the Templates
-    /// registry resolves into a view. The islands are HTML attribute encoded so
-    /// their json quotes do not break the markup, and an absent or empty island
-    /// is omitted.
+    /// state and services of an <see cref="IDataIsland"/> into hidden island
+    /// elements at the start of the host element: the wx-state island that the
+    /// engine seeds its store from and one wx-service island per declared
+    /// service, which the ServiceRegistry resolves into configured services.
+    /// The declared template reference stays an attribute (data-wx-template),
+    /// because it is a plain string and not structured data. The engine consumes
+    /// the island elements when it reads them, so they never reach the visible
+    /// DOM of a mounted control.
     /// </summary>
     public static class DataIslandExtensions
     {
         /// <summary>
-        /// Emits the data-wx-state, data-wx-service and data-wx-template islands
-        /// on a host element from the control's declarations. The attributes are
-        /// added last, after the control's own attributes, so the legacy
-        /// attributes keep their place and the islands sit beside them.
+        /// Emits the wx-state and wx-service island elements as the first
+        /// children of the host element and the data-wx-template reference as an
+        /// attribute, from the control's declarations. The islands come first so
+        /// the engine finds them before any rendered content and a control that
+        /// relocates its children keeps them out of the visible panes.
         /// </summary>
         /// <param name="html">The host element.</param>
         /// <param name="control">The data bound control.</param>
@@ -31,44 +32,67 @@ namespace WebExpress.WebApp.WebData
         /// <returns>The host element for chaining.</returns>
         public static IHtmlNode EmitDataIslands(this IHtmlNode html, IDataIsland control, IRenderControlContext renderContext)
         {
-            if (control == null || html == null)
+            if (control == null || html is not HtmlElement host)
             {
                 return html;
             }
 
             var state = control.StateFactory?.Invoke(renderContext);
-            var services = BuildServiceIsland(control, renderContext);
+            var descriptors = (control.ServiceFactories ?? [])
+                .Select(factory => factory?.Invoke(renderContext))
+                .Where(descriptor => descriptor != null)
+                .ToList();
             var template = control.TemplateFactory?.Invoke(renderContext);
 
-            html.AddUserAttribute("data-wx-state", state != null && !state.IsEmpty ? WebUtility.HtmlEncode(state.ToIsland()) : null);
-            html.AddUserAttribute("data-wx-service", services != null ? WebUtility.HtmlEncode(services) : null);
-            html.AddUserAttribute("data-wx-template", !string.IsNullOrEmpty(template) ? WebUtility.HtmlEncode(template) : null);
+            var islands = new List<IHtmlNode>();
+
+            if (state != null && !state.IsEmpty)
+            {
+                islands.Add(state.ToIslandElement());
+            }
+
+            islands.AddRange(descriptors.Select(descriptor => descriptor.ToIslandElement()));
+
+            if (islands.Count > 0)
+            {
+                host.AddFirst([.. islands]);
+            }
+
+            host.AddUserAttribute("data-wx-template", !string.IsNullOrEmpty(template) ? WebUtility.HtmlEncode(template) : null);
 
             return html;
         }
 
         /// <summary>
-        /// Builds the json of the data-wx-service island from the declared
-        /// service factories. One service serializes to a single object, which
-        /// keeps the island identical to the historical single service contract,
-        /// and several services serialize to a json array.
+        /// Emits single wx-service island elements as the first children of the
+        /// host element. This is the emission path for controls that author
+        /// their endpoint through a rest uri property rather than declared
+        /// service factories; the control builds the descriptor that matches
+        /// its client contract and the wire format stays identical to the
+        /// declared service emission. Null descriptors are skipped, so a
+        /// control passes its optional endpoints unconditionally.
         /// </summary>
-        /// <param name="control">The data bound control.</param>
-        /// <param name="renderContext">The context in which the control is rendered.</param>
-        /// <returns>The island json, or null when no service is declared.</returns>
-        private static string BuildServiceIsland(IDataIsland control, IRenderControlContext renderContext)
+        /// <param name="html">The host element.</param>
+        /// <param name="descriptors">The service descriptors.</param>
+        /// <returns>The host element for chaining.</returns>
+        public static IHtmlNode EmitServiceIslands(this IHtmlNode html, params DataServiceDescriptor[] descriptors)
         {
-            var descriptors = (control.ServiceFactories ?? [])
-                .Select(factory => factory?.Invoke(renderContext))
-                .Where(descriptor => descriptor != null)
-                .ToList();
-
-            return descriptors.Count switch
+            if (html is not HtmlElement host)
             {
-                0 => null,
-                1 => descriptors[0].ToIsland(),
-                _ => "[" + string.Join(",", descriptors.Select(descriptor => descriptor.ToIsland())) + "]"
-            };
+                return html;
+            }
+
+            var islands = descriptors
+                .Where(descriptor => descriptor != null)
+                .Select(descriptor => (IHtmlNode)descriptor.ToIslandElement())
+                .ToArray();
+
+            if (islands.Length > 0)
+            {
+                host.AddFirst(islands);
+            }
+
+            return html;
         }
     }
 }

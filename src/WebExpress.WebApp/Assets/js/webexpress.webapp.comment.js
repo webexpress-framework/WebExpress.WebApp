@@ -11,14 +11,11 @@
  * status / decision / solution), free-form labels, a body in HTML, a list of
  * likes, a reactions map (emoji → user-ids), and a flat replies array.
  *
- * Declarative configuration:
- *   <div class="wx-webapp-comment"
- *        data-uri="/api/comments/INC-00123"
- *        data-users-uri="/api/users"
- *        data-current-user="u1"
- *        data-image-upload-uri="/api/upload"></div>
+ * Declarative configuration: the host carries wx-service islands named
+ * "data" (comments endpoint), "users" (mention resolution) and "upload"
+ * (inline image upload), plus the data-current-user attribute.
  *
- * REST contract:
+ * REST contract (against the data service):
  *   GET    {uri}                                       → [Comment]
  *   GET    {uri}/categories                            → [Category]
  *   PUT    {uri}/{id}           body { body, category, labels }     → Comment
@@ -95,11 +92,11 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
      */
     constructor(element) {
         // the toolbar ui state is seeded from the persisted sort cookie and the
-        // optional data-wx-state island; the data service is a configured island
-        // or a legacy descriptor. both are resolved before super so the component
-        // owns the store and the service map. The data-wx-state island may also
-        // carry the comments themselves, in which case the first paint needs no
-        // round trip.
+        // optional wx-state island; the services come from the wx-service
+        // islands. both are resolved before super so the component owns the
+        // store and the service map. The wx-state island may also carry the
+        // comments themselves, in which case the first paint needs no round
+        // trip.
         const cookieMatch = document.cookie.match(new RegExp("(^| )wx_comment_sort_dir=([^;]*)"));
         const persistedSortDir = cookieMatch ? decodeURIComponent(cookieMatch[2]) : null;
         const initialState = Object.assign({
@@ -113,9 +110,13 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
 
         super(element, { state: initialState, services: services });
 
-        this._usersUri = element.dataset.usersUri || null;
+        const usersService = this.useService("users");
+        this._usersUri = usersService ? usersService.baseUri : null;
+
+        const uploadService = this.useService("upload");
+        this._imageUploadUri = uploadService ? uploadService.baseUri : null;
+
         this._currentUser = element.dataset.currentUser || null;
-        this._imageUploadUri = element.dataset.imageUploadUri || null;
         this._readonly = element.dataset.readonly === "true";
 
         // categories are sourced from the REST API ({uri}/categories) unless
@@ -144,10 +145,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
 
         // clean host
         element.textContent = "";
-        element.removeAttribute("data-uri");
-        element.removeAttribute("data-users-uri");
         element.removeAttribute("data-current-user");
-        element.removeAttribute("data-image-upload-uri");
         element.removeAttribute("data-readonly");
         element.removeAttribute("data-categories");
         element.classList.add("wx-comment");

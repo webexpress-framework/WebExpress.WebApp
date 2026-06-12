@@ -12,17 +12,6 @@ webexpress.webapp = webexpress.webapp || {}
  */
 webexpress.webapp.kanbanModel = {
     /**
-     * Builds the legacy service descriptor used when the host element does not
-     * carry a data-wx-service island. The board is loaded with GET and state
-     * changes are persisted with PUT.
-     * @param {string} restUri - The REST endpoint backing the board.
-     * @returns {object} A rest service descriptor.
-     */
-    legacyDescriptor(restUri) {
-        return { name: "data", kind: "rest", baseUri: restUri || "", method: "GET", updateMethod: "PUT" };
-    },
-
-    /**
      * Normalises a board response into the internal columns, swimlanes and
      * cards. Only the parts present in the response are returned, so that a
      * partial update leaves the other parts of the board untouched, which

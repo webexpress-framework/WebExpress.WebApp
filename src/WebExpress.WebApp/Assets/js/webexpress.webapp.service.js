@@ -130,8 +130,7 @@ webexpress.webapp.Service = class {
     }
 
     /**
-     * Returns the base address the service calls, from its descriptor. Controls
-     * derive their data uri from this instead of the legacy data-uri attribute.
+     * Returns the base address the service calls, from its descriptor.
      * @returns {string} The base address, or an empty string.
      */
     get baseUri() {
@@ -485,7 +484,7 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
 /**
  * Registry of service factories keyed by descriptor kind. The default kind is
  * "rest". A descriptor is turned into a configured service through create, and
- * a host element's data-wx-service island is turned into a map of named
+ * a host element's wx-service island elements are turned into a map of named
  * services through fromElement.
  */
 webexpress.webapp.ServiceRegistry = new class {
@@ -561,40 +560,27 @@ webexpress.webapp.ServiceRegistry = new class {
     }
 
     /**
-     * Reads the data-wx-service island of a host element and returns a map of
-     * named services. The island is a json object or an array of descriptors,
-     * each of which carries a name.
+     * Reads the wx-service island elements of a host element and returns a map
+     * of named services. Each island carries the scalar descriptor parts as
+     * attributes and the query, response, header and error mappings as child
+     * elements. The islands are consumed on the first read and the parsed
+     * descriptors are cached on the element, so a control and its component
+     * base can both resolve the same services.
      * @param {HTMLElement} element - The host element.
      * @returns {object} A map of service name to service instance.
      */
     fromElement(element) {
         const services = {};
 
-        if (!element || typeof element.getAttribute !== "function") {
+        if (!element || typeof element.removeChild !== "function") {
             return services;
         }
 
-        const raw = element.getAttribute("data-wx-service");
-
-        if (!raw) {
-            return services;
+        if (element._wxServiceDescriptors === undefined) {
+            element._wxServiceDescriptors = this._consumeServiceIslands(element);
         }
 
-        let parsed = null;
-
-        try {
-            parsed = JSON.parse(raw);
-        } catch (error) {
-            console.warn("invalid data-wx-service island", error);
-            return services;
-        }
-
-        const descriptors = Array.isArray(parsed) ? parsed : [parsed];
-
-        for (const descriptor of descriptors) {
-            if (!descriptor || typeof descriptor !== "object") {
-                continue;
-            }
+        for (const descriptor of element._wxServiceDescriptors) {
             const service = this.create(descriptor);
             if (service) {
                 services[descriptor.name || "default"] = service;
@@ -602,6 +588,108 @@ webexpress.webapp.ServiceRegistry = new class {
         }
 
         return services;
+    }
+
+    /**
+     * Parses and removes the wx-service island elements of a host element.
+     * Only direct children are read, so a nested data bound control keeps its
+     * own islands.
+     * @param {HTMLElement} element - The host element.
+     * @returns {Array<object>} The parsed descriptors.
+     */
+    _consumeServiceIslands(element) {
+        const descriptors = [];
+        const islands = Array.from(element.childNodes || [])
+            .filter((node) => node.nodeType === 1 && node.tagName === "WX-SERVICE");
+
+        for (const island of islands) {
+            descriptors.push(this._parseServiceIsland(island));
+            element.removeChild(island);
+        }
+
+        return descriptors;
+    }
+
+    /**
+     * Parses one wx-service island element into the descriptor shape the
+     * service factories consume. Absent parts stay absent in the descriptor,
+     * so the service defaults apply exactly as with a hand written descriptor.
+     * @param {HTMLElement} island - The island element.
+     * @returns {object} The descriptor.
+     */
+    _parseServiceIsland(island) {
+        const descriptor = {
+            name: island.getAttribute("name") || "default",
+            kind: island.getAttribute("kind") || "rest",
+            baseUri: island.getAttribute("base-uri") || ""
+        };
+
+        const method = island.getAttribute("method");
+        if (method) {
+            descriptor.method = method;
+        }
+
+        const updateMethod = island.getAttribute("update-method");
+        if (updateMethod) {
+            descriptor.updateMethod = updateMethod;
+        }
+
+        const retryCount = island.getAttribute("retry-count");
+        if (retryCount !== null && retryCount !== "") {
+            descriptor.retry = {
+                count: Number(retryCount),
+                delayMs: Number(island.getAttribute("retry-delay") || 0)
+            };
+        }
+
+        const mappings = [
+            ["WX-QUERY", "query", "name", "wire"],
+            ["WX-RESPONSE", "response", "name", "wire"],
+            ["WX-HEADER", "headers", "name", "value"],
+            ["WX-ERROR", "errors", "status", "message"]
+        ];
+
+        for (const [tag, part, keyAttribute, valueAttribute] of mappings) {
+            for (const child of Array.from(island.childNodes || [])) {
+                if (child.nodeType !== 1 || child.tagName !== tag) {
+                    continue;
+                }
+                const key = child.getAttribute(keyAttribute);
+                if (!key) {
+                    continue;
+                }
+                (descriptor[part] || (descriptor[part] = {}))[key] = child.getAttribute(valueAttribute) || "";
+            }
+        }
+
+        return descriptor;
+    }
+
+    /**
+     * Builds a wx-service island element from a descriptor, so client side
+     * composed hosts configure their nested controls through the same single
+     * channel the server emits. Only the scalar descriptor parts are carried,
+     * which is all the internal handoffs need.
+     * @param {object} descriptor - The service descriptor.
+     * @returns {HTMLElement} The island element.
+     */
+    islandElement(descriptor) {
+        descriptor = descriptor || {};
+
+        const island = document.createElement("wx-service");
+        island.setAttribute("hidden", "");
+        island.setAttribute("name", descriptor.name || "data");
+        island.setAttribute("kind", descriptor.kind || "rest");
+        island.setAttribute("base-uri", descriptor.baseUri || "");
+
+        if (descriptor.method) {
+            island.setAttribute("method", descriptor.method);
+        }
+        if (descriptor.updateMethod) {
+            island.setAttribute("update-method", descriptor.updateMethod);
+        }
+
+        return island;
     }
 
     /**

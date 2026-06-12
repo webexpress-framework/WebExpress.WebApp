@@ -3,7 +3,7 @@
  *
  * They instantiate the real webexpress.webapp.WorkflowEditorCtrl on the DOM
  * stub with a stubbed WebUI graph editor base and assert the id contract of
- * the REST integration: the workflow id authored in the data-wx-state island
+ * the REST integration: the workflow id authored in the wx-state island
  * rides along as the wire query parameter on the load GET and the autosave
  * PUT, and a load that resolves after destroy leaves the editor untouched.
  * The pure wire-format mapping is covered by workflow.editor.model.test.mjs.
@@ -14,7 +14,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert";
-import { loadEngine, webappAsset } from "./harness.mjs";
+import { loadEngine, webappAsset, appendServiceIsland, appendStateIsland } from "./harness.mjs";
 
 // the workflow editor extends the WebUI graph editor, which the engine harness
 // does not load; the stub carries the members the workflow control calls. The
@@ -29,6 +29,9 @@ const GRAPH_EDITOR_BASE_STUB = `
     webexpress.webui.GraphEditorCtrl = class extends webexpress.webui.Ctrl {
         constructor(element) {
             super(element);
+            // the real graph viewer base clears the host while building its
+            // svg canvas, so the islands must be consumed before super
+            element.innerHTML = "";
             this._toolbarContainer = null;
             this._selectedNodeId = null;
             this._selectedEdgeId = null;
@@ -81,11 +84,11 @@ function load(options) {
  */
 function createHost(engine, state) {
     const element = engine.createElement("div");
-    element.setAttribute("data-wx-service", JSON.stringify({
+    appendServiceIsland(engine.document, element, {
         name: "data", kind: "rest", baseUri: "/api/workflow", method: "GET", updateMethod: "PUT"
-    }));
+    });
     if (state) {
-        element.setAttribute("data-wx-state", JSON.stringify(state));
+        appendStateIsland(engine.document, element, state);
     }
     return element;
 }

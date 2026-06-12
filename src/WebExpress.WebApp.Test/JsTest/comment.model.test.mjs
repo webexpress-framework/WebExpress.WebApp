@@ -21,16 +21,6 @@ function load(options) {
     ));
 }
 
-test("legacy descriptor lists with get and edits with put", () => {
-    const { wxapp } = load();
-    const descriptor = wxapp.commentModel.legacyDescriptor("/api/comments/INC-1");
-
-    assert.equal(descriptor.kind, "rest");
-    assert.equal(descriptor.baseUri, "/api/comments/INC-1");
-    assert.equal(descriptor.method, "GET");
-    assert.equal(descriptor.updateMethod, "PUT");
-});
-
 test("normalize categories accepts arrays and objects", () => {
     const { wxapp } = load();
 
@@ -83,7 +73,7 @@ test("model drives the comment operations through a service end to end", async (
         return { ok: true, status: 204 };
     });
 
-    const service = wxapp.ServiceRegistry.create(wxapp.commentModel.legacyDescriptor("/api/c"));
+    const service = wxapp.ServiceRegistry.create({ name: "data", kind: "rest", baseUri: "/api/c", method: "GET", updateMethod: "PUT" });
 
     const list = await service.request("/api/c", { method: "GET", headers: { "Accept": "application/json" } });
     assert.equal(calls[0].method, "GET");

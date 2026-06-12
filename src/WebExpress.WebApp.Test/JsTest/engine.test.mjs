@@ -13,7 +13,7 @@ import { test } from "node:test";
 // different Object.prototype than this test realm, so deepStrictEqual would
 // reject structurally equal objects. Loose deepEqual compares by structure.
 import assert from "node:assert";
-import { loadEngine } from "./harness.mjs";
+import { loadEngine, appendServiceIsland, appendStateIsland } from "./harness.mjs";
 
 // Store
 
@@ -140,15 +140,46 @@ test("rest service normalises a network error", async () => {
     assert.equal(result.error.kind, "network");
 });
 
-test("service registry builds services from a data-wx-service island", () => {
-    const { wxapp, createElement } = loadEngine();
+test("service registry builds services from a wx-service island element", () => {
+    const { wxapp, createElement, document } = loadEngine();
     const element = createElement("div");
-    element.setAttribute("data-wx-service", JSON.stringify({ name: "data", kind: "rest", baseUri: "/api/x" }));
+    appendServiceIsland(document, element, { name: "data", kind: "rest", baseUri: "/api/x" });
 
     const services = wxapp.ServiceRegistry.fromElement(element);
 
     assert.ok(services.data);
     assert.equal(typeof services.data.query, "function");
+    assert.equal(services.data.baseUri, "/api/x");
+    // the island is consumed on the read
+    assert.equal(element.childNodes.length, 0);
+});
+
+test("service registry parses the island mappings and policies", () => {
+    const { wxapp, createElement, document } = loadEngine();
+    const element = createElement("div");
+    appendServiceIsland(document, element, {
+        name: "data",
+        kind: "rest",
+        baseUri: "/api/orders",
+        method: "GET",
+        updateMethod: "PUT",
+        query: { search: "q", page: "p" },
+        response: { items: "items" },
+        headers: { "X-Api-Version": "1" },
+        errors: { "404": "webexpress.webapp:error.notfound" },
+        retry: { count: 2, delayMs: 300 }
+    });
+
+    const services = wxapp.ServiceRegistry.fromElement(element);
+    const descriptor = services.data._descriptor;
+
+    assert.equal(descriptor.method, "GET");
+    assert.equal(descriptor.updateMethod, "PUT");
+    assert.deepEqual(descriptor.query, { search: "q", page: "p" });
+    assert.deepEqual(descriptor.response, { items: "items" });
+    assert.deepEqual(descriptor.headers, { "X-Api-Version": "1" });
+    assert.deepEqual(descriptor.errors, { "404": "webexpress.webapp:error.notfound" });
+    assert.deepEqual(descriptor.retry, { count: 2, delayMs: 300 });
 });
 
 test("rest service request parses json by content type and passes init through", async () => {
@@ -336,7 +367,7 @@ test("intent dispatch of an unknown intent does not throw", () => {
 // Component
 
 test("component seeds state, renders and re-renders", () => {
-    const { wxapp, createElement } = loadEngine();
+    const { wxapp, createElement, document } = loadEngine();
 
     class Counter extends wxapp.Data {
         constructor(element) {
@@ -349,7 +380,7 @@ test("component seeds state, renders and re-renders", () => {
     }
 
     const element = createElement("div");
-    element.setAttribute("data-wx-state", JSON.stringify({ count: 7 }));
+    appendStateIsland(document, element, { count: 7 });
     const component = new Counter(element);
 
     assert.equal(element.childNodes.length, 1);
@@ -363,24 +394,44 @@ test("component seeds state, renders and re-renders", () => {
 });
 
 test("component readState parses the state island and tolerates its absence", () => {
-    const { wxapp, createElement } = loadEngine();
+    const { wxapp, createElement, document } = loadEngine();
 
     const withState = createElement("div");
-    withState.setAttribute("data-wx-state", JSON.stringify({ a: 1 }));
+    appendStateIsland(document, withState, { a: 1 });
     assert.deepEqual(wxapp.Data.readState(withState), { a: 1 });
 
     const withoutState = createElement("div");
     assert.deepEqual(wxapp.Data.readState(withoutState), {});
 });
 
-test("component seeds its store from the literal c# data-wx-state island", () => {
-    const { wxapp, createElement } = loadEngine();
+test("component readState coerces the typed wx-prop values", () => {
+    const { wxapp, createElement, document } = loadEngine();
 
-    // the exact compact json that a c# ControlState (page 0, pageSize 50) emits
-    const island = '{"page":0,"pageSize":50}';
+    const element = createElement("div");
+    appendStateIsland(document, element, {
+        page: 0,
+        loading: false,
+        search: "treasure",
+        items: [{ id: "a" }]
+    });
 
+    const state = wxapp.Data.readState(element);
+
+    assert.strictEqual(state.page, 0);
+    assert.strictEqual(state.loading, false);
+    assert.strictEqual(state.search, "treasure");
+    assert.deepEqual(state.items, [{ id: "a" }]);
+    // the island is consumed on the first read, later reads serve the cache
+    assert.equal(element.childNodes.length, 0);
+    assert.deepEqual(wxapp.Data.readState(element).items, [{ id: "a" }]);
+});
+
+test("component seeds its store from the c# authored wx-state island", () => {
+    const { wxapp, createElement, document } = loadEngine();
+
+    // the exact island shape that a c# DataState (page 0, pageSize 50) emits
     const probe = createElement("div");
-    probe.setAttribute("data-wx-state", island);
+    appendStateIsland(document, probe, { page: 0, pageSize: 50 });
     assert.deepEqual(wxapp.Data.readState(probe), { page: 0, pageSize: 50 });
 
     class ListComponent extends wxapp.Data {
@@ -394,7 +445,7 @@ test("component seeds its store from the literal c# data-wx-state island", () =>
     }
 
     const element = createElement("div");
-    element.setAttribute("data-wx-state", island);
+    appendStateIsland(document, element, { page: 0, pageSize: 50 });
     const component = new ListComponent(element);
 
     assert.equal(element.childNodes[0].textContent, "0/50");
@@ -428,13 +479,11 @@ test("component destroy stops further renders", () => {
 
 // Multiple services per component
 
-test("service registry parses an island array into named services", () => {
-    const { wxapp, createElement } = loadEngine();
+test("service registry parses several islands into named services", () => {
+    const { wxapp, createElement, document } = loadEngine();
     const element = createElement("div");
-    element.setAttribute("data-wx-service", JSON.stringify([
-        { name: "load", kind: "rest", baseUri: "/api/form" },
-        { name: "submit", kind: "rest", baseUri: "/api/form" }
-    ]));
+    appendServiceIsland(document, element, { name: "load", kind: "rest", baseUri: "/api/form" });
+    appendServiceIsland(document, element, { name: "submit", kind: "rest", baseUri: "/api/form" });
 
     const services = wxapp.ServiceRegistry.fromElement(element);
 
@@ -531,7 +580,7 @@ test("error channel stays silent on success and on abort", async () => {
 // Templates
 
 test("component without a render uses the referenced registered template", () => {
-    const { wxapp, createElement } = loadEngine();
+    const { wxapp, createElement, document } = loadEngine();
 
     wxapp.Templates.register("orders-view", (state) => wxapp.h("p", { class: "t" }, String(state.count)));
 
@@ -544,7 +593,7 @@ test("component without a render uses the referenced registered template", () =>
 
     const element = createElement("div");
     element.setAttribute("data-wx-template", "orders-view");
-    element.setAttribute("data-wx-state", JSON.stringify({ count: 3 }));
+    appendStateIsland(document, element, { count: 3 });
     const component = new Probe(element);
 
     assert.equal(element.childNodes.length, 1);

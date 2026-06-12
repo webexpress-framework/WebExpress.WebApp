@@ -22,15 +22,6 @@ function load(options) {
     ));
 }
 
-test("legacy descriptor exposes the rest base uri", () => {
-    const { wxapp } = load();
-    const descriptor = wxapp.commentComposerModel.legacyDescriptor("/api/comments");
-
-    assert.equal(descriptor.kind, "rest");
-    assert.equal(descriptor.baseUri, "/api/comments");
-    assert.equal(descriptor.method, "GET");
-});
-
 test("categories url appends the segment with a single slash", () => {
     const { wxapp } = load();
     assert.equal(wxapp.commentComposerModel.categoriesUrl("/api/c"), "/api/c/categories");
@@ -78,7 +69,7 @@ test("model loads categories and posts a comment through a service end to end", 
     assert.deepEqual(wxapp.commentComposerModel.normalizeCategories(catRes.data), { q: { id: "q", label: "Q" } });
 
     // the new comment is posted through the service create
-    const service = wxapp.ServiceRegistry.create(wxapp.commentComposerModel.legacyDescriptor("/api/comments"));
+    const service = wxapp.ServiceRegistry.create({ name: "data", kind: "rest", baseUri: "/api/comments", method: "GET", updateMethod: "PUT" });
     const created = await service.create({ body: "hi", category: "q", labels: wxapp.commentComposerModel.parseLabels("x, y") });
     assert.equal(calls[1].method, "POST");
     assert.deepEqual(JSON.parse(calls[1].body), { body: "hi", category: "q", labels: ["x", "y"] });

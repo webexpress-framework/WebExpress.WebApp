@@ -1,27 +1,21 @@
-using System.Linq;
-using System.Net;
 using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebData;
 using WebExpress.WebApp.WebControl;
-using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.Test.WebControl
 {
     /// <summary>
-    /// Tests that the REST list control emits the C# authored data-wx-service
-    /// island. This is the pilot of the C# side of the View, State and Service
-    /// architecture: the JavaScript already consumes the island through
-    /// ServiceRegistry.fromElement and falls back to its legacy descriptor when
-    /// the island is absent, so these tests assert both the non breaking default
-    /// and the new emission.
+    /// Tests that the REST list control emits the C# authored wx-service island
+    /// element. The JavaScript consumes the island through
+    /// ServiceRegistry.fromElement, so these tests assert both the default
+    /// (no declared service emits no island) and the emission shape.
     /// </summary>
     [Collection("NonParallelTests")]
     public class UnitTestControlDataListService
     {
         /// <summary>
-        /// Tests that a control without a declared data service emits no island,
-        /// so the existing markup and the legacy client fallback are preserved.
+        /// Tests that a control without a declared data service emits no island.
         /// </summary>
         [Fact]
         public void NoServiceEmitsNoIsland()
@@ -40,7 +34,8 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
-        /// Tests that a declared data service emits the data-wx-service island.
+        /// Tests that a declared data service emits the wx-service island
+        /// element as the first child of the host.
         /// </summary>
         [Fact]
         public void DataServiceEmitsTheIsland()
@@ -55,18 +50,19 @@ namespace WebExpress.WebApp.Test.WebControl
             };
 
             // act
-            var html = control.Render(context, visualTree);
+            var html = control.Render(context, visualTree).ToString();
 
             // validation
-            AssertExtensions.EqualWithPlaceholders(@"<div id=""*"" class=""wx-webapp-list"" data-wx-service=""*""></div>", html);
+            Assert.Contains("<wx-service hidden name=\"data\" kind=\"rest\" base-uri=\"/api/orders\" method=\"GET\">", html);
+            Assert.Contains("</wx-service>", html);
         }
 
         /// <summary>
-        /// Tests that the island is HTML attribute encoded so its json quotes do
-        /// not break the markup, and that it decodes back to the exact island.
+        /// Tests that the island carries the mappings as child elements rather
+        /// than encoded json, so the markup stays inspectable.
         /// </summary>
         [Fact]
-        public void IslandIsHtmlEncoded()
+        public void IslandCarriesMappingsAsElements()
         {
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
@@ -80,9 +76,10 @@ namespace WebExpress.WebApp.Test.WebControl
             // act
             var html = control.Render(context, visualTree).ToString();
 
-            // validation: encoded json quotes, and the full encoded island is present
-            Assert.Contains("&quot;name&quot;:&quot;data&quot;", html);
-            Assert.Contains(WebUtility.HtmlEncode(DataServiceDescriptor.ListData("/api/orders").ToIsland()), html);
+            // validation
+            Assert.Contains("<wx-query name=\"search\" wire=\"q\"></wx-query>", html);
+            Assert.Contains("<wx-response name=\"items\" wire=\"items\"></wx-response>", html);
+            Assert.DoesNotContain("data-wx-service", html);
         }
     }
 }

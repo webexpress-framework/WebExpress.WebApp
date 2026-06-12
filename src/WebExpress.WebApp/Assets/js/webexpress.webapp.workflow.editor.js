@@ -61,20 +61,22 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
      * @param {HTMLElement} element - host element with the wx-webapp-workflow-editor class.
      */
     constructor(element) {
+        // consume the islands before the base constructor clears the host;
+        // the reads cache on the element, so they survive the dom rebuild
+        const state = webexpress.webapp.Data.readState(element);
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+
         super(element);
 
         // the workflow id is authored in C# through the state island and rides
         // along as the logical id query parameter on load and save; the wire
         // name stays with the service descriptor
-        const state = webexpress.webapp.Data.readState(element);
         this._workflowId = typeof state.id === "string" ? state.id : "";
 
         // the debounced autosave PUT flows through this rest service
-        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
         this._service = islandServices.data;
         this._restUri = this._service ? this._service.baseUri : "";
 
-        element.removeAttribute("data-uri");
         element.classList.add("wx-workflow-editor");
 
         this._buildLayout();

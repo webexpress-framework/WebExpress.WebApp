@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using WebExpress.WebApp.WebControl;
+using WebExpress.WebApp.WebData;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
@@ -12,12 +14,44 @@ namespace WebExpress.WebApp.WebApiControl
     /// <see cref="ControlLogin"/> from WebUI with REST API endpoint 
     /// configuration and redirect support.
     /// </summary>
-    public class ControlDataLogin : ControlLogin, IControlData
+    public class ControlDataLogin : ControlLogin, IControlData, IDataIsland
     {
         /// <summary>
-        /// Gets or sets the REST API endpoint used for login authentication.
+        /// Gets the data service descriptors of the control, emitted as
+        /// wx-service island elements. The data service authenticates the
+        /// credentials with POST.
         /// </summary>
-        public Func<IRenderControlContext, IUri> RestUri { get; set; }
+        public IList<Func<IRenderControlContext, DataServiceDescriptor>> ServiceFactories { get; } = [];
+
+        /// <summary>
+        /// Gets or sets the single data service descriptor, as a convenience for
+        /// the common control with exactly one service. Reading returns the
+        /// first declared service, assigning replaces all declared services.
+        /// </summary>
+        public Func<IRenderControlContext, DataServiceDescriptor> ServiceFactory
+        {
+            get => ServiceFactories.Count > 0 ? ServiceFactories[0] : null;
+            set
+            {
+                ServiceFactories.Clear();
+
+                if (value != null)
+                {
+                    ServiceFactories.Add(value);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the optional template reference, emitted as the
+        /// data-wx-template attribute.
+        /// </summary>
+        public Func<IRenderControlContext, string> TemplateFactory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional initial state, emitted as the wx-state island.
+        /// </summary>
+        public Func<IRenderControlContext, DataState> StateFactory { get; set; }
 
         /// <summary>
         /// Gets or sets the URI to redirect to after a successful login.
@@ -41,15 +75,12 @@ namespace WebExpress.WebApp.WebApiControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            var uri = RestUri?.Invoke(renderContext);
             var redirectUri = RedirectUri?.Invoke(renderContext);
-
-            var resultUri = uri?.BindParameters(renderContext?.Request);
 
             var html = base.Render(renderContext, visualTree)
                 .AddClass("wx-webapp-login")
                 .RemoveClass("wx-webui-login")
-                .AddUserAttribute("data-uri", resultUri?.ToString())
+                .EmitDataIslands(this, renderContext)
                 .AddUserAttribute("data-redirect", redirectUri?.ToString());
 
             return html;

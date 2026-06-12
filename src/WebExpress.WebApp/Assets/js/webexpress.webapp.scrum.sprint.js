@@ -44,10 +44,8 @@ webexpress.webapp.ScrumSprintCtrl = class extends webexpress.webapp.Data {
      * @param {HTMLElement} element - The host element.
      */
     constructor(element) {
-        // seed the sprint state from the optional data-wx-state island before
-        // super, so the component store owns the sprint, the load status and the
-        // error. The single sprint load uses the shared request, so no service
-        // map is needed.
+        // seed the sprint state from the optional wx-state island before super,
+        // so the component store owns the sprint, the load status and the error
         const initialState = Object.assign(
             { sprint: null, status: "idle", error: null },
             webexpress.webapp.Data.readState(element)
@@ -55,9 +53,9 @@ webexpress.webapp.ScrumSprintCtrl = class extends webexpress.webapp.Data {
 
         super(element, { state: initialState });
 
-        this._restUri = element.dataset.restUri || element.getAttribute("data-rest-uri") || null;
-        element.removeAttribute("data-rest-uri");
-        element.removeAttribute("data-wx-state");
+        // the endpoint is authored in C# through the wx-service island
+        this._service = this.useService("data");
+        this._restUri = this._service ? this._service.baseUri : null;
         element.classList.add("wx-scrum-sprint");
 
         // dispatch a select event when the card is clicked (ignoring inner controls)

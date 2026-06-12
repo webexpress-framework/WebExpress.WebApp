@@ -6,22 +6,11 @@ webexpress.webapp = webexpress.webapp || {}
  * migration). These functions carry no DOM or network dependency, so they can
  * be unit tested in isolation. The control composes them with a RestService
  * whose query loads the watchers, whose create adds one and whose remove
- * deletes one, plus a shared request for the cross endpoint user search.
+ * deletes one, plus a second users service for the candidate search.
  *
  * See WebExpress.WebApp/docs/architecture/view-state-service.md.
  */
 webexpress.webapp.watcherModel = {
-    /**
-     * Builds the legacy service descriptor used when the host element does not
-     * carry a data-wx-service island. The watchers are loaded with GET, an
-     * watcher is added with POST and removed with DELETE on a path.
-     * @param {string} uri - The REST endpoint backing the watcher list.
-     * @returns {object} A rest service descriptor.
-     */
-    legacyDescriptor(uri) {
-        return { name: "data", kind: "rest", baseUri: uri || "", method: "GET", updateMethod: "PUT" };
-    },
-
     /**
      * Normalises a watcher list response into an array, tolerating a missing or
      * malformed payload so the renderer always receives a list.
@@ -30,19 +19,6 @@ webexpress.webapp.watcherModel = {
      */
     normalizeList(data) {
         return Array.isArray(data) ? data : [];
-    },
-
-    /**
-     * Builds the user search url from the users endpoint and a free text query,
-     * appending the query parameter with the correct separator and encoding.
-     * @param {string} usersUri - The users search endpoint.
-     * @param {string} q - The free text query.
-     * @returns {string} The request url.
-     */
-    searchUrl(usersUri, q) {
-        const base = usersUri || "";
-        const sep = base.includes("?") ? "&" : "?";
-        return base + sep + "q=" + encodeURIComponent(q == null ? "" : q);
     },
 
     /**

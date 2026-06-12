@@ -1,15 +1,18 @@
 using System.Collections.Generic;
+using System.Globalization;
+using System.Net;
 using System.Text.Json;
+using WebExpress.WebCore.WebHtml;
 
 namespace WebExpress.WebApp.WebData
 {
     /// <summary>
     /// A typed, C# authored description of the initial state of a View, State
     /// and Service component. The author sets keys and values, where the values
-    /// come from the existing C# lambdas, and the state serializes into the
-    /// compact data-wx-state JSON island that the JavaScript Component seeds its
-    /// store from on the first render. Server side initial data can be embedded
-    /// here so the first paint needs no round trip.
+    /// come from the existing C# lambdas, and the state renders into the hidden
+    /// wx-state island element that the JavaScript Component seeds its store
+    /// from on the first render. Server side initial data can be embedded here
+    /// so the first paint needs no round trip.
     ///
     /// This is a C# artifact of the architecture described in
     /// WebExpress/docs/view-state-service.md (section 3.2, 8). It is consumed by
@@ -95,15 +98,60 @@ namespace WebExpress.WebApp.WebData
         public DataState Items(object items) => Set("items", items);
 
         /// <summary>
-        /// Serializes the state into the compact JSON island that the JavaScript
-        /// Component seeds its store from. The caller is responsible for HTML
-        /// attribute encoding when the result is written into a data-wx-state
-        /// attribute.
+        /// Renders the state into the hidden wx-state island element that the
+        /// JavaScript Component seeds its store from. Scalar values carry their
+        /// type as an attribute so the client can restore them losslessly;
+        /// structured values fall back to a JSON encoded text body, because
+        /// arbitrary object graphs have no natural element form.
         /// </summary>
-        /// <returns>The compact JSON representation.</returns>
-        public string ToIsland()
+        /// <returns>The island element.</returns>
+        public HtmlElement ToIslandElement()
         {
-            return JsonSerializer.Serialize(_values, IslandOptions);
+            var island = new HtmlElement("wx-state");
+            island.AddUserAttribute("hidden");
+
+            foreach (var entry in _values)
+            {
+                var (type, text) = FormatValue(entry.Value);
+
+                var prop = new HtmlElement("wx-prop");
+                prop.AddUserAttribute("name", WebUtility.HtmlEncode(entry.Key));
+
+                if (type != null)
+                {
+                    prop.AddUserAttribute("type", type);
+                }
+
+                if (!string.IsNullOrEmpty(text))
+                {
+                    prop.Add(new HtmlText(WebUtility.HtmlEncode(text)));
+                }
+
+                island.Add(prop);
+            }
+
+            return island;
+        }
+
+        /// <summary>
+        /// Maps a state value to its island text and type marker. Strings are
+        /// the default and carry no marker, numbers and booleans carry their
+        /// scalar type and everything else is serialized as JSON, mirroring the
+        /// coercion in webexpress.webapp.Data.readState.
+        /// </summary>
+        /// <param name="value">The state value.</param>
+        /// <returns>The type marker (null for strings) and the island text.</returns>
+        private static (string Type, string Text) FormatValue(object value)
+        {
+            return value switch
+            {
+                null => ("json", "null"),
+                string s => (null, s),
+                bool b => ("boolean", b ? "true" : "false"),
+                sbyte or byte or short or ushort or int or uint or long or ulong or float or double or decimal
+                    => ("number", System.Convert.ToString(value, CultureInfo.InvariantCulture)),
+                _ => ("json", JsonSerializer.Serialize(value, IslandOptions))
+            };
         }
     }
 }

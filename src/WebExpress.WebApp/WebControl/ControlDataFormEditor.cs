@@ -1,8 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using WebExpress.WebApp.WebData;
 using WebExpress.WebCore.WebHtml;
-using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
@@ -15,14 +16,46 @@ namespace WebExpress.WebApp.WebControl
     /// host element with the full Designer UI (tab bar, structure tree, live
     /// preview, palette, QuickAdd picker, drag-and-drop, keyboard shortcuts).
     /// </summary>
-    public class ControlDataFormEditor : Control, IControlDataFormEditor
+    public class ControlDataFormEditor : Control, IControlDataFormEditor, IDataIsland
     {
         public const int _defaultIndent = 18;
 
         /// <summary>
-        /// Gets or sets the base URI used for REST API requests.
+        /// Gets the data service descriptors of the control, emitted as
+        /// wx-service island elements. The data service loads and persists the
+        /// form definition.
         /// </summary>
-        public Func<IRenderControlContext, IUri> RestUri { get; set; }
+        public IList<Func<IRenderControlContext, DataServiceDescriptor>> ServiceFactories { get; } = [];
+
+        /// <summary>
+        /// Gets or sets the single data service descriptor, as a convenience for
+        /// the common control with exactly one service. Reading returns the
+        /// first declared service, assigning replaces all declared services.
+        /// </summary>
+        public Func<IRenderControlContext, DataServiceDescriptor> ServiceFactory
+        {
+            get => ServiceFactories.Count > 0 ? ServiceFactories[0] : null;
+            set
+            {
+                ServiceFactories.Clear();
+
+                if (value != null)
+                {
+                    ServiceFactories.Add(value);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the optional template reference, emitted as the
+        /// data-wx-template attribute.
+        /// </summary>
+        public Func<IRenderControlContext, string> TemplateFactory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional initial state, emitted as the wx-state island.
+        /// </summary>
+        public Func<IRenderControlContext, DataState> StateFactory { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether preview mode is enabled.
@@ -56,7 +89,6 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            var restUri = RestUri?.Invoke(renderContext);
             var indent = Indent?.Invoke(renderContext) ?? _defaultIndent;
             var preview = Preview?.Invoke(renderContext) ?? true;
             var @readonly = Readonly?.Invoke(renderContext) ?? false;
@@ -72,7 +104,7 @@ namespace WebExpress.WebApp.WebControl
                 Style = GetStyles(renderContext),
                 Role = role
             }
-                .AddUserAttribute("data-rest-url", restUri?.ToString())
+                .EmitDataIslands(this, renderContext)
                 .AddUserAttribute("data-preview", !preview ? "false" : null)
                 .AddUserAttribute("data-indent", indent != 18 ? indent.ToString(CultureInfo.InvariantCulture) : null)
                 .AddUserAttribute("data-readonly", @readonly ? "true" : null);
