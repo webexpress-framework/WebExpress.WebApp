@@ -257,3 +257,51 @@ webexpress.webui.Actions.register("dispatch", {
         }
     }
 });
+
+/**
+ * Request action - issues a fire-and-forget HTTP request through the service
+ * layer when triggered (typically by a click), without navigating away from
+ * the current page. It suits endpoints whose visible result arrives through a
+ * different channel - for example a server that pushes a popup over the
+ * MessageQueue WebSocket: a full navigation would unload the very page that is
+ * meant to receive the live push, so the call is made in the background and the
+ * page stays put.
+ *
+ * Supported attributes:
+ *   data-wx-{primary|secondary}-uri     - the endpoint to call (required)
+ *   data-wx-{primary|secondary}-method  - the http method (optional, default GET)
+ *
+ * Example:
+ *   <button type="button"
+ *           data-wx-primary-action="request"
+ *           data-wx-primary-uri="/api/v1/popuptrigger?scope=global">Notify</button>
+ */
+webexpress.webui.Actions.register("request", {
+    execute: function (element, prefix, controller, event) {
+        if (event && typeof event.preventDefault === "function") {
+            event.preventDefault();
+        }
+
+        var uri = element.getAttribute("data-wx-" + prefix + "-uri");
+        if (!uri) {
+            console.warn("request action without uri", element);
+            return;
+        }
+
+        var method = (element.getAttribute("data-wx-" + prefix + "-method") || "GET").toUpperCase();
+
+        var registry = (typeof webexpress !== "undefined" && webexpress.webapp)
+            ? webexpress.webapp.ServiceRegistry
+            : null;
+        if (!registry || typeof registry.request !== "function") {
+            console.warn("request action: service registry unavailable", element);
+            return;
+        }
+
+        // fire and forget - the observable result (e.g. a broadcast popup)
+        // arrives through the MessageQueue WebSocket, not through this response
+        registry.request(uri, { method: method }).catch(function (error) {
+            console.error("request action failed:", error);
+        });
+    }
+});
