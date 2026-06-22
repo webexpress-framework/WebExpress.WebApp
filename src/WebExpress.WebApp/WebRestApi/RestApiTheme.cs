@@ -15,7 +15,7 @@ using WebExpress.WebIndex.Queries;
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// REST endpoint that backs the <c>ControlRestSelectionTheme</c> selector.
+    /// REST endpoint that backs the <c>ControlDataSelectionTheme</c> selector.
     /// <para>
     /// A <c>GET</c> returns the themes registered for the request's application
     /// in the shape consumed by the JS dropdown:

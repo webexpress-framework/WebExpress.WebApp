@@ -1,0 +1,108 @@
+using WebExpress.WebApp.Test.Fixture;
+using WebExpress.WebApp.WebData;
+using WebExpress.WebApp.WebApiControl;
+using WebExpress.WebCore.WebUri;
+using WebExpress.WebUI.WebPage;
+
+namespace WebExpress.WebApp.Test.WebControl
+{
+    /// <summary>
+    /// Tests the REST login form control.
+    /// </summary>
+    [Collection("NonParallelTests")]
+    public class UnitTestControlDataLoginForm
+    {
+        /// <summary>
+        /// Tests the id property of the login form control.
+        /// </summary>
+        [Theory]
+        [InlineData(null, @"<div class=""wx-webapp-login""></div>")]
+        [InlineData("login-form", @"<div id=""login-form"" class=""wx-webapp-login""></div>")]
+        public void Id(string id, string expected)
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlDataLogin(id);
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
+
+        /// <summary>
+        /// Tests the REST URI property of the login form control.
+        /// </summary>
+        [Theory]
+        [InlineData(null, @"<div class=""wx-webapp-login""></div>")]
+        [InlineData("https://example.com/api/login", @"<div class=""wx-webapp-login""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/login"" method=""POST""></wx-service></div>")]
+        public void RestUri(string uriString, string expected)
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlDataLogin()
+            {
+                ServiceFactory = uriString is not null ? _ => DataServiceDescriptor.SubmitData(uriString) : null
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
+
+        /// <summary>
+        /// Tests the redirect URI property of the login form control.
+        /// </summary>
+        [Theory]
+        [InlineData(null, @"<div class=""wx-webapp-login""></div>")]
+        [InlineData("https://example.com/home", @"<div class=""wx-webapp-login"" data-redirect=""https://example.com/home""></div>")]
+        public void RedirectUri(string uriString, string expected)
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlDataLogin()
+            {
+                RedirectUri = _ => uriString is not null ? new UriEndpoint(uriString) : null
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
+
+        /// <summary>
+        /// Tests that the Title property from the base ControlLogin is accessible.
+        /// </summary>
+        [Theory]
+        [InlineData(null, @"<div class=""wx-webapp-login""></div>")]
+        [InlineData("My Login", @"<div class=""wx-webapp-login"" dataset-title=""My Login""></div>")]
+        public void Title(string title, string expected)
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlDataLogin()
+            {
+                Title = _ => title
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
+    }
+}

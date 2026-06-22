@@ -16,7 +16,7 @@ webexpress.webui.Actions.register("logout", {
             target = "/";
         }
 
-        fetch(uri, {
+        webexpress.webapp.ServiceRegistry.request(uri, {
             method: "DELETE",
             headers: {
                 "Content-Type": "application/json; charset=utf-8"
@@ -49,12 +49,19 @@ webexpress.webui.Actions.register("plugin-package", {
         }
 
         var handleResponse = function (response) {
+            // response is the normalised service result, not a raw Response; the
+            // body is already parsed into data and a non-json body is wrapped as
+            // { text }. On failure prefer the parsed text, then the error message.
             if (!response.ok) {
-                return response.text().then(function (text) {
-                    throw new Error(text || ("Request failed with status " + response.status + " for " + method + " " + uri));
-                });
+                var detail = "";
+                if (response.data && typeof response.data === "object" && typeof response.data.text === "string") {
+                    detail = response.data.text;
+                } else if (response.error && response.error.message) {
+                    detail = response.error.message;
+                }
+                throw new Error(detail || ("Request failed with status " + response.status + " for " + method + " " + uri));
             }
-            return response.json().catch(function () { return {}; });
+            return (response.data && typeof response.data === "object") ? response.data : {};
         };
 
         var handleResult = function (payload) {
@@ -87,7 +94,7 @@ webexpress.webui.Actions.register("plugin-package", {
                 var formData = new FormData();
                 formData.append("file", input.files[0], input.files[0].name);
 
-                fetch(uri, {
+                webexpress.webapp.ServiceRegistry.request(uri, {
                     method: method,
                     body: formData
                 }).then(handleResponse).then(handleResult).catch(handleError).finally(cleanup);
@@ -97,7 +104,7 @@ webexpress.webui.Actions.register("plugin-package", {
             return;
         }
 
-        fetch(uri, {
+        webexpress.webapp.ServiceRegistry.request(uri, {
             method: method
         }).then(handleResponse).then(handleResult).catch(handleError);
     }
@@ -174,6 +181,79 @@ webexpress.webui.Actions.register("popup", {
             : null;
         if (queue && typeof queue.dispatchLocal === "function") {
             queue.dispatchLocal(payload);
+        }
+    }
+});
+
+/**
+ * Dispatch action - sends a named intent with a payload to the store of a
+ * target Data component, part of the View, State and Service architecture.
+ * It is the bridge that lets any actionable element feed the unidirectional
+ * loop without touching the component's DOM or services directly.
+ *
+ * Supported attributes:
+ *   data-wx-{primary|secondary}-intent  - the intent name (required)
+ *   data-wx-{primary|secondary}-target  - id of the target component
+ *                                         (optional, default: the nearest
+ *                                         ancestor component)
+ *   data-wx-{primary|secondary}-payload - a json payload (optional)
+ *
+ * Example:
+ *   <button type="button"
+ *           data-wx-primary-action="dispatch"
+ *           data-wx-primary-intent="list/page"
+ *           data-wx-primary-target="orders"
+ *           data-wx-primary-payload='{"page":0}'>First page</button>
+ */
+webexpress.webui.Actions.register("dispatch", {
+    execute: function (element, prefix, controller, event) {
+        if (event && typeof event.preventDefault === "function") {
+            event.preventDefault();
+        }
+
+        function attr(name) {
+            return element.getAttribute("data-wx-" + prefix + "-" + name);
+        }
+
+        var intent = attr("intent");
+        if (!intent) {
+            console.warn("dispatch action without intent", element);
+            return;
+        }
+
+        var payload = null;
+        var payloadRaw = attr("payload");
+        if (payloadRaw) {
+            try {
+                payload = JSON.parse(payloadRaw);
+            } catch (error) {
+                console.warn("dispatch action with invalid payload", element, error);
+                return;
+            }
+        }
+
+        // resolve the target component: an explicit target id wins, otherwise
+        // the nearest ancestor component is used
+        var component = null;
+        var targetId = attr("target");
+        if (targetId) {
+            var host = document.getElementById(targetId);
+            component = host ? controller.getInstanceByElement(host) : null;
+        } else {
+            var current = element;
+            while (current && !component) {
+                var instance = controller.getInstanceByElement(current);
+                if (instance && typeof instance.dispatch === "function") {
+                    component = instance;
+                }
+                current = current.parentElement;
+            }
+        }
+
+        if (component && typeof component.dispatch === "function") {
+            component.dispatch(intent, payload);
+        } else {
+            console.warn("dispatch action found no target component", element);
         }
     }
 });

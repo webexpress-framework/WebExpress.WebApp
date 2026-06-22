@@ -38,10 +38,28 @@ namespace WebExpress.WebApp.WebRestApi
         public IEnumerable<WqlExpressionType> NextExpressionTypes { get; set; } = [];
 
         /// <summary>
-        /// Gets or sets the error message that describes the result of the 
+        /// Gets or sets the error message that describes the result of the
         /// current wql.
         /// </summary>
         public string ErrorMessage { get; set; }
+
+        /// <summary>
+        /// Gets or sets the part of the current token before the cursor; the
+        /// client uses it to replace the partial input when applying a suggestion.
+        /// </summary>
+        public string Prefix { get; set; }
+
+        /// <summary>
+        /// Gets or sets the attribute name the cursor context belongs to; the
+        /// client uses it to request attribute-specific value suggestions.
+        /// </summary>
+        public string Attribute { get; set; }
+
+        /// <summary>
+        /// Gets or sets whether the cursor is inside an open string literal; the
+        /// client then skips the automatic quoting of applied suggestions.
+        /// </summary>
+        public bool Quoted { get; set; }
 
         /// <summary>
         /// Gets or sets the list of suggestion items.
@@ -68,7 +86,10 @@ namespace WebExpress.WebApp.WebRestApi
                 currentExpressionType = CurrentExpressionType,
                 nextExpressionTypes = NextExpressionTypes,
                 suggestions = Suggestions,
-                errorMessage = ErrorMessage
+                errorMessage = ErrorMessage,
+                prefix = Prefix,
+                attribute = Attribute,
+                quoted = Quoted
             };
 
             var jsonData = JsonSerializer.Serialize(data, _jsonOptions);

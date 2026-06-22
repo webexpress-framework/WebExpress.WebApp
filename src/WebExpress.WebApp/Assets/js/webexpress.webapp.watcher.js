@@ -6,50 +6,86 @@
  * remove-on-click affordance is enabled). The "+" button opens a dropdown
  * with a search input that queries `data-users-uri` and lists candidates.
  *
- * Declarative configuration:
- *   <div class="wx-webapp-watcher"
- *        data-uri="/api/watchers/INC-00123"
- *        data-users-uri="/api/users"></div>
+ * Declarative configuration: the host carries a wx-service island named
+ * "data" for the watcher endpoint and an optional second island named
+ * "users" for the candidate search.
  *
  * REST contract:
- *   GET  {uri}                              → [{ id, name, team, initials, color }]
- *   POST {uri}            body { userId }   → { id, name, team, initials, color }
- *   DELETE {uri}/{userId}                   → 204
- *   GET  {users-uri}?q=…                    → [{ id, name, team, initials, color }]
+ *   GET  {data}                             → [{ id, name, team, initials, color }]
+ *   POST {data}           body { userId }   → { id, name, team, initials, color }
+ *   DELETE {data}/{userId}                  → 204
+ *   GET  {users}?q=…                        → [{ id, name, team, initials, color }]
  *
  * Events dispatched on the host element:
  *   webexpress.webapp.Event.WATCHER_ADDED_EVENT   detail: { user }
  *   webexpress.webapp.Event.WATCHER_REMOVED_EVENT detail: { user }
  */
-webexpress.webapp.WatcherCtrl = class extends webexpress.webui.Ctrl {
+webexpress.webapp.WatcherCtrl = class extends webexpress.webapp.Data {
     /**
      * Construct a new WatcherCtrl.
      * @param {HTMLElement} element - host element.
      */
     constructor(element) {
-        super(element);
+        // resolve the services and the initial state before super, so the
+        // Component seeds its store from the optional wx-state island and owns
+        // the service map
+        const services = webexpress.webapp.ServiceRegistry.fromElement(element);
+        const initialState = Object.assign({ watchers: [] }, webexpress.webapp.Data.readState(element));
 
-        this._uri = element.dataset.uri || null;
-        this._usersUri = element.dataset.usersUri || null;
+        super(element, { state: initialState, services: services });
+
         this._maxVisible = parseInt(element.dataset.maxVisible || "6", 10);
         this._readonly = element.dataset.readonly === "true";
+        this._service = this.useService("data");
+        this._users = this.useService("users");
 
-        // state
-        this._watchers = [];
         this._dropdownOpen = false;
         this._searchTimer = null;
 
         // clean host
         element.textContent = "";
-        element.removeAttribute("data-uri");
-        element.removeAttribute("data-users-uri");
         element.removeAttribute("data-max-visible");
         element.removeAttribute("data-readonly");
         element.classList.add("wx-watcher");
 
         this._buildDom();
         this._attachEventHandlers();
-        this._load();
+
+        // subscribe to the store, perform the first render and run onMount
+        this.mount();
+
+        // when the server seeded the watchers through the data-wx-state island the
+        // first paint needs no round trip; otherwise load them from the endpoint
+        if (this._watchers.length === 0) {
+            this._load();
+        }
+    }
+
+    /**
+     * The watchers, backed by the component store so the store is the single
+     * source of truth and a change triggers a re-render through the subscription.
+     * @returns {Array<Object>} The current watchers.
+     */
+    get _watchers() {
+        return this.state.watchers || [];
+    }
+
+    set _watchers(value) {
+        this.setState({ watchers: value });
+    }
+
+    /**
+     * Renders the avatar row on the first paint.
+     */
+    onMount() {
+        this._render();
+    }
+
+    /**
+     * Renders the avatar row whenever the watcher state changes.
+     */
+    onUpdate() {
+        this._render();
     }
 
     /**
@@ -129,20 +165,18 @@ webexpress.webapp.WatcherCtrl = class extends webexpress.webui.Ctrl {
      * Loads watchers from the configured URI and renders them.
      */
     async _load() {
-        if (!this._uri) {
+        if (!this._service) {
             this._watchers = [];
-            this._render();
             return;
         }
         try {
-            const res = await fetch(this._uri, { headers: { "Accept": "application/json" } });
-            if (!res.ok) throw new Error(res.statusText);
-            this._watchers = await res.json();
+            const res = await this._service.query({});
+            if (!res.ok) throw new Error(res.error ? res.error.message : String(res.status));
+            this._watchers = webexpress.webapp.watcherModel.normalizeList(res.data);
         } catch (e) {
             console.warn("WatcherCtrl: load failed", e);
             this._watchers = [];
         }
-        this._render();
     }
 
     /**
@@ -223,21 +257,19 @@ webexpress.webapp.WatcherCtrl = class extends webexpress.webui.Ctrl {
      * @param {string} q - Free-text query.
      */
     async _search(q) {
-        if (!this._usersUri) {
+        if (!this._users) {
             return;
         }
         let users = [];
         try {
-            const url = this._usersUri + (this._usersUri.includes("?") ? "&" : "?") + "q=" + encodeURIComponent(q);
-            const res = await fetch(url, { headers: { "Accept": "application/json" } });
-            if (!res.ok) throw new Error(res.statusText);
-            users = await res.json();
+            const res = await this._users.query({ search: q });
+            if (!res.ok) throw new Error(res.error ? res.error.message : String(res.status));
+            users = res.data;
         } catch (e) {
             console.warn("WatcherCtrl: search failed", e);
         }
 
-        const known = new Set(this._watchers.map(u => u.id));
-        const candidates = users.filter(u => !known.has(u.id));
+        const candidates = webexpress.webapp.watcherModel.candidates(this._watchers, users);
 
         this._resultsList.replaceChildren();
         if (candidates.length === 0) {
@@ -269,19 +301,14 @@ webexpress.webapp.WatcherCtrl = class extends webexpress.webui.Ctrl {
      */
     async _add(user) {
         this._closeDropdown();
-        if (!this._uri) {
+        if (!this._service) {
             return;
         }
         try {
-            const res = await fetch(this._uri, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Accept": "application/json" },
-                body: JSON.stringify({ userId: user.id })
-            });
-            if (!res.ok) throw new Error(res.statusText);
-            const created = await res.json();
-            this._watchers.push(created);
-            this._render();
+            const res = await this._service.create({ userId: user.id });
+            if (!res.ok) throw new Error(res.error ? res.error.message : String(res.status));
+            const created = res.data;
+            this._watchers = this._watchers.concat([created]);
             this._dispatch(webexpress.webapp.Event.WATCHER_ADDED_EVENT, { user: created });
         } catch (e) {
             console.warn("WatcherCtrl: add failed", e);
@@ -293,14 +320,13 @@ webexpress.webapp.WatcherCtrl = class extends webexpress.webui.Ctrl {
      * @param {Object} user
      */
     async _remove(user) {
-        if (!this._uri) {
+        if (!this._service) {
             return;
         }
         try {
-            const res = await fetch(this._uri + "/" + encodeURIComponent(user.id), { method: "DELETE" });
-            if (!res.ok && res.status !== 204) throw new Error(res.statusText);
-            this._watchers = this._watchers.filter(u => u.id !== user.id);
-            this._render();
+            const res = await this._service.remove({ path: webexpress.webapp.watcherModel.removePath(user.id) });
+            if (!res.ok && res.status !== 204) throw new Error(res.error ? res.error.message : String(res.status));
+            this._watchers = webexpress.webapp.watcherModel.removeById(this._watchers, user.id);
             this._dispatch(webexpress.webapp.Event.WATCHER_REMOVED_EVENT, { user });
         } catch (e) {
             console.warn("WatcherCtrl: remove failed", e);

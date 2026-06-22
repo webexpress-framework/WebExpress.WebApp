@@ -14,6 +14,15 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
         super(element);
     }
 
+    // wizard step state accessors backed by the store inherited from the form
+    // control, so the single source of truth is the store
+
+    get _currentIndex() { return this._store.getState().currentIndex || 0; }
+    set _currentIndex(value) { this._store.setState({ currentIndex: value }); }
+
+    get _wizardLoading() { return this._store.getState().wizardLoading || false; }
+    set _wizardLoading(value) { this._store.setState({ wizardLoading: value }); }
+
     /**
      * Initialize the wizard, parse pages and build the layout.
      * Overrides the base _init method.
@@ -115,7 +124,7 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
         this._btnPrev = document.createElement("button");
         this._btnPrev.type = "button";
         this._btnPrev.className = "btn btn-outline-secondary";
-        this._btnPrev.textContent = this._i18n("webexpress.webapp:wizard.previous") || "Zurück";
+        this._btnPrev.textContent = this._i18n("webexpress.webapp:wizard.previous") || "Previous";
         this._btnPrev.addEventListener("click", () => {
             this._navigate(-1);
         });
@@ -123,7 +132,7 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
         this._btnNext = document.createElement("button");
         this._btnNext.type = "button";
         this._btnNext.className = "btn btn-primary";
-        this._btnNext.textContent = this._i18n("webexpress.webapp:wizard.next") || "Weiter";
+        this._btnNext.textContent = this._i18n("webexpress.webapp:wizard.next") || "Next";
         this._btnNext.addEventListener("click", () => {
             this._navigate(1);
         });
@@ -131,7 +140,7 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
         this._btnFinish = document.createElement("button");
         this._btnFinish.type = "submit";
         this._btnFinish.className = "btn btn-success";
-        this._btnFinish.textContent = this._i18n("webexpress.webapp:wizard.finish") || "Abschließen";
+        this._btnFinish.textContent = this._i18n("webexpress.webapp:wizard.finish") || "Finish";
 
         if (modalFooter) {
             // hide original submit button
@@ -198,7 +207,7 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
                 const payloadStr = JSON.stringify(this._buildPayload());
 
                 // check cache: if already loaded successfully and payload did not change
-                if (page.isLoaded && page.payloadHash === payloadStr && !page.hasError) {
+                if (webexpress.webapp.restWizardModel.shouldUseCache(page, payloadStr)) {
                     targetFound = true;
                     break;
                 }
@@ -264,38 +273,33 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
         }
         page.element.style.display = "block";
 
-        try {
-            const response = await fetch(page.uri, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json; charset=utf-8",
-                    "Accept": "text/html"
-                },
-                body: payloadStr
-            });
+        const result = await this._service.request(
+            page.uri, webexpress.webapp.restWizardModel.buildStepRequestInit(payloadStr));
 
-            if (response.status === 204) {
-                this._setWizardLoading(false);
-                return 204;
-            }
-
-            if (!response.ok) {
-                throw new Error(this._i18n("webexpress.webapp:error.load_failed") || `Fehler beim Laden des Schritts (HTTP ${response.status})`);
-            }
-
-            const html = await response.text();
-            this._injectHtml(page.element, html);
-            page.isLoaded = true;
+        // a 204 No Content signals that the step is skipped
+        if (result.status === 204) {
             this._setWizardLoading(false);
-            
-            return 200;
+            return 204;
+        }
 
-        } catch (error) {
+        // any failure (http or network) renders the step error and stops here
+        if (!result.ok) {
+            const message = this._i18n("webexpress.webapp:error.load_failed") ||
+                (result.error && result.error.message) ||
+                `Failed to load the step (HTTP ${result.status})`;
             page.hasError = true;
-            page.element.innerHTML = `<div class="alert alert-danger wx-restwizard-page-error my-3">${error.message}</div>`;
+            page.element.innerHTML = `<div class="alert alert-danger wx-restwizard-page-error my-3">${message}</div>`;
             this._setWizardLoading(false);
             return 500;
         }
+
+        // the step content is delivered as html text (parsed by the service)
+        const html = (result.data && typeof result.data.text === "string") ? result.data.text : "";
+        this._injectHtml(page.element, html);
+        page.isLoaded = true;
+        this._setWizardLoading(false);
+
+        return 200;
     }
 
     /**
@@ -380,16 +384,10 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
         }
         
         // determine if current page is the last non-skipped page
-        let isLastPage = true;
-        for (let j = this._currentIndex + 1; j < this._pages.length; j++) {
-            if (!this._pages[j].skipped) {
-                isLastPage = false;
-                break;
-            }
-        }
+        const isLast = webexpress.webapp.restWizardModel.isLastPage(this._pages, this._currentIndex);
 
         if (this._btnNext && this._btnFinish) {
-            if (isLastPage) {
+            if (isLast) {
                 this._btnNext.style.display = "none";
                 this._btnFinish.style.display = "";
             } else {

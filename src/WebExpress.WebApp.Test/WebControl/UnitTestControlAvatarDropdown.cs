@@ -1,4 +1,5 @@
-﻿using WebExpress.WebApp.Test.Fixture;
+using WebExpress.WebApp.Test.Fixture;
+using WebExpress.WebApp.WebData;
 using WebExpress.WebApp.WebApiControl;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebPage;
@@ -24,7 +25,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
             var context = UnitTestControlFixture.CreateRenderContextMock(application);
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestAvatarDropdown(id)
+            var control = new ControlDataAvatarDropdown(id)
             {
             };
 
@@ -40,7 +41,7 @@ namespace WebExpress.WebApp.Test.WebControl
         /// </summary>
         [Theory]
         [InlineData(null, @"<div class=""wx-webapp-avatar-dropdown"" role=""button""></div>")]
-        [InlineData("https://example.com/api/avatar", @"<div class=""wx-webapp-avatar-dropdown"" role=""button"" data-uri=""https://example.com/api/avatar""></div>")]
+        [InlineData("https://example.com/api/avatar", @"<div class=""wx-webapp-avatar-dropdown"" role=""button""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/avatar"" method=""GET""></wx-service></div>")]
         public void RestUri(string uriString, string expected)
         {
             // arrange
@@ -48,9 +49,9 @@ namespace WebExpress.WebApp.Test.WebControl
             var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
             var context = UnitTestControlFixture.CreateRenderContextMock(application);
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlRestAvatarDropdown()
+            var control = new ControlDataAvatarDropdown()
             {
-                RestUri = _ => uriString is not null ? new UriEndpoint(uriString) : null
+                ServiceFactory = uriString is not null ? _ => DataServiceDescriptor.QueryData(uriString) : null
             };
 
             // act

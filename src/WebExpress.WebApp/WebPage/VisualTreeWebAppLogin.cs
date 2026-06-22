@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using WebExpress.WebApp.WebApiControl;
 using WebExpress.WebApp.WebControl;
+using WebExpress.WebApp.WebData;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebComponent;
 using WebExpress.WebCore.WebEndpoint;
@@ -117,11 +119,11 @@ namespace WebExpress.WebApp.WebPage
             var html = new HtmlElementRootHtml();
             var body = new HtmlElementSectionBody();
             var renderContext = new RenderControlContext(context.RenderContext);
-            var login = new ControlRestLogin()
+            var login = new ControlDataLogin()
             {
-                RestUri = _ => LoginUri,
                 Padding = _ => new PropertySpacingPadding(PropertySpacing.Space.Five)
-            };
+            }
+                .Service("data", svc => svc.Uri(_ => LoginUri).Method(HttpMethod.Post));
 
             // head
             html.Head.Title = I18N.Translate(context.Request, Title);

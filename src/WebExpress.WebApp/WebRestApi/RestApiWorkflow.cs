@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
+using System.Text.Json;
 using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebParameter;
@@ -15,6 +17,11 @@ namespace WebExpress.WebApp.WebRestApi
     /// </summary>
     public abstract class RestApiWorkflow : IRestApi
     {
+        private static readonly JsonSerializerOptions _jsonOptions = new()
+        {
+            WriteIndented = true
+        };
+
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
@@ -64,6 +71,51 @@ namespace WebExpress.WebApp.WebRestApi
         }
 
         /// <summary>
+        /// Processing of the resource that was called via the put request. The
+        /// workflow editor autosaves its whole definition through this handler,
+        /// so the payload mirrors the GET shape and the workflow id arrives as
+        /// the same query parameter as on load.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns>The response containing the result of the operation.</returns>
+        [Method(RequestMethod.PUT)]
+        public virtual IResponse Update(IRequest request)
+        {
+            var id = request.GetParameter<ParameterId>()?.Value;
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                return new ResponseBadRequest(new StatusMessage("Missing workflow id."));
+            }
+
+            if (request is not Request requestData || requestData.Content is null || requestData.Content.Length == 0)
+            {
+                return new ResponseBadRequest(new StatusMessage("Missing request body."));
+            }
+
+            using var context = CreateContext();
+
+            try
+            {
+                var bodyString = Encoding.UTF8.GetString(requestData.Content);
+                var workflow = JsonSerializer.Deserialize<RestApiWorkflowResult>(bodyString, _jsonOptions);
+
+                Update(id, workflow, context, request);
+
+                var responseJson = JsonSerializer.Serialize(new { success = true }, _jsonOptions);
+
+                return new ResponseOK
+                {
+                    Content = Encoding.UTF8.GetBytes(responseJson)
+                }
+                    .AddHeaderContentType("application/json");
+            }
+            catch (Exception ex)
+            {
+                return new ResponseBadRequest(new StatusMessage($"Error processing request.{ex}"));
+            }
+        }
+
+        /// <summary>
         /// Creates a new instance of an object that implements the IQueryContext interface.
         /// </summary>
         /// <returns>
@@ -94,6 +146,28 @@ namespace WebExpress.WebApp.WebRestApi
         protected virtual RestApiWorkflowResult Retrieve(string workflowId, IQueryContext context, IRequest request)
         {
             return new RestApiWorkflowResult();
+        }
+
+        /// <summary>
+        /// Persists the workflow definition delivered by the editor's autosave.
+        /// The default implementation discards the payload, so a read-only
+        /// workflow source needs no override.
+        /// </summary>
+        /// <param name="workflowId">
+        /// The unique identifier of the workflow to update.
+        /// </param>
+        /// <param name="workflow">
+        /// The workflow definition to persist, carrying the states and
+        /// transitions in the same shape the GET request delivers.
+        /// </param>
+        /// <param name="context">
+        /// The query context providing access to the underlying data store. Cannot be null.
+        /// </param>
+        /// <param name="request">
+        /// The current API request. Cannot be null.
+        /// </param>
+        protected virtual void Update(string workflowId, RestApiWorkflowResult workflow, IQueryContext context, IRequest request)
+        {
         }
 
         /// <summary>

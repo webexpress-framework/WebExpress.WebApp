@@ -20,10 +20,11 @@
  *
  * REST integration
  * ----------------
- * A single `data-uri` returns the workflow definition as a
- * `RestApiWorkflowResult` payload. The same response carries the catalogs of
- * available guards, validations and post functions consumed by the rule
- * pickers, so no additional endpoints are needed.
+ * A single GET on the data service, keyed by the workflow id from the state
+ * island, returns the workflow definition as a `RestApiWorkflowResult`
+ * payload. The same response carries the catalogs of available guards,
+ * validations and post functions consumed by the rule pickers, so no
+ * additional endpoints are needed.
  *
  * Mutations are debounced and persisted automatically.
  */
@@ -31,13 +32,14 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
 
     // configuration
     _restUri = "";
+    _workflowId = "";
 
     // cached catalogs sourced from the same REST response
     _catalog = { guards: [], validations: [], postfunctions: [] };
 
     // request state
     _isLoading = false;
-    _abortController = null;
+    _destroyed = false;
     _saveDebounce = null;
 
     // workflow header metadata kept for round-tripping
@@ -59,12 +61,22 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
      * @param {HTMLElement} element - host element with the wx-webapp-workflow-editor class.
      */
     constructor(element) {
+        // consume the islands before the base constructor clears the host;
+        // the reads cache on the element, so they survive the dom rebuild
+        const state = webexpress.webapp.Data.readState(element);
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+
         super(element);
 
-        const ds = element.dataset;
-        this._restUri = ds.uri || "";
+        // the workflow id is authored in C# through the state island and rides
+        // along as the logical id query parameter on load and save; the wire
+        // name stays with the service descriptor
+        this._workflowId = typeof state.id === "string" ? state.id : "";
 
-        element.removeAttribute("data-uri");
+        // the debounced autosave PUT flows through this rest service
+        this._service = islandServices.data;
+        this._restUri = this._service ? this._service.baseUri : "";
+
         element.classList.add("wx-workflow-editor");
 
         this._buildLayout();
@@ -215,57 +227,31 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
             return;
         }
 
-        if (this._abortController !== null) {
-            this._abortController.abort("workflow editor: request replaced");
-        }
-
-        this._abortController = new AbortController();
         this._isLoading = true;
         this._element.classList.add("placeholder-glow");
 
-        const base = window.location.origin;
-        let urlObj;
-        try {
-            urlObj = new URL(this._restUri, base);
-        } catch (e) {
-            urlObj = new URL(this._restUri, document.baseURI);
-        }
-        const fetchUrl = this._restUri.startsWith("http") ? urlObj.href : (urlObj.pathname + urlObj.search);
+        // the rest service maps the logical id to its wire name and aborts a
+        // previous in-flight load when a newer one replaces it
+        const params = this._workflowId !== "" ? { id: this._workflowId } : {};
 
-        fetch(fetchUrl, { signal: this._abortController.signal })
+        this._service.query(params)
             .then(res => {
-                if (!res.ok) {
-                    throw new Error("workflow editor: load request failed (" + res.status + ")");
+                if (this._destroyed || (res.error && res.error.kind === "abort")) {
+                    return;
                 }
-                return res.json();
-            })
-            .then(response => {
-                this._meta = {
-                    id: response.id || "",
-                    name: response.name || "",
-                    state: response.state || "",
-                    version: response.version || "",
-                    description: response.description || ""
-                };
-                this._catalog = {
-                    guards: Array.isArray(response.guards) ? response.guards : [],
-                    validations: Array.isArray(response.validations) ? response.validations : [],
-                    postfunctions: Array.isArray(response.postfunctions) ? response.postfunctions : []
-                };
+                if (!res.ok) {
+                    console.error("workflow editor: load request failed (" + res.status + ")");
+                    this._element.classList.remove("placeholder-glow");
+                    this._isLoading = false;
+                    return;
+                }
+                const response = res.data;
+                this._meta = webexpress.webapp.workflowEditorModel.normalizeMeta(response);
+                this._catalog = webexpress.webapp.workflowEditorModel.normalizeCatalog(response);
                 this.model = this._fromWireFormat(response);
                 this._element.classList.remove("placeholder-glow");
                 this._isLoading = false;
-                this._abortController = null;
                 this._renderPropsPanel();
-            })
-            .catch(error => {
-                if (error.name === "AbortError") {
-                    return;
-                }
-                console.error("workflow editor: load failed", error);
-                this._element.classList.remove("placeholder-glow");
-                this._isLoading = false;
-                this._abortController = null;
             });
     }
 
@@ -276,23 +262,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
      * @returns {{nodes: Array, edges: Array}}
      */
     _fromWireFormat(response) {
-        const nodesIn = Array.isArray(response.nodes)
-            ? response.nodes
-            : (Array.isArray(response.states) ? response.states : []);
-        const edgesIn = Array.isArray(response.edges)
-            ? response.edges
-            : (Array.isArray(response.transitions) ? response.transitions : []);
-
-        const nodes = nodesIn.map(n => Object.assign({}, n));
-        const edges = edgesIn.map(e => {
-            const out = Object.assign({}, e);
-            // accept the prototype's source/target alias for compatibility
-            if (out.from === undefined && out.source !== undefined) { out.from = out.source; }
-            if (out.to === undefined && out.target !== undefined) { out.to = out.target; }
-            return out;
-        });
-
-        return { nodes, edges };
+        return webexpress.webapp.workflowEditorModel.fromWireFormat(response);
     }
 
     /**
@@ -404,31 +374,15 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
             }
         }
 
-        const payload = {
-            id: this._meta.id,
-            name: this._meta.name,
-            state: this._meta.state,
-            version: this._meta.version,
-            description: this._meta.description,
-            nodes: this._model.nodes,
-            edges: this._model.edges,
-            // mirror payload using the REST wire names so backends that prefer
-            // states / transitions can read either field.
-            states: this._model.nodes,
-            transitions: this._model.edges
-        };
+        const payload = webexpress.webapp.workflowEditorModel.toWirePayload(this._meta, this._model);
+        const options = this._workflowId !== "" ? { params: { id: this._workflowId } } : {};
 
-        fetch(this._restUri, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        })
+        this._service.update(payload, options)
             .then(res => {
                 if (!res.ok) {
                     console.warn("workflow editor: save returned " + res.status);
                 }
-            })
-            .catch(err => console.error("workflow editor: save failed", err));
+            });
     }
 
     /**
@@ -1355,6 +1309,9 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
      * Tears down handlers so reloading the editor does not leak listeners.
      */
     destroy() {
+        // a load resolving after teardown must not touch the detached DOM
+        this._destroyed = true;
+
         if (this._kbHandler) {
             window.removeEventListener("keydown", this._kbHandler);
             this._kbHandler = null;
@@ -1362,9 +1319,6 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
         if (this._saveDebounce) {
             clearTimeout(this._saveDebounce);
             this._saveDebounce = null;
-        }
-        if (this._abortController) {
-            this._abortController.abort("workflow editor: destroyed");
         }
     }
 };

@@ -10,10 +10,16 @@ webexpress.webui.TableTemplates.register("rest_selection", (val, table, row, cel
     const editable = opts.editable === true || opts.editable === "true";
     const multiselection = opts.multiselection || null;
 
+    // the endpoint travels as a client built wx-service island, matching the
+    // single configuration channel the server emits
     if (editable) {
         const editor = document.createElement("div");
         editor.id = "wx_" + Math.random().toString(36).slice(2, 7);
-        editor.dataset.uri = opts.uri;
+        if (opts.uri) {
+            editor.appendChild(webexpress.webapp.ServiceRegistry.islandElement({
+                name: "data", kind: "rest", baseUri: opts.uri, method: "GET"
+            }));
+        }
         const inputCtrl = new webexpress.webapp.InputSelectionCtrl(editor);
         inputCtrl.multiSelect = multiselection;
         inputCtrl.value = val;
@@ -25,7 +31,11 @@ webexpress.webui.TableTemplates.register("rest_selection", (val, table, row, cel
         new webexpress.webui.SmartEditCtrl(container);
     } else {
         // read-only
-        container.dataset.uri = opts.uri;
+        if (opts.uri) {
+            container.appendChild(webexpress.webapp.ServiceRegistry.islandElement({
+                name: "data", kind: "rest", baseUri: opts.uri, method: "GET"
+            }));
+        }
         const ctrl = new webexpress.webapp.SelectionCtrl(container);
         ctrl.value = val;
     }

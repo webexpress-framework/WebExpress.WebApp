@@ -79,25 +79,40 @@ namespace WebExpress.WebApp.WebRestApi
                     lastToken = item;
                 }
 
-                var currentExpressionType = currentToken?.ExpressionType
-                    ?? lastToken?.ExpectedNextTokens.FirstOrDefault()
-                    ?? WqlExpressionType.None;
+                // the cursor directly after a punctuation token (quote,
+                // parenthesis, separator) belongs to the position AFTER the
+                // token: punctuation cannot be extended by typing, so the
+                // permissible followers are offered instead (e.g. "and" after
+                // a closing quote)
+                var afterPunctuation = currentToken is not null
+                    && pos == currentToken.Token.Offset + currentToken.Token.Length
+                    && (currentToken.ExpressionType == WqlExpressionType.Quotation
+                        || currentToken.ExpressionType == WqlExpressionType.OpenParenthesis
+                        || currentToken.ExpressionType == WqlExpressionType.CloseParenthesis
+                        || currentToken.ExpressionType == WqlExpressionType.Separator);
+
+                var referenceToken = currentToken ?? lastToken;
+                var followMode = currentToken is null || afterPunctuation;
+
+                var currentExpressionType = followMode
+                    ? referenceToken?.ExpectedNextTokens.FirstOrDefault() ?? WqlExpressionType.None
+                    : currentToken.ExpressionType;
 
                 // extract prefix - part of the token before the cursor
                 var prefix = "";
-                if (currentToken is not null)
+                if (!followMode)
                 {
                     // get prefix safely using Range and Math.Min
                     var offset = Math.Max(0, Math.Min(pos - currentToken.Token.Offset, currentToken.Token.Value.Length));
                     prefix = currentToken.Token.Value[..offset];
                 }
 
-                // find the current attribute (example: look backwards for last attribute-type token)
+                // find the current attribute (look backwards for the last attribute-type token)
                 string currentAttribute = null;
-                if (currentToken is not null)
+                if (referenceToken is not null)
                 {
                     var items = ila.Items.ToList();
-                    var idx = items.IndexOf(currentToken);
+                    var idx = items.IndexOf(referenceToken);
 
                     var previousAttribute = items
                         .Take(idx)
@@ -110,13 +125,40 @@ namespace WebExpress.WebApp.WebRestApi
                     }
                 }
 
-                var nextExpressionTypes = currentToken?.ExpectedNextTokens ?? [];
-                var errorMessage = ila.IsValidSoFar
+                var nextExpressionTypes = referenceToken?.ExpectedNextTokens ?? [];
+
+                // a parse that fails right at the end of the input is an
+                // incomplete statement the user is still typing (e.g. an
+                // attribute without an operator yet), not an invalid one;
+                // only report an error when unconsumed input remains before
+                // the cursor
+                var trimmedLength = wql.TrimEnd().Length;
+                var lastItem = ila.Items.LastOrDefault();
+                var consumedEnd = lastItem is null
+                    ? 0
+                    : lastItem.Token.Offset + lastItem.Token.Length;
+                var incomplete = consumedEnd >= trimmedLength - 1;
+
+                var errorMessage = ila.IsValidSoFar || incomplete
                     ? null
                     : "Query is invalid or incomplete.";
 
-                // call GetSuggestions with type, prefix, attribute
-                var suggestions = GetSuggestions(currentExpressionType, prefix, currentAttribute);
+                // the cursor sits inside an open string literal when an odd
+                // number of quotation tokens precedes it
+                var quoted = ila.Items
+                    .Count(x => x.ExpressionType == WqlExpressionType.Quotation && x.Token.Offset < pos) % 2 == 1;
+
+                // in follow mode every permissible next type contributes its
+                // suggestions (e.g. logical operators and order keywords after
+                // a completed condition); otherwise the current token's type
+                var suggestionTypes = followMode
+                    ? (referenceToken?.ExpectedNextTokens ?? []).Distinct()
+                    : new[] { currentExpressionType }.AsEnumerable();
+
+                var suggestions = suggestionTypes
+                    .SelectMany(type => GetSuggestions(type, prefix, currentAttribute))
+                    .Distinct()
+                    .ToList();
 
                 return new RestApiWqlPromptAnalyzeResult()
                 {
@@ -124,7 +166,10 @@ namespace WebExpress.WebApp.WebRestApi
                     CurrentExpressionType = currentExpressionType,
                     NextExpressionTypes = nextExpressionTypes,
                     ErrorMessage = errorMessage,
-                    Suggestions = suggestions
+                    Suggestions = suggestions,
+                    Prefix = prefix,
+                    Attribute = currentAttribute,
+                    Quoted = quoted
                 }
                     .ToResponse();
             }
@@ -256,6 +301,28 @@ namespace WebExpress.WebApp.WebRestApi
                     items.AddRange
                     (
                         logicOperators.Where
+                        (
+                            x =>
+                            prefix == null ||
+                            x.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                        )
+                    );
+                    break;
+                case WqlExpressionType.Order:
+                    items.AddRange
+                    (
+                        new[] { "order by" }.Where
+                        (
+                            x =>
+                            prefix == null ||
+                            x.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                        )
+                    );
+                    break;
+                case WqlExpressionType.PartitioningOperator:
+                    items.AddRange
+                    (
+                        new[] { "take", "skip" }.Where
                         (
                             x =>
                             prefix == null ||

@@ -15,12 +15,15 @@ webexpress.webapp.InputUniqueCtrl = class extends webexpress.webui.Ctrl {
     constructor(element) {
         super(element);
 
-        // read configuration from attributes
+        // read configuration from attributes; the endpoint is authored in C#
+        // through the wx-service island
         const el = this._element;
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(el);
+        this._service = islandServices.data || null;
         this._fieldId = el.getAttribute("id");
         this._fieldName = el.getAttribute("name") || "unique";
         this._initialValue = el.getAttribute("data-value") || null;
-        this._url = el.getAttribute("data-uri") || el.getAttribute("data-url") || "";
+        this._url = this._service ? this._service.baseUri : "";
         this._method = (el.getAttribute("data-method") || "GET").toUpperCase();
         this._param = el.getAttribute("data-param") || "v";
         this._responseField = el.getAttribute("data-response-field") || "available";
@@ -52,8 +55,6 @@ webexpress.webapp.InputUniqueCtrl = class extends webexpress.webui.Ctrl {
             "name",
             "placeholder",
             "data-value",
-            "data-url",
-            "data-uri",
             "data-method",
             "data-param",
             "data-response-field",
@@ -170,27 +171,7 @@ webexpress.webapp.InputUniqueCtrl = class extends webexpress.webui.Ctrl {
      * @returns {Record<string, string>} A map of header names to values.
      */
     _parseHeaders(headersJson) {
-        // return empty set if not provided
-        if (!headersJson) {
-            return {};
-        }
-        // attempt to parse a plain object of string-to-string pairs
-        try {
-            const obj = JSON.parse(headersJson);
-            if (obj && typeof obj === "object" && !Array.isArray(obj)) {
-                const out = {};
-                for (const [k, v] of Object.entries(obj)) {
-                    // only accept string keys with string values
-                    if (typeof k === "string" && typeof v === "string") {
-                        out[k] = v;
-                    }
-                }
-                return out;
-            }
-        } catch (e) {
-            // ignore invalid json
-        }
-        return {};
+        return webexpress.webapp.inputUniqueModel.parseHeaders(headersJson);
     }
 
     /**
@@ -284,11 +265,16 @@ webexpress.webapp.InputUniqueCtrl = class extends webexpress.webui.Ctrl {
                 if (!headers["Content-Type"]) {
                     headers["Content-Type"] = "application/json";
                 }
-                opts.body = JSON.stringify({ [this._param]: value });
+                opts.body = JSON.stringify(webexpress.webapp.inputUniqueModel.requestBody(this._param, value));
             }
 
-            // perform request
-            const response = await fetch(reqUrl, opts);
+            // perform request through the shared service
+            const response = await webexpress.webapp.ServiceRegistry.request(reqUrl, opts);
+
+            // ignore superseded requests that a newer keystroke aborted
+            if (response.error && response.error.kind === "abort") {
+                return;
+            }
 
             // handle non-2xx responses as errors
             if (!response.ok) {
@@ -301,11 +287,9 @@ webexpress.webapp.InputUniqueCtrl = class extends webexpress.webui.Ctrl {
                 return;
             }
 
-            // parse json response
-            let data = null;
-            try {
-                data = await response.json();
-            } catch (_parseErr) {
+            // read the parsed json response; a null payload indicates a parse failure
+            const data = response.data;
+            if (data === null || data === undefined) {
                 if (value === this._currentValue) {
                     this._setState("error", this._messageError);
                     this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
@@ -365,54 +349,7 @@ webexpress.webapp.InputUniqueCtrl = class extends webexpress.webui.Ctrl {
      * @returns {boolean|null} True if available, false if not, null if undecidable.
      */
     _extractAvailability(data) {
-        // prefer configured field if present
-        if (data && Object.prototype.hasOwnProperty.call(data, this._responseField)) {
-            const raw = data[this._responseField];
-            if (typeof raw === "boolean") {
-                return raw;
-            }
-            if (typeof raw === "string") {
-                const s = raw.trim().toLowerCase();
-                if (s === "true") {
-                    return true;
-                }
-                if (s === "false") {
-                    return false;
-                }
-            }
-            if (typeof raw === "number") {
-                if (raw === 1) {
-                    return true;
-                }
-                if (raw === 0) {
-                    return false;
-                }
-            }
-        }
-
-        // heuristics for common shapes
-        if (data && typeof data === "object") {
-            if (typeof data.status === "string") {
-                const st = data.status.toLowerCase();
-                if (st === "free" || st === "available") {
-                    return true;
-                }
-                if (st === "taken" || st === "unavailable" || st === "exists" || st === "in_use") {
-                    return false;
-                }
-            }
-            if (typeof data.code === "string") {
-                const cd = data.code.toLowerCase();
-                if (cd === "available") {
-                    return true;
-                }
-                if (cd === "unavailable") {
-                    return false;
-                }
-            }
-        }
-
-        return null;
+        return webexpress.webapp.inputUniqueModel.extractAvailability(data, this._responseField);
     }
 
     /**

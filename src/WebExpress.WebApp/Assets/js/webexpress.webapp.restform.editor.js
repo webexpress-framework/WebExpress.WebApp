@@ -78,9 +78,13 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
     constructor(element) {
         super(element);
 
+        // the endpoint is authored in C# through the wx-service island
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+        this._service = islandServices.data || null;
+        this._restUrl = this._service ? this._service.baseUri : null;
+
         // initialize properties from data attributes
         const ds = element.dataset;
-        this._restUrl = ds.restUrl || null;
         this._previewOn = ds.preview !== "false";
         const indent = parseInt(ds.indent, 10);
         this._indent = isFinite(indent) ? Math.min(32, Math.max(8, indent)) : 18;
@@ -332,14 +336,14 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
         try {
-            const res = await fetch(this._restUrl, {
+            const res = await webexpress.webapp.ServiceRegistry.request(this._restUrl, {
                 method: "GET",
                 headers: { "Accept": "application/json" }
             });
             if (!res.ok) {
                 return;
             }
-            const json = await res.json();
+            const json = res.data;
             this._structure = json.structure || json.data || json;
             this._fieldCatalog = json.catalog;
         } catch (e) {
@@ -1694,7 +1698,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
         try {
-            const res = await fetch(this._restUrl, {
+            const res = await webexpress.webapp.ServiceRegistry.request(this._restUrl, {
                 method: "PUT",
                 headers: {
                     "Accept": "application/json",
@@ -1703,12 +1707,11 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
                 body: JSON.stringify(this._structure)
             });
             if (!res.ok) {
-                let body = null;
-                try { body = await res.json(); } catch { body = null; }
+                const body = res.data;
                 this._dispatch(webexpress.webapp.Event.FORM_EDITOR_VALIDATION_FAILED_EVENT, body || { status: res.status });
                 return;
             }
-            const body = await res.json();
+            const body = res.data;
             if (body && body.data && typeof body.data.version === "number") {
                 this._structure.version = body.data.version;
                 this._renderHeader();

@@ -4,7 +4,7 @@
  * keyboard accessibility, sprint completion/start logic, smart duration selection,
  * configurable icons, bootstrap-based modals and item selection (single & multi).
  */
-webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
+webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
 
     _restUri = null;
     _title = null;
@@ -28,14 +28,24 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
      * @param {HTMLElement} element - The host element.
      */
     constructor(element) {
-        super(element);
+        // resolve the data service and seed the sprints and items from the
+        // optional wx-state island before super, so the component owns the
+        // store and the service map; the model builds the sprint and item
+        // paths and the bodies
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+        const services = islandServices;
+        const initialState = Object.assign({ sprints: [], items: [] }, webexpress.webapp.Data.readState(element));
 
-        this._restUri = element.dataset.restUri || element.getAttribute("data-rest-uri") || null;
+        super(element, { state: initialState, services: services });
+
         this._title = element.dataset.title || element.getAttribute("data-title") || this._i18n("webexpress.webapp:scrum.backlog", "Backlog");
 
         const selAttr = element.dataset.selectable || element.getAttribute("data-selectable");
         this._selectable = selAttr !== "false";
         this._readonly = element.dataset.readonly === "true";
+
+        this._service = this.useService("data");
+        this._restUri = this._service ? this._service.baseUri : null;
 
         // read configurable icons or use font awesome defaults
         // item type icons are not configured here - they are delivered per item via item.icon from the rest api
@@ -67,7 +77,14 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
         // global keyboard shortcuts (Ctrl+A, Escape)
         element.addEventListener("keydown", this._onRootKeyDown);
 
-        if (this._restUri) {
+        // when the server seeded the backlog through the data-wx-state island,
+        // render it without a round trip; otherwise load from the endpoint or
+        // parse the inline static configuration
+        const seeded = this.state;
+        if ((Array.isArray(seeded.sprints) && seeded.sprints.length > 0)
+            || (Array.isArray(seeded.items) && seeded.items.length > 0)) {
+            this.data = { sprints: seeded.sprints || [], items: seeded.items || [] };
+        } else if (this._restUri) {
             this._load();
         } else {
             this._parseStaticConfig();
@@ -86,8 +103,9 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
         }
         try {
             const parsed = JSON.parse(cfgEl.textContent);
-            this._sprints = Array.isArray(parsed.sprints) ? parsed.sprints : [];
-            this._items = Array.isArray(parsed.items) ? parsed.items : [];
+            const norm = webexpress.webapp.scrumBacklogModel.normalizeData(parsed);
+            this._sprints = norm.sprints;
+            this._items = norm.items;
             this._rebuildIndexes();
             this._ensureRanking();
         } catch (e) {
@@ -118,8 +136,9 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
      * @param {Object} data - { sprints: [], items: [] }
      */
     set data(data) {
-        this._sprints = Array.isArray(data?.sprints) ? data.sprints : [];
-        this._items = Array.isArray(data?.items) ? data.items : [];
+        const norm = webexpress.webapp.scrumBacklogModel.normalizeData(data);
+        this._sprints = norm.sprints;
+        this._items = norm.items;
         this._rebuildIndexes();
         this._ensureRanking();
         this._pruneSelection();
@@ -164,11 +183,14 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
 
         this._dispatch(webexpress.webui.Event.DATA_REQUESTED_EVENT, { uri: this._restUri });
 
-        fetch(this._restUri, { headers: { "Accept": "application/json" } })
-            .then((r) => r.json())
-            .then((data) => {
-                this._sprints = Array.isArray(data?.sprints) ? data.sprints : [];
-                this._items = Array.isArray(data?.items) ? data.items : [];
+        this._service.query({})
+            .then((r) => {
+                if (!r.ok) {
+                    throw new Error(r.error ? r.error.message : ("HTTP " + r.status));
+                }
+                const norm = webexpress.webapp.scrumBacklogModel.normalizeData(r.data);
+                this._sprints = norm.sprints;
+                this._items = norm.items;
                 this._rebuildIndexes();
                 this._ensureRanking();
                 this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, { uri: this._restUri });
@@ -189,12 +211,13 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
         if (!this._restUri) {
             return Promise.resolve(sprint);
         }
-        return fetch(this._restUri, {
-            method: "POST",
-            headers: { "Accept": "application/json", "Content-Type": "application/json" },
-            body: JSON.stringify(sprint)
-        })
-            .then((r) => r.json())
+        return this._service.create(sprint)
+            .then((r) => {
+                if (!r.ok) {
+                    throw new Error(r.error ? r.error.message : ("HTTP " + r.status));
+                }
+                return r.data;
+            })
             .catch((err) => {
                 console.error("ScrumBacklogCtrl: failed to create sprint", err);
                 return sprint;
@@ -210,12 +233,13 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
         if (!this._restUri) {
             return Promise.resolve(sprint);
         }
-        return fetch(this._restUri + "/sprints/" + encodeURIComponent(sprint.id), {
-            method: "PUT",
-            headers: { "Accept": "application/json", "Content-Type": "application/json" },
-            body: JSON.stringify(sprint)
-        })
-            .then((r) => r.json())
+        return this._service.update(sprint, { path: webexpress.webapp.scrumBacklogModel.sprintPath(sprint.id) })
+            .then((r) => {
+                if (!r.ok) {
+                    throw new Error(r.error ? r.error.message : ("HTTP " + r.status));
+                }
+                return r.data;
+            })
             .catch((err) => {
                 console.error("ScrumBacklogCtrl: failed to update sprint", err);
                 return sprint;
@@ -231,11 +255,13 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
         if (!this._restUri) {
             return Promise.resolve();
         }
-        return fetch(this._restUri + "/sprints/" + encodeURIComponent(sprintId), {
-            method: "DELETE",
-            headers: { "Accept": "application/json" }
-        })
-            .then(() => undefined)
+        return this._service.remove({ path: webexpress.webapp.scrumBacklogModel.sprintPath(sprintId) })
+            .then((r) => {
+                if (!r.ok && r.status !== 204) {
+                    throw new Error(r.error ? r.error.message : ("HTTP " + r.status));
+                }
+                return undefined;
+            })
             .catch((err) => {
                 console.error("ScrumBacklogCtrl: failed to delete sprint", err);
                 return undefined;
@@ -251,12 +277,16 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
         if (!this._restUri) {
             return Promise.resolve(item);
         }
-        return fetch(this._restUri + "/items/" + encodeURIComponent(item.id) + "/rank", {
-            method: "PUT",
-            headers: { "Accept": "application/json", "Content-Type": "application/json" },
-            body: JSON.stringify({ sprintId: item.sprintId || null, rank: item.rank })
-        })
-            .then((r) => r.json())
+        return this._service.update(
+            webexpress.webapp.scrumBacklogModel.itemRankBody(item),
+            { path: webexpress.webapp.scrumBacklogModel.itemRankPath(item.id) }
+        )
+            .then((r) => {
+                if (!r.ok) {
+                    throw new Error(r.error ? r.error.message : ("HTTP " + r.status));
+                }
+                return r.data;
+            })
             .catch((err) => {
                 console.error("ScrumBacklogCtrl: failed to persist rank", err);
                 return item;
@@ -282,15 +312,12 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
         // attempt a batch endpoint; fall back transparently on 404
-        fetch(this._restUri + "/items/rank-batch", {
-            method: "PUT",
-            headers: { "Accept": "application/json", "Content-Type": "application/json" },
-            body: JSON.stringify({
-                ranks: items.map((i) => ({ id: i.id, sprintId: i.sprintId || null, rank: i.rank }))
-            })
-        })
+        this._service.update(
+            webexpress.webapp.scrumBacklogModel.rankBatchBody(items),
+            { path: webexpress.webapp.scrumBacklogModel.rankBatchPath() }
+        )
             .then((r) => {
-                if (r.status === 404 || r.status === 405) {
+                if (r.status === 404 || r.status === 405 || (r.error && r.error.kind === "network")) {
                     for (const it of items) {
                         this._persistItemRank(it);
                     }
@@ -316,15 +343,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
         if (!sprint) {
             return;
         }
-        const normalized = Object.assign({
-            id: sprint.id || ("sp_" + Date.now()),
-            name: sprint.name || "",
-            goal: sprint.goal || "",
-            status: sprint.status || "planned",
-            start: sprint.start || null,
-            end: sprint.end || null,
-            capacity: typeof sprint.capacity === "number" ? sprint.capacity : 0
-        }, sprint);
+        const normalized = webexpress.webapp.scrumBacklogModel.normalizeSprint(sprint);
         this._sprints.push(normalized);
         this._sprintIndex.set(normalized.id, normalized);
         this.render();
@@ -865,11 +884,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
      * @returns {void}
      */
     _rewriteRanks(sprintId, orderedItems) {
-        let rank = 1;
-        for (const it of orderedItems) {
-            it.sprintId = sprintId || null;
-            it.rank = rank++;
-        }
+        webexpress.webapp.scrumBacklogModel.rewriteRanks(sprintId, orderedItems);
     }
 
     /**
@@ -878,23 +893,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
      * @returns {Array<Object>}
      */
     _itemsForSprintSorted(sprintId) {
-        const sid = sprintId || null;
-        const out = this._items.filter((i) => {
-            return (i.sprintId || null) === sid || (sid === null && (!i.sprintId || i.status === "backlog"));
-        });
-
-        out.sort((a, b) => {
-            const ra = typeof a.rank === "number" ? a.rank : Number.MAX_SAFE_INTEGER;
-            const rb = typeof b.rank === "number" ? b.rank : Number.MAX_SAFE_INTEGER;
-            if (ra !== rb) {
-                return ra - rb;
-            }
-            const ka = String(a.key || a.title || "");
-            const kb = String(b.key || b.title || "");
-            return ka.localeCompare(kb);
-        });
-
-        return out;
+        return webexpress.webapp.scrumBacklogModel.itemsForSprintSorted(this._items, sprintId);
     }
 
     /**
@@ -1519,18 +1518,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
      * @returns {boolean}
      */
     _crossesActiveSprint(items, targetSprintId) {
-        const activeId = this._activeSprintId();
-        if (!activeId) {
-            return false;
-        }
-        const targetIsActive = targetSprintId === activeId;
-        for (const it of items) {
-            const sourceIsActive = (it.sprintId || null) === activeId;
-            if (sourceIsActive !== targetIsActive) {
-                return true;
-            }
-        }
-        return false;
+        return webexpress.webapp.scrumBacklogModel.crossesActiveSprint(items, targetSprintId, this._activeSprintId());
     }
 
     /**

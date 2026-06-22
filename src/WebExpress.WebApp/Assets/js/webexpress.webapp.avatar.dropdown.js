@@ -14,15 +14,24 @@ webexpress.webapp.AvatarDropdownCtrl = class extends webexpress.webui.AvatarDrop
      * @param {HTMLElement} element - The DOM element associated with the instance.
      */
     constructor(element) {
+        // consume the islands before the base constructor parses the children
+        // as menu items; the read caches on the element
+        webexpress.webapp.ServiceRegistry.fromElement(element);
+
         super(element);
 
         // capture static items parsed by base class to append later
         this._staticItems = Array.isArray(this._items) ? this._items.slice(0) : [];
 
         // read configuration from data-attributes
-        this._apiEndpoint = element.dataset.uri || null;
         this._httpMethod = (element.dataset.method || "GET").toUpperCase();
         this._maxItems = Number.isFinite(parseInt(element.dataset.maxitems, 10)) ? parseInt(element.dataset.maxitems, 10) : 25;
+
+        // data service used to fetch the dropdown items through the service
+        // layer; the endpoint is authored in C# through the wx-service island
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+        this._service = islandServices.data || null;
+        this._apiEndpoint = this._service ? this._service.baseUri : null;
 
         // dynamic items storage
         this._allItems = [];
@@ -318,13 +327,13 @@ webexpress.webapp.AvatarDropdownCtrl = class extends webexpress.webui.AvatarDrop
                 }
             }
 
-            const res = await fetch(url, init);
+            const res = await this._service.request(url, init);
 
             if (!res.ok) {
                 throw new Error("http error " + res.status);
             }
 
-            const json = await res.json();
+            const json = res.data;
             const username = json.username || null;
             const image = json.image || null;
             const rawItems = json.items;

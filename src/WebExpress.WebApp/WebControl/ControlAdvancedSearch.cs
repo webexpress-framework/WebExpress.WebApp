@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using WebExpress.WebApp.WebData;
 using WebExpress.WebCore.WebHtml;
-using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
@@ -16,14 +16,46 @@ namespace WebExpress.WebApp.WebControl
     /// prompt, normalizes their payloads and re-emits a unified
     /// webexpress.webui.Event.CHANGE_FILTER_EVENT.
     /// </summary>
-    public class ControlAdvancedSearch : Control, IControlSearch
+    public class ControlAdvancedSearch : Control, IControlSearch, IDataIsland
     {
         private readonly List<IControl> _content = [];
 
         /// <summary>
-        /// Gets or sets the uri that determines the data.
+        /// Gets the data service descriptors of the control, emitted as
+        /// wx-service island elements. The data service backs the embedded WQL
+        /// prompt.
         /// </summary>
-        public Func<IRenderControlContext, IUri> RestUri { get; set; }
+        public IList<Func<IRenderControlContext, DataServiceDescriptor>> ServiceFactories { get; } = [];
+
+        /// <summary>
+        /// Gets or sets the single data service descriptor, as a convenience for
+        /// the common control with exactly one service. Reading returns the
+        /// first declared service, assigning replaces all declared services.
+        /// </summary>
+        public Func<IRenderControlContext, DataServiceDescriptor> ServiceFactory
+        {
+            get => ServiceFactories.Count > 0 ? ServiceFactories[0] : null;
+            set
+            {
+                ServiceFactories.Clear();
+
+                if (value != null)
+                {
+                    ServiceFactories.Add(value);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the optional template reference, emitted as the
+        /// data-wx-template attribute.
+        /// </summary>
+        public Func<IRenderControlContext, string> TemplateFactory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional initial state, emitted as the wx-state island.
+        /// </summary>
+        public Func<IRenderControlContext, DataState> StateFactory { get; set; }
 
         /// <summary>
         /// Gets the content of the control (e.g., save button).
@@ -95,17 +127,14 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, params IControl[] controls)
         {
-            var uri = RestUri?.Invoke(renderContext);
-            var resultUri = uri?.BindParameters(renderContext.Request);
-
             var html = new HtmlElementTextContentDiv()
             {
                 Id = Id,
                 Class = Css.Concatenate("wx-webapp-search", GetClasses(renderContext)),
                 Style = GetStyles(renderContext)
             }
-                .AddUserAttribute("data-uri", resultUri?.ToString())
-                .Add(controls.Select(x => x.Render(renderContext, visualTree)));
+                .Add(controls.Select(x => x.Render(renderContext, visualTree)))
+                .EmitDataIslands(this, renderContext);
 
             return html;
         }

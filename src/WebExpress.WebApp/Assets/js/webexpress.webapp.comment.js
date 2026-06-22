@@ -11,14 +11,11 @@
  * status / decision / solution), free-form labels, a body in HTML, a list of
  * likes, a reactions map (emoji → user-ids), and a flat replies array.
  *
- * Declarative configuration:
- *   <div class="wx-webapp-comment"
- *        data-uri="/api/comments/INC-00123"
- *        data-users-uri="/api/users"
- *        data-current-user="u1"
- *        data-image-upload-uri="/api/upload"></div>
+ * Declarative configuration: the host carries wx-service islands named
+ * "data" (comments endpoint), "users" (mention resolution) and "upload"
+ * (inline image upload), plus the data-current-user attribute.
  *
- * REST contract:
+ * REST contract (against the data service):
  *   GET    {uri}                                       → [Comment]
  *   GET    {uri}/categories                            → [Category]
  *   PUT    {uri}/{id}           body { body, category, labels }     → Comment
@@ -39,7 +36,7 @@
  *     - When detail.uri matches this control's REST URI (or is missing),
  *       the new comment is appended to the list and re-rendered.
  */
-webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
+webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
 
     /**
      * Default reaction emoji palette.
@@ -94,12 +91,32 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
      * @param {HTMLElement} element - host element.
      */
     constructor(element) {
-        super(element);
+        // the toolbar ui state is seeded from the persisted sort cookie and the
+        // optional wx-state island; the services come from the wx-service
+        // islands. both are resolved before super so the component owns the
+        // store and the service map. The wx-state island may also carry the
+        // comments themselves, in which case the first paint needs no round
+        // trip.
+        const cookieMatch = document.cookie.match(new RegExp("(^| )wx_comment_sort_dir=([^;]*)"));
+        const persistedSortDir = cookieMatch ? decodeURIComponent(cookieMatch[2]) : null;
+        const initialState = Object.assign({
+            sortBy: "date",          // "date" | "likes"
+            sortDir: (persistedSortDir === "asc" || persistedSortDir === "desc") ? persistedSortDir : "desc",
+            filterCat: "all",
+            editingId: null          // id of comment currently in edit-mode
+        }, webexpress.webapp.Data.readState(element));
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+        const services = islandServices;
 
-        this._uri = element.dataset.uri || null;
-        this._usersUri = element.dataset.usersUri || null;
+        super(element, { state: initialState, services: services });
+
+        const usersService = this.useService("users");
+        this._usersUri = usersService ? usersService.baseUri : null;
+
+        const uploadService = this.useService("upload");
+        this._imageUploadUri = uploadService ? uploadService.baseUri : null;
+
         this._currentUser = element.dataset.currentUser || null;
-        this._imageUploadUri = element.dataset.imageUploadUri || null;
         this._readonly = element.dataset.readonly === "true";
 
         // categories are sourced from the REST API ({uri}/categories) unless
@@ -116,24 +133,19 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
             }
         }
 
-        // state
+        // the data service backs the categories, comments, users, edit, delete,
+        // like, pin, reaction and reply requests
+        this._service = this.useService("data");
+        this._uri = this._service ? this._service.baseUri : null;
+
+        // data and caches (view state, not part of the store)
         this._comments = [];
-        this._sortBy = "date";   // "date" | "likes"
-        const persistedSortDir = this._getCookie("wx_comment_sort_dir");
-        this._sortDir = persistedSortDir === "asc" || persistedSortDir === "desc"
-            ? persistedSortDir
-            : "desc";  // "asc" | "desc"
-        this._filterCat = "all";
-        this._editingId = null;  // id of comment currently in edit-mode
         this._editorEditRef = null; // EditorCtrl instance while editing
         this._userCache = {};    // userId -> user record
 
         // clean host
         element.textContent = "";
-        element.removeAttribute("data-uri");
-        element.removeAttribute("data-users-uri");
         element.removeAttribute("data-current-user");
-        element.removeAttribute("data-image-upload-uri");
         element.removeAttribute("data-readonly");
         element.removeAttribute("data-categories");
         element.classList.add("wx-comment");
@@ -142,6 +154,21 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
         this._attachEventHandlers();
         void this._init();
     }
+
+    // toolbar and edit state accessors backed by the store, so the single
+    // source of truth is the store
+
+    get _sortBy() { return this._store.getState().sortBy; }
+    set _sortBy(value) { this._store.setState({ sortBy: value }); }
+
+    get _sortDir() { return this._store.getState().sortDir; }
+    set _sortDir(value) { this._store.setState({ sortDir: value }); }
+
+    get _filterCat() { return this._store.getState().filterCat; }
+    set _filterCat(value) { this._store.setState({ filterCat: value }); }
+
+    get _editingId() { return this._store.getState().editingId; }
+    set _editingId(value) { this._store.setState({ editingId: value }); }
 
     /**
      * Bootstraps the control: loads categories from the REST API (unless
@@ -152,7 +179,18 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
             await this._loadCategories();
         }
         this._rebuildFilterOptions();
-        await this._load();
+
+        // when the server seeded the comments through the data-wx-state island,
+        // render them without a round trip; otherwise load from the endpoint
+        const seeded = this.state.comments;
+        if (Array.isArray(seeded) && seeded.length > 0) {
+            this._comments = seeded.slice();
+            await this._preloadUsers();
+            this._rebuildFilterOptions();
+            this._renderList();
+        } else {
+            await this._load();
+        }
     }
 
     /**
@@ -160,18 +198,17 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
      * empty set; the filter will then show only "All categories".
      */
     async _loadCategories() {
-        if (!this._uri) {
+        if (!this._uri || !this._service) {
             this._categories = {};
             return;
         }
-        try {
-            const sep = this._uri.endsWith("/") ? "" : "/";
-            const url = this._uri + sep + "categories";
-            const res = await fetch(url, { headers: { "Accept": "application/json" } });
-            if (!res.ok) throw new Error(res.statusText);
-            this._categories = this._normalizeCategories(await res.json());
-        } catch (e) {
-            console.warn("CommentCtrl: categories load failed", e);
+        const result = await this._service.request(
+            webexpress.webapp.commentModel.categoriesUrl(this._uri),
+            { headers: { "Accept": "application/json" } });
+        if (result.ok) {
+            this._categories = this._normalizeCategories(result.data);
+        } else {
+            console.warn("CommentCtrl: categories load failed", result.error.message);
             this._categories = {};
         }
     }
@@ -183,19 +220,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
      * @returns {Object<string, Object>}
      */
     _normalizeCategories(input) {
-        if (!input) {
-            return {};
-        }
-        if (Array.isArray(input)) {
-            const obj = {};
-            for (const c of input) {
-                if (c && c.id) {
-                    obj[c.id] = c;
-                }
-            }
-            return obj;
-        }
-        return input;
+        return webexpress.webapp.commentModel.normalizeCategories(input);
     }
 
     /**
@@ -367,17 +392,16 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
      * Loads the comments from the configured URI and renders them.
      */
     async _load() {
-        if (!this._uri) {
+        if (!this._uri || !this._service) {
             this._comments = [];
             this._renderList();
             return;
         }
-        try {
-            const res = await fetch(this._uri, { headers: { "Accept": "application/json" } });
-            if (!res.ok) throw new Error(res.statusText);
-            this._comments = await res.json();
-        } catch (e) {
-            console.warn("CommentCtrl: load failed", e);
+        const result = await this._service.request(this._uri, { headers: { "Accept": "application/json" } });
+        if (result.ok) {
+            this._comments = result.data;
+        } else {
+            console.warn("CommentCtrl: load failed", result.error.message);
             this._comments = [];
         }
         // pre-warm user cache for everyone referenced
@@ -391,7 +415,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
      * resolve names + colors synchronously.
      */
     async _preloadUsers() {
-        if (!this._usersUri) {
+        if (!this._usersUri || !this._service) {
             return;
         }
         const ids = new Set();
@@ -410,16 +434,15 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
         if (missing.length === 0) {
             return;
         }
-        try {
-            const url = this._usersUri + (this._usersUri.includes("?") ? "&" : "?") + "ids=" + missing.map(encodeURIComponent).join(",");
-            const res = await fetch(url, { headers: { "Accept": "application/json" } });
-            if (!res.ok) throw new Error(res.statusText);
-            const users = await res.json();
-            for (const u of users) {
+        const result = await this._service.request(
+            webexpress.webapp.commentModel.buildUsersUrl(this._usersUri, missing),
+            { headers: { "Accept": "application/json" } });
+        if (result.ok) {
+            for (const u of result.data) {
                 this._userCache[u.id] = u;
             }
-        } catch (e) {
-            console.warn("CommentCtrl: user preload failed", e);
+        } else {
+            console.warn("CommentCtrl: user preload failed", result.error.message);
         }
     }
 
@@ -916,22 +939,22 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
      * @param {Object} patch
      */
     async _saveEdit(comment, patch) {
-        try {
-            const res = await fetch(this._uri + "/" + encodeURIComponent(comment.id), {
-                method: "PUT",
-                headers: { "Content-Type": "application/json", "Accept": "application/json" },
-                body: JSON.stringify(patch)
-            });
-            if (!res.ok) throw new Error(res.statusText);
-            const updated = await res.json();
+        if (!this._service) {
+            return;
+        }
+        const result = await this._service.update(patch, {
+            path: webexpress.webapp.commentModel.commentPath(comment.id)
+        });
+        if (result.ok) {
+            const updated = result.data;
             this._comments = this._comments.map(c => c.id === updated.id ? updated : c);
             this._editingId = null;
             this._editorEditRef = null;
             this._rebuildFilterOptions();
             this._renderList();
             this._dispatch(webexpress.webapp.Event.COMMENT_UPDATED_EVENT, { comment: updated });
-        } catch (e) {
-            console.warn("CommentCtrl: edit failed", e);
+        } else {
+            console.warn("CommentCtrl: edit failed", result.error.message);
         }
     }
 
@@ -940,15 +963,19 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
      * @param {Object} comment
      */
     async _delete(comment) {
-        try {
-            const res = await fetch(this._uri + "/" + encodeURIComponent(comment.id), { method: "DELETE" });
-            if (!res.ok && res.status !== 204) throw new Error(res.statusText);
+        if (!this._service) {
+            return;
+        }
+        const result = await this._service.remove({
+            path: webexpress.webapp.commentModel.commentPath(comment.id)
+        });
+        if (result.ok) {
             this._comments = this._comments.filter(c => c.id !== comment.id);
             this._rebuildFilterOptions();
             this._renderList();
             this._dispatch(webexpress.webapp.Event.COMMENT_DELETED_EVENT, { id: comment.id });
-        } catch (e) {
-            console.warn("CommentCtrl: delete failed", e);
+        } else {
+            console.warn("CommentCtrl: delete failed", result.error.message);
         }
     }
 
@@ -957,19 +984,18 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
      * @param {Object} comment
      */
     async _toggleLike(comment) {
-        try {
-            const res = await fetch(this._uri + "/" + encodeURIComponent(comment.id) + "/likes", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Accept": "application/json" },
-                body: JSON.stringify({ userId: this._currentUser })
-            });
-            if (!res.ok) throw new Error(res.statusText);
-            const updated = await res.json();
-            comment.likes = updated.likes;
+        if (!this._service) {
+            return;
+        }
+        const result = await this._service.create({ userId: this._currentUser }, {
+            path: webexpress.webapp.commentModel.commentSubPath(comment.id, "likes")
+        });
+        if (result.ok) {
+            comment.likes = result.data.likes;
             this._renderList();
             this._dispatch(webexpress.webapp.Event.COMMENT_UPDATED_EVENT, { comment });
-        } catch (e) {
-            console.warn("CommentCtrl: like failed", e);
+        } else {
+            console.warn("CommentCtrl: like failed", result.error.message);
         }
     }
 
@@ -978,18 +1004,18 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
      * @param {Object} comment
      */
     async _togglePin(comment) {
-        try {
-            const res = await fetch(this._uri + "/" + encodeURIComponent(comment.id) + "/pin", {
-                method: "POST",
-                headers: { "Accept": "application/json" }
-            });
-            if (!res.ok) throw new Error(res.statusText);
-            const updated = await res.json();
-            comment.pinned = updated.pinned;
+        if (!this._service) {
+            return;
+        }
+        const result = await this._service.create(undefined, {
+            path: webexpress.webapp.commentModel.commentSubPath(comment.id, "pin")
+        });
+        if (result.ok) {
+            comment.pinned = result.data.pinned;
             this._renderList();
             this._dispatch(webexpress.webapp.Event.COMMENT_UPDATED_EVENT, { comment });
-        } catch (e) {
-            console.warn("CommentCtrl: pin failed", e);
+        } else {
+            console.warn("CommentCtrl: pin failed", result.error.message);
         }
     }
 
@@ -999,19 +1025,18 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
      * @param {string} emoji
      */
     async _toggleReaction(comment, emoji) {
-        try {
-            const res = await fetch(this._uri + "/" + encodeURIComponent(comment.id) + "/reactions", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Accept": "application/json" },
-                body: JSON.stringify({ emoji, userId: this._currentUser })
-            });
-            if (!res.ok) throw new Error(res.statusText);
-            const updated = await res.json();
-            comment.reactions = updated.reactions;
+        if (!this._service) {
+            return;
+        }
+        const result = await this._service.create({ emoji, userId: this._currentUser }, {
+            path: webexpress.webapp.commentModel.commentSubPath(comment.id, "reactions")
+        });
+        if (result.ok) {
+            comment.reactions = result.data.reactions;
             this._renderList();
             this._dispatch(webexpress.webapp.Event.COMMENT_REACTION_EVENT, { commentId: comment.id, emoji, reactions: comment.reactions });
-        } catch (e) {
-            console.warn("CommentCtrl: reaction failed", e);
+        } else {
+            console.warn("CommentCtrl: reaction failed", result.error.message);
         }
     }
 
@@ -1021,20 +1046,20 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webui.Ctrl {
      * @param {string} body
      */
     async _postReply(comment, body) {
-        try {
-            const res = await fetch(this._uri + "/" + encodeURIComponent(comment.id) + "/replies", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Accept": "application/json" },
-                body: JSON.stringify({ body })
-            });
-            if (!res.ok) throw new Error(res.statusText);
-            const reply = await res.json();
+        if (!this._service) {
+            return;
+        }
+        const result = await this._service.create({ body }, {
+            path: webexpress.webapp.commentModel.commentSubPath(comment.id, "replies")
+        });
+        if (result.ok) {
+            const reply = result.data;
             comment.replies = comment.replies || [];
             comment.replies.push(reply);
             this._renderList();
             this._dispatch(webexpress.webapp.Event.COMMENT_REPLY_EVENT, { commentId: comment.id, reply });
-        } catch (e) {
-            console.warn("CommentCtrl: reply failed", e);
+        } else {
+            console.warn("CommentCtrl: reply failed", result.error.message);
         }
     }
 

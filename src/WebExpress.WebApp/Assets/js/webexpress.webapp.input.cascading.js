@@ -4,14 +4,19 @@
 webexpress.webapp.InputCascadingCtrl = class extends webexpress.webui.InputCascadingCtrl {
     /**
      * Constructor initializes remote-enabled cascading control.
-     * @param {HTMLElement} element - host element containing optional .wx-selection-item children or data-api attribute
+     * @param {HTMLElement} element - host element containing optional .wx-selection-item children or a wx-service island
      */
     constructor(element) {
+        // consume the island before the base constructor parses the
+        // declarative children; the read caches on the element
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+
         // call base constructor (will parse any declarative DOM and render briefly)
         super(element);
 
-        // read api base from host attributes; prefer data-uri
-        this._apiBase = element.getAttribute("data-uri") || null;
+        // the endpoint is configured through the wx-service island
+        this._service = islandServices.data || null;
+        this._apiBase = this._service ? this._service.baseUri : null;
         // cache for fetched nodes keyed by parent id (use "__root__" for root)
         this._remoteCache = {};
         // flag if remote mode is enabled
@@ -53,12 +58,12 @@ webexpress.webapp.InputCascadingCtrl = class extends webexpress.webui.InputCasca
         }
 
         // perform fetch and normalize response
-        return fetch(url, { method: "GET", credentials: "same-origin" })
+        return webexpress.webapp.ServiceRegistry.request(url, { method: "GET", credentials: "same-origin" })
             .then(function (resp) {
                 if (!resp.ok) {
                     throw new Error("Network response was not ok");
                 }
-                return resp.json();
+                return resp.data;
             })
             .then(function (data) {
                 // expect data to be an array of nodes; normalize shape
