@@ -5,7 +5,7 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Represents the content control for a web application.
+    /// Renders the main content area of a WebApp page, where the page's primary content (and its toolbar) is placed.
     /// </summary>
     public class ControlWebAppContent : Control, IControlWebAppContent
     {

@@ -10,7 +10,7 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Represents a sidebar control for the web application.
+    /// Renders the sidebar of a WebApp page, typically holding navigation or contextual content.
     /// </summary>
     public class ControlWebAppSidebar : Control, IControlWebAppSidebar
     {

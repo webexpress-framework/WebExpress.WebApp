@@ -19,7 +19,7 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebPage
 {
     /// <summary>
-    /// Represents the visual tree of the web application.
+    /// The default page layout (visual tree) of a WebApp: the arrangement of header, sidebar, content, toolbar, and footer that pages are rendered into.
     /// </summary>
     public class VisualTreeWebApp : VisualTreeControl, IVisualTreeWebApp
     {

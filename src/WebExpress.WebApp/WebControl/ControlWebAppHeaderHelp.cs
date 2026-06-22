@@ -12,7 +12,7 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Help control for a WebApp.
+    /// Renders the help control in the WebApp header, offering access to help and documentation.
     /// </summary>
     public class ControlWebAppHeaderHelp : Control, IControlWebAppHeaderHelp
     {

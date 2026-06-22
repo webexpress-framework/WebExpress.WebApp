@@ -8,7 +8,7 @@ namespace WebExpress.WebApp.WebControl
     public class ControlDataListOptionItem
     {
         /// <summary>
-        /// The types of an option entry.
+        /// The kinds of entry an options menu can contain (for example a command or a separator).
         /// </summary>
         public enum OptionType { Item, Header, Divider };
 

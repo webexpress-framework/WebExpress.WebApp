@@ -12,7 +12,7 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// App navigator for a WebApp.
+    /// Renders the app navigator in the WebApp header, the control for switching between applications.
     /// </summary>
     public class ControlWebAppHeaderAppNavigator : Control, IControlWebAppHeaderAppNavigator
     {

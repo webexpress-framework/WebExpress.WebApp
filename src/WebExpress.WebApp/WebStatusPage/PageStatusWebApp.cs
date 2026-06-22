@@ -9,7 +9,7 @@ using WebExpress.WebUI.WebControl;
 namespace WebExpress.WebApp.WebStatusPage
 {
     /// <summary>
-    /// A status page.
+    /// Base class for a WebApp status page: the page shown for an HTTP status (such as an error), rendered with the WebApp's visual tree.
     /// </summary>
     public abstract class PageStatusWebApp : IStatusPage<VisualTreeWebApp>
     {

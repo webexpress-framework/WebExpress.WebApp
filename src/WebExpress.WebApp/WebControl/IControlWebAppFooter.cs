@@ -4,7 +4,7 @@ using WebExpress.WebUI.WebControl;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Footer for a web app.
+    /// Contract for the footer area of a WebApp page.
     /// </summary>
     public interface IControlWebAppFooter : IControl
     {

@@ -10,7 +10,7 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Represents the header navigation control for the web application.
+    /// Renders the main navigation shown within the WebApp header.
     /// </summary>
     public class ControlWebAppHeaderAppNavigation : ControlPanel, IControlWebAppHeaderAppNavigation
     {

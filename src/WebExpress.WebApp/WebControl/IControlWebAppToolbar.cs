@@ -4,7 +4,7 @@ using WebExpress.WebUI.WebControl;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Represents a toolbar control for a web application.
+    /// Contract for a toolbar of a WebApp page.
     /// </summary>
     public interface IControlWebAppToolbar : IControlToolbar
     {

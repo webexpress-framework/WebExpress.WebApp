@@ -6,7 +6,7 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Header for a web app.
+    /// Renders the header bar at the top of a WebApp page, holding the title, navigation, help, and more.
     /// </summary>
     public class ControlWebAppHeader : Control, IControlWebAppHeader
     {

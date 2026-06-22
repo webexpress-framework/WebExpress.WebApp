@@ -6,7 +6,7 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// App title for a web app.
+    /// Renders the application title shown in the WebApp header.
     /// </summary>
     public class ControlWebAppHeaderAppTitle : ControlLink, IControlWebAppHeaderAppTitle
     {

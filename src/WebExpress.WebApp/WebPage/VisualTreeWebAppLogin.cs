@@ -19,7 +19,7 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebPage
 {
     /// <summary>
-    /// Represents the visual tree for login of the web application.
+    /// The page layout (visual tree) used for the WebApp's login screen, a reduced arrangement without the usual navigation.
     /// </summary>
     public class VisualTreeWebAppLogin : VisualTreeControl, IVisualTreeWebApp
     {

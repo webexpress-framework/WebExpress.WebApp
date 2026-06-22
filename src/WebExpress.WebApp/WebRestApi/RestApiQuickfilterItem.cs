@@ -3,7 +3,7 @@
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Represents a quickfilter item in a REST API operation.
+    /// Describes one quick-filter option in the data returned by a REST API.
     /// </summary>
     public class RestApiQuickfilterItem
     {

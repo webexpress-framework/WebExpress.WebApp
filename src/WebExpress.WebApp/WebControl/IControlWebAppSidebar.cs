@@ -4,7 +4,7 @@ using WebExpress.WebUI.WebControl;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Represents a sidebar control for the web application.
+    /// Contract for the sidebar of a WebApp page.
     /// </summary>
     public interface IControlWebAppSidebar : IControl
     {

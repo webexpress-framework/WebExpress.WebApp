@@ -11,7 +11,7 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Quick create control element for a WebApp.
+    /// Renders the quick-create control in the WebApp header, a shortcut menu for creating new items.
     /// </summary>
     public class ControlWebAppHeaderQuickCreate : Control, IControlWebAppHeaderQuickCreate
     {

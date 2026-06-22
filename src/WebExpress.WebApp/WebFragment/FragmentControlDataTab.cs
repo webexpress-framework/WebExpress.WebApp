@@ -7,7 +7,7 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebFragment
 {
     /// <summary>
-    /// Represents a tab control within a fragment context.
+    /// A tab control made available as a fragment, so the framework can insert it into a WebApp page section.
     /// </summary>
     public abstract class FragmentControlDataTab : ControlDataTab, IFragmentControl<ControlDataTab>
     {

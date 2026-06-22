@@ -10,7 +10,7 @@ using WebExpress.WebUI.WebIcon;
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Represents an clone option in a REST API.
+    /// A 'clone' entry in the options menu a REST API offers for a data item.
     /// </summary>
     public class RestApiOptionClone : RestApiOption
     {

@@ -3,7 +3,7 @@
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Header for a web app.
+    /// Contract for the header bar of a WebApp page.
     /// </summary>
     public interface IControlWebAppHeader : IControl
     {

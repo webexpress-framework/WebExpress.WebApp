@@ -11,7 +11,7 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Headline for an web app.
+    /// Renders the headline area of a WebApp page, showing the page title and related actions.
     /// </summary>
     public class ControlWebAppHeadline : Control, IControlWebAppHeadline
     {

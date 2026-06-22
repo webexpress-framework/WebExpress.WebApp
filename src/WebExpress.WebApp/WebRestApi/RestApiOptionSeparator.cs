@@ -4,7 +4,7 @@ using WebExpress.WebCore.WebMessage;
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Represents a separator option in a REST API.
+    /// A separator entry in the options menu a REST API offers, used to group other options.
     /// </summary>
     public class RestApiOptionSeparator : RestApiOption
     {

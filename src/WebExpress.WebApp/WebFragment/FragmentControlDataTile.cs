@@ -7,7 +7,7 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebFragment
 {
     /// <summary>
-    /// Represents a tile control within a fragment context.
+    /// A tile control made available as a fragment, so the framework can insert it into a WebApp page section.
     /// </summary>
     public abstract class FragmentControlDataTile : ControlDataTile, IFragmentControl<ControlDataTile>
     {

@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Represents the dashboard widget structure.
+    /// Describes one widget of a dashboard in the data returned by a REST API.
     /// </summary>
     public class RestApiDashboardWidget
     {

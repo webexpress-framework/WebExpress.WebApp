@@ -10,7 +10,7 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Represents a toolbar control for a web application.
+    /// Renders a toolbar of a WebApp page, holding action buttons and controls.
     /// </summary>
     public class ControlWebAppToolbar : ControlToolbar, IControlWebAppToolbar
     {
