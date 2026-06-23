@@ -43,6 +43,11 @@ namespace WebExpress.WebApp.WebControl
         public IControlWebAppHeaderQuickCreate QuickCreate { get; }
 
         /// <summary>
+        /// Gets or sets the search of the application.
+        /// </summary>
+        public IControlWebAppHeaderSearch Search { get; }
+
+        /// <summary>
         /// Gets or sets the navigation of the application helpers.
         /// </summary>
         public IControlWebAppHeaderHelp Help { get; }

@@ -66,6 +66,13 @@ namespace WebExpress.WebApp.WebControl
         };
 
         /// <summary>
+        /// Gets or sets the search of the application.
+        /// </summary>
+        public IControlWebAppHeaderSearch Search { get; } = new ControlWebAppHeaderSearch("wx-header-search")
+        {
+        };
+
+        /// <summary>
         /// Gets or sets the navigation of the application helpers.
         /// </summary>
         public IControlWebAppHeaderHelp Help { get; } = new ControlWebAppHeaderHelp("wx-header-help")
@@ -124,6 +131,7 @@ namespace WebExpress.WebApp.WebControl
              .Add(AppTitle)
              .Add(AppNavigation)
              .Add(QuickCreate)
+             .Add(Search)
              .Add(new ControlPanel() { Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Auto, PropertySpacing.Space.None) })
              .Add(Help)
              .Add(Notifications)
