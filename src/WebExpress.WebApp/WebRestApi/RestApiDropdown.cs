@@ -61,7 +61,10 @@ namespace WebExpress.WebApp.WebRestApi
                 query = query.WithPaging(pageNumber * pageSize, pageSize);
 
                 using var context = CreateContext();
-                var items = RetrieveItems(query, context, request);
+
+                // materialize once so the lazy index query is not enumerated twice
+                // (once to count, once to serialize)
+                var items = RetrieveItems(query, context, request)?.ToList() ?? [];
 
                 var result = new RestApiDropdownResult<IIndexItem>()
                 {
@@ -70,7 +73,9 @@ namespace WebExpress.WebApp.WebRestApi
                     {
                         PageNumber = pageNumber,
                         PageSize = pageSize,
-                        TotalCount = items.Count()
+                        // prepended headers and dividers ride in the same stream but are
+                        // not selectable, so they must not inflate the reported total
+                        TotalCount = items.Count(i => i.Type == RestApiDropdownItem.TypeItem)
                     }
                 };
 

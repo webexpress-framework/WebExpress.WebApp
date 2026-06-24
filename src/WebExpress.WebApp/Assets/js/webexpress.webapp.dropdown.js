@@ -399,6 +399,9 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
      * @returns {Object} A normalized item compatible with DropdownCtrl._createMenuItem.
      */
     _mapApiItem(apiItem) {
+        // structural entries (header/divider) ride in the same stream as items;
+        // the type must survive mapping or _createMenuItem renders them as links
+        const type = apiItem.type || "item";
         const id = apiItem.id || null;
         const uri = apiItem.uri || apiItem.url || "javascript:void(0);";
         const text = apiItem.text || apiItem.name || apiItem.label || apiItem.title || "";
@@ -425,6 +428,7 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
         }
 
         return {
+            type: type,
             id: id,
             uri: uri,
             image: image,
@@ -453,12 +457,22 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
 
         const limited = [];
         let remaining = this._maxItems;
-        
+
         for (let i = 0; i < this._allItems.length; i++) {
+            const item = this._allItems[i];
+
+            // headers and dividers are structural; only selectable items count
+            // against the cap so a prepended title never steals an item's slot
+            if (item.type === "header" || item.type === "divider") {
+                limited.push(item);
+                continue;
+            }
+
             if (remaining <= 0) {
                 break;
             }
-            limited.push(this._allItems[i]);
+
+            limited.push(item);
             remaining--;
         }
 
