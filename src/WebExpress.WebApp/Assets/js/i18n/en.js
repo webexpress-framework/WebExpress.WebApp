@@ -189,6 +189,16 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "scrum.field.capacity": "Capacity (pts)",
     "scrum.dialog.create": "Create",
 
+    // scrum team workload
+    "scrum.team.title": "Sprint team",
+    "scrum.team.person": "Person",
+    "scrum.team.planned": "Planned",
+    "scrum.team.completed": "Completed",
+    "scrum.team.points_abbr": "pts",
+    "scrum.team.total": "Total",
+    "scrum.team.empty": "No people in this sprint.",
+    "scrum.team.show_all": "Show all people",
+
     // watcher
     "watcher.title": "Watchers",
     "watcher.add": "Add watcher",

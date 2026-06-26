@@ -17,6 +17,7 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/css/webexpress.webapp.form.css")]
     [Asset("/assets/css/webexpress.webapp.popupnotification.css")]
     [Asset("/assets/css/webexpress.webapp.scrum.css")]
+    [Asset("/assets/css/webexpress.webapp.scrum.team.css")]
     [Asset("/assets/css/webexpress.webapp.search.css")]
     [Asset("/assets/css/webexpress.webapp.tab.css")]
     [Asset("/assets/css/webexpress.webapp.table.css")]

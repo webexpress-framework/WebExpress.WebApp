@@ -467,6 +467,20 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
+        /// Declares the standard data service of the scrum team workload surface,
+        /// which loads the current sprint's people and their story points with GET.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The scrum team control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataScrumTeam DataService<TEndpoint>(this ControlDataScrumTeam control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), configure);
+        }
+
+        /// <summary>
         /// Declares the standard data service of the table rest selection
         /// template, which queries the selectable items with GET.
         /// </summary>
