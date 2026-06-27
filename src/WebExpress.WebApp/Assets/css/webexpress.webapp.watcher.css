@@ -6,67 +6,38 @@
     position: relative;
 }
  
-.wx-watcher-row {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
-}
- 
+/* the avatar circles, the +N overflow chip and the overlap come from the
+   webexpress.webui avatar-group styles (.wx-avatar-group); these rules only
+   reset the avatar buttons and style the trailing add affordance */
 .wx-watcher-avatar {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    border: 1px solid var(--wx-webapp-border);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 9.5px;
-    font-weight: 700;
-    color: #1d2230;
     cursor: pointer;
     padding: 0;
-    transition: transform 0.1s, box-shadow 0.1s;
+    font: inherit;
 }
- 
-.wx-watcher-avatar:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
-}
- 
+
 .wx-watcher-avatar:disabled {
     cursor: default;
 }
- 
-.wx-watcher-more {
-    font-size: 11px;
-    color: var(--wx-webapp-text-3);
-    background: var(--wx-webapp-surface-2);
-    border: 1px solid var(--wx-webapp-border);
-    padding: 2px 7px;
-    border-radius: 999px;
-    font-family: var(--wx-webapp-font-mono);
-}
- 
+
 .wx-watcher-add {
-    width: 24px;
-    height: 24px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
-    border: 1px dashed var(--wx-webapp-border-2);
+    border: 1px dashed var(--wx-webapp-border-2, var(--bs-border-color, #ced4da));
     background: transparent;
-    color: var(--wx-webapp-text-3);
+    color: var(--wx-webapp-text-3, var(--bs-secondary-color, #6c757d));
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
+    font-size: 16px;
     line-height: 1;
     cursor: pointer;
     padding: 0;
 }
- 
+
 .wx-watcher-add:hover {
-    border-color: var(--wx-webapp-primary);
-    color: var(--wx-webapp-primary);
+    border-color: var(--wx-webapp-primary, var(--bs-primary, #0d6efd));
+    color: var(--wx-webapp-primary, var(--bs-primary, #0d6efd));
 }
 
 .wx-watcher-dropdown {

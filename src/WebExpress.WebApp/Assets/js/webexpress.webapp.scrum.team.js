@@ -95,7 +95,8 @@ webexpress.webapp.ScrumTeamCtrl = class extends webexpress.webapp.Data {
      */
     _buildDom() {
         this._row = document.createElement("div");
-        this._row.className = "wx-scrum-team-row";
+        // the people render as an overlapping avatar group (webexpress.webui)
+        this._row.className = "wx-avatar-group";
         this._element.appendChild(this._row);
     }
 
@@ -155,7 +156,7 @@ webexpress.webapp.ScrumTeamCtrl = class extends webexpress.webapp.Data {
         if (overflow > 0) {
             const more = document.createElement("button");
             more.type = "button";
-            more.className = "wx-scrum-team-more";
+            more.className = "wx-avatar-group-more wx-scrum-team-more";
             more.textContent = "+" + overflow;
             more.title = members.slice(this._maxVisible).map(m => m.name).join(", ");
             more.addEventListener("click", () => this._openModal());
@@ -182,18 +183,14 @@ webexpress.webapp.ScrumTeamCtrl = class extends webexpress.webapp.Data {
     _makeAvatar(member) {
         const av = document.createElement("button");
         av.type = "button";
-        av.className = "wx-scrum-team-avatar";
+        av.className = "wx-avatar-group-avatar wx-scrum-team-avatar";
         av.title = member.name
             + (member.team ? " · " + member.team : "")
             + " · " + member.completed + "/" + member.points + " " + this._i18n("webexpress.webapp:scrum.team.points_abbr", "pts")
             + " " + this._i18n("webexpress.webapp:scrum.team.completed", "completed").toLowerCase();
         av.setAttribute("aria-label", av.title);
-
-        const bubble = document.createElement("span");
-        bubble.className = "wx-scrum-team-bubble";
-        bubble.style.background = member.color || "#888";
-        bubble.textContent = member.initials;
-        av.appendChild(bubble);
+        av.style.background = member.color || "#888";
+        av.appendChild(document.createTextNode(member.initials));
 
         const badge = document.createElement("span");
         badge.className = "wx-scrum-team-badge";

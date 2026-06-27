@@ -93,7 +93,8 @@ webexpress.webapp.WatcherCtrl = class extends webexpress.webapp.Data {
      */
     _buildDom() {
         this._row = document.createElement("div");
-        this._row.className = "wx-watcher-row";
+        // the watchers render as an overlapping avatar group (webexpress.webui)
+        this._row.className = "wx-avatar-group";
 
         this._addBtn = document.createElement("button");
         this._addBtn.type = "button";
@@ -192,7 +193,7 @@ webexpress.webapp.WatcherCtrl = class extends webexpress.webapp.Data {
         }
         if (overflow > 0) {
             const more = document.createElement("span");
-            more.className = "wx-watcher-more";
+            more.className = "wx-avatar-group-more wx-watcher-more";
             more.textContent = "+" + overflow;
             more.title = this._watchers.slice(this._maxVisible).map(u => u.name).join(", ");
             this._row.appendChild(more);
@@ -208,7 +209,7 @@ webexpress.webapp.WatcherCtrl = class extends webexpress.webapp.Data {
     _makeAvatar(user) {
         const av = document.createElement("button");
         av.type = "button";
-        av.className = "wx-watcher-avatar";
+        av.className = "wx-avatar-group-avatar wx-watcher-avatar";
         av.title = user.name + (user.team ? " · " + user.team : "");
         av.setAttribute("aria-label", av.title);
         av.style.background = user.color || "#888";
