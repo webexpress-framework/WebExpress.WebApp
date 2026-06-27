@@ -59,6 +59,7 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/js/webexpress.webapp.scrum.sprint.js")]
     [Asset("/assets/js/webexpress.webapp.scrum.team.model.js")]
     [Asset("/assets/js/webexpress.webapp.scrum.team.js")]
+    [Asset("/assets/js/webexpress.webapp.scrum.velocity.js")]
     [Asset("/assets/js/webexpress.webapp.search.js")]
     [Asset("/assets/js/webexpress.webapp.selection.model.js")]
     [Asset("/assets/js/webexpress.webapp.selection.js")]

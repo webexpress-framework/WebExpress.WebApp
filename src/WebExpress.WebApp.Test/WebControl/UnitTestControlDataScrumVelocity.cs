@@ -8,27 +8,27 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.Test.WebControl
 {
     /// <summary>
-    /// Tests the scrum team workload control. The control only emits the host
-    /// element; the avatar row, the overflow chip and the modal table are built
-    /// by the JS controller <c>webexpress.webapp.ScrumTeamCtrl</c>.
+    /// Tests the scrum velocity control. The control only emits the host element;
+    /// the bar chart is built by the JS controller
+    /// <c>webexpress.webapp.ScrumVelocityCtrl</c>.
     /// </summary>
     [Collection("NonParallelTests")]
-    public class UnitTestControlDataScrumTeam
+    public class UnitTestControlDataScrumVelocity
     {
         /// <summary>
-        /// Tests the id property of the scrum team control.
+        /// Tests the id property of the scrum velocity control.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div class=""wx-webapp-scrum-team""></div>")]
-        [InlineData("id", @"<div id=""id"" class=""wx-webapp-scrum-team""></div>")]
-        [InlineData("87BD7E47-9D08-4DAB-BFFE-DA2B2DD12C3B", @"<div id=""87BD7E47-9D08-4DAB-BFFE-DA2B2DD12C3B"" class=""wx-webapp-scrum-team""></div>")]
+        [InlineData(null, @"<div class=""wx-webapp-scrum-velocity""></div>")]
+        [InlineData("id", @"<div id=""id"" class=""wx-webapp-scrum-velocity""></div>")]
+        [InlineData("87BD7E47-9D08-4DAB-BFFE-DA2B2DD12C3B", @"<div id=""87BD7E47-9D08-4DAB-BFFE-DA2B2DD12C3B"" class=""wx-webapp-scrum-velocity""></div>")]
         public void Id(string id, string expected)
         {
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlDataScrumTeam(id);
+            var control = new ControlDataScrumVelocity(id);
 
             // act
             var html = control.Render(context, visualTree);
@@ -38,19 +38,19 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
-        /// Tests the data service of the scrum team control, which loads the
-        /// people of the current sprint with a single GET.
+        /// Tests the data service of the scrum velocity control, which loads the
+        /// recent sprints with a single GET.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div class=""wx-webapp-scrum-team""></div>")]
-        [InlineData("https://example.com/api/scrum/team", @"<div class=""wx-webapp-scrum-team""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/scrum/team"" method=""GET""></wx-service></div>")]
+        [InlineData(null, @"<div class=""wx-webapp-scrum-velocity""></div>")]
+        [InlineData("https://example.com/api/scrum/velocity", @"<div class=""wx-webapp-scrum-velocity""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/scrum/velocity"" method=""GET""></wx-service></div>")]
         public void RestUri(string uriString, string expected)
         {
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlDataScrumTeam()
+            var control = new ControlDataScrumVelocity()
             {
                 ServiceFactory = uriString is not null ? _ => DataServiceDescriptor.QueryData(uriString) : null
             };
@@ -63,21 +63,21 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
-        /// Tests that the MaxVisible property renders into the
-        /// <c>data-max-visible</c> attribute.
+        /// Tests that the MaxSprints property renders into the
+        /// <c>data-max-sprints</c> attribute.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div class=""wx-webapp-scrum-team""></div>")]
-        [InlineData(8, @"<div class=""wx-webapp-scrum-team"" data-max-visible=""8""></div>")]
-        public void MaxVisible(int? maxVisible, string expected)
+        [InlineData(null, @"<div class=""wx-webapp-scrum-velocity""></div>")]
+        [InlineData(8, @"<div class=""wx-webapp-scrum-velocity"" data-max-sprints=""8""></div>")]
+        public void MaxSprints(int? maxSprints, string expected)
         {
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlDataScrumTeam()
+            var control = new ControlDataScrumVelocity()
             {
-                MaxVisible = _ => maxVisible
+                MaxSprints = _ => maxSprints
             };
 
             // act
@@ -88,7 +88,7 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
-        /// Tests the id, the data service and the MaxVisible attribute rendering
+        /// Tests the id, the data service and the MaxSprints attribute rendering
         /// together.
         /// </summary>
         [Fact]
@@ -98,17 +98,17 @@ namespace WebExpress.WebApp.Test.WebControl
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlDataScrumTeam("t1")
+            var control = new ControlDataScrumVelocity("v1")
             {
-                ServiceFactory = _ => DataServiceDescriptor.QueryData("https://example.com/api/scrum/team"),
-                MaxVisible = _ => 5
+                ServiceFactory = _ => DataServiceDescriptor.QueryData("https://example.com/api/scrum/velocity"),
+                MaxSprints = _ => 6
             };
 
             // act
             var html = control.Render(context, visualTree);
 
             // validation
-            AssertExtensions.EqualWithPlaceholders(@"<div id=""t1"" class=""wx-webapp-scrum-team"" data-max-visible=""5""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/scrum/team"" method=""GET""></wx-service></div>", html);
+            AssertExtensions.EqualWithPlaceholders(@"<div id=""v1"" class=""wx-webapp-scrum-velocity"" data-max-sprints=""6""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/scrum/velocity"" method=""GET""></wx-service></div>", html);
         }
 
         /// <summary>
@@ -122,22 +122,23 @@ namespace WebExpress.WebApp.Test.WebControl
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlDataScrumTeam()
+            var control = new ControlDataScrumVelocity()
             {
-                ColorPoints = _ => new PropertyColorBackground(TypeColorBackground.Primary),
-                ColorCompleted = _ => new PropertyColorBackground("#00aa88")
+                ColorCompleted = _ => new PropertyColorBackground(TypeColorBackground.Success),
+                ColorCommitted = _ => new PropertyColorBackground("#dddddd"),
+                ColorAverage = _ => new PropertyColorBackground(TypeColorBackground.Danger)
             };
 
             // act
             var html = control.Render(context, visualTree);
 
             // validation
-            AssertExtensions.EqualWithPlaceholders(@"<div class=""wx-webapp-scrum-team"" data-color-points-css=""bg-primary"" data-color-completed-style=""background:#00aa88;""></div>", html);
+            AssertExtensions.EqualWithPlaceholders(@"<div class=""wx-webapp-scrum-velocity"" data-color-completed-css=""bg-success"" data-color-committed-style=""background:#dddddd;"" data-color-average-css=""bg-danger""></div>", html);
         }
 
         /// <summary>
         /// Disabled controls must render to <c>null</c> so the page does not
-        /// contain an inert scrum team host.
+        /// contain an inert velocity host.
         /// </summary>
         [Fact]
         public void Enable_False_RendersNothing()
@@ -146,7 +147,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var control = new ControlDataScrumTeam()
+            var control = new ControlDataScrumVelocity()
             {
                 Enable = _ => false
             };

@@ -1,0 +1,141 @@
+.wx-scrum-velocity {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.wx-scrum-velocity-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.wx-scrum-velocity-eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--wx-webapp-text-3, var(--bs-secondary-color, #6c757d));
+}
+
+.wx-scrum-velocity-avg {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--wx-webapp-text-2, var(--bs-body-color, #212529));
+    font-family: var(--wx-webapp-font-mono, var(--bs-font-monospace, ui-monospace, SFMono-Regular, Menlo, monospace));
+}
+
+.wx-scrum-velocity-plot {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    height: 150px;
+    border-bottom: 1px solid var(--wx-webapp-border, var(--bs-border-color, #dee2e6));
+}
+
+.wx-scrum-velocity-col {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.wx-scrum-velocity-bar-committed {
+    position: absolute;
+    left: 14%;
+    right: 14%;
+    bottom: 0;
+    min-height: 2px;
+    background: var(--wx-webapp-surface-2, var(--bs-tertiary-bg, #eef1f4));
+    border: 1px solid var(--wx-webapp-border, var(--bs-border-color, #dee2e6));
+    border-bottom: 0;
+    border-radius: 4px 4px 0 0;
+}
+
+.wx-scrum-velocity-bar-completed {
+    position: absolute;
+    left: 14%;
+    right: 14%;
+    bottom: 0;
+    min-height: 2px;
+    background: #198754;
+    border-radius: 4px 4px 0 0;
+}
+
+.wx-scrum-velocity-col:hover .wx-scrum-velocity-bar-completed {
+    background: #157347;
+}
+
+.wx-scrum-velocity-value {
+    position: absolute;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--wx-webapp-text-2, var(--bs-body-color, #212529));
+    font-family: var(--wx-webapp-font-mono, var(--bs-font-monospace, ui-monospace, SFMono-Regular, Menlo, monospace));
+}
+
+.wx-scrum-velocity-avg-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--wx-webapp-text-3, var(--bs-secondary-color, #6c757d));
+    opacity: 0.9;
+    pointer-events: none;
+}
+
+.wx-scrum-velocity-labels {
+    display: flex;
+    gap: 8px;
+}
+
+.wx-scrum-velocity-label {
+    flex: 1 1 0;
+    min-width: 0;
+    text-align: center;
+    font-size: 10.5px;
+    color: var(--wx-webapp-text-3, var(--bs-secondary-color, #6c757d));
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wx-scrum-velocity-legend {
+    display: flex;
+    gap: 14px;
+    font-size: 11px;
+    color: var(--wx-webapp-text-3, var(--bs-secondary-color, #6c757d));
+}
+
+.wx-scrum-velocity-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.wx-scrum-velocity-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex: 0 0 auto;
+}
+
+.wx-scrum-velocity-swatch.completed {
+    background: #198754;
+}
+
+.wx-scrum-velocity-swatch.committed {
+    background: var(--wx-webapp-surface-2, var(--bs-tertiary-bg, #eef1f4));
+    border: 1px solid var(--wx-webapp-border, var(--bs-border-color, #dee2e6));
+}
+
+.wx-scrum-velocity-empty {
+    padding: 16px;
+    text-align: center;
+    color: var(--wx-webapp-text-3, var(--bs-secondary-color, #6c757d));
+    font-size: 12.5px;
+}

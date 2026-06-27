@@ -1,4 +1,5 @@
 using System;
+using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.WebControl
@@ -15,5 +16,15 @@ namespace WebExpress.WebApp.WebControl
         /// ones collapse into a <c>+N</c> overflow chip that opens the modal.
         /// </summary>
         Func<IRenderControlContext, int?> MaxVisible { get; }
+
+        /// <summary>
+        /// Gets the color of the story point badge on each avatar.
+        /// </summary>
+        Func<IRenderControlContext, PropertyColorBackground> ColorPoints { get; }
+
+        /// <summary>
+        /// Gets the accent color of the completed story points in the modal.
+        /// </summary>
+        Func<IRenderControlContext, PropertyColorBackground> ColorCompleted { get; }
     }
 }

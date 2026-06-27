@@ -112,3 +112,22 @@ new ControlDataScrumTeam("sprint-team")
 }
     .DataService<RestApiScrumTeam>();
 ```
+
+## Colors
+
+The accent colors are user-definable, exactly like a control button. Each color is a `PropertyColorBackground`: a **system color** (`TypeColorBackground.Primary`, …) is emitted as a CSS class (`bg-primary`) and a **user-defined color** (`"#7c3aed"`) as an inline style. When a color is not set, the stylesheet default applies.
+
+| Property         | Element
+|------------------|-------------------------------------------
+| `ColorPoints`    | The story point badge on each avatar.
+| `ColorCompleted` | The completed badge and the per-person completion bar in the modal.
+
+```csharp
+new ControlDataScrumTeam("sprint-team")
+{
+    MaxVisible = _ => 6,
+    ColorPoints    = _ => new PropertyColorBackground("#7c3aed"),                   // user-defined → inline style
+    ColorCompleted = _ => new PropertyColorBackground(TypeColorBackground.Success)  // system → CSS class
+}
+    .DataService<RestApiScrumTeam>();
+```

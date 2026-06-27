@@ -481,6 +481,21 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
+        /// Declares the standard data service of the scrum velocity chart, which
+        /// loads the recent sprints with their committed and completed story
+        /// points with GET.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The scrum velocity control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataScrumVelocity DataService<TEndpoint>(this ControlDataScrumVelocity control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), configure);
+        }
+
+        /// <summary>
         /// Declares the standard data service of the table rest selection
         /// template, which queries the selectable items with GET.
         /// </summary>

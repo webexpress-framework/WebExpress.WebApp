@@ -8,20 +8,19 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Renders the host element for a scrum team workload row. The control only
-    /// emits the placeholder div; the avatar row of the people working in the
-    /// current sprint, the <c>+N</c> overflow chip and the modal that lists
-    /// every person with their story points as a table are built by the
-    /// client-side <c>webexpress.webapp.ScrumTeamCtrl</c>, which talks to the
-    /// configured data service to load the members. The layout mirrors
-    /// <see cref="ControlDataWatcher"/> so the two avatar surfaces read alike.
+    /// Renders the host element for a scrum velocity chart. The control only
+    /// emits the placeholder div; the bar chart of the last few sprints, drawn
+    /// from the completed story points per sprint with the committed points as a
+    /// backdrop and an average line, is built by the client-side
+    /// <c>webexpress.webapp.ScrumVelocityCtrl</c>, which talks to the configured
+    /// data service to load the sprint history.
     /// </summary>
-    public class ControlDataScrumTeam : Control, IControlDataScrumTeam, IDataIsland
+    public class ControlDataScrumVelocity : Control, IControlDataScrumVelocity, IDataIsland
     {
         /// <summary>
         /// Gets the data service descriptors of the control, emitted as
-        /// wx-service island elements. The data service loads the current
-        /// sprint's people and their story points.
+        /// wx-service island elements. The data service loads the recent sprints
+        /// with their committed and completed story points.
         /// </summary>
         public IList<Func<IRenderControlContext, DataServiceDescriptor>> ServiceFactories { get; } = [];
 
@@ -56,32 +55,36 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, DataState> StateFactory { get; set; }
 
         /// <summary>
-        /// Gets or sets the maximum number of people shown inline before they are
-        /// collapsed into a <c>+N</c> overflow chip. Defaults to <c>6</c> on the
-        /// client side when not provided.
+        /// Gets or sets the maximum number of most recent sprints rendered in the
+        /// chart. Defaults to <c>6</c> on the client side when not provided.
         /// </summary>
-        public Func<IRenderControlContext, int?> MaxVisible { get; set; }
+        public Func<IRenderControlContext, int?> MaxSprints { get; set; }
 
         /// <summary>
-        /// Gets or sets the color of the story point badge on each avatar. Accepts
-        /// a system color (emitted as a CSS class) or a user-defined color (emitted
+        /// Gets or sets the color of the completed (velocity) bars. Accepts a
+        /// system color (emitted as a CSS class) or a user-defined color (emitted
         /// as an inline style), exactly like a control button. When not set, the
         /// stylesheet default applies.
         /// </summary>
-        public Func<IRenderControlContext, PropertyColorBackground> ColorPoints { get; set; }
+        public Func<IRenderControlContext, PropertyColorBackground> ColorCompleted { get; set; }
 
         /// <summary>
-        /// Gets or sets the accent color of the completed story points in the
-        /// modal (the completed badge and the per-person completion bar). When not
-        /// set, the stylesheet default applies.
+        /// Gets or sets the color of the committed backdrop bars. When not set,
+        /// the stylesheet default applies.
         /// </summary>
-        public Func<IRenderControlContext, PropertyColorBackground> ColorCompleted { get; set; }
+        public Func<IRenderControlContext, PropertyColorBackground> ColorCommitted { get; set; }
+
+        /// <summary>
+        /// Gets or sets the color of the average line. When not set, the
+        /// stylesheet default applies.
+        /// </summary>
+        public Func<IRenderControlContext, PropertyColorBackground> ColorAverage { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">Optional host element id.</param>
-        public ControlDataScrumTeam(string id = null)
+        public ControlDataScrumVelocity(string id = null)
             : base(id)
         {
         }
@@ -100,23 +103,26 @@ namespace WebExpress.WebApp.WebControl
                 return null;
             }
 
-            var maxVisible = MaxVisible?.Invoke(renderContext);
-            var colorPoints = ColorPoints?.Invoke(renderContext);
+            var maxSprints = MaxSprints?.Invoke(renderContext);
             var colorCompleted = ColorCompleted?.Invoke(renderContext);
+            var colorCommitted = ColorCommitted?.Invoke(renderContext);
+            var colorAverage = ColorAverage?.Invoke(renderContext);
 
             return new HtmlElementTextContentDiv()
             {
                 Id = Id,
-                Class = Css.Concatenate("wx-webapp-scrum-team", GetClasses(renderContext)),
+                Class = Css.Concatenate("wx-webapp-scrum-velocity", GetClasses(renderContext)),
                 Style = GetStyles(renderContext),
                 Role = Role?.Invoke(renderContext)
             }
                 .EmitDataIslands(this, renderContext)
-                .AddUserAttribute("data-max-visible", maxVisible?.ToString())
-                .AddUserAttribute("data-color-points-css", colorPoints?.ToClass())
-                .AddUserAttribute("data-color-points-style", colorPoints?.ToStyle())
+                .AddUserAttribute("data-max-sprints", maxSprints?.ToString())
                 .AddUserAttribute("data-color-completed-css", colorCompleted?.ToClass())
-                .AddUserAttribute("data-color-completed-style", colorCompleted?.ToStyle());
+                .AddUserAttribute("data-color-completed-style", colorCompleted?.ToStyle())
+                .AddUserAttribute("data-color-committed-css", colorCommitted?.ToClass())
+                .AddUserAttribute("data-color-committed-style", colorCommitted?.ToStyle())
+                .AddUserAttribute("data-color-average-css", colorAverage?.ToClass())
+                .AddUserAttribute("data-color-average-style", colorAverage?.ToStyle());
         }
     }
 }

@@ -38,6 +38,14 @@ webexpress.webapp.ScrumTeamCtrl = class extends webexpress.webapp.Data {
         this._maxVisible = parseInt(element.dataset.maxVisible || "6", 10);
         this._service = this.useService("data");
 
+        // the avatar badge and the completed accent colors are authored in C# and
+        // emitted either as a CSS class (system color) or an inline style
+        // (user-defined color); both paths are honored when painting
+        this._colors = {
+            points: this._readColor(element, "color-points"),
+            completed: this._readColor(element, "color-completed")
+        };
+
         // clean host
         element.textContent = "";
         element.removeAttribute("data-max-visible");
@@ -190,6 +198,7 @@ webexpress.webapp.ScrumTeamCtrl = class extends webexpress.webapp.Data {
         const badge = document.createElement("span");
         badge.className = "wx-scrum-team-badge";
         badge.textContent = String(member.points);
+        this._applyColor(badge, this._colors.points);
         av.appendChild(badge);
 
         av.addEventListener("click", () => this._openModal());
@@ -346,6 +355,7 @@ webexpress.webapp.ScrumTeamCtrl = class extends webexpress.webapp.Data {
 
         const fill = document.createElement("span");
         fill.style.width = pct + "%";
+        this._applyColor(fill, this._colors.completed);
         bar.appendChild(fill);
 
         return bar;
@@ -379,9 +389,59 @@ webexpress.webapp.ScrumTeamCtrl = class extends webexpress.webapp.Data {
         const badge = document.createElement("span");
         badge.className = "wx-scrum-team-points-badge" + (variant ? " " + variant : "");
         badge.textContent = String(points);
+        if (variant === "done") {
+            this._applyColor(badge, this._colors.completed);
+        }
         td.appendChild(badge);
 
         return td;
+    }
+
+    /**
+     * Reads a user-definable color authored on the host as a `data-{name}-css`
+     * class (system color) and a `data-{name}-style` inline declaration
+     * (user-defined color), removing the source attributes so the host is left
+     * clean after the configuration has been consumed.
+     * @param {HTMLElement} element - The host element.
+     * @param {string} name - The attribute base name, for example "color-points".
+     * @returns {{css: (string|null), style: (string|null)}} The color descriptor.
+     */
+    _readColor(element, name) {
+        const cssAttr = "data-" + name + "-css";
+        const styleAttr = "data-" + name + "-style";
+
+        const color = {
+            css: element.getAttribute(cssAttr) || null,
+            style: element.getAttribute(styleAttr) || null
+        };
+
+        element.removeAttribute(cssAttr);
+        element.removeAttribute(styleAttr);
+
+        return color;
+    }
+
+    /**
+     * Applies a color descriptor to an element, preferring the CSS class and
+     * falling back to the inline style declaration. A null or empty descriptor
+     * leaves the element's stylesheet default untouched.
+     * @param {HTMLElement} element - The target element.
+     * @param {{css: (string|null), style: (string|null)}} color - The descriptor.
+     */
+    _applyColor(element, color) {
+        if (!element || !color) {
+            return;
+        }
+
+        if (color.css) {
+            for (const cls of color.css.split(/\s+/)) {
+                if (cls) {
+                    element.classList.add(cls);
+                }
+            }
+        } else if (color.style) {
+            element.style.cssText += ";" + color.style;
+        }
     }
 
     /**

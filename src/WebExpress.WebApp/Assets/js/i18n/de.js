@@ -199,6 +199,14 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "scrum.team.empty": "Keine Personen in diesem Sprint.",
     "scrum.team.show_all": "Alle Personen anzeigen",
 
+    // scrum velocity
+    "scrum.velocity.title": "Velocity",
+    "scrum.velocity.average": "Durchschnitt",
+    "scrum.velocity.committed": "Geplant",
+    "scrum.velocity.completed": "Erledigt",
+    "scrum.velocity.points_abbr": "Pkt.",
+    "scrum.velocity.empty": "Noch keine abgeschlossenen Sprints.",
+
     // watcher
     "watcher.title": "Beobachter",
     "watcher.add": "Beobachter hinzufügen",
