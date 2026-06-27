@@ -102,7 +102,13 @@ class Element {
     replaceChildren(...nodes) {
         this.childNodes.forEach((n) => { n.parentNode = null; });
         this.childNodes = [];
-        for (const node of nodes) { this.appendChild(node); }
+        for (const node of nodes) { this.appendChild(typeof node === "string" ? new TextNode(node) : node); }
+    }
+
+    append(...nodes) {
+        for (const node of nodes) {
+            this.appendChild(typeof node === "string" ? new TextNode(node) : node);
+        }
     }
 
     replaceChild(newNode, oldNode) {

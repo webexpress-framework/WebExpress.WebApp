@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using WebExpress.WebApp.WebData;
 using WebExpress.WebCore.Internationalization;
@@ -117,6 +118,14 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, DataState> StateFactory { get; set; }
 
         /// <summary>
+        /// Gets or sets the optional story-point estimation scale offered in the
+        /// assign/estimate dialog, emitted as the comma separated
+        /// data-estimation-scale attribute. When not set, the client falls back to
+        /// a rounded Fibonacci sequence.
+        /// </summary>
+        public Func<IRenderControlContext, IEnumerable<int>> EstimationScale { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The control id.</param>
@@ -136,6 +145,7 @@ namespace WebExpress.WebApp.WebControl
             var title = Title?.Invoke(renderContext);
             var selectable = Selectable?.Invoke(renderContext) ?? true;
             var @readonly = Readonly?.Invoke(renderContext) ?? false;
+            var scale = EstimationScale?.Invoke(renderContext);
 
             var html = new HtmlElementTextContentDiv()
             {
@@ -155,6 +165,7 @@ namespace WebExpress.WebApp.WebControl
                 .AddUserAttribute("data-icon-complete-sprint", IconCompleteSprint?.Invoke(renderContext))
                 .AddUserAttribute("data-icon-edit-sprint", IconEditSprint?.Invoke(renderContext))
                 .AddUserAttribute("data-icon-delete-sprint", IconDeleteSprint?.Invoke(renderContext))
+                .AddUserAttribute("data-estimation-scale", scale != null && scale.Any() ? string.Join(",", scale) : null)
                 .EmitDataIslands(this, renderContext);
 
             return html;

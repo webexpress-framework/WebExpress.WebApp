@@ -285,6 +285,45 @@ namespace WebExpress.WebApp.WebRestApi
                     }
                 }
 
+                if (routeSegments.Count == 2 && EqualsSegment(routeSegments[0], "items"))
+                {
+                    var itemId = routeSegments[1];
+                    if (!Guid.TryParse(itemId, out var itemGuid))
+                    {
+                        return new ResponseNotFound(new StatusMessage("Item not found."));
+                    }
+
+                    using var context = CreateContext();
+                    var item = RetrieveItems(new Query<TIndexItem>(), context, request)
+                        .FirstOrDefault(x => x.Id == itemGuid);
+
+                    if (item == null)
+                    {
+                        return new ResponseNotFound(new StatusMessage("Item not found."));
+                    }
+
+                    var payload = GetPayload<RestApiScrumItemPayload>(request);
+                    if (payload is null)
+                    {
+                        return new ResponseBadRequest(new StatusMessage("Invalid item payload."));
+                    }
+
+                    var validation = ValidateItem(item, payload, request);
+                    if (!validation.IsValid)
+                    {
+                        return ToValidationResponse(validation);
+                    }
+
+                    lock (_syncRoot)
+                    {
+                        var result = UpdateItem(item, payload, request);
+
+                        NotifyDomain(item);
+
+                        return result?.ToResponse() ?? new ResponseBadRequest(new StatusMessage("Update failed."));
+                    }
+                }
+
                 return new ResponseNotFound();
             }
             catch (Exception ex)
@@ -462,6 +501,26 @@ namespace WebExpress.WebApp.WebRestApi
         }
 
         /// <summary>
+        /// Validates the specified item assignment/estimation payload.
+        /// </summary>
+        /// <param name="existingItem">
+        /// The existing item.
+        /// </param>
+        /// <param name="payload">
+        /// The item payload to validate.
+        /// </param>
+        /// <param name="request">
+        /// The current request context.
+        /// </param>
+        /// <returns>
+        /// An object representing the validation result.
+        /// </returns>
+        protected virtual IRestApiValidationResult ValidateItem(TIndexItem existingItem, RestApiScrumItemPayload payload, IRequest request)
+        {
+            return new RestApiValidationResult();
+        }
+
+        /// <summary>
         /// Creates a new sprint.
         /// </summary>
         /// <param name="payload">
@@ -541,6 +600,26 @@ namespace WebExpress.WebApp.WebRestApi
         /// The update result.
         /// </returns>
         protected virtual IRestApiCrudResultUpdate RankItem(TIndexItem existingItem, RestApiScrumRankPayload payload, IRequest request)
+        {
+            return new RestApiCrudResultUpdate();
+        }
+
+        /// <summary>
+        /// Updates the assignment and the story-point estimate of the specified item.
+        /// </summary>
+        /// <param name="existingItem">
+        /// The item to update.
+        /// </param>
+        /// <param name="payload">
+        /// The item payload carrying the new assignee and estimate.
+        /// </param>
+        /// <param name="request">
+        /// The current request context.
+        /// </param>
+        /// <returns>
+        /// The update result.
+        /// </returns>
+        protected virtual IRestApiCrudResultUpdate UpdateItem(TIndexItem existingItem, RestApiScrumItemPayload payload, IRequest request)
         {
             return new RestApiCrudResultUpdate();
         }

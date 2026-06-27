@@ -95,6 +95,30 @@ const BOOTSTRAP = `
     // (the dispatched type is simply undefined, which the stub element ignores).
     webexpress.webui.Event = {};
     webexpress.webapp.Event = {};
+    // a faithful minimal copy of the webexpress.webui.Icon factory so control
+    // files that build their icons through it can be instantiated in the harness;
+    // the css-versus-image decision itself is covered by the WebUI icon tests.
+    webexpress.webui.Icon = {
+        create(spec, extraClass) {
+            var value = (spec || "").trim();
+            if (!value) { return null; }
+            var extra = (extraClass || "").trim();
+            if (this._isImage(value)) {
+                var img = document.createElement("img");
+                img.className = ("wx-icon-img " + extra).trim();
+                img.src = value;
+                img.alt = "";
+                return img;
+            }
+            var i = document.createElement("i");
+            i.className = (value + " " + extra).trim();
+            return i;
+        },
+        _isImage(value) {
+            return /^(https?:|data:|\\.{0,2}\\/)/i.test(value)
+                || /\\.(svg|png|jpe?g|gif|webp|ico|bmp|avif)(\\?.*)?$/i.test(value);
+        }
+    };
 `;
 
 /**

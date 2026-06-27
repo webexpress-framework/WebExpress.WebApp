@@ -189,6 +189,14 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "scrum.field.capacity": "Capacity (pts)",
     "scrum.dialog.create": "Create",
 
+    // scrum item assignment & estimation
+    "scrum.menu.assign": "Assign & estimate…",
+    "scrum.dialog.assign_estimate": "Assign & estimate",
+    "scrum.field.assignee": "Assignee",
+    "scrum.field.points": "Story points",
+    "scrum.assignee.unassigned": "Unassigned",
+    "scrum.assignee.search": "Search people…",
+
     // scrum team workload
     "scrum.team.title": "Sprint team",
     "scrum.team.person": "Person",

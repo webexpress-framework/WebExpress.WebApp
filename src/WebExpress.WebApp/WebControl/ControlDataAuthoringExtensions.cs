@@ -257,6 +257,20 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
+        /// Declares the users service of the scrum backlog, which resolves the
+        /// candidate assignees with GET when an item is assigned.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The scrum backlog control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataScrumBacklog UsersService<TEndpoint>(this ControlDataScrumBacklog control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, UsersPreset, Endpoint<TEndpoint>(), configure);
+        }
+
+        /// <summary>
         /// Declares the users service of the comment surface, which resolves
         /// mentioned users with GET.
         /// </summary>

@@ -56,5 +56,26 @@
         /// Gets or sets the rank associated with the current instance.
         /// </summary>
         public int Rank { get; set; }
+
+        /// <summary>
+        /// Gets or sets the id of the person the item is assigned to, or
+        /// <see langword="null"/> when the item is unassigned.
+        /// </summary>
+        public string AssigneeId { get; set; }
+
+        /// <summary>
+        /// Gets or sets the display name of the assignee.
+        /// </summary>
+        public string AssigneeName { get; set; }
+
+        /// <summary>
+        /// Gets or sets the short text shown inside the assignee avatar.
+        /// </summary>
+        public string AssigneeInitials { get; set; }
+
+        /// <summary>
+        /// Gets or sets the CSS color used as the assignee avatar background.
+        /// </summary>
+        public string AssigneeColor { get; set; }
     }
 }

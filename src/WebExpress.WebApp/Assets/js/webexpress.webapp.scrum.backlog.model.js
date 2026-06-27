@@ -81,6 +81,49 @@ webexpress.webapp.scrumBacklogModel = {
     },
 
     /**
+     * Builds the path segment used to update an item's assignment and estimate.
+     * @param {string} id - The item id.
+     * @returns {string} The path appended to the base uri.
+     */
+    itemPath(id) {
+        return "/items/" + encodeURIComponent(id);
+    },
+
+    /**
+     * Builds the request body for an item assignment/estimation update, dropping
+     * a missing estimate so the server keeps the existing one.
+     * @param {{assigneeId: *, points: *}} values - The new assignment and estimate.
+     * @returns {{assigneeId: (string|null), points: (number|undefined)}} The body.
+     */
+    itemBody(values) {
+        values = values || {};
+        // a null, undefined or empty estimate means "leave unchanged"
+        const hasPoints = values.points != null && values.points !== "";
+        const points = Math.trunc(Number(values.points));
+        return {
+            assigneeId: values.assigneeId || null,
+            points: hasPoints && Number.isFinite(points) && points >= 0 ? points : undefined
+        };
+    },
+
+    /**
+     * Parses a comma separated estimation scale into non-negative integers,
+     * falling back to a rounded Fibonacci sequence when none is supplied.
+     * @param {string} raw - The comma separated scale, for example "1,2,3,5,8".
+     * @returns {Array<number>} The estimation scale.
+     */
+    estimationScale(raw) {
+        const fallback = [0, 1, 2, 3, 5, 8, 13, 20, 40, 100];
+        if (typeof raw !== "string" || raw.trim() === "") {
+            return fallback;
+        }
+        const values = raw.split(",")
+            .map((s) => parseInt(s.trim(), 10))
+            .filter((n) => Number.isFinite(n) && n >= 0);
+        return values.length > 0 ? values : fallback;
+    },
+
+    /**
      * Builds the request body for a batched item rank update.
      * @param {Array<object>} items - The items to persist.
      * @returns {{ranks: Array<object>}} The body.

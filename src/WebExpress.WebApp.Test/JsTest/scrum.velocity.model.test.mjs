@@ -15,12 +15,9 @@ import { test } from "node:test";
 import assert from "node:assert";
 import { loadEngine, webappAsset } from "./harness.mjs";
 
-// the velocity model lives in the control file (no separate module), so the
-// helpers are exercised by loading the control; the class definition only needs
-// the engine, which the harness already provides
 function load(options) {
     return loadEngine(Object.assign(
-        { extraFiles: [webappAsset("webexpress.webapp.scrum.velocity.js")] },
+        { extraFiles: [webappAsset("webexpress.webapp.scrum.velocity.model.js")] },
         options
     ));
 }
@@ -28,7 +25,7 @@ function load(options) {
 test("normalize list completes each sprint and defaults to empty", () => {
     const { wxapp } = load();
 
-    const normalized = wxapp.ScrumVelocityCtrl._normalizeList([{ id: 1, name: "Sprint 1", committed: 30, completed: 24 }]);
+    const normalized = wxapp.scrumVelocityModel.normalizeList([{ id: 1, name: "Sprint 1", committed: 30, completed: 24 }]);
     assert.deepEqual(normalized, [{
         id: "1",
         name: "Sprint 1",
@@ -36,45 +33,45 @@ test("normalize list completes each sprint and defaults to empty", () => {
         completed: 24
     }]);
 
-    assert.deepEqual(wxapp.ScrumVelocityCtrl._normalizeList(null), []);
-    assert.deepEqual(wxapp.ScrumVelocityCtrl._normalizeList({ id: "a" }), []);
+    assert.deepEqual(wxapp.scrumVelocityModel.normalizeList(null), []);
+    assert.deepEqual(wxapp.scrumVelocityModel.normalizeList({ id: "a" }), []);
 });
 
 test("normalize sprint coerces malformed points to zero and accepts aliases", () => {
     const { wxapp } = load();
 
-    assert.equal(wxapp.ScrumVelocityCtrl._normalizeSprint({ name: "X", completed: -4 }).completed, 0);
-    assert.equal(wxapp.ScrumVelocityCtrl._normalizeSprint({ name: "X", completed: "nope" }).completed, 0);
-    assert.equal(wxapp.ScrumVelocityCtrl._normalizeSprint({ name: "X", completed: 21.8 }).completed, 21);
-    assert.equal(wxapp.ScrumVelocityCtrl._normalizeSprint({ committedPoints: 40, completedPoints: 33 }).committed, 40);
-    assert.equal(wxapp.ScrumVelocityCtrl._normalizeSprint({ committedPoints: 40, completedPoints: 33 }).completed, 33);
-    assert.equal(wxapp.ScrumVelocityCtrl._normalizeSprint(null).name, "");
+    assert.equal(wxapp.scrumVelocityModel.normalizeSprint({ name: "X", completed: -4 }).completed, 0);
+    assert.equal(wxapp.scrumVelocityModel.normalizeSprint({ name: "X", completed: "nope" }).completed, 0);
+    assert.equal(wxapp.scrumVelocityModel.normalizeSprint({ name: "X", completed: 21.8 }).completed, 21);
+    assert.equal(wxapp.scrumVelocityModel.normalizeSprint({ committedPoints: 40, completedPoints: 33 }).committed, 40);
+    assert.equal(wxapp.scrumVelocityModel.normalizeSprint({ committedPoints: 40, completedPoints: 33 }).completed, 33);
+    assert.equal(wxapp.scrumVelocityModel.normalizeSprint(null).name, "");
 });
 
 test("last n keeps the trailing slice in order", () => {
     const { wxapp } = load();
     const sprints = [{ name: "1" }, { name: "2" }, { name: "3" }, { name: "4" }, { name: "5" }];
 
-    assert.deepEqual(wxapp.ScrumVelocityCtrl._lastN(sprints, 3).map(s => s.name), ["3", "4", "5"]);
+    assert.deepEqual(wxapp.scrumVelocityModel.lastN(sprints, 3).map(s => s.name), ["3", "4", "5"]);
     // a non-positive or oversized count returns the whole list
-    assert.deepEqual(wxapp.ScrumVelocityCtrl._lastN(sprints, 0).map(s => s.name), ["1", "2", "3", "4", "5"]);
-    assert.deepEqual(wxapp.ScrumVelocityCtrl._lastN(sprints, 99).map(s => s.name), ["1", "2", "3", "4", "5"]);
-    assert.deepEqual(wxapp.ScrumVelocityCtrl._lastN(null, 3), []);
+    assert.deepEqual(wxapp.scrumVelocityModel.lastN(sprints, 0).map(s => s.name), ["1", "2", "3", "4", "5"]);
+    assert.deepEqual(wxapp.scrumVelocityModel.lastN(sprints, 99).map(s => s.name), ["1", "2", "3", "4", "5"]);
+    assert.deepEqual(wxapp.scrumVelocityModel.lastN(null, 3), []);
 });
 
 test("average is the mean completed and tolerates empties", () => {
     const { wxapp } = load();
-    assert.equal(wxapp.ScrumVelocityCtrl._average([{ completed: 20 }, { completed: 30 }, { completed: 25 }]), 25);
-    assert.equal(wxapp.ScrumVelocityCtrl._average([{ completed: 10 }, { completed: 5 }]), 7.5);
-    assert.equal(wxapp.ScrumVelocityCtrl._average([]), 0);
-    assert.equal(wxapp.ScrumVelocityCtrl._average(null), 0);
+    assert.equal(wxapp.scrumVelocityModel.average([{ completed: 20 }, { completed: 30 }, { completed: 25 }]), 25);
+    assert.equal(wxapp.scrumVelocityModel.average([{ completed: 10 }, { completed: 5 }]), 7.5);
+    assert.equal(wxapp.scrumVelocityModel.average([]), 0);
+    assert.equal(wxapp.scrumVelocityModel.average(null), 0);
 });
 
 test("max value scales over committed and completed, never below one", () => {
     const { wxapp } = load();
-    assert.equal(wxapp.ScrumVelocityCtrl._maxValue([{ committed: 30, completed: 24 }, { committed: 28, completed: 31 }]), 31);
-    assert.equal(wxapp.ScrumVelocityCtrl._maxValue([{ committed: 0, completed: 0 }]), 1);
-    assert.equal(wxapp.ScrumVelocityCtrl._maxValue([]), 1);
+    assert.equal(wxapp.scrumVelocityModel.maxValue([{ committed: 30, completed: 24 }, { committed: 28, completed: 31 }]), 31);
+    assert.equal(wxapp.scrumVelocityModel.maxValue([{ committed: 0, completed: 0 }]), 1);
+    assert.equal(wxapp.scrumVelocityModel.maxValue([]), 1);
 });
 
 test("model loads the sprints through a service end to end", async () => {
@@ -98,8 +95,8 @@ test("model loads the sprints through a service end to end", async () => {
     const loaded = await service.query({});
     assert.equal(calls[0].method, "GET");
 
-    const sprints = wxapp.ScrumVelocityCtrl._normalizeList(loaded.data);
+    const sprints = wxapp.scrumVelocityModel.normalizeList(loaded.data);
     assert.deepEqual(sprints.map(s => s.id), ["s1", "s2"]);
-    assert.equal(wxapp.ScrumVelocityCtrl._average(sprints), 25.5);
-    assert.equal(wxapp.ScrumVelocityCtrl._maxValue(sprints), 30);
+    assert.equal(wxapp.scrumVelocityModel.average(sprints), 25.5);
+    assert.equal(wxapp.scrumVelocityModel.maxValue(sprints), 30);
 });

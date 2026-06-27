@@ -67,5 +67,10 @@ namespace WebExpress.WebApp.WebControl
         /// Gets the icon used for deleting a sprint.
         /// </summary>
         Func<IRenderControlContext, string> IconDeleteSprint { get; }
+
+        /// <summary>
+        /// Gets the story-point estimation scale offered in the assign/estimate dialog.
+        /// </summary>
+        Func<IRenderControlContext, System.Collections.Generic.IEnumerable<int>> EstimationScale { get; }
     }
 }

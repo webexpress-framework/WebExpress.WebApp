@@ -101,7 +101,7 @@ webexpress.webapp.WatcherCtrl = class extends webexpress.webapp.Data {
         this._addBtn.className = "wx-watcher-add";
         this._addBtn.title = this._i18n("webexpress.webapp:watcher.add", "Add watcher");
         this._addBtn.setAttribute("aria-label", this._addBtn.title);
-        this._addBtn.textContent = "+";
+        this._addBtn.appendChild(webexpress.webui.Icon.create("fas fa-plus"));
 
         this._dropdown = document.createElement("div");
         this._dropdown.className = "wx-watcher-dropdown";

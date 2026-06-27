@@ -59,6 +59,7 @@ test("paths build the sprint, item rank and batch endpoints", () => {
     assert.equal(wxapp.scrumBacklogModel.sprintPath("s 1"), "/sprints/s%201");
     assert.equal(wxapp.scrumBacklogModel.itemRankPath("i 1"), "/items/i%201/rank");
     assert.equal(wxapp.scrumBacklogModel.rankBatchPath(), "/items/rank-batch");
+    assert.equal(wxapp.scrumBacklogModel.itemPath("i 1"), "/items/i%201");
 });
 
 test("request bodies carry the rank payloads", () => {
@@ -69,6 +70,30 @@ test("request bodies carry the rank payloads", () => {
     const batch = wxapp.scrumBacklogModel.rankBatchBody([{ id: "i1", sprintId: "s1", rank: 1 }, { id: "i2", rank: 2 }]);
     assert.deepEqual(batch, { ranks: [{ id: "i1", sprintId: "s1", rank: 1 }, { id: "i2", sprintId: null, rank: 2 }] });
     assert.deepEqual(wxapp.scrumBacklogModel.rankBatchBody(null), { ranks: [] });
+});
+
+test("item body carries the assignment and clamps the estimate", () => {
+    const { wxapp } = load();
+    assert.deepEqual(wxapp.scrumBacklogModel.itemBody({ assigneeId: "guybrush", points: 8 }), { assigneeId: "guybrush", points: 8 });
+    // an empty assignee unassigns; a missing estimate is dropped so the server keeps it
+    assert.deepEqual(wxapp.scrumBacklogModel.itemBody({ assigneeId: "", points: null }), { assigneeId: null, points: undefined });
+    // negative or malformed estimates are dropped
+    assert.deepEqual(wxapp.scrumBacklogModel.itemBody({ assigneeId: "elaine", points: -3 }), { assigneeId: "elaine", points: undefined });
+    assert.deepEqual(wxapp.scrumBacklogModel.itemBody({ assigneeId: "elaine", points: "x" }), { assigneeId: "elaine", points: undefined });
+    assert.deepEqual(wxapp.scrumBacklogModel.itemBody(null), { assigneeId: null, points: undefined });
+});
+
+test("estimation scale parses the host value and falls back to fibonacci", () => {
+    const { wxapp } = load();
+    const fibonacci = [0, 1, 2, 3, 5, 8, 13, 20, 40, 100];
+
+    assert.deepEqual(wxapp.scrumBacklogModel.estimationScale("1, 2, 3, 5, 8"), [1, 2, 3, 5, 8]);
+    // missing, empty or all-invalid input falls back to the rounded fibonacci scale
+    assert.deepEqual(wxapp.scrumBacklogModel.estimationScale(undefined), fibonacci);
+    assert.deepEqual(wxapp.scrumBacklogModel.estimationScale("   "), fibonacci);
+    assert.deepEqual(wxapp.scrumBacklogModel.estimationScale("x, y"), fibonacci);
+    // negative and malformed entries are dropped, the rest are kept
+    assert.deepEqual(wxapp.scrumBacklogModel.estimationScale("0, -3, 5, foo, 13"), [0, 5, 13]);
 });
 
 test("items for sprint sorted filters by group and sorts by rank then key", () => {

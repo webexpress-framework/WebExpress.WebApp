@@ -112,7 +112,7 @@
 
 .wx-scrum-row {
     display: grid;
-    grid-template-columns: 24px 90px 1fr auto auto auto;
+    grid-template-columns: 24px 90px 1fr auto auto auto auto;
     gap: 0.75rem;
     align-items: center;
     padding: 0.5rem 0.875rem;
@@ -248,6 +248,24 @@
     text-align: center;
 }
 
+.wx-scrum-row .wx-scrum-assignee {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 9999px;
+    font-size: 0.62rem;
+    font-weight: 700;
+    color: #fff;
+    background: var(--bs-secondary, #6c757d);
+}
+
+.wx-scrum-row .wx-scrum-assignee-empty {
+    background: transparent;
+    border: 1px dashed var(--bs-border-color, #dee2e6);
+}
+
 .wx-scrum-row .wx-scrum-add-sprint {
     border: 1px solid var(--bs-border-color, #dee2e6);
     background: var(--bs-body-bg, #fff);
@@ -321,6 +339,126 @@
 [data-bs-theme="dark"] .wx-scrum-ctx-item:disabled {
     color: var(--bs-secondary-color, #adb5bd);
     opacity: 0.6;
+}
+
+/* --------------------------------------------------------------- assign & estimate dialog */
+/* the modal host is appended to the document body, so these selectors are not
+   nested under .wx-scrum-backlog */
+.wx-scrum-assignee-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.wx-scrum-assignee-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    border-radius: 9999px;
+    color: #fff;
+    font-weight: 700;
+    object-fit: cover;
+    background: var(--bs-secondary, #6c757d);
+}
+
+.wx-scrum-assignee-selected {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 40px;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 0.375rem;
+    background: var(--bs-tertiary-bg, #f8f9fa);
+}
+
+.wx-scrum-assignee-selected-empty {
+    color: var(--bs-secondary-color, #6c757d);
+    font-size: 0.85rem;
+}
+
+.wx-scrum-assignee-selected-avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 0.72rem;
+}
+
+.wx-scrum-assignee-selected-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.wx-scrum-assignee-clear {
+    margin-left: auto;
+    border: none;
+    background: transparent;
+    color: var(--bs-secondary-color, #6c757d);
+    line-height: 1;
+    padding: 0.2rem 0.35rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+}
+
+.wx-scrum-assignee-clear:hover {
+    color: var(--bs-danger, #dc3545);
+    background: rgba(220, 53, 69, 0.08);
+}
+
+.wx-scrum-assignee-results {
+    max-height: 220px;
+    overflow-y: auto;
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 0.375rem;
+}
+
+.wx-scrum-assignee-result {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    text-align: left;
+    border: none;
+    border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+    background: var(--bs-body-bg, #fff);
+    padding: 0.35rem 0.5rem;
+    cursor: pointer;
+}
+
+.wx-scrum-assignee-result:last-child {
+    border-bottom: none;
+}
+
+.wx-scrum-assignee-result:hover,
+.wx-scrum-assignee-result:focus-visible {
+    background: rgba(13, 110, 253, 0.08);
+}
+
+.wx-scrum-assignee-result-avatar {
+    width: 26px;
+    height: 26px;
+    font-size: 0.68rem;
+}
+
+.wx-scrum-assignee-result-body {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+    min-width: 0;
+}
+
+.wx-scrum-assignee-result-name {
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.wx-scrum-assignee-result-team {
+    font-size: 0.72rem;
+    color: var(--bs-secondary-color, #6c757d);
+}
+
+[data-bs-theme="dark"] .wx-scrum-assignee-result {
+    background: var(--bs-body-bg, #1d1f23);
 }
 
 /* --------------------------------------------------------------- sprint overview */
