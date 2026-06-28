@@ -15,8 +15,22 @@ namespace WebExpress.WebApp.WebControl
     /// which talks to the configured REST endpoint to load, post, edit,
     /// delete, like, pin and reply to comments.
     /// </summary>
-    public class ControlDataComment : Control, IDataIsland
+    public class ControlDataComment : Control, IDataIsland, IScopeBound
     {
+
+        /// <summary>
+        /// Gets or sets the name of the enclosing scope resource the comments
+        /// render. When set, the comments are a central resource the scope
+        /// ViewState owns; when null, the control owns its state and service
+        /// islands and loads itself.
+        /// </summary>
+        public Func<IRenderControlContext, string> Resource { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional scope id the control binds to. When null, it
+        /// resolves the nearest enclosing scope by ancestry.
+        /// </summary>
+        public Func<IRenderControlContext, string> Scope { get; set; }
 
         /// <summary>
         /// Gets or sets the id of the currently signed-in user. It is used

@@ -89,12 +89,12 @@ Object.defineProperty(NodeType, Symbol.hasInstance, {
 // the WebApp engine, in the load order the IncludeJavaScript attributes use
 const WEBAPP_ENGINE = [
     "webexpress.webapp.js",
-    "webexpress.webapp.store.js",
     "webexpress.webapp.service.js",
     "webexpress.webapp.renderer.js",
     "webexpress.webapp.template.js",
     "webexpress.webapp.intent.js",
     "webexpress.webapp.data.js",
+    "webexpress.webapp.viewstate.js",
     "service/default.js",
     "intent/default.js",
     "bind/default.js"

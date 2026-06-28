@@ -7,6 +7,7 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
 
     _restUri = "";
     _abortController = null;
+    _viewState = null;
 
     /**
      * Initializes the REST Dashboard control.
@@ -19,6 +20,11 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
 
         super(element);
 
+        // the resource a scope renders. when present, the dashboard is a pure
+        // view of a central resource the enclosing scope owns; when absent it
+        // loads itself (standalone).
+        this._resource = (element.dataset && element.dataset.wxResource) || null;
+
         // the load keeps its own abort and loading state through the shared
         // request; the layout state save flows through this rest service
         this._service = islandServices.data;
@@ -26,9 +32,54 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
 
         this._initRestPersistence(element);
 
-        if (this._restUri) {
+        if (this._resource) {
+            // scope mode: the enclosing scope loads the resource centrally
+            this._attachToScope(element);
+        } else if (this._restUri) {
             this._receiveData();
         }
+    }
+
+    /**
+     * Attaches the dashboard to the enclosing scope ViewState and renders its
+     * resource slice. The scope owns the service and the central load, so the
+     * dashboard re-renders whenever the scope re-queries the resource, while
+     * layout changes still persist through the scope's update service.
+     * @param {HTMLElement} element The host element.
+     */
+    _attachToScope(element) {
+        const viewId = (element.dataset && element.dataset.wxView) || null;
+
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewId, (viewState) => {
+            this._viewState = viewState;
+
+            const serviceName = (element.dataset && element.dataset.wxService) || "data";
+            const service = viewState.useService(serviceName);
+            if (service) {
+                this._service = service;
+                this._restUri = service.baseUri;
+            }
+
+            const unsubscribe = viewState.watch((state) => state[this._resource], (slice) => this._applySlice(slice));
+            (element._wxCleanup = element._wxCleanup || []).push(unsubscribe);
+
+            this._applySlice(viewState.getState()[this._resource]);
+        });
+    }
+
+    /**
+     * Renders a resource slice the scope loaded centrally, normalising the raw
+     * dashboard payload exactly as the standalone load does.
+     * @param {object} slice The resource slice { items, total, data, loading, error }.
+     */
+    _applySlice(slice) {
+        slice = slice || {};
+
+        if (slice.data) {
+            this.updateData(slice.data);
+        }
+
+        this._element.classList.remove("placeholder-glow");
     }
 
     /**
@@ -137,6 +188,10 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
      * Forces an update of the control data from the server.
      */
     update() {
+        if (this._viewState) {
+            this._viewState.reload(this._resource);
+            return;
+        }
         if (this._restUri) {
             if (this._isVisible && this._isVisible()) {
                 this._receiveData();

@@ -7,6 +7,7 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
 
     // configuration
     _restUri = "";
+    _viewState = null;
 
     /**
      * Initializes the REST Kanban control.
@@ -20,11 +21,17 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
 
         super(element);
 
+        // the resource a scope renders. when present, the board is a pure view of
+        // a central resource the enclosing scope owns; when absent it owns its
+        // state and loads itself (standalone).
+        this._resource = (element.dataset && element.dataset.wxResource) || null;
+
         // canonical ui state: a single source of truth for the loading flag,
-        // seeded from the optional wx-state island
-        this._store = new webexpress.webapp.Store(Object.assign({
+        // seeded from the optional wx-state island. in scope mode this is
+        // replaced by the scope ViewState once it resolves.
+        this._store = new webexpress.webapp.ViewState(element, { standalone: true, state: Object.assign({
             loading: false
-        }, webexpress.webapp.Data.readState(element)));
+        }, webexpress.webapp.Data.readState(element)) });
 
         // data service from the wx-service island. its query loads the board,
         // its update persists changes.
@@ -34,9 +41,56 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
 
         this._initRestPersistence(element);
 
-        if (this._restUri) {
+        if (this._resource) {
+            // scope mode: the enclosing scope loads the resource centrally
+            this._attachToScope(element);
+        } else if (this._restUri) {
             this._receiveData();
         }
+    }
+
+    /**
+     * Attaches the board to the enclosing scope ViewState and renders its
+     * resource slice. The scope owns the state, the service and the central
+     * load, so the board re-renders whenever the scope re-queries the resource,
+     * while card moves still persist through the scope's update service.
+     * @param {HTMLElement} element The host element.
+     */
+    _attachToScope(element) {
+        const viewId = (element.dataset && element.dataset.wxView) || null;
+
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewId, (viewState) => {
+            this._viewState = viewState;
+            this._store = viewState;
+
+            const serviceName = (element.dataset && element.dataset.wxService) || "data";
+            const service = viewState.useService(serviceName);
+            if (service) {
+                this._service = service;
+                this._restUri = service.baseUri;
+            }
+
+            const unsubscribe = viewState.watch((state) => state[this._resource], (slice) => this._applySlice(slice));
+            (element._wxCleanup = element._wxCleanup || []).push(unsubscribe);
+
+            this._applySlice(viewState.getState()[this._resource]);
+        });
+    }
+
+    /**
+     * Renders a resource slice the scope loaded centrally, normalising the raw
+     * board payload exactly as the standalone load does.
+     * @param {object} slice The resource slice { items, total, data, loading, error }.
+     */
+    _applySlice(slice) {
+        slice = slice || {};
+
+        if (slice.data) {
+            this.updateData(slice.data);
+        }
+
+        this._element.classList.remove("placeholder-glow");
+        this._loading = false;
     }
 
     // loading flag accessor backed by the store, so the single source of truth
@@ -149,6 +203,10 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
      * Forces an update of the control data.
      */
     update() {
+        if (this._viewState) {
+            this._viewState.reload(this._resource);
+            return;
+        }
         if (this._restUri) {
             if (this._isVisible && this._isVisible()) {
                 this._receiveData();

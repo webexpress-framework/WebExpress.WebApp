@@ -6,9 +6,10 @@
  * - webexpress.webui.Event.DATA_ARRIVED_EVENT
  *
  * Phase two of the View, State and Service migration:
- * - the query, paging and result state is owned by a webexpress.webapp.Store,
- *   exposed through accessors so the inherited pager, sorting and persistence
- *   logic keeps working against a single source of truth
+ * - the query, paging and result state is owned by a standalone
+ *   webexpress.webapp.ViewState, exposed through accessors so the inherited
+ *   pager, sorting and persistence logic keeps working against a single source
+ *   of truth
  * - the data load and the layout state update go through a
  *   webexpress.webapp.RestService, configured from a data-wx-service island when
  *   present and otherwise from a legacy descriptor that reproduces the
@@ -20,6 +21,8 @@
 webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderable {
     // configuration
     _restUri = "";
+    _viewState = null;
+    _sliceTotal = 0;
 
     // view data
     _rows = {};
@@ -58,9 +61,15 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
 
         super(element);
 
+        // the resource a scope renders. when present, the table is a pure view
+        // of a central resource the enclosing scope owns; when absent it owns
+        // its state and loads itself (standalone).
+        this._resource = (element.dataset && element.dataset.wxResource) || null;
+
         // canonical state: a single source of truth that the accessors below
-        // read from and write to. seeded from the optional wx-state island.
-        this._store = new webexpress.webapp.Store(Object.assign({
+        // read from and write to. seeded from the optional wx-state island. in
+        // scope mode this is replaced by the scope ViewState once it resolves.
+        this._store = new webexpress.webapp.ViewState(element, { standalone: true, state: Object.assign({
             search: "",
             wql: "",
             filter: "",
@@ -71,7 +80,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
             total: 0,
             loading: false,
             error: null
-        }, webexpress.webapp.Data.readState(element)));
+        }, webexpress.webapp.Data.readState(element)) });
 
         // data service from the wx-service island
         const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
@@ -100,11 +109,62 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
         // initialize pager and info area
         this._initPager(element);
 
-        if (this._restUri) {
+        if (this._resource) {
+            // scope mode: the enclosing scope loads the resource centrally; this
+            // table only subscribes to its slice and renders it
+            this._attachToScope(element);
+        } else if (this._restUri) {
             this._load();
         } else {
             this._toggleProgress(false);
         }
+    }
+
+    /**
+     * Attaches the table to the enclosing scope ViewState and renders its
+     * resource slice. The scope owns the state, the service and the central
+     * load, so the table becomes a pure view: it subscribes to the slice and
+     * re-renders whenever the scope re-queries the resource. The shared scope
+     * state also becomes the table's store, so the search, paging and sort binds
+     * drive the same keys every control in the scope reads.
+     * @param {HTMLElement} element The host element.
+     */
+    _attachToScope(element) {
+        const viewId = (element.dataset && element.dataset.wxView) || null;
+
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewId, (viewState) => {
+            this._viewState = viewState;
+            this._store = viewState;
+
+            const serviceName = (element.dataset && element.dataset.wxService) || "data";
+            const service = viewState.useService(serviceName);
+            if (service) {
+                this._service = service;
+                this._restUri = service.baseUri;
+            }
+
+            const unsubscribe = viewState.watch((state) => state[this._resource], (slice) => this._applySlice(slice));
+            (element._wxCleanup = element._wxCleanup || []).push(unsubscribe);
+
+            this._applySlice(viewState.getState()[this._resource]);
+        });
+    }
+
+    /**
+     * Renders a resource slice the scope loaded centrally. The slice carries the
+     * raw response, which the table normalises into its columns and rows exactly
+     * as the standalone load does.
+     * @param {object} slice The resource slice { items, total, data, loading, error }.
+     */
+    _applySlice(slice) {
+        slice = slice || {};
+        this._sliceTotal = Number(slice.total) || 0;
+
+        if (slice.data) {
+            this.updateData(slice.data);
+        }
+
+        this._toggleProgress(false);
     }
 
     // state accessors backed by the store, so the single source of truth is the
@@ -132,7 +192,9 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
     get _orderDir() { return this._store.getState().orderDir; }
     set _orderDir(value) { this._store.setState({ orderDir: value }); }
 
-    get _totalRecords() { return this._store.getState().total; }
+    // in scope mode the total comes from the resource slice, not from a top
+    // level state key, so several resources in one scope keep separate totals
+    get _totalRecords() { return this._viewState ? this._sliceTotal : this._store.getState().total; }
     set _totalRecords(value) { this._store.setState({ total: value }); }
 
     get _isLoading() { return this._store.getState().loading; }
@@ -168,7 +230,9 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
                     this._orderDir = detail.sortDirection;
                     this._page = 0;
 
-                    if (this._restUri) {
+                    if (this._viewState) {
+                        this._viewState.reload(this._resource);
+                    } else if (this._restUri) {
                         this._load();
                     } else {
                         this._dispatch(webexpress.webui.Event.TABLE_SORT_EVENT, {
@@ -531,6 +595,10 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
      * Updates the control.
      */
     update() {
+        if (this._viewState) {
+            this._viewState.reload(this._resource);
+            return;
+        }
         if (this._restUri) {
             if (this._isVisible()) {
                 this._load();
@@ -553,6 +621,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
             payload: payload,
             services: { data: this._service },
             component: this,
+            viewState: this._viewState,
             element: this._element
         });
     }
@@ -563,6 +632,9 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
      * @returns {Promise<void>|undefined} Resolves when the load completes.
      */
     load() {
+        if (this._viewState) {
+            return this._viewState.reload(this._resource);
+        }
         if (this._restUri && this._isVisible()) {
             return this._load();
         }

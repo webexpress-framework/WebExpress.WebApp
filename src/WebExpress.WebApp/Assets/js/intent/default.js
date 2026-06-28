@@ -33,6 +33,38 @@ webexpress.webapp.Intents.register("wx/set", {
     }
 });
 
+// view/query - the scope level query intent. its reducer merges the payload
+// patch into the scope state (for example a new search term and a reset page),
+// and its effect re-queries the named resource through the scope ViewState, so
+// one control can change the shared state and trigger a central re-query that
+// every subscribing control re-renders from.
+webexpress.webapp.Intents.register("view/query", {
+    reduce(state, payload) {
+        return (payload && payload.patch && typeof payload.patch === "object") ? payload.patch : null;
+    },
+    effect(context) {
+        const resource = context.payload && context.payload.resource;
+        const viewState = context.viewState;
+        if (viewState && resource && typeof viewState.reload === "function") {
+            return viewState.reload(resource);
+        }
+        return undefined;
+    }
+});
+
+// view/reload - re-queries a resource without changing the scope state, for an
+// explicit refresh.
+webexpress.webapp.Intents.register("view/reload", {
+    effect(context) {
+        const resource = context.payload && context.payload.resource;
+        const viewState = context.viewState;
+        if (viewState && resource && typeof viewState.reload === "function") {
+            return viewState.reload(resource);
+        }
+        return undefined;
+    }
+});
+
 // the query intents of the data query control families (list, table, tile).
 // each reducer is a pure state transition and each effect triggers the load
 // through the dispatching component, so a test can dispatch an intent and

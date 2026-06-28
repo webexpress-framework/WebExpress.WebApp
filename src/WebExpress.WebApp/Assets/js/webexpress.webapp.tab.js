@@ -11,6 +11,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
 
     // configuration
     _restUri = "";
+    _viewState = null;
     _readonly = false;
     _movableTab = false;
     _templates = new Map();
@@ -38,12 +39,18 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         // initialize base class structure
         super(element);
 
+        // the resource a scope renders. when present, the tabs are a pure view
+        // of a central resource the enclosing scope owns; when absent the control
+        // owns its state and loads itself (standalone).
+        this._resource = (element.dataset && element.dataset.wxResource) || null;
+
         // canonical ui state: a single source of truth for the loading flag,
-        // seeded from the optional wx-state island
-        this._store = new webexpress.webapp.Store(Object.assign({
+        // seeded from the optional wx-state island. in scope mode this is
+        // replaced by the scope ViewState once it resolves.
+        this._store = new webexpress.webapp.ViewState(element, { standalone: true, state: Object.assign({
             loading: false,
             error: null
-        }, webexpress.webapp.Data.readState(element)));
+        }, webexpress.webapp.Data.readState(element)) });
 
         this._readonly = element.dataset.readonly === "true";
         this._movableTab = element.dataset.movableTab === "true";
@@ -74,7 +81,10 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
             this._initAddButton();
         }
 
-        if (this._restUri !== "") {
+        if (this._resource) {
+            // scope mode: the enclosing scope loads the resource centrally
+            this._attachToScope(element);
+        } else if (this._restUri !== "") {
             this._element.classList.add("placeholder-glow");
             this._receiveData();
         }
@@ -85,6 +95,51 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
 
     get _isLoading() { return this._store.getState().loading; }
     set _isLoading(value) { this._store.setState({ loading: value }); }
+
+    /**
+     * Attaches the tabs to the enclosing scope ViewState and renders its
+     * resource slice. The scope owns the state, the service and the central
+     * load, so the tab set re-renders whenever the scope re-queries the
+     * resource, while create, reorder and close still flow through the scope's
+     * service.
+     * @param {HTMLElement} element The host element.
+     */
+    _attachToScope(element) {
+        const viewId = (element.dataset && element.dataset.wxView) || null;
+
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewId, (viewState) => {
+            this._viewState = viewState;
+            this._store = viewState;
+
+            const serviceName = (element.dataset && element.dataset.wxService) || "data";
+            const service = viewState.useService(serviceName);
+            if (service) {
+                this._service = service;
+                this._restUri = service.baseUri;
+            }
+
+            const unsubscribe = viewState.watch((state) => state[this._resource], (slice) => this._applySlice(slice));
+            (element._wxCleanup = element._wxCleanup || []).push(unsubscribe);
+
+            this._applySlice(viewState.getState()[this._resource]);
+        });
+    }
+
+    /**
+     * Renders a resource slice the scope loaded centrally, mapping the raw tab
+     * payload into the tab set exactly as the standalone load does.
+     * @param {object} slice The resource slice { items, total, data, loading, error }.
+     */
+    _applySlice(slice) {
+        slice = slice || {};
+
+        if (slice.data) {
+            this.updateData(webexpress.webapp.tabModel.mapTabs(slice.data));
+        }
+
+        this._element.classList.remove("placeholder-glow");
+        this._isLoading = false;
+    }
 
     /**
      * Extracts template definitions from the element and removes them from the DOM.

@@ -12,12 +12,26 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// Represents a control panel for API list interactions.
     /// </summary>
-    public class ControlDataList : ControlList, IControlDataList, IDataIsland
+    public class ControlDataList : ControlList, IControlDataList, IDataIsland, IScopeBound
     {
         /// <summary>
         /// Gets or sets the binding.
         /// </summary>
         public Func<IRenderControlContext, IBinding> Bind { get; set; }
+
+        /// <summary>
+        /// Gets or sets the name of the enclosing scope resource the list
+        /// renders. When set, the list is a pure view of a central resource the
+        /// scope ViewState owns; when null, the list owns its state and service
+        /// islands and loads itself.
+        /// </summary>
+        public Func<IRenderControlContext, string> Resource { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional scope id the list binds to. When null, the
+        /// list resolves the nearest enclosing scope by ancestry.
+        /// </summary>
+        public Func<IRenderControlContext, string> Scope { get; set; }
 
         /// <summary>
         /// Gets the data service descriptors of the control, emitted together as

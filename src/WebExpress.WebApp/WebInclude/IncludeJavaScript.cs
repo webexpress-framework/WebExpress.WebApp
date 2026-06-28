@@ -12,12 +12,12 @@ namespace WebExpress.WebApp.WebInclude
     /// files required for the functionality of a web application.
     /// </remarks>
     [Asset("/assets/js/webexpress.webapp.js")]
-    [Asset("/assets/js/webexpress.webapp.store.js")]
     [Asset("/assets/js/webexpress.webapp.service.js")]
     [Asset("/assets/js/webexpress.webapp.renderer.js")]
     [Asset("/assets/js/webexpress.webapp.template.js")]
     [Asset("/assets/js/webexpress.webapp.intent.js")]
     [Asset("/assets/js/webexpress.webapp.data.js")]
+    [Asset("/assets/js/webexpress.webapp.viewstate.js")]
     [Asset("/assets/js/service/default.js")]
     [Asset("/assets/js/intent/default.js")]
     [Asset("/assets/js/bind/default.js")]

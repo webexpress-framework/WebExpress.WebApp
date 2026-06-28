@@ -55,6 +55,8 @@ class Element {
 
     get firstChild() { return this.childNodes[0] || null; }
 
+    get parentElement() { return this.parentNode && this.parentNode.nodeType === 1 ? this.parentNode : null; }
+
     get nodeName() { return this.tagName; }
 
     get innerText() { return this.textContent; }

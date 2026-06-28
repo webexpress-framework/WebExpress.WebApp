@@ -15,67 +15,9 @@ import { test } from "node:test";
 import assert from "node:assert";
 import { loadEngine, appendServiceIsland, appendStateIsland } from "./harness.mjs";
 
-// Store
-
-test("store applies a shallow patch and notifies once after flush", () => {
-    const { wxapp } = loadEngine();
-    const store = new wxapp.Store({ a: 1, b: 2 });
-
-    let calls = 0;
-    let last = null;
-    store.subscribe((state) => { calls += 1; last = state; });
-
-    store.setState({ a: 10 });
-    store.setState({ b: 20 });
-    store.flush();
-
-    assert.equal(calls, 1);
-    assert.deepEqual(last, { a: 10, b: 20 });
-    assert.equal(store.getState().a, 10);
-});
-
-test("store does not notify when nothing changes", () => {
-    const { wxapp } = loadEngine();
-    const store = new wxapp.Store({ a: 1 });
-
-    let calls = 0;
-    store.subscribe(() => { calls += 1; });
-
-    store.setState({ a: 1 });
-    store.flush();
-
-    assert.equal(calls, 0);
-});
-
-test("store watch fires only when the selected slice changes", () => {
-    const { wxapp } = loadEngine();
-    const store = new wxapp.Store({ a: 1, b: 1 });
-
-    let aCalls = 0;
-    store.watch((state) => state.a, () => { aCalls += 1; });
-
-    store.setState({ b: 2 });
-    store.flush();
-    assert.equal(aCalls, 0);
-
-    store.setState({ a: 5 });
-    store.flush();
-    assert.equal(aCalls, 1);
-});
-
-test("store registry reference counts shared stores", () => {
-    const { wxapp } = loadEngine();
-
-    const first = wxapp.StoreRegistry.acquire("x", { n: 0 });
-    const second = wxapp.StoreRegistry.acquire("x");
-    assert.equal(first, second);
-
-    wxapp.StoreRegistry.release("x");
-    assert.equal(wxapp.StoreRegistry.get("x"), first);
-
-    wxapp.StoreRegistry.release("x");
-    assert.equal(wxapp.StoreRegistry.get("x"), null);
-});
+// the observable state container (Store) was removed; the ViewState is now the
+// single state primitive and its patch, notify, watch and registry behaviour is
+// covered by viewstate.test.mjs.
 
 // Service
 
@@ -333,7 +275,7 @@ test("renderer removes stale nodes", () => {
 
 test("intent reducer applies a patch to the store", () => {
     const { wxapp } = loadEngine();
-    const store = new wxapp.Store({ count: 0 });
+    const store = new wxapp.ViewState(null, { standalone: true, state: { count: 0 } });
     wxapp.Intents.register("inc", { reduce: (state, payload) => ({ count: state.count + (payload || 1) }) });
 
     wxapp.Intents.dispatch("inc", { store, payload: 5 });
@@ -351,7 +293,7 @@ test("intent effect runs and can dispatch a follow up", () => {
     });
     wxapp.Intents.register("done", { reduce: (state, payload) => ({ loading: false, ok: payload.ok }) });
 
-    const store = new wxapp.Store({ loading: false });
+    const store = new wxapp.ViewState(null, { standalone: true, state: { loading: false } });
     wxapp.Intents.dispatch("load", { store });
 
     assert.equal(effectRan, true);
@@ -361,7 +303,7 @@ test("intent effect runs and can dispatch a follow up", () => {
 
 test("intent dispatch of an unknown intent does not throw", () => {
     const { wxapp } = loadEngine();
-    assert.doesNotThrow(() => wxapp.Intents.dispatch("nope", { store: new wxapp.Store({}) }));
+    assert.doesNotThrow(() => wxapp.Intents.dispatch("nope", { store: new wxapp.ViewState(null, { standalone: true, state: {} }) }));
 });
 
 // Component
@@ -710,7 +652,7 @@ test("query intents reduce state and trigger the load for list, table and tile",
     const { wxapp } = loadEngine();
 
     for (const domain of ["list", "table", "tile"]) {
-        const store = new wxapp.Store({ search: "", wql: "", filter: "", page: 3 });
+        const store = new wxapp.ViewState(null, { standalone: true, state: { search: "", wql: "", filter: "", page: 3 } });
         let loads = 0;
         const component = { load() { loads += 1; } };
 

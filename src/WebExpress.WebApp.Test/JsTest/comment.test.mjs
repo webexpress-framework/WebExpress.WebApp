@@ -12,7 +12,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert";
-import { loadEngine, webappAsset, appendServiceIsland, appendStateIsland } from "./harness.mjs";
+import { loadEngine, webappAsset, appendServiceIsland, appendStateIsland, appendResourceIsland } from "./harness.mjs";
 
 function load(options) {
     return loadEngine(Object.assign(
@@ -54,6 +54,35 @@ test("comment extends the component base", () => {
 
     assert.ok(ctrl instanceof wxapp.Data);
     assert.equal(typeof ctrl.store, "object");
+});
+
+test("comment in a scope renders the central comments resource the scope loads", async () => {
+    const { wxapp, createElement, setFetch, document } = load();
+    let fetchCount = 0;
+    setFetch(async () => {
+        fetchCount++;
+        return { ok: true, status: 200, headers: { get: () => "application/json" }, json: async () => [SEED_COMMENT] };
+    });
+
+    const scopeHost = createElement("div");
+    scopeHost.dataset.wxScope = "discussion";
+    appendServiceIsland(document, scopeHost, { name: "data", kind: "rest", baseUri: "/api/comments", method: "GET", updateMethod: "PUT" });
+    appendResourceIsland(document, scopeHost, { name: "comments", service: "data", target: "comments", params: [] });
+
+    const viewState = new wxapp.ViewState(scopeHost);
+
+    const commentHost = createElement("div");
+    commentHost.dataset.wxResource = "comments";
+    commentHost.dataset.categories = PRESET_CATEGORIES;
+    scopeHost.appendChild(commentHost);
+
+    const ctrl = new wxapp.CommentCtrl(commentHost);
+    await settle();
+    await settle();
+
+    assert.equal(fetchCount, 1, "the scope loaded the comments resource centrally");
+    assert.equal(ctrl.value.length, 1, "the control renders the comments from the slice");
+    assert.equal(ctrl.value[0].id, "c1");
 });
 
 test("comment seeds its comments from the wx-state island and skips the load", async () => {

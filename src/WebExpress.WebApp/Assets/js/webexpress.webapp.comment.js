@@ -138,6 +138,13 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
         this._service = this.useService("data");
         this._uri = this._service ? this._service.baseUri : null;
 
+        // the resource a scope renders. when present, the comments themselves are
+        // a central resource the enclosing scope owns and loads; this control
+        // still keeps its own store for the local toolbar state (sort, filter,
+        // edit), which is per-control and must not be shared across the scope.
+        this._resource = (element.dataset && element.dataset.wxResource) || null;
+        this._viewState = null;
+
         // data and caches (view state, not part of the store)
         this._comments = [];
         this._editorEditRef = null; // EditorCtrl instance while editing
@@ -175,6 +182,15 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
      * provided declaratively) and then performs the initial comment load.
      */
     async _init() {
+        // scope mode: the enclosing scope owns the comments resource. resolve the
+        // scope first, take its data service for the categories and the
+        // mutations, then render the resource slice instead of loading the
+        // comments here.
+        if (this._resource) {
+            await this._attachToScope();
+            return;
+        }
+
         if (!this._categoriesPreset) {
             await this._loadCategories();
         }
@@ -191,6 +207,69 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
         } else {
             await this._load();
         }
+    }
+
+    /**
+     * Resolves the enclosing scope ViewState, adopts its data service, loads the
+     * categories through it and subscribes to the comments resource slice, so the
+     * comments are loaded once by the scope and the control re-renders from the
+     * shared slice while its mutations still flow through the scope service.
+     * @returns {Promise<void>} Resolves once the scope is attached.
+     */
+    async _attachToScope() {
+        const element = this._element;
+        const viewId = (element.dataset && element.dataset.wxView) || null;
+
+        const viewState = await new Promise((resolve) => {
+            webexpress.webapp.ViewStateRegistry.whenReady(element, viewId, resolve);
+        });
+
+        this._viewState = viewState;
+
+        const serviceName = (element.dataset && element.dataset.wxService) || "data";
+        const service = viewState.useService(serviceName);
+        if (service) {
+            this._service = service;
+            this._uri = service.baseUri;
+        }
+
+        // secondary services (mention resolution, inline image upload) also come
+        // from the scope in scope mode, since the control emits no islands of its own
+        const usersService = viewState.useService("users");
+        if (usersService) {
+            this._usersUri = usersService.baseUri;
+        }
+        const uploadService = viewState.useService("upload");
+        if (uploadService) {
+            this._imageUploadUri = uploadService.baseUri;
+        }
+
+        if (!this._categoriesPreset) {
+            await this._loadCategories();
+        }
+        this._rebuildFilterOptions();
+
+        const unsubscribe = viewState.watch((state) => state[this._resource], (slice) => this._applySlice(slice));
+        (element._wxCleanup = element._wxCleanup || []).push(unsubscribe);
+
+        this._applySlice(viewState.getState()[this._resource]);
+    }
+
+    /**
+     * Renders a comments resource slice the scope loaded centrally. The comments
+     * arrive as the raw response array; the toolbar and edit state stay in this
+     * control's own store.
+     * @param {object} slice The resource slice { items, total, data, loading, error }.
+     */
+    _applySlice(slice) {
+        slice = slice || {};
+        const data = slice.data;
+        this._comments = Array.isArray(data) ? data : (Array.isArray(slice.items) ? slice.items : []);
+
+        this._preloadUsers().then(() => {
+            this._rebuildFilterOptions();
+            this._renderList();
+        });
     }
 
     /**

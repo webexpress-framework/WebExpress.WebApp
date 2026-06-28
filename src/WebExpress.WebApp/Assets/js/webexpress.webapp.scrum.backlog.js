@@ -7,6 +7,7 @@
 webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
 
     _restUri = null;
+    _viewState = null;
     _title = null;
     _sprints = [];
     _items = [];
@@ -46,6 +47,11 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
 
         this._service = this.useService("data");
         this._restUri = this._service ? this._service.baseUri : null;
+
+        // the resource a scope renders. when present, the backlog data is a
+        // central resource the enclosing scope owns and loads; selection and
+        // drag state stay local to this control.
+        this._resource = (element.dataset && element.dataset.wxResource) || null;
 
         // optional users service backing the assignee picker
         this._users = this.useService("users");
@@ -94,7 +100,10 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
         // render it without a round trip; otherwise load from the endpoint or
         // parse the inline static configuration
         const seeded = this.state;
-        if ((Array.isArray(seeded.sprints) && seeded.sprints.length > 0)
+        if (this._resource) {
+            // scope mode: the enclosing scope loads the backlog resource centrally
+            this._attachToScope(element);
+        } else if ((Array.isArray(seeded.sprints) && seeded.sprints.length > 0)
             || (Array.isArray(seeded.items) && seeded.items.length > 0)) {
             this.data = { sprints: seeded.sprints || [], items: seeded.items || [] };
         } else if (this._restUri) {
@@ -102,6 +111,54 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
         } else {
             this._parseStaticConfig();
             this.render();
+        }
+    }
+
+    /**
+     * Attaches the backlog to the enclosing scope ViewState and renders its
+     * resource slice. The scope owns the service and the central load, so the
+     * backlog re-renders whenever the scope re-queries the resource, while its
+     * sprint and item mutations still flow through the scope service.
+     * @param {HTMLElement} element The host element.
+     */
+    _attachToScope(element) {
+        const viewId = (element.dataset && element.dataset.wxView) || null;
+
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewId, (viewState) => {
+            this._viewState = viewState;
+
+            const serviceName = (element.dataset && element.dataset.wxService) || "data";
+            const service = viewState.useService(serviceName);
+            if (service) {
+                this._service = service;
+                this._restUri = service.baseUri;
+            }
+
+            // secondary services (the assignee picker's users service) also come
+            // from the scope in scope mode, since the control emits no islands of
+            // its own
+            const usersService = viewState.useService("users");
+            if (usersService) {
+                this._users = usersService;
+            }
+
+            const unsubscribe = viewState.watch((state) => state[this._resource], (slice) => this._applySlice(slice));
+            (element._wxCleanup = element._wxCleanup || []).push(unsubscribe);
+
+            this._applySlice(viewState.getState()[this._resource]);
+        });
+    }
+
+    /**
+     * Renders a backlog resource slice the scope loaded centrally. The raw
+     * sprints and items response flows through the data setter, which normalises
+     * and renders it; the local selection and drag state are preserved.
+     * @param {object} slice The resource slice { items, total, data, loading, error }.
+     */
+    _applySlice(slice) {
+        slice = slice || {};
+        if (slice.data) {
+            this.data = slice.data;
         }
     }
 

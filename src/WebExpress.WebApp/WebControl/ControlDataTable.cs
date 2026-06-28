@@ -13,13 +13,27 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// Represents a control panel for API table interactions.
     /// </summary>
-    public class ControlDataTable : ControlPanel, IControlDataTable, IDataIsland
+    public class ControlDataTable : ControlPanel, IControlDataTable, IDataIsland, IScopeBound
     {
         /// <summary>
-        /// Retruns or sets the number of items to display on each page in a 
+        /// Retruns or sets the number of items to display on each page in a
         /// paginated collection.
         /// </summary>
         public Func<IRenderControlContext, uint> PageSize { get; set; }
+
+        /// <summary>
+        /// Gets or sets the name of the enclosing scope resource the table
+        /// renders. When set, the table is a pure view of a central resource the
+        /// scope ViewState owns; when null, the table owns its state and service
+        /// islands and loads itself.
+        /// </summary>
+        public Func<IRenderControlContext, string> Resource { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional scope id the table binds to. When null, the
+        /// table resolves the nearest enclosing scope by ancestry.
+        /// </summary>
+        public Func<IRenderControlContext, string> Scope { get; set; }
 
         /// <summary>
         /// Gets or sets the binding.

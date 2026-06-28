@@ -12,8 +12,22 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// Represents a control panel for API kanban interactions.
     /// </summary>
-    public class ControlDataKanban : ControlPanel, IControlDataKanban, IDataIsland
+    public class ControlDataKanban : ControlPanel, IControlDataKanban, IDataIsland, IScopeBound
     {
+        /// <summary>
+        /// Gets or sets the name of the enclosing scope resource the board
+        /// renders. When set, the control is a pure view of a central resource
+        /// the scope ViewState owns; when null, it owns its state and service
+        /// islands and loads itself.
+        /// </summary>
+        public Func<IRenderControlContext, string> Resource { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional scope id the control binds to. When null, it
+        /// resolves the nearest enclosing scope by ancestry.
+        /// </summary>
+        public Func<IRenderControlContext, string> Scope { get; set; }
+
         /// <summary>
         /// Gets or sets a value indicating whether the column headers can be
         /// renamed inline (smart-edit). The new column layout is persisted to

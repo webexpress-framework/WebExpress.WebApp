@@ -37,6 +37,26 @@ namespace WebExpress.WebApp.WebData
                 return html;
             }
 
+            // a scope-bound control renders a resource of the enclosing scope, so
+            // the scope owns the state and the service; the control carries only
+            // the resource binding and skips its own state and service islands
+            if (control is IScopeBound scopeBound)
+            {
+                var resource = scopeBound.Resource?.Invoke(renderContext);
+                if (!string.IsNullOrEmpty(resource))
+                {
+                    host.AddUserAttribute("data-wx-resource", WebUtility.HtmlEncode(resource));
+
+                    var scope = scopeBound.Scope?.Invoke(renderContext);
+                    host.AddUserAttribute("data-wx-view", !string.IsNullOrEmpty(scope) ? WebUtility.HtmlEncode(scope) : null);
+
+                    var scopedTemplate = control.TemplateFactory?.Invoke(renderContext);
+                    host.AddUserAttribute("data-wx-template", !string.IsNullOrEmpty(scopedTemplate) ? WebUtility.HtmlEncode(scopedTemplate) : null);
+
+                    return html;
+                }
+            }
+
             var state = control.StateFactory?.Invoke(renderContext);
             var descriptors = (control.ServiceFactories ?? [])
                 .Select(factory => factory?.Invoke(renderContext))
@@ -76,6 +96,36 @@ namespace WebExpress.WebApp.WebData
         /// <param name="descriptors">The service descriptors.</param>
         /// <returns>The host element for chaining.</returns>
         public static IHtmlNode EmitServiceIslands(this IHtmlNode html, params DataServiceDescriptor[] descriptors)
+        {
+            if (html is not HtmlElement host)
+            {
+                return html;
+            }
+
+            var islands = descriptors
+                .Where(descriptor => descriptor != null)
+                .Select(descriptor => (IHtmlNode)descriptor.ToIslandElement())
+                .ToArray();
+
+            if (islands.Length > 0)
+            {
+                host.AddFirst(islands);
+            }
+
+            return html;
+        }
+
+        /// <summary>
+        /// Emits the wx-resource island elements of a scope ViewState as the first
+        /// children of the host element. The resources come first, beside the
+        /// wx-state and wx-service islands, so the JavaScript ViewState finds every
+        /// island before the scope's rendered content. Null descriptors are
+        /// skipped, so a scope passes its resources unconditionally.
+        /// </summary>
+        /// <param name="html">The scope host element.</param>
+        /// <param name="descriptors">The resource descriptors.</param>
+        /// <returns>The host element for chaining.</returns>
+        public static IHtmlNode EmitResourceIslands(this IHtmlNode html, params DataResourceDescriptor[] descriptors)
         {
             if (html is not HtmlElement host)
             {

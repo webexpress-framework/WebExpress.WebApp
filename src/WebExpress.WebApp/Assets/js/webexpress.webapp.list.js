@@ -10,6 +10,8 @@
  */
 webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
     _restUri = "";
+    _viewState = null;
+    _sliceTotal = 0;
     _progressDiv = this._createProgressDiv();
 
     /**
@@ -24,10 +26,17 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
 
         super(element);
 
+        // the resource a scope renders. when present, the list is a pure view of
+        // a central resource owned by the enclosing scope ViewState; when absent,
+        // the list owns its state and loads itself (standalone).
+        this._resource = (element.dataset && element.dataset.wxResource) || null;
+
         // canonical state for the list: a single source of truth that the
         // accessors below read from and write to. seeded from the optional
-        // wx-state island.
-        this._store = new webexpress.webapp.Store(Object.assign({
+        // wx-state island. in scope mode this is replaced by the scope ViewState
+        // once it resolves, so the search and paging keys live in the shared
+        // scope state.
+        this._store = new webexpress.webapp.ViewState(element, { standalone: true, state: Object.assign({
             search: "",
             wql: "",
             filter: "",
@@ -38,7 +47,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
             total: 0,
             loading: false,
             error: null
-        }, webexpress.webapp.Data.readState(element)));
+        }, webexpress.webapp.Data.readState(element)) });
 
         // data service: the configured island authored in C# through .Service().
         const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
@@ -69,8 +78,76 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
 
         this._initPager(element);
 
-        // initial data load
-        this._load();
+        if (this._resource) {
+            // scope mode: the enclosing scope loads the resource centrally; this
+            // list only subscribes to its slice and renders it
+            this._attachToScope(element);
+        } else {
+            // standalone: load through the control's own service
+            this._load();
+        }
+    }
+
+    /**
+     * Attaches the list to the enclosing scope ViewState and renders its
+     * resource slice. The scope owns the state, the service and the central
+     * load, so the list becomes a pure view: it subscribes to the slice and
+     * re-renders whenever the scope re-queries the resource. The shared scope
+     * state also becomes the list's store, so the search and paging binds drive
+     * the same keys every control in the scope reads.
+     * @param {HTMLElement} element The host element.
+     */
+    _attachToScope(element) {
+        const viewId = (element.dataset && element.dataset.wxView) || null;
+
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewId, (viewState) => {
+            this._viewState = viewState;
+            this._store = viewState;
+
+            const serviceName = (element.dataset && element.dataset.wxService) || "data";
+            const service = viewState.useService(serviceName);
+            if (service) {
+                this._service = service;
+                this._restUri = service.baseUri;
+            }
+
+            const unsubscribe = viewState.watch((state) => state[this._resource], (slice) => this._applySlice(slice));
+            (element._wxCleanup = element._wxCleanup || []).push(unsubscribe);
+
+            // render whatever the scope has already loaded for this resource
+            this._applySlice(viewState.getState()[this._resource]);
+        });
+    }
+
+    /**
+     * Renders a resource slice the scope loaded centrally. The slice carries the
+     * items and the total, which the list maps into its rows and its pager,
+     * mirroring the tail of the standalone load.
+     * @param {object} slice The resource slice { items, total, loading, error }.
+     */
+    _applySlice(slice) {
+        slice = slice || {};
+        this._sliceTotal = Number(slice.total) || 0;
+
+        const listUl = this._element.querySelector("ul.wx-list");
+        if (listUl) {
+            listUl.classList.remove("placeholder-glow");
+        }
+
+        const newItems = webexpress.webapp.listModel.mapItems({ items: slice.items || [] });
+        this.setItems(newItems);
+
+        if (this._selectable) {
+            let selected = this._items.find((i) => i.id === this._selectedItem?.id) || null;
+            if (!selected && this._items.length > 0) {
+                selected = this._items[0];
+                this._handleSelectionChange(selected, null, true);
+                this._triggerPrimaryAction(selected);
+            }
+        }
+
+        this._syncPagerAndInfo();
+        this._progressDiv.style.visibility = "hidden";
     }
 
     // state accessors backed by the store, so the single source of truth is the
@@ -97,7 +174,9 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
     get _orderDir() { return this._store.getState().orderDir; }
     set _orderDir(value) { this._store.setState({ orderDir: value }); }
 
-    get _totalRecords() { return this._store.getState().total; }
+    // in scope mode the total comes from the resource slice, not from a top
+    // level state key, so several resources in one scope keep separate totals
+    get _totalRecords() { return this._viewState ? this._sliceTotal : this._store.getState().total; }
     set _totalRecords(value) { this._store.setState({ total: value }); }
 
     /**
@@ -186,6 +265,10 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
      * Derived classes can override this method to implement specific behavior.
      */
     update() {
+        if (this._viewState) {
+            this._viewState.reload(this._resource);
+            return;
+        }
         if (this._restUri && this._isVisible()) {
             this._load();
         }
@@ -205,6 +288,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
             payload: payload,
             services: { data: this._service },
             component: this,
+            viewState: this._viewState,
             element: this._element
         });
     }
@@ -215,6 +299,9 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
      * @returns {Promise<void>|undefined} Resolves when the load completes.
      */
     load() {
+        if (this._viewState) {
+            return this._viewState.reload(this._resource);
+        }
         if (this._restUri && this._isVisible()) {
             return this._load();
         }
@@ -395,7 +482,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
             this._infoDiv.textContent = `Page ${this._page + 1} of ${totalPages} - loading…`;
         }
 
-        this._load();
+        this.load();
     }
 };
 

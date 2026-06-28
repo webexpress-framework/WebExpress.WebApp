@@ -13,7 +13,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert";
-import { loadEngine, webappAsset, appendServiceIsland, appendStateIsland } from "./harness.mjs";
+import { loadEngine, webappAsset, appendServiceIsland, appendStateIsland, appendResourceIsland } from "./harness.mjs";
 
 function load(options) {
     return loadEngine(Object.assign(
@@ -42,6 +42,40 @@ test("scrum backlog extends the component base", () => {
 
     assert.ok(ctrl instanceof wxapp.Data);
     assert.equal(typeof ctrl.store, "object");
+});
+
+test("scrum backlog in a scope renders the central resource slice the scope loads", async () => {
+    const { wxapp, createElement, setFetch, document } = load();
+    let fetchCount = 0;
+    setFetch(async () => {
+        fetchCount++;
+        return {
+            ok: true, status: 200, json: async () => ({
+                sprints: [{ id: "s1", name: "Sprint 1", status: "active" }],
+                items: [{ id: "i1", sprintId: "s1", title: "Task", key: "T-1", points: 3 }]
+            })
+        };
+    });
+
+    const scopeHost = createElement("div");
+    scopeHost.dataset.wxScope = "backlog";
+    appendServiceIsland(document, scopeHost, { name: "data", kind: "rest", baseUri: "/api/backlog", method: "GET", updateMethod: "PUT" });
+    appendResourceIsland(document, scopeHost, { name: "backlog", service: "data", target: "backlog", params: [] });
+
+    const viewState = new wxapp.ViewState(scopeHost);
+
+    const backlogHost = createElement("div");
+    backlogHost.dataset.wxResource = "backlog";
+    scopeHost.appendChild(backlogHost);
+
+    const ctrl = new wxapp.ScrumBacklogCtrl(backlogHost);
+    await settle();
+    await settle();
+
+    assert.equal(fetchCount, 1, "the scope loaded the resource centrally");
+    assert.equal(ctrl.sprints.length, 1, "the backlog renders the sprints from the slice");
+    assert.equal(ctrl.items.length, 1, "the backlog renders the items from the slice");
+    assert.ok(viewState.getState().backlog.data, "the slice carries the raw backlog response");
 });
 
 test("scrum backlog seeds from the wx-state island and skips the load", async () => {

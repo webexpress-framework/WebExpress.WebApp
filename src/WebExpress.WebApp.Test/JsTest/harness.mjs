@@ -33,12 +33,12 @@ export function webappAsset(name) {
 // load order mirrors the Asset attribute order in IncludeJavaScript
 // the engine lives in WebExpress.WebApp (WebUI carries only static controls)
 const ENGINE_FILES = [
-    "webexpress.webapp.store.js",
     "webexpress.webapp.service.js",
     "webexpress.webapp.renderer.js",
     "webexpress.webapp.template.js",
     "webexpress.webapp.intent.js",
     "webexpress.webapp.data.js",
+    "webexpress.webapp.viewstate.js",
     "service/default.js",
     "intent/default.js",
     "bind/default.js"
@@ -225,6 +225,41 @@ export function appendServiceIsland(document, element, descriptor) {
             child.setAttribute(valueAttribute, value);
             island.appendChild(child);
         }
+    }
+
+    element.appendChild(island);
+    return island;
+}
+
+/**
+ * Appends a wx-resource island element to a scope host, mirroring the C#
+ * emission in DataResourceDescriptor.ToIslandElement, so the ViewState tests
+ * configure their scopes through the same channel the server renders. Each
+ * parameter declares the bidirectional binding between a state key and a query
+ * parameter.
+ * @param {object} document - The document stub of the loaded engine.
+ * @param {object} element - The scope host element.
+ * @param {object} resource - The resource descriptor shape.
+ * @returns {object} The island element.
+ */
+export function appendResourceIsland(document, element, resource) {
+    resource = resource || {};
+
+    const island = document.createElement("wx-resource");
+    island.setAttribute("name", resource.name || "default");
+    island.setAttribute("service", resource.service || "data");
+    island.setAttribute("target", resource.target || resource.name || "default");
+
+    if (resource.auto === false) {
+        island.setAttribute("auto", "false");
+    }
+
+    for (const param of resource.params || []) {
+        const child = document.createElement("wx-param");
+        child.setAttribute("name", param.name);
+        child.setAttribute("state", param.state || param.name);
+        child.setAttribute("dir", param.dir || "inout");
+        island.appendChild(child);
     }
 
     element.appendChild(island);

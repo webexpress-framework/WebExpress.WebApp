@@ -28,19 +28,15 @@ webexpress.webapp.Data = class extends webexpress.webui.Ctrl {
 
         this._mounted = false;
         this._unsubscribe = null;
-        this._sharedStoreId = null;
         this._renderRoot = options.renderRoot || element;
 
         const initialState = options.state || webexpress.webapp.Data.readState(element);
 
-        if (options.store) {
-            this._store = options.store;
-        } else if (options.shared && element && element.id) {
-            this._sharedStoreId = element.id;
-            this._store = webexpress.webapp.StoreRegistry.acquire(element.id, initialState);
-        } else {
-            this._store = new webexpress.webapp.Store(initialState);
-        }
+        // the store is a standalone ViewState: the observable state container
+        // without the scope machinery, so the Data base owns one source of truth
+        // and depends on no separate store type.
+        this._store = options.store
+            || new webexpress.webapp.ViewState(element, { state: initialState, standalone: true });
 
         this._services = options.services || webexpress.webapp.ServiceRegistry.fromElement(element);
         this._templateId = options.template
@@ -57,7 +53,7 @@ webexpress.webapp.Data = class extends webexpress.webui.Ctrl {
 
     /**
      * Returns the store.
-     * @returns {webexpress.webapp.Store} The store.
+     * @returns {webexpress.webapp.ViewState} The store.
      */
     get store() {
         return this._store;
@@ -184,11 +180,6 @@ webexpress.webapp.Data = class extends webexpress.webui.Ctrl {
 
         if (typeof this.onUnmount === "function") {
             this.onUnmount();
-        }
-
-        if (this._sharedStoreId) {
-            webexpress.webapp.StoreRegistry.release(this._sharedStoreId);
-            this._sharedStoreId = null;
         }
 
         this._mounted = false;

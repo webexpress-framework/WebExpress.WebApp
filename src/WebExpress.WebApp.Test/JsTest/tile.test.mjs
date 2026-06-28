@@ -13,7 +13,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert";
-import { loadEngine, webappAsset, appendServiceIsland, appendStateIsland } from "./harness.mjs";
+import { loadEngine, webappAsset, appendServiceIsland, appendStateIsland, appendResourceIsland } from "./harness.mjs";
 
 // the webapp tile extends the static WebUI tile, which the engine harness does
 // not load; the stub carries the members the webapp control calls
@@ -129,4 +129,39 @@ test("tile paging and filter dispatch their intents through the store", async ()
     assert.match(urls[2], /f=insult/);
     assert.match(urls[2], /p=0/);
     assert.equal(tile._filter, "insult");
+});
+
+test("tile in a scope renders the central resource slice the scope loads", async () => {
+    const engine = load();
+    const urls = [];
+    engine.setFetch(async (url) => {
+        urls.push(url);
+        return { ok: true, status: 200, json: async () => ({ items: [{ id: "a", label: "A" }, { id: "b", label: "B" }], total: 4 }) };
+    });
+
+    const scopeHost = engine.createElement("div");
+    scopeHost.dataset.wxScope = "gallery";
+    appendStateIsland(engine.document, scopeHost, { page: 0, search: "" });
+    appendServiceIsland(engine.document, scopeHost, {
+        name: "data", kind: "rest", baseUri: "/api/gallery", method: "GET", updateMethod: "PUT",
+        query: { page: "p", search: "q" }, response: { items: "items", total: "total" }
+    });
+    appendResourceIsland(engine.document, scopeHost, {
+        name: "tiles", service: "data", target: "tiles",
+        params: [{ name: "page", state: "page", dir: "inout" }, { name: "search", state: "search", dir: "out" }]
+    });
+
+    const viewState = new engine.wxapp.ViewState(scopeHost);
+
+    const tileHost = engine.createElement("div");
+    tileHost.dataset.wxResource = "tiles";
+    scopeHost.appendChild(tileHost);
+
+    const tile = new engine.wxapp.TileCtrl(tileHost);
+    await settle();
+
+    assert.equal(urls.length, 1, "the scope loaded the resource centrally");
+    assert.equal(tile._items.length, 2, "the tiles render the slice items");
+    assert.equal(tile._totalRecords, 4, "the tiles read the total from the slice");
+    assert.equal(viewState.getState().tiles.items.length, 2);
 });

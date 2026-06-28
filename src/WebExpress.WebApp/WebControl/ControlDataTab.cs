@@ -17,9 +17,23 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// Represents a control panel for API tab interactions.
     /// </summary>
-    public class ControlDataTab : ControlPanel, IControlDataTab, IDataIsland
+    public class ControlDataTab : ControlPanel, IControlDataTab, IDataIsland, IScopeBound
     {
         private readonly List<IControlDataTabTemplate> _templates = [];
+
+        /// <summary>
+        /// Gets or sets the name of the enclosing scope resource the tabs render.
+        /// When set, the control is a pure view of a central resource the scope
+        /// ViewState owns; when null, it owns its state and service islands and
+        /// loads itself.
+        /// </summary>
+        public Func<IRenderControlContext, string> Resource { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional scope id the control binds to. When null, it
+        /// resolves the nearest enclosing scope by ancestry.
+        /// </summary>
+        public Func<IRenderControlContext, string> Scope { get; set; }
 
         /// <summary>
         /// Gets or sets the binding.
