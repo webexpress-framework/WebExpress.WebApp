@@ -104,8 +104,9 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
             this._viewState = viewState;
             this._store = viewState;
 
-            const serviceName = (element.dataset && element.dataset.wxService) || "data";
-            const service = viewState.useService(serviceName);
+            // the data service is the one the bound resource declares, so it is
+            // identified by the resource rather than by a hard-coded name
+            const service = viewState.serviceForResource(this._resource);
             if (service) {
                 this._service = service;
                 this._restUri = service.baseUri;

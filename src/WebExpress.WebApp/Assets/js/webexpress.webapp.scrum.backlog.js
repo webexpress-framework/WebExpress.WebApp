@@ -127,17 +127,17 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
         webexpress.webapp.ViewStateRegistry.whenReady(element, viewId, (viewState) => {
             this._viewState = viewState;
 
-            const serviceName = (element.dataset && element.dataset.wxService) || "data";
-            const service = viewState.useService(serviceName);
+            const service = viewState.serviceForResource(this._resource);
             if (service) {
                 this._service = service;
                 this._restUri = service.baseUri;
             }
 
-            // secondary services (the assignee picker's users service) also come
-            // from the scope in scope mode, since the control emits no islands of
-            // its own
-            const usersService = viewState.useService("users");
+            // the assignee picker's users service also comes from the scope in
+            // scope mode, resolved by the type-safe users binding the control
+            // emits, since the control owns no islands of its own
+            const usersName = element.dataset && element.dataset.wxUsers;
+            const usersService = usersName ? viewState.useService(usersName) : null;
             if (usersService) {
                 this._users = usersService;
             }

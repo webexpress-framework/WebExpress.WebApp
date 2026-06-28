@@ -53,8 +53,7 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
         webexpress.webapp.ViewStateRegistry.whenReady(element, viewId, (viewState) => {
             this._viewState = viewState;
 
-            const serviceName = (element.dataset && element.dataset.wxService) || "data";
-            const service = viewState.useService(serviceName);
+            const service = viewState.serviceForResource(this._resource);
             if (service) {
                 this._service = service;
                 this._restUri = service.baseUri;

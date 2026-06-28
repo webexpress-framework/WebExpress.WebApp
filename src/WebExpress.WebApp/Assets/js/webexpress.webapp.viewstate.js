@@ -268,6 +268,30 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
     }
 
     /**
+     * Returns the names of the resources this scope declares, so the registry
+     * can index a control to the scope that owns the resource it binds to. This
+     * is what lets a control resolve its scope by its resource rather than by
+     * DOM ancestry, so the scope host no longer needs to wrap its controls.
+     * @returns {Array<string>} The declared resource names.
+     */
+    get resourceNames() {
+        return Object.keys(this._resources || {});
+    }
+
+    /**
+     * Returns the service a resource is loaded through, resolved from the
+     * resource's declared service name. A control bound to a resource uses this
+     * for its data and its mutations, so the service is identified by the
+     * resource rather than by a hard-coded name.
+     * @param {string} name - The resource name.
+     * @returns {webexpress.webapp.Service|null} The service or null.
+     */
+    serviceForResource(name) {
+        const resource = this.resource(name);
+        return resource ? this.useService(resource.service) : null;
+    }
+
+    /**
      * Dispatches an intent against this scope's state and services, so the
      * search, paging and filter binds and the dispatch action feed the same
      * unidirectional loop. The ViewState is itself the store the intent reduces
@@ -559,13 +583,15 @@ webexpress.webapp.ViewStateRegistry = new class {
      */
     constructor() {
         this._states = new Map();
+        this._byResource = new Map();
         this._pending = [];
     }
 
     /**
-     * Registers a ViewState under its scope id and resolves any control that
-     * asked for a scope before it existed. A later scope with the same id
-     * replaces the earlier one, which mirrors a re-rendered host.
+     * Registers a ViewState under its scope id, indexes the resources it
+     * declares and resolves any control that asked for a scope before it
+     * existed. A later scope with the same id replaces the earlier one, which
+     * mirrors a re-rendered host.
      * @param {string} id - The scope id.
      * @param {webexpress.webapp.ViewState} viewState - The ViewState instance.
      * @returns {this} The registry for chaining.
@@ -573,9 +599,22 @@ webexpress.webapp.ViewStateRegistry = new class {
     register(id, viewState) {
         if (typeof id === "string" && viewState) {
             this._states.set(id, viewState);
+            for (const name of viewState.resourceNames) {
+                this._byResource.set(name, viewState);
+            }
             this._flushPending();
         }
         return this;
+    }
+
+    /**
+     * Returns the ViewState that declares a resource, so a control resolves its
+     * scope by the resource it binds to rather than by DOM ancestry.
+     * @param {string} name - The resource name.
+     * @returns {webexpress.webapp.ViewState|null} The ViewState or null.
+     */
+    resolveByResource(name) {
+        return this._byResource.get(name) || null;
     }
 
     /**
@@ -612,6 +651,17 @@ webexpress.webapp.ViewStateRegistry = new class {
     resolve(element, id) {
         if (id) {
             return this.get(id);
+        }
+
+        // a control that binds a resource resolves the scope that declares it,
+        // which is how a control finds its scope when the scope host no longer
+        // wraps it
+        const resourceName = element && element.dataset && element.dataset.wxResource;
+        if (resourceName) {
+            const byResource = this.resolveByResource(resourceName);
+            if (byResource) {
+                return byResource;
+            }
         }
 
         let current = element;
@@ -677,6 +727,7 @@ webexpress.webapp.ViewStateRegistry = new class {
      */
     clear() {
         this._states.clear();
+        this._byResource.clear();
         this._pending = [];
     }
 };

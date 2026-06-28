@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using WebExpress.WebApp.WebControl;
+using WebExpress.WebApp.WebFragment;
 using WebExpress.WebApp.WebSection;
 using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
@@ -184,10 +185,21 @@ namespace WebExpress.WebApp.WebPage
             var preferences = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionBodyPreferences>
             (
                 renderContext?.PageContext
-            );
+            )
+                .Where(x => x is not IFragmentControlViewState);
 
             html.Body.Add(preferences.Select(x => x.Render(renderContext, this)));
             html.Body.Add(MessageQueueUri);
+
+            // render the scope ViewState fragments first, when present, found by
+            // their type across the body sections. They are hidden island hosts,
+            // so they sit early in the body, add nothing visible, and the
+            // scope-bound controls resolve them by resource. The content sections
+            // exclude them so a scope is never rendered twice.
+            var viewStates = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControlViewState, SectionBodyPreferences>(renderContext?.PageContext)
+                .Concat(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControlViewState, SectionBodyPrimary>(renderContext?.PageContext))
+                .Concat(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControlViewState, SectionBodySecondary>(renderContext?.PageContext));
+            html.Body.Add(viewStates.Select(x => x.Render(renderContext, this)));
             html.Body.Add(Header.Render(renderContext, this));
             html.Body.Add(Toast.Render(renderContext, this));
             html.Body.Add(Breadcrumb.Render(renderContext, this));
@@ -196,7 +208,8 @@ namespace WebExpress.WebApp.WebPage
             var primary = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionBodyPrimary>
             (
                 renderContext?.PageContext
-            );
+            )
+                .Where(x => x is not IFragmentControlViewState);
             html.Body.Add(primary.Select(x => x.Render(renderContext, this)));
 
             var split = new ControlPanelSplit
@@ -228,7 +241,8 @@ namespace WebExpress.WebApp.WebPage
             var secondary = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionBodySecondary>
             (
                 renderContext?.PageContext
-            );
+            )
+                .Where(x => x is not IFragmentControlViewState);
 
             html.Body.Add(secondary.Select(x => x.Render(renderContext, this)));
 

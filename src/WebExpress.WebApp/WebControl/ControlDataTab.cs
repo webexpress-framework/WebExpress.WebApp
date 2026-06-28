@@ -27,7 +27,7 @@ namespace WebExpress.WebApp.WebControl
         /// ViewState owns; when null, it owns its state and service islands and
         /// loads itself.
         /// </summary>
-        public Func<IRenderControlContext, string> Resource { get; set; }
+        public Func<IRenderControlContext, string> ResourceFactory { get; set; }
 
         /// <summary>
         /// Gets or sets the optional scope id the control binds to. When null, it

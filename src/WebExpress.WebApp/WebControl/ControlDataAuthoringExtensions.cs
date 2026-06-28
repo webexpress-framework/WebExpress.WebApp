@@ -524,6 +524,118 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
+        /// Binds the list to a scope resource by type, fluently and preserving
+        /// the concrete control type. A single generic extension on IScopeBound
+        /// could not keep the concrete type (C# allows neither mixing one
+        /// inferred and one explicit type argument), so the binding is declared
+        /// per control family, mirroring the DataService presets.
+        /// </summary>
+        /// <typeparam name="TResource">The resource type.</typeparam>
+        /// <param name="control">The list control.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataList Resource<TResource>(this ControlDataList control) where TResource : IDataResource
+            => BindResource<ControlDataList, TResource>(control);
+
+        /// <summary>
+        /// Binds the table to a scope resource by type.
+        /// </summary>
+        /// <typeparam name="TResource">The resource type.</typeparam>
+        /// <param name="control">The table control.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataTable Resource<TResource>(this ControlDataTable control) where TResource : IDataResource
+            => BindResource<ControlDataTable, TResource>(control);
+
+        /// <summary>
+        /// Binds the tile panel to a scope resource by type.
+        /// </summary>
+        /// <typeparam name="TResource">The resource type.</typeparam>
+        /// <param name="control">The tile control.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataTile Resource<TResource>(this ControlDataTile control) where TResource : IDataResource
+            => BindResource<ControlDataTile, TResource>(control);
+
+        /// <summary>
+        /// Binds the kanban board to a scope resource by type.
+        /// </summary>
+        /// <typeparam name="TResource">The resource type.</typeparam>
+        /// <param name="control">The kanban control.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataKanban Resource<TResource>(this ControlDataKanban control) where TResource : IDataResource
+            => BindResource<ControlDataKanban, TResource>(control);
+
+        /// <summary>
+        /// Binds the dashboard to a scope resource by type.
+        /// </summary>
+        /// <typeparam name="TResource">The resource type.</typeparam>
+        /// <param name="control">The dashboard control.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataDashboard Resource<TResource>(this ControlDataDashboard control) where TResource : IDataResource
+            => BindResource<ControlDataDashboard, TResource>(control);
+
+        /// <summary>
+        /// Binds the tab set to a scope resource by type.
+        /// </summary>
+        /// <typeparam name="TResource">The resource type.</typeparam>
+        /// <param name="control">The tab control.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataTab Resource<TResource>(this ControlDataTab control) where TResource : IDataResource
+            => BindResource<ControlDataTab, TResource>(control);
+
+        /// <summary>
+        /// Binds the comment surface to a scope resource by type.
+        /// </summary>
+        /// <typeparam name="TResource">The resource type.</typeparam>
+        /// <param name="control">The comment control.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataComment Resource<TResource>(this ControlDataComment control) where TResource : IDataResource
+            => BindResource<ControlDataComment, TResource>(control);
+
+        /// <summary>
+        /// Binds the scrum backlog to a scope resource by type.
+        /// </summary>
+        /// <typeparam name="TResource">The resource type.</typeparam>
+        /// <param name="control">The scrum backlog control.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataScrumBacklog Resource<TResource>(this ControlDataScrumBacklog control) where TResource : IDataResource
+            => BindResource<ControlDataScrumBacklog, TResource>(control);
+
+        /// <summary>
+        /// Binds the scrum backlog's users service by endpoint type, fluently and
+        /// preserving the concrete control type.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The users endpoint type.</typeparam>
+        /// <param name="control">The scrum backlog control.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataScrumBacklog UsersService<TEndpoint>(this ControlDataScrumBacklog control) where TEndpoint : IEndpoint
+        {
+            if (control != null)
+            {
+                control.UsersFactory = _ => DataTypeName.Of<TEndpoint>();
+            }
+
+            return control;
+        }
+
+        /// <summary>
+        /// Sets the resource binding on a scope-bound control and returns the
+        /// concrete control type, the shared body of the per family Resource
+        /// overloads.
+        /// </summary>
+        /// <typeparam name="T">The control type.</typeparam>
+        /// <typeparam name="TResource">The resource type.</typeparam>
+        /// <param name="control">The scope-bound control.</param>
+        /// <returns>The control for chaining.</returns>
+        private static T BindResource<T, TResource>(T control) where T : IScopeBound where TResource : IDataResource
+        {
+            if (control != null)
+            {
+                control.ResourceFactory = _ => DataTypeName.Of<TResource>();
+            }
+
+            return control;
+        }
+
+        /// <summary>
         /// The preset of the named users service, which resolves users with GET.
         /// </summary>
         /// <param name="baseUri">The resolved endpoint.</param>

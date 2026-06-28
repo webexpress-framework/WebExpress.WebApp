@@ -14,21 +14,25 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// Represents a REST-backed scrum backlog control.
     /// </summary>
-    public class ControlDataScrumBacklog : ControlPanel, IControlDataScrumBacklog, IDataIsland, IScopeBound
+    public class ControlDataScrumBacklog : ControlPanel, IControlDataScrumBacklog, IDataIsland, IScopeBoundUsers
     {
         /// <summary>
-        /// Gets or sets the name of the enclosing scope resource the backlog
-        /// renders. When set, the backlog data is a central resource the scope
-        /// ViewState owns; when null, the control owns its state and service
-        /// islands and loads itself.
+        /// Gets or sets the resolver of the scope resource the backlog renders,
+        /// set type-safely through Resource&lt;TResource&gt;(). When null, the
+        /// control owns its state and service islands and loads itself.
         /// </summary>
-        public Func<IRenderControlContext, string> Resource { get; set; }
+        public Func<IRenderControlContext, string> ResourceFactory { get; set; }
 
         /// <summary>
-        /// Gets or sets the optional scope id the control binds to. When null, it
-        /// resolves the nearest enclosing scope by ancestry.
+        /// Gets or sets the optional scope id the control binds to.
         /// </summary>
         public Func<IRenderControlContext, string> Scope { get; set; }
+
+        /// <summary>
+        /// Gets or sets the resolver of the scope users service the assignee
+        /// picker uses, set type-safely through UsersService&lt;TEndpoint&gt;().
+        /// </summary>
+        public Func<IRenderControlContext, string> UsersFactory { get; set; }
 
         /// <summary>
         /// Gets or sets the title displayed by the backlog control.

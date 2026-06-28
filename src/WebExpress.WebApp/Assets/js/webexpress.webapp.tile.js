@@ -97,8 +97,7 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
             this._viewState = viewState;
             this._store = viewState;
 
-            const serviceName = (element.dataset && element.dataset.wxService) || "data";
-            const service = viewState.useService(serviceName);
+            const service = viewState.serviceForResource(this._resource);
             if (service) {
                 this._service = service;
                 this._restUri = service.baseUri;

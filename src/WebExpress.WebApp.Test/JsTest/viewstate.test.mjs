@@ -258,6 +258,25 @@ test("the registry resolves a scope by explicit id and by ancestry", () => {
     assert.equal(engine.wxapp.ViewStateRegistry.resolve(child, "outer"), vs, "an explicit id resolves the scope");
 });
 
+test("the registry resolves a scope by the resource a control binds, and serves its service", () => {
+    const engine = loadEngine();
+    engine.setFetch(async () => ({ ok: true, status: 200, json: async () => ({ items: [], total: 0 }) }));
+
+    const host = buildScope(engine, {
+        scope: "orders-scope",
+        service: { name: "data", baseUri: "/api/orders", method: "GET" },
+        resources: [{ name: "orders", service: "data", target: "orders", auto: false, params: [] }]
+    });
+    const vs = new engine.wxapp.ViewState(host);
+
+    // a control finds its scope by the resource it binds, not by ancestry
+    assert.equal(engine.wxapp.ViewStateRegistry.resolveByResource("orders"), vs);
+    // and uses the service the resource declares
+    const service = vs.serviceForResource("orders");
+    assert.ok(service, "serviceForResource returns the resource's service");
+    assert.equal(service.baseUri, "/api/orders");
+});
+
 test("a nested scope shadows the outer one for its own controls", () => {
     const engine = loadEngine();
     const outer = buildScope(engine, { scope: "outer", state: { level: "outer" } });

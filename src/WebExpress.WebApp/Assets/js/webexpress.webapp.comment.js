@@ -226,8 +226,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
 
         this._viewState = viewState;
 
-        const serviceName = (element.dataset && element.dataset.wxService) || "data";
-        const service = viewState.useService(serviceName);
+        const service = viewState.serviceForResource(this._resource);
         if (service) {
             this._service = service;
             this._uri = service.baseUri;

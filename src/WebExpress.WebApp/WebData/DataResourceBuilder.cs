@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using WebExpress.WebCore.WebEndpoint;
 
 namespace WebExpress.WebApp.WebData
 {
@@ -39,6 +40,19 @@ namespace WebExpress.WebApp.WebData
         }
 
         /// <summary>
+        /// Sets the scope service that loads the resource, identified by its
+        /// endpoint type rather than a string name. This is the type-safe form
+        /// used by the generic ControlViewState authoring.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type of the service.</typeparam>
+        /// <returns>The builder for chaining.</returns>
+        public DataResourceBuilder Service<TEndpoint>() where TEndpoint : IEndpoint
+        {
+            _service = DataTypeName.Of<TEndpoint>();
+            return this;
+        }
+
+        /// <summary>
         /// Sets the state key the projected result is reduced into. Defaults to
         /// the resource name.
         /// </summary>
@@ -75,6 +89,55 @@ namespace WebExpress.WebApp.WebData
             _params.Add(new DataResourceParam(name, state ?? name, dir));
             return this;
         }
+
+        /// <summary>
+        /// Binds the page index parameter of the closed query vocabulary, so the
+        /// standard paging parameter needs no string at the call site.
+        /// </summary>
+        /// <returns>The builder for chaining.</returns>
+        public DataResourceBuilder Page() => Param("page");
+
+        /// <summary>
+        /// Binds the page size parameter.
+        /// </summary>
+        /// <returns>The builder for chaining.</returns>
+        public DataResourceBuilder PageSize() => Param("pageSize");
+
+        /// <summary>
+        /// Binds the search parameter.
+        /// </summary>
+        /// <returns>The builder for chaining.</returns>
+        public DataResourceBuilder Search() => Param("search");
+
+        /// <summary>
+        /// Binds the structured query parameter.
+        /// </summary>
+        /// <returns>The builder for chaining.</returns>
+        public DataResourceBuilder Wql() => Param("wql");
+
+        /// <summary>
+        /// Binds the filter parameter.
+        /// </summary>
+        /// <returns>The builder for chaining.</returns>
+        public DataResourceBuilder Filter() => Param("filter");
+
+        /// <summary>
+        /// Binds the order field parameter.
+        /// </summary>
+        /// <returns>The builder for chaining.</returns>
+        public DataResourceBuilder OrderBy() => Param("orderBy");
+
+        /// <summary>
+        /// Binds the order direction parameter.
+        /// </summary>
+        /// <returns>The builder for chaining.</returns>
+        public DataResourceBuilder OrderDir() => Param("orderDir");
+
+        /// <summary>
+        /// Binds the id parameter.
+        /// </summary>
+        /// <returns>The builder for chaining.</returns>
+        public DataResourceBuilder Id() => Param("id");
 
         /// <summary>
         /// Builds the descriptor.

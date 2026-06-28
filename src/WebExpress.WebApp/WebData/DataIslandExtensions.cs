@@ -42,13 +42,19 @@ namespace WebExpress.WebApp.WebData
             // the resource binding and skips its own state and service islands
             if (control is IScopeBound scopeBound)
             {
-                var resource = scopeBound.Resource?.Invoke(renderContext);
+                var resource = scopeBound.ResourceFactory?.Invoke(renderContext);
                 if (!string.IsNullOrEmpty(resource))
                 {
                     host.AddUserAttribute("data-wx-resource", WebUtility.HtmlEncode(resource));
 
                     var scope = scopeBound.Scope?.Invoke(renderContext);
                     host.AddUserAttribute("data-wx-view", !string.IsNullOrEmpty(scope) ? WebUtility.HtmlEncode(scope) : null);
+
+                    if (scopeBound is IScopeBoundUsers scopeBoundUsers)
+                    {
+                        var users = scopeBoundUsers.UsersFactory?.Invoke(renderContext);
+                        host.AddUserAttribute("data-wx-users", !string.IsNullOrEmpty(users) ? WebUtility.HtmlEncode(users) : null);
+                    }
 
                     var scopedTemplate = control.TemplateFactory?.Invoke(renderContext);
                     host.AddUserAttribute("data-wx-template", !string.IsNullOrEmpty(scopedTemplate) ? WebUtility.HtmlEncode(scopedTemplate) : null);

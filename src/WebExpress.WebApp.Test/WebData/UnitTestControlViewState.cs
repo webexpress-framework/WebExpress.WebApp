@@ -2,6 +2,7 @@ using System.Net.Http;
 using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebControl;
 using WebExpress.WebApp.WebData;
+using WebExpress.WebCore.WebEndpoint;
 using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.Test.WebData
@@ -94,15 +95,76 @@ namespace WebExpress.WebApp.Test.WebData
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
-            var list = new ControlDataList("list") { Resource = _ => "orders" }
+
+            // the list declares a state and a service, but binds a resource by
+            // type; the resource binding wins, so the own islands are skipped
+            var list = new ControlDataList("list")
                 .State(s => s.Page(0))
                 .Service("data", svc => svc.Method(HttpMethod.Get));
+            list.Resource<OrdersTestResource>();
 
             var html = list.Render(context, visualTree).ToString();
 
-            Assert.Contains("data-wx-resource=\"orders\"", html);
+            Assert.Contains("data-wx-resource=\"" + DataTypeName.Of<OrdersTestResource>() + "\"", html);
             Assert.DoesNotContain("<wx-service", html);
             Assert.DoesNotContain("<wx-state", html);
+        }
+
+        /// <summary>
+        /// Tests that the type-safe generic scope emits the state from the typed
+        /// model and the service and resource named by their types, with no child
+        /// controls and no string names at the authoring site.
+        /// </summary>
+        [Fact]
+        public void GenericScopeEmitsTypedStateServiceAndResource()
+        {
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+
+            var scope = new ControlViewState<DataQueryState>("orders")
+                .State(s => { s.Page = 0; s.PageSize = 25; })
+                .Service<FakeEndpoint>(svc => svc.Method(HttpMethod.Get))
+                .Resource<OrdersTestResource>(r => r.Service<FakeEndpoint>().Page().PageSize());
+
+            var html = scope.Render(context, visualTree).ToString();
+
+            Assert.Contains("wx-webapp-viewstate", html);
+            Assert.Contains("<wx-prop name=\"page\" type=\"number\">0</wx-prop>", html);
+            Assert.Contains("<wx-prop name=\"pageSize\" type=\"number\">25</wx-prop>", html);
+            Assert.Contains("<wx-service hidden name=\"" + DataTypeName.Of<FakeEndpoint>() + "\"", html);
+            Assert.Contains("<wx-resource hidden name=\"" + DataTypeName.Of<OrdersTestResource>() + "\"", html);
+            Assert.Contains("service=\"" + DataTypeName.Of<FakeEndpoint>() + "\"", html);
+            Assert.Contains("<wx-param name=\"page\"", html);
+        }
+
+        /// <summary>
+        /// Tests that the fluent Resource binding returns the concrete control
+        /// type, so it chains, and sets the resource binding to the resource type.
+        /// </summary>
+        [Fact]
+        public void FluentResourceBindingPreservesTheControlType()
+        {
+            // the explicit ControlDataList target only compiles because the
+            // per-family binding returns the concrete control type, not IScopeBound
+            ControlDataList list = new ControlDataList("list").Resource<OrdersTestResource>();
+
+            Assert.NotNull(list.ResourceFactory);
+            Assert.Equal(DataTypeName.Of<OrdersTestResource>(), list.ResourceFactory(null));
+        }
+
+        /// <summary>
+        /// A test resource identity used by the scope-bound binding test.
+        /// </summary>
+        private sealed class OrdersTestResource : IDataResource
+        {
+        }
+
+        /// <summary>
+        /// A test endpoint identity used by the generic scope authoring test.
+        /// </summary>
+        private sealed class FakeEndpoint : IEndpoint
+        {
         }
     }
 }

@@ -27,7 +27,7 @@ namespace WebExpress.WebApp.WebControl
         /// scope ViewState owns; when null, the table owns its state and service
         /// islands and loads itself.
         /// </summary>
-        public Func<IRenderControlContext, string> Resource { get; set; }
+        public Func<IRenderControlContext, string> ResourceFactory { get; set; }
 
         /// <summary>
         /// Gets or sets the optional scope id the table binds to. When null, the
