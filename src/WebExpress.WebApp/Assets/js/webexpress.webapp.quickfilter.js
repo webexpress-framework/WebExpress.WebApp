@@ -123,7 +123,11 @@ webexpress.webapp.QuickFilterCtrl = class extends webexpress.webui.QuickFilterCt
 
         const activeIds = this._registry.getActiveFilters();
         const container = document.createElement("div");
-        
+
+        // render the authored items first (avatars, dropdowns, multi-selects and
+        // REST dropdowns), then the REST-loaded filter buttons after them
+        const itemFilterIds = this._renderItems(activeIds, container);
+
         // render chip-like filter buttons first
         for (let i = 0; i < this._staticButtonConfigs.length; i++) {
             const btnCfg = this._staticButtonConfigs[i];
@@ -162,10 +166,11 @@ webexpress.webapp.QuickFilterCtrl = class extends webexpress.webui.QuickFilterCt
             .map(cfg => cfg.id || (cfg.primaryAction && cfg.primaryAction.target))
             .filter(id => !!id);
 
-        // render filter chips for active filters not represented by a button
+        // render filter chips for active filters not represented by an item or button
+        const represented = itemFilterIds.concat(buttonFilterIds);
         for (let i = 0; i < activeIds.length; i++) {
             const filterId = activeIds[i];
-            if (!buttonFilterIds.includes(filterId)) {
+            if (!represented.includes(filterId)) {
                 const config = this._registry.getFilterConfig(filterId);
                 if (config) {
                     const chip = this._createFilterChip(config);
@@ -175,6 +180,32 @@ webexpress.webapp.QuickFilterCtrl = class extends webexpress.webui.QuickFilterCt
         }
 
         el.appendChild(container);
+    }
+
+    /**
+     * Loads the dropdown options of a REST quick-filter item through the service
+     * layer, narrowing the result by the search query when one is given so huge
+     * option sets are filtered on the server, and normalising the response into
+     * the registry's option shape.
+     * @param {string} uri - the endpoint uri.
+     * @param {string} [query] - the search query for large option sets.
+     * @returns {Promise<Array>} the loaded option descriptors.
+     */
+    _fetchOptions(uri, query) {
+        const url = query
+            ? uri + (uri.indexOf("?") >= 0 ? "&" : "?") + "q=" + encodeURIComponent(query)
+            : uri;
+        return webexpress.webapp.ServiceRegistry.request(url)
+            .then((res) => {
+                if (!res || !res.ok) {
+                    return [];
+                }
+                if (Array.isArray(res.data)) {
+                    return res.data;
+                }
+                return (res.data && Array.isArray(res.data.filters)) ? res.data.filters : [];
+            })
+            .catch(() => []);
     }
 
     /**
