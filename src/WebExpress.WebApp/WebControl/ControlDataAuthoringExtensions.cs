@@ -228,6 +228,20 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
+        /// Declares the standard data service of the traffic light surface, which
+        /// loads the current status with GET and persists a change with PUT.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The traffic light control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataTrafficLight DataService<TEndpoint>(this ControlDataTrafficLight control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, DataServiceDescriptor.Data, Endpoint<TEndpoint>(), configure);
+        }
+
+        /// <summary>
         /// Declares the standard data service of the watcher surface, which
         /// loads with GET; additions and removals shape their own requests
         /// against the same base.
@@ -598,6 +612,15 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>The control for chaining.</returns>
         public static ControlDataScrumBacklog Resource<TResource>(this ControlDataScrumBacklog control) where TResource : IDataResource
             => BindResource<ControlDataScrumBacklog, TResource>(control);
+
+        /// <summary>
+        /// Binds the traffic light to a scope resource by type.
+        /// </summary>
+        /// <typeparam name="TResource">The resource type.</typeparam>
+        /// <param name="control">The traffic light control.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataTrafficLight Resource<TResource>(this ControlDataTrafficLight control) where TResource : IDataResource
+            => BindResource<ControlDataTrafficLight, TResource>(control);
 
         /// <summary>
         /// Binds the scrum backlog's users service by endpoint type, fluently and

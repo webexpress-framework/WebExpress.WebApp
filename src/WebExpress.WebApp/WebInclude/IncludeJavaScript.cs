@@ -69,6 +69,7 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/js/webexpress.webapp.table.model.js")]
     [Asset("/assets/js/webexpress.webapp.table.js")]
     [Asset("/assets/js/webexpress.webapp.tag.js")]
+    [Asset("/assets/js/webexpress.webapp.traffic.light.js")]
     [Asset("/assets/js/webexpress.webapp.tile.model.js")]
     [Asset("/assets/js/webexpress.webapp.tile.js")]
     [Asset("/assets/js/webexpress.webapp.watcher.model.js")]

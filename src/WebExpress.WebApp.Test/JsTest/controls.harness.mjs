@@ -67,6 +67,8 @@ const WEBUI_BASE_CONTROLS = [
     "webexpress.webui.quickfilter.js",
     "webexpress.webui.input.tag.js",
     "webexpress.webui.tag.js",
+    "webexpress.webui.traffic.light.js",
+    "webexpress.webui.input.traffic.light.js",
     "webexpress.webui.tab.js",
     "webexpress.webui.selection.js",
     "webexpress.webui.tile.js",

@@ -14,3 +14,5 @@
   href: watcher.md
 - name: TabCtrl
   href: tab.md
+- name: TrafficLightCtrl
+  href: traffic-light.md
