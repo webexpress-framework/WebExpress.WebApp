@@ -49,3 +49,17 @@ test("an editable host composes the interactive input representation", () => {
     assert.ok(ctrl._ctrl instanceof rt.wx.InputTrafficLightCtrl, "the inner control is the interactive input");
     assert.equal(ctrl.value, "red", "the seeded value is reflected");
 });
+
+test("re-scanning the host does not append a second inner light", () => {
+    const rt = loadControl({ file: "webexpress.webapp.traffic.light.js" });
+    const element = host(rt, { value: "green" });
+
+    // the controller strips the marker on construction; the control must not
+    // re-add it, otherwise every later DOM scan mounts another inner light
+    rt.wx.Controller.createInstances(element);
+    rt.wx.Controller.createInstances(element);
+    rt.wx.Controller.createInstances(element);
+
+    assert.equal(element.querySelectorAll(".wx-traffic-light").length, 1, "exactly one inner light exists after repeated scans");
+    assert.ok(!element.classList.contains("wx-webapp-traffic-light"), "the registered marker class is not left on the host");
+});

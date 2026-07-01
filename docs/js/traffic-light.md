@@ -59,8 +59,9 @@ The server side is a plain REST endpoint that answers `GET` and `PUT`; the fluen
 Once initialized, the `TrafficLightCtrl` instance is retrievable via `getInstanceByElement(element)`. Its `value` getter/setter (delegating to the composed inner control) exposes the current lamp token; assigning it through user interaction also persists the change.
 
 ```javascript
-// find the host element in the DOM
-const element = document.querySelector(".wx-webapp-traffic-light");
+// find the host element in the DOM by its id (the controller consumes the
+// wx-webapp-traffic-light marker class when it mounts the control)
+const element = document.getElementById("crew-status");
 
 // retrieve the controller instance associated with the element
 const trafficLight = webexpress.webui.Controller.getInstanceByElement(element);

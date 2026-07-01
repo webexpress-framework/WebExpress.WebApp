@@ -29,8 +29,10 @@ webexpress.webapp.TrafficLightCtrl = class extends webexpress.webui.Ctrl {
 
         super(element);
 
-        // styling hook (the registered marker is consumed by the controller)
-        element.classList.add("wx-webapp-traffic-light");
+        // do NOT re-add the registered selector: the controller strips it on
+        // construction to enforce construct-once, so re-adding it makes the host
+        // match again and every later DOM scan appends another inner light
+        // (there is no css on the host class, the visuals live on the inner)
 
         this._readonly = element.dataset.readonly === "true";
         // the resource a scope renders; when present the status is a pure view of
