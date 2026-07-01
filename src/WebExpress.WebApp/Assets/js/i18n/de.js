@@ -5,6 +5,13 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
 
     "dropdown.search.placeholder": "Suche...",
 
+    "statustask.none": "Unbekannt",
+    "statustask.pending": "Wartend",
+    "statustask.running": "In Arbeit",
+    "statustask.warning": "Warnung",
+    "statustask.error": "Fehler",
+    "statustask.done": "Fertig",
+
     "form.edit_row": "Eintrag bearbeiten",
     "form.edit_item": "Element bearbeiten",
     

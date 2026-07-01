@@ -14,3 +14,4 @@ This section documents the JavaScript controllers and client-side behavior used 
 - [WatcherCtrl](watcher.md)
 - [TabCtrl](tab.md)
 - [TagCtrl](tag.md)
+- [StatusTaskCtrl](status-task.md)

@@ -16,3 +16,5 @@
   href: tab.md
 - name: TrafficLightCtrl
   href: traffic-light.md
+- name: StatusTaskCtrl
+  href: status-task.md

@@ -24,6 +24,7 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/css/webexpress.webapp.table.css")]
     [Asset("/assets/css/webexpress.webapp.tag.css")]
     [Asset("/assets/css/webexpress.webapp.taskprogressbar.css")]
+    [Asset("/assets/css/webexpress.webapp.statustask.css")]
     [Asset("/assets/css/webexpress.webapp.watcher.css")]
     [Asset("/assets/css/webexpress.webapp.workflow.editor.css")]
     [Asset("/assets/css/webexpress.webapp.wql.css")]
