@@ -538,6 +538,34 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
+        /// Declares the standard data service of the table rest combo template,
+        /// which queries the selectable options with GET.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The template control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlTableTemplateRestCombo DataService<TEndpoint>(this ControlTableTemplateRestCombo control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), configure);
+        }
+
+        /// <summary>
+        /// Declares the standard data service of the table rest tag template, which
+        /// serves autocomplete suggestions with GET.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The template control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlTableTemplateRestTag DataService<TEndpoint>(this ControlTableTemplateRestTag control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), configure);
+        }
+
+        /// <summary>
         /// Binds the list to a scope resource by type, fluently and preserving
         /// the concrete control type. A single generic extension on IScopeBound
         /// could not keep the concrete type (C# allows neither mixing one

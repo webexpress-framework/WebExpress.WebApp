@@ -60,6 +60,14 @@ test("map api item chooses field aliases defensively", () => {
     assert.equal(empty.disabled, false);
 });
 
+test("map api item maps the RestApiSelectionItem text field to the label", () => {
+    const { wxapp } = load();
+    // the server sends { id, text, color, uri } (WebApp.WebRestApi.RestApiSelectionItem);
+    // without the text alias the read-only tags render with an empty label
+    const item = wxapp.selectionModel.mapApiItem({ id: "1", text: "Monkey Island" });
+    assert.equal(item.label, "Monkey Island");
+});
+
 test("model searches and maps the result through the shared request end to end", async () => {
     const { wxapp, setFetch } = load();
     const calls = [];

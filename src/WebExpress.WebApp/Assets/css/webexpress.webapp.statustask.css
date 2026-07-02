@@ -1,4 +1,6 @@
-.wx-webapp-status-task {
+/* the controller strips the wx-webapp-status-task marker on mount and the dot
+   host (and the status table template cell) carries wx-status-task instead */
+.wx-status-task {
     display: inline-flex;
     align-items: center;
     gap: 0.4em;

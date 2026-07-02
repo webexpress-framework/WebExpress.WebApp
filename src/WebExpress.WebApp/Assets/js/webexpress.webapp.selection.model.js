@@ -67,7 +67,10 @@ webexpress.webapp.selectionModel = {
      */
     mapApiItem(apiItem) {
         const id = apiItem.id || null;
-        const label = apiItem.label || apiItem.content || apiItem.name || apiItem.title || "";
+        // the RestApiSelectionItem sends the display text as "text" (see
+        // WebExpress.WebApp.WebRestApi.RestApiSelectionItem); without that alias
+        // the read-only tags render with an empty label
+        const label = apiItem.label || apiItem.text || apiItem.content || apiItem.name || apiItem.title || "";
         const icon = apiItem.icon || null;
         const image = apiItem.image || apiItem.img || null;
         const color = apiItem.color || null;

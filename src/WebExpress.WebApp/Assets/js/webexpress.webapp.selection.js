@@ -66,6 +66,46 @@ webexpress.webapp.SelectionCtrl = class extends webexpress.webui.SelectionCtrl {
     }
 
     /**
+     * Returns the current selection.
+     * @returns {Array} The selected ids.
+     */
+    get value() {
+        return super.value;
+    }
+
+    /**
+     * Sets the selection and remembers it. The options are fetched asynchronously,
+     * so the table template assigns the value before they arrive; the base setter
+     * drops ids that are not yet among the (empty) options, so the remembered value
+     * is re-applied in the options setter once the load completes.
+     * @param {Array|string} v - The selection ids.
+     */
+    set value(v) {
+        this._desiredValue = v;
+        super.value = v;
+    }
+
+    /**
+     * Returns the option items.
+     * @returns {Array} The option items.
+     */
+    get options() {
+        return super.options;
+    }
+
+    /**
+     * Replaces the options and re-applies the remembered selection against them,
+     * so a value assigned before the options loaded becomes visible now.
+     * @param {Array} items - The option items.
+     */
+    set options(items) {
+        super.options = items;
+        if (this._desiredValue != null) {
+            super.value = this._desiredValue;
+        }
+    }
+
+    /**
      * Removes the used data-* attributes from the element after reading configuration.
      * @param {HTMLElement} element - The DOM element containing the attributes.
      * @returns {void}
