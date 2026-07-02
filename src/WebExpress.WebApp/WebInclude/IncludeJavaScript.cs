@@ -33,6 +33,8 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/js/webexpress.webapp.dropdown.js")]
     [Asset("/assets/js/webexpress.webapp.dropdown.theme.model.js")]
     [Asset("/assets/js/webexpress.webapp.dropdown.theme.js")]
+    [Asset("/assets/js/webexpress.webapp.gantt.model.js")]
+    [Asset("/assets/js/webexpress.webapp.gantt.js")]
     [Asset("/assets/js/webexpress.webapp.input.selection.model.js")]
     [Asset("/assets/js/webexpress.webapp.input.selection.js")]
     [Asset("/assets/js/webexpress.webapp.input.tile.js")]

@@ -87,6 +87,21 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
+        /// Declares the standard data service of the gantt chart, which loads
+        /// the project with GET and persists task and link mutations against
+        /// the same base.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The gantt control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataGantt DataService<TEndpoint>(this ControlDataGantt control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, DataServiceDescriptor.Data, Endpoint<TEndpoint>(), configure);
+        }
+
+        /// <summary>
         /// Declares the standard data service of the dashboard, which loads its
         /// state with GET and persists it with PUT.
         /// </summary>
@@ -604,6 +619,15 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>The control for chaining.</returns>
         public static ControlDataKanban Resource<TResource>(this ControlDataKanban control) where TResource : IDataResource
             => BindResource<ControlDataKanban, TResource>(control);
+
+        /// <summary>
+        /// Binds the gantt chart to a scope resource by type.
+        /// </summary>
+        /// <typeparam name="TResource">The resource type.</typeparam>
+        /// <param name="control">The gantt control.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataGantt Resource<TResource>(this ControlDataGantt control) where TResource : IDataResource
+            => BindResource<ControlDataGantt, TResource>(control);
 
         /// <summary>
         /// Binds the dashboard to a scope resource by type.

@@ -130,6 +130,28 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "save": "Save",
     "close": "Close",
 
+    // gantt chart
+    "gantt.new_task": "New task",
+    "gantt.scale.day": "Day",
+    "gantt.scale.week": "Week",
+    "gantt.scale.month": "Month",
+    "gantt.zoom_in": "Zoom in",
+    "gantt.zoom_out": "Zoom out",
+    "gantt.today": "Today",
+    "gantt.week_short": "W",
+    "gantt.days_short": "d",
+    "gantt.col.name": "Task",
+    "gantt.col.start": "Start",
+    "gantt.col.end": "End",
+    "gantt.col.duration": "Duration",
+    "gantt.col.progress": "Progress",
+    "gantt.col.resources": "Resources",
+    "gantt.delete_task": "Delete task",
+    "gantt.toggle_grid": "Show or hide the task list",
+    "gantt.empty": "No tasks yet. Create one with \"New task\" or double-click the timeline.",
+    "gantt.load_failed": "Failed to load the plan.",
+    "gantt.retry": "Retry",
+
     // scrum & backlog
     "scrum.backlog": "Backlog",
     "scrum.sprint": "Sprint",

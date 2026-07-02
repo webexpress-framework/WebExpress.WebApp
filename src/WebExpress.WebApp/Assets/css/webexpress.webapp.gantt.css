@@ -1,0 +1,626 @@
+/*
+ * Gantt chart styles for the interactive REST gantt control.
+ * Aligned with the bootstrap variables and the existing WebUI controls.
+ */
+
+/* ----------------------------------------------------------------- host */
+
+/* both panes align rows by pixel height, so every box must include its
+   border regardless of the page's global box-sizing */
+.wx-gantt,
+.wx-gantt *,
+.wx-gantt *::before,
+.wx-gantt *::after {
+    box-sizing: border-box;
+}
+
+.wx-gantt {
+    display: flex;
+    flex-direction: column;
+    height: var(--wx-gantt-height, 480px);
+    min-height: 240px;
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 0.375rem;
+    background: var(--bs-body-bg, #fff);
+    color: var(--bs-body-color, #212529);
+    overflow: hidden;
+}
+
+.wx-gantt:focus {
+    outline: none;
+}
+
+.wx-gantt:focus-visible {
+    box-shadow: 0 0 0 0.2rem var(--bs-primary-border-subtle, #9ec5fe);
+}
+
+/* a running gesture must not start a text selection */
+.wx-gantt--dragging,
+.wx-gantt--linking,
+.wx-gantt--panning {
+    user-select: none;
+    cursor: grabbing;
+}
+
+/* -------------------------------------------------------------- toolbar */
+.wx-gantt-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.5rem;
+    border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+    background: var(--bs-tertiary-bg, #f8f9fa);
+    flex-wrap: wrap;
+}
+
+.wx-gantt-toolbar-spacer {
+    flex-grow: 1;
+}
+
+.wx-gantt-btn {
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    background: var(--bs-body-bg, #fff);
+    color: var(--bs-body-color, #212529);
+    border-radius: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    line-height: 1.2;
+    cursor: pointer;
+}
+
+.wx-gantt-btn:hover,
+.wx-gantt-btn:focus-visible {
+    background: var(--bs-secondary-bg, #e9ecef);
+}
+
+.wx-gantt-btn--primary {
+    background: var(--bs-primary, #0d6efd);
+    border-color: var(--bs-primary, #0d6efd);
+    color: #fff;
+}
+
+.wx-gantt-btn--primary:hover,
+.wx-gantt-btn--primary:focus-visible {
+    background: var(--bs-primary, #0d6efd);
+    filter: brightness(0.92);
+}
+
+.wx-gantt-scales,
+.wx-gantt-zoom {
+    display: inline-flex;
+    gap: 0.25rem;
+}
+
+.wx-gantt-btn.is-active {
+    background: var(--bs-primary-bg-subtle, #cfe2ff);
+    border-color: var(--bs-primary-border-subtle, #9ec5fe);
+    color: var(--bs-primary-text-emphasis, #052c65);
+}
+
+/* ----------------------------------------------------------------- body */
+.wx-gantt-body {
+    display: flex;
+    flex-grow: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* ----------------------------------------------------------------- grid */
+.wx-gantt-grid {
+    flex: 0 0 var(--wx-gantt-grid-w, 420px);
+    max-width: 55%;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+/* collapsed grid: the splitter stays as the handle that brings it back */
+.wx-gantt-grid.wx-gantt-grid--collapsed {
+    display: none;
+}
+
+/* columns that no longer fit the pane hide right to left, the name stays */
+.wx-gantt-grid--hide-start .wx-gantt-grid-cell--key-start,
+.wx-gantt-grid--hide-end .wx-gantt-grid-cell--key-end,
+.wx-gantt-grid--hide-duration .wx-gantt-grid-cell--key-duration,
+.wx-gantt-grid--hide-progress .wx-gantt-grid-cell--key-progress,
+.wx-gantt-grid--hide-resources .wx-gantt-grid-cell--key-resources {
+    display: none;
+}
+
+/* the splitter separates the panes and resizes the grid by dragging */
+.wx-gantt-splitter {
+    flex: 0 0 6px;
+    cursor: col-resize;
+    background: var(--bs-tertiary-bg, #f8f9fa);
+    border-left: 1px solid var(--bs-border-color, #dee2e6);
+    border-right: 1px solid var(--bs-border-color, #dee2e6);
+}
+
+.wx-gantt-splitter:hover,
+.wx-gantt--dragging .wx-gantt-splitter {
+    background: var(--bs-primary-bg-subtle, #cfe2ff);
+}
+
+.wx-gantt-grid-head {
+    display: flex;
+    align-items: center;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--bs-secondary-color, #6c757d);
+    background: var(--bs-tertiary-bg, #f8f9fa);
+    border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+    flex-shrink: 0;
+}
+
+.wx-gantt-grid-rows {
+    flex-grow: 1;
+    overflow: hidden;
+    position: relative;
+}
+
+.wx-gantt-grid-row {
+    display: flex;
+    align-items: center;
+    position: relative;
+    border-bottom: 1px solid var(--bs-border-color-translucent, rgba(0, 0, 0, 0.08));
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+
+.wx-gantt-grid-row:hover {
+    background: var(--bs-tertiary-bg, #f8f9fa);
+}
+
+.wx-gantt-grid-row.is-selected {
+    background: var(--bs-primary-bg-subtle, #cfe2ff);
+}
+
+.wx-gantt-grid-row.is-summary {
+    font-weight: 600;
+}
+
+.wx-gantt-grid-cell {
+    padding: 0 0.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.wx-gantt-grid-cell--name {
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.wx-gantt-grid-cell--date {
+    flex: 0 0 84px;
+}
+
+.wx-gantt-grid-cell--num {
+    flex: 0 0 60px;
+    justify-content: flex-end;
+}
+
+.wx-gantt-grid-cell--res {
+    flex: 0 0 110px;
+    color: var(--bs-secondary-color, #6c757d);
+}
+
+.wx-gantt-grid-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* optional per-task icon, a css class or an image resolved by the factory */
+.wx-gantt-grid-icon {
+    flex-shrink: 0;
+    width: 1rem;
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--bs-secondary-color, #6c757d);
+}
+
+img.wx-gantt-grid-icon {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+}
+
+.wx-gantt-bar-icon {
+    margin-right: 0.25rem;
+    font-size: 0.7rem;
+}
+
+img.wx-gantt-bar-icon {
+    width: 12px;
+    height: 12px;
+    vertical-align: -2px;
+    object-fit: contain;
+}
+
+.wx-gantt-caret {
+    border: none;
+    background: transparent;
+    color: var(--bs-secondary-color, #6c757d);
+    padding: 0;
+    width: 1rem;
+    flex-shrink: 0;
+    cursor: pointer;
+    font-size: 0.7rem;
+}
+
+.wx-gantt-row-delete {
+    position: absolute;
+    right: 0.25rem;
+    border: none;
+    background: transparent;
+    color: var(--bs-secondary-color, #6c757d);
+    padding: 0.125rem 0.25rem;
+    cursor: pointer;
+    font-size: 0.7rem;
+    display: none;
+}
+
+.wx-gantt-grid-row:hover .wx-gantt-row-delete {
+    display: inline-block;
+}
+
+.wx-gantt-row-delete:hover {
+    color: var(--bs-danger, #dc3545);
+}
+
+.wx-gantt-cell-input {
+    width: 100%;
+    font: inherit;
+    padding: 0 0.25rem;
+    border: 1px solid var(--bs-primary, #0d6efd);
+    border-radius: 0.2rem;
+    background: var(--bs-body-bg, #fff);
+    color: inherit;
+}
+
+.wx-gantt-empty {
+    padding: 1rem;
+    font-size: 0.85rem;
+    color: var(--bs-secondary-color, #6c757d);
+}
+
+/* ------------------------------------------------------------- timeline */
+.wx-gantt-chart {
+    flex-grow: 1;
+    overflow: auto;
+    position: relative;
+    min-width: 0;
+}
+
+.wx-gantt-chart-inner {
+    position: relative;
+    min-width: 100%;
+}
+
+.wx-gantt-chart-head {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: var(--bs-tertiary-bg, #f8f9fa);
+    border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+    box-sizing: border-box;
+}
+
+/* groups and units add up to the head height minus its bottom border, so
+   the first row stripe starts exactly below the header */
+.wx-gantt-scale-groups {
+    display: flex;
+    height: 21px;
+}
+
+.wx-gantt-scale-units {
+    display: flex;
+    height: 22px;
+}
+
+.wx-gantt-scale-cell {
+    flex-shrink: 0;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.68rem;
+    color: var(--bs-secondary-color, #6c757d);
+    border-right: 1px solid var(--bs-border-color-translucent, rgba(0, 0, 0, 0.08));
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.wx-gantt-scale-units .wx-gantt-scale-cell.is-weekend {
+    background: var(--bs-secondary-bg, #e9ecef);
+}
+
+/* --------------------------------------------------------------- canvas */
+.wx-gantt-canvas {
+    position: relative;
+    /* the free surface pans the timeline */
+    cursor: grab;
+}
+
+.wx-gantt-row-stripe {
+    position: absolute;
+    left: 0;
+    right: 0;
+    border-bottom: 1px solid var(--bs-border-color-translucent, rgba(0, 0, 0, 0.08));
+    z-index: 0;
+}
+
+.wx-gantt-row-stripe.is-selected {
+    background: var(--bs-primary-bg-subtle, #cfe2ff);
+    opacity: 0.5;
+}
+
+.wx-gantt-weekend {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background: var(--bs-tertiary-bg, #f8f9fa);
+    z-index: 0;
+}
+
+.wx-gantt-today {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    border-left: 2px dashed var(--bs-danger, #dc3545);
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* ---------------------------------------------------------- dependencies */
+.wx-gantt-links {
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: 2;
+    overflow: visible;
+    pointer-events: none;
+}
+
+.wx-gantt-link {
+    fill: none;
+    stroke: var(--bs-secondary-color, #6c757d);
+    stroke-width: 1.5;
+}
+
+.wx-gantt-link.is-selected {
+    stroke: var(--bs-primary, #0d6efd);
+    stroke-width: 2;
+}
+
+.wx-gantt-link--temp {
+    stroke: var(--bs-primary, #0d6efd);
+    stroke-dasharray: 4 3;
+}
+
+.wx-gantt-links marker path {
+    fill: var(--bs-secondary-color, #6c757d);
+}
+
+/* the visible connector is thin, its invisible twin catches the pointer */
+.wx-gantt-link-hit {
+    fill: none;
+    stroke: transparent;
+    stroke-width: 10;
+    pointer-events: stroke;
+    cursor: pointer;
+}
+
+/* ----------------------------------------------------------------- bars */
+.wx-gantt-bars {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 3;
+    pointer-events: none;
+}
+
+.wx-gantt-bars > * {
+    pointer-events: auto;
+}
+
+.wx-gantt-bar {
+    position: absolute;
+    background: var(--bs-primary, #0d6efd);
+    border-radius: 4px;
+    cursor: grab;
+    box-sizing: border-box;
+}
+
+.wx-gantt-bar.is-selected {
+    box-shadow: 0 0 0 2px var(--bs-primary-border-subtle, #9ec5fe);
+}
+
+.wx-gantt-bar-progress {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 4px 0 0 4px;
+    pointer-events: none;
+}
+
+.wx-gantt-bar-label {
+    position: absolute;
+    left: 6px;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #fff;
+    font-size: 0.72rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+}
+
+.wx-gantt-bar-resources {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.7rem;
+    color: var(--bs-secondary-color, #6c757d);
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+/* container bars: flat bracket with downward end ticks, driven by rollup */
+.wx-gantt-bar--summary {
+    background: var(--bs-emphasis-color, #212529);
+    border-radius: 2px;
+    cursor: default;
+}
+
+.wx-gantt-bar--summary .wx-gantt-bar-label {
+    color: var(--bs-body-color, #212529);
+    top: 14px;
+    transform: none;
+}
+
+.wx-gantt-bar--summary::before,
+.wx-gantt-bar--summary::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    border: 4px solid transparent;
+    border-top-color: var(--bs-emphasis-color, #212529);
+}
+
+.wx-gantt-bar--summary::before {
+    left: 0;
+}
+
+.wx-gantt-bar--summary::after {
+    right: 0;
+}
+
+.wx-gantt-milestone {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    background: var(--bs-emphasis-color, #212529);
+    transform: translate(-50%, -50%) rotate(45deg);
+    border-radius: 2px;
+    cursor: grab;
+    z-index: 3;
+}
+
+.wx-gantt-milestone.is-selected {
+    box-shadow: 0 0 0 2px var(--bs-primary-border-subtle, #9ec5fe);
+}
+
+/* -------------------------------------------------------- drag surfaces */
+.wx-gantt-handle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    cursor: ew-resize;
+    opacity: 0;
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.wx-gantt-handle--start {
+    left: 0;
+    border-radius: 4px 0 0 4px;
+}
+
+.wx-gantt-handle--end {
+    right: 0;
+    border-radius: 0 4px 4px 0;
+}
+
+.wx-gantt-bar:hover .wx-gantt-handle {
+    opacity: 1;
+}
+
+.wx-gantt-progress-handle {
+    position: absolute;
+    bottom: -4px;
+    width: 8px;
+    height: 8px;
+    margin-left: 0;
+    background: var(--bs-body-bg, #fff);
+    border: 1px solid var(--bs-primary, #0d6efd);
+    border-radius: 2px;
+    cursor: ew-resize;
+    opacity: 0;
+}
+
+.wx-gantt-bar:hover .wx-gantt-progress-handle {
+    opacity: 1;
+}
+
+.wx-gantt-port {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--bs-body-bg, #fff);
+    border: 2px solid var(--bs-primary, #0d6efd);
+    opacity: 0;
+    cursor: crosshair;
+    z-index: 4;
+    box-sizing: border-box;
+}
+
+.wx-gantt-port--start {
+    left: -14px;
+}
+
+.wx-gantt-port--end {
+    right: -14px;
+}
+
+.wx-gantt-bar:hover .wx-gantt-port,
+.wx-gantt-milestone:hover .wx-gantt-port {
+    opacity: 1;
+}
+
+/* every port shows while a link gesture runs, so targets are discoverable */
+.wx-gantt--linking .wx-gantt-port {
+    opacity: 1;
+}
+
+.wx-gantt-port.is-target {
+    background: var(--bs-primary, #0d6efd);
+}
+
+/* ---------------------------------------------------------------- error */
+.wx-gantt-error {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    color: var(--bs-danger, #dc3545);
+    font-size: 0.85rem;
+}
+
+/* ------------------------------------------------------------ responsive */
+@media (max-width: 768px) {
+    .wx-gantt-grid {
+        flex-basis: 180px;
+    }
+
+    .wx-gantt-grid-cell--date,
+    .wx-gantt-grid-cell--num,
+    .wx-gantt-grid-cell--res {
+        display: none;
+    }
+}

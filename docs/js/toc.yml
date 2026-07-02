@@ -4,6 +4,8 @@
   href: collaborative.md
 - name: CommentCtrl
   href: comment.md
+- name: GanttCtrl
+  href: gantt.md
 - name: RestFormCtrl
   href: form.md
 - name: RestFormEditorCtrl
