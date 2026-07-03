@@ -6,17 +6,25 @@
   href: comment.md
 - name: GanttCtrl
   href: gantt.md
+- name: InputCascadingCtrl
+  href: cascading.md
 - name: RestFormCtrl
   href: form.md
 - name: RestFormEditorCtrl
   href: form-editor.md
-- name: InputSelectionTheme
+- name: DropdownThemeCtrl
   href: theme-selector.md
 - name: WatcherCtrl
   href: watcher.md
 - name: TabCtrl
   href: tab.md
+- name: TagCtrl
+  href: tag.md
 - name: TrafficLightCtrl
   href: traffic-light.md
 - name: StatusTaskCtrl
   href: status-task.md
+- name: ScrumTeamCtrl
+  href: scrum.team.md
+- name: ScrumVelocityCtrl
+  href: scrum.velocity.md

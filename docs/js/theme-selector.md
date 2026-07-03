@@ -1,8 +1,8 @@
 ![WebExpress](https://raw.githubusercontent.com/webexpress-framework/.github/main/docs/assets/img/banner.png)
 
-# DropdownTheme
+# DropdownThemeCtrl
 
-The `webexpress.webapp.DropdownTheme` is a REST-backed theme picker that extends `webexpress.webui.DropdownCtrl`. It loads the themes registered for the current application from a REST endpoint, surfaces the active theme as the dropdown's label so exactly one theme is always selected, hands the user's choice to the application via a `PUT`, and reloads the page. The framework does **not** persist the choice itself - storage is owned by the application, which also tells the visual tree which theme to use on subsequent renders.
+The `webexpress.webapp.DropdownThemeCtrl` is a REST-backed theme picker that extends `webexpress.webui.DropdownCtrl`. It loads the themes registered for the current application from a REST endpoint, surfaces the active theme as the dropdown's label so exactly one theme is always selected, hands the user's choice to the application via a `PUT`, and reloads the page. The framework does **not** persist the choice itself - storage is owned by the application, which also tells the visual tree which theme to use on subsequent renders.
 
 ```
    ┌──────────────────────────────────────────────┐

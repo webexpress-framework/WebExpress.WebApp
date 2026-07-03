@@ -18,4 +18,4 @@ webexpress.webapp.InputPasswordCtrl = class extends webexpress.webui.InputPasswo
 };
 
 // register the class in the controller
-webexpress.webapp.Controller?.registerClass?.("wx-webapp-input-password", webexpress.webapp.InputPasswordCtrl);
+webexpress.webui.Controller.registerClass("wx-webapp-input-password", webexpress.webapp.InputPasswordCtrl);

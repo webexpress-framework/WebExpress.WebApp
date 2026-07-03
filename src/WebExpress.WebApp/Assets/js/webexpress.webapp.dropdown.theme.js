@@ -15,7 +15,7 @@
  *
  * Registered under the class selector wx-webapp-dropdown-theme.
  */
-webexpress.webapp.DropdownTheme = class extends webexpress.webui.DropdownCtrl {
+webexpress.webapp.DropdownThemeCtrl = class extends webexpress.webui.DropdownCtrl {
     /**
      * Construct the controller and trigger the initial theme fetch.
      * @param {HTMLElement} element - the host DOM element.
@@ -145,4 +145,4 @@ webexpress.webapp.DropdownTheme = class extends webexpress.webui.DropdownCtrl {
 };
 
 // register the class in the controller
-webexpress.webui.Controller.registerClass("wx-webapp-dropdown-theme", webexpress.webapp.DropdownTheme);
+webexpress.webui.Controller.registerClass("wx-webapp-dropdown-theme", webexpress.webapp.DropdownThemeCtrl);

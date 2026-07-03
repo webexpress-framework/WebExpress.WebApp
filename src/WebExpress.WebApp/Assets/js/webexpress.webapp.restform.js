@@ -882,7 +882,8 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
         Object.assign(input, {
             type: "text", className: "form-control", placeholder: confirmItem, autocomplete: "off"
         });
-        input.setAttribute("aria-label", this._i18n("webexpress.webapp:delete.confirmation.input.aria-label", { item: confirmItem }));
+        input.setAttribute("aria-label", this._i18n("webexpress.webapp:delete.confirmation.input.aria-label", "Type {item} to confirm deletion.")
+            .replace("{item}", confirmItem));
 
         // store input ref
         this._confirmInput = input;

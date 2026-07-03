@@ -48,10 +48,13 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
 
     "delete.confirmation.prompt": "Bitte geben Sie {item} ein, um die Löschaktion zu bestätigen.",
     "delete.confirmation.mismatch": "Der Wert stimmt nicht überein. Bitte überprüfen Sie Ihre Eingabe.",
+    "delete.confirmation.input.aria-label": "Geben Sie {item} ein, um das Löschen zu bestätigen.",
 
     "login.error.empty": "Benutzername und Passwort sind erforderlich.",
     "login.error.invalid": "Ungültiger Benutzername oder falsches Passwort.",
     "login.error.locked": "Zu viele fehlgeschlagene Versuche. Bitte versuchen Sie es später erneut.",
+    "login.error.ratelimit": "Zu viele fehlgeschlagene Versuche. Bitte warten Sie.",
+    "login.locked": "Gesperrt",
 
     // status
     "status.online": "Online",
@@ -191,6 +194,7 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "scrum.menu.complete_sprint": "Sprint abschließen",
     "scrum.menu.edit_sprint": "Sprint bearbeiten",
     "scrum.menu.delete_sprint": "Sprint löschen",
+    "scrum.delete.prompt": "Soll dieser Sprint wirklich gelöscht werden? Zugeordnete Einträge werden ins Backlog verschoben.",
 
     // scrum active-sprint confirmation
     "scrum.confirm.yes": "Ja",

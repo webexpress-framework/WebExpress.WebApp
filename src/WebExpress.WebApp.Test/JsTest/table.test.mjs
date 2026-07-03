@@ -19,7 +19,7 @@ import { loadEngine, webappAsset, appendServiceIsland, appendStateIsland, append
 // the webapp table extends the static WebUI reorderable table, which the engine
 // harness does not load; the stub carries the members the webapp control calls
 const TABLE_BASE_STUB = `
-    webexpress.webui.TableCtrlReorderable = class extends webexpress.webui.Ctrl {
+    webexpress.webui.TableReorderableCtrl = class extends webexpress.webui.Ctrl {
         constructor(element) {
             super(element);
             this._table = document.createElement("table");

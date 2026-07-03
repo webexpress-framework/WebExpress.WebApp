@@ -161,7 +161,7 @@ webexpress.webapp.Service = class {
  *     query: { search: "q", page: "p", pageSize: "l" },
  *     response: { items: "items", total: "total" },
  *     headers: { ... },
- *     errors: { "404": "webexpress.webapp:error.notfound" },
+ *     errors: { "404": "webexpress.webapp:error.not_found" },
  *     retry: { count: 2, delayMs: 300 }
  *   }
  */
@@ -284,7 +284,8 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
 
             if (!response.ok) {
                 const mapped = this._descriptor.errors && this._descriptor.errors[String(response.status)];
-                const message = mapped || ("request failed with status " + response.status);
+                // a mapped entry may be an i18n key (see the descriptor doc); plain text falls through untouched
+                const message = (mapped && (webexpress?.webui?.I18N?.translate(mapped) ?? mapped)) || ("request failed with status " + response.status);
                 const result = {
                     ok: false,
                     data: data,
@@ -454,7 +455,8 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
 
             if (!response.ok) {
                 const mapped = this._descriptor.errors && this._descriptor.errors[String(response.status)];
-                const message = mapped || ("request failed with status " + response.status);
+                // a mapped entry may be an i18n key (see the descriptor doc); plain text falls through untouched
+                const message = (mapped && (webexpress?.webui?.I18N?.translate(mapped) ?? mapped)) || ("request failed with status " + response.status);
                 return webexpress.webapp.ServiceResult.fail("http", response.status, message, response.status >= 500);
             }
 

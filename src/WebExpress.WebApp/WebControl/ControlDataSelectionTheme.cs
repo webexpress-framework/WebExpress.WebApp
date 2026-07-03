@@ -16,7 +16,7 @@ namespace WebExpress.WebApp.WebControl
     /// dropdown (<see cref="ControlDropdown"/>) that does not need to live
     /// inside a <see cref="ControlForm"/>. The dropdown shell is emitted as
     /// <c>wx-webapp-dropdown-theme</c> wired to the declared data service;
-    /// the JS layer (<c>webexpress.webapp.DropdownTheme</c>) fetches the
+    /// the JS layer (<c>webexpress.webapp.DropdownThemeCtrl</c>) fetches the
     /// theme list on initialisation, marks the currently active theme as the
     /// dropdown's label, and persists a user pick through
     /// <c>PUT v=&lt;themeId&gt;</c> followed by a page reload so the server

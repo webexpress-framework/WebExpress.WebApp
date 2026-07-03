@@ -4,12 +4,13 @@
    read-only surface and the autocomplete dropdown of the editable surface
    shown inside the modal. */
 
-/* read-only tag surface with a "+" affordance */
-.wx-webapp-tag {
+/* read-only tag surface with a "+" affordance; wx-tag-surface is the hook
+   TagCtrl re-adds after the wx-webapp-tag boot selector is consumed */
+.wx-tag-surface {
     align-items: center;
 }
 
-.wx-webapp-tag > .wx-tag-add {
+.wx-tag-surface > .wx-tag-add {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -26,7 +27,7 @@
     cursor: pointer;
 }
 
-.wx-webapp-tag > .wx-tag-add:hover {
+.wx-tag-surface > .wx-tag-add:hover {
     color: var(--bs-body-color);
     border-color: var(--bs-body-color);
     background-color: var(--bs-secondary-bg, rgba(0, 0, 0, 0.05));

@@ -482,6 +482,21 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
+        /// Declares the standard data service of the cascading input, which
+        /// queries the root level with GET and the children of a selected node
+        /// on demand via the parent query parameter.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The input control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataFormItemInputCascading DataService<TEndpoint>(this ControlDataFormItemInputCascading control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), configure);
+        }
+
+        /// <summary>
         /// Declares the standard data service of the check input, which reads
         /// and toggles the state against the endpoint.
         /// </summary>

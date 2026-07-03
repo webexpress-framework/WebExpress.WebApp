@@ -18,7 +18,7 @@
  *   and is unit tested in isolation
  * The emitted events and the rendered DOM are unchanged.
  */
-webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderable {
+webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtrl {
     // configuration
     _restUri = "";
     _viewState = null;

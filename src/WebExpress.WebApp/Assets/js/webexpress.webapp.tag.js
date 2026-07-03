@@ -319,9 +319,10 @@ webexpress.webapp.TagCtrl = class extends webexpress.webui.TagCtrl {
 
         super(element);
 
-        // styling hook (the registered "wx-webapp-tag" selector is removed by
-        // the controller on instantiation, so re-add it for the css)
-        element.classList.add("wx-webapp-tag");
+        // styling hook: the registered "wx-webapp-tag" selector is consumed by
+        // the controller on instantiation; re-adding it would make a later dom
+        // scan construct a second instance, so a distinct class keys the css
+        element.classList.add("wx-tag-surface");
 
         // the endpoint is authored in C# through the wx-service island
         this._service = islandServices.data || null;

@@ -60,22 +60,23 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
         // to a rounded fibonacci sequence when the host carries no scale
         this._estimationScale = webexpress.webapp.scrumBacklogModel.estimationScale(element.dataset.estimationScale);
 
-        // read configurable icons or use font awesome defaults
+        // read configurable icons or use theme-resolved defaults; icons without
+        // a light glyph stay on their font awesome class in both themes
         // item type icons are not configured here - they are delivered per item via item.icon from the rest api
         this._icons = {
             // sections and status
             active: element.dataset.iconActive || "fas fa-play-circle",
-            planned: element.dataset.iconPlanned || "far fa-calendar-alt",
-            backlog: element.dataset.iconBacklog || "fas fa-list",
-            sprintMenu: element.dataset.iconSprintMenu || "fas fa-ellipsis",
+            planned: element.dataset.iconPlanned || this._iconClass("far fa-calendar-alt", "calendar"),
+            backlog: element.dataset.iconBacklog || this._iconClass("fas fa-list", "list"),
+            sprintMenu: element.dataset.iconSprintMenu || this._iconClass("fas fa-ellipsis", "more"),
 
             // context menu actions
-            moveToBacklog: element.dataset.iconMoveToBacklog || "fas fa-inbox",
-            moveToSprint: element.dataset.iconMoveToSprint || "fas fa-share",
-            startSprint: element.dataset.iconStartSprint || "fas fa-play",
+            moveToBacklog: element.dataset.iconMoveToBacklog || this._iconClass("fas fa-inbox", "inbox"),
+            moveToSprint: element.dataset.iconMoveToSprint || this._iconClass("fas fa-share", "share"),
+            startSprint: element.dataset.iconStartSprint || this._iconClass("fas fa-play", "play"),
             completeSprint: element.dataset.iconCompleteSprint || "fas fa-check-double",
-            editSprint: element.dataset.iconEditSprint || "fas fa-edit",
-            deleteSprint: element.dataset.iconDeleteSprint || "fas fa-trash-alt",
+            editSprint: element.dataset.iconEditSprint || this._iconClass("fas fa-edit", "edit"),
+            deleteSprint: element.dataset.iconDeleteSprint || this._iconClass("fas fa-trash-alt", "trash"),
 
             // item assignment and estimation
             assign: element.dataset.iconAssign || "fas fa-user-plus",
@@ -1044,7 +1045,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
             createBtn.type = "button";
             createBtn.className = "btn btn-primary btn-sm wx-scrum-create-sprint";
             createBtn.append(
-                webexpress.webui.Icon.create("fas fa-plus"),
+                webexpress.webui.Icon.create(this._iconClass("fas fa-plus", "plus")),
                 " " + this._i18n("webexpress.webapp:scrum.create_sprint", "Create sprint")
             );
             createBtn.addEventListener("click", () => this.openSprintDialog());
@@ -1074,7 +1075,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
         status.className = "wx-scrum-status " + (sprint.status || "");
 
         const statusKey = (sprint.status || "planned").toLowerCase();
-        status.appendChild(webexpress.webui.Icon.create(this._icons[statusKey] || "fas fa-circle", "wx-scrum-status-icon me-1"));
+        status.appendChild(webexpress.webui.Icon.create(this._icons[statusKey] || this._iconClass("fas fa-circle", "circle"), "wx-scrum-status-icon me-1"));
         status.appendChild(document.createTextNode(sprint.status || ""));
         head.appendChild(status);
 
@@ -1098,7 +1099,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
             const menuBtn = document.createElement("button");
             menuBtn.type = "button";
             menuBtn.className = "btn btn-sm btn-light wx-scrum-sprint-menu";
-            menuBtn.appendChild(webexpress.webui.Icon.create(this._icons.sprintMenu || "fas fa-ellipsis"));
+            menuBtn.appendChild(webexpress.webui.Icon.create(this._icons.sprintMenu || this._iconClass("fas fa-ellipsis", "more")));
             menuBtn.addEventListener("click", (e) => {
                 e.stopPropagation();
                 this._openSprintMenu(e, sprint);
@@ -1193,7 +1194,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
         type.className = "wx-scrum-type " + (item.type || "");
         // the icon is supplied per item by the rest api (item.icon) as either a
         // css class or an image source; fall back to a neutral marker
-        const iconSpec = (typeof item.icon === "string" && item.icon.trim()) ? item.icon.trim() : "fas fa-circle";
+        const iconSpec = (typeof item.icon === "string" && item.icon.trim()) ? item.icon.trim() : this._iconClass("fas fa-circle", "circle");
         type.appendChild(webexpress.webui.Icon.create(iconSpec));
         row.appendChild(type);
 
@@ -2399,7 +2400,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
             clear.type = "button";
             clear.className = "wx-scrum-assignee-clear";
             clear.title = this._i18n("webexpress.webapp:scrum.assignee.unassigned", "Unassigned");
-            clear.appendChild(webexpress.webui.Icon.create("fas fa-times"));
+            clear.appendChild(webexpress.webui.Icon.create(this._iconClass("fas fa-times", "xmark")));
             clear.addEventListener("click", () => {
                 selectedUser = null;
                 renderSelected();

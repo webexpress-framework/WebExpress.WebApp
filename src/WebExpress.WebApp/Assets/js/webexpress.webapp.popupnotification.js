@@ -19,7 +19,7 @@
  * - webexpress.webui.Event.HIDE_EVENT with the notification id when the
  *   alert is closed or expires.
  */
-class PopupNotificationCtrl extends webexpress.webui.Ctrl {
+webexpress.webapp.PopupNotificationCtrl = class extends webexpress.webui.Ctrl {
     static SHOW_TYPE = "webexpress.webapp.popup.show";
     static DISMISS_TYPE = "webexpress.webapp.popup.dismiss";
 
@@ -77,7 +77,7 @@ class PopupNotificationCtrl extends webexpress.webui.Ctrl {
             return;
         }
 
-        if (payload.type === PopupNotificationCtrl.SHOW_TYPE && payload.notification) {
+        if (payload.type === webexpress.webapp.PopupNotificationCtrl.SHOW_TYPE && payload.notification) {
             this._showNotification(payload.notification);
         }
     }
@@ -310,7 +310,7 @@ class PopupNotificationCtrl extends webexpress.webui.Ctrl {
 
         if (this._queue) {
             this._queue.send({
-                type: PopupNotificationCtrl.DISMISS_TYPE,
+                type: webexpress.webapp.PopupNotificationCtrl.DISMISS_TYPE,
                 notificationId: id
             });
         }
@@ -383,7 +383,7 @@ class PopupNotificationCtrl extends webexpress.webui.Ctrl {
         // trigger the keyframes
         alert.classList.add("wx-popup-hiding");
     }
-}
+};
 
 // register the class in the controller
-webexpress.webui.Controller.registerClass("wx-webapp-popupnotification", PopupNotificationCtrl);
+webexpress.webui.Controller.registerClass("wx-webapp-popupnotification", webexpress.webapp.PopupNotificationCtrl);

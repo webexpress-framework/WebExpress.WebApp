@@ -56,8 +56,9 @@ The server side is provided by the abstract `WebExpress.WebApp.WebRestApi.RestAp
 Once initialized, the `TagCtrl` instance is retrievable via `getInstanceByElement(element)`. The inherited `value` getter/setter exposes the current tags as a semicolon-separated string (or accepts a string or array).
 
 ```javascript
-// find the host element in the DOM
-const tagElement = document.querySelector(".wx-webapp-tag");
+// find the host element in the DOM; the wx-webapp-tag boot selector is
+// consumed at initialization, wx-tag-surface is the hook the control re-adds
+const tagElement = document.querySelector(".wx-tag-surface");
 
 // retrieve the controller instance associated with the element
 const tagCtrl = webexpress.webui.Controller.getInstanceByElement(tagElement);

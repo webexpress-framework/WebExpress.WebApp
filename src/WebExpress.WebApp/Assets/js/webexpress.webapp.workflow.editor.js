@@ -121,7 +121,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
             toggle.id = "btn-toggle-props";
             toggle.className = "wx-simple-btn wx-workflow-editor-toggle";
             toggle.title = this._i18n("webexpress.webui:workflow.editor.props.toggle");
-            toggle.innerHTML = `<i class="fas fa-columns" aria-hidden="true"></i>`;
+            toggle.innerHTML = `<i class="${this._iconClass("fas fa-columns", "columns")}" aria-hidden="true"></i>`;
             toggle.onclick = (e) => {
                 e.stopPropagation();
                 this._togglePropsPane();
@@ -458,7 +458,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
         const addBtn = document.createElement("button");
         addBtn.type = "button";
         addBtn.className = "wx-workflow-editor-btn wx-workflow-editor-btn--ghost";
-        addBtn.innerHTML = `<i class="fas fa-plus" aria-hidden="true"></i> <span></span>`;
+        addBtn.innerHTML = `<i class="${this._iconClass("fas fa-plus", "plus")}" aria-hidden="true"></i> <span></span>`;
         addBtn.querySelector("span").textContent =
             this._i18n("webexpress.webui:workflow.editor.props.add.transition");
         addBtn.addEventListener("click", () => this._beginAddTransition());
@@ -486,11 +486,11 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
 
         if (issues.length === 0) {
             box.classList.add("wx-workflow-editor-preflight--ok");
-            icon.className = "fas fa-check";
+            icon.className = this._iconClass("fas fa-check", "check");
             text.textContent = this._i18n("webexpress.webui:workflow.editor.preflight.ok");
         } else {
             box.classList.add("wx-workflow-editor-preflight--warn");
-            icon.className = "fas fa-triangle-exclamation";
+            icon.className = this._iconClass("fas fa-triangle-exclamation", "triangle-exclamation");
             text.textContent = issues[0];
         }
         icon.setAttribute("aria-hidden", "true");
@@ -723,7 +723,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
             {
                 id: "guards",
                 label: this._i18n("webexpress.webui:workflow.editor.transition.guards"),
-                icon: "fas fa-shield-alt",
+                icon: this._iconClass("fas fa-shield-alt", "shield"),
                 build: () => this._renderRulePanel(edge, "guards",
                     this._catalog.guards,
                     this._i18n("webexpress.webui:workflow.editor.transition.guards.add"),
@@ -733,7 +733,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
             {
                 id: "postfunctions",
                 label: this._i18n("webexpress.webui:workflow.editor.transition.postfunctions"),
-                icon: "fas fa-bolt",
+                icon: this._iconClass("fas fa-bolt", "bolt"),
                 build: () => this._renderRulePanel(edge, "postfunctions",
                     this._catalog.postfunctions,
                     this._i18n("webexpress.webui:workflow.editor.transition.postfunctions.add"),
@@ -1020,7 +1020,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "wx-workflow-editor-btn wx-workflow-editor-btn--danger";
-        btn.innerHTML = `<i class="fas fa-trash" aria-hidden="true"></i> <span></span>`;
+        btn.innerHTML = `<i class="${this._iconClass("fas fa-trash", "trash")}" aria-hidden="true"></i> <span></span>`;
         btn.querySelector("span").textContent = label;
         btn.addEventListener("click", onClick);
 
@@ -1068,7 +1068,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
                 item.className = "wx-workflow-editor-prop-section__item";
                 const otherNode = this._model.nodes.find(n => n.id === e[otherSide]);
                 const otherLabel = otherNode ? (otherNode.label || otherNode.id) : "?";
-                item.innerHTML = `<i class="fas fa-arrow-right" aria-hidden="true"></i><span class="wx-workflow-editor-prop-section__item-label"></span><span class="wx-workflow-editor-prop-section__item-side"></span>`;
+                item.innerHTML = `<i class="${this._iconClass("fas fa-arrow-right", "arrow-right")}" aria-hidden="true"></i><span class="wx-workflow-editor-prop-section__item-label"></span><span class="wx-workflow-editor-prop-section__item-side"></span>`;
                 item.querySelector(".wx-workflow-editor-prop-section__item-label").textContent = e.label || e.id || "";
                 item.querySelector(".wx-workflow-editor-prop-section__item-side").textContent = otherLabel;
                 item.addEventListener("click", () => {
@@ -1112,7 +1112,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
         const addBtn = document.createElement("button");
         addBtn.type = "button";
         addBtn.className = "wx-workflow-editor-btn wx-workflow-editor-btn--ghost";
-        addBtn.innerHTML = `<i class="fas fa-plus" aria-hidden="true"></i> <span></span>`;
+        addBtn.innerHTML = `<i class="${this._iconClass("fas fa-plus", "plus")}" aria-hidden="true"></i> <span></span>`;
         addBtn.querySelector("span").textContent = addLabel;
         addWrap.appendChild(addBtn);
 

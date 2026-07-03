@@ -4,13 +4,13 @@
  * the current session, then redirects the browser to the application root.
  */
 webexpress.webui.Actions.register("logout", {
-    execute: function (element, prefix) {
-        var uri = element.getAttribute("data-wx-" + prefix + "-uri");
+    execute(element, prefix) {
+        const uri = element.getAttribute("data-wx-" + prefix + "-uri");
         if (!uri) {
             console.warn("Logout action: no session API URI specified.");
             return;
         }
-        var target = element.getAttribute("data-wx-" + prefix + "-target") || "/";
+        let target = element.getAttribute("data-wx-" + prefix + "-target") || "/";
         if (!target) {
             console.warn("Logout action: redirect target is empty, using '/' as fallback.");
             target = "/";
@@ -21,7 +21,7 @@ webexpress.webui.Actions.register("logout", {
             headers: {
                 "Content-Type": "application/json; charset=utf-8"
             }
-        }).finally(function () {
+        }).finally(() => {
             // redirect to application root regardless of outcome
             window.location.href = target;
         });
@@ -33,27 +33,27 @@ webexpress.webui.Actions.register("logout", {
  * Executes activate/deactivate/delete requests and upload-based install/update.
  */
 webexpress.webui.Actions.register("plugin-package", {
-    execute: function (element, prefix) {
-        var uri = element.getAttribute("data-wx-" + prefix + "-uri");
+    execute(element, prefix) {
+        const uri = element.getAttribute("data-wx-" + prefix + "-uri");
         if (!uri) {
             console.warn("Plugin package action: missing endpoint URI.");
             return;
         }
 
-        var method = (element.getAttribute("data-wx-" + prefix + "-method") || "POST").toUpperCase();
-        var requireFile = (element.getAttribute("data-wx-" + prefix + "-require-file") || "") === "true";
-        var confirmText = element.getAttribute("data-wx-" + prefix + "-confirm");
+        const method = (element.getAttribute("data-wx-" + prefix + "-method") || "POST").toUpperCase();
+        const requireFile = (element.getAttribute("data-wx-" + prefix + "-require-file") || "") === "true";
+        const confirmText = element.getAttribute("data-wx-" + prefix + "-confirm");
 
         if (confirmText && !window.confirm(confirmText)) {
             return;
         }
 
-        var handleResponse = function (response) {
+        const handleResponse = (response) => {
             // response is the normalised service result, not a raw Response; the
             // body is already parsed into data and a non-json body is wrapped as
             // { text }. On failure prefer the parsed text, then the error message.
             if (!response.ok) {
-                var detail = "";
+                let detail = "";
                 if (response.data && typeof response.data === "object" && typeof response.data.text === "string") {
                     detail = response.data.text;
                 } else if (response.error && response.error.message) {
@@ -64,34 +64,34 @@ webexpress.webui.Actions.register("plugin-package", {
             return (response.data && typeof response.data === "object") ? response.data : {};
         };
 
-        var handleResult = function (payload) {
+        const handleResult = (payload) => {
             if (payload && payload.message) {
                 console.info(payload.message);
             }
             window.location.reload();
         };
 
-        var handleError = function (error) {
+        const handleError = (error) => {
             console.error("Plugin package action failed:", error);
             window.alert(error && error.message ? error.message : "Plugin package action failed.");
         };
 
         if (requireFile) {
-            var input = document.createElement("input");
+            const input = document.createElement("input");
             input.type = "file";
             input.accept = ".wxp";
             input.style.display = "none";
-            var cleanup = function () {
+            const cleanup = () => {
                 input.value = "";
             };
 
-            input.addEventListener("change", function () {
+            input.addEventListener("change", () => {
                 if (!input.files || input.files.length === 0) {
                     cleanup();
                     return;
                 }
 
-                var formData = new FormData();
+                const formData = new FormData();
                 formData.append("file", input.files[0], input.files[0].name);
 
                 webexpress.webapp.ServiceRegistry.request(uri, {
@@ -136,21 +136,19 @@ webexpress.webui.Actions.register("plugin-package", {
  *           data-wx-primary-durability="4000">Save</button>
  */
 webexpress.webui.Actions.register("popup", {
-    execute: function (element, prefix, controller, event) {
+    execute(element, prefix, controller, event) {
         if (event && typeof event.preventDefault === "function") {
             event.preventDefault();
         }
 
-        function attr(name) {
-            return element.getAttribute("data-wx-" + prefix + "-" + name);
-        }
+        const attr = (name) => element.getAttribute("data-wx-" + prefix + "-" + name);
 
-        var heading = attr("heading") || "";
-        var message = attr("message") || "";
-        var type = attr("type") || "alert-primary";
-        var icon = attr("icon") || null;
-        var durabilityRaw = attr("durability");
-        var durability = durabilityRaw === null || durabilityRaw === ""
+        const heading = attr("heading") || "";
+        const message = attr("message") || "";
+        const type = attr("type") || "alert-primary";
+        const icon = attr("icon") || null;
+        const durabilityRaw = attr("durability");
+        let durability = durabilityRaw === null || durabilityRaw === ""
             ? 5000
             : parseInt(durabilityRaw, 10);
         if (isNaN(durability)) {
@@ -159,10 +157,10 @@ webexpress.webui.Actions.register("popup", {
 
         // build a notification id - random per click so multiple presses
         // produce distinct alerts instead of replacing one another
-        var id = "popup-" + Date.now().toString(36) + "-"
+        const id = "popup-" + Date.now().toString(36) + "-"
             + Math.random().toString(36).slice(2, 8);
 
-        var payload = {
+        const payload = {
             type: "webexpress.webapp.popup.show",
             notification: {
                 id: id,
@@ -176,7 +174,7 @@ webexpress.webui.Actions.register("popup", {
             }
         };
 
-        var queue = (typeof webexpress !== "undefined" && webexpress.webapp)
+        const queue = (typeof webexpress !== "undefined" && webexpress.webapp)
             ? webexpress.webapp.MessageQueue
             : null;
         if (queue && typeof queue.dispatchLocal === "function") {
@@ -206,23 +204,21 @@ webexpress.webui.Actions.register("popup", {
  *           data-wx-primary-payload='{"page":0}'>First page</button>
  */
 webexpress.webui.Actions.register("dispatch", {
-    execute: function (element, prefix, controller, event) {
+    execute(element, prefix, controller, event) {
         if (event && typeof event.preventDefault === "function") {
             event.preventDefault();
         }
 
-        function attr(name) {
-            return element.getAttribute("data-wx-" + prefix + "-" + name);
-        }
+        const attr = (name) => element.getAttribute("data-wx-" + prefix + "-" + name);
 
-        var intent = attr("intent");
+        const intent = attr("intent");
         if (!intent) {
             console.warn("dispatch action without intent", element);
             return;
         }
 
-        var payload = null;
-        var payloadRaw = attr("payload");
+        let payload = null;
+        const payloadRaw = attr("payload");
         if (payloadRaw) {
             try {
                 payload = JSON.parse(payloadRaw);
@@ -234,15 +230,15 @@ webexpress.webui.Actions.register("dispatch", {
 
         // resolve the target component: an explicit target id wins, otherwise
         // the nearest ancestor component is used
-        var component = null;
-        var targetId = attr("target");
+        let component = null;
+        const targetId = attr("target");
         if (targetId) {
-            var host = document.getElementById(targetId);
+            const host = document.getElementById(targetId);
             component = host ? controller.getInstanceByElement(host) : null;
         } else {
-            var current = element;
+            let current = element;
             while (current && !component) {
-                var instance = controller.getInstanceByElement(current);
+                const instance = controller.getInstanceByElement(current);
                 if (instance && typeof instance.dispatch === "function") {
                     component = instance;
                 }
@@ -277,20 +273,20 @@ webexpress.webui.Actions.register("dispatch", {
  *           data-wx-primary-uri="/api/v1/popuptrigger?scope=global">Notify</button>
  */
 webexpress.webui.Actions.register("request", {
-    execute: function (element, prefix, controller, event) {
+    execute(element, prefix, controller, event) {
         if (event && typeof event.preventDefault === "function") {
             event.preventDefault();
         }
 
-        var uri = element.getAttribute("data-wx-" + prefix + "-uri");
+        const uri = element.getAttribute("data-wx-" + prefix + "-uri");
         if (!uri) {
             console.warn("request action without uri", element);
             return;
         }
 
-        var method = (element.getAttribute("data-wx-" + prefix + "-method") || "GET").toUpperCase();
+        const method = (element.getAttribute("data-wx-" + prefix + "-method") || "GET").toUpperCase();
 
-        var registry = (typeof webexpress !== "undefined" && webexpress.webapp)
+        const registry = (typeof webexpress !== "undefined" && webexpress.webapp)
             ? webexpress.webapp.ServiceRegistry
             : null;
         if (!registry || typeof registry.request !== "function") {
@@ -300,7 +296,7 @@ webexpress.webui.Actions.register("request", {
 
         // fire and forget - the observable result (e.g. a broadcast popup)
         // arrives through the MessageQueue WebSocket, not through this response
-        registry.request(uri, { method: method }).catch(function (error) {
+        registry.request(uri, { method: method }).catch((error) => {
             console.error("request action failed:", error);
         });
     }
