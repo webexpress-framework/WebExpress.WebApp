@@ -138,6 +138,17 @@ webexpress.webapp.Service = class {
     }
 
     /**
+     * Returns the wire names of the logical domains whose data the service
+     * serves, from its descriptor. A scope ViewState subscribes these domains
+     * on the message queue and re-queries the service's resources when the
+     * server announces a data change.
+     * @returns {Array<string>} The domain names, or an empty array.
+     */
+    get domains() {
+        return this._descriptor.domains || [];
+    }
+
+    /**
      * Aborts any request that is in flight. The base implementation does
      * nothing.
      */
@@ -636,6 +647,13 @@ webexpress.webapp.ServiceRegistry = new class {
             descriptor.updateMethod = updateMethod;
         }
 
+        const domains = island.getAttribute("domains");
+        if (domains) {
+            descriptor.domains = domains.split(";")
+                .map((domain) => domain.trim().toLowerCase())
+                .filter((domain) => domain.length > 0);
+        }
+
         const retryCount = island.getAttribute("retry-count");
         if (retryCount !== null && retryCount !== "") {
             descriptor.retry = {
@@ -690,6 +708,9 @@ webexpress.webapp.ServiceRegistry = new class {
         if (descriptor.updateMethod) {
             island.setAttribute("update-method", descriptor.updateMethod);
         }
+        if (Array.isArray(descriptor.domains) && descriptor.domains.length > 0) {
+            island.setAttribute("domains", descriptor.domains.join(";"));
+        }
 
         return island;
     }
@@ -699,5 +720,206 @@ webexpress.webapp.ServiceRegistry = new class {
      */
     clear() {
         this._factories.clear();
+    }
+};
+
+/**
+ * The client side of the live data update channel. A subscription is created
+ * with the domains a component's services declare and a callback; it registers
+ * on the message queue, subscribes the domains on the server (so the server
+ * addresses this connection when data of those domains changes - including
+ * changes made by other users) and invokes the callback with the changed
+ * domains after a short coalescing window, so a burst of changes (for example
+ * a bulk operation) triggers one reaction instead of one per message. The
+ * scope ViewState and the Data component base share this class; without a
+ * message queue (for example in a headless test) the subscription stays
+ * detached and attach is a no-op.
+ */
+webexpress.webapp.DataChangeSubscription = class {
+    /**
+     * The wire type of the server message that announces a data change of a
+     * domain. Must match DataChangedMessageTypes.Changed on the server.
+     * @type {string}
+     */
+    static CHANGED_TYPE = "webexpress.webapp.data.changed";
+
+    /**
+     * How long incoming change messages are coalesced before the callback
+     * runs.
+     * @type {number}
+     */
+    static COALESCE_MS = 50;
+
+    /**
+     * The class that plays the change flash animation on a control whose data
+     * was re-queried because of an external change.
+     * @type {string}
+     */
+    static FLASH_CLASS = "wx-data-changed";
+
+    /**
+     * How long the flash class stays on the element. Matches the css
+     * animation duration, so the class is gone when the animation ends and a
+     * later flash can restart it.
+     * @type {number}
+     */
+    static FLASH_MS = 1200;
+
+    /**
+     * Plays the change flash on an element, so the user sees that its data
+     * was refreshed by an external change rather than by an own action. A
+     * flash that arrives while the previous one is still playing restarts the
+     * animation by removing and re-adding the class across a reflow.
+     * @param {HTMLElement} element - The element to flash.
+     */
+    static flash(element) {
+        if (!element || !element.classList) {
+            return;
+        }
+
+        const cls = webexpress.webapp.DataChangeSubscription.FLASH_CLASS;
+
+        if (element._wxFlashTimer) {
+            clearTimeout(element._wxFlashTimer);
+            element._wxFlashTimer = null;
+            element.classList.remove(cls);
+            // reading a layout property commits the removal, so re-adding the
+            // class restarts the css animation instead of being coalesced
+            void element.offsetWidth;
+        }
+
+        element.classList.add(cls);
+        element._wxFlashTimer = setTimeout(() => {
+            element._wxFlashTimer = null;
+            element.classList.remove(cls);
+        }, webexpress.webapp.DataChangeSubscription.FLASH_MS);
+    }
+
+    /**
+     * Wires a component reload to the data change channel: the domains are
+     * collected from the given services, an external change of one of them
+     * runs the reload, and once the reload settles the element plays the
+     * change flash, so the user sees the content changed because of an
+     * outside action. This is the one wiring the Data base and the standalone
+     * data controls share. Components whose services declare no domains stay
+     * detached and receive null.
+     * @param {Array<webexpress.webapp.Service>|object} services - The services, as an array or a name map.
+     * @param {Function} reload - Reloads the component; may return a promise.
+     * @param {HTMLElement} element - The host element to flash.
+     * @returns {webexpress.webapp.DataChangeSubscription|null} The attached subscription or null.
+     */
+    static attachReload(services, reload, element) {
+        const list = Array.isArray(services) ? services : Object.values(services || {});
+        const domains = list.flatMap((service) => (service && service.domains) || []);
+
+        if (domains.length === 0 || typeof reload !== "function") {
+            return null;
+        }
+
+        return new webexpress.webapp.DataChangeSubscription(domains, () => {
+            let outcome;
+            try {
+                outcome = reload();
+            } catch (error) {
+                console.error("data change reload failed", error);
+                return;
+            }
+
+            Promise.resolve(outcome).then(() => {
+                webexpress.webapp.DataChangeSubscription.flash(element);
+            }).catch(() => {
+                // a failed reload already surfaced through the error channel
+            });
+        }).attach();
+    }
+
+    /**
+     * Creates a subscription.
+     * @param {Array<string>} domains - The wire names of the domains to react to.
+     * @param {Function} onChanged - Receives a Set of the changed domain names.
+     */
+    constructor(domains, onChanged) {
+        this._domains = new Set((domains || []).map((domain) => String(domain).toLowerCase()));
+        this._onChanged = onChanged;
+        this._listener = null;
+        this._pending = new Set();
+        this._timer = null;
+    }
+
+    /**
+     * Registers on the message queue and subscribes the domains. Without a
+     * queue or without domains the subscription stays detached.
+     * @returns {this} The subscription for chaining.
+     */
+    attach() {
+        const queue = webexpress.webapp.MessageQueue;
+        if (!queue || this._domains.size === 0 || this._listener) {
+            return this;
+        }
+
+        if (typeof queue.register === "function") {
+            this._listener = (payload) => this._onMessage(payload);
+            queue.register(this._listener);
+        }
+
+        if (typeof queue.subscribeDomains === "function") {
+            queue.subscribeDomains(Array.from(this._domains));
+        }
+
+        return this;
+    }
+
+    /**
+     * Unregisters the queue listener and cancels a pending callback. The
+     * server side domain subscription stays with the connection, because an
+     * unmatched change message is simply ignored.
+     */
+    detach() {
+        const queue = webexpress.webapp.MessageQueue;
+        if (queue && this._listener && typeof queue.unregister === "function") {
+            queue.unregister(this._listener);
+        }
+        this._listener = null;
+
+        if (this._timer) {
+            clearTimeout(this._timer);
+            this._timer = null;
+        }
+        this._pending.clear();
+    }
+
+    /**
+     * Handles a message from the queue. A change message whose domain matches
+     * marks the domain and schedules the coalesced callback; every other
+     * message is ignored.
+     * @param {*} payload - The message payload.
+     */
+    _onMessage(payload) {
+        if (!payload || typeof payload !== "object"
+            || payload.type !== webexpress.webapp.DataChangeSubscription.CHANGED_TYPE) {
+            return;
+        }
+
+        const domain = typeof payload.domain === "string" ? payload.domain.toLowerCase() : null;
+        if (!domain || !this._domains.has(domain)) {
+            return;
+        }
+
+        this._pending.add(domain);
+
+        if (this._timer) {
+            return;
+        }
+
+        this._timer = setTimeout(() => {
+            this._timer = null;
+            const changed = this._pending;
+            this._pending = new Set();
+            try {
+                this._onChanged(changed);
+            } catch (error) {
+                console.error("data change callback failed", error);
+            }
+        }, webexpress.webapp.DataChangeSubscription.COALESCE_MS);
     }
 };

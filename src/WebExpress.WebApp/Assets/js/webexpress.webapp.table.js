@@ -115,6 +115,14 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
             this._attachToScope(element);
         } else if (this._restUri) {
             this._load();
+
+            // an external change of the service's domains re-queries and
+            // flashes, so changes made by other users re-render standalone too
+            const dataChanges = webexpress.webapp.DataChangeSubscription.attachReload(
+                [this._service], () => this._load(), element);
+            if (dataChanges) {
+                (element._wxCleanup = element._wxCleanup || []).push(() => dataChanges.detach());
+            }
         } else {
             this._toggleProgress(false);
         }

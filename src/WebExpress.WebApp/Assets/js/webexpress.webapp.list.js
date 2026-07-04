@@ -85,6 +85,14 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
         } else {
             // standalone: load through the control's own service
             this._load();
+
+            // an external change of the service's domains re-queries and
+            // flashes, so changes made by other users re-render standalone too
+            const dataChanges = webexpress.webapp.DataChangeSubscription.attachReload(
+                [this._service], () => this._load(), element);
+            if (dataChanges) {
+                (element._wxCleanup = element._wxCleanup || []).push(() => dataChanges.detach());
+            }
         }
     }
 

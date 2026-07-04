@@ -151,5 +151,36 @@ namespace WebExpress.WebApp.Test.WebData
             Assert.DoesNotContain("wx-error", island);
             Assert.DoesNotContain("retry-count", island);
         }
+
+        /// <summary>
+        /// Tests that the declared domains are emitted as one semicolon joined
+        /// attribute and that duplicates merge, which is the shape the client
+        /// ViewState subscribes for live data updates.
+        /// </summary>
+        [Fact]
+        public void DomainsAreEmittedWhenSet()
+        {
+            var island = DataServiceDescriptor.Rest("data")
+                .WithBaseUri("/api/x")
+                .WithDomain("my.app.order")
+                .WithDomain("my.app.customer")
+                .WithDomain("my.app.order")
+                .ToIslandElement()
+                .ToString();
+
+            Assert.Contains("domains=\"my.app.order;my.app.customer\"", island);
+        }
+
+        /// <summary>
+        /// Tests that a service without domains omits the attribute, so a
+        /// scope with such a service stays detached from the message queue.
+        /// </summary>
+        [Fact]
+        public void DomainsAreOmittedByDefault()
+        {
+            var island = DataServiceDescriptor.Rest("data").WithBaseUri("/api/x").ToIslandElement().ToString();
+
+            Assert.DoesNotContain("domains", island);
+        }
     }
 }

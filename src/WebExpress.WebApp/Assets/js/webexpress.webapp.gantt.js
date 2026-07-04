@@ -510,6 +510,16 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
     // ----------------------------------------------------------------- REST
 
     /**
+     * Reloads the project. The public load surface of the component
+     * contract, so intents and the data change subscription can trigger a
+     * reload without knowing the internal loader.
+     * @returns {Promise<void>} Resolves when the load settled.
+     */
+    load() {
+        return this._load();
+    }
+
+    /**
      * Loads the project from the data service.
      * @returns {Promise<void>} Resolves when the load settled.
      */

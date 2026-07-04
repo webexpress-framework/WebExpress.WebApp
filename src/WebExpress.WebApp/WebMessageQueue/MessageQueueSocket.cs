@@ -21,10 +21,15 @@ namespace WebExpress.WebApp.WebMessageQueue
         private readonly ICollaborativeMessageHandler _collaborativeHandler;
         private readonly IPopupNotificationHandler _popupNotificationHandler;
         private readonly IChatMessageHandler _chatMessageHandler;
+        private readonly DataSubscription _dataSubscription = new();
         private ISocketConnection _socketConnection;
 
         /// <summary>
-        /// Gets the client session associated with the current context.
+        /// Gets the client session associated with the current context. The
+        /// session domains merge the static set from the connect url with the
+        /// domains the client subscribed at runtime, so a scope ViewState that
+        /// subscribes after the page rendered is addressed like a page that
+        /// declared the domain up front.
         /// </summary>
         public IClientSession ClientSession => new ClientSession()
         {
@@ -40,8 +45,13 @@ namespace WebExpress.WebApp.WebMessageQueue
             EndpointId = _socketContext.EndpointId,
             PluginContext = _socketContext.PluginContext,
             ApplicationContext = _socketContext.ApplicationContext,
-            Domains = _request.Parameters.FirstOrDefault()?.Value?.Split(';') ?? []
+            Domains = GetSessionDomains()
         };
+
+        /// <summary>
+        /// Gets the runtime domain subscription of this connection.
+        /// </summary>
+        public DataSubscription DataSubscription => _dataSubscription;
 
         /// <summary>
         /// Gets the unique identifier for the current connection.
@@ -160,6 +170,12 @@ namespace WebExpress.WebApp.WebMessageQueue
                 return;
             }
 
+            if (DataChangedMessageTypes.IsDataChange(messageType))
+            {
+                _dataSubscription.Handle(obj);
+                return;
+            }
+
             if (CollaborativeMessageTypes.IsCollaborative(messageType) && _collaborativeHandler is not null)
             {
                 _ = DispatchCollaborativeAsync(obj);
@@ -176,6 +192,22 @@ namespace WebExpress.WebApp.WebMessageQueue
             {
                 _ = DispatchChatAsync(obj);
             }
+        }
+
+        /// <summary>
+        /// Merges the static domains of the connect url with the domains the
+        /// client subscribed at runtime. The connect url carries the domains
+        /// the page declared at render time; the subscription carries the
+        /// domains the scope ViewStates derived from their services on the
+        /// client.
+        /// </summary>
+        /// <returns>The merged, distinct domain set of this connection.</returns>
+        private string[] GetSessionDomains()
+        {
+            var fromUrl = _request?.GetParameter("domains")?.Value?
+                .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? [];
+
+            return [.. fromUrl.Union(_dataSubscription.Domains, StringComparer.OrdinalIgnoreCase)];
         }
 
         /// <summary>

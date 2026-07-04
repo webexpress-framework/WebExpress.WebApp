@@ -219,10 +219,92 @@ namespace WebExpress.WebApp.Test.WebData
         }
 
         /// <summary>
+        /// Tests that declaring the endpoint derives the domains from the CRUD
+        /// item type, so an author who writes Endpoint&lt;TEndpoint&gt;() gets
+        /// live data updates without naming the domain a second time.
+        /// </summary>
+        [Fact]
+        public void EndpointDerivesTheDomainsFromTheCrudItemType()
+        {
+            // arrange: the endpoint resolution touches the sitemap at build time
+            UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+
+            // act
+            var island = new DataServiceBuilder("data")
+                .Endpoint<FakeCrudEndpoint>()
+                .Build(null)
+                .ToIslandElement()
+                .ToString();
+
+            // validation: the wire name is the lower case full name of the item type
+            Assert.Contains($"domains=\"{typeof(FakeDomainItem).FullName.ToLower()}\"", island);
+        }
+
+        /// <summary>
+        /// Tests that an endpoint whose item type belongs to no domain derives
+        /// no domains, so the service island stays free of the attribute.
+        /// </summary>
+        [Fact]
+        public void EndpointWithoutADomainItemDerivesNoDomains()
+        {
+            // arrange
+            UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+
+            // act
+            var island = new DataServiceBuilder("data")
+                .Endpoint<FakeEndpoint>()
+                .Build(null)
+                .ToIslandElement()
+                .ToString();
+
+            // validation
+            Assert.DoesNotContain("domains", island);
+        }
+
+        /// <summary>
+        /// Tests that the explicit Domain declaration emits the domain for
+        /// endpoints whose item types cannot be derived from the endpoint type.
+        /// </summary>
+        [Fact]
+        public void ExplicitDomainDeclarationEmitsTheDomain()
+        {
+            // act
+            var island = new DataServiceBuilder("data")
+                .Domain<FakeDomainItem>()
+                .Build(null)
+                .ToIslandElement()
+                .ToString();
+
+            // validation
+            Assert.Contains($"domains=\"{typeof(FakeDomainItem).FullName.ToLower()}\"", island);
+        }
+
+        /// <summary>
         /// A marker endpoint for the preset test.
         /// </summary>
         private sealed class FakeEndpoint : WebExpress.WebCore.WebEndpoint.IEndpoint
         {
+        }
+
+        /// <summary>
+        /// An index item that belongs to a domain, so a CRUD endpoint that
+        /// serves it announces its changes.
+        /// </summary>
+        private sealed class FakeDomainItem : WebExpress.WebIndex.IIndexItem, WebExpress.WebCore.WebDomain.IDomain
+        {
+            public Guid Id { get; set; }
+        }
+
+        /// <summary>
+        /// A CRUD endpoint over the domain item, mirroring the shape an
+        /// application REST API has.
+        /// </summary>
+        private sealed class FakeCrudEndpoint : WebExpress.WebApp.WebRestApi.RestApiCrud<FakeDomainItem>
+        {
+            protected override IEnumerable<FakeDomainItem> Retrieve(WebExpress.WebIndex.Queries.IQuery<FakeDomainItem> query, WebExpress.WebIndex.Queries.IQueryContext context, WebExpress.WebCore.WebMessage.IRequest request)
+            {
+                return [];
+            }
         }
     }
 }

@@ -26,6 +26,10 @@ webexpress.webapp.MessageQueue = new class {
         // remembered for automatic reconnect attempts
         this._wsUrl = null;
         this._domains = null;
+
+        // domains subscribed at runtime (by scope ViewStates); re-announced
+        // after every reconnect because the server keeps them per connection
+        this._subscribedDomains = new Set();
     }
 
     /**
@@ -104,6 +108,7 @@ webexpress.webapp.MessageQueue = new class {
             this._lastError = null;
             // reset backoff so the next disconnect starts the staircase over
             this._reconnectDelay = this._reconnectDelayInitial;
+            this._sendDomainSubscription();
         });
 
         this._ws.addEventListener("message", (evt) => {
@@ -123,7 +128,7 @@ webexpress.webapp.MessageQueue = new class {
                 }
             }
 
-            if (payload && typeof payload === "object" && payload.type === "update") {
+            if (payload && typeof payload === "object" && payload.type === "webexpress.webapp.data.changed") {
                 const updateEvent = new CustomEvent(webexpress.webapp.Event.UPDATE_EVENT, {
                     detail: { payload }
                 });
@@ -191,6 +196,48 @@ webexpress.webapp.MessageQueue = new class {
         this._reconnectDelay = Math.min(this._reconnectDelay * 2, this._reconnectMax);
     }
 
+
+    /**
+     * Subscribes the connection to data change messages of the given domains.
+     * A scope ViewState calls this with the domains its services declare, so
+     * the server addresses it like a page that declared them up front. The
+     * subscription is remembered and re-announced after every reconnect,
+     * because the server keeps the domain set per connection.
+     * @param {Array<string>} domains - The wire names of the domains.
+     */
+    subscribeDomains(domains) {
+        if (!Array.isArray(domains)) {
+            return;
+        }
+
+        let added = false;
+        for (const domain of domains) {
+            if (typeof domain === "string" && domain.length > 0 && !this._subscribedDomains.has(domain)) {
+                this._subscribedDomains.add(domain);
+                added = true;
+            }
+        }
+
+        if (added) {
+            this._sendDomainSubscription();
+        }
+    }
+
+    /**
+     * Announces the accumulated domain subscription to the server. Sent on
+     * every new subscription and after every reconnect; the server merges the
+     * domains, so repeating the full set is idempotent.
+     */
+    _sendDomainSubscription() {
+        if (this._subscribedDomains.size === 0) {
+            return;
+        }
+
+        this.send({
+            type: "webexpress.webapp.data.subscribe",
+            domains: Array.from(this._subscribedDomains)
+        });
+    }
 
     /**
      * Dispatches a synthesized payload to every registered listener

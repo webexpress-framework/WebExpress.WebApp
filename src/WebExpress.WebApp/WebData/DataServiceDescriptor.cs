@@ -80,6 +80,16 @@ namespace WebExpress.WebApp.WebData
         public IDictionary<string, string> Errors { get; } = new Dictionary<string, string>();
 
         /// <summary>
+        /// Gets the wire names of the logical domains whose data the service
+        /// serves. A scope ViewState subscribes these domains on the message
+        /// queue and re-queries the resources of this service when the server
+        /// announces a change, so data changed by other users re-renders
+        /// without a page reload. The names are usually derived from the
+        /// endpoint type, so the author never writes them.
+        /// </summary>
+        public IList<string> Domains { get; } = new List<string>();
+
+        /// <summary>
         /// Gets or sets the number of automatic retries the client service
         /// performs for retriable failures, which are network errors and http
         /// 5xx responses. The default of zero disables retrying.
@@ -321,6 +331,23 @@ namespace WebExpress.WebApp.WebData
         }
 
         /// <summary>
+        /// Adds a domain the service serves data of, identified by its wire
+        /// name. Duplicates are ignored so the derived and the explicitly
+        /// declared domains merge cleanly.
+        /// </summary>
+        /// <param name="domain">The wire name of the domain.</param>
+        /// <returns>The descriptor for chaining.</returns>
+        public DataServiceDescriptor WithDomain(string domain)
+        {
+            if (!string.IsNullOrWhiteSpace(domain) && !Domains.Contains(domain))
+            {
+                Domains.Add(domain);
+            }
+
+            return this;
+        }
+
+        /// <summary>
         /// Declares the retry policy for retriable failures, which are network
         /// errors and http 5xx responses.
         /// </summary>
@@ -350,6 +377,11 @@ namespace WebExpress.WebApp.WebData
             island.AddUserAttribute("base-uri", Encode(BaseUri));
             island.AddUserAttribute("method", Encode(Method));
             island.AddUserAttribute("update-method", Encode(UpdateMethod));
+
+            if (Domains.Count > 0)
+            {
+                island.AddUserAttribute("domains", Encode(string.Join(";", Domains)));
+            }
 
             if (RetryCount > 0)
             {

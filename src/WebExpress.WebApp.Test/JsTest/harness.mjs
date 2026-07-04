@@ -206,6 +206,9 @@ export function appendServiceIsland(document, element, descriptor) {
     if (descriptor.updateMethod) {
         island.setAttribute("update-method", descriptor.updateMethod);
     }
+    if (Array.isArray(descriptor.domains) && descriptor.domains.length > 0) {
+        island.setAttribute("domains", descriptor.domains.join(";"));
+    }
     if (descriptor.retry) {
         island.setAttribute("retry-count", String(descriptor.retry.count));
         island.setAttribute("retry-delay", String(descriptor.retry.delayMs || 0));

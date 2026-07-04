@@ -5,9 +5,7 @@ using System.Reflection;
 using System.Text.Json;
 using WebExpress.WebApp.WebAttribute;
 using WebExpress.WebApp.WebMessageQueue;
-using WebExpress.WebCore;
 using WebExpress.WebCore.WebAttribute;
-using WebExpress.WebCore.WebDomain;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebParameter;
 using WebExpress.WebCore.WebRestApi;
@@ -83,17 +81,8 @@ namespace WebExpress.WebApp.WebRestApi
                     return new ResponseBadRequest(new StatusMessage("Creation failed."));
                 }
 
-                // notify domain listeners
-                if (newItem is IDomain domain)
-                {
-                    var messageQueueManager = WebEx.ComponentHub
-                        .GetComponentManager<MessageQueueManager>();
-
-                    var message = new Message("update");
-                    var address = new AddressDomain(domain);
-
-                    _ = messageQueueManager.SendAsync(address, message);
-                }
+                // notify domain listeners so open scopes re-query the changed data
+                _ = DataChangedNotifier.NotifyAsync(newItem, DataChangeOperation.Created, newItem?.Id.ToString());
 
                 return result.ToResponse();
             }
@@ -471,15 +460,8 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 var result = Update(existingItem, fieldMap, request);
 
-                if (existingItem is IDomain domain)
-                {
-                    var messageQueueManager = WebEx.ComponentHub
-                        .GetComponentManager<MessageQueueManager>();
-                    var message = new Message("update");
-                    var address = new AddressDomain(domain);
-
-                    _ = messageQueueManager.SendAsync(address, message);
-                }
+                // notify domain listeners so open scopes re-query the changed data
+                _ = DataChangedNotifier.NotifyAsync(existingItem, DataChangeOperation.Updated, existingItem.Id.ToString());
 
                 return result?.ToResponse();
             }
@@ -619,15 +601,8 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 var result = Delete(item, request);
 
-                if (item is IDomain domain)
-                {
-                    var messageQueueManager = WebEx.ComponentHub
-                        .GetComponentManager<MessageQueueManager>();
-                    var message = new Message("update");
-                    var address = new AddressDomain(domain);
-
-                    _ = messageQueueManager.SendAsync(address, message);
-                }
+                // notify domain listeners so open scopes re-query the changed data
+                _ = DataChangedNotifier.NotifyAsync(item, DataChangeOperation.Deleted, item.Id.ToString());
 
                 return result.ToResponse();
             }

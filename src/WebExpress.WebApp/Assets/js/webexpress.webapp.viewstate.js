@@ -86,6 +86,7 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
         this._mounted = false;
         this._notifyScheduled = false;
         this._listeners = new Set();
+        this._dataChanges = null;
 
         // a standalone ViewState is a plain observable state container a control
         // creates as its own store, with no scope machinery: it does not register
@@ -435,6 +436,7 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
 
         this._mounted = true;
         this.loadAll();
+        this._attachDataChanges();
 
         if (this._element && typeof this._element.dispatchEvent === "function") {
             this._element.dispatchEvent(new CustomEvent("webexpress.webapp.viewstate.ready", {
@@ -454,6 +456,7 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
     destroy() {
         this._listeners.clear();
         this._notifyScheduled = false;
+        this._detachDataChanges();
 
         if (this._services) {
             for (const service of Object.values(this._services)) {
@@ -504,6 +507,113 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
             } catch (error) {
                 console.error("ViewState listener failed", error);
             }
+        }
+    }
+
+    /**
+     * Wires the scope to the server side data change channel. The domains are
+     * derived from the scope's services (each wx-service island may carry the
+     * domains of the data its endpoint serves); when at least one service
+     * declares a domain, the scope subscribes them and re-queries the
+     * resources of a changed domain, so every subscribing control re-renders
+     * when data changes on the server - including changes made by other
+     * users. The originator of a change receives the message too and
+     * re-queries like everyone else, which keeps its slices on the canonical
+     * server state; the coalescing window and the service's abort of
+     * superseded queries absorb the overlap with its own post-mutation
+     * reload. A scope without domain-declaring services stays entirely
+     * detached from the queue.
+     */
+    _attachDataChanges() {
+        this._domainResources = this._mapDomainsToResources();
+        if (this._domainResources.size === 0) {
+            return;
+        }
+
+        this._dataChanges = new webexpress.webapp.DataChangeSubscription(
+            Array.from(this._domainResources.keys()),
+            (changed) => this._reloadChangedResources(changed)
+        ).attach();
+    }
+
+    /**
+     * Releases the data change wiring.
+     */
+    _detachDataChanges() {
+        if (this._dataChanges) {
+            this._dataChanges.detach();
+            this._dataChanges = null;
+        }
+    }
+
+    /**
+     * Indexes the scope's resources by the domains their services declare, so
+     * an incoming change message resolves directly to the resources that must
+     * re-query.
+     * @returns {Map<string, Set<string>>} A map of domain name to resource names.
+     */
+    _mapDomainsToResources() {
+        const map = new Map();
+
+        for (const name of Object.keys(this._resources || {})) {
+            const service = this.serviceForResource(name);
+            const domains = (service && service.domains) || [];
+            for (const domain of domains) {
+                const key = String(domain).toLowerCase();
+                if (!map.has(key)) {
+                    map.set(key, new Set());
+                }
+                map.get(key).add(name);
+            }
+        }
+
+        return map;
+    }
+
+    /**
+     * Re-queries every resource of the changed domains once, deduplicated
+     * across domains, so a resource whose service serves several changed
+     * domains loads a single time. When the fresh data has been reduced, the
+     * controls bound to the resource play the change flash, so the user sees
+     * that the update came from outside rather than from an own action.
+     * @param {Set<string>} changed - The changed domain names.
+     */
+    _reloadChangedResources(changed) {
+        const resources = new Set();
+        for (const domain of changed) {
+            for (const name of this._domainResources.get(domain) || []) {
+                resources.add(name);
+            }
+        }
+
+        for (const name of resources) {
+            Promise.resolve(this.reload(name)).then((result) => {
+                if (result && result.ok) {
+                    webexpress.webapp.ViewState._flashBoundControls(name);
+                }
+            }).catch(() => {
+                // a failed re-query already surfaced through the error channel
+            });
+        }
+    }
+
+    /**
+     * Plays the change flash on every control bound to a resource. The bound
+     * controls are found by their data-wx-resource binding, which is also how
+     * they resolve their scope, so no control has to opt in individually.
+     * @param {string} resource - The resource name.
+     */
+    static _flashBoundControls(resource) {
+        if (typeof document === "undefined" || typeof document.querySelectorAll !== "function") {
+            return;
+        }
+
+        const escaped = (typeof CSS !== "undefined" && typeof CSS.escape === "function")
+            ? CSS.escape(resource)
+            : String(resource).replace(/["\\]/g, "\\$&");
+
+        for (const element of document.querySelectorAll(`[data-wx-resource="${escaped}"]`)) {
+            webexpress.webapp.DataChangeSubscription.flash(element);
         }
     }
 

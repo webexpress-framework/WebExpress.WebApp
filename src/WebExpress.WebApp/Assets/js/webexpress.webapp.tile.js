@@ -78,6 +78,14 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
         } else if (this._restUri) {
             this._element.classList.add("placeholder-glow");
             this._receiveData();
+
+            // an external change of the service's domains re-queries and
+            // flashes, so changes made by other users re-render standalone too
+            const dataChanges = webexpress.webapp.DataChangeSubscription.attachReload(
+                [this._service], () => this._receiveData(), element);
+            if (dataChanges) {
+                (element._wxCleanup = element._wxCleanup || []).push(() => dataChanges.detach());
+            }
         }
     }
 

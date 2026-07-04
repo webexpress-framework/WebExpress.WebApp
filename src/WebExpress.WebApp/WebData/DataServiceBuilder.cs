@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
+using WebExpress.WebApp.WebMessageQueue;
 using WebExpress.WebCore;
+using WebExpress.WebCore.WebDomain;
 using WebExpress.WebCore.WebEndpoint;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebPage;
@@ -26,6 +29,7 @@ namespace WebExpress.WebApp.WebData
         private readonly List<KeyValuePair<string, string>> _response = new();
         private readonly List<KeyValuePair<string, string>> _headers = new();
         private readonly List<KeyValuePair<int, string>> _errors = new();
+        private readonly List<string> _domains = new();
         private int _retryCount;
         private int _retryDelayMilliseconds;
 
@@ -49,6 +53,21 @@ namespace WebExpress.WebApp.WebData
         {
             _endpoint = renderContext => WebEx.ComponentHub.SitemapManager
                 .GetUri<TEndpoint>(renderContext?.PageContext?.ApplicationContext)?.ToString();
+            _domains.AddRange(DeriveDomains(typeof(TEndpoint)));
+            return this;
+        }
+
+        /// <summary>
+        /// Declares a domain the service serves data of, for endpoints whose
+        /// item types cannot be derived from the endpoint type. The scope
+        /// ViewState subscribes the declared domains and re-queries the
+        /// service's resources when the server announces a change.
+        /// </summary>
+        /// <typeparam name="TDomain">The domain type.</typeparam>
+        /// <returns>The builder for chaining.</returns>
+        public DataServiceBuilder Domain<TDomain>() where TDomain : IDomain
+        {
+            _domains.Add(DataChangedNotifier.DomainName(typeof(TDomain)));
             return this;
         }
 
@@ -194,12 +213,49 @@ namespace WebExpress.WebApp.WebData
                 descriptor = descriptor.MapError(pair.Key, pair.Value);
             }
 
+            foreach (var domain in _domains)
+            {
+                descriptor = descriptor.WithDomain(domain);
+            }
+
             if (_retryCount > 0)
             {
                 descriptor = descriptor.WithRetry(_retryCount, _retryDelayMilliseconds);
             }
 
             return descriptor;
+        }
+
+        /// <summary>
+        /// Derives the domains an endpoint serves from its type. The CRUD REST
+        /// bases carry their item type as a generic argument (for example
+        /// RestApiCrud&lt;TIndexItem&gt;), and the server announces a change
+        /// under the item type when it implements IDomain, so every generic
+        /// argument along the inheritance chain that is a domain names a
+        /// change source of this endpoint. Deriving here means an author who
+        /// declares Endpoint&lt;TEndpoint&gt;() gets live updates without
+        /// naming the domain a second time. The family presets share this
+        /// derivation for their descriptors.
+        /// </summary>
+        /// <param name="endpointType">The endpoint type.</param>
+        /// <returns>The wire names of the derived domains.</returns>
+        public static IEnumerable<string> DeriveDomains(Type endpointType)
+        {
+            var domains = new List<string>();
+
+            for (var type = endpointType; type != null; type = type.BaseType)
+            {
+                if (!type.IsGenericType)
+                {
+                    continue;
+                }
+
+                domains.AddRange(type.GetGenericArguments()
+                    .Where(argument => typeof(IDomain).IsAssignableFrom(argument))
+                    .Select(DataChangedNotifier.DomainName));
+            }
+
+            return domains.Distinct();
         }
     }
 

@@ -28,6 +28,7 @@ webexpress.webapp.Data = class extends webexpress.webui.Ctrl {
 
         this._mounted = false;
         this._unsubscribe = null;
+        this._dataChanges = null;
         this._renderRoot = options.renderRoot || element;
 
         const initialState = options.state || webexpress.webapp.Data.readState(element);
@@ -108,6 +109,16 @@ webexpress.webapp.Data = class extends webexpress.webui.Ctrl {
         this._apply(this._store.getState());
         this._mounted = true;
 
+        // when a service declares the domains its endpoint serves, a server
+        // side data change of those domains reloads the component and plays
+        // the change flash on the host, so the user sees changes made by
+        // other users; components without a load or without domain-declaring
+        // services stay detached from the queue
+        if (typeof this.load === "function") {
+            this._dataChanges = webexpress.webapp.DataChangeSubscription.attachReload(
+                this._services, () => this.load(), this._element);
+        }
+
         if (typeof this.onMount === "function") {
             this.onMount(this._store.getState());
         }
@@ -168,6 +179,11 @@ webexpress.webapp.Data = class extends webexpress.webui.Ctrl {
         if (this._unsubscribe) {
             this._unsubscribe();
             this._unsubscribe = null;
+        }
+
+        if (this._dataChanges) {
+            this._dataChanges.detach();
+            this._dataChanges = null;
         }
 
         if (this._services) {

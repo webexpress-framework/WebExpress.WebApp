@@ -137,3 +137,29 @@ main {
     border-radius: 50%;
 }
 
+/* played on a data control whose content was re-queried because of an
+   external data change (webexpress.webapp.data.changed), so the user sees
+   the update came from outside; the class is removed by the engine after
+   the animation duration */
+.wx-data-changed {
+    animation: wx-data-changed-flash 1.2s ease-out 1;
+}
+
+@keyframes wx-data-changed-flash {
+    0% {
+        background-color: var(--bs-primary-bg-subtle, rgba(13, 110, 253, 0.2));
+        box-shadow: 0 0 0 0.2rem var(--bs-primary-border-subtle, rgba(13, 110, 253, 0.35));
+    }
+
+    100% {
+        background-color: transparent;
+        box-shadow: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .wx-data-changed {
+        animation: none;
+    }
+}
+

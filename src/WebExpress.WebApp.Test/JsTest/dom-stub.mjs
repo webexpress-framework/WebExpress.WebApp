@@ -194,6 +194,40 @@ function makeStyle() {
 }
 
 /**
+ * Collects the elements of a subtree that carry an attribute with an exact
+ * value. This backs the one selector form the engine queries the document
+ * with, which is the [data-wx-resource="name"] lookup of the change flash.
+ * @param {Element} node - The subtree root.
+ * @param {string} name - The attribute name.
+ * @param {string} value - The attribute value.
+ * @param {Array<Element>} matches - The accumulator.
+ * @returns {Array<Element>} The matching elements.
+ */
+function findByAttribute(node, name, value, matches) {
+    if (node.nodeType === 1 && node.getAttribute(name) === value) {
+        matches.push(node);
+    }
+    for (const child of node.childNodes || []) {
+        findByAttribute(child, name, value, matches);
+    }
+    return matches;
+}
+
+/**
+ * Parses the [attr="value"] selector form; unescaping covers the characters
+ * CSS.escape produces for the type-derived resource names (dots, digits).
+ * @param {string} selector - The selector.
+ * @returns {{name: string, value: string}|null} The parsed parts or null.
+ */
+function parseAttributeSelector(selector) {
+    const match = /^\[([a-zA-Z-]+)="((?:[^"\\]|\\.)*)"\]$/.exec(String(selector));
+    if (!match) {
+        return null;
+    }
+    return { name: match[1], value: match[2].replace(/\\(.)/g, "$1") };
+}
+
+/**
  * Finds an element with the given id in a subtree.
  * @param {Element} node - The subtree root.
  * @param {string} id - The id to find.
@@ -233,8 +267,16 @@ export function createDocument() {
         createDocumentFragment() { return new Element("#document-fragment"); },
         createTextNode(text) { return new TextNode(text); },
         getElementById(id) { return findById(body, String(id)); },
-        querySelector() { return null; },
-        querySelectorAll() { return []; },
+        querySelector(selector) {
+            return this.querySelectorAll(selector)[0] || null;
+        },
+        querySelectorAll(selector) {
+            const attribute = parseAttributeSelector(selector);
+            if (!attribute) {
+                return [];
+            }
+            return findByAttribute(body, attribute.name, attribute.value, []);
+        },
         addEventListener(type, handler) {
             (listeners[type] || (listeners[type] = new Set())).add(handler);
         },

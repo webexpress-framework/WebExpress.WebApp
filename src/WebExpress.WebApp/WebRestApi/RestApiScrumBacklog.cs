@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using WebExpress.WebApp.WebMessageQueue;
-using WebExpress.WebCore;
 using WebExpress.WebCore.WebAttribute;
-using WebExpress.WebCore.WebDomain;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
 using WebExpress.WebCore.WebStatusPage;
@@ -138,7 +136,7 @@ namespace WebExpress.WebApp.WebRestApi
                         return new ResponseBadRequest(new StatusMessage("Creation failed."));
                     }
 
-                    NotifyDomain(newSprint);
+                    NotifyDomain(newSprint, DataChangeOperation.Created);
 
                     return result.ToResponse();
                 }
@@ -201,7 +199,7 @@ namespace WebExpress.WebApp.WebRestApi
                     {
                         var result = UpdateSprint(sprint, payload, request);
 
-                        NotifyDomain(sprint);
+                        NotifyDomain(sprint, DataChangeOperation.Updated);
 
                         return result?.ToResponse() ?? new ResponseBadRequest(new StatusMessage("Update failed."));
                     }
@@ -240,7 +238,7 @@ namespace WebExpress.WebApp.WebRestApi
                     {
                         var result = MoveItem(item, payload, request);
 
-                        NotifyDomain(item);
+                        NotifyDomain(item, DataChangeOperation.Updated);
 
                         return result?.ToResponse() ?? new ResponseBadRequest(new StatusMessage("Update failed."));
                     }
@@ -279,7 +277,7 @@ namespace WebExpress.WebApp.WebRestApi
                     {
                         var result = RankItem(item, payload, request);
 
-                        NotifyDomain(item);
+                        NotifyDomain(item, DataChangeOperation.Updated);
 
                         return result?.ToResponse() ?? new ResponseBadRequest(new StatusMessage("Update failed."));
                     }
@@ -318,7 +316,7 @@ namespace WebExpress.WebApp.WebRestApi
                     {
                         var result = UpdateItem(item, payload, request);
 
-                        NotifyDomain(item);
+                        NotifyDomain(item, DataChangeOperation.Updated);
 
                         return result?.ToResponse() ?? new ResponseBadRequest(new StatusMessage("Update failed."));
                     }
@@ -373,7 +371,7 @@ namespace WebExpress.WebApp.WebRestApi
                 {
                     var result = DeleteSprint(sprint, request);
 
-                    NotifyDomain(sprint);
+                    NotifyDomain(sprint, DataChangeOperation.Deleted);
 
                     return result?.ToResponse() ?? new ResponseBadRequest(new StatusMessage("Delete failed."));
                 }
@@ -795,27 +793,19 @@ namespace WebExpress.WebApp.WebRestApi
         }
 
         /// <summary>
-        /// Sends an update notification message for the specified domain entity if 
-        /// it implements the IDomain interface.
+        /// Announces a data change for the specified entity if it belongs to a
+        /// domain, so open scopes re-query the changed data. Entities that do
+        /// not implement IDomain are ignored.
         /// </summary>
         /// <param name="entity">
-        /// The object to be checked and notified. If the object implements IDomain, 
-        /// an update message is sent for it; otherwise, no action is taken.
+        /// The changed entity.
         /// </param>
-        private static void NotifyDomain(object entity)
+        /// <param name="operation">
+        /// The kind of change the entity underwent.
+        /// </param>
+        private static void NotifyDomain(object entity, DataChangeOperation operation)
         {
-            if (entity is not IDomain domain)
-            {
-                return;
-            }
-
-            var messageQueueManager = WebEx.ComponentHub
-                .GetComponentManager<MessageQueueManager>();
-
-            var message = new Message("update");
-            var address = new AddressDomain(domain);
-
-            _ = messageQueueManager.SendAsync(address, message);
+            _ = DataChangedNotifier.NotifyAsync(entity, operation, (entity as IIndexItem)?.Id.ToString());
         }
 
         /// <summary>

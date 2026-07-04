@@ -113,6 +113,14 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
             this._parseStaticConfig();
             this.render();
         }
+
+        // the backlog does not run the Data mount, so the live update wiring
+        // happens here: an external change of the service's domains re-queries
+        // and flashes, so changes made by other users re-render standalone too
+        if (!this._resource) {
+            this._dataChanges = webexpress.webapp.DataChangeSubscription.attachReload(
+                [this._service], () => this._load(), element);
+        }
     }
 
     /**
@@ -241,6 +249,16 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
         if (this._anchorId && !this._itemIndex.has(this._anchorId)) {
             this._anchorId = null;
         }
+    }
+
+    /**
+     * Reloads the backlog. The public load surface of the component
+     * contract, so intents and the data change subscription can trigger a
+     * reload without knowing the internal loader.
+     * @returns {void}
+     */
+    load() {
+        return this._load();
     }
 
     /**

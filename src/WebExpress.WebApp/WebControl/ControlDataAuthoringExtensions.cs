@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using WebExpress.WebApp.WebApiControl;
 using WebExpress.WebApp.WebData;
 using WebExpress.WebCore;
@@ -39,7 +40,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataList DataService<TEndpoint>(this ControlDataList control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.ListData, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.ListData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -54,7 +55,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataTable DataService<TEndpoint>(this ControlDataTable control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.TableData, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.TableData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -69,7 +70,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataTab DataService<TEndpoint>(this ControlDataTab control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.TabData, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.TabData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -83,7 +84,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataKanban DataService<TEndpoint>(this ControlDataKanban control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.Data, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.Data, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -98,7 +99,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataGantt DataService<TEndpoint>(this ControlDataGantt control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.Data, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.Data, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -112,7 +113,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataDashboard DataService<TEndpoint>(this ControlDataDashboard control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.Data, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.Data, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -126,7 +127,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataTile DataService<TEndpoint>(this ControlDataTile control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.Data, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.Data, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -140,7 +141,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataComment DataService<TEndpoint>(this ControlDataComment control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.Data, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.Data, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -154,7 +155,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataScrumBacklog DataService<TEndpoint>(this ControlDataScrumBacklog control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.Data, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.Data, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -168,7 +169,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataWorkflow DataService<TEndpoint>(this ControlDataWorkflow control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.Data, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.Data, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -182,7 +183,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataDropdown DataService<TEndpoint>(this ControlDataDropdown control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -196,7 +197,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataAvatarDropdown DataService<TEndpoint>(this ControlDataAvatarDropdown control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -210,7 +211,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataSelectionTheme DataService<TEndpoint>(this ControlDataSelectionTheme control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.Data, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.Data, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -224,7 +225,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataLogin DataService<TEndpoint>(this ControlDataLogin control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.SubmitData, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.SubmitData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -239,7 +240,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataTag DataService<TEndpoint>(this ControlDataTag control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -253,7 +254,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataTrafficLight DataService<TEndpoint>(this ControlDataTrafficLight control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.Data, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.Data, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -268,7 +269,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataWatcher DataService<TEndpoint>(this ControlDataWatcher control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.Data, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.Data, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -282,7 +283,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataWatcher UsersService<TEndpoint>(this ControlDataWatcher control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, UsersPreset, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, UsersPreset, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -296,7 +297,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataScrumBacklog UsersService<TEndpoint>(this ControlDataScrumBacklog control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, UsersPreset, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, UsersPreset, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -310,7 +311,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataComment UsersService<TEndpoint>(this ControlDataComment control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, UsersPreset, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, UsersPreset, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -324,7 +325,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataComment UploadService<TEndpoint>(this ControlDataComment control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, UploadPreset, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, UploadPreset, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -338,7 +339,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataCommentComposer UsersService<TEndpoint>(this ControlDataCommentComposer control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, UsersPreset, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, UsersPreset, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -352,7 +353,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataCommentComposer UploadService<TEndpoint>(this ControlDataCommentComposer control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, UploadPreset, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, UploadPreset, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -366,7 +367,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataCommentComposer DataService<TEndpoint>(this ControlDataCommentComposer control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.Data, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.Data, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -380,7 +381,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataQuickfilter DataService<TEndpoint>(this ControlDataQuickfilter control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -394,7 +395,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataWqlPrompt DataService<TEndpoint>(this ControlDataWqlPrompt control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -408,7 +409,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlAdvancedSearch DataService<TEndpoint>(this ControlAdvancedSearch control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -422,7 +423,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataForm DataService<TEndpoint>(this ControlDataForm control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.FormData, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.FormData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -436,7 +437,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataWizard DataService<TEndpoint>(this ControlDataWizard control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.FormData, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.FormData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -450,7 +451,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataFormEditor DataService<TEndpoint>(this ControlDataFormEditor control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.FormData, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.FormData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -464,7 +465,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataFormItemInputUnique DataService<TEndpoint>(this ControlDataFormItemInputUnique control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -478,7 +479,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataFormItemInputSelection DataService<TEndpoint>(this ControlDataFormItemInputSelection control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -493,7 +494,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataFormItemInputCascading DataService<TEndpoint>(this ControlDataFormItemInputCascading control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -507,7 +508,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataFormItemInputCheck DataService<TEndpoint>(this ControlDataFormItemInputCheck control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -521,7 +522,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataScrumSprint DataService<TEndpoint>(this ControlDataScrumSprint control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -535,7 +536,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataScrumTeam DataService<TEndpoint>(this ControlDataScrumTeam control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -550,7 +551,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataScrumVelocity DataService<TEndpoint>(this ControlDataScrumVelocity control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -564,7 +565,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlTableTemplateRestSelection DataService<TEndpoint>(this ControlTableTemplateRestSelection control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -578,7 +579,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlTableTemplateRestCombo DataService<TEndpoint>(this ControlTableTemplateRestCombo control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -592,7 +593,7 @@ namespace WebExpress.WebApp.WebControl
         public static ControlTableTemplateRestTag DataService<TEndpoint>(this ControlTableTemplateRestTag control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), configure);
+            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -759,20 +760,39 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
+        /// Builds the domain derivation for an endpoint type, so a control
+        /// authored through a family preset takes part in the live data
+        /// updates without naming the domain a second time.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <returns>The wire names of the derived domains.</returns>
+        private static IEnumerable<string> Domains<TEndpoint>() where TEndpoint : IEndpoint
+        {
+            return DataServiceBuilder.DeriveDomains(typeof(TEndpoint));
+        }
+
+        /// <summary>
         /// Adds a preset service factory to the control.
         /// </summary>
         /// <typeparam name="T">The control type.</typeparam>
         /// <param name="control">The data bound control.</param>
         /// <param name="preset">The family preset, receiving the resolved endpoint.</param>
         /// <param name="endpoint">The endpoint resolver.</param>
+        /// <param name="domains">The wire names of the domains the endpoint serves.</param>
         /// <param name="configure">An optional adjustment of the preset.</param>
         /// <returns>The control for chaining.</returns>
-        private static T AddPreset<T>(T control, Func<string, DataServiceDescriptor> preset, Func<IRenderControlContext, string> endpoint, Action<DataServiceDescriptor> configure)
+        private static T AddPreset<T>(T control, Func<string, DataServiceDescriptor> preset, Func<IRenderControlContext, string> endpoint, IEnumerable<string> domains, Action<DataServiceDescriptor> configure)
             where T : IDataIsland
         {
             control.ServiceFactories.Add(renderContext =>
             {
                 var descriptor = preset(endpoint(renderContext));
+
+                foreach (var domain in domains)
+                {
+                    descriptor.WithDomain(domain);
+                }
+
                 configure?.Invoke(descriptor);
                 return descriptor;
             });
