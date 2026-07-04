@@ -17,6 +17,7 @@ This section documents the JavaScript controllers and client-side behavior used 
 - [TabCtrl](tab.md)
 - [TagCtrl](tag.md)
 - [StatusTaskCtrl](status-task.md)
+- [SystemMetricCtrl](system-metric.md)
 - [TrafficLightCtrl](traffic-light.md)
 - [ScrumTeamCtrl](scrum.team.md)
 - [ScrumVelocityCtrl](scrum.velocity.md)

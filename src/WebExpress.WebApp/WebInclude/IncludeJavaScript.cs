@@ -51,6 +51,7 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/js/webexpress.webapp.popupnotification.js")]
     [Asset("/assets/js/webexpress.webapp.progress.task.js")]
     [Asset("/assets/js/webexpress.webapp.status.task.js")]
+    [Asset("/assets/js/webexpress.webapp.system.metric.js")]
     [Asset("/assets/js/webexpress.webapp.quickfilter.js")]
     [Asset("/assets/js/webexpress.webapp.restform.model.js")]
     [Asset("/assets/js/webexpress.webapp.restform.js")]

@@ -205,6 +205,10 @@ class Element {
 
     setAttribute(name, value) {
         if (name === "id") { this._id = String(value); return; }
+        // the browser reflects the class content attribute into classList, which
+        // is how an SVG element (whose className is not string-assignable) still
+        // becomes selectable by class
+        if (name === "class") { this.className = String(value); return; }
         this._attrs.set(name, String(value));
     }
     getAttribute(name) {
@@ -214,10 +218,12 @@ class Element {
     }
     hasAttribute(name) {
         if (name === "id") { return this._id != null; }
+        if (name === "class") { return this._classes.size > 0; }
         return this._attrs.has(name);
     }
     removeAttribute(name) {
         if (name === "id") { this._id = null; return; }
+        if (name === "class") { this._classes.clear(); return; }
         this._attrs.delete(name);
     }
 

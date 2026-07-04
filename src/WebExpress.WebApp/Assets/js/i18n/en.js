@@ -12,6 +12,9 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "statustask.error": "Error",
     "statustask.done": "Done",
 
+    "systemmetric.cpu": "CPU",
+    "systemmetric.ram": "Memory",
+
     "form.edit_row": "Edit Row",
     "form.edit_item": "Edit Item",
     
