@@ -187,6 +187,20 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
+        /// Declares the standard data service of the data sidebar, which queries
+        /// its navigation tree with GET.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The sidebar control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataSidebar DataService<TEndpoint>(this ControlDataSidebar control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
+        }
+
+        /// <summary>
         /// Declares the standard data service of the avatar dropdown, which
         /// queries its items with GET.
         /// </summary>

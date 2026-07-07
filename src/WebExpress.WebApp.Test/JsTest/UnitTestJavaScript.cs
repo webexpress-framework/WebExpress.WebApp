@@ -26,6 +26,18 @@ namespace WebExpress.WebApp.Test.JsTest
         /// </summary>
         private static readonly TimeSpan _timeout = TimeSpan.FromMinutes(2);
 
+        /// <summary>
+        /// The Node.js executable and its major version, probed once for the
+        /// whole test class. Resolving the runtime spawns a process, so the
+        /// result is cached to avoid repeating the lookup for every test case.
+        /// </summary>
+        private static readonly Lazy<(string Path, int Major)> _node = new(() =>
+        {
+            var path = FindNodeExecutable();
+            var major = path == null ? -1 : GetNodeMajorVersion(path);
+            return (path, major);
+        });
+
         private readonly ITestOutputHelper _output;
 
         /// <summary>
@@ -38,21 +50,43 @@ namespace WebExpress.WebApp.Test.JsTest
         }
 
         /// <summary>
-        /// Executes every JsTest/*.test.mjs file through the Node.js test
-        /// runner and fails with the captured runner output when a JavaScript
-        /// test fails. Skips with a warning when Node.js is unavailable.
+        /// Enumerates the JsTest/*.test.mjs files so each one is surfaced as
+        /// its own xUnit test case. Discovery walks the source tree because
+        /// that is where the harness resolves the shipped JavaScript assets
+        /// from. The file names stay relative so the test case display names
+        /// remain readable and stable across machines.
         /// </summary>
-        [Fact]
-        public void RunJavaScriptTests()
+        /// <returns>The file name (without path) of every *.test.mjs file.</returns>
+        public static TheoryData<string> JavaScriptTestFiles()
         {
-            var node = FindNodeExecutable();
+            var data = new TheoryData<string>();
+            foreach (var file in Directory.GetFiles(GetJsTestDirectory(), "*.test.mjs").OrderBy(f => f))
+            {
+                data.Add(Path.GetFileName(file));
+            }
+            return data;
+        }
+
+        /// <summary>
+        /// Executes a single JsTest/*.test.mjs file through the Node.js test
+        /// runner and fails with the captured runner output when the test
+        /// fails. Running one file per xUnit test case keeps the individual
+        /// JavaScript suites independently visible and rerunnable instead of
+        /// collapsing them into a single pass or fail. Skips with a warning
+        /// when Node.js is unavailable.
+        /// </summary>
+        /// <param name="fileName">The *.test.mjs file to run, relative to JsTest.</param>
+        [Theory]
+        [MemberData(nameof(JavaScriptTestFiles))]
+        public void RunJavaScriptTest(string fileName)
+        {
+            var (node, major) = _node.Value;
             if (node == null)
             {
                 Assert.Skip("Warning: Node.js was not found (checked WEBEXPRESS_NODE, the PATH and " +
                     "well-known install locations). The JavaScript tests under JsTest were skipped.");
             }
 
-            var major = GetNodeMajorVersion(node);
             if (major < MinimumNodeMajorVersion)
             {
                 Assert.Skip($"Warning: Node.js at '{node}' is unusable or too old " +
@@ -61,15 +95,15 @@ namespace WebExpress.WebApp.Test.JsTest
             }
 
             var directory = GetJsTestDirectory();
-            var files = Directory.GetFiles(directory, "*.test.mjs").OrderBy(f => f).ToArray();
-            Assert.True(files.Length > 0, $"No *.test.mjs files were found in '{directory}'.");
+            var file = Path.Combine(directory, fileName);
+            Assert.True(File.Exists(file), $"The JavaScript test file '{file}' was not found.");
 
-            var (exitCode, log) = RunNode(node, directory, ["--test", .. files]);
+            var (exitCode, log) = RunNode(node, directory, ["--test", file]);
 
             _output.WriteLine($"node: {node}");
             _output.WriteLine(log);
             Assert.True(exitCode == 0,
-                $"The JavaScript tests failed (node exit code {exitCode}).{Environment.NewLine}{log}");
+                $"The JavaScript test '{fileName}' failed (node exit code {exitCode}).{Environment.NewLine}{log}");
         }
 
         /// <summary>

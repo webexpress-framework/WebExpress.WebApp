@@ -72,6 +72,7 @@ const WEBUI_BASE_CONTROLS = [
     "webexpress.webui.tab.js",
     "webexpress.webui.selection.js",
     "webexpress.webui.tile.js",
+    "webexpress.webui.sidebar.js",
     "webexpress.webui.smartedit.js"
 ];
 
