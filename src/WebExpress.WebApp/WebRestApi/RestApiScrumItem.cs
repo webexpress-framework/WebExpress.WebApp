@@ -77,5 +77,11 @@
         /// Gets or sets the CSS color used as the assignee avatar background.
         /// </summary>
         public string AssigneeColor { get; set; }
+
+        /// <summary>
+        /// Gets or sets the uri of the assignee avatar image. When present, the
+        /// image replaces the initials badge.
+        /// </summary>
+        public string AssigneeImage { get; set; }
     }
 }

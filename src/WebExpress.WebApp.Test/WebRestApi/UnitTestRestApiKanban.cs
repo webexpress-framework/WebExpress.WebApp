@@ -1,6 +1,10 @@
 ﻿using System.Text;
 using System.Text.Json;
 using WebExpress.WebApp.Test.Fixture;
+using WebExpress.WebApp.WebRestApi;
+using WebExpress.WebCore.WebUri;
+using WebExpress.WebUI.WebControl;
+using WebExpress.WebUI.WebIcon;
 
 namespace WebExpress.WebApp.Test.WebRestApi
 {
@@ -56,6 +60,57 @@ namespace WebExpress.WebApp.Test.WebRestApi
 
             var cards = root.GetProperty("items").EnumerateArray().ToList();
             Assert.Empty(cards);
+        }
+
+        /// <summary>
+        /// Verifies that a footer chip serializes its typed color into the css
+        /// class (system color) or the inline style (user-defined color), while
+        /// the typed color itself stays off the wire.
+        /// </summary>
+        [Fact]
+        public void SerializeCardChipColor()
+        {
+            // arrange
+            var system = new RestApiKanbanCardChip { Label = "P1", Color = new PropertyColorBackgroundBadge(TypeColorBackgroundBadge.Danger), Title = "Priority" };
+            var user = new RestApiKanbanCardChip { Label = "5", Color = new PropertyColorBackgroundBadge("#ff8800") };
+
+            // act
+            var systemJson = JsonSerializer.Serialize(system);
+            var userJson = JsonSerializer.Serialize(user);
+
+            // validation
+            using var systemDoc = JsonDocument.Parse(systemJson);
+            Assert.Equal("text-bg-danger", systemDoc.RootElement.GetProperty("colorCss").GetString());
+            Assert.Equal(JsonValueKind.Null, systemDoc.RootElement.GetProperty("colorStyle").ValueKind);
+            Assert.False(systemDoc.RootElement.TryGetProperty("color", out _));
+
+            using var userDoc = JsonDocument.Parse(userJson);
+            Assert.Equal(JsonValueKind.Null, userDoc.RootElement.GetProperty("colorCss").ValueKind);
+            Assert.Equal("background:#ff8800;", userDoc.RootElement.GetProperty("colorStyle").GetString());
+        }
+
+        /// <summary>
+        /// Verifies that a footer chip serializes its typed icon into the spec
+        /// the client parses: an image icon contributes its picture uri, any
+        /// other icon its CSS class, while the typed icon stays off the wire.
+        /// </summary>
+        [Fact]
+        public void SerializeCardChipIcon()
+        {
+            // arrange
+            var glyph = new RestApiKanbanCardChip { Label = "8", Icon = new IconStar() };
+            var picture = new RestApiKanbanCardChip { Label = "GT", Icon = new ImageIcon(new UriEndpoint("/img/star.png")) };
+
+            // act
+            var glyphJson = JsonSerializer.Serialize(glyph);
+            var pictureJson = JsonSerializer.Serialize(picture);
+
+            // validation
+            using var glyphDoc = JsonDocument.Parse(glyphJson);
+            Assert.Equal("fas fa-star", glyphDoc.RootElement.GetProperty("icon").GetString());
+
+            using var pictureDoc = JsonDocument.Parse(pictureJson);
+            Assert.Equal("/img/star.png", pictureDoc.RootElement.GetProperty("icon").GetString());
         }
 
         /// <summary>

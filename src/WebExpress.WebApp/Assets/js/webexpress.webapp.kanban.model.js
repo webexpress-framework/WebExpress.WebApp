@@ -49,11 +49,37 @@ webexpress.webapp.kanbanModel = {
                 colorCss: item.colorCss || "",
                 icon: item.icon || null,
                 image: item.image || null,
+                assigneeId: item.assigneeId || null,
+                assigneeName: item.assigneeName || null,
+                assigneeInitials: item.assigneeInitials || null,
+                assigneeColor: item.assigneeColor || null,
+                assigneeImage: item.assigneeImage || null,
+                footer: this._normalizeFooter(item.footer),
                 primaryAction: item.primaryAction || {},
                 secondaryAction: item.secondaryAction || {}
             }));
         }
 
         return out;
+    },
+
+    /**
+     * Normalises the optional footer of a card into complete chips, so the
+     * renderer never sees partial records; entries without a label and an icon
+     * carry no information and are dropped. A chip color arrives either as a
+     * CSS class (system color) or an inline style (user-defined color).
+     * @param {*} footer - The raw footer array.
+     * @returns {Array<object>} The normalised footer chips.
+     */
+    _normalizeFooter(footer) {
+        return (Array.isArray(footer) ? footer : [])
+            .map((chip) => ({
+                label: (chip && chip.label) || "",
+                icon: (chip && chip.icon) || null,
+                colorCss: (chip && chip.colorCss) || "",
+                colorStyle: (chip && chip.colorStyle) || "",
+                title: (chip && chip.title) || ""
+            }))
+            .filter((chip) => chip.label || chip.icon);
     }
 };

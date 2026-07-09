@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -42,5 +43,44 @@ namespace WebExpress.WebApp.WebRestApi
         /// </summary>
         [JsonPropertyName("colorCss")]
         public string ColorCss { get; set; }
+
+        /// <summary>
+        /// Gets or sets the id of the person the card is assigned to, or
+        /// <see langword="null"/> when the card is unassigned.
+        /// </summary>
+        [JsonPropertyName("assigneeId")]
+        public string AssigneeId { get; set; }
+
+        /// <summary>
+        /// Gets or sets the display name of the assignee.
+        /// </summary>
+        [JsonPropertyName("assigneeName")]
+        public string AssigneeName { get; set; }
+
+        /// <summary>
+        /// Gets or sets the short text shown inside the assignee avatar.
+        /// </summary>
+        [JsonPropertyName("assigneeInitials")]
+        public string AssigneeInitials { get; set; }
+
+        /// <summary>
+        /// Gets or sets the CSS color used as the assignee avatar background.
+        /// </summary>
+        [JsonPropertyName("assigneeColor")]
+        public string AssigneeColor { get; set; }
+
+        /// <summary>
+        /// Gets or sets the uri of the assignee avatar image. When present, the
+        /// image replaces the initials badge.
+        /// </summary>
+        [JsonPropertyName("assigneeImage")]
+        public string AssigneeImage { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional footer of the card: small, application-defined
+        /// chips such as the priority or the story points.
+        /// </summary>
+        [JsonPropertyName("footer")]
+        public IEnumerable<RestApiKanbanCardChip> Footer { get; set; }
     }
 }

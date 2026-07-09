@@ -14,7 +14,7 @@
  * for the team endpoint.
  *
  * REST contract:
- *   GET {data} → [{ id, name, team, initials, color, points }]
+ *   GET {data} → [{ id, name, team, initials, color, image, points }]
  *
  * Events dispatched on the host element:
  *   webexpress.webui.Event.DATA_REQUESTED_EVENT
@@ -189,8 +189,16 @@ webexpress.webapp.ScrumTeamCtrl = class extends webexpress.webapp.Data {
             + " · " + member.completed + "/" + member.points + " " + this._i18n("webexpress.webapp:scrum.team.points_abbr", "pts")
             + " " + this._i18n("webexpress.webapp:scrum.team.completed", "completed").toLowerCase();
         av.setAttribute("aria-label", av.title);
-        av.style.background = member.color || "#888";
-        av.appendChild(document.createTextNode(member.initials));
+        if (member.image) {
+            const img = document.createElement("img");
+            img.className = "wx-avatar-group-img";
+            img.src = member.image;
+            img.alt = member.name || "";
+            av.appendChild(img);
+        } else {
+            av.style.background = member.color || "#888";
+            av.appendChild(document.createTextNode(member.initials));
+        }
 
         const badge = document.createElement("span");
         badge.className = "wx-scrum-team-badge";
@@ -306,10 +314,18 @@ webexpress.webapp.ScrumTeamCtrl = class extends webexpress.webapp.Data {
         const person = document.createElement("div");
         person.className = "wx-scrum-team-person";
 
-        const avatar = document.createElement("span");
-        avatar.className = "wx-scrum-team-avatar-sm";
-        avatar.style.background = member.color || "#888";
-        avatar.textContent = member.initials;
+        let avatar;
+        if (member.image) {
+            avatar = document.createElement("img");
+            avatar.className = "wx-scrum-team-avatar-sm";
+            avatar.src = member.image;
+            avatar.alt = member.name || "";
+        } else {
+            avatar = document.createElement("span");
+            avatar.className = "wx-scrum-team-avatar-sm";
+            avatar.style.background = member.color || "#888";
+            avatar.textContent = member.initials;
+        }
         person.appendChild(avatar);
 
         const body = document.createElement("span");

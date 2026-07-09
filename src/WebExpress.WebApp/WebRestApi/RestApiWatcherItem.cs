@@ -39,5 +39,12 @@ namespace WebExpress.WebApp.WebRestApi
         /// </summary>
         [JsonPropertyName("color")]
         public string Color { get; set; }
+
+        /// <summary>
+        /// Gets or sets the uri of the avatar image. When present, the image
+        /// replaces the initials badge.
+        /// </summary>
+        [JsonPropertyName("image")]
+        public string Image { get; set; }
     }
 }

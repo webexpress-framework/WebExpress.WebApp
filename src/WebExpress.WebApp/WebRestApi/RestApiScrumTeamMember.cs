@@ -42,6 +42,13 @@ namespace WebExpress.WebApp.WebRestApi
         public string Color { get; set; }
 
         /// <summary>
+        /// Gets or sets the uri of the avatar image. When present, the image
+        /// replaces the initials badge.
+        /// </summary>
+        [JsonPropertyName("image")]
+        public string Image { get; set; }
+
+        /// <summary>
         /// Gets or sets the sum of story points planned (committed) for the
         /// person in the current sprint.
         /// </summary>

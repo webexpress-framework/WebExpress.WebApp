@@ -11,10 +11,10 @@
  * "users" for the candidate search.
  *
  * REST contract:
- *   GET  {data}                             → [{ id, name, team, initials, color }]
- *   POST {data}           body { userId }   → { id, name, team, initials, color }
+ *   GET  {data}                             → [{ id, name, team, initials, color, image }]
+ *   POST {data}           body { userId }   → { id, name, team, initials, color, image }
  *   DELETE {data}/{userId}                  → 204
- *   GET  {users}?q=…                        → [{ id, name, team, initials, color }]
+ *   GET  {users}?q=…                        → [{ id, name, team, initials, color, image }]
  *
  * Events dispatched on the host element:
  *   webexpress.webapp.Event.WATCHER_ADDED_EVENT   detail: { user }
@@ -212,8 +212,16 @@ webexpress.webapp.WatcherCtrl = class extends webexpress.webapp.Data {
         av.className = "wx-avatar-group-avatar wx-watcher-avatar";
         av.title = user.name + (user.team ? " · " + user.team : "");
         av.setAttribute("aria-label", av.title);
-        av.style.background = user.color || "#888";
-        av.textContent = user.initials || (user.name || "?").slice(0, 2).toUpperCase();
+        if (user.image) {
+            const img = document.createElement("img");
+            img.className = "wx-avatar-group-img";
+            img.src = user.image;
+            img.alt = user.name || "";
+            av.appendChild(img);
+        } else {
+            av.style.background = user.color || "#888";
+            av.textContent = user.initials || (user.name || "?").slice(0, 2).toUpperCase();
+        }
         if (!this._readonly) {
             av.addEventListener("click", () => this._remove(user));
         } else {
@@ -284,8 +292,11 @@ webexpress.webapp.WatcherCtrl = class extends webexpress.webapp.Data {
             const row = document.createElement("button");
             row.type = "button";
             row.className = "wx-watcher-result";
+            const avatar = u.image
+                ? `<img class="wx-watcher-result-avatar" src="${this._esc(u.image)}" alt="">`
+                : `<span class="wx-watcher-result-avatar" style="background:${u.color || "#888"}">${u.initials || (u.name || "?").slice(0, 2).toUpperCase()}</span>`;
             row.innerHTML = `
-                <span class="wx-watcher-result-avatar" style="background:${u.color || "#888"}">${u.initials || (u.name || "?").slice(0, 2).toUpperCase()}</span>
+                ${avatar}
                 <span class="wx-watcher-result-body">
                     <span class="wx-watcher-result-name">${this._esc(u.name)}</span>
                     ${u.team ? `<span class="wx-watcher-result-team">${this._esc(u.team)}</span>` : ""}

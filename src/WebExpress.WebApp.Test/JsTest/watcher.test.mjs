@@ -69,6 +69,32 @@ test("watcher seeds its watchers from the wx-state island and skips the load", a
     assert.equal(fetchCount, 0);
 });
 
+test("watcher renders an image avatar when the user carries one", () => {
+    const { wxapp, createElement, setFetch, document } = load();
+    setFetch(async () => ({ ok: true, status: 200, json: async () => [] }));
+
+    const element = createElement("div");
+    appendServiceIsland(document, element, { name: "data", kind: "rest", baseUri: "/api/watchers", method: "GET", updateMethod: "PUT" });
+    appendStateIsland(document, element, {
+        watchers: [
+            { id: "u1", name: "Ann", initials: "AN" },
+            { id: "u2", name: "Bob", image: "/img/bob.png" }
+        ]
+    });
+
+    const ctrl = new wxapp.WatcherCtrl(element);
+
+    // the plain user keeps the initials badge, the pictured user gets an img child
+    const [plain, pictured] = ctrl._row.childNodes;
+    assert.equal(plain.textContent, "AN");
+    assert.equal(plain.childNodes.some((n) => n.tagName === "IMG"), false);
+
+    const img = pictured.childNodes.find((n) => n.tagName === "IMG");
+    assert.ok(img, "the avatar image exists");
+    assert.equal(img.src, "/img/bob.png");
+    assert.equal(img.className, "wx-avatar-group-img");
+});
+
 test("watcher loads from the service when no state island is present", async () => {
     const { wxapp, createElement, setFetch, document } = load();
     let fetchCount = 0;

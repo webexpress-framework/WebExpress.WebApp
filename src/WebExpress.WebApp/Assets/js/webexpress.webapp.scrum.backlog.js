@@ -1236,15 +1236,24 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
         points.textContent = String(item.points || 0);
         row.appendChild(points);
 
-        const assignee = document.createElement("span");
-        assignee.className = "wx-scrum-assignee";
-        if (item.assigneeId) {
-            assignee.style.background = item.assigneeColor || "#6c757d";
-            assignee.textContent = item.assigneeInitials || (item.assigneeName || "?").slice(0, 2).toUpperCase();
+        let assignee;
+        if (item.assigneeId && item.assigneeImage) {
+            assignee = document.createElement("img");
+            assignee.className = "wx-scrum-assignee";
+            assignee.src = item.assigneeImage;
+            assignee.alt = item.assigneeName || "";
             assignee.title = item.assigneeName || "";
         } else {
-            assignee.classList.add("wx-scrum-assignee-empty");
-            assignee.title = this._i18n("webexpress.webapp:scrum.assignee.unassigned", "Unassigned");
+            assignee = document.createElement("span");
+            assignee.className = "wx-scrum-assignee";
+            if (item.assigneeId) {
+                assignee.style.background = item.assigneeColor || "#6c757d";
+                assignee.textContent = item.assigneeInitials || (item.assigneeName || "?").slice(0, 2).toUpperCase();
+                assignee.title = item.assigneeName || "";
+            } else {
+                assignee.classList.add("wx-scrum-assignee-empty");
+                assignee.title = this._i18n("webexpress.webapp:scrum.assignee.unassigned", "Unassigned");
+            }
         }
         row.appendChild(assignee);
 
@@ -2340,7 +2349,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
         // the dialog edits a working copy of the assignment so the board only
         // changes when the dialog is saved
         let selectedUser = item.assigneeId
-            ? { id: item.assigneeId, name: item.assigneeName, initials: item.assigneeInitials, color: item.assigneeColor }
+            ? { id: item.assigneeId, name: item.assigneeName, initials: item.assigneeInitials, color: item.assigneeColor, image: item.assigneeImage }
             : null;
         let candidates = [];
 
@@ -2568,6 +2577,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
         item.assigneeName = user ? user.name : null;
         item.assigneeInitials = user ? user.initials : null;
         item.assigneeColor = user ? user.color : null;
+        item.assigneeImage = user ? (user.image || null) : null;
         this.render();
 
         if (!this._service) {

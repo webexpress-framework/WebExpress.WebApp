@@ -25,7 +25,10 @@ test("normalize board maps columns, swimlanes and cards with defaults", () => {
     const board = wxapp.kanbanModel.normalizeBoard({
         columns: [{ id: "c1", label: "To Do" }, { id: "c2", label: "Done", size: "2fr" }],
         swimlanes: [{ id: "s1", label: "Lane", expanded: false }],
-        items: [{ id: "i1", columnId: "c1", swimlaneId: "s1", label: "Card" }]
+        items: [
+            { id: "i1", columnId: "c1", swimlaneId: "s1", label: "Card" },
+            { id: "i2", columnId: "c1", label: "Assigned", assigneeId: "u1", assigneeName: "Guybrush Threepwood", assigneeInitials: "GT", assigneeColor: "#6f42c1", assigneeImage: "/img/guybrush.png" }
+        ]
     });
 
     assert.equal(board.columns.length, 2);
@@ -35,6 +38,38 @@ test("normalize board maps columns, swimlanes and cards with defaults", () => {
     assert.equal(board.cards[0].id, "i1");
     assert.equal(board.cards[0].label, "Card");
     assert.deepEqual(board.cards[0].primaryAction, {});
+    assert.equal(board.cards[0].assigneeId, null);
+    assert.equal(board.cards[0].assigneeImage, null);
+    assert.equal(board.cards[1].assigneeId, "u1");
+    assert.equal(board.cards[1].assigneeName, "Guybrush Threepwood");
+    assert.equal(board.cards[1].assigneeInitials, "GT");
+    assert.equal(board.cards[1].assigneeColor, "#6f42c1");
+    assert.equal(board.cards[1].assigneeImage, "/img/guybrush.png");
+});
+
+test("normalize board completes the footer chips and drops empty entries", () => {
+    const { wxapp } = load();
+    const board = wxapp.kanbanModel.normalizeBoard({
+        items: [
+            {
+                id: "i1", columnId: "c1", footer: [
+                    { label: "P1", colorCss: "text-bg-danger", title: "Priority" },
+                    { icon: "fas fa-star", colorStyle: "background:#ff8800;" },
+                    { title: "carries neither label nor icon" },
+                    null
+                ]
+            },
+            { id: "i2", columnId: "c1", footer: "not a list" },
+            { id: "i3", columnId: "c1" }
+        ]
+    });
+
+    assert.deepEqual(board.cards[0].footer, [
+        { label: "P1", icon: null, colorCss: "text-bg-danger", colorStyle: "", title: "Priority" },
+        { label: "", icon: "fas fa-star", colorCss: "", colorStyle: "background:#ff8800;", title: "" }
+    ]);
+    assert.deepEqual(board.cards[1].footer, []);
+    assert.deepEqual(board.cards[2].footer, []);
 });
 
 test("normalize board returns only the present parts and tolerates empties", () => {

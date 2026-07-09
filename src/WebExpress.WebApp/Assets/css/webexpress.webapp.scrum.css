@@ -259,6 +259,7 @@
     font-weight: 700;
     color: #fff;
     background: var(--bs-secondary, #6c757d);
+    object-fit: cover;
 }
 
 .wx-scrum-row .wx-scrum-assignee-empty {

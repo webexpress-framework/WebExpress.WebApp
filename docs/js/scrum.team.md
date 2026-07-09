@@ -43,7 +43,7 @@ The data endpoint is not spelled as an attribute. It is contributed in C# by `.D
 |----------|----------------|------|-------------------------|-------------------------------------------
 | `GET`    | `{data}`       | —    | `TeamMember[]`          | Initial load and refresh.
 
-`TeamMember` objects are expected to carry at least `id`, `name` and `points` (the planned/committed load), and optionally `completed` (the points already done), `team`, `initials` and `color` (a CSS color used as the avatar background). When `initials` is omitted, the client derives them from the name; when `color` is omitted, a neutral grey is used; `points` and `completed` are coerced to non-negative integers and `completed` is clamped so it never exceeds `points`.
+`TeamMember` objects are expected to carry at least `id`, `name` and `points` (the planned/committed load), and optionally `completed` (the points already done), `team`, `initials`, `color` (a CSS color used as the avatar background) and `image` (the uri of an avatar picture that replaces the initials badge). When `initials` is omitted, the client derives them from the name; when `color` is omitted, a neutral grey is used; `points` and `completed` are coerced to non-negative integers and `completed` is clamped so it never exceeds `points`.
 
 ```json
 [
@@ -68,7 +68,7 @@ if (teamCtrl) {
     teamCtrl.refresh();
 }
 
-// read the current members (a copy of { id, name, team, initials, color, points, completed })
+// read the current members (a copy of { id, name, team, initials, color, image, points, completed })
 const members = teamCtrl ? teamCtrl.value : [];
 ```
 

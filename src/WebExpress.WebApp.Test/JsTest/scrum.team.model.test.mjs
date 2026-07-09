@@ -32,6 +32,7 @@ test("normalize list completes each member and defaults to empty", () => {
         team: "",
         initials: "GT",
         color: "#888",
+        image: null,
         points: 8,
         completed: 3
     }]);
@@ -43,9 +44,10 @@ test("normalize list completes each member and defaults to empty", () => {
 test("normalize member keeps explicit fields and clamps invalid points", () => {
     const { wxapp } = load();
 
-    const explicit = wxapp.scrumTeamModel.normalizeMember({ id: "elaine", name: "Elaine Marley", team: "Gov", initials: "EM", color: "#7c3aed", points: 13, completed: 8 });
+    const explicit = wxapp.scrumTeamModel.normalizeMember({ id: "elaine", name: "Elaine Marley", team: "Gov", initials: "EM", color: "#7c3aed", image: "/img/elaine.png", points: 13, completed: 8 });
     assert.equal(explicit.initials, "EM");
     assert.equal(explicit.color, "#7c3aed");
+    assert.equal(explicit.image, "/img/elaine.png");
     assert.equal(explicit.points, 13);
     assert.equal(explicit.completed, 8);
 

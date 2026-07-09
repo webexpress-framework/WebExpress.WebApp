@@ -43,6 +43,7 @@ webexpress.webapp.scrumTeamModel = {
             team: member.team || "",
             initials: member.initials || this.deriveInitials(name),
             color: member.color || "#888",
+            image: member.image || null,
             points: planned,
             completed: completed
         };

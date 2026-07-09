@@ -40,7 +40,7 @@ The control is bootstrapped from a single host element carrying the `wx-webapp-w
 | `DELETE` | `{data-uri}/{userId}`          | —                   | `204 No Content`       | Detach a watcher.
 | `GET`    | `{data-users-uri}?q={search}`  | —                   | `User[]`               | Search candidates for the add dropdown.
 
-`User` objects are expected to carry at least `id`, `name`, `initials`, `team`, and `color` (a CSS color used as the avatar background).
+`User` objects are expected to carry at least `id`, `name`, `initials`, `team`, and `color` (a CSS color used as the avatar background). An optional `image` carries the uri of an avatar picture; when present, it replaces the initials badge in the avatar row and in the search results.
 
 ## Programmatic Control
 
