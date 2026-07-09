@@ -251,6 +251,20 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "scrum.velocity.points_abbr": "Pkt.",
     "scrum.velocity.empty": "Noch keine abgeschlossenen Sprints.",
 
+    // permission
+    "permission.title": "Berechtigungen",
+    "permission.assign.group.label": "Gruppe zuweisen",
+    "permission.assign.policy.label": "Richtlinie",
+    "permission.assign": "Zuweisen",
+    "permission.select.placeholder": "Bitte wählen…",
+    "permission.search.placeholder": "Suchen…",
+    "permission.column.group": "Zugewiesene Gruppe",
+    "permission.column.policy": "Wirksame Richtlinie",
+    "permission.remove": "Zuweisung entfernen",
+    "permission.empty": "Noch keine Zuweisungen",
+    "permission.pager.prev": "Zurück",
+    "permission.pager.next": "Weiter",
+
     // watcher
     "watcher.title": "Beobachter",
     "watcher.add": "Beobachter hinzufügen",

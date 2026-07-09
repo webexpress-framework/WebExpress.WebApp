@@ -14,6 +14,8 @@
   href: form-editor.md
 - name: DropdownThemeCtrl
   href: theme-selector.md
+- name: PermissionCtrl
+  href: permission.md
 - name: WatcherCtrl
   href: watcher.md
 - name: TabCtrl

@@ -301,6 +301,49 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
+        /// Declares the standard data service of the permission surface, which
+        /// queries the group-to-policy assignments with GET; assignments and
+        /// revocations shape their own requests against the same base.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The permission control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataPermission DataService<TEndpoint>(this ControlDataPermission control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
+        }
+
+        /// <summary>
+        /// Declares the groups service of the permission surface, which
+        /// resolves the assignable identity groups with GET.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The permission control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataPermission GroupsService<TEndpoint>(this ControlDataPermission control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, GroupsPreset, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
+        }
+
+        /// <summary>
+        /// Declares the policies service of the permission surface, which
+        /// resolves the assignable identity policies with GET.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The permission control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataPermission PoliciesService<TEndpoint>(this ControlDataPermission control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, PoliciesPreset, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
+        }
+
+        /// <summary>
         /// Declares the users service of the scrum backlog, which resolves the
         /// candidate assignees with GET when an item is assigned.
         /// </summary>
@@ -748,6 +791,28 @@ namespace WebExpress.WebApp.WebControl
         private static DataServiceDescriptor UsersPreset(string baseUri)
         {
             return DataServiceDescriptor.Rest("users").WithBaseUri(baseUri).WithMethod("GET");
+        }
+
+        /// <summary>
+        /// The preset of the named groups service, which resolves the
+        /// assignable identity groups with GET.
+        /// </summary>
+        /// <param name="baseUri">The resolved endpoint.</param>
+        /// <returns>The configured descriptor.</returns>
+        private static DataServiceDescriptor GroupsPreset(string baseUri)
+        {
+            return DataServiceDescriptor.Rest("groups").WithBaseUri(baseUri).WithMethod("GET");
+        }
+
+        /// <summary>
+        /// The preset of the named policies service, which resolves the
+        /// assignable identity policies with GET.
+        /// </summary>
+        /// <param name="baseUri">The resolved endpoint.</param>
+        /// <returns>The configured descriptor.</returns>
+        private static DataServiceDescriptor PoliciesPreset(string baseUri)
+        {
+            return DataServiceDescriptor.Rest("policies").WithBaseUri(baseUri).WithMethod("GET");
         }
 
         /// <summary>

@@ -399,6 +399,10 @@ webexpress.webapp.Event = class {
     static TAG_ADDED_EVENT = "webexpress.webapp.tag.added";
     // Event triggered when a tag is removed
     static TAG_REMOVED_EVENT = "webexpress.webapp.tag.removed";
+    // Event triggered when a group is assigned to a policy
+    static PERMISSION_ASSIGNED_EVENT = "webexpress.webapp.permission.assigned";
+    // Event triggered when a group-to-policy assignment is revoked
+    static PERMISSION_REMOVED_EVENT = "webexpress.webapp.permission.removed";
 }
 
 // initialize the WebSocket connection after the DOM is fully loaded    

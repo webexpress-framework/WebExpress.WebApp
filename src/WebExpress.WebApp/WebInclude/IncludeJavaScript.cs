@@ -48,6 +48,8 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/js/webexpress.webapp.list.js")]
     [Asset("/assets/js/webexpress.webapp.login.js")]
     [Asset("/assets/js/webexpress.webapp.message.queue.status.js")]
+    [Asset("/assets/js/webexpress.webapp.permission.model.js")]
+    [Asset("/assets/js/webexpress.webapp.permission.js")]
     [Asset("/assets/js/webexpress.webapp.popupnotification.js")]
     [Asset("/assets/js/webexpress.webapp.progress.task.js")]
     [Asset("/assets/js/webexpress.webapp.status.task.js")]
