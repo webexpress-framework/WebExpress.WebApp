@@ -16,8 +16,30 @@ namespace WebExpress.WebApp.WebControl
     /// Represents a form that retrieves and displays data from 
     /// a RESTful resource specified by a URI.
     /// </summary>
-    public class ControlDataForm : ControlForm, IDataIsland
+    public class ControlDataForm : ControlForm, IDataIsland, IViewStateModelBound
     {
+        /// <summary>
+        /// Gets or sets the resolver of the ViewState resource the form drives. When
+        /// set through Resource&lt;TResource&gt;(), a successful submit re-queries
+        /// this resource so a ViewState-bound list or table re-renders with the
+        /// created or edited record; when null, the form is standalone and
+        /// coordinates through the data arrived and upload success events.
+        /// </summary>
+        public Func<IRenderControlContext, string> ResourceFactory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional ViewState id the form binds to. When null, the
+        /// form resolves its ViewState by the resource it drives.
+        /// </summary>
+        public Func<IRenderControlContext, string> ViewState { get; set; }
+
+        /// <summary>
+        /// Gets or sets the resolver of an optional state path the form writes, set
+        /// through Model(...). A form's write is primarily a re-query after a
+        /// successful submit, so this is usually left unset.
+        /// </summary>
+        public Func<IRenderControlContext, string> ModelFactory { get; set; }
+
         /// <summary>
         /// Gets the data service descriptors of the control, emitted as
         /// wx-service island elements. The data service backs the load and the

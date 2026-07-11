@@ -1,6 +1,7 @@
 using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebControl;
 using WebExpress.WebApp.WebData;
+using WebExpress.WebCore.WebEndpoint;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebPage;
 
@@ -115,6 +116,61 @@ namespace WebExpress.WebApp.Test.WebControl
             // validation
             var expected = @"*<div id=""platform"" class=""wx-quickfilter-dropdown"" data-text=""Platform"" data-group=""platform"" data-rest-uri=""https://example.com/api/platforms""></div>*";
             AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
+
+        /// <summary>
+        /// A quickfilter bound to a ViewState resource is a writing surface: it
+        /// emits the resource binding together with the data-wx-model and
+        /// data-wx-model-query attributes, and unlike a read-only bound control it
+        /// keeps its own wx-service island, because it still loads its own filter
+        /// definitions while driving the shared resource.
+        /// </summary>
+        [Fact]
+        public void ViewStateBound_EmitsModelBinding_AndKeepsService()
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlDataQuickfilter()
+            {
+                ServiceFactory = _ => DataServiceDescriptor.QueryData("https://example.com/api/data"),
+                ResourceFactory = _ => "games",
+                ModelFactory = _ => "filter"
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(@"<div id=""*"" class=""wx-webapp-quickfilter"" data-wx-resource=""games"" data-wx-model=""filter"" data-wx-model-query=""games""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/data"" method=""GET""></wx-service></div>", html);
+        }
+
+        /// <summary>
+        /// The fluent Resource&lt;TResource&gt;().Model(...) authoring sets the
+        /// resource and model factories, so a writing surface is declared entirely
+        /// type-safely without spelling a resource name or state key at the call
+        /// site beyond the written path.
+        /// </summary>
+        [Fact]
+        public void ResourceAndModel_BindByType()
+        {
+            // arrange & act: Resource and Model mutate the same instance, so the
+            // concrete control keeps carrying both factories
+            var control = new ControlDataQuickfilter("games");
+            control.Resource<QuickfilterTestResource>().Model("filter");
+
+            // validation
+            Assert.Equal(DataTypeName.Of<QuickfilterTestResource>(), control.ResourceFactory(null));
+            Assert.Equal("filter", control.ModelFactory(null));
+        }
+
+        /// <summary>
+        /// A resource identity used only by the binding test.
+        /// </summary>
+        private sealed class QuickfilterTestResource : IDataResource
+        {
         }
     }
 }

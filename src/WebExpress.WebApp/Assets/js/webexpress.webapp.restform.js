@@ -40,6 +40,8 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
 
         this._service = this.useService("data");
 
+        this._attachViewState(element);
+
         const parseBool = (val, defaultVal) => {
             return val === "true" ? true : (val === "false" ? false : defaultVal);
         };
@@ -95,6 +97,30 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
         this._onSubmitBound = this._onSubmit.bind(this);
 
         this._init();
+    }
+
+    /**
+     * Wires the form to an enclosing ViewState when it was authored with
+     * Resource<T>(). A successful submit then re-queries the bound resource so a
+     * ViewState-bound list or table re-renders with the created or edited record,
+     * rather than relying only on the upload success and data arrived events. A
+     * form without a resource binding stays standalone.
+     * @param {HTMLElement} element - the host element carrying the binding.
+     */
+    _attachViewState(element) {
+        this._viewState = null;
+        this._viewStateResource = element.getAttribute("data-wx-model-query")
+            || element.getAttribute("data-wx-resource")
+            || null;
+
+        if (!this._viewStateResource) {
+            return;
+        }
+
+        const viewStateId = element.getAttribute("data-wx-viewstate") || null;
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
+            this._viewState = viewState;
+        });
     }
 
     // transient ui state accessors backed by the store, so the single source of
@@ -613,6 +639,12 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
 
             this._dispatch(webexpress.webui.Event.UPLOAD_SUCCESS_EVENT, { response: json, status: result.status, form: this._element });
             this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, { type: "submit", data: json });
+
+            // when bound to a ViewState, re-query the resource so a ViewState-bound
+            // list or table re-renders with the created or edited record
+            if (this._viewState) {
+                this._viewState.dispatch("viewstate/reload", { resource: this._viewStateResource });
+            }
 
             if (classification.closeModal) {
                 this._closeEnclosingModal();

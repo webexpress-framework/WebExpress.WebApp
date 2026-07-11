@@ -16,9 +16,31 @@ namespace WebExpress.WebApp.WebControl
     /// prompt, normalizes their payloads and re-emits a unified
     /// webexpress.webui.Event.CHANGE_FILTER_EVENT.
     /// </summary>
-    public class ControlAdvancedSearch : Control, IControlSearch, IDataIsland
+    public class ControlAdvancedSearch : Control, IControlSearch, IDataIsland, IViewStateModelBound
     {
         private readonly List<IControl> _content = [];
+
+        /// <summary>
+        /// Gets or sets the resolver of the ViewState resource the search drives.
+        /// When set through Resource&lt;TResource&gt;(), a search or WQL change
+        /// writes the search and wql state keys and re-queries this resource; when
+        /// null, the search is standalone and coordinates through the change filter
+        /// event and the BindSearch bind.
+        /// </summary>
+        public Func<IRenderControlContext, string> ResourceFactory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional ViewState id the search binds to. When null, the
+        /// search resolves its ViewState by the resource it drives.
+        /// </summary>
+        public Func<IRenderControlContext, string> ViewState { get; set; }
+
+        /// <summary>
+        /// Gets or sets the resolver of the state path a basic search writes into,
+        /// set through Model(...) and defaulting to "search" on the client; a WQL
+        /// change always writes the "wql" key, mirroring the query state contract.
+        /// </summary>
+        public Func<IRenderControlContext, string> ModelFactory { get; set; }
 
         /// <summary>
         /// Gets the data service descriptors of the control, emitted as

@@ -50,9 +50,69 @@ webexpress.webapp.SearchCtrl = class extends webexpress.webui.Ctrl {
         this._buildDom();
         this._initChildren();
         this._attachEventHandlers();
+        this._attachViewState(element);
         this._applyMode(this._initialMode);
-        
+
         this._isInitializing = false;
+    }
+
+    /**
+     * Wires the search to an enclosing ViewState when it was authored with
+     * Resource<T>().Model(path). Instead of the BindSearch control-to-control
+     * wire, a search or WQL change writes into the shared state and re-queries
+     * the bound resource. A single listener on the host catches every unified
+     * change the control re-emits, skipping the internal compatibility echo. A
+     * search without a resource binding stays standalone.
+     * @param {HTMLElement} element - the host element carrying the binding.
+     */
+    _attachViewState(element) {
+        this._viewState = null;
+        this._viewStateResource = element.getAttribute("data-wx-model-query")
+            || element.getAttribute("data-wx-resource")
+            || null;
+
+        if (!this._viewStateResource) {
+            return;
+        }
+
+        // the basic search writes this state key (defaulting to "search"); a WQL
+        // change always writes "wql", so the two modes stay mutually exclusive in
+        // the shared state exactly as the query state contract expects
+        this._searchStateKey = element.getAttribute("data-wx-model") || "search";
+
+        const viewStateId = element.getAttribute("data-wx-viewstate") || null;
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
+            this._viewState = viewState;
+        });
+
+        this._element.addEventListener(webexpress.webui.Event.CHANGE_FILTER_EVENT, (e) => {
+            // the compatibility echo is re-dispatched by this control itself and
+            // must not loop back into a second write
+            if (e.detail && e.detail._fromAdvanced) {
+                return;
+            }
+            this._writeSearchToViewState((e.detail && e.detail.value) || "", (e.detail && e.detail.searchType) || "basic");
+        });
+    }
+
+    /**
+     * Writes the current search or WQL text into the bound ViewState and
+     * re-queries the resource, resetting the page for the new query. A basic
+     * change writes the search key and clears wql; a WQL change writes wql and
+     * clears the search key.
+     * @param {string} value - the search or WQL text.
+     * @param {string} searchType - "basic" or "wql".
+     */
+    _writeSearchToViewState(value, searchType) {
+        if (!this._viewState) {
+            return;
+        }
+
+        const isWql = searchType === "wql";
+        const patch = { page: 0 };
+        patch[this._searchStateKey] = isWql ? null : value;
+        patch.wql = isWql ? value : null;
+        this._viewState.dispatch("viewstate/query", { resource: this._viewStateResource, patch: patch });
     }
 
     /**

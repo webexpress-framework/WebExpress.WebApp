@@ -17,8 +17,29 @@ namespace WebExpress.WebApp.WebControl
     /// <c>COMMENT_ADDED_EVENT</c> so that any sibling
     /// <see cref="ControlDataComment"/> on the same page picks it up.
     /// </summary>
-    public class ControlDataCommentComposer : Control, IDataIsland
+    public class ControlDataCommentComposer : Control, IDataIsland, IViewStateModelBound
     {
+        /// <summary>
+        /// Gets or sets the resolver of the ViewState comments resource the composer
+        /// drives. When set through Resource&lt;TResource&gt;(), a posted comment
+        /// re-queries this resource so a ViewState-bound comment list re-renders;
+        /// when null, the composer is standalone and coordinates through the
+        /// comment added event.
+        /// </summary>
+        public Func<IRenderControlContext, string> ResourceFactory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional ViewState id the composer binds to. When null,
+        /// the composer resolves its ViewState by the resource it drives.
+        /// </summary>
+        public Func<IRenderControlContext, string> ViewState { get; set; }
+
+        /// <summary>
+        /// Gets or sets the resolver of an optional state path the composer writes,
+        /// set through Model(...). The composer's write is primarily a re-query
+        /// after a successful post, so this is usually left unset.
+        /// </summary>
+        public Func<IRenderControlContext, string> ModelFactory { get; set; }
         /// <summary>
         /// Gets the data service descriptors of the control, emitted as
         /// wx-service island elements: the data service receives the new

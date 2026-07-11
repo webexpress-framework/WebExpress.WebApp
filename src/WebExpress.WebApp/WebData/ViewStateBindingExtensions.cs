@@ -1,4 +1,6 @@
+using System;
 using WebExpress.WebCore.WebEndpoint;
+using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.WebData
 {
@@ -27,6 +29,66 @@ namespace WebExpress.WebApp.WebData
             if (control != null)
             {
                 control.ResourceFactory = _ => DataTypeName.Of<TResource>();
+            }
+
+            return control;
+        }
+
+        /// <summary>
+        /// Binds a writing surface to the ViewState resource it drives, identified
+        /// by the resource type. The surface writes into the shared state and
+        /// re-queries this resource, so it resolves the ViewState that declares it
+        /// on the client, exactly like a control that renders the resource. The
+        /// overload keeps the receiver typed as <see cref="IViewStateModelBound"/>
+        /// so the Model(...) call chains after it.
+        /// </summary>
+        /// <typeparam name="TResource">The resource type the surface drives.</typeparam>
+        /// <param name="control">The writing surface.</param>
+        /// <returns>The surface for chaining.</returns>
+        public static IViewStateModelBound Resource<TResource>(this IViewStateModelBound control) where TResource : IDataResource
+        {
+            if (control != null)
+            {
+                control.ResourceFactory = _ => DataTypeName.Of<TResource>();
+            }
+
+            return control;
+        }
+
+        /// <summary>
+        /// Declares the ViewState state path a writing surface writes when the user
+        /// interacts, so a quickfilter, a search box or a form field feeds the
+        /// shared state and, combined with the bound resource, triggers a central
+        /// re-query. The path is emitted as data-wx-model and the bound resource
+        /// as data-wx-model-query, which the model bind and the surface's client
+        /// behavior consume. This is the write counterpart to Resource, so it is
+        /// declared on <see cref="IViewStateModelBound"/> and paired with it.
+        /// </summary>
+        /// <param name="control">The writing surface.</param>
+        /// <param name="path">The ViewState state path to write, for example "filter" or "search".</param>
+        /// <returns>The surface for chaining.</returns>
+        public static IViewStateModelBound Model(this IViewStateModelBound control, string path)
+        {
+            if (control != null)
+            {
+                control.ModelFactory = _ => path;
+            }
+
+            return control;
+        }
+
+        /// <summary>
+        /// Declares the ViewState state path a writing surface writes, resolved from
+        /// the render context, for a path that depends on the request.
+        /// </summary>
+        /// <param name="control">The writing surface.</param>
+        /// <param name="path">The resolver of the state path.</param>
+        /// <returns>The surface for chaining.</returns>
+        public static IViewStateModelBound Model(this IViewStateModelBound control, Func<IRenderControlContext, string> path)
+        {
+            if (control != null)
+            {
+                control.ModelFactory = path;
             }
 
             return control;

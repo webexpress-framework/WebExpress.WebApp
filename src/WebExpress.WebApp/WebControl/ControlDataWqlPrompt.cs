@@ -11,8 +11,29 @@ namespace WebExpress.WebApp.WebControl
     /// Represents a control for composing and editing WQL expressions with REST-based suggestions, 
     /// syntax validation, and history navigation.
     /// </summary>
-    public class ControlDataWqlPrompt : Control, IControlDataWqlPrompt, IDataIsland
+    public class ControlDataWqlPrompt : Control, IControlDataWqlPrompt, IDataIsland, IViewStateModelBound
     {
+        /// <summary>
+        /// Gets or sets the resolver of the ViewState resource the prompt drives.
+        /// When set through Resource&lt;TResource&gt;(), a submitted WQL query is
+        /// written into the shared state and re-queries this resource; when null,
+        /// the prompt is standalone and coordinates through the change filter event
+        /// and the BindSearch bind.
+        /// </summary>
+        public Func<IRenderControlContext, string> ResourceFactory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional ViewState id the prompt binds to. When null, the
+        /// prompt resolves its ViewState by the resource it drives.
+        /// </summary>
+        public Func<IRenderControlContext, string> ViewState { get; set; }
+
+        /// <summary>
+        /// Gets or sets the resolver of the state path the prompt writes the
+        /// submitted query into, set through Model(...) and defaulting to "wql" on
+        /// the client.
+        /// </summary>
+        public Func<IRenderControlContext, string> ModelFactory { get; set; }
         /// <summary>
         /// Gets the data service descriptors of the control, emitted as
         /// wx-service island elements. The data service backs the suggestions,

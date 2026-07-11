@@ -20,10 +20,64 @@ webexpress.webapp.QuickFilterCtrl = class extends webexpress.webui.QuickFilterCt
         this._restUri = this._service ? this._service.baseUri : "";
         this._abortController = null;
 
+        this._attachViewState(element);
+
         // initial load if a REST endpoint is defined
         if (this._restUri) {
             this._receiveData();
         }
+    }
+
+    /**
+     * Wires the quickfilter to an enclosing ViewState when it was authored with
+     * Resource<T>().Model(path). Instead of the BindFilter control-to-control
+     * wire, the quickfilter writes the active filter set into the shared state
+     * and re-queries the bound resource, so every control that renders it
+     * re-renders. A quickfilter without a resource binding stays standalone and
+     * keeps coordinating through the change filter event and the BindFilter bind.
+     * @param {HTMLElement} element - the host element carrying the binding.
+     */
+    _attachViewState(element) {
+        this._viewState = null;
+        this._viewStateResource = element.getAttribute("data-wx-model-query")
+            || element.getAttribute("data-wx-resource")
+            || null;
+
+        if (!this._viewStateResource) {
+            return;
+        }
+
+        // the model path defaults to "filter", the query parameter the data
+        // query families already carry, when the surface is bound but declares
+        // no explicit path
+        this._modelPath = element.getAttribute("data-wx-model") || "filter";
+
+        const viewStateId = element.getAttribute("data-wx-viewstate") || null;
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
+            this._viewState = viewState;
+            // a cookie-restored selection feeds the initial query, so the first
+            // paint already reflects the persisted filter
+            if (this._registry.getActiveFilters().length > 0) {
+                this._writeFilterToViewState();
+            }
+        });
+
+        document.addEventListener(webexpress.webui.Event.CHANGE_FILTER_EVENT, () => this._writeFilterToViewState());
+    }
+
+    /**
+     * Writes the active filter set into the bound ViewState and re-queries the
+     * resource, resetting the page so a new filter starts at the first page. The
+     * viewstate/query intent applies the patch and re-loads in one step.
+     */
+    _writeFilterToViewState() {
+        if (!this._viewState) {
+            return;
+        }
+
+        const patch = { page: 0 };
+        patch[this._modelPath] = this._registry.getActiveFilters();
+        this._viewState.dispatch("viewstate/query", { resource: this._viewStateResource, patch: patch });
     }
 
     /**

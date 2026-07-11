@@ -43,11 +43,55 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         // ui initialization
         this._initUi();
         this._attachListeners();
+        this._attachViewState(element);
 
         // load history asynchronously after initialization
         setTimeout(() => {
             this._loadHistoryFromApi();
         }, 200);
+    }
+
+    /**
+     * Wires the prompt to an enclosing ViewState when it was authored standalone
+     * with Resource<T>().Model(path). A submitted query then writes into the
+     * shared state and re-queries the bound resource instead of coordinating
+     * through the BindSearch wire. A prompt embedded in the advanced search
+     * carries no resource binding of its own, so its changes flow through the
+     * search host instead and this stays inert.
+     * @param {HTMLElement} element - the host element carrying the binding.
+     */
+    _attachViewState(element) {
+        this._viewState = null;
+        this._viewStateResource = element.getAttribute("data-wx-model-query")
+            || element.getAttribute("data-wx-resource")
+            || null;
+
+        if (!this._viewStateResource) {
+            return;
+        }
+
+        this._wqlStateKey = element.getAttribute("data-wx-model") || "wql";
+
+        const viewStateId = element.getAttribute("data-wx-viewstate") || null;
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
+            this._viewState = viewState;
+        });
+    }
+
+    /**
+     * Writes a submitted WQL query into the bound ViewState and re-queries the
+     * resource, resetting the page and clearing the basic search key so the two
+     * search modes stay mutually exclusive in the shared state.
+     * @param {string} text - the submitted WQL query.
+     */
+    _writeWqlToViewState(text) {
+        if (!this._viewState) {
+            return;
+        }
+
+        const patch = { page: 0, search: null };
+        patch[this._wqlStateKey] = text;
+        this._viewState.dispatch("viewstate/query", { resource: this._viewStateResource, patch: patch });
     }
 
     /**
@@ -787,6 +831,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
 
         this._setValidState();
         this._dispatch(webexpress.webui.Event.CHANGE_FILTER_EVENT, { value: text });
+        this._writeWqlToViewState(text);
     }
 
     /**

@@ -11,8 +11,30 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// Represents a control panel for API quickfilter interactions.
     /// </summary>
-    public class ControlDataQuickfilter : ControlQuickfilter, IControlDataQuickfilter, IDataIsland
+    public class ControlDataQuickfilter : ControlQuickfilter, IControlDataQuickfilter, IDataIsland, IViewStateModelBound
     {
+        /// <summary>
+        /// Gets or sets the resolver of the ViewState resource the quickfilter
+        /// drives. When set through Resource&lt;TResource&gt;(), the quickfilter
+        /// writes the active filter into the shared state and re-queries this
+        /// resource; when null, the quickfilter is standalone and coordinates
+        /// through the change filter event and the BindFilter bind.
+        /// </summary>
+        public Func<IRenderControlContext, string> ResourceFactory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional ViewState id the quickfilter binds to. When
+        /// null, the quickfilter resolves its ViewState by the resource it drives.
+        /// </summary>
+        public Func<IRenderControlContext, string> ViewState { get; set; }
+
+        /// <summary>
+        /// Gets or sets the resolver of the state path the quickfilter writes the
+        /// active filter into, set through Model(...) and defaulting to "filter"
+        /// on the client when the surface is bound but no path is declared.
+        /// </summary>
+        public Func<IRenderControlContext, string> ModelFactory { get; set; }
+
         /// <summary>
         /// Gets the data service descriptors of the control, emitted as
         /// wx-service island elements. The data service loads the filter

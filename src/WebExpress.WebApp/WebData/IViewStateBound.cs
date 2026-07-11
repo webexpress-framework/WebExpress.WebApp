@@ -52,4 +52,35 @@ namespace WebExpress.WebApp.WebData
         /// </summary>
         Func<IRenderControlContext, string> UsersFactory { get; set; }
     }
+
+    /// <summary>
+    /// Marks a writing surface that drives a ViewState resource: a quickfilter, a
+    /// search or WQL prompt, a form or a comment composer that, instead of only
+    /// rendering a resource slice, writes a value into the shared ViewState state
+    /// and triggers a central re-query of the resource. It is the write
+    /// counterpart to <see cref="IViewStateBound"/>: the surface declares the
+    /// state path it writes with Model(...) and the resource it drives with
+    /// Resource&lt;TResource&gt;(), which the control emits as the data-wx-model
+    /// and data-wx-model-query attributes. Unlike a read-only bound control, a
+    /// writing surface keeps its own wx-state and wx-service islands, because it
+    /// still loads its own data (filter definitions, suggestions) and submits
+    /// through its own service; the resource binding only adds the shared write
+    /// and re-query on top.
+    ///
+    /// When the resource is left unset the surface is standalone and behaves
+    /// exactly as before, owning its islands and coordinating through events and
+    /// the BindSearch/BindFilter binds. See WebExpress/docs/view-state-service.md.
+    /// </summary>
+    public interface IViewStateModelBound : IViewStateBound
+    {
+        /// <summary>
+        /// Gets or sets the resolver of the ViewState state path the surface writes
+        /// when the user interacts, emitted as the data-wx-model attribute. It is
+        /// set through Model(...). When null, the surface drives no state path and
+        /// the write is left to the surface's own client behavior. The member is
+        /// named ModelFactory rather than Model so the Model(...) extension is not
+        /// shadowed by an instance member of the same name.
+        /// </summary>
+        Func<IRenderControlContext, string> ModelFactory { get; set; }
+    }
 }

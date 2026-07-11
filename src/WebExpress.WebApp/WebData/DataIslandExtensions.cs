@@ -57,10 +57,29 @@ namespace WebExpress.WebApp.WebData
                         host.AddUserAttribute("data-wx-users", !string.IsNullOrEmpty(users) ? WebUtility.HtmlEncode(users) : null);
                     }
 
-                    var boundTemplate = control.TemplateFactory?.Invoke(renderContext);
-                    host.AddUserAttribute("data-wx-template", !string.IsNullOrEmpty(boundTemplate) ? WebUtility.HtmlEncode(boundTemplate) : null);
+                    // a writing surface drives the resource rather than only
+                    // rendering it: it declares the state path it writes and the
+                    // resource to re-query, and it keeps its own state and service
+                    // islands below, because it still loads its own data and
+                    // submits through its own service. A read-only bound control
+                    // renders the resource slice alone and returns here with no
+                    // islands of its own.
+                    if (viewStateBound is IViewStateModelBound modelBound)
+                    {
+                        var model = modelBound.ModelFactory?.Invoke(renderContext);
+                        if (!string.IsNullOrEmpty(model))
+                        {
+                            host.AddUserAttribute("data-wx-model", WebUtility.HtmlEncode(model));
+                            host.AddUserAttribute("data-wx-model-query", WebUtility.HtmlEncode(resource));
+                        }
+                    }
+                    else
+                    {
+                        var boundTemplate = control.TemplateFactory?.Invoke(renderContext);
+                        host.AddUserAttribute("data-wx-template", !string.IsNullOrEmpty(boundTemplate) ? WebUtility.HtmlEncode(boundTemplate) : null);
 
-                    return html;
+                        return html;
+                    }
                 }
             }
 

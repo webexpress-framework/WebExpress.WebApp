@@ -74,9 +74,34 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webapp.Data {
 
         this._buildDom();
         this._attachEventHandlers();
+        this._attachViewState(element);
         if (!this._categoriesPreset) {
             void this._loadCategories();
         }
+    }
+
+    /**
+     * Wires the composer to an enclosing ViewState when it was authored with
+     * Resource<T>(). A posted comment then re-queries the comments resource so a
+     * ViewState-bound comment list re-renders from the canonical server state,
+     * rather than relying only on the comment added event. A composer without a
+     * resource binding stays standalone.
+     * @param {HTMLElement} element - the host element carrying the binding.
+     */
+    _attachViewState(element) {
+        this._viewState = null;
+        this._viewStateResource = element.getAttribute("data-wx-model-query")
+            || element.getAttribute("data-wx-resource")
+            || null;
+
+        if (!this._viewStateResource) {
+            return;
+        }
+
+        const viewStateId = element.getAttribute("data-wx-viewstate") || null;
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
+            this._viewState = viewState;
+        });
     }
 
     /**
@@ -337,6 +362,11 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webapp.Data {
             if (!res.ok) throw new Error(res.error ? res.error.message : String(res.status));
             const created = res.data;
             this._dispatch(webexpress.webapp.Event.COMMENT_ADDED_EVENT, { comment: created, uri: this._uri });
+            // when bound to a ViewState, re-query the comments resource so a
+            // ViewState-bound comment list re-renders from the canonical state
+            if (this._viewState) {
+                this._viewState.dispatch("viewstate/reload", { resource: this._viewStateResource });
+            }
             this._collapse();
         } catch (e) {
             console.warn("CommentComposerCtrl: submit failed", e);
