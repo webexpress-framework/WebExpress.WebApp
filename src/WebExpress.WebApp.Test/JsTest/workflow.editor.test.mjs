@@ -14,7 +14,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert";
-import { loadEngine, webappAsset, appendServiceIsland, appendStateIsland } from "./harness.mjs";
+import { loadEngine, webappAsset, appendServiceIsland, appendStateIsland, appendResourceIsland } from "./harness.mjs";
 
 // the workflow editor extends the WebUI graph editor, which the engine harness
 // does not load; the stub carries the members the workflow control calls. The
@@ -219,4 +219,34 @@ test("workflow editor ignores a load that resolves after destroy", async () => {
     assert.equal(editor._meta.id, "");
     // only the constructor render, the late response must not render again
     assert.equal(propsPanelCalls.count, 1);
+});
+
+test("workflow editor in a scope renders the central resource slice the scope loads", async () => {
+    const { engine } = load();
+    const urls = [];
+    engine.setFetch(async (url) => {
+        urls.push(url);
+        return { ok: true, status: 200, json: async () => workflowResponse() };
+    });
+
+    const scopeHost = engine.createElement("div");
+    scopeHost.dataset.wxScope = "workflow";
+    appendServiceIsland(engine.document, scopeHost, { name: "data", kind: "rest", baseUri: "/api/workflow", method: "GET", updateMethod: "PUT" });
+    appendResourceIsland(engine.document, scopeHost, { name: "workflow", service: "data", target: "workflow" });
+
+    new engine.wxapp.ViewState(scopeHost);
+
+    const element = engine.createElement("div");
+    element.dataset.wxResource = "workflow";
+    scopeHost.appendChild(element);
+
+    const editor = new engine.wxapp.WorkflowEditorCtrl(element);
+    await settle();
+
+    assert.equal(urls.length, 1, "the scope loaded the resource centrally");
+    assert.equal(editor._meta.id, "wf1");
+    assert.equal(editor._model.nodes.length, 2);
+    assert.equal(editor._model.edges.length, 1);
+    // the autosave persists through the scope service against the scope endpoint
+    assert.equal(editor._restUri, "/api/workflow");
 });

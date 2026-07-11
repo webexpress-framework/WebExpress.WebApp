@@ -99,3 +99,22 @@ A read-only variant for users without edit rights:
      data-uri="/api/watchers/INC-00123"
      data-readonly="true"></div>
 ```
+
+## Scope Binding (ViewState)
+
+`ControlDataWatcher` is **scope-capable**. Bound to a resource of an enclosing `ControlViewState` scope, the watchers become a slice of that scope's shared state instead of an independent surface; the candidate search is bound to the scope's users service:
+
+```csharp
+// inside the scope:
+new ControlDataWatcher("watchers")
+    .Resource<IncidentWatchersResource>()
+    .UsersService<RestApiUsers>();
+```
+
+When a resource is bound the control:
+
+- emits only the `data-wx-resource` binding (and the `data-wx-users` binding of the scope users service) instead of its own `wx-service` islands, because the scope owns the state, the services and the central load;
+- on the client, resolves the enclosing `ViewState`, **subscribes** to the resource slice and re-renders the avatar row whenever the scope re-queries it;
+- still persists additions and removals through the scope's resource service and then **re-queries** the resource, so every sibling control bound to the same resource refreshes.
+
+Left unbound, the control owns its `wx-service` islands and loads itself (standalone), exactly as documented above. The path is chosen automatically — by `DataIslandExtensions.EmitDataIslands` on the server and by the presence of `data-wx-resource` on the client.

@@ -303,6 +303,11 @@ webexpress.webapp.TagEditorCtrl = class extends webexpress.webui.InputTagCtrl {
  * adds a "+" button that opens a modal in which tags are added or deleted via a
  * TagEditorCtrl. On close, the read-only chips reflect the edits.
  *
+ * It is scope-capable: when the host carries a data-wx-resource binding the
+ * tags are a slice of an enclosing ViewState scope, so the control subscribes
+ * to that slice and the scope owns the central load; without a binding it owns
+ * its own wx-service island and loads itself (standalone).
+ *
  * Setting data-readonly="true" suppresses the "+" button, leaving a pure
  * read-only display.
  */
@@ -327,6 +332,10 @@ webexpress.webapp.TagCtrl = class extends webexpress.webui.TagCtrl {
         // the endpoint is authored in C# through the wx-service island
         this._service = islandServices.data || null;
         this._apiEndpoint = this._service ? this._service.baseUri : null;
+        // the resource a scope renders; when present the tags are a pure view of
+        // a central resource the enclosing scope owns, when absent the control
+        // loads itself (standalone)
+        this._resource = (element.dataset && element.dataset.wxResource) || null;
         this._readonly = element.dataset.readonly === "true";
         this._placeholder = element.getAttribute("placeholder") || "";
 
@@ -342,8 +351,48 @@ webexpress.webapp.TagCtrl = class extends webexpress.webui.TagCtrl {
         }
 
         // initial load of the attached tags
-        if (this._apiEndpoint) {
+        if (this._resource) {
+            this._attachToScope(element);
+        } else if (this._apiEndpoint) {
             this._loadTags();
+        }
+    }
+
+    /**
+     * Attaches the control to the enclosing scope ViewState and renders its
+     * resource slice. The scope owns the central load and the service; the
+     * editor's additions and deletions still persist through the scope's data
+     * service, and the resource is re-queried afterwards so sibling controls
+     * refresh.
+     * @param {HTMLElement} element - The host element.
+     */
+    _attachToScope(element) {
+        const viewId = (element.dataset && element.dataset.wxView) || null;
+
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewId, (viewState) => {
+            this._viewState = viewState;
+
+            const service = viewState.serviceForResource(this._resource);
+            if (service) {
+                this._service = service;
+                this._apiEndpoint = service.baseUri;
+            }
+
+            const unsubscribe = viewState.watch((state) => state[this._resource], (slice) => this._applySlice(slice));
+            (element._wxCleanup = element._wxCleanup || []).push(unsubscribe);
+
+            this._applySlice(viewState.getState()[this._resource]);
+        });
+    }
+
+    /**
+     * Renders a resource slice the scope loaded centrally.
+     * @param {object} slice - The resource slice { items, total, data, loading, error }.
+     */
+    _applySlice(slice) {
+        slice = slice || {};
+        if (slice.data) {
+            this.value = webexpress.webapp._toTagValues(slice.data);
         }
     }
 
@@ -419,6 +468,11 @@ webexpress.webapp.TagCtrl = class extends webexpress.webui.TagCtrl {
             this.value = editor.value;
             editor.destroy();
             host.remove();
+
+            // in scope mode the resource is re-queried so sibling controls refresh
+            if (this._viewState && this._resource) {
+                this._viewState.reload(this._resource);
+            }
         });
 
         modal.show();

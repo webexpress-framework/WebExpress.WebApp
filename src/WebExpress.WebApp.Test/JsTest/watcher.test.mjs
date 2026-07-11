@@ -11,7 +11,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert";
-import { loadEngine, webappAsset, appendServiceIsland, appendStateIsland } from "./harness.mjs";
+import { loadEngine, webappAsset, appendServiceIsland, appendStateIsland, appendResourceIsland } from "./harness.mjs";
 
 function load(options) {
     return loadEngine(Object.assign(
@@ -111,4 +111,34 @@ test("watcher loads from the service when no state island is present", async () 
     assert.equal(fetchCount, 1);
     assert.equal(ctrl.value.length, 1);
     assert.equal(ctrl.value[0].id, "u9");
+});
+
+test("watcher in a scope renders the central resource slice and resolves the users service from the scope", async () => {
+    const { wxapp, createElement, setFetch, document } = load();
+    const urls = [];
+    setFetch(async (url) => {
+        urls.push(url);
+        return { ok: true, status: 200, json: async () => [{ id: "u1", name: "Ann", initials: "AN" }] };
+    });
+
+    const scopeHost = createElement("div");
+    scopeHost.dataset.wxScope = "ticket";
+    appendServiceIsland(document, scopeHost, { name: "data", kind: "rest", baseUri: "/api/watchers", method: "GET", updateMethod: "PUT" });
+    appendServiceIsland(document, scopeHost, { name: "users", kind: "rest", baseUri: "/api/users", method: "GET" });
+    appendResourceIsland(document, scopeHost, { name: "watchers", service: "data", target: "watchers" });
+
+    const viewState = new wxapp.ViewState(scopeHost);
+
+    const element = createElement("div");
+    element.dataset.wxResource = "watchers";
+    element.dataset.wxUsers = "users";
+    scopeHost.appendChild(element);
+
+    const ctrl = new wxapp.WatcherCtrl(element);
+    await settle();
+
+    assert.equal(urls.length, 1, "the scope loaded the resource centrally");
+    assert.equal(ctrl.value.length, 1, "the avatar row renders the slice");
+    assert.equal(ctrl.value[0].id, "u1");
+    assert.equal(ctrl._users, viewState.useService("users"), "the candidate search uses the scope users service");
 });

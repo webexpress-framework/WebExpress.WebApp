@@ -14,8 +14,38 @@ namespace WebExpress.WebApp.WebControl
     /// <c>webexpress.webapp.WatcherCtrl</c>, which talks to the configured
     /// data and users services to load, add, remove and resolve watchers.
     /// </summary>
-    public class ControlDataWatcher : Control, IDataIsland
+    /// <remarks>
+    /// The control is scope-capable: bound to a resource of an enclosing
+    /// <see cref="ControlViewState"/> scope through <c>Resource&lt;TResource&gt;()</c>,
+    /// it emits only the <c>data-wx-resource</c> binding (and the users service
+    /// bound with <c>UsersService&lt;TEndpoint&gt;()</c>) and renders the slice the
+    /// scope loads centrally, while additions and removals still persist through
+    /// the scope's data service; left unbound it owns its <c>wx-service</c> islands
+    /// and loads itself (standalone). The path is chosen automatically by
+    /// <see cref="DataIslandExtensions.EmitDataIslands"/>.
+    /// </remarks>
+    public class ControlDataWatcher : Control, IDataIsland, IScopeBoundUsers
     {
+        /// <summary>
+        /// Gets or sets the resolver of the scope resource the control renders. Set type-safely
+        /// through <c>Resource&lt;TResource&gt;()</c>. When null, the control is standalone and
+        /// owns its own islands.
+        /// </summary>
+        public Func<IRenderControlContext, string> ResourceFactory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional scope id the control binds to, emitted as the
+        /// <c>data-wx-view</c> attribute. When null, the control resolves its scope by the
+        /// resource it binds to.
+        /// </summary>
+        public Func<IRenderControlContext, string> Scope { get; set; }
+
+        /// <summary>
+        /// Gets or sets the resolver of the scope users service the candidate
+        /// search uses, set type-safely through UsersService&lt;TEndpoint&gt;().
+        /// </summary>
+        public Func<IRenderControlContext, string> UsersFactory { get; set; }
+
         /// <summary>
         /// Gets the data service descriptors of the control, emitted as
         /// wx-service island elements: the data service backs the watcher list

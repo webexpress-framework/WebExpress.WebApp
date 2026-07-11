@@ -184,5 +184,60 @@ namespace WebExpress.WebApp.Test.WebControl
             // validation
             Assert.Null(html);
         }
+
+        /// <summary>
+        /// When bound to a scope resource, the control emits only the
+        /// <c>data-wx-resource</c> binding (and the <c>data-wx-users</c> binding
+        /// of the scope users service) and skips its own <c>wx-service</c>
+        /// islands, because the enclosing scope owns the services and the
+        /// central load.
+        /// </summary>
+        [Fact]
+        public void ScopeBound_EmitsResourceAndUsersBinding_NotServices()
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlDataWatcher()
+            {
+                // even with services declared, the resource binding wins
+                ServiceFactories =
+                {
+                    _ => DataServiceDescriptor.Data("https://example.com/api/watchers/INC-1"),
+                    _ => DataServiceDescriptor.Rest("users").WithBaseUri("https://example.com/api/users").WithMethod("GET")
+                },
+                ResourceFactory = _ => "watchers",
+                UsersFactory = _ => "users"
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(@"<div class=""wx-webapp-watcher"" data-wx-resource=""watchers"" data-wx-users=""users""></div>", html);
+        }
+
+        /// <summary>
+        /// The fluent <c>Resource&lt;TResource&gt;()</c> binding sets the resource factory to the
+        /// resource type name and preserves the concrete control type for chaining.
+        /// </summary>
+        [Fact]
+        public void Resource_BindsByType_PreservingConcreteType()
+        {
+            // arrange & act: the assignment compiles only because the typed overload returns the
+            // concrete control type rather than IScopeBound
+            ControlDataWatcher control = new ControlDataWatcher("watchers").Resource<WatchersTestResource>();
+
+            // validation
+            Assert.Equal(DataTypeName.Of<WatchersTestResource>(), control.ResourceFactory(null));
+        }
+
+        /// <summary>
+        /// A resource identity used only by the binding test.
+        /// </summary>
+        private sealed class WatchersTestResource : IDataResource
+        {
+        }
     }
 }

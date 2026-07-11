@@ -1,6 +1,7 @@
 using WebExpress.WebApp.Test.Fixture;
-using WebExpress.WebApp.WebData;
 using WebExpress.WebApp.WebApiControl;
+using WebExpress.WebApp.WebControl;
+using WebExpress.WebApp.WebData;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebPage;
 
@@ -111,6 +112,55 @@ namespace WebExpress.WebApp.Test.WebControl
 
             // validation
             AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
+
+        /// <summary>
+        /// When bound to a scope resource, the control emits only the
+        /// <c>data-wx-resource</c> binding and skips its own <c>wx-service</c>
+        /// island, because the enclosing scope owns the service and the central load.
+        /// </summary>
+        [Fact]
+        public void ScopeBound_EmitsResourceBinding_NotService()
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlDataDropdown()
+            {
+                // even with a service declared, the resource binding wins
+                ServiceFactory = _ => DataServiceDescriptor.QueryData("https://example.com/api/data"),
+                ResourceFactory = _ => "items"
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(@"<div class=""wx-webapp-dropdown"" role=""button"" data-wx-resource=""items""></div>", html);
+        }
+
+        /// <summary>
+        /// The fluent <c>Resource&lt;TResource&gt;()</c> binding sets the resource factory to the
+        /// resource type name and preserves the concrete control type for chaining.
+        /// </summary>
+        [Fact]
+        public void Resource_BindsByType_PreservingConcreteType()
+        {
+            // arrange & act: the assignment compiles only because the typed overload returns the
+            // concrete control type rather than IScopeBound
+            ControlDataDropdown control = new ControlDataDropdown("items").Resource<ItemsTestResource>();
+
+            // validation
+            Assert.Equal(DataTypeName.Of<ItemsTestResource>(), control.ResourceFactory(null));
+        }
+
+        /// <summary>
+        /// A resource identity used only by the binding test.
+        /// </summary>
+        private sealed class ItemsTestResource : IDataResource
+        {
         }
     }
 }

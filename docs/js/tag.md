@@ -88,3 +88,20 @@ tagElement.addEventListener(webexpress.webapp.Event.TAG_ADDED_EVENT, (e) => {
 ## Read-only Mode
 
 Setting `data-readonly="true"` (or `Readonly = _ => true` on the `ControlDataTag`) suppresses the "+" button, leaving a pure read-only chip display with no way to open the editing modal. This is useful for surfaces that should display tags without allowing edits.
+
+## Scope Binding (ViewState)
+
+`ControlDataTag` is **scope-capable**. Bound to a resource of an enclosing `ControlViewState` scope, the tags become a slice of that scope's shared state instead of an independent surface:
+
+```csharp
+// inside the scope:
+new ControlDataTag("tags").Resource<IncidentTagsResource>();
+```
+
+When a resource is bound the control:
+
+- emits only the `data-wx-resource` binding (and the optional `data-wx-view` scope id) instead of its own `wx-service` island, because the scope owns the state, the service and the central load;
+- on the client, resolves the enclosing `ViewState`, **subscribes** to the resource slice and re-renders the chips whenever the scope re-queries it;
+- still persists additions and deletions through the scope's resource service and **re-queries** the resource when the editing modal closes, so every sibling control bound to the same resource refreshes.
+
+Left unbound, the control owns its `wx-service` island and loads itself (standalone), exactly as documented above. The path is chosen automatically — by `DataIslandExtensions.EmitDataIslands` on the server and by the presence of `data-wx-resource` on the client.

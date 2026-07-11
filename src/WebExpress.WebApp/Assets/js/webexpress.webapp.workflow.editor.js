@@ -26,6 +26,12 @@
  * validations and post functions consumed by the rule pickers, so no
  * additional endpoints are needed.
  *
+ * It is scope-capable: when the host carries a data-wx-resource binding the
+ * workflow is a slice of an enclosing ViewState scope, so the editor
+ * subscribes to that slice and the scope owns the central load; the debounced
+ * autosave still persists through the scope's data service. Without a binding
+ * the editor owns its own wx-service island and loads itself (standalone).
+ *
  * Mutations are debounced and persisted automatically.
  */
 webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEditorCtrl {
@@ -77,15 +83,69 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
         this._service = islandServices.data;
         this._restUri = this._service ? this._service.baseUri : "";
 
+        // the resource a scope renders; when present the workflow is loaded
+        // centrally by the enclosing scope, when absent the control loads
+        // itself (standalone)
+        this._resource = (element.dataset && element.dataset.wxResource) || null;
+
         element.classList.add("wx-workflow-editor");
 
         this._buildLayout();
         this._setupShortcuts();
 
-        if (this._restUri !== "") {
+        if (this._resource) {
+            this._attachToScope(element);
+        } else if (this._restUri !== "") {
             this._receiveData();
         }
 
+        this._renderPropsPanel();
+    }
+
+    /**
+     * Attaches the editor to the enclosing scope ViewState and renders its
+     * resource slice. The scope owns the central load and the service, while
+     * the debounced autosave still persists through the scope's data service.
+     * @param {HTMLElement} element - The host element.
+     */
+    _attachToScope(element) {
+        const viewId = (element.dataset && element.dataset.wxView) || null;
+
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewId, (viewState) => {
+            this._viewState = viewState;
+
+            const service = viewState.serviceForResource(this._resource);
+            if (service) {
+                this._service = service;
+                this._restUri = service.baseUri;
+            }
+
+            const unsubscribe = viewState.watch((state) => state[this._resource], (slice) => this._applySlice(slice));
+            (element._wxCleanup = element._wxCleanup || []).push(unsubscribe);
+
+            this._applySlice(viewState.getState()[this._resource]);
+        });
+    }
+
+    /**
+     * Renders a resource slice the scope loaded centrally. A slice arriving
+     * while an autosave is pending is skipped, because re-applying the server
+     * model would clobber the edits the debounce has not persisted yet; the
+     * next scope re-query delivers the saved state.
+     * @param {object} slice - The resource slice { items, total, data, loading, error }.
+     */
+    _applySlice(slice) {
+        slice = slice || {};
+        if (!slice.data || this._destroyed || this._saveDebounce !== null) {
+            return;
+        }
+
+        const response = slice.data;
+        this._meta = webexpress.webapp.workflowEditorModel.normalizeMeta(response);
+        this._catalog = webexpress.webapp.workflowEditorModel.normalizeCatalog(response);
+        this.model = this._fromWireFormat(response);
+        this._element.classList.remove("placeholder-glow");
+        this._isLoading = false;
         this._renderPropsPanel();
     }
 

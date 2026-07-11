@@ -748,6 +748,97 @@ namespace WebExpress.WebApp.WebControl
             => BindResource<ControlDataTrafficLight, TResource>(control);
 
         /// <summary>
+        /// Binds the tag surface to a scope resource by type.
+        /// </summary>
+        /// <typeparam name="TResource">The resource type.</typeparam>
+        /// <param name="control">The tag control.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataTag Resource<TResource>(this ControlDataTag control) where TResource : IDataResource
+            => BindResource<ControlDataTag, TResource>(control);
+
+        /// <summary>
+        /// Binds the watcher surface to a scope resource by type.
+        /// </summary>
+        /// <typeparam name="TResource">The resource type.</typeparam>
+        /// <param name="control">The watcher control.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataWatcher Resource<TResource>(this ControlDataWatcher control) where TResource : IDataResource
+            => BindResource<ControlDataWatcher, TResource>(control);
+
+        /// <summary>
+        /// Binds the scrum sprint card to a scope resource by type.
+        /// </summary>
+        /// <typeparam name="TResource">The resource type.</typeparam>
+        /// <param name="control">The sprint control.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataScrumSprint Resource<TResource>(this ControlDataScrumSprint control) where TResource : IDataResource
+            => BindResource<ControlDataScrumSprint, TResource>(control);
+
+        /// <summary>
+        /// Binds the scrum team workload surface to a scope resource by type.
+        /// </summary>
+        /// <typeparam name="TResource">The resource type.</typeparam>
+        /// <param name="control">The scrum team control.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataScrumTeam Resource<TResource>(this ControlDataScrumTeam control) where TResource : IDataResource
+            => BindResource<ControlDataScrumTeam, TResource>(control);
+
+        /// <summary>
+        /// Binds the scrum velocity chart to a scope resource by type.
+        /// </summary>
+        /// <typeparam name="TResource">The resource type.</typeparam>
+        /// <param name="control">The scrum velocity control.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataScrumVelocity Resource<TResource>(this ControlDataScrumVelocity control) where TResource : IDataResource
+            => BindResource<ControlDataScrumVelocity, TResource>(control);
+
+        /// <summary>
+        /// Binds the workflow editor to a scope resource by type.
+        /// </summary>
+        /// <typeparam name="TResource">The resource type.</typeparam>
+        /// <param name="control">The workflow control.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataWorkflow Resource<TResource>(this ControlDataWorkflow control) where TResource : IDataResource
+            => BindResource<ControlDataWorkflow, TResource>(control);
+
+        /// <summary>
+        /// Binds the remote dropdown to a scope resource by type.
+        /// </summary>
+        /// <typeparam name="TResource">The resource type.</typeparam>
+        /// <param name="control">The dropdown control.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataDropdown Resource<TResource>(this ControlDataDropdown control) where TResource : IDataResource
+            => BindResource<ControlDataDropdown, TResource>(control);
+
+        /// <summary>
+        /// Binds the avatar dropdown to a scope resource by type.
+        /// </summary>
+        /// <typeparam name="TResource">The resource type.</typeparam>
+        /// <param name="control">The avatar dropdown control.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataAvatarDropdown Resource<TResource>(this ControlDataAvatarDropdown control) where TResource : IDataResource
+            => BindResource<ControlDataAvatarDropdown, TResource>(control);
+
+        /// <summary>
+        /// Binds the watcher's users service by endpoint type, fluently and
+        /// preserving the concrete control type. The parameterless overload
+        /// binds the scope users service, while the preset overload with the
+        /// configure callback declares an owned users island (standalone).
+        /// </summary>
+        /// <typeparam name="TEndpoint">The users endpoint type.</typeparam>
+        /// <param name="control">The watcher control.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataWatcher UsersService<TEndpoint>(this ControlDataWatcher control) where TEndpoint : IEndpoint
+        {
+            if (control != null)
+            {
+                control.UsersFactory = _ => DataTypeName.Of<TEndpoint>();
+            }
+
+            return control;
+        }
+
+        /// <summary>
         /// Binds the scrum backlog's users service by endpoint type, fluently and
         /// preserving the concrete control type.
         /// </summary>

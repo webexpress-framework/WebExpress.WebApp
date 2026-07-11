@@ -124,3 +124,19 @@ new ControlDataScrumVelocity("sprint-velocity")
 }
     .DataService<RestApiScrumVelocity>();
 ```
+
+## Scope Binding (ViewState)
+
+`ControlDataScrumVelocity` is **scope-capable**. Bound to a resource of an enclosing `ControlViewState` scope, the sprint history becomes a slice of that scope's shared state instead of an independent surface:
+
+```csharp
+// inside the scope:
+new ControlDataScrumVelocity("sprint-velocity").Resource<SprintVelocityResource>();
+```
+
+When a resource is bound the control:
+
+- emits only the `data-wx-resource` binding (and the optional `data-wx-view` scope id) instead of its own `wx-service` island, because the scope owns the state, the service and the central load;
+- on the client, resolves the enclosing `ViewState`, **subscribes** to the resource slice and re-renders the chart whenever the scope re-queries it.
+
+Left unbound, the control owns its `wx-service` island and loads itself (standalone), exactly as documented above. The path is chosen automatically — by `DataIslandExtensions.EmitDataIslands` on the server and by the presence of `data-wx-resource` on the client.

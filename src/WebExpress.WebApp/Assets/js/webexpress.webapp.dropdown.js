@@ -1,6 +1,12 @@
 /**
- * DropdownCtrl extends WebUI.DropdownCtrl to fetch items from a REST API and adds a 
+ * DropdownCtrl extends WebUI.DropdownCtrl to fetch items from a REST API and adds a
  * search field at the top of the menu.
+ *
+ * It is scope-capable: when the host carries a data-wx-resource binding the
+ * items are a slice of an enclosing ViewState scope, so the control subscribes
+ * to that slice and the scope owns the central load; a remote search still
+ * queries directly through the scope's data service. Without a binding the
+ * control owns its own wx-service island and loads itself (standalone).
  *
  * The following events are triggered:
  * - webexpress.webui.Event.CLICK_EVENT
@@ -37,6 +43,11 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
         this._service = islandServices.data || null;
         this._apiEndpoint = this._service ? this._service.baseUri : null;
 
+        // the resource a scope renders; when present the items are a pure view
+        // of a central resource the enclosing scope owns, when absent the
+        // control loads itself (standalone)
+        this._resource = (element.dataset && element.dataset.wxResource) || null;
+
         // dynamic items storage
         this._allItems = [];
         this._searchTerm = "";
@@ -60,7 +71,11 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
         }, 180);
 
         // initial fetch or initial render (for static-only)
-        if (this._apiEndpoint) {
+        if (this._resource) {
+            this._ensureStructure();
+            this._updateDynamicItems([]);
+            this._attachToScope(element);
+        } else if (this._apiEndpoint) {
             this._fetchData("").catch((err) => {
                 console.error("failed to fetch dropdown data:", err);
                 this._ensureStructure(); // still ensure search exists even on error
@@ -70,6 +85,53 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
             this._ensureStructure();
             this._updateDynamicItems([]);
         }
+    }
+
+    /**
+     * Attaches the dropdown to the enclosing scope ViewState and renders its
+     * resource slice. The scope owns the central load and the service; a
+     * remote search still queries directly through the scope's data service,
+     * because the search term is local to this dropdown and not part of the
+     * central slice.
+     * @param {HTMLElement} element - The host element.
+     */
+    _attachToScope(element) {
+        const viewId = (element.dataset && element.dataset.wxView) || null;
+
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewId, (viewState) => {
+            this._viewState = viewState;
+
+            const service = viewState.serviceForResource(this._resource);
+            if (service) {
+                this._service = service;
+                this._apiEndpoint = service.baseUri;
+            }
+
+            const unsubscribe = viewState.watch((state) => state[this._resource], (slice) => this._applySlice(slice));
+            (element._wxCleanup = element._wxCleanup || []).push(unsubscribe);
+
+            this._applySlice(viewState.getState()[this._resource]);
+        });
+    }
+
+    /**
+     * Renders a resource slice the scope loaded centrally. A slice arriving
+     * while the user is filtering is not applied over the search result,
+     * because the remote search owns the dynamic region until the term is
+     * cleared.
+     * @param {object} slice - The resource slice { items, total, data, loading, error }.
+     */
+    _applySlice(slice) {
+        slice = slice || {};
+        if (!slice.data || this._searchTerm) {
+            return;
+        }
+
+        this._ensureStructure();
+
+        const rawItems = Array.isArray(slice.data) ? slice.data : (slice.data.items || []);
+        this._allItems = rawItems.map((x) => this._mapApiItem(x));
+        this._applyFilter(this._searchTerm);
     }
 
     /**

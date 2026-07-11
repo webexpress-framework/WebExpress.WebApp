@@ -157,5 +157,53 @@ namespace WebExpress.WebApp.Test.WebControl
             // validation
             Assert.Null(html);
         }
+
+        /// <summary>
+        /// When bound to a scope resource, the control emits only the
+        /// <c>data-wx-resource</c> binding and skips its own <c>wx-service</c>
+        /// island, because the enclosing scope owns the service and the central load.
+        /// </summary>
+        [Fact]
+        public void ScopeBound_EmitsResourceBinding_NotService()
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlDataScrumTeam()
+            {
+                // even with a service declared, the resource binding wins
+                ServiceFactory = _ => DataServiceDescriptor.QueryData("https://example.com/api/scrum/team"),
+                ResourceFactory = _ => "team"
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(@"<div class=""wx-webapp-scrum-team"" data-wx-resource=""team""></div>", html);
+        }
+
+        /// <summary>
+        /// The fluent <c>Resource&lt;TResource&gt;()</c> binding sets the resource factory to the
+        /// resource type name and preserves the concrete control type for chaining.
+        /// </summary>
+        [Fact]
+        public void Resource_BindsByType_PreservingConcreteType()
+        {
+            // arrange & act: the assignment compiles only because the typed overload returns the
+            // concrete control type rather than IScopeBound
+            ControlDataScrumTeam control = new ControlDataScrumTeam("team").Resource<TeamTestResource>();
+
+            // validation
+            Assert.Equal(DataTypeName.Of<TeamTestResource>(), control.ResourceFactory(null));
+        }
+
+        /// <summary>
+        /// A resource identity used only by the binding test.
+        /// </summary>
+        private sealed class TeamTestResource : IDataResource
+        {
+        }
     }
 }
