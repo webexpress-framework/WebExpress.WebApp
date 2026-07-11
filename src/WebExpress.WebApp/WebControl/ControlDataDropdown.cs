@@ -13,29 +13,29 @@ namespace WebExpress.WebApp.WebApiControl
     /// Represents a dropdown control that can be rendered as HTML within a RESTful web application context.
     /// </summary>
     /// <remarks>
-    /// The control is scope-capable: bound to a resource of an enclosing
-    /// <see cref="ControlViewState"/> scope through <c>Resource&lt;TResource&gt;()</c>,
+    /// The control is ViewState-capable: bound to a resource of an enclosing
+    /// <see cref="ControlViewState"/> ViewState through <c>Resource&lt;TResource&gt;()</c>,
     /// it emits only the <c>data-wx-resource</c> binding and renders the slice the
-    /// scope loads centrally, while a remote search still queries through the
-    /// scope's data service; left unbound it owns its <c>wx-service</c> island and
+    /// ViewState loads centrally, while a remote search still queries through the
+    /// ViewState's data service; left unbound it owns its <c>wx-service</c> island and
     /// loads itself (standalone). The path is chosen automatically by
     /// <see cref="DataIslandExtensions.EmitDataIslands"/>.
     /// </remarks>
-    public class ControlDataDropdown : ControlDropdown, IControlData, IDataIsland, IScopeBound
+    public class ControlDataDropdown : ControlDropdown, IControlData, IDataIsland, IViewStateBound
     {
         /// <summary>
-        /// Gets or sets the resolver of the scope resource the control renders. Set type-safely
+        /// Gets or sets the resolver of the ViewState resource the control renders. Set type-safely
         /// through <c>Resource&lt;TResource&gt;()</c>. When null, the control is standalone and
         /// owns its own islands.
         /// </summary>
         public Func<IRenderControlContext, string> ResourceFactory { get; set; }
 
         /// <summary>
-        /// Gets or sets the optional scope id the control binds to, emitted as the
-        /// <c>data-wx-view</c> attribute. When null, the control resolves its scope by the
+        /// Gets or sets the optional ViewState id the control binds to, emitted as the
+        /// <c>data-wx-viewstate</c> attribute. When null, the control resolves its ViewState by the
         /// resource it binds to.
         /// </summary>
-        public Func<IRenderControlContext, string> Scope { get; set; }
+        public Func<IRenderControlContext, string> ViewState { get; set; }
 
         /// <summary>
         /// Gets the data service descriptors of the control, emitted as

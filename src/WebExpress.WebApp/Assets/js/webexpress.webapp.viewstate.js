@@ -50,18 +50,18 @@ webexpress.webapp._microtask = function (callback) {
 };
 
 /**
- * The scope ViewState, the central artifact of the View, State and Service
- * architecture at scope scope.
+ * The ViewState, the central artifact of the View, State and Service
+ * architecture.
  *
  * A ViewState owns the single source of truth for a region of the page: it is
  * an observable state container, it holds the named services that load the
  * region's data and it holds the named resources that bind that state to those
  * services. Instead of every data control owning a private store and loading
- * itself, the controls of a scope subscribe to one ViewState and re-render when
+ * itself, the controls of a region subscribe to one ViewState and re-render when
  * the shared state changes, resources are loaded once and centrally, and any
  * control can trigger a re-query through the ViewState. The page is simply the
- * outermost scope; scopes nest, and a control resolves the nearest enclosing
- * scope (or an explicit one by id).
+ * outermost ViewState; ViewStates nest, and a control resolves the nearest enclosing
+ * ViewState (or an explicit one by id).
  *
  * The ViewState is the observable state primitive of WebExpress.WebApp. It
  * absorbs the responsibilities of the former Store, so a component never owns a
@@ -76,9 +76,9 @@ webexpress.webapp._microtask = function (callback) {
  */
 webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
     /**
-     * Creates a ViewState for a scope host element.
-     * @param {HTMLElement} element - The scope host element.
-     * @param {object} [options={}] - Optional overrides: state, services, resources, scopeId.
+     * Creates a ViewState for a ViewState host element.
+     * @param {HTMLElement} element - The ViewState host element.
+     * @param {object} [options={}] - Optional overrides: state, services, resources, viewStateId.
      */
     constructor(element, options = {}) {
         super(element);
@@ -89,20 +89,20 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
         this._dataChanges = null;
 
         // a standalone ViewState is a plain observable state container a control
-        // creates as its own store, with no scope machinery: it does not register
-        // as a scope, does not claim the element and does not load resources. The
-        // scope ViewState the controller instantiates for a wx-webapp-viewstate
+        // creates as its own store, with no ViewState machinery: it does not register
+        // as a ViewState, does not claim the element and does not load resources. The
+        // ViewState the controller instantiates for a wx-webapp-viewstate
         // host is the full form, with the registry, the back-reference and the
         // central resource load.
         this._standalone = !!options.standalone;
 
-        // the scope id keys the registry for explicit, non-ancestor lookup. it
+        // the ViewState id keys the registry for explicit, non-ancestor lookup. it
         // survives instantiation because it is a data attribute, while the
         // selector class is stripped by the controller on instantiation.
-        this._scopeId = options.scopeId
-            || (element && element.dataset && element.dataset.wxScope)
+        this._viewStateId = options.viewStateId
+            || (element && element.dataset && element.dataset.wxViewstate)
             || (element && element.id)
-            || "scope";
+            || "viewstate";
 
         // seed from the islands the C# ControlViewState emits. each read
         // consumes and caches the island on the element, so a later control
@@ -116,23 +116,23 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
         }
 
         // an immediate back-reference, so a descendant control resolves this
-        // scope even though the controller instantiates children before their
+        // ViewState even though the controller instantiates children before their
         // host (depth-first), well before this instance enters the instance map.
         if (element) {
             element._wxViewState = this;
         }
 
-        webexpress.webapp.ViewStateRegistry.register(this._scopeId, this);
+        webexpress.webapp.ViewStateRegistry.register(this._viewStateId, this);
 
         this.mount();
     }
 
     /**
-     * Returns the scope id of this ViewState.
-     * @returns {string} The scope id.
+     * Returns the ViewState id of this ViewState.
+     * @returns {string} The ViewState id.
      */
-    get scopeId() {
-        return this._scopeId;
+    get viewStateId() {
+        return this._viewStateId;
     }
 
     /**
@@ -251,7 +251,7 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Returns a service of this scope by name.
+     * Returns a service of this ViewState by name.
      * @param {string} name - The service name.
      * @returns {webexpress.webapp.Service|null} The service or null.
      */
@@ -260,7 +260,7 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Returns the resource descriptor of this scope by name.
+     * Returns the resource descriptor of this ViewState by name.
      * @param {string} name - The resource name.
      * @returns {object|null} The resource descriptor or null.
      */
@@ -269,10 +269,10 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Returns the names of the resources this scope declares, so the registry
-     * can index a control to the scope that owns the resource it binds to. This
-     * is what lets a control resolve its scope by its resource rather than by
-     * DOM ancestry, so the scope host no longer needs to wrap its controls.
+     * Returns the names of the resources this ViewState declares, so the registry
+     * can index a control to the ViewState that owns the resource it binds to. This
+     * is what lets a control resolve its ViewState by its resource rather than by
+     * DOM ancestry, so the ViewState host no longer needs to wrap its controls.
      * @returns {Array<string>} The declared resource names.
      */
     get resourceNames() {
@@ -293,10 +293,10 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Dispatches an intent against this scope's state and services, so the
+     * Dispatches an intent against this ViewState's state and services, so the
      * search, paging and filter binds and the dispatch action feed the same
      * unidirectional loop. The ViewState is itself the store the intent reduces
-     * into, so an intent reducer that calls store.setState writes this scope's
+     * into, so an intent reducer that calls store.setState writes this ViewState's
      * state.
      * @param {string} name - The intent name.
      * @param {*} payload - The intent payload.
@@ -409,7 +409,7 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
 
     /**
      * Loads every resource that is declared to load automatically. Called once
-     * on mount, so the first paint of the scope needs no per control load.
+     * on mount, so the first paint of the ViewState needs no per control load.
      * @returns {Promise<Array>} Resolves when every automatic load settles.
      */
     loadAll() {
@@ -425,7 +425,7 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
     /**
      * Subscribes nothing of its own, loads the automatic resources and
      * announces readiness, so a descendant control or a bind that resolved this
-     * scope before it existed attaches now. Called at the end of the
+     * ViewState before it existed attaches now. Called at the end of the
      * constructor once the state, services and resources are in place.
      * @returns {this} The ViewState for chaining.
      */
@@ -441,7 +441,7 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
         if (this._element && typeof this._element.dispatchEvent === "function") {
             this._element.dispatchEvent(new CustomEvent("webexpress.webapp.viewstate.ready", {
                 bubbles: true,
-                detail: { viewState: this, scope: this._scopeId }
+                detail: { viewState: this, viewStateId: this._viewStateId }
             }));
         }
 
@@ -450,8 +450,8 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
 
     /**
      * Tears the ViewState down. It drops its subscribers, aborts in-flight
-     * services, releases the scope back-reference and unregisters from the
-     * registry, so a removed scope leaves nothing behind.
+     * services, releases the ViewState back-reference and unregisters from the
+     * registry, so a removed ViewState leaves nothing behind.
      */
     destroy() {
         this._listeners.clear();
@@ -470,7 +470,7 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
             delete this._element._wxViewState;
         }
 
-        webexpress.webapp.ViewStateRegistry.unregister(this._scopeId, this);
+        webexpress.webapp.ViewStateRegistry.unregister(this._viewStateId, this);
 
         this._mounted = false;
 
@@ -511,17 +511,17 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Wires the scope to the server side data change channel. The domains are
-     * derived from the scope's services (each wx-service island may carry the
+     * Wires the ViewState to the server side data change channel. The domains are
+     * derived from the ViewState's services (each wx-service island may carry the
      * domains of the data its endpoint serves); when at least one service
-     * declares a domain, the scope subscribes them and re-queries the
+     * declares a domain, the ViewState subscribes them and re-queries the
      * resources of a changed domain, so every subscribing control re-renders
      * when data changes on the server - including changes made by other
      * users. The originator of a change receives the message too and
      * re-queries like everyone else, which keeps its slices on the canonical
      * server state; the coalescing window and the service's abort of
      * superseded queries absorb the overlap with its own post-mutation
-     * reload. A scope without domain-declaring services stays entirely
+     * reload. A ViewState without domain-declaring services stays entirely
      * detached from the queue.
      */
     _attachDataChanges() {
@@ -547,7 +547,7 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Indexes the scope's resources by the domains their services declare, so
+     * Indexes the ViewState's resources by the domains their services declare, so
      * an incoming change message resolves directly to the resources that must
      * re-query.
      * @returns {Map<string, Set<string>>} A map of domain name to resource names.
@@ -600,7 +600,7 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
     /**
      * Plays the change flash on every control bound to a resource. The bound
      * controls are found by their data-wx-resource binding, which is also how
-     * they resolve their scope, so no control has to opt in individually.
+     * they resolve their ViewState, so no control has to opt in individually.
      * @param {string} resource - The resource name.
      */
     static _flashBoundControls(resource) {
@@ -618,10 +618,10 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Parses and removes the wx-resource island elements of a scope host into a
+     * Parses and removes the wx-resource island elements of a ViewState host into a
      * map of resource descriptors. Only direct children are read, so a nested
-     * scope keeps its own resources.
-     * @param {HTMLElement} element - The scope host element.
+     * ViewState keeps its own resources.
+     * @param {HTMLElement} element - The ViewState host element.
      * @returns {object} A map of resource name to descriptor.
      */
     static _consumeResourceIslands(element) {
@@ -681,9 +681,9 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
 };
 
 /**
- * The registry of scope ViewStates. It keys a ViewState by its scope id for an
- * explicit, non-ancestor lookup, and resolves the scope a control belongs to by
- * walking up to the nearest enclosing host. A scope's lifetime is its host
+ * The registry of ViewStates. It keys a ViewState by its ViewState id for an
+ * explicit, non-ancestor lookup, and resolves the ViewState a control belongs to by
+ * walking up to the nearest enclosing host. A ViewState's lifetime is its host
  * element's lifetime, which the controller already tears down on removal, so
  * the registry holds no reference counts of its own.
  */
@@ -698,11 +698,11 @@ webexpress.webapp.ViewStateRegistry = new class {
     }
 
     /**
-     * Registers a ViewState under its scope id, indexes the resources it
-     * declares and resolves any control that asked for a scope before it
-     * existed. A later scope with the same id replaces the earlier one, which
+     * Registers a ViewState under its ViewState id, indexes the resources it
+     * declares and resolves any control that asked for a ViewState before it
+     * existed. A later ViewState with the same id replaces the earlier one, which
      * mirrors a re-rendered host.
-     * @param {string} id - The scope id.
+     * @param {string} id - The ViewState id.
      * @param {webexpress.webapp.ViewState} viewState - The ViewState instance.
      * @returns {this} The registry for chaining.
      */
@@ -719,7 +719,7 @@ webexpress.webapp.ViewStateRegistry = new class {
 
     /**
      * Returns the ViewState that declares a resource, so a control resolves its
-     * scope by the resource it binds to rather than by DOM ancestry.
+     * ViewState by the resource it binds to rather than by DOM ancestry.
      * @param {string} name - The resource name.
      * @returns {webexpress.webapp.ViewState|null} The ViewState or null.
      */
@@ -728,8 +728,8 @@ webexpress.webapp.ViewStateRegistry = new class {
     }
 
     /**
-     * Returns a ViewState by scope id without resolving by ancestry.
-     * @param {string} id - The scope id.
+     * Returns a ViewState by ViewState id without resolving by ancestry.
+     * @param {string} id - The ViewState id.
      * @returns {webexpress.webapp.ViewState|null} The ViewState or null.
      */
     get(id) {
@@ -737,10 +737,10 @@ webexpress.webapp.ViewStateRegistry = new class {
     }
 
     /**
-     * Unregisters a ViewState by scope id. The guard keeps a fresh scope that
+     * Unregisters a ViewState by ViewState id. The guard keeps a fresh ViewState that
      * already re-registered the same id from being dropped when an old instance
      * tears down.
-     * @param {string} id - The scope id.
+     * @param {string} id - The ViewState id.
      * @param {webexpress.webapp.ViewState} [viewState] - The expected instance.
      */
     unregister(id, viewState) {
@@ -752,10 +752,10 @@ webexpress.webapp.ViewStateRegistry = new class {
 
     /**
      * Resolves the ViewState a control belongs to. An explicit id wins and may
-     * point at a scope that is not an ancestor, for example a toolbar that
-     * drives a content region; otherwise the nearest enclosing scope is used.
+     * point at a ViewState that is not an ancestor, for example a toolbar that
+     * drives a content region; otherwise the nearest enclosing ViewState is used.
      * @param {HTMLElement} element - The control element.
-     * @param {string} [id] - An explicit scope id.
+     * @param {string} [id] - An explicit ViewState id.
      * @returns {webexpress.webapp.ViewState|null} The resolved ViewState or null.
      */
     resolve(element, id) {
@@ -763,8 +763,8 @@ webexpress.webapp.ViewStateRegistry = new class {
             return this.get(id);
         }
 
-        // a control that binds a resource resolves the scope that declares it,
-        // which is how a control finds its scope when the scope host no longer
+        // a control that binds a resource resolves the ViewState that declares it,
+        // which is how a control finds its ViewState when the ViewState host no longer
         // wraps it
         const resourceName = element && element.dataset && element.dataset.wxResource;
         if (resourceName) {
@@ -787,12 +787,12 @@ webexpress.webapp.ViewStateRegistry = new class {
 
     /**
      * Resolves the ViewState a control belongs to and invokes the callback once
-     * it is available. The scope may not exist yet when the control is
+     * it is available. The ViewState may not exist yet when the control is
      * constructed, because the controller instantiates children before their
-     * host; in that case the request is queued and resolved when the scope
+     * host; in that case the request is queued and resolved when the ViewState
      * registers itself, which is independent of DOM event order and timing.
      * @param {HTMLElement} element - The control element.
-     * @param {string} [id] - An explicit scope id.
+     * @param {string} [id] - An explicit ViewState id.
      * @param {Function} callback - Receives the resolved ViewState.
      */
     whenReady(element, id, callback) {
@@ -806,8 +806,8 @@ webexpress.webapp.ViewStateRegistry = new class {
     }
 
     /**
-     * Resolves the controls that asked for a scope before it existed. A request
-     * that still cannot be resolved stays queued for a later scope.
+     * Resolves the controls that asked for a ViewState before it existed. A request
+     * that still cannot be resolved stays queued for a later ViewState.
      */
     _flushPending() {
         if (this._pending.length === 0) {
@@ -842,6 +842,6 @@ webexpress.webapp.ViewStateRegistry = new class {
     }
 };
 
-// register the scope host with the controller, so an emitted
+// register the ViewState host with the controller, so an emitted
 // wx-webapp-viewstate element is instantiated as a ViewState
 webexpress.webui.Controller.registerClass("wx-webapp-viewstate", webexpress.webapp.ViewState);

@@ -13,7 +13,7 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// Represents a control panel for API table interactions.
     /// </summary>
-    public class ControlDataTable : ControlPanel, IControlDataTable, IDataIsland, IScopeBound
+    public class ControlDataTable : ControlPanel, IControlDataTable, IDataIsland, IViewStateBound
     {
         /// <summary>
         /// Retruns or sets the number of items to display on each page in a
@@ -22,18 +22,18 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, uint> PageSize { get; set; }
 
         /// <summary>
-        /// Gets or sets the name of the enclosing scope resource the table
+        /// Gets or sets the name of the enclosing ViewState resource the table
         /// renders. When set, the table is a pure view of a central resource the
-        /// scope ViewState owns; when null, the table owns its state and service
+        /// ViewState owns; when null, the table owns its state and service
         /// islands and loads itself.
         /// </summary>
         public Func<IRenderControlContext, string> ResourceFactory { get; set; }
 
         /// <summary>
-        /// Gets or sets the optional scope id the table binds to. When null, the
-        /// table resolves the nearest enclosing scope by ancestry.
+        /// Gets or sets the optional ViewState id the table binds to. When null, the
+        /// table resolves the nearest enclosing ViewState by ancestry.
         /// </summary>
-        public Func<IRenderControlContext, string> Scope { get; set; }
+        public Func<IRenderControlContext, string> ViewState { get; set; }
 
         /// <summary>
         /// Gets or sets the binding.

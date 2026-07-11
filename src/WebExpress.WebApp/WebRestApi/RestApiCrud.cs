@@ -81,7 +81,7 @@ namespace WebExpress.WebApp.WebRestApi
                     return new ResponseBadRequest(new StatusMessage("Creation failed."));
                 }
 
-                // notify domain listeners so open scopes re-query the changed data
+                // notify domain listeners so open ViewStates re-query the changed data
                 _ = DataChangedNotifier.NotifyAsync(newItem, DataChangeOperation.Created, newItem?.Id.ToString());
 
                 return result.ToResponse();
@@ -460,7 +460,7 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 var result = Update(existingItem, fieldMap, request);
 
-                // notify domain listeners so open scopes re-query the changed data
+                // notify domain listeners so open ViewStates re-query the changed data
                 _ = DataChangedNotifier.NotifyAsync(existingItem, DataChangeOperation.Updated, existingItem.Id.ToString());
 
                 return result?.ToResponse();
@@ -601,7 +601,7 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 var result = Delete(item, request);
 
-                // notify domain listeners so open scopes re-query the changed data
+                // notify domain listeners so open ViewStates re-query the changed data
                 _ = DataChangedNotifier.NotifyAsync(item, DataChangeOperation.Deleted, item.Id.ToString());
 
                 return result.ToResponse();

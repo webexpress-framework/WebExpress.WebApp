@@ -20,8 +20,8 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
 
         super(element);
 
-        // the resource a scope renders. when present, the dashboard is a pure
-        // view of a central resource the enclosing scope owns; when absent it
+        // the resource a ViewState renders. when present, the dashboard is a pure
+        // view of a central resource the enclosing ViewState owns; when absent it
         // loads itself (standalone).
         this._resource = (element.dataset && element.dataset.wxResource) || null;
 
@@ -33,8 +33,8 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
         this._initRestPersistence(element);
 
         if (this._resource) {
-            // scope mode: the enclosing scope loads the resource centrally
-            this._attachToScope(element);
+            // ViewState mode: the enclosing ViewState loads the resource centrally
+            this._attachToViewState(element);
         } else if (this._restUri) {
             this._receiveData();
 
@@ -49,16 +49,16 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
     }
 
     /**
-     * Attaches the dashboard to the enclosing scope ViewState and renders its
-     * resource slice. The scope owns the service and the central load, so the
-     * dashboard re-renders whenever the scope re-queries the resource, while
-     * layout changes still persist through the scope's update service.
+     * Attaches the dashboard to the enclosing ViewState and renders its
+     * resource slice. The ViewState owns the service and the central load, so the
+     * dashboard re-renders whenever the ViewState re-queries the resource, while
+     * layout changes still persist through the ViewState's update service.
      * @param {HTMLElement} element The host element.
      */
-    _attachToScope(element) {
-        const viewId = (element.dataset && element.dataset.wxView) || null;
+    _attachToViewState(element) {
+        const viewStateId = (element.dataset && element.dataset.wxViewstate) || null;
 
-        webexpress.webapp.ViewStateRegistry.whenReady(element, viewId, (viewState) => {
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
             this._viewState = viewState;
 
             const service = viewState.serviceForResource(this._resource);
@@ -75,7 +75,7 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
     }
 
     /**
-     * Renders a resource slice the scope loaded centrally, normalising the raw
+     * Renders a resource slice the ViewState loaded centrally, normalising the raw
      * dashboard payload exactly as the standalone load does.
      * @param {object} slice The resource slice { items, total, data, loading, error }.
      */

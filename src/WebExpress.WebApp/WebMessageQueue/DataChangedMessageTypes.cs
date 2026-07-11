@@ -3,10 +3,10 @@ namespace WebExpress.WebApp.WebMessageQueue
     /// <summary>
     /// The well known message type identifiers of the data change family.
     /// A data change message informs connected clients that server side data
-    /// of a logical domain was created, updated or deleted, so a scope
+    /// of a logical domain was created, updated or deleted, so a
     /// ViewState can re-query the resources that render that data. The
     /// subscribe type is the inbound counterpart with which a client extends
-    /// its session's domain set at runtime, so a scope receives change
+    /// its session's domain set at runtime, so a ViewState receives change
     /// messages for the domains its services declare without the page having
     /// to know them at render time.
     /// </summary>

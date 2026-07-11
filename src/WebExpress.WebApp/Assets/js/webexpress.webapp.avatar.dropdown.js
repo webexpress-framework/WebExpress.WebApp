@@ -1,9 +1,9 @@
 /**
  * AvatarDropdownCtrl extends WebUI.AvatarDropdownCtrl to fetch items from a REST API.
  *
- * It is scope-capable: when the host carries a data-wx-resource binding the
- * avatar and the items are a slice of an enclosing ViewState scope, so the
- * control subscribes to that slice and the scope owns the central load;
+ * It is ViewState-capable: when the host carries a data-wx-resource binding the
+ * avatar and the items are a slice of an enclosing ViewState, so the
+ * control subscribes to that slice and the ViewState owns the central load;
  * without a binding it owns its own wx-service island and loads itself
  * (standalone).
  *
@@ -39,8 +39,8 @@ webexpress.webapp.AvatarDropdownCtrl = class extends webexpress.webui.AvatarDrop
         this._service = islandServices.data || null;
         this._apiEndpoint = this._service ? this._service.baseUri : null;
 
-        // the resource a scope renders; when present the avatar and the items
-        // are a pure view of a central resource the enclosing scope owns, when
+        // the resource a ViewState renders; when present the avatar and the items
+        // are a pure view of a central resource the enclosing ViewState owns, when
         // absent the control loads itself (standalone)
         this._resource = (element.dataset && element.dataset.wxResource) || null;
 
@@ -61,7 +61,7 @@ webexpress.webapp.AvatarDropdownCtrl = class extends webexpress.webui.AvatarDrop
         if (this._resource) {
             this._ensureStructure();
             this._updateDynamicItems([]);
-            this._attachToScope(element);
+            this._attachToViewState(element);
         } else if (this._apiEndpoint) {
             this._fetchData().catch((err) => {
                 console.error("failed to fetch dropdown data:", err);
@@ -75,16 +75,16 @@ webexpress.webapp.AvatarDropdownCtrl = class extends webexpress.webui.AvatarDrop
     }
 
     /**
-     * Attaches the dropdown to the enclosing scope ViewState and renders its
-     * resource slice. The scope owns the central load and the service; this
-     * control becomes a pure view that re-renders whenever the scope re-queries
+     * Attaches the dropdown to the enclosing ViewState and renders its
+     * resource slice. The ViewState owns the central load and the service; this
+     * control becomes a pure view that re-renders whenever the ViewState re-queries
      * the resource.
      * @param {HTMLElement} element - The host element.
      */
-    _attachToScope(element) {
-        const viewId = (element.dataset && element.dataset.wxView) || null;
+    _attachToViewState(element) {
+        const viewStateId = (element.dataset && element.dataset.wxViewstate) || null;
 
-        webexpress.webapp.ViewStateRegistry.whenReady(element, viewId, (viewState) => {
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
             this._viewState = viewState;
 
             const service = viewState.serviceForResource(this._resource);
@@ -101,7 +101,7 @@ webexpress.webapp.AvatarDropdownCtrl = class extends webexpress.webui.AvatarDrop
     }
 
     /**
-     * Renders a resource slice the scope loaded centrally. The raw response
+     * Renders a resource slice the ViewState loaded centrally. The raw response
      * carries the avatar identity beside the items, so both are applied.
      * @param {object} slice - The resource slice { items, total, data, loading, error }.
      */

@@ -56,7 +56,7 @@ test("comment extends the component base", () => {
     assert.equal(typeof ctrl.store, "object");
 });
 
-test("comment in a scope renders the central comments resource the scope loads", async () => {
+test("comment in a ViewState renders the central comments resource the ViewState loads", async () => {
     const { wxapp, createElement, setFetch, document } = load();
     let fetchCount = 0;
     setFetch(async () => {
@@ -64,23 +64,23 @@ test("comment in a scope renders the central comments resource the scope loads",
         return { ok: true, status: 200, headers: { get: () => "application/json" }, json: async () => [SEED_COMMENT] };
     });
 
-    const scopeHost = createElement("div");
-    scopeHost.dataset.wxScope = "discussion";
-    appendServiceIsland(document, scopeHost, { name: "data", kind: "rest", baseUri: "/api/comments", method: "GET", updateMethod: "PUT" });
-    appendResourceIsland(document, scopeHost, { name: "comments", service: "data", target: "comments", params: [] });
+    const viewStateHost = createElement("div");
+    viewStateHost.dataset.wxViewstate = "discussion";
+    appendServiceIsland(document, viewStateHost, { name: "data", kind: "rest", baseUri: "/api/comments", method: "GET", updateMethod: "PUT" });
+    appendResourceIsland(document, viewStateHost, { name: "comments", service: "data", target: "comments", params: [] });
 
-    const viewState = new wxapp.ViewState(scopeHost);
+    const viewState = new wxapp.ViewState(viewStateHost);
 
     const commentHost = createElement("div");
     commentHost.dataset.wxResource = "comments";
     commentHost.dataset.categories = PRESET_CATEGORIES;
-    scopeHost.appendChild(commentHost);
+    viewStateHost.appendChild(commentHost);
 
     const ctrl = new wxapp.CommentCtrl(commentHost);
     await settle();
     await settle();
 
-    assert.equal(fetchCount, 1, "the scope loaded the comments resource centrally");
+    assert.equal(fetchCount, 1, "the ViewState loaded the comments resource centrally");
     assert.equal(ctrl.value.length, 1, "the control renders the comments from the slice");
     assert.equal(ctrl.value[0].id, "c1");
 });

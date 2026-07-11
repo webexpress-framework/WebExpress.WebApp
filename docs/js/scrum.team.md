@@ -132,18 +132,18 @@ new ControlDataScrumTeam("sprint-team")
     .DataService<RestApiScrumTeam>();
 ```
 
-## Scope Binding (ViewState)
+## ViewState Binding
 
-`ControlDataScrumTeam` is **scope-capable**. Bound to a resource of an enclosing `ControlViewState` scope, the members become a slice of that scope's shared state instead of an independent surface:
+`ControlDataScrumTeam` is **ViewState-capable**. Bound to a resource of an enclosing `ControlViewState`, the members become a slice of that ViewState's shared state instead of an independent surface:
 
 ```csharp
-// inside the scope:
+// inside the ViewState:
 new ControlDataScrumTeam("sprint-team").Resource<SprintTeamResource>();
 ```
 
 When a resource is bound the control:
 
-- emits only the `data-wx-resource` binding (and the optional `data-wx-view` scope id) instead of its own `wx-service` island, because the scope owns the state, the service and the central load;
-- on the client, resolves the enclosing `ViewState`, **subscribes** to the resource slice and re-renders the avatar row whenever the scope re-queries it.
+- emits only the `data-wx-resource` binding (and the optional `data-wx-viewstate` id) instead of its own `wx-service` island, because the ViewState owns the state, the service and the central load;
+- on the client, resolves the enclosing `ViewState`, **subscribes** to the resource slice and re-renders the avatar row whenever the ViewState re-queries it.
 
 Left unbound, the control owns its `wx-service` island and loads itself (standalone), exactly as documented above. The path is chosen automatically — by `DataIslandExtensions.EmitDataIslands` on the server and by the presence of `data-wx-resource` on the client.

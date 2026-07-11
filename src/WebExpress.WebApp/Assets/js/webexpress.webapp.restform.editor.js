@@ -1795,7 +1795,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Returns the group containing the selected node (used to scope add operations
+     * Returns the group containing the selected node (used to ViewState add operations
      * to the currently focused group).
      * @param {object} tab
      * @param {string} selectedId

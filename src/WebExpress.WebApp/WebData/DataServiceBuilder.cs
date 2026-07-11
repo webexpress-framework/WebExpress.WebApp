@@ -59,7 +59,7 @@ namespace WebExpress.WebApp.WebData
 
         /// <summary>
         /// Declares a domain the service serves data of, for endpoints whose
-        /// item types cannot be derived from the endpoint type. The scope
+        /// item types cannot be derived from the endpoint type. The
         /// ViewState subscribes the declared domains and re-queries the
         /// service's resources when the server announces a change.
         /// </summary>

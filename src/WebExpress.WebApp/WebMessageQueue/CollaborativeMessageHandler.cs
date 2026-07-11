@@ -51,8 +51,8 @@ namespace WebExpress.WebApp.WebMessageQueue
 
         /// <summary>
         /// Interprets, validates and forwards the specified collaborative
-        /// payload to all clients that are part of the same collaborative
-        /// scope as the originating socket.
+        /// payload to all clients that are part of the same collaboration
+        /// group as the originating socket.
         /// </summary>
         /// <param name="source">
         /// The socket that received the raw message. Cannot be <c>null</c>.

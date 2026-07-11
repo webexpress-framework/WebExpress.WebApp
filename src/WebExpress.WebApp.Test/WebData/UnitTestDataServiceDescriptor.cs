@@ -173,7 +173,7 @@ namespace WebExpress.WebApp.Test.WebData
 
         /// <summary>
         /// Tests that a service without domains omits the attribute, so a
-        /// scope with such a service stays detached from the message queue.
+        /// ViewState with such a service stays detached from the message queue.
         /// </summary>
         [Fact]
         public void DomainsAreOmittedByDefault()

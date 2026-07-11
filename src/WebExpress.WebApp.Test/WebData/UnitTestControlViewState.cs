@@ -8,21 +8,21 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.Test.WebData
 {
     /// <summary>
-    /// Tests the ControlViewState scope host. It renders its child controls inside
-    /// the scope element, marks the element with its scope id and emits the state,
-    /// service and resource islands at the start of the element, so the JavaScript
-    /// ViewState seeds, configures and loads the scope from a single host.
+    /// Tests the ControlViewState host. It renders its child controls inside
+    /// the host element, marks the element with its ViewState id and emits the
+    /// state, service and resource islands at the start of the element, so the
+    /// JavaScript ViewState seeds, configures and loads from a single host.
     /// </summary>
     [Collection("NonParallelTests")]
     public class UnitTestControlViewState
     {
         /// <summary>
-        /// Tests that the host carries the scope class and the scope id, so the
+        /// Tests that the host carries the host class and the ViewState id, so the
         /// controller instantiates a ViewState the controls resolve by id and by
         /// ancestry.
         /// </summary>
         [Fact]
-        public void EmitsTheScopeHost()
+        public void EmitsTheViewStateHost()
         {
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
@@ -32,11 +32,11 @@ namespace WebExpress.WebApp.Test.WebData
             var html = control.Render(context, visualTree).ToString();
 
             Assert.Contains("wx-webapp-viewstate", html);
-            Assert.Contains("data-wx-scope=\"orders\"", html);
+            Assert.Contains("data-wx-viewstate=\"orders\"", html);
         }
 
         /// <summary>
-        /// Tests that the scope host emits the state, service and resource islands
+        /// Tests that the ViewState host emits the state, service and resource islands
         /// together from one chain, which is the markup contract the JavaScript
         /// ViewState consumes.
         /// </summary>
@@ -62,12 +62,12 @@ namespace WebExpress.WebApp.Test.WebData
         }
 
         /// <summary>
-        /// Tests that the scope renders its child controls inside the scope
-        /// element, so the controls of a region live in the scope they subscribe
-        /// to and resolve it by ancestry.
+        /// Tests that the ViewState renders its child controls inside the host
+        /// element, so the controls of a region live in the ViewState they
+        /// subscribe to and resolve it by ancestry.
         /// </summary>
         [Fact]
-        public void RendersChildControlsInsideTheScope()
+        public void RendersChildControlsInsideTheViewState()
         {
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
@@ -77,20 +77,20 @@ namespace WebExpress.WebApp.Test.WebData
 
             var html = control.Render(context, visualTree).ToString();
 
-            // the child list renders inside the scope, while the scope keeps its
-            // own resource island separate from the child's islands
+            // the child list renders inside the ViewState, which keeps its own
+            // resource island separate from the child's islands
             Assert.Contains("wx-webapp-list", html);
             Assert.Contains("id=\"inner\"", html);
             Assert.Contains("<wx-resource hidden name=\"orders\"", html);
         }
 
         /// <summary>
-        /// Tests that a scope-bound child carries only the resource binding and
-        /// skips its own state and service islands, because the enclosing scope
+        /// Tests that a ViewState-bound child carries only the resource binding and
+        /// skips its own state and service islands, because the enclosing ViewState
         /// owns the state, the service and the central load.
         /// </summary>
         [Fact]
-        public void ScopeBoundChildEmitsResourceBindingNotItsOwnIslands()
+        public void ViewStateBoundChildEmitsResourceBindingNotItsOwnIslands()
         {
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
@@ -111,23 +111,23 @@ namespace WebExpress.WebApp.Test.WebData
         }
 
         /// <summary>
-        /// Tests that the type-safe generic scope emits the state from the typed
+        /// Tests that the type-safe generic ViewState emits the state from the typed
         /// model and the service and resource named by their types, with no child
         /// controls and no string names at the authoring site.
         /// </summary>
         [Fact]
-        public void GenericScopeEmitsTypedStateServiceAndResource()
+        public void GenericViewStateEmitsTypedStateServiceAndResource()
         {
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
 
-            var scope = new ControlViewState<DataQueryState>("orders")
+            var viewState = new ControlViewState<DataQueryState>("orders")
                 .State(s => { s.Page = 0; s.PageSize = 25; })
                 .Service<FakeEndpoint>(svc => svc.Method(HttpMethod.Get))
                 .Resource<OrdersTestResource>(r => r.Service<FakeEndpoint>().Page().PageSize());
 
-            var html = scope.Render(context, visualTree).ToString();
+            var html = viewState.Render(context, visualTree).ToString();
 
             Assert.Contains("wx-webapp-viewstate", html);
             Assert.Contains("<wx-prop name=\"page\" type=\"number\">0</wx-prop>", html);
@@ -146,7 +146,7 @@ namespace WebExpress.WebApp.Test.WebData
         public void FluentResourceBindingPreservesTheControlType()
         {
             // the explicit ControlDataList target only compiles because the
-            // per-family binding returns the concrete control type, not IScopeBound
+            // per-family binding returns the concrete control type, not IViewStateBound
             ControlDataList list = new ControlDataList("list").Resource<OrdersTestResource>();
 
             Assert.NotNull(list.ResourceFactory);
@@ -154,14 +154,14 @@ namespace WebExpress.WebApp.Test.WebData
         }
 
         /// <summary>
-        /// A test resource identity used by the scope-bound binding test.
+        /// A test resource identity used by the ViewState-bound binding test.
         /// </summary>
         private sealed class OrdersTestResource : IDataResource
         {
         }
 
         /// <summary>
-        /// A test endpoint identity used by the generic scope authoring test.
+        /// A test endpoint identity used by the generic ViewState authoring test.
         /// </summary>
         private sealed class FakeEndpoint : IEndpoint
         {

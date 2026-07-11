@@ -186,14 +186,14 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
-        /// When bound to a scope resource, the control emits only the
+        /// When bound to a ViewState resource, the control emits only the
         /// <c>data-wx-resource</c> binding (and the <c>data-wx-users</c> binding
-        /// of the scope users service) and skips its own <c>wx-service</c>
-        /// islands, because the enclosing scope owns the services and the
+        /// of the ViewState users service) and skips its own <c>wx-service</c>
+        /// islands, because the enclosing ViewState owns the services and the
         /// central load.
         /// </summary>
         [Fact]
-        public void ScopeBound_EmitsResourceAndUsersBinding_NotServices()
+        public void ViewStateBound_EmitsResourceAndUsersBinding_NotServices()
         {
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
@@ -226,7 +226,7 @@ namespace WebExpress.WebApp.Test.WebControl
         public void Resource_BindsByType_PreservingConcreteType()
         {
             // arrange & act: the assignment compiles only because the typed overload returns the
-            // concrete control type rather than IScopeBound
+            // concrete control type rather than IViewStateBound
             ControlDataWatcher control = new ControlDataWatcher("watchers").Resource<WatchersTestResource>();
 
             // validation

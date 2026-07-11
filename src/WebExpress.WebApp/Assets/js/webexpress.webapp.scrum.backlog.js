@@ -48,8 +48,8 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
         this._service = this.useService("data");
         this._restUri = this._service ? this._service.baseUri : null;
 
-        // the resource a scope renders. when present, the backlog data is a
-        // central resource the enclosing scope owns and loads; selection and
+        // the resource a ViewState renders. when present, the backlog data is a
+        // central resource the enclosing ViewState owns and loads; selection and
         // drag state stay local to this control.
         this._resource = (element.dataset && element.dataset.wxResource) || null;
 
@@ -102,8 +102,8 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
         // parse the inline static configuration
         const seeded = this.state;
         if (this._resource) {
-            // scope mode: the enclosing scope loads the backlog resource centrally
-            this._attachToScope(element);
+            // ViewState mode: the enclosing ViewState loads the backlog resource centrally
+            this._attachToViewState(element);
         } else if ((Array.isArray(seeded.sprints) && seeded.sprints.length > 0)
             || (Array.isArray(seeded.items) && seeded.items.length > 0)) {
             this.data = { sprints: seeded.sprints || [], items: seeded.items || [] };
@@ -124,16 +124,16 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Attaches the backlog to the enclosing scope ViewState and renders its
-     * resource slice. The scope owns the service and the central load, so the
-     * backlog re-renders whenever the scope re-queries the resource, while its
-     * sprint and item mutations still flow through the scope service.
+     * Attaches the backlog to the enclosing ViewState and renders its
+     * resource slice. The ViewState owns the service and the central load, so the
+     * backlog re-renders whenever the ViewState re-queries the resource, while its
+     * sprint and item mutations still flow through the ViewState service.
      * @param {HTMLElement} element The host element.
      */
-    _attachToScope(element) {
-        const viewId = (element.dataset && element.dataset.wxView) || null;
+    _attachToViewState(element) {
+        const viewStateId = (element.dataset && element.dataset.wxViewstate) || null;
 
-        webexpress.webapp.ViewStateRegistry.whenReady(element, viewId, (viewState) => {
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
             this._viewState = viewState;
 
             const service = viewState.serviceForResource(this._resource);
@@ -142,8 +142,8 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
                 this._restUri = service.baseUri;
             }
 
-            // the assignee picker's users service also comes from the scope in
-            // scope mode, resolved by the type-safe users binding the control
+            // the assignee picker's users service also comes from the ViewState in
+            // ViewState mode, resolved by the type-safe users binding the control
             // emits, since the control owns no islands of its own
             const usersName = element.dataset && element.dataset.wxUsers;
             const usersService = usersName ? viewState.useService(usersName) : null;
@@ -159,7 +159,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Renders a backlog resource slice the scope loaded centrally. The raw
+     * Renders a backlog resource slice the ViewState loaded centrally. The raw
      * sprints and items response flows through the data setter, which normalises
      * and renders it; the local selection and drag state are preserved.
      * @param {object} slice The resource slice { items, total, data, loading, error }.
@@ -176,7 +176,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
      * @returns {void}
      */
     _parseStaticConfig() {
-        const cfgEl = this._element.querySelector(":scope > script[type='application/json']");
+        const cfgEl = this._element.querySelector(":ViewState > script[type='application/json']");
         if (!cfgEl) {
             return;
         }

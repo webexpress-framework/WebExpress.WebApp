@@ -1,12 +1,12 @@
 /**
- * Headless tests for the REST table control in scope mode (View, State and
- * Service at scope scope).
+ * Headless tests for the REST table control in ViewState mode (View, State and
+ * Service).
  *
  * They instantiate the real webexpress.webapp.TableCtrl on the DOM stub with a
- * stubbed WebUI reorderable table base, inside an enclosing ViewState scope, and
- * assert that the table normalises and renders the raw response the scope loads
+ * stubbed WebUI reorderable table base, inside an enclosing ViewState, and
+ * assert that the table normalises and renders the raw response the ViewState loads
  * centrally, and that its search re-queries the resource through the shared
- * scope state.
+ * ViewState state.
  *
  * Run with Node 18 or newer from the jstest folder:
  *   node --test
@@ -43,35 +43,35 @@ function load(options) {
 }
 
 /**
- * Builds a scope host with a data service and a rows resource, instantiates the
+ * Builds a ViewState host with a data service and a rows resource, instantiates the
  * ViewState for it, then appends a table element bound to that resource.
  * @param {object} engine - The loaded engine.
- * @returns {object} The scope ViewState and the table host element.
+ * @returns {object} The ViewState and the table host element.
  */
-function buildScopeWithTable(engine) {
-    const scopeHost = engine.createElement("div");
-    scopeHost.dataset.wxScope = "catalog";
-    appendStateIsland(engine.document, scopeHost, { page: 0, search: "" });
-    appendServiceIsland(engine.document, scopeHost, {
+function buildViewStateWithTable(engine) {
+    const viewStateHost = engine.createElement("div");
+    viewStateHost.dataset.wxViewstate = "catalog";
+    appendStateIsland(engine.document, viewStateHost, { page: 0, search: "" });
+    appendServiceIsland(engine.document, viewStateHost, {
         name: "data", kind: "rest", baseUri: "/api/catalog", method: "GET", updateMethod: "PUT",
         query: { page: "p", search: "q" }, response: { rows: "rows", total: "total" }
     });
-    appendResourceIsland(engine.document, scopeHost, {
+    appendResourceIsland(engine.document, viewStateHost, {
         name: "rows", service: "data", target: "rows",
         params: [{ name: "page", state: "page", dir: "inout" }, { name: "search", state: "search", dir: "out" }]
     });
 
-    const viewState = new engine.wxapp.ViewState(scopeHost);
+    const viewState = new engine.wxapp.ViewState(viewStateHost);
 
     const tableHost = engine.createElement("div");
     tableHost.dataset.wxResource = "rows";
-    scopeHost.appendChild(tableHost);
+    viewStateHost.appendChild(tableHost);
 
     return { viewState, tableHost };
 }
 
 /**
- * Awaits the pending load turns of the scope and the control.
+ * Awaits the pending load turns of the ViewState and the control.
  * @returns {Promise<void>} A promise that resolves after the pending turns.
  */
 async function settle() {
@@ -79,7 +79,7 @@ async function settle() {
     await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-test("table in a scope normalises and renders the raw response the scope loads", async () => {
+test("table in a ViewState normalises and renders the raw response the ViewState loads", async () => {
     const engine = load();
     const urls = [];
     engine.setFetch(async (url) => {
@@ -93,17 +93,17 @@ test("table in a scope normalises and renders the raw response the scope loads",
         };
     });
 
-    const { viewState, tableHost } = buildScopeWithTable(engine);
+    const { viewState, tableHost } = buildViewStateWithTable(engine);
     const table = new engine.wxapp.TableCtrl(tableHost);
     await settle();
 
-    assert.equal(urls.length, 1, "the scope loaded the resource centrally");
+    assert.equal(urls.length, 1, "the ViewState loaded the resource centrally");
     assert.equal(table._rows.length, 2, "the table normalises the raw rows");
     assert.equal(table._totalRecords, 5, "the table reads the total from the slice");
     assert.equal(viewState.getState().rows.total, 5);
 });
 
-test("table search re-queries the resource through the shared scope state", async () => {
+test("table search re-queries the resource through the shared ViewState state", async () => {
     const engine = load();
     const urls = [];
     engine.setFetch(async (url) => {
@@ -111,7 +111,7 @@ test("table search re-queries the resource through the shared scope state", asyn
         return { ok: true, status: 200, json: async () => ({ columns: [], rows: [], total: 0 }) };
     });
 
-    const { viewState, tableHost } = buildScopeWithTable(engine);
+    const { viewState, tableHost } = buildViewStateWithTable(engine);
     const table = new engine.wxapp.TableCtrl(tableHost);
     await settle();
 

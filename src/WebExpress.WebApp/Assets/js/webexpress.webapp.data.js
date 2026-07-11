@@ -34,7 +34,7 @@ webexpress.webapp.Data = class extends webexpress.webui.Ctrl {
         const initialState = options.state || webexpress.webapp.Data.readState(element);
 
         // the store is a standalone ViewState: the observable state container
-        // without the scope machinery, so the Data base owns one source of truth
+        // without the ViewState machinery, so the Data base owns one source of truth
         // and depends on no separate store type.
         this._store = options.store
             || new webexpress.webapp.ViewState(element, { state: initialState, standalone: true });

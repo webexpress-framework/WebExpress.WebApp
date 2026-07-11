@@ -44,7 +44,7 @@ test("scrum backlog extends the component base", () => {
     assert.equal(typeof ctrl.store, "object");
 });
 
-test("scrum backlog in a scope renders the central resource slice the scope loads", async () => {
+test("scrum backlog in a ViewState renders the central resource slice the ViewState loads", async () => {
     const { wxapp, createElement, setFetch, document } = load();
     let fetchCount = 0;
     setFetch(async () => {
@@ -57,22 +57,22 @@ test("scrum backlog in a scope renders the central resource slice the scope load
         };
     });
 
-    const scopeHost = createElement("div");
-    scopeHost.dataset.wxScope = "backlog";
-    appendServiceIsland(document, scopeHost, { name: "data", kind: "rest", baseUri: "/api/backlog", method: "GET", updateMethod: "PUT" });
-    appendResourceIsland(document, scopeHost, { name: "backlog", service: "data", target: "backlog", params: [] });
+    const viewStateHost = createElement("div");
+    viewStateHost.dataset.wxViewstate = "backlog";
+    appendServiceIsland(document, viewStateHost, { name: "data", kind: "rest", baseUri: "/api/backlog", method: "GET", updateMethod: "PUT" });
+    appendResourceIsland(document, viewStateHost, { name: "backlog", service: "data", target: "backlog", params: [] });
 
-    const viewState = new wxapp.ViewState(scopeHost);
+    const viewState = new wxapp.ViewState(viewStateHost);
 
     const backlogHost = createElement("div");
     backlogHost.dataset.wxResource = "backlog";
-    scopeHost.appendChild(backlogHost);
+    viewStateHost.appendChild(backlogHost);
 
     const ctrl = new wxapp.ScrumBacklogCtrl(backlogHost);
     await settle();
     await settle();
 
-    assert.equal(fetchCount, 1, "the scope loaded the resource centrally");
+    assert.equal(fetchCount, 1, "the ViewState loaded the resource centrally");
     assert.equal(ctrl.sprints.length, 1, "the backlog renders the sprints from the slice");
     assert.equal(ctrl.items.length, 1, "the backlog renders the items from the slice");
     assert.ok(viewState.getState().backlog.data, "the slice carries the raw backlog response");

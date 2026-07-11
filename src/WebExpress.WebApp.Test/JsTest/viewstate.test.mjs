@@ -1,6 +1,6 @@
 /**
- * Headless unit tests for the scope ViewState, the central artifact of the
- * View, State and Service architecture at scope scope.
+ * Headless unit tests for the ViewState, the central artifact of the
+ * View, State and Service architecture.
  *
  * Run with Node 18 or newer from the jstest folder:
  *   node --test
@@ -8,9 +8,9 @@
  * The tests load the real engine modules from Assets/js through a vm context
  * with a minimal DOM stub, so they exercise the shipped code rather than a copy.
  * The ViewState is the observable state container, so these tests cover both its
- * state core (the former Store responsibilities) and its scope wiring: seeding
+ * state core (the former Store responsibilities) and its ViewState wiring: seeding
  * from islands, central resource loading, bidirectional parameter binding,
- * scope resolution and teardown.
+ * ViewState resolution and teardown.
  */
 
 import { test } from "node:test";
@@ -21,12 +21,12 @@ import assert from "node:assert";
 import { loadEngine, appendServiceIsland, appendStateIsland, appendResourceIsland } from "./harness.mjs";
 
 /**
- * Builds a scope host element with the given state, service and resource
+ * Builds a ViewState host element with the given state, service and resource
  * islands, mirroring the markup the C# ControlViewState emits.
  */
-function buildScope(engine, { scope = "orders", state, service, resources } = {}) {
+function buildViewState(engine, { viewStateId = "orders", state, service, resources } = {}) {
     const host = engine.document.createElement("div");
-    host.dataset.wxScope = scope;
+    host.dataset.wxViewstate = viewStateId;
 
     if (state) {
         appendStateIsland(engine.document, host, state);
@@ -56,7 +56,7 @@ async function settle(viewState, turns = 6) {
 
 test("view state applies a shallow patch and notifies once after flush", () => {
     const engine = loadEngine();
-    const vs = new engine.wxapp.ViewState(buildScope(engine, { state: { a: 1, b: 2 } }));
+    const vs = new engine.wxapp.ViewState(buildViewState(engine, { state: { a: 1, b: 2 } }));
 
     let calls = 0;
     let last = null;
@@ -73,7 +73,7 @@ test("view state applies a shallow patch and notifies once after flush", () => {
 
 test("view state does not notify when nothing changes, so an echoed value cannot loop", () => {
     const engine = loadEngine();
-    const vs = new engine.wxapp.ViewState(buildScope(engine, { state: { page: 2 } }));
+    const vs = new engine.wxapp.ViewState(buildViewState(engine, { state: { page: 2 } }));
 
     let calls = 0;
     vs.subscribe(() => { calls += 1; });
@@ -86,7 +86,7 @@ test("view state does not notify when nothing changes, so an echoed value cannot
 
 test("view state watch fires only when the selected slice changes", () => {
     const engine = loadEngine();
-    const vs = new engine.wxapp.ViewState(buildScope(engine, { state: { a: 1, b: 1 } }));
+    const vs = new engine.wxapp.ViewState(buildViewState(engine, { state: { a: 1, b: 1 } }));
 
     let aCalls = 0;
     vs.watch((state) => state.a, () => { aCalls += 1; });
@@ -104,7 +104,7 @@ test("view state watch fires only when the selected slice changes", () => {
 
 test("view state seeds its state, services and resources from the islands", () => {
     const engine = loadEngine();
-    const host = buildScope(engine, {
+    const host = buildViewState(engine, {
         state: { page: 0, search: "" },
         service: { name: "data", baseUri: "/api/orders", method: "GET" },
         resources: [{ name: "orders", service: "data", target: "orders", params: [{ name: "page", state: "page" }] }]
@@ -130,7 +130,7 @@ test("view state loads a resource centrally and reduces it into the target slice
         return { ok: true, status: 200, json: async () => ({ items: [1, 2, 3], total: 3, page: 0 }) };
     });
 
-    const host = buildScope(engine, {
+    const host = buildViewState(engine, {
         state: { page: 0, search: "x" },
         service: { name: "data", baseUri: "/api/orders", method: "GET", query: { page: "p", search: "q" }, response: { items: "items", total: "total" } },
         resources: [{
@@ -159,7 +159,7 @@ test("an automatic resource triggers a central load on mount", () => {
         return { ok: true, status: 200, json: async () => ({ items: [], total: 0 }) };
     });
 
-    const host = buildScope(engine, {
+    const host = buildViewState(engine, {
         state: { page: 0 },
         service: { name: "data", baseUri: "/api/orders", method: "GET" },
         resources: [{ name: "orders", service: "data", target: "orders", params: [{ name: "page", state: "page" }] }]
@@ -180,7 +180,7 @@ test("an inbound parameter writes the echoed value back to state, bidirectionall
         return { ok: true, status: 200, json: async () => ({ items: [], total: 0, page: 2 }) };
     });
 
-    const host = buildScope(engine, {
+    const host = buildViewState(engine, {
         state: { page: 9 },
         service: { name: "data", baseUri: "/api/orders", method: "GET", query: { page: "p" } },
         resources: [{ name: "orders", service: "data", target: "orders", auto: false, params: [{ name: "page", state: "page", dir: "inout" }] }]
@@ -202,7 +202,7 @@ test("reload re-queries a resource with the current state", async () => {
         return { ok: true, status: 200, json: async () => ({ items: [], total: 0 }) };
     });
 
-    const host = buildScope(engine, {
+    const host = buildViewState(engine, {
         state: { search: "a" },
         service: { name: "data", baseUri: "/api/orders", method: "GET", query: { search: "q" } },
         resources: [{ name: "orders", service: "data", target: "orders", auto: false, params: [{ name: "search", state: "search", dir: "out" }] }]
@@ -217,9 +217,9 @@ test("reload re-queries a resource with the current state", async () => {
     assert.ok(urls[1].includes("q=b"));
 });
 
-// the scope query intent
+// the ViewState query intent
 
-test("the view/query intent merges a patch and re-queries the resource", async () => {
+test("the viewstate/query intent merges a patch and re-queries the resource", async () => {
     const engine = loadEngine();
     let fetchCalls = 0;
     engine.setFetch(async () => {
@@ -227,14 +227,14 @@ test("the view/query intent merges a patch and re-queries the resource", async (
         return { ok: true, status: 200, json: async () => ({ items: [], total: 0 }) };
     });
 
-    const host = buildScope(engine, {
+    const host = buildViewState(engine, {
         state: { search: "", page: 5 },
         service: { name: "data", baseUri: "/api/orders", method: "GET", query: { search: "q", page: "p" } },
         resources: [{ name: "orders", service: "data", target: "orders", auto: false, params: [{ name: "search", state: "search", dir: "out" }] }]
     });
 
     const vs = new engine.wxapp.ViewState(host);
-    vs.dispatch("view/query", { patch: { search: "abc", page: 0 }, resource: "orders" });
+    vs.dispatch("viewstate/query", { patch: { search: "abc", page: 0 }, resource: "orders" });
 
     assert.equal(vs.getState().search, "abc", "the reducer patch is applied synchronously");
     assert.equal(vs.getState().page, 0);
@@ -243,33 +243,33 @@ test("the view/query intent merges a patch and re-queries the resource", async (
     assert.equal(fetchCalls, 1, "the effect re-queries the resource");
 });
 
-// scope resolution
+// ViewState resolution
 
-test("the registry resolves a scope by explicit id and by ancestry", () => {
+test("the registry resolves a ViewState by explicit id and by ancestry", () => {
     const engine = loadEngine();
-    const host = buildScope(engine, { scope: "outer", state: { a: 1 } });
+    const host = buildViewState(engine, { viewStateId: "outer", state: { a: 1 } });
     const vs = new engine.wxapp.ViewState(host);
 
     const child = engine.document.createElement("div");
     host.appendChild(child);
 
     assert.equal(engine.wxapp.ViewStateRegistry.get("outer"), vs);
-    assert.equal(engine.wxapp.ViewStateRegistry.resolve(child), vs, "the nearest enclosing scope is resolved");
-    assert.equal(engine.wxapp.ViewStateRegistry.resolve(child, "outer"), vs, "an explicit id resolves the scope");
+    assert.equal(engine.wxapp.ViewStateRegistry.resolve(child), vs, "the nearest enclosing ViewState is resolved");
+    assert.equal(engine.wxapp.ViewStateRegistry.resolve(child, "outer"), vs, "an explicit id resolves the ViewState");
 });
 
-test("the registry resolves a scope by the resource a control binds, and serves its service", () => {
+test("the registry resolves a ViewState by the resource a control binds, and serves its service", () => {
     const engine = loadEngine();
     engine.setFetch(async () => ({ ok: true, status: 200, json: async () => ({ items: [], total: 0 }) }));
 
-    const host = buildScope(engine, {
-        scope: "orders-scope",
+    const host = buildViewState(engine, {
+        viewStateId: "orders-viewstate",
         service: { name: "data", baseUri: "/api/orders", method: "GET" },
         resources: [{ name: "orders", service: "data", target: "orders", auto: false, params: [] }]
     });
     const vs = new engine.wxapp.ViewState(host);
 
-    // a control finds its scope by the resource it binds, not by ancestry
+    // a control finds its ViewState by the resource it binds, not by ancestry
     assert.equal(engine.wxapp.ViewStateRegistry.resolveByResource("orders"), vs);
     // and uses the service the resource declares
     const service = vs.serviceForResource("orders");
@@ -277,12 +277,12 @@ test("the registry resolves a scope by the resource a control binds, and serves 
     assert.equal(service.baseUri, "/api/orders");
 });
 
-test("a nested scope shadows the outer one for its own controls", () => {
+test("a nested ViewState shadows the outer one for its own controls", () => {
     const engine = loadEngine();
-    const outer = buildScope(engine, { scope: "outer", state: { level: "outer" } });
+    const outer = buildViewState(engine, { viewStateId: "outer", state: { level: "outer" } });
     const outerVs = new engine.wxapp.ViewState(outer);
 
-    const inner = buildScope(engine, { scope: "inner", state: { level: "inner" } });
+    const inner = buildViewState(engine, { viewStateId: "inner", state: { level: "inner" } });
     outer.appendChild(inner);
     const innerVs = new engine.wxapp.ViewState(inner);
 
@@ -293,27 +293,27 @@ test("a nested scope shadows the outer one for its own controls", () => {
     assert.notEqual(engine.wxapp.ViewStateRegistry.resolve(innerChild), outerVs);
 });
 
-test("whenReady resolves a control that asked before its scope existed", () => {
+test("whenReady resolves a control that asked before its ViewState existed", () => {
     const engine = loadEngine();
-    const host = buildScope(engine, { scope: "late", state: { a: 1 } });
+    const host = buildViewState(engine, { viewStateId: "late", state: { a: 1 } });
     const child = engine.document.createElement("div");
     host.appendChild(child);
 
     let resolved = null;
-    // the control asks before the scope host is instantiated (children first)
+    // the control asks before the ViewState host is instantiated (children first)
     engine.wxapp.ViewStateRegistry.whenReady(child, null, (vs) => { resolved = vs; });
     assert.equal(resolved, null);
 
     const vs = new engine.wxapp.ViewState(host);
-    assert.equal(resolved, vs, "registering the scope resolves the pending request");
+    assert.equal(resolved, vs, "registering the ViewState resolves the pending request");
 });
 
 // teardown
 
 test("destroy aborts services, unregisters and releases the back-reference", () => {
     const engine = loadEngine();
-    const host = buildScope(engine, {
-        scope: "orders",
+    const host = buildViewState(engine, {
+        viewStateId: "orders",
         state: { a: 1 },
         service: { name: "data", baseUri: "/api/orders", method: "GET" }
     });

@@ -235,13 +235,13 @@ export function appendServiceIsland(document, element, descriptor) {
 }
 
 /**
- * Appends a wx-resource island element to a scope host, mirroring the C#
+ * Appends a wx-resource island element to a ViewState host, mirroring the C#
  * emission in DataResourceDescriptor.ToIslandElement, so the ViewState tests
- * configure their scopes through the same channel the server renders. Each
+ * configure their ViewStates through the same channel the server renders. Each
  * parameter declares the bidirectional binding between a state key and a query
  * parameter.
  * @param {object} document - The document stub of the loaded engine.
- * @param {object} element - The scope host element.
+ * @param {object} element - The ViewState host element.
  * @param {object} resource - The resource descriptor shape.
  * @returns {object} The island element.
  */

@@ -12,7 +12,7 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// Represents a control panel for API tile interactions.
     /// </summary>
-    public class ControlDataTile : ControlPanel, IControlDataTile, IDataIsland, IScopeBound
+    public class ControlDataTile : ControlPanel, IControlDataTile, IDataIsland, IViewStateBound
     {
         /// <summary>
         /// Retruns or sets the number of items to display on each page in a
@@ -21,18 +21,18 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, uint> PageSize { get; set; }
 
         /// <summary>
-        /// Gets or sets the name of the enclosing scope resource the tiles
+        /// Gets or sets the name of the enclosing ViewState resource the tiles
         /// render. When set, the control is a pure view of a central resource the
-        /// scope ViewState owns; when null, it owns its state and service islands
+        /// ViewState owns; when null, it owns its state and service islands
         /// and loads itself.
         /// </summary>
         public Func<IRenderControlContext, string> ResourceFactory { get; set; }
 
         /// <summary>
-        /// Gets or sets the optional scope id the control binds to. When null, it
-        /// resolves the nearest enclosing scope by ancestry.
+        /// Gets or sets the optional ViewState id the control binds to. When null, it
+        /// resolves the nearest enclosing ViewState by ancestry.
         /// </summary>
-        public Func<IRenderControlContext, string> Scope { get; set; }
+        public Func<IRenderControlContext, string> ViewState { get; set; }
 
         /// <summary>
         /// Gets or sets the binding.

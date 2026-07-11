@@ -5,7 +5,7 @@ namespace WebExpress.WebApp.WebMessageQueue
     /// <summary>
     /// The outbound WebSocket message that announces a server side data change
     /// to the clients of a domain. It carries the domain name so a client can
-    /// route the change to the scope ViewStates whose services declare that
+    /// route the change to the ViewStates whose services declare that
     /// domain, the operation so a client can distinguish structural from value
     /// changes, and optionally the id of the changed item. The message body
     /// deliberately carries no data: the client re-queries through its

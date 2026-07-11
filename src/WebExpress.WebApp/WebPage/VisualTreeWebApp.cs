@@ -191,11 +191,11 @@ namespace WebExpress.WebApp.WebPage
             html.Body.Add(preferences.Select(x => x.Render(renderContext, this)));
             html.Body.Add(MessageQueueUri);
 
-            // render the scope ViewState fragments first, when present, found by
+            // render the ViewState fragments first, when present, found by
             // their type across the body sections. They are hidden island hosts,
             // so they sit early in the body, add nothing visible, and the
-            // scope-bound controls resolve them by resource. The content sections
-            // exclude them so a scope is never rendered twice.
+            // bound controls resolve them by resource. The content sections
+            // exclude them so a ViewState is never rendered twice.
             var viewStates = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControlViewState, SectionBodyPreferences>(renderContext?.PageContext)
                 .Concat(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControlViewState, SectionBodyPrimary>(renderContext?.PageContext))
                 .Concat(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControlViewState, SectionBodySecondary>(renderContext?.PageContext));

@@ -12,21 +12,21 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// Represents a control panel for API dashboard interactions.
     /// </summary>
-    public class ControlDataDashboard : ControlPanel, IControlDataDashboard, IDataIsland, IScopeBound
+    public class ControlDataDashboard : ControlPanel, IControlDataDashboard, IDataIsland, IViewStateBound
     {
         /// <summary>
-        /// Gets or sets the name of the enclosing scope resource the dashboard
+        /// Gets or sets the name of the enclosing ViewState resource the dashboard
         /// renders. When set, the control is a pure view of a central resource
-        /// the scope ViewState owns; when null, it owns its state and service
+        /// the ViewState owns; when null, it owns its state and service
         /// islands and loads itself.
         /// </summary>
         public Func<IRenderControlContext, string> ResourceFactory { get; set; }
 
         /// <summary>
-        /// Gets or sets the optional scope id the control binds to. When null, it
-        /// resolves the nearest enclosing scope by ancestry.
+        /// Gets or sets the optional ViewState id the control binds to. When null, it
+        /// resolves the nearest enclosing ViewState by ancestry.
         /// </summary>
-        public Func<IRenderControlContext, string> Scope { get; set; }
+        public Func<IRenderControlContext, string> ViewState { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether the column headers can be

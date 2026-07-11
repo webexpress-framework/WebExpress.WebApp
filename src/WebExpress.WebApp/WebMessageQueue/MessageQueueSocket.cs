@@ -27,7 +27,7 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// <summary>
         /// Gets the client session associated with the current context. The
         /// session domains merge the static set from the connect url with the
-        /// domains the client subscribed at runtime, so a scope ViewState that
+        /// domains the client subscribed at runtime, so a ViewState that
         /// subscribes after the page rendered is addressed like a page that
         /// declared the domain up front.
         /// </summary>
@@ -198,7 +198,7 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// Merges the static domains of the connect url with the domains the
         /// client subscribed at runtime. The connect url carries the domains
         /// the page declared at render time; the subscription carries the
-        /// domains the scope ViewStates derived from their services on the
+        /// domains the ViewStates derived from their services on the
         /// client.
         /// </summary>
         /// <returns>The merged, distinct domain set of this connection.</returns>

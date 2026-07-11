@@ -115,12 +115,12 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
-        /// When bound to a scope resource, the control emits only the
+        /// When bound to a ViewState resource, the control emits only the
         /// <c>data-wx-resource</c> binding and skips its own <c>wx-service</c>
-        /// island, because the enclosing scope owns the service and the central load.
+        /// island, because the enclosing ViewState owns the service and the central load.
         /// </summary>
         [Fact]
-        public void ScopeBound_EmitsResourceBinding_NotService()
+        public void ViewStateBound_EmitsResourceBinding_NotService()
         {
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
@@ -149,7 +149,7 @@ namespace WebExpress.WebApp.Test.WebControl
         public void Resource_BindsByType_PreservingConcreteType()
         {
             // arrange & act: the assignment compiles only because the typed overload returns the
-            // concrete control type rather than IScopeBound
+            // concrete control type rather than IViewStateBound
             ControlDataDropdown control = new ControlDataDropdown("items").Resource<ItemsTestResource>();
 
             // validation

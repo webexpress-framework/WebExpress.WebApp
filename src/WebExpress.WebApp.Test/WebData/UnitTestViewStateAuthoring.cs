@@ -3,11 +3,11 @@ using WebExpress.WebApp.WebData;
 namespace WebExpress.WebApp.Test.WebData
 {
     /// <summary>
-    /// Tests the fluent C# authoring surface for the resources of a scope
+    /// Tests the fluent C# authoring surface for the resources of a
     /// ViewState: the <see cref="DataResourceBuilder"/> that produces a resource
-    /// descriptor and the Resource extension that lets a scope host declare its
+    /// descriptor and the Resource extension that lets a ViewState host declare its
     /// resources by chaining, matching the View, State and Service concept at
-    /// scope scope.
+    /// ViewState.
     /// </summary>
     public class UnitTestViewStateAuthoring
     {
@@ -69,7 +69,7 @@ namespace WebExpress.WebApp.Test.WebData
 
         /// <summary>
         /// Tests that the fluent Resource extension accumulates one resource
-        /// factory per call, so a scope can declare several resources.
+        /// factory per call, so a ViewState can declare several resources.
         /// </summary>
         [Fact]
         public void FluentResourceAccumulatesFactories()

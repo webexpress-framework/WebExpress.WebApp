@@ -139,7 +139,7 @@ webexpress.webapp.Service = class {
 
     /**
      * Returns the wire names of the logical domains whose data the service
-     * serves, from its descriptor. A scope ViewState subscribes these domains
+     * serves, from its descriptor. A ViewState subscribes these domains
      * on the message queue and re-queries the service's resources when the
      * server announces a data change.
      * @returns {Array<string>} The domain names, or an empty array.
@@ -731,7 +731,7 @@ webexpress.webapp.ServiceRegistry = new class {
  * changes made by other users) and invokes the callback with the changed
  * domains after a short coalescing window, so a burst of changes (for example
  * a bulk operation) triggers one reaction instead of one per message. The
- * scope ViewState and the Data component base share this class; without a
+ * ViewState and the Data component base share this class; without a
  * message queue (for example in a headless test) the subscription stays
  * detached and attach is a no-op.
  */

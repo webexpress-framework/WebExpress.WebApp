@@ -26,16 +26,16 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
 
         super(element);
 
-        // the resource a scope renders. when present, the list is a pure view of
-        // a central resource owned by the enclosing scope ViewState; when absent,
+        // the resource a ViewState renders. when present, the list is a pure view of
+        // a central resource owned by the enclosing ViewState; when absent,
         // the list owns its state and loads itself (standalone).
         this._resource = (element.dataset && element.dataset.wxResource) || null;
 
         // canonical state for the list: a single source of truth that the
         // accessors below read from and write to. seeded from the optional
-        // wx-state island. in scope mode this is replaced by the scope ViewState
+        // wx-state island. in ViewState mode this is replaced by the ViewState
         // once it resolves, so the search and paging keys live in the shared
-        // scope state.
+        // ViewState state.
         this._store = new webexpress.webapp.ViewState(element, { standalone: true, state: Object.assign({
             search: "",
             wql: "",
@@ -79,9 +79,9 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
         this._initPager(element);
 
         if (this._resource) {
-            // scope mode: the enclosing scope loads the resource centrally; this
+            // ViewState mode: the enclosing ViewState loads the resource centrally; this
             // list only subscribes to its slice and renders it
-            this._attachToScope(element);
+            this._attachToViewState(element);
         } else {
             // standalone: load through the control's own service
             this._load();
@@ -97,18 +97,18 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
     }
 
     /**
-     * Attaches the list to the enclosing scope ViewState and renders its
-     * resource slice. The scope owns the state, the service and the central
+     * Attaches the list to the enclosing ViewState and renders its
+     * resource slice. The ViewState owns the state, the service and the central
      * load, so the list becomes a pure view: it subscribes to the slice and
-     * re-renders whenever the scope re-queries the resource. The shared scope
+     * re-renders whenever the ViewState re-queries the resource. The shared ViewState
      * state also becomes the list's store, so the search and paging binds drive
-     * the same keys every control in the scope reads.
+     * the same keys every control in the ViewState reads.
      * @param {HTMLElement} element The host element.
      */
-    _attachToScope(element) {
-        const viewId = (element.dataset && element.dataset.wxView) || null;
+    _attachToViewState(element) {
+        const viewStateId = (element.dataset && element.dataset.wxViewstate) || null;
 
-        webexpress.webapp.ViewStateRegistry.whenReady(element, viewId, (viewState) => {
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
             this._viewState = viewState;
             this._store = viewState;
 
@@ -123,13 +123,13 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
             const unsubscribe = viewState.watch((state) => state[this._resource], (slice) => this._applySlice(slice));
             (element._wxCleanup = element._wxCleanup || []).push(unsubscribe);
 
-            // render whatever the scope has already loaded for this resource
+            // render whatever the ViewState has already loaded for this resource
             this._applySlice(viewState.getState()[this._resource]);
         });
     }
 
     /**
-     * Renders a resource slice the scope loaded centrally. The slice carries the
+     * Renders a resource slice the ViewState loaded centrally. The slice carries the
      * items and the total, which the list maps into its rows and its pager,
      * mirroring the tail of the standalone load.
      * @param {object} slice The resource slice { items, total, loading, error }.
@@ -183,8 +183,8 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
     get _orderDir() { return this._store.getState().orderDir; }
     set _orderDir(value) { this._store.setState({ orderDir: value }); }
 
-    // in scope mode the total comes from the resource slice, not from a top
-    // level state key, so several resources in one scope keep separate totals
+    // in ViewState mode the total comes from the resource slice, not from a top
+    // level state key, so several resources in one ViewState keep separate totals
     get _totalRecords() { return this._viewState ? this._sliceTotal : this._store.getState().total; }
     set _totalRecords(value) { this._store.setState({ total: value }); }
 

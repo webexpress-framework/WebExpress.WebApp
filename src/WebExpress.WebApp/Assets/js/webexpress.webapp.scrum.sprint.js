@@ -23,9 +23,9 @@
  *   }
  * }
  *
- * It is scope-capable: when the host carries a data-wx-resource binding the
- * sprint is a slice of an enclosing ViewState scope, so the control subscribes
- * to that slice and the scope owns the central load; without a binding it owns
+ * It is ViewState-capable: when the host carries a data-wx-resource binding the
+ * sprint is a slice of an enclosing ViewState, so the control subscribes
+ * to that slice and the ViewState owns the central load; without a binding it owns
  * its own wx-service island and loads itself (standalone).
  *
  * The following events are dispatched on the host element:
@@ -61,8 +61,8 @@ webexpress.webapp.ScrumSprintCtrl = class extends webexpress.webapp.Data {
         // the endpoint is authored in C# through the wx-service island
         this._service = this.useService("data");
         this._restUri = this._service ? this._service.baseUri : null;
-        // the resource a scope renders; when present the sprint is a pure view
-        // of a central resource the enclosing scope owns, when absent the
+        // the resource a ViewState renders; when present the sprint is a pure view
+        // of a central resource the enclosing ViewState owns, when absent the
         // control loads itself (standalone)
         this._resource = (element.dataset && element.dataset.wxResource) || null;
         element.classList.add("wx-scrum-sprint");
@@ -71,7 +71,7 @@ webexpress.webapp.ScrumSprintCtrl = class extends webexpress.webapp.Data {
         element.addEventListener("click", (e) => this._onCardClick(e));
 
         // without an endpoint and without a seed, fall back to the inline
-        // config; a scope-bound card renders its slice instead
+        // config; a ViewState-bound card renders its slice instead
         if (!this._resource && !this._restUri && !this._sprint) {
             this._parseStaticConfig();
         }
@@ -82,23 +82,23 @@ webexpress.webapp.ScrumSprintCtrl = class extends webexpress.webapp.Data {
 
         // load from the endpoint only when the server did not seed the sprint
         if (this._resource) {
-            this._attachToScope(element);
+            this._attachToViewState(element);
         } else if (this._restUri && !this._sprint) {
             this._load();
         }
     }
 
     /**
-     * Attaches the control to the enclosing scope ViewState and renders its
-     * resource slice. The scope owns the central load and the service; this
-     * control becomes a pure view that re-renders whenever the scope re-queries
+     * Attaches the control to the enclosing ViewState and renders its
+     * resource slice. The ViewState owns the central load and the service; this
+     * control becomes a pure view that re-renders whenever the ViewState re-queries
      * the resource.
      * @param {HTMLElement} element - The host element.
      */
-    _attachToScope(element) {
-        const viewId = (element.dataset && element.dataset.wxView) || null;
+    _attachToViewState(element) {
+        const viewStateId = (element.dataset && element.dataset.wxViewstate) || null;
 
-        webexpress.webapp.ViewStateRegistry.whenReady(element, viewId, (viewState) => {
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
             this._viewState = viewState;
 
             const service = viewState.serviceForResource(this._resource);
@@ -115,7 +115,7 @@ webexpress.webapp.ScrumSprintCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Renders a resource slice the scope loaded centrally.
+     * Renders a resource slice the ViewState loaded centrally.
      * @param {object} slice - The resource slice { items, total, data, loading, error }.
      */
     _applySlice(slice) {
@@ -155,7 +155,7 @@ webexpress.webapp.ScrumSprintCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Reloads the sprint payload, in scope mode through the scope's central
+     * Reloads the sprint payload, in ViewState mode through the ViewState's central
      * re-query and standalone from the configured REST endpoint.
      * @returns {void}
      */
@@ -172,7 +172,7 @@ webexpress.webapp.ScrumSprintCtrl = class extends webexpress.webapp.Data {
      * @returns {void}
      */
     _parseStaticConfig() {
-        const cfgEl = this._element.querySelector(":scope > script[type='application/json']");
+        const cfgEl = this._element.querySelector(":ViewState > script[type='application/json']");
         if (!cfgEl) {
             return;
         }

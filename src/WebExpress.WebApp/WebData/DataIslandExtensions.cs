@@ -37,27 +37,28 @@ namespace WebExpress.WebApp.WebData
                 return html;
             }
 
-            // a scope-bound control renders a resource of the enclosing scope, so
-            // the scope owns the state and the service; the control carries only
-            // the resource binding and skips its own state and service islands
-            if (control is IScopeBound scopeBound)
+            // a ViewState-bound control renders a resource of the enclosing
+            // ViewState, which owns the state and the service; the control
+            // carries only the resource binding and skips its own state and
+            // service islands
+            if (control is IViewStateBound viewStateBound)
             {
-                var resource = scopeBound.ResourceFactory?.Invoke(renderContext);
+                var resource = viewStateBound.ResourceFactory?.Invoke(renderContext);
                 if (!string.IsNullOrEmpty(resource))
                 {
                     host.AddUserAttribute("data-wx-resource", WebUtility.HtmlEncode(resource));
 
-                    var scope = scopeBound.Scope?.Invoke(renderContext);
-                    host.AddUserAttribute("data-wx-view", !string.IsNullOrEmpty(scope) ? WebUtility.HtmlEncode(scope) : null);
+                    var viewStateId = viewStateBound.ViewState?.Invoke(renderContext);
+                    host.AddUserAttribute("data-wx-viewstate", !string.IsNullOrEmpty(viewStateId) ? WebUtility.HtmlEncode(viewStateId) : null);
 
-                    if (scopeBound is IScopeBoundUsers scopeBoundUsers)
+                    if (viewStateBound is IViewStateBoundUsers viewStateBoundUsers)
                     {
-                        var users = scopeBoundUsers.UsersFactory?.Invoke(renderContext);
+                        var users = viewStateBoundUsers.UsersFactory?.Invoke(renderContext);
                         host.AddUserAttribute("data-wx-users", !string.IsNullOrEmpty(users) ? WebUtility.HtmlEncode(users) : null);
                     }
 
-                    var scopedTemplate = control.TemplateFactory?.Invoke(renderContext);
-                    host.AddUserAttribute("data-wx-template", !string.IsNullOrEmpty(scopedTemplate) ? WebUtility.HtmlEncode(scopedTemplate) : null);
+                    var boundTemplate = control.TemplateFactory?.Invoke(renderContext);
+                    host.AddUserAttribute("data-wx-template", !string.IsNullOrEmpty(boundTemplate) ? WebUtility.HtmlEncode(boundTemplate) : null);
 
                     return html;
                 }
@@ -122,13 +123,13 @@ namespace WebExpress.WebApp.WebData
         }
 
         /// <summary>
-        /// Emits the wx-resource island elements of a scope ViewState as the first
+        /// Emits the wx-resource island elements of a ViewState as the first
         /// children of the host element. The resources come first, beside the
         /// wx-state and wx-service islands, so the JavaScript ViewState finds every
-        /// island before the scope's rendered content. Null descriptors are
-        /// skipped, so a scope passes its resources unconditionally.
+        /// island before the ViewState's rendered content. Null descriptors are
+        /// skipped, so a ViewState passes its resources unconditionally.
         /// </summary>
-        /// <param name="html">The scope host element.</param>
+        /// <param name="html">The ViewState host element.</param>
         /// <param name="descriptors">The resource descriptors.</param>
         /// <returns>The host element for chaining.</returns>
         public static IHtmlNode EmitResourceIslands(this IHtmlNode html, params DataResourceDescriptor[] descriptors)

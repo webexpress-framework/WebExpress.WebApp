@@ -1,7 +1,7 @@
 namespace WebExpress.WebApp.WebData
 {
     /// <summary>
-    /// The standard query state of a scope that backs a list, table or tile: the
+    /// The standard query state of a ViewState that backs a list, table or tile: the
     /// search term, the structured query, the filter, the page index, the page
     /// size and the order. It is used as the TState of a
     /// ControlViewState&lt;TState&gt; so the initial state is configured through
@@ -48,7 +48,7 @@ namespace WebExpress.WebApp.WebData
     }
 
     /// <summary>
-    /// The empty state of a scope that seeds no initial state, used as the TState
+    /// The empty state of a ViewState that seeds no initial state, used as the TState
     /// of a ControlViewState&lt;TState&gt; for a board, a dashboard, a tab set or
     /// a comment surface that loads everything from its resource.
     /// </summary>

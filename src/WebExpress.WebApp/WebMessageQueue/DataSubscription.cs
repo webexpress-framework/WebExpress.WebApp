@@ -7,14 +7,14 @@ namespace WebExpress.WebApp.WebMessageQueue
 {
     /// <summary>
     /// The runtime domain subscription of one WebSocket connection. A page
-    /// registers its initial domains through the connect url, but a scope
+    /// registers its initial domains through the connect url, but a
     /// ViewState learns the domains of its services only on the client, after
     /// the page rendered; it subscribes them through an inbound
     /// <see cref="DataChangedMessageTypes.Subscribe"/> message. This class
     /// parses those messages and accumulates the subscribed domains, so the
     /// socket can merge them into its session metadata without carrying the
     /// parsing itself. Subscriptions are additive for the lifetime of the
-    /// connection, because a scope that unsubscribes gains nothing: an
+    /// connection, because a ViewState that unsubscribes gains nothing: an
     /// unmatched change message is simply ignored on the client.
     /// </summary>
     public sealed class DataSubscription

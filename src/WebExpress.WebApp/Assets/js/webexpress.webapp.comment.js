@@ -138,10 +138,10 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
         this._service = this.useService("data");
         this._uri = this._service ? this._service.baseUri : null;
 
-        // the resource a scope renders. when present, the comments themselves are
-        // a central resource the enclosing scope owns and loads; this control
+        // the resource a ViewState renders. when present, the comments themselves are
+        // a central resource the enclosing ViewState owns and loads; this control
         // still keeps its own store for the local toolbar state (sort, filter,
-        // edit), which is per-control and must not be shared across the scope.
+        // edit), which is per-control and must not be shared across the ViewState.
         this._resource = (element.dataset && element.dataset.wxResource) || null;
         this._viewState = null;
 
@@ -182,12 +182,12 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
      * provided declaratively) and then performs the initial comment load.
      */
     async _init() {
-        // scope mode: the enclosing scope owns the comments resource. resolve the
-        // scope first, take its data service for the categories and the
+        // ViewState mode: the enclosing ViewState owns the comments resource. resolve the
+        // ViewState first, take its data service for the categories and the
         // mutations, then render the resource slice instead of loading the
         // comments here.
         if (this._resource) {
-            await this._attachToScope();
+            await this._attachToViewState();
             return;
         }
 
@@ -210,18 +210,18 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Resolves the enclosing scope ViewState, adopts its data service, loads the
+     * Resolves the enclosing ViewState, adopts its data service, loads the
      * categories through it and subscribes to the comments resource slice, so the
-     * comments are loaded once by the scope and the control re-renders from the
-     * shared slice while its mutations still flow through the scope service.
-     * @returns {Promise<void>} Resolves once the scope is attached.
+     * comments are loaded once by the ViewState and the control re-renders from the
+     * shared slice while its mutations still flow through the ViewState service.
+     * @returns {Promise<void>} Resolves once the ViewState is attached.
      */
-    async _attachToScope() {
+    async _attachToViewState() {
         const element = this._element;
-        const viewId = (element.dataset && element.dataset.wxView) || null;
+        const viewStateId = (element.dataset && element.dataset.wxViewstate) || null;
 
         const viewState = await new Promise((resolve) => {
-            webexpress.webapp.ViewStateRegistry.whenReady(element, viewId, resolve);
+            webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, resolve);
         });
 
         this._viewState = viewState;
@@ -233,7 +233,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
         }
 
         // secondary services (mention resolution, inline image upload) also come
-        // from the scope in scope mode, since the control emits no islands of its own
+        // from the ViewState in ViewState mode, since the control emits no islands of its own
         const usersService = viewState.useService("users");
         if (usersService) {
             this._usersUri = usersService.baseUri;
@@ -255,7 +255,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Renders a comments resource slice the scope loaded centrally. The comments
+     * Renders a comments resource slice the ViewState loaded centrally. The comments
      * arrive as the raw response array; the toolbar and edit state stay in this
      * control's own store.
      * @param {object} slice The resource slice { items, total, data, loading, error }.

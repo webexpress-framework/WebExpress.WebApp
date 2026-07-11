@@ -4,8 +4,8 @@ using WebExpress.WebCore.WebEndpoint;
 namespace WebExpress.WebApp.WebData
 {
     /// <summary>
-    /// A fluent builder for a named resource of a scope ViewState. It is the C#
-    /// authoring surface that declares which scope service loads the resource,
+    /// A fluent builder for a named resource of a ViewState. It is the C#
+    /// authoring surface that declares which ViewState service loads the resource,
     /// which state key receives the result and how the parameters flow between
     /// the state and the query. The builder produces a
     /// <see cref="DataResourceDescriptor"/> that the ControlViewState serializes
@@ -29,7 +29,7 @@ namespace WebExpress.WebApp.WebData
         }
 
         /// <summary>
-        /// Sets the name of the scope service that loads the resource.
+        /// Sets the name of the ViewState service that loads the resource.
         /// </summary>
         /// <param name="name">The service name, default "data".</param>
         /// <returns>The builder for chaining.</returns>
@@ -40,7 +40,7 @@ namespace WebExpress.WebApp.WebData
         }
 
         /// <summary>
-        /// Sets the scope service that loads the resource, identified by its
+        /// Sets the ViewState service that loads the resource, identified by its
         /// endpoint type rather than a string name. This is the type-safe form
         /// used by the generic ControlViewState authoring.
         /// </summary>
@@ -76,12 +76,12 @@ namespace WebExpress.WebApp.WebData
         }
 
         /// <summary>
-        /// Binds a scope state key to a query parameter. The direction defaults to
+        /// Binds a ViewState state key to a query parameter. The direction defaults to
         /// a bidirectional binding, so the value feeds the request and the value
         /// the response echoes flows back into the state.
         /// </summary>
         /// <param name="name">The logical query parameter name.</param>
-        /// <param name="state">The scope state key, defaulting to the parameter name.</param>
+        /// <param name="state">The ViewState state key, defaulting to the parameter name.</param>
         /// <param name="dir">The binding direction, one of "in", "out" or "inout".</param>
         /// <returns>The builder for chaining.</returns>
         public DataResourceBuilder Param(string name, string state = null, string dir = "inout")

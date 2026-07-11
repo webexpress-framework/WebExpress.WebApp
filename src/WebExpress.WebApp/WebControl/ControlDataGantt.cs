@@ -14,21 +14,21 @@ namespace WebExpress.WebApp.WebControl
     /// client renders the timeline, persists task and link mutations REST-fully
     /// and raises the mutation events.
     /// </summary>
-    public class ControlDataGantt : ControlPanel, IControlDataGantt, IDataIsland, IScopeBound
+    public class ControlDataGantt : ControlPanel, IControlDataGantt, IDataIsland, IViewStateBound
     {
         /// <summary>
-        /// Gets or sets the name of the enclosing scope resource the gantt
+        /// Gets or sets the name of the enclosing ViewState resource the gantt
         /// renders. When set, the control is a pure view of a central resource
-        /// the scope ViewState owns; when null, it owns its state and service
+        /// the ViewState owns; when null, it owns its state and service
         /// islands and loads itself.
         /// </summary>
         public Func<IRenderControlContext, string> ResourceFactory { get; set; }
 
         /// <summary>
-        /// Gets or sets the optional scope id the control binds to. When null, it
-        /// resolves the nearest enclosing scope by ancestry.
+        /// Gets or sets the optional ViewState id the control binds to. When null, it
+        /// resolves the nearest enclosing ViewState by ancestry.
         /// </summary>
-        public Func<IRenderControlContext, string> Scope { get; set; }
+        public Func<IRenderControlContext, string> ViewState { get; set; }
 
         /// <summary>
         /// Gets or sets the initial timeline scale: day, week or month. The

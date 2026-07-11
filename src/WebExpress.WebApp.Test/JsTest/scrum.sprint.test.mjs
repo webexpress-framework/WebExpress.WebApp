@@ -85,7 +85,7 @@ test("scrum sprint loads from the service when no state island is present", asyn
     assert.equal(ctrl.sprint.name, "Sprint 9");
 });
 
-test("scrum sprint in a scope renders the central resource slice the scope loads", async () => {
+test("scrum sprint in a ViewState renders the central resource slice the ViewState loads", async () => {
     const { wxapp, createElement, setFetch, document } = load();
     const urls = [];
     setFetch(async (url) => {
@@ -93,21 +93,21 @@ test("scrum sprint in a scope renders the central resource slice the scope loads
         return { ok: true, status: 200, json: async () => ({ name: "Sprint 24", committedPoints: 47 }) };
     });
 
-    const scopeHost = createElement("div");
-    scopeHost.dataset.wxScope = "scrum";
-    appendServiceIsland(document, scopeHost, { name: "data", kind: "rest", baseUri: "/api/sprint", method: "GET" });
-    appendResourceIsland(document, scopeHost, { name: "sprint", service: "data", target: "sprint" });
+    const viewStateHost = createElement("div");
+    viewStateHost.dataset.wxViewstate = "scrum";
+    appendServiceIsland(document, viewStateHost, { name: "data", kind: "rest", baseUri: "/api/sprint", method: "GET" });
+    appendResourceIsland(document, viewStateHost, { name: "sprint", service: "data", target: "sprint" });
 
-    new wxapp.ViewState(scopeHost);
+    new wxapp.ViewState(viewStateHost);
 
     const element = createElement("div");
     element.dataset.wxResource = "sprint";
-    scopeHost.appendChild(element);
+    viewStateHost.appendChild(element);
 
     const ctrl = new wxapp.ScrumSprintCtrl(element);
     await settle();
 
-    assert.equal(urls.length, 1, "the scope loaded the resource centrally");
+    assert.equal(urls.length, 1, "the ViewState loaded the resource centrally");
     assert.ok(ctrl.sprint, "the card renders the slice");
     assert.equal(ctrl.sprint.name, "Sprint 24");
 });

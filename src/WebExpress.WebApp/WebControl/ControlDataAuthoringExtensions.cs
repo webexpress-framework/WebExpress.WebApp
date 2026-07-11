@@ -654,8 +654,8 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
-        /// Binds the list to a scope resource by type, fluently and preserving
-        /// the concrete control type. A single generic extension on IScopeBound
+        /// Binds the list to a ViewState resource by type, fluently and preserving
+        /// the concrete control type. A single generic extension on IViewStateBound
         /// could not keep the concrete type (C# allows neither mixing one
         /// inferred and one explicit type argument), so the binding is declared
         /// per control family, mirroring the DataService presets.
@@ -667,7 +667,7 @@ namespace WebExpress.WebApp.WebControl
             => BindResource<ControlDataList, TResource>(control);
 
         /// <summary>
-        /// Binds the table to a scope resource by type.
+        /// Binds the table to a ViewState resource by type.
         /// </summary>
         /// <typeparam name="TResource">The resource type.</typeparam>
         /// <param name="control">The table control.</param>
@@ -676,7 +676,7 @@ namespace WebExpress.WebApp.WebControl
             => BindResource<ControlDataTable, TResource>(control);
 
         /// <summary>
-        /// Binds the tile panel to a scope resource by type.
+        /// Binds the tile panel to a ViewState resource by type.
         /// </summary>
         /// <typeparam name="TResource">The resource type.</typeparam>
         /// <param name="control">The tile control.</param>
@@ -685,7 +685,7 @@ namespace WebExpress.WebApp.WebControl
             => BindResource<ControlDataTile, TResource>(control);
 
         /// <summary>
-        /// Binds the kanban board to a scope resource by type.
+        /// Binds the kanban board to a ViewState resource by type.
         /// </summary>
         /// <typeparam name="TResource">The resource type.</typeparam>
         /// <param name="control">The kanban control.</param>
@@ -694,7 +694,7 @@ namespace WebExpress.WebApp.WebControl
             => BindResource<ControlDataKanban, TResource>(control);
 
         /// <summary>
-        /// Binds the gantt chart to a scope resource by type.
+        /// Binds the gantt chart to a ViewState resource by type.
         /// </summary>
         /// <typeparam name="TResource">The resource type.</typeparam>
         /// <param name="control">The gantt control.</param>
@@ -703,7 +703,7 @@ namespace WebExpress.WebApp.WebControl
             => BindResource<ControlDataGantt, TResource>(control);
 
         /// <summary>
-        /// Binds the dashboard to a scope resource by type.
+        /// Binds the dashboard to a ViewState resource by type.
         /// </summary>
         /// <typeparam name="TResource">The resource type.</typeparam>
         /// <param name="control">The dashboard control.</param>
@@ -712,7 +712,7 @@ namespace WebExpress.WebApp.WebControl
             => BindResource<ControlDataDashboard, TResource>(control);
 
         /// <summary>
-        /// Binds the tab set to a scope resource by type.
+        /// Binds the tab set to a ViewState resource by type.
         /// </summary>
         /// <typeparam name="TResource">The resource type.</typeparam>
         /// <param name="control">The tab control.</param>
@@ -721,7 +721,7 @@ namespace WebExpress.WebApp.WebControl
             => BindResource<ControlDataTab, TResource>(control);
 
         /// <summary>
-        /// Binds the comment surface to a scope resource by type.
+        /// Binds the comment surface to a ViewState resource by type.
         /// </summary>
         /// <typeparam name="TResource">The resource type.</typeparam>
         /// <param name="control">The comment control.</param>
@@ -730,7 +730,7 @@ namespace WebExpress.WebApp.WebControl
             => BindResource<ControlDataComment, TResource>(control);
 
         /// <summary>
-        /// Binds the scrum backlog to a scope resource by type.
+        /// Binds the scrum backlog to a ViewState resource by type.
         /// </summary>
         /// <typeparam name="TResource">The resource type.</typeparam>
         /// <param name="control">The scrum backlog control.</param>
@@ -739,7 +739,7 @@ namespace WebExpress.WebApp.WebControl
             => BindResource<ControlDataScrumBacklog, TResource>(control);
 
         /// <summary>
-        /// Binds the traffic light to a scope resource by type.
+        /// Binds the traffic light to a ViewState resource by type.
         /// </summary>
         /// <typeparam name="TResource">The resource type.</typeparam>
         /// <param name="control">The traffic light control.</param>
@@ -748,7 +748,7 @@ namespace WebExpress.WebApp.WebControl
             => BindResource<ControlDataTrafficLight, TResource>(control);
 
         /// <summary>
-        /// Binds the tag surface to a scope resource by type.
+        /// Binds the tag surface to a ViewState resource by type.
         /// </summary>
         /// <typeparam name="TResource">The resource type.</typeparam>
         /// <param name="control">The tag control.</param>
@@ -757,7 +757,7 @@ namespace WebExpress.WebApp.WebControl
             => BindResource<ControlDataTag, TResource>(control);
 
         /// <summary>
-        /// Binds the watcher surface to a scope resource by type.
+        /// Binds the watcher surface to a ViewState resource by type.
         /// </summary>
         /// <typeparam name="TResource">The resource type.</typeparam>
         /// <param name="control">The watcher control.</param>
@@ -766,7 +766,7 @@ namespace WebExpress.WebApp.WebControl
             => BindResource<ControlDataWatcher, TResource>(control);
 
         /// <summary>
-        /// Binds the scrum sprint card to a scope resource by type.
+        /// Binds the scrum sprint card to a ViewState resource by type.
         /// </summary>
         /// <typeparam name="TResource">The resource type.</typeparam>
         /// <param name="control">The sprint control.</param>
@@ -775,7 +775,7 @@ namespace WebExpress.WebApp.WebControl
             => BindResource<ControlDataScrumSprint, TResource>(control);
 
         /// <summary>
-        /// Binds the scrum team workload surface to a scope resource by type.
+        /// Binds the scrum team workload surface to a ViewState resource by type.
         /// </summary>
         /// <typeparam name="TResource">The resource type.</typeparam>
         /// <param name="control">The scrum team control.</param>
@@ -784,7 +784,7 @@ namespace WebExpress.WebApp.WebControl
             => BindResource<ControlDataScrumTeam, TResource>(control);
 
         /// <summary>
-        /// Binds the scrum velocity chart to a scope resource by type.
+        /// Binds the scrum velocity chart to a ViewState resource by type.
         /// </summary>
         /// <typeparam name="TResource">The resource type.</typeparam>
         /// <param name="control">The scrum velocity control.</param>
@@ -793,7 +793,7 @@ namespace WebExpress.WebApp.WebControl
             => BindResource<ControlDataScrumVelocity, TResource>(control);
 
         /// <summary>
-        /// Binds the workflow editor to a scope resource by type.
+        /// Binds the workflow editor to a ViewState resource by type.
         /// </summary>
         /// <typeparam name="TResource">The resource type.</typeparam>
         /// <param name="control">The workflow control.</param>
@@ -802,7 +802,7 @@ namespace WebExpress.WebApp.WebControl
             => BindResource<ControlDataWorkflow, TResource>(control);
 
         /// <summary>
-        /// Binds the remote dropdown to a scope resource by type.
+        /// Binds the remote dropdown to a ViewState resource by type.
         /// </summary>
         /// <typeparam name="TResource">The resource type.</typeparam>
         /// <param name="control">The dropdown control.</param>
@@ -811,7 +811,7 @@ namespace WebExpress.WebApp.WebControl
             => BindResource<ControlDataDropdown, TResource>(control);
 
         /// <summary>
-        /// Binds the avatar dropdown to a scope resource by type.
+        /// Binds the avatar dropdown to a ViewState resource by type.
         /// </summary>
         /// <typeparam name="TResource">The resource type.</typeparam>
         /// <param name="control">The avatar dropdown control.</param>
@@ -822,7 +822,7 @@ namespace WebExpress.WebApp.WebControl
         /// <summary>
         /// Binds the watcher's users service by endpoint type, fluently and
         /// preserving the concrete control type. The parameterless overload
-        /// binds the scope users service, while the preset overload with the
+        /// binds the ViewState users service, while the preset overload with the
         /// configure callback declares an owned users island (standalone).
         /// </summary>
         /// <typeparam name="TEndpoint">The users endpoint type.</typeparam>
@@ -856,15 +856,15 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
-        /// Sets the resource binding on a scope-bound control and returns the
+        /// Sets the resource binding on a ViewState-bound control and returns the
         /// concrete control type, the shared body of the per family Resource
         /// overloads.
         /// </summary>
         /// <typeparam name="T">The control type.</typeparam>
         /// <typeparam name="TResource">The resource type.</typeparam>
-        /// <param name="control">The scope-bound control.</param>
+        /// <param name="control">The ViewState-bound control.</param>
         /// <returns>The control for chaining.</returns>
-        private static T BindResource<T, TResource>(T control) where T : IScopeBound where TResource : IDataResource
+        private static T BindResource<T, TResource>(T control) where T : IViewStateBound where TResource : IDataResource
         {
             if (control != null)
             {

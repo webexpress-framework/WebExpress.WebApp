@@ -73,7 +73,7 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
 
         /// <summary>
         /// Tests that a change message without a domain is rejected, because
-        /// the client could not route it to any scope.
+        /// the client could not route it to any ViewState.
         /// </summary>
         [Fact]
         public void ChangedMessageRequiresADomain()
@@ -112,7 +112,7 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
         /// <summary>
         /// Tests that the instance form and the type-safe form derive the same
         /// wire name as the notifier, so a change reaches the sessions a page
-        /// or a scope subscribed under that name.
+        /// or a ViewState subscribed under that name.
         /// </summary>
         [Fact]
         public void AddressDomainFormsAgreeOnTheWireName()
@@ -142,7 +142,7 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
 
         /// <summary>
         /// Tests that subscriptions accumulate over multiple messages, because
-        /// scopes mount independently and each announces its own domains.
+        /// ViewStates mount independently and each announces its own domains.
         /// </summary>
         [Fact]
         public void SubscriptionAccumulatesOverMultipleMessages()
@@ -193,7 +193,7 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
 
         /// <summary>
         /// Tests that the socket merges the runtime subscription into its
-        /// session domains, so a scope that subscribes after the page rendered
+        /// session domains, so a ViewState that subscribes after the page rendered
         /// is addressed like a page that declared the domain up front.
         /// </summary>
         [Fact]

@@ -113,7 +113,7 @@ test("watcher loads from the service when no state island is present", async () 
     assert.equal(ctrl.value[0].id, "u9");
 });
 
-test("watcher in a scope renders the central resource slice and resolves the users service from the scope", async () => {
+test("watcher in a ViewState renders the central resource slice and resolves the users service from the ViewState", async () => {
     const { wxapp, createElement, setFetch, document } = load();
     const urls = [];
     setFetch(async (url) => {
@@ -121,24 +121,24 @@ test("watcher in a scope renders the central resource slice and resolves the use
         return { ok: true, status: 200, json: async () => [{ id: "u1", name: "Ann", initials: "AN" }] };
     });
 
-    const scopeHost = createElement("div");
-    scopeHost.dataset.wxScope = "ticket";
-    appendServiceIsland(document, scopeHost, { name: "data", kind: "rest", baseUri: "/api/watchers", method: "GET", updateMethod: "PUT" });
-    appendServiceIsland(document, scopeHost, { name: "users", kind: "rest", baseUri: "/api/users", method: "GET" });
-    appendResourceIsland(document, scopeHost, { name: "watchers", service: "data", target: "watchers" });
+    const viewStateHost = createElement("div");
+    viewStateHost.dataset.wxViewstate = "ticket";
+    appendServiceIsland(document, viewStateHost, { name: "data", kind: "rest", baseUri: "/api/watchers", method: "GET", updateMethod: "PUT" });
+    appendServiceIsland(document, viewStateHost, { name: "users", kind: "rest", baseUri: "/api/users", method: "GET" });
+    appendResourceIsland(document, viewStateHost, { name: "watchers", service: "data", target: "watchers" });
 
-    const viewState = new wxapp.ViewState(scopeHost);
+    const viewState = new wxapp.ViewState(viewStateHost);
 
     const element = createElement("div");
     element.dataset.wxResource = "watchers";
     element.dataset.wxUsers = "users";
-    scopeHost.appendChild(element);
+    viewStateHost.appendChild(element);
 
     const ctrl = new wxapp.WatcherCtrl(element);
     await settle();
 
-    assert.equal(urls.length, 1, "the scope loaded the resource centrally");
+    assert.equal(urls.length, 1, "the ViewState loaded the resource centrally");
     assert.equal(ctrl.value.length, 1, "the avatar row renders the slice");
     assert.equal(ctrl.value[0].id, "u1");
-    assert.equal(ctrl._users, viewState.useService("users"), "the candidate search uses the scope users service");
+    assert.equal(ctrl._users, viewState.useService("users"), "the candidate search uses the ViewState users service");
 });

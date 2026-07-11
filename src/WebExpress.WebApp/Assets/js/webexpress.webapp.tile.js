@@ -33,14 +33,14 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
 
         super(element);
 
-        // the resource a scope renders. when present, the tiles are a pure view
-        // of a central resource the enclosing scope owns; when absent the control
+        // the resource a ViewState renders. when present, the tiles are a pure view
+        // of a central resource the enclosing ViewState owns; when absent the control
         // owns its state and loads itself (standalone).
         this._resource = (element.dataset && element.dataset.wxResource) || null;
 
         // canonical state for the tiles: a single source of truth that the
         // accessors below read from and write to. seeded from the optional
-        // wx-state island. in scope mode this is replaced by the scope ViewState
+        // wx-state island. in ViewState mode this is replaced by the ViewState
         // once it resolves.
         this._store = new webexpress.webapp.ViewState(element, { standalone: true, state: Object.assign({
             search: "",
@@ -72,9 +72,9 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
         this._initPager(element);
 
         if (this._resource) {
-            // scope mode: the enclosing scope loads the resource centrally; this
+            // ViewState mode: the enclosing ViewState loads the resource centrally; this
             // control only subscribes to its slice and renders it
-            this._attachToScope(element);
+            this._attachToViewState(element);
         } else if (this._restUri) {
             this._element.classList.add("placeholder-glow");
             this._receiveData();
@@ -90,18 +90,18 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
     }
 
     /**
-     * Attaches the tiles to the enclosing scope ViewState and renders its
-     * resource slice. The scope owns the state, the service and the central
+     * Attaches the tiles to the enclosing ViewState and renders its
+     * resource slice. The ViewState owns the state, the service and the central
      * load, so the control becomes a pure view that re-renders whenever the
-     * scope re-queries the resource. The shared scope state also becomes the
+     * ViewState re-queries the resource. The shared ViewState state also becomes the
      * control's store, so the search, paging and sort binds drive the same keys
-     * every control in the scope reads.
+     * every control in the ViewState reads.
      * @param {HTMLElement} element The host element.
      */
-    _attachToScope(element) {
-        const viewId = (element.dataset && element.dataset.wxView) || null;
+    _attachToViewState(element) {
+        const viewStateId = (element.dataset && element.dataset.wxViewstate) || null;
 
-        webexpress.webapp.ViewStateRegistry.whenReady(element, viewId, (viewState) => {
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
             this._viewState = viewState;
             this._store = viewState;
 
@@ -119,7 +119,7 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
     }
 
     /**
-     * Renders a resource slice the scope loaded centrally. The slice carries the
+     * Renders a resource slice the ViewState loaded centrally. The slice carries the
      * raw response, which the control maps into tiles exactly as the standalone
      * load does.
      * @param {object} slice The resource slice { items, total, data, loading, error }.
@@ -164,8 +164,8 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
     get _orderDir() { return this._store.getState().orderDir; }
     set _orderDir(value) { this._store.setState({ orderDir: value }); }
 
-    // in scope mode the total comes from the resource slice, not from a top
-    // level state key, so several resources in one scope keep separate totals
+    // in ViewState mode the total comes from the resource slice, not from a top
+    // level state key, so several resources in one ViewState keep separate totals
     get _totalRecords() { return this._viewState ? this._sliceTotal : this._store.getState().total; }
     set _totalRecords(value) { this._store.setState({ total: value }); }
 

@@ -5,7 +5,7 @@ namespace WebExpress.WebApp.Test.WebData
     /// <summary>
     /// Tests the C# resource descriptor that renders into the wx-resource island
     /// element. The island is consumed by webexpress.webapp.ViewState, so the test
-    /// pins the shape that the scope loads its central resources from, including
+    /// pins the shape that the ViewState loads its central resources from, including
     /// the bidirectional parameter bindings.
     /// </summary>
     public class UnitTestDataResourceDescriptor

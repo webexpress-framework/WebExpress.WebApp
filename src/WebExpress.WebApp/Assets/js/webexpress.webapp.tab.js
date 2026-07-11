@@ -39,14 +39,14 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         // initialize base class structure
         super(element);
 
-        // the resource a scope renders. when present, the tabs are a pure view
-        // of a central resource the enclosing scope owns; when absent the control
+        // the resource a ViewState renders. when present, the tabs are a pure view
+        // of a central resource the enclosing ViewState owns; when absent the control
         // owns its state and loads itself (standalone).
         this._resource = (element.dataset && element.dataset.wxResource) || null;
 
         // canonical ui state: a single source of truth for the loading flag,
-        // seeded from the optional wx-state island. in scope mode this is
-        // replaced by the scope ViewState once it resolves.
+        // seeded from the optional wx-state island. in ViewState mode this is
+        // replaced by the ViewState once it resolves.
         this._store = new webexpress.webapp.ViewState(element, { standalone: true, state: Object.assign({
             loading: false,
             error: null
@@ -82,8 +82,8 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         }
 
         if (this._resource) {
-            // scope mode: the enclosing scope loads the resource centrally
-            this._attachToScope(element);
+            // ViewState mode: the enclosing ViewState loads the resource centrally
+            this._attachToViewState(element);
         } else if (this._restUri !== "") {
             this._element.classList.add("placeholder-glow");
             this._receiveData();
@@ -105,17 +105,17 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
     set _isLoading(value) { this._store.setState({ loading: value }); }
 
     /**
-     * Attaches the tabs to the enclosing scope ViewState and renders its
-     * resource slice. The scope owns the state, the service and the central
-     * load, so the tab set re-renders whenever the scope re-queries the
-     * resource, while create, reorder and close still flow through the scope's
+     * Attaches the tabs to the enclosing ViewState and renders its
+     * resource slice. The ViewState owns the state, the service and the central
+     * load, so the tab set re-renders whenever the ViewState re-queries the
+     * resource, while create, reorder and close still flow through the ViewState's
      * service.
      * @param {HTMLElement} element The host element.
      */
-    _attachToScope(element) {
-        const viewId = (element.dataset && element.dataset.wxView) || null;
+    _attachToViewState(element) {
+        const viewStateId = (element.dataset && element.dataset.wxViewstate) || null;
 
-        webexpress.webapp.ViewStateRegistry.whenReady(element, viewId, (viewState) => {
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
             this._viewState = viewState;
             this._store = viewState;
 
@@ -133,7 +133,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
     }
 
     /**
-     * Renders a resource slice the scope loaded centrally, mapping the raw tab
+     * Renders a resource slice the ViewState loaded centrally, mapping the raw tab
      * payload into the tab set exactly as the standalone load does.
      * @param {object} slice The resource slice { items, total, data, loading, error }.
      */

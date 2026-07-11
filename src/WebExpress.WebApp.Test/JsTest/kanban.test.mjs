@@ -1,10 +1,10 @@
 /**
- * Headless test for the REST kanban control in scope mode (View, State and
- * Service at scope scope).
+ * Headless test for the REST kanban control in ViewState mode (View, State and
+ * Service).
  *
  * It instantiates the real webexpress.webapp.KanbanCtrl on the DOM stub with a
- * stubbed WebUI kanban base, inside an enclosing ViewState scope, and asserts
- * that the board normalises and renders the raw response the scope loads
+ * stubbed WebUI kanban base, inside an enclosing ViewState, and asserts
+ * that the board normalises and renders the raw response the ViewState loads
  * centrally, which is the GET/PUT data shape the kanban, dashboard, tab,
  * comment and scrum-backlog families share.
  *
@@ -44,7 +44,7 @@ async function settle() {
     await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-test("kanban in a scope normalises and renders the raw board the scope loads", async () => {
+test("kanban in a ViewState normalises and renders the raw board the ViewState loads", async () => {
     const engine = load();
     const urls = [];
     engine.setFetch(async (url) => {
@@ -58,23 +58,23 @@ test("kanban in a scope normalises and renders the raw board the scope loads", a
         };
     });
 
-    const scopeHost = engine.createElement("div");
-    scopeHost.dataset.wxScope = "board";
-    appendServiceIsland(engine.document, scopeHost, {
+    const viewStateHost = engine.createElement("div");
+    viewStateHost.dataset.wxViewstate = "board";
+    appendServiceIsland(engine.document, viewStateHost, {
         name: "data", kind: "rest", baseUri: "/api/board", method: "GET", updateMethod: "PUT"
     });
-    appendResourceIsland(engine.document, scopeHost, { name: "board", service: "data", target: "board", params: [] });
+    appendResourceIsland(engine.document, viewStateHost, { name: "board", service: "data", target: "board", params: [] });
 
-    const viewState = new engine.wxapp.ViewState(scopeHost);
+    const viewState = new engine.wxapp.ViewState(viewStateHost);
 
     const kanbanHost = engine.createElement("div");
     kanbanHost.dataset.wxResource = "board";
-    scopeHost.appendChild(kanbanHost);
+    viewStateHost.appendChild(kanbanHost);
 
     const kanban = new engine.wxapp.KanbanCtrl(kanbanHost);
     await settle();
 
-    assert.equal(urls.length, 1, "the scope loaded the resource centrally");
+    assert.equal(urls.length, 1, "the ViewState loaded the resource centrally");
     assert.equal(kanban._columns.length, 2, "the board renders the normalised columns from the slice");
     assert.ok(viewState.getState().board.data, "the slice carries the raw board response");
 });

@@ -11,11 +11,11 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// The type-safe scope ViewState host. Unlike the container form, it holds no
-    /// child controls: it declares only the scope state, the scope services and
-    /// the scope resources, all referenced by type rather than by string. The
-    /// controls of the scope are created separately and bind to a resource with
-    /// Resource&lt;TResource&gt;(); on the client they resolve the scope that
+    /// The type-safe ViewState host. Unlike the container form, it holds no
+    /// child controls: it declares only the ViewState state, the ViewState services and
+    /// the ViewState resources, all referenced by type rather than by string. The
+    /// controls of the ViewState are created separately and bind to a resource with
+    /// Resource&lt;TResource&gt;(); on the client they resolve the ViewState that
     /// declares the resource, so the host no longer needs to wrap them.
     ///
     /// <code>
@@ -27,11 +27,11 @@ namespace WebExpress.WebApp.WebControl
     ///
     /// See WebExpress/docs/view-state-service.md.
     /// </summary>
-    /// <typeparam name="TState">The scope state model; its non null properties seed the state.</typeparam>
+    /// <typeparam name="TState">The ViewState state model; its non null properties seed the state.</typeparam>
     public class ControlViewState<TState> : Control, IViewState where TState : class, new()
     {
         /// <summary>
-        /// Gets the data service descriptors of the scope.
+        /// Gets the data service descriptors of the ViewState.
         /// </summary>
         public IList<Func<IRenderControlContext, DataServiceDescriptor>> ServiceFactories { get; } = [];
 
@@ -59,31 +59,31 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, string> TemplateFactory { get; set; }
 
         /// <summary>
-        /// Gets or sets the initial scope state, built from the typed state model.
+        /// Gets or sets the initial ViewState state, built from the typed state model.
         /// </summary>
         public Func<IRenderControlContext, DataState> StateFactory { get; set; }
 
         /// <summary>
-        /// Gets the resource descriptors of the scope.
+        /// Gets the resource descriptors of the ViewState.
         /// </summary>
         public IList<Func<IRenderControlContext, DataResourceDescriptor>> ResourceFactories { get; } = [];
 
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
-        /// <param name="id">The scope id, used as the data-wx-scope identifier.</param>
+        /// <param name="id">The ViewState id, used as the data-wx-viewstate identifier.</param>
         public ControlViewState(string id = null)
             : base(id ?? RandomId.Create())
         {
         }
 
         /// <summary>
-        /// Declares the initial scope state by configuring a typed state model.
+        /// Declares the initial ViewState state by configuring a typed state model.
         /// Each non null property of the model is emitted as a state value, so
         /// the seed is written through typed properties rather than string keys.
         /// </summary>
         /// <param name="configure">The state configuration.</param>
-        /// <returns>The scope for chaining.</returns>
+        /// <returns>The ViewState for chaining.</returns>
         public ControlViewState<TState> State(Action<TState> configure)
         {
             StateFactory = _ =>
@@ -97,13 +97,13 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
-        /// Declares a scope service, identified by its endpoint type rather than
+        /// Declares a ViewState service, identified by its endpoint type rather than
         /// a string name. The endpoint is resolved through the sitemap at render
         /// time and the service name on the wire is derived from the type.
         /// </summary>
         /// <typeparam name="TEndpoint">The endpoint type of the service.</typeparam>
         /// <param name="configure">The service configuration.</param>
-        /// <returns>The scope for chaining.</returns>
+        /// <returns>The ViewState for chaining.</returns>
         public ControlViewState<TState> Service<TEndpoint>(Action<DataServiceBuilder> configure = null) where TEndpoint : IEndpoint
         {
             ServiceFactories.Add(renderContext =>
@@ -118,12 +118,12 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
-        /// Declares a scope resource, identified by its resource type rather than
+        /// Declares a ViewState resource, identified by its resource type rather than
         /// a string name. A control binds to it with Resource&lt;TResource&gt;().
         /// </summary>
         /// <typeparam name="TResource">The resource type.</typeparam>
         /// <param name="configure">The resource configuration.</param>
-        /// <returns>The scope for chaining.</returns>
+        /// <returns>The ViewState for chaining.</returns>
         public ControlViewState<TState> Resource<TResource>(Action<DataResourceBuilder> configure = null) where TResource : IDataResource
         {
             ResourceFactories.Add(_ =>
@@ -138,8 +138,8 @@ namespace WebExpress.WebApp.WebControl
 
         /// <summary>
         /// Converts the control to an HTML representation. It renders a hidden
-        /// scope host that carries the state, service and resource islands; the
-        /// host has no visible content because the scope declares no controls.
+        /// ViewState host that carries the state, service and resource islands; the
+        /// host has no visible content because the ViewState declares no controls.
         /// </summary>
         /// <param name="renderContext">The context in which the control is rendered.</param>
         /// <param name="visualTree">The visual tree.</param>
@@ -152,7 +152,7 @@ namespace WebExpress.WebApp.WebControl
                 Class = Css.Concatenate("wx-webapp-viewstate", GetClasses(renderContext)),
                 Style = GetStyles(renderContext)
             }
-                .AddUserAttribute("data-wx-scope", Id);
+                .AddUserAttribute("data-wx-viewstate", Id);
 
             var resources = ResourceFactories
                 .Select(factory => factory?.Invoke(renderContext))

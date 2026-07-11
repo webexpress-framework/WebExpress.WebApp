@@ -81,7 +81,7 @@ namespace WebExpress.WebApp.WebData
 
         /// <summary>
         /// Gets the wire names of the logical domains whose data the service
-        /// serves. A scope ViewState subscribes these domains on the message
+        /// serves. A ViewState subscribes these domains on the message
         /// queue and re-queries the resources of this service when the server
         /// announces a change, so data changed by other users re-renders
         /// without a page reload. The names are usually derived from the

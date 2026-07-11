@@ -221,7 +221,7 @@ test("workflow editor ignores a load that resolves after destroy", async () => {
     assert.equal(propsPanelCalls.count, 1);
 });
 
-test("workflow editor in a scope renders the central resource slice the scope loads", async () => {
+test("workflow editor in a ViewState renders the central resource slice the ViewState loads", async () => {
     const { engine } = load();
     const urls = [];
     engine.setFetch(async (url) => {
@@ -229,24 +229,24 @@ test("workflow editor in a scope renders the central resource slice the scope lo
         return { ok: true, status: 200, json: async () => workflowResponse() };
     });
 
-    const scopeHost = engine.createElement("div");
-    scopeHost.dataset.wxScope = "workflow";
-    appendServiceIsland(engine.document, scopeHost, { name: "data", kind: "rest", baseUri: "/api/workflow", method: "GET", updateMethod: "PUT" });
-    appendResourceIsland(engine.document, scopeHost, { name: "workflow", service: "data", target: "workflow" });
+    const viewStateHost = engine.createElement("div");
+    viewStateHost.dataset.wxViewstate = "workflow";
+    appendServiceIsland(engine.document, viewStateHost, { name: "data", kind: "rest", baseUri: "/api/workflow", method: "GET", updateMethod: "PUT" });
+    appendResourceIsland(engine.document, viewStateHost, { name: "workflow", service: "data", target: "workflow" });
 
-    new engine.wxapp.ViewState(scopeHost);
+    new engine.wxapp.ViewState(viewStateHost);
 
     const element = engine.createElement("div");
     element.dataset.wxResource = "workflow";
-    scopeHost.appendChild(element);
+    viewStateHost.appendChild(element);
 
     const editor = new engine.wxapp.WorkflowEditorCtrl(element);
     await settle();
 
-    assert.equal(urls.length, 1, "the scope loaded the resource centrally");
+    assert.equal(urls.length, 1, "the ViewState loaded the resource centrally");
     assert.equal(editor._meta.id, "wf1");
     assert.equal(editor._model.nodes.length, 2);
     assert.equal(editor._model.edges.length, 1);
-    // the autosave persists through the scope service against the scope endpoint
+    // the autosave persists through the ViewState service against the ViewState endpoint
     assert.equal(editor._restUri, "/api/workflow");
 });

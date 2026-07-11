@@ -27,7 +27,7 @@ webexpress.webapp.MessageQueue = new class {
         this._wsUrl = null;
         this._domains = null;
 
-        // domains subscribed at runtime (by scope ViewStates); re-announced
+        // domains subscribed at runtime (by ViewStates); re-announced
         // after every reconnect because the server keeps them per connection
         this._subscribedDomains = new Set();
     }
@@ -199,7 +199,7 @@ webexpress.webapp.MessageQueue = new class {
 
     /**
      * Subscribes the connection to data change messages of the given domains.
-     * A scope ViewState calls this with the domains its services declare, so
+     * A ViewState calls this with the domains its services declare, so
      * the server addresses it like a page that declared them up front. The
      * subscription is remembered and re-announced after every reconnect,
      * because the server keeps the domain set per connection.

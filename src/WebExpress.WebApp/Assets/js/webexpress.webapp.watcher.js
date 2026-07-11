@@ -10,10 +10,10 @@
  * "data" for the watcher endpoint and an optional second island named
  * "users" for the candidate search.
  *
- * It is scope-capable: when the host carries a data-wx-resource binding the
- * watchers are a slice of an enclosing ViewState scope, so the control
- * subscribes to that slice and the scope owns the central load; the users
- * service is then resolved from the scope through the data-wx-users binding.
+ * It is ViewState-capable: when the host carries a data-wx-resource binding the
+ * watchers are a slice of an enclosing ViewState, so the control
+ * subscribes to that slice and the ViewState owns the central load; the users
+ * service is then resolved from the ViewState through the data-wx-users binding.
  * Without a binding the control owns its own islands and loads itself
  * (standalone).
  *
@@ -43,8 +43,8 @@ webexpress.webapp.WatcherCtrl = class extends webexpress.webapp.Data {
 
         this._maxVisible = parseInt(element.dataset.maxVisible || "6", 10);
         this._readonly = element.dataset.readonly === "true";
-        // the resource a scope renders; when present the watchers are a pure
-        // view of a central resource the enclosing scope owns, when absent the
+        // the resource a ViewState renders; when present the watchers are a pure
+        // view of a central resource the enclosing ViewState owns, when absent the
         // control loads itself (standalone)
         this._resource = (element.dataset && element.dataset.wxResource) || null;
         this._service = this.useService("data");
@@ -68,24 +68,24 @@ webexpress.webapp.WatcherCtrl = class extends webexpress.webapp.Data {
         // when the server seeded the watchers through the data-wx-state island the
         // first paint needs no round trip; otherwise load them from the endpoint
         if (this._resource) {
-            this._attachToScope(element);
+            this._attachToViewState(element);
         } else if (this._watchers.length === 0) {
             this._load();
         }
     }
 
     /**
-     * Attaches the control to the enclosing scope ViewState and renders its
-     * resource slice. The scope owns the central load and the service; the
-     * candidate search users service also comes from the scope, resolved by
+     * Attaches the control to the enclosing ViewState and renders its
+     * resource slice. The ViewState owns the central load and the service; the
+     * candidate search users service also comes from the ViewState, resolved by
      * the type-safe users binding the control emits. Additions and removals
-     * still persist through the scope's data service.
+     * still persist through the ViewState's data service.
      * @param {HTMLElement} element - The host element.
      */
-    _attachToScope(element) {
-        const viewId = (element.dataset && element.dataset.wxView) || null;
+    _attachToViewState(element) {
+        const viewStateId = (element.dataset && element.dataset.wxViewstate) || null;
 
-        webexpress.webapp.ViewStateRegistry.whenReady(element, viewId, (viewState) => {
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
             this._viewState = viewState;
 
             const service = viewState.serviceForResource(this._resource);
@@ -107,7 +107,7 @@ webexpress.webapp.WatcherCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Renders a resource slice the scope loaded centrally.
+     * Renders a resource slice the ViewState loaded centrally.
      * @param {object} slice - The resource slice { items, total, data, loading, error }.
      */
     _applySlice(slice) {
@@ -379,7 +379,7 @@ webexpress.webapp.WatcherCtrl = class extends webexpress.webapp.Data {
             this._watchers = this._watchers.concat([created]);
             this._dispatch(webexpress.webapp.Event.WATCHER_ADDED_EVENT, { user: created });
 
-            // in scope mode the resource is re-queried so sibling controls refresh
+            // in ViewState mode the resource is re-queried so sibling controls refresh
             if (this._viewState && this._resource) {
                 this._viewState.reload(this._resource);
             }
@@ -402,7 +402,7 @@ webexpress.webapp.WatcherCtrl = class extends webexpress.webapp.Data {
             this._watchers = webexpress.webapp.watcherModel.removeById(this._watchers, user.id);
             this._dispatch(webexpress.webapp.Event.WATCHER_REMOVED_EVENT, { user });
 
-            // in scope mode the resource is re-queried so sibling controls refresh
+            // in ViewState mode the resource is re-queried so sibling controls refresh
             if (this._viewState && this._resource) {
                 this._viewState.reload(this._resource);
             }

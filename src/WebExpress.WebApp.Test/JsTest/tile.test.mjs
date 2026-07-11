@@ -131,7 +131,7 @@ test("tile paging and filter dispatch their intents through the store", async ()
     assert.equal(tile._filter, "insult");
 });
 
-test("tile in a scope renders the central resource slice the scope loads", async () => {
+test("tile in a ViewState renders the central resource slice the ViewState loads", async () => {
     const engine = load();
     const urls = [];
     engine.setFetch(async (url) => {
@@ -139,28 +139,28 @@ test("tile in a scope renders the central resource slice the scope loads", async
         return { ok: true, status: 200, json: async () => ({ items: [{ id: "a", label: "A" }, { id: "b", label: "B" }], total: 4 }) };
     });
 
-    const scopeHost = engine.createElement("div");
-    scopeHost.dataset.wxScope = "gallery";
-    appendStateIsland(engine.document, scopeHost, { page: 0, search: "" });
-    appendServiceIsland(engine.document, scopeHost, {
+    const viewStateHost = engine.createElement("div");
+    viewStateHost.dataset.wxViewstate = "gallery";
+    appendStateIsland(engine.document, viewStateHost, { page: 0, search: "" });
+    appendServiceIsland(engine.document, viewStateHost, {
         name: "data", kind: "rest", baseUri: "/api/gallery", method: "GET", updateMethod: "PUT",
         query: { page: "p", search: "q" }, response: { items: "items", total: "total" }
     });
-    appendResourceIsland(engine.document, scopeHost, {
+    appendResourceIsland(engine.document, viewStateHost, {
         name: "tiles", service: "data", target: "tiles",
         params: [{ name: "page", state: "page", dir: "inout" }, { name: "search", state: "search", dir: "out" }]
     });
 
-    const viewState = new engine.wxapp.ViewState(scopeHost);
+    const viewState = new engine.wxapp.ViewState(viewStateHost);
 
     const tileHost = engine.createElement("div");
     tileHost.dataset.wxResource = "tiles";
-    scopeHost.appendChild(tileHost);
+    viewStateHost.appendChild(tileHost);
 
     const tile = new engine.wxapp.TileCtrl(tileHost);
     await settle();
 
-    assert.equal(urls.length, 1, "the scope loaded the resource centrally");
+    assert.equal(urls.length, 1, "the ViewState loaded the resource centrally");
     assert.equal(tile._items.length, 2, "the tiles render the slice items");
     assert.equal(tile._totalRecords, 4, "the tiles read the total from the slice");
     assert.equal(viewState.getState().tiles.items.length, 2);

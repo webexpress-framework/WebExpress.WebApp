@@ -794,7 +794,7 @@ namespace WebExpress.WebApp.WebRestApi
 
         /// <summary>
         /// Announces a data change for the specified entity if it belongs to a
-        /// domain, so open scopes re-query the changed data. Entities that do
+        /// domain, so open ViewStates re-query the changed data. Entities that do
         /// not implement IDomain are ignored.
         /// </summary>
         /// <param name="entity">

@@ -88,9 +88,9 @@ element.addEventListener(webexpress.webapp.Event.CHANGE_STATUS_EVENT, (e) => {
 
 Setting `data-readonly="true"` (or `Readonly = _ => true` on the `ControlDataTrafficLight`) composes the dedicated **read-only representation** (`webexpress.webui.TrafficLightCtrl`, `role="img"`) instead of a disabled input: the current status is still loaded from the endpoint, but the lamps are not interactive and a change is never persisted. This is useful for dashboards and status surfaces that display a state without allowing edits.
 
-## Scope Binding (ViewState)
+## ViewState Binding
 
-`ControlDataTrafficLight` is **scope-capable**. Bound to a resource of an enclosing `ControlViewState` scope, the status becomes a slice of that scope's shared state instead of an independent surface:
+`ControlDataTrafficLight` is **ViewState-capable**. Bound to a resource of an enclosing `ControlViewState`, the status becomes a slice of that ViewState's shared state instead of an independent surface:
 
 ```csharp
 new ControlViewState("incident", status, tags, assignee)
@@ -98,14 +98,14 @@ new ControlViewState("incident", status, tags, assignee)
     .Service("data", svc => svc./* … */)
     .Resource<IncidentStatusResource>();
 
-// inside the scope:
+// inside the ViewState:
 new ControlDataTrafficLight("status").Resource<IncidentStatusResource>();
 ```
 
 When a resource is bound the control:
 
-- emits only the `data-wx-resource` binding (and the optional `data-wx-view` scope id) instead of its own `wx-service` island, because the scope owns the state, the service and the central load;
-- on the client, resolves the enclosing `ViewState`, **subscribes** to the resource slice and re-renders whenever the scope re-queries it;
-- in editable mode, persists a change through the scope's resource service and then **re-queries** the resource, so every sibling control bound to the same resource refreshes.
+- emits only the `data-wx-resource` binding (and the optional `data-wx-viewstate` id) instead of its own `wx-service` island, because the ViewState owns the state, the service and the central load;
+- on the client, resolves the enclosing `ViewState`, **subscribes** to the resource slice and re-renders whenever the ViewState re-queries it;
+- in editable mode, persists a change through the ViewState's resource service and then **re-queries** the resource, so every sibling control bound to the same resource refreshes.
 
 Left unbound, the control owns its `wx-service` island and loads itself (standalone), exactly as documented above. The path is chosen automatically — by `DataIslandExtensions.EmitDataIslands` on the server and by the presence of `data-wx-resource` on the client.

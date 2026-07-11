@@ -7,15 +7,15 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebFragment
 {
     /// <summary>
-    /// A scope ViewState made available as a fragment, so the framework can
+    /// A ViewState made available as a fragment, so the framework can
     /// insert it into a WebApp page section. A page that is composed from
-    /// fragments uses this to inject the scope its scope-bound control fragments
+    /// fragments uses this to inject the ViewState its bound control fragments
     /// resolve by resource, mirroring the fragment form of the data controls
     /// (FragmentControlDataList and the rest). The fragment is generic over the
-    /// scope state model and carries the typed State, Service and Resource
+    /// ViewState state model and carries the typed State, Service and Resource
     /// authoring of <see cref="ControlViewState{TState}"/>.
     /// </summary>
-    /// <typeparam name="TState">The scope state model.</typeparam>
+    /// <typeparam name="TState">The ViewState state model.</typeparam>
     public abstract class FragmentControlViewState<TState> : ControlViewState<TState>, IFragmentControl<ControlViewState<TState>>, IFragmentControlViewState where TState : class, new()
     {
         /// <summary>

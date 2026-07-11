@@ -21,14 +21,14 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
 
         super(element);
 
-        // the resource a scope renders. when present, the board is a pure view of
-        // a central resource the enclosing scope owns; when absent it owns its
+        // the resource a ViewState renders. when present, the board is a pure view of
+        // a central resource the enclosing ViewState owns; when absent it owns its
         // state and loads itself (standalone).
         this._resource = (element.dataset && element.dataset.wxResource) || null;
 
         // canonical ui state: a single source of truth for the loading flag,
-        // seeded from the optional wx-state island. in scope mode this is
-        // replaced by the scope ViewState once it resolves.
+        // seeded from the optional wx-state island. in ViewState mode this is
+        // replaced by the ViewState once it resolves.
         this._store = new webexpress.webapp.ViewState(element, { standalone: true, state: Object.assign({
             loading: false
         }, webexpress.webapp.Data.readState(element)) });
@@ -42,8 +42,8 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
         this._initRestPersistence(element);
 
         if (this._resource) {
-            // scope mode: the enclosing scope loads the resource centrally
-            this._attachToScope(element);
+            // ViewState mode: the enclosing ViewState loads the resource centrally
+            this._attachToViewState(element);
         } else if (this._restUri) {
             this._receiveData();
 
@@ -58,16 +58,16 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
     }
 
     /**
-     * Attaches the board to the enclosing scope ViewState and renders its
-     * resource slice. The scope owns the state, the service and the central
-     * load, so the board re-renders whenever the scope re-queries the resource,
-     * while card moves still persist through the scope's update service.
+     * Attaches the board to the enclosing ViewState and renders its
+     * resource slice. The ViewState owns the state, the service and the central
+     * load, so the board re-renders whenever the ViewState re-queries the resource,
+     * while card moves still persist through the ViewState's update service.
      * @param {HTMLElement} element The host element.
      */
-    _attachToScope(element) {
-        const viewId = (element.dataset && element.dataset.wxView) || null;
+    _attachToViewState(element) {
+        const viewStateId = (element.dataset && element.dataset.wxViewstate) || null;
 
-        webexpress.webapp.ViewStateRegistry.whenReady(element, viewId, (viewState) => {
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
             this._viewState = viewState;
             this._store = viewState;
 
@@ -85,7 +85,7 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
     }
 
     /**
-     * Renders a resource slice the scope loaded centrally, normalising the raw
+     * Renders a resource slice the ViewState loaded centrally, normalising the raw
      * board payload exactly as the standalone load does.
      * @param {object} slice The resource slice { items, total, data, loading, error }.
      */

@@ -9,9 +9,9 @@
  * - editable composes the interactive webexpress.webui.InputTrafficLightCtrl and
  *   persists each change.
  *
- * It is scope-capable: when the host carries a data-wx-resource binding the
- * status is a slice of an enclosing ViewState scope, so the control subscribes
- * to that slice and the scope owns the central load; without a binding it owns
+ * It is ViewState-capable: when the host carries a data-wx-resource binding the
+ * status is a slice of an enclosing ViewState, so the control subscribes
+ * to that slice and the ViewState owns the central load; without a binding it owns
  * its own wx-service island and loads itself (standalone).
  *
  * The following event is triggered (in addition to the composed control's
@@ -35,8 +35,8 @@ webexpress.webapp.TrafficLightCtrl = class extends webexpress.webui.Ctrl {
         // (there is no css on the host class, the visuals live on the inner)
 
         this._readonly = element.dataset.readonly === "true";
-        // the resource a scope renders; when present the status is a pure view of
-        // a central resource the enclosing scope owns, when absent the control
+        // the resource a ViewState renders; when present the status is a pure view of
+        // a central resource the enclosing ViewState owns, when absent the control
         // loads itself (standalone)
         this._resource = (element.dataset && element.dataset.wxResource) || null;
         this._service = islandServices.data || null;
@@ -70,7 +70,7 @@ webexpress.webapp.TrafficLightCtrl = class extends webexpress.webui.Ctrl {
         }
 
         if (this._resource) {
-            this._attachToScope(element);
+            this._attachToViewState(element);
         } else if (this._service) {
             this._load();
         }
@@ -129,16 +129,16 @@ webexpress.webapp.TrafficLightCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Attaches the control to the enclosing scope ViewState and renders its
-     * resource slice. The scope owns the central load and the service; this
-     * control becomes a pure view that re-renders whenever the scope re-queries
+     * Attaches the control to the enclosing ViewState and renders its
+     * resource slice. The ViewState owns the central load and the service; this
+     * control becomes a pure view that re-renders whenever the ViewState re-queries
      * the resource.
      * @param {HTMLElement} element - The host element.
      */
-    _attachToScope(element) {
-        const viewId = (element.dataset && element.dataset.wxView) || null;
+    _attachToViewState(element) {
+        const viewStateId = (element.dataset && element.dataset.wxViewstate) || null;
 
-        webexpress.webapp.ViewStateRegistry.whenReady(element, viewId, (viewState) => {
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
             this._viewState = viewState;
 
             const service = viewState.serviceForResource(this._resource);
@@ -154,7 +154,7 @@ webexpress.webapp.TrafficLightCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Renders a resource slice the scope loaded centrally.
+     * Renders a resource slice the ViewState loaded centrally.
      * @param {object} slice - The resource slice { data, loading, error }.
      */
     _applySlice(slice) {
@@ -165,7 +165,7 @@ webexpress.webapp.TrafficLightCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Persists the current status through the service's update method. In scope
+     * Persists the current status through the service's update method. In ViewState
      * mode the resource is re-queried afterwards so sibling controls refresh.
      * @returns {Promise<void>} Resolves when the status is persisted.
      */

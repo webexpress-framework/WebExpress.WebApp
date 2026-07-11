@@ -130,7 +130,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         this.mount();
 
         if (this._resource) {
-            this._attachToScope(element);
+            this._attachToViewState(element);
         } else if (this._restUri !== "" && project.tasks.length === 0) {
             this._load();
         }
@@ -228,7 +228,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
 
     /**
      * Reloads the project from the configured REST endpoint, or through the
-     * enclosing scope when the control is a resource view.
+     * enclosing ViewState when the control is a resource view.
      * @returns {void}
      */
     refresh() {
@@ -561,19 +561,19 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Attaches the control to the enclosing scope ViewState and renders its
-     * resource slice. The scope owns the state, the service and the central
-     * load, while mutations still persist through the scope's data service.
+     * Attaches the control to the enclosing ViewState and renders its
+     * resource slice. The ViewState owns the state, the service and the central
+     * load, while mutations still persist through the ViewState's data service.
      * @param {HTMLElement} element - The host element.
      */
-    _attachToScope(element) {
+    _attachToViewState(element) {
         if (!webexpress.webapp.ViewStateRegistry) {
             return;
         }
 
-        const viewId = (element.dataset && element.dataset.wxView) || null;
+        const viewStateId = (element.dataset && element.dataset.wxViewstate) || null;
 
-        webexpress.webapp.ViewStateRegistry.whenReady(element, viewId, (viewState) => {
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
             this._viewState = viewState;
 
             const service = viewState.serviceForResource(this._resource);
@@ -590,7 +590,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Renders a resource slice the scope loaded centrally.
+     * Renders a resource slice the ViewState loaded centrally.
      * @param {object} slice - The resource slice { data, loading, error }.
      */
     _applySlice(slice) {

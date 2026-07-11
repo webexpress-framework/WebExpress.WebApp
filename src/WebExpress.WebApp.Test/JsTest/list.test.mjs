@@ -1,11 +1,11 @@
 /**
- * Headless tests for the REST list control in scope mode (View, State and
- * Service at scope scope).
+ * Headless tests for the REST list control in ViewState mode (View, State and
+ * Service).
  *
  * They instantiate the real webexpress.webapp.ListCtrl on the DOM stub with a
- * stubbed WebUI list base, inside an enclosing ViewState scope, and assert that
- * the list renders the central resource slice the scope loads, and that its
- * search re-queries the resource through the shared scope state instead of
+ * stubbed WebUI list base, inside an enclosing ViewState, and assert that
+ * the list renders the central resource slice the ViewState loads, and that its
+ * search re-queries the resource through the shared ViewState state instead of
  * loading the data itself.
  *
  * Run with Node 18 or newer from the jstest folder:
@@ -44,35 +44,35 @@ function load(options) {
 }
 
 /**
- * Builds a scope host with a data service and an orders resource, instantiates
+ * Builds a ViewState host with a data service and an orders resource, instantiates
  * the ViewState for it, then appends a list element bound to that resource.
  * @param {object} engine - The loaded engine.
- * @returns {object} The scope ViewState and the list host element.
+ * @returns {object} The ViewState and the list host element.
  */
-function buildScopeWithList(engine) {
-    const scopeHost = engine.createElement("div");
-    scopeHost.dataset.wxScope = "orders";
-    appendStateIsland(engine.document, scopeHost, { page: 0, search: "" });
-    appendServiceIsland(engine.document, scopeHost, {
+function buildViewStateWithList(engine) {
+    const viewStateHost = engine.createElement("div");
+    viewStateHost.dataset.wxViewstate = "orders";
+    appendStateIsland(engine.document, viewStateHost, { page: 0, search: "" });
+    appendServiceIsland(engine.document, viewStateHost, {
         name: "data", kind: "rest", baseUri: "/api/orders", method: "GET",
         query: { page: "p", search: "q" }, response: { items: "items", total: "total" }
     });
-    appendResourceIsland(engine.document, scopeHost, {
+    appendResourceIsland(engine.document, viewStateHost, {
         name: "orders", service: "data", target: "orders",
         params: [{ name: "page", state: "page", dir: "inout" }, { name: "search", state: "search", dir: "out" }]
     });
 
-    const viewState = new engine.wxapp.ViewState(scopeHost);
+    const viewState = new engine.wxapp.ViewState(viewStateHost);
 
     const listHost = engine.createElement("div");
     listHost.dataset.wxResource = "orders";
-    scopeHost.appendChild(listHost);
+    viewStateHost.appendChild(listHost);
 
     return { viewState, listHost };
 }
 
 /**
- * Awaits the pending load turns of the scope and the control.
+ * Awaits the pending load turns of the ViewState and the control.
  * @returns {Promise<void>} A promise that resolves after the pending turns.
  */
 async function settle() {
@@ -80,7 +80,7 @@ async function settle() {
     await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-test("list in a scope renders the central resource slice the scope loads", async () => {
+test("list in a ViewState renders the central resource slice the ViewState loads", async () => {
     const engine = load();
     const urls = [];
     engine.setFetch(async (url) => {
@@ -88,11 +88,11 @@ test("list in a scope renders the central resource slice the scope loads", async
         return { ok: true, status: 200, json: async () => ({ items: [{ id: "a", text: "A" }, { id: "b", text: "B" }], total: 7 }) };
     });
 
-    const { viewState, listHost } = buildScopeWithList(engine);
+    const { viewState, listHost } = buildViewStateWithList(engine);
     const list = new engine.wxapp.ListCtrl(listHost);
     await settle();
 
-    // the scope loaded the resource centrally, the list did not load itself
+    // the ViewState loaded the resource centrally, the list did not load itself
     assert.equal(urls.length, 1);
     assert.match(urls[0], /\/api\/orders\?/);
     assert.match(urls[0], /p=0/);
@@ -101,7 +101,7 @@ test("list in a scope renders the central resource slice the scope loads", async
     assert.equal(viewState.getState().orders.items.length, 2);
 });
 
-test("list search re-queries the resource through the shared scope state", async () => {
+test("list search re-queries the resource through the shared ViewState state", async () => {
     const engine = load();
     const urls = [];
     engine.setFetch(async (url) => {
@@ -109,7 +109,7 @@ test("list search re-queries the resource through the shared scope state", async
         return { ok: true, status: 200, json: async () => ({ items: [], total: 0 }) };
     });
 
-    const { viewState, listHost } = buildScopeWithList(engine);
+    const { viewState, listHost } = buildViewStateWithList(engine);
     const list = new engine.wxapp.ListCtrl(listHost);
     await settle();
 
@@ -119,5 +119,5 @@ test("list search re-queries the resource through the shared scope state", async
     assert.equal(urls.length, 2, "the search triggers a central re-query, not a private load");
     assert.match(urls[1], /q=guybrush/);
     assert.match(urls[1], /p=0/);
-    assert.equal(viewState.getState().search, "guybrush", "the search lives in the shared scope state");
+    assert.equal(viewState.getState().search, "guybrush", "the search lives in the shared ViewState state");
 });

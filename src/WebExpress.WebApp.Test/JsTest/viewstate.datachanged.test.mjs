@@ -1,5 +1,5 @@
 /**
- * Headless unit tests for the live data update wiring of the scope ViewState.
+ * Headless unit tests for the live data update wiring of the ViewState.
  *
  * Run with Node 18 or newer from the jstest folder:
  *   node --test
@@ -48,13 +48,13 @@ function installQueue(engine) {
 }
 
 /**
- * Builds a scope host whose service declares the order domain and whose
+ * Builds a ViewState host whose service declares the order domain and whose
  * resource binds that service, mirroring the markup the C# ControlViewState
  * emits for an endpoint with a derivable domain.
  */
-function buildScope(engine, { domains = [ORDER_DOMAIN], auto = false } = {}) {
+function buildViewState(engine, { domains = [ORDER_DOMAIN], auto = false } = {}) {
     const host = engine.document.createElement("div");
-    host.dataset.wxScope = "orders";
+    host.dataset.wxViewstate = "orders";
 
     appendStateIsland(engine.document, host, { page: 0 });
     appendServiceIsland(engine.document, host, {
@@ -80,21 +80,21 @@ async function settleChanges(engine, ms = 80) {
     }
 }
 
-test("a scope with domain-declaring services registers and subscribes on the queue", () => {
+test("a ViewState with domain-declaring services registers and subscribes on the queue", () => {
     const engine = loadEngine();
     const queue = installQueue(engine);
 
-    new engine.wxapp.ViewState(buildScope(engine));
+    new engine.wxapp.ViewState(buildViewState(engine));
 
-    assert.equal(queue.listeners.length, 1, "the scope registers one queue listener");
-    assert.deepEqual(queue.subscribed, [ORDER_DOMAIN], "the scope subscribes the service's domains");
+    assert.equal(queue.listeners.length, 1, "the ViewState registers one queue listener");
+    assert.deepEqual(queue.subscribed, [ORDER_DOMAIN], "the ViewState subscribes the service's domains");
 });
 
-test("a scope without domains stays detached from the queue", () => {
+test("a ViewState without domains stays detached from the queue", () => {
     const engine = loadEngine();
     const queue = installQueue(engine);
 
-    new engine.wxapp.ViewState(buildScope(engine, { domains: [] }));
+    new engine.wxapp.ViewState(buildViewState(engine, { domains: [] }));
 
     assert.equal(queue.listeners.length, 0);
     assert.equal(queue.subscribed.length, 0);
@@ -110,7 +110,7 @@ test("a data change of the subscribed domain re-queries the bound resource", asy
         return { ok: true, status: 200, json: async () => ({ items: [fetchCalls], total: 1 }) };
     });
 
-    const vs = new engine.wxapp.ViewState(buildScope(engine));
+    const vs = new engine.wxapp.ViewState(buildViewState(engine));
 
     queue.push({ type: CHANGED_TYPE, domain: ORDER_DOMAIN, operation: "updated", itemId: "42" });
     await settleChanges(engine);
@@ -130,7 +130,7 @@ test("the domain matching is case-insensitive, mirroring the server derivation",
         return { ok: true, status: 200, json: async () => ({ items: [], total: 0 }) };
     });
 
-    new engine.wxapp.ViewState(buildScope(engine));
+    new engine.wxapp.ViewState(buildViewState(engine));
 
     queue.push({ type: CHANGED_TYPE, domain: "My.App.Order", operation: "created" });
     await settleChanges(engine);
@@ -148,7 +148,7 @@ test("a change of a foreign domain and non-change messages are ignored", async (
         return { ok: true, status: 200, json: async () => ({ items: [], total: 0 }) };
     });
 
-    new engine.wxapp.ViewState(buildScope(engine));
+    new engine.wxapp.ViewState(buildViewState(engine));
 
     queue.push({ type: CHANGED_TYPE, domain: "my.app.customer", operation: "updated" });
     queue.push({ type: "webexpress.webapp.collaborative.cursor", domain: ORDER_DOMAIN });
@@ -169,7 +169,7 @@ test("a burst of changes coalesces into one re-query per resource", async () => 
         return { ok: true, status: 200, json: async () => ({ items: [], total: 0 }) };
     });
 
-    new engine.wxapp.ViewState(buildScope(engine));
+    new engine.wxapp.ViewState(buildViewState(engine));
 
     for (let i = 0; i < 5; i++) {
         queue.push({ type: CHANGED_TYPE, domain: ORDER_DOMAIN, operation: "updated", itemId: String(i) });
@@ -189,7 +189,7 @@ test("destroy unregisters the queue listener and cancels a pending re-query", as
         return { ok: true, status: 200, json: async () => ({ items: [], total: 0 }) };
     });
 
-    const vs = new engine.wxapp.ViewState(buildScope(engine));
+    const vs = new engine.wxapp.ViewState(buildViewState(engine));
 
     queue.push({ type: CHANGED_TYPE, domain: ORDER_DOMAIN, operation: "updated" });
     vs.destroy();
@@ -205,10 +205,10 @@ test("controls bound to a re-queried resource play the change flash", async () =
 
     engine.setFetch(async () => ({ ok: true, status: 200, json: async () => ({ items: [], total: 0 }) }));
 
-    const host = buildScope(engine);
+    const host = buildViewState(engine);
     engine.document.body.appendChild(host);
 
-    // a scope-bound control carries the data-wx-resource binding on its host
+    // a ViewState-bound control carries the data-wx-resource binding on its host
     const control = engine.document.createElement("div");
     control.setAttribute("data-wx-resource", "orders");
     engine.document.body.appendChild(control);
@@ -235,7 +235,7 @@ test("the change flash is removed after its duration and can restart", async () 
     // shorten the flash so the removal is observable without a long wait
     engine.wxapp.DataChangeSubscription.FLASH_MS = 40;
 
-    const host = buildScope(engine);
+    const host = buildViewState(engine);
     engine.document.body.appendChild(host);
     const control = engine.document.createElement("div");
     control.setAttribute("data-wx-resource", "orders");
@@ -335,7 +335,7 @@ test("all resources of the changed domain re-query, others stay untouched", asyn
     });
 
     const host = engine.document.createElement("div");
-    host.dataset.wxScope = "mixed";
+    host.dataset.wxViewstate = "mixed";
     appendServiceIsland(engine.document, host, {
         name: "orders-data", baseUri: "/api/orders", method: "GET", domains: [ORDER_DOMAIN]
     });

@@ -303,9 +303,9 @@ webexpress.webapp.TagEditorCtrl = class extends webexpress.webui.InputTagCtrl {
  * adds a "+" button that opens a modal in which tags are added or deleted via a
  * TagEditorCtrl. On close, the read-only chips reflect the edits.
  *
- * It is scope-capable: when the host carries a data-wx-resource binding the
- * tags are a slice of an enclosing ViewState scope, so the control subscribes
- * to that slice and the scope owns the central load; without a binding it owns
+ * It is ViewState-capable: when the host carries a data-wx-resource binding the
+ * tags are a slice of an enclosing ViewState, so the control subscribes
+ * to that slice and the ViewState owns the central load; without a binding it owns
  * its own wx-service island and loads itself (standalone).
  *
  * Setting data-readonly="true" suppresses the "+" button, leaving a pure
@@ -332,8 +332,8 @@ webexpress.webapp.TagCtrl = class extends webexpress.webui.TagCtrl {
         // the endpoint is authored in C# through the wx-service island
         this._service = islandServices.data || null;
         this._apiEndpoint = this._service ? this._service.baseUri : null;
-        // the resource a scope renders; when present the tags are a pure view of
-        // a central resource the enclosing scope owns, when absent the control
+        // the resource a ViewState renders; when present the tags are a pure view of
+        // a central resource the enclosing ViewState owns, when absent the control
         // loads itself (standalone)
         this._resource = (element.dataset && element.dataset.wxResource) || null;
         this._readonly = element.dataset.readonly === "true";
@@ -352,24 +352,24 @@ webexpress.webapp.TagCtrl = class extends webexpress.webui.TagCtrl {
 
         // initial load of the attached tags
         if (this._resource) {
-            this._attachToScope(element);
+            this._attachToViewState(element);
         } else if (this._apiEndpoint) {
             this._loadTags();
         }
     }
 
     /**
-     * Attaches the control to the enclosing scope ViewState and renders its
-     * resource slice. The scope owns the central load and the service; the
-     * editor's additions and deletions still persist through the scope's data
+     * Attaches the control to the enclosing ViewState and renders its
+     * resource slice. The ViewState owns the central load and the service; the
+     * editor's additions and deletions still persist through the ViewState's data
      * service, and the resource is re-queried afterwards so sibling controls
      * refresh.
      * @param {HTMLElement} element - The host element.
      */
-    _attachToScope(element) {
-        const viewId = (element.dataset && element.dataset.wxView) || null;
+    _attachToViewState(element) {
+        const viewStateId = (element.dataset && element.dataset.wxViewstate) || null;
 
-        webexpress.webapp.ViewStateRegistry.whenReady(element, viewId, (viewState) => {
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
             this._viewState = viewState;
 
             const service = viewState.serviceForResource(this._resource);
@@ -386,7 +386,7 @@ webexpress.webapp.TagCtrl = class extends webexpress.webui.TagCtrl {
     }
 
     /**
-     * Renders a resource slice the scope loaded centrally.
+     * Renders a resource slice the ViewState loaded centrally.
      * @param {object} slice - The resource slice { items, total, data, loading, error }.
      */
     _applySlice(slice) {
@@ -469,7 +469,7 @@ webexpress.webapp.TagCtrl = class extends webexpress.webui.TagCtrl {
             editor.destroy();
             host.remove();
 
-            // in scope mode the resource is re-queried so sibling controls refresh
+            // in ViewState mode the resource is re-queried so sibling controls refresh
             if (this._viewState && this._resource) {
                 this._viewState.reload(this._resource);
             }
