@@ -2,6 +2,7 @@ using System.Net.Http;
 using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebControl;
 using WebExpress.WebApp.WebData;
+using WebExpress.WebCore.WebParameter;
 using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.Test.WebData
@@ -176,6 +177,34 @@ namespace WebExpress.WebApp.Test.WebData
             // validation
             Assert.Contains("<wx-prop name=\"page\" type=\"number\">0</wx-prop>", island);
             Assert.Contains("<wx-prop name=\"pageSize\" type=\"number\">25</wx-prop>", island);
+        }
+
+        /// <summary>
+        /// Tests that a table whose service endpoint is keyed by a route parameter
+        /// emits a wx-service island with the ${name} placeholder expanded to the
+        /// value the current request carries, so the client fetches the concrete
+        /// resource. This is the end-to-end shape of the class detail page: the
+        /// page route binds classid and the table's endpoint is
+        /// /api/1/fields/${classid}/table.
+        /// </summary>
+        [Fact]
+        public void ServiceEndpointRouteParameterExpandsAtEmission()
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock(null, null, new Parameter("classid", "41bf8ef5-03b8-4ccd-8666-83d91450abc5", ParameterScope.Url));
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlDataTable("fields")
+            {
+                ServiceFactory = _ => DataServiceDescriptor.TableData("/api/1/fields/${classid}/table")
+            };
+
+            // act
+            var html = control.Render(context, visualTree).ToString();
+
+            // validation: the island carries the concrete resource, not the placeholder
+            Assert.Contains("base-uri=\"/api/1/fields/41bf8ef5-03b8-4ccd-8666-83d91450abc5/table\"", html);
+            Assert.DoesNotContain("${classid}", html);
         }
 
         /// <summary>

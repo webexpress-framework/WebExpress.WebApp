@@ -1,7 +1,10 @@
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Net;
+using System.Text.RegularExpressions;
 using WebExpress.WebCore.WebHtml;
+using WebExpress.WebCore.WebMessage;
 
 namespace WebExpress.WebApp.WebData
 {
@@ -22,6 +25,14 @@ namespace WebExpress.WebApp.WebData
     /// </summary>
     public class DataServiceDescriptor
     {
+        /// <summary>
+        /// Matches a ${name} path variable placeholder that the sitemap leaves in
+        /// a resolved base address when the endpoint route carries a path
+        /// parameter without a bound value (see
+        /// UriPathSegmentVariable.ToString). The captured group is the variable
+        /// name, which is also the request parameter key that fills it.
+        /// </summary>
+        private static readonly Regex PathVariablePlaceholder = new(@"\$\{([^{}]+)\}", RegexOptions.Compiled);
 
         /// <summary>
         /// Gets the logical service name, for example "data". The component
@@ -358,6 +369,106 @@ namespace WebExpress.WebApp.WebData
         {
             RetryCount = count;
             RetryDelayMilliseconds = delayMilliseconds;
+            return this;
+        }
+
+        /// <summary>
+        /// Expands the ${name} path variable placeholders the sitemap leaves in
+        /// the base address when the endpoint route carries a path parameter
+        /// without a bound value, so a service whose endpoint is keyed by a route
+        /// parameter (for example /api/1/fields/${classid}/table) points at the
+        /// concrete resource of the current request rather than at a literal
+        /// placeholder the client cannot resolve. Each placeholder is replaced
+        /// with the value of the request parameter of the same name; the lookup
+        /// is case insensitive, because the placeholder carries the segment's
+        /// variable name while the request stores the route parameter key in
+        /// lower case. A placeholder without a matching request parameter is left
+        /// untouched, so a genuine misconfiguration stays visible instead of
+        /// silently producing a wrong url, and a value the client is expected to
+        /// fill per call is preserved. This is the automatic binding the emission
+        /// applies from the current request; the manual overloads bind values the
+        /// request does not carry.
+        /// </summary>
+        /// <param name="request">The current request whose route parameters bind the placeholders.</param>
+        /// <returns>The descriptor for chaining.</returns>
+        public DataServiceDescriptor BindPathVariables(IRequest request)
+        {
+            return request == null
+                ? this
+                : ExpandPathVariables(name => request.GetParameter(name)?.Value);
+        }
+
+        /// <summary>
+        /// Binds a single ${name} path variable placeholder to an explicit value,
+        /// for a service endpoint whose route parameter the current request does
+        /// not carry, for example a value the author knows at render time or a
+        /// value bound under a different name than the placeholder. A manual
+        /// binding runs before the automatic request binding of the emission and
+        /// removes the placeholder it fills, so it takes precedence over a request
+        /// parameter of the same name, and it leaves other placeholders for the
+        /// request or the client. The lookup is case insensitive, matching the
+        /// request binding.
+        /// </summary>
+        /// <param name="name">The placeholder name, which is the route parameter's variable name.</param>
+        /// <param name="value">The explicit value the placeholder is replaced with.</param>
+        /// <returns>The descriptor for chaining.</returns>
+        public DataServiceDescriptor BindPathVariable(string name, string value)
+        {
+            return string.IsNullOrEmpty(name)
+                ? this
+                : ExpandPathVariables(candidate => string.Equals(candidate, name, StringComparison.OrdinalIgnoreCase) ? value : null);
+        }
+
+        /// <summary>
+        /// Binds several ${name} path variable placeholders to explicit values in
+        /// one pass, for a service endpoint whose route parameters the current
+        /// request does not carry. The values are matched by name, case
+        /// insensitively, and a placeholder with no matching entry is left for the
+        /// request or the client, so a partial manual binding composes with the
+        /// automatic request binding of the emission.
+        /// </summary>
+        /// <param name="values">The explicit placeholder name to value bindings.</param>
+        /// <returns>The descriptor for chaining.</returns>
+        public DataServiceDescriptor BindPathVariables(IEnumerable<KeyValuePair<string, string>> values)
+        {
+            if (values == null)
+            {
+                return this;
+            }
+
+            var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var pair in values)
+            {
+                map[pair.Key] = pair.Value;
+            }
+
+            return ExpandPathVariables(name => map.TryGetValue(name, out var value) ? value : null);
+        }
+
+        /// <summary>
+        /// Replaces the ${name} placeholders of the base address with the values
+        /// the resolver returns, leaving a placeholder untouched when the resolver
+        /// yields null. It is the shared core of the request and manual bindings,
+        /// so both apply the same placeholder grammar and the same leave-on-miss
+        /// rule.
+        /// </summary>
+        /// <param name="resolve">Maps a placeholder name to its value, or null to leave it in place.</param>
+        /// <returns>The descriptor for chaining.</returns>
+        private DataServiceDescriptor ExpandPathVariables(Func<string, string> resolve)
+        {
+            // the common static endpoint carries no placeholder, so the guard
+            // keeps the regex off the render hot path in that case
+            if (string.IsNullOrEmpty(BaseUri) || !BaseUri.Contains("${"))
+            {
+                return this;
+            }
+
+            BaseUri = PathVariablePlaceholder.Replace(BaseUri, match =>
+            {
+                var value = resolve(match.Groups[1].Value);
+                return value ?? match.Value;
+            });
+
             return this;
         }
 

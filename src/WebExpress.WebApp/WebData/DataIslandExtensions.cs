@@ -87,6 +87,10 @@ namespace WebExpress.WebApp.WebData
             var descriptors = (control.ServiceFactories ?? [])
                 .Select(factory => factory?.Invoke(renderContext))
                 .Where(descriptor => descriptor != null)
+                // resolve the ${name} route placeholders the sitemap leaves in the
+                // base address against the current request, so a service keyed by a
+                // route parameter targets the concrete resource of this request
+                .Select(descriptor => descriptor.BindPathVariables(renderContext?.Request))
                 .ToList();
             var template = control.TemplateFactory?.Invoke(renderContext);
 
