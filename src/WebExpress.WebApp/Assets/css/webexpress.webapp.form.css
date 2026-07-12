@@ -109,6 +109,11 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     animation: fadeInPage 0.3s ease-in-out forwards;
 }
 
+/* The end state must resolve to transform:none, not translateY(0): with
+   animation-fill-mode:forwards the page would otherwise permanently retain a
+   transform, which establishes a containing block and stacking context that
+   traps fixed-positioned dropdown/overlay menus inside the page (clipped by
+   the page's overflow and covered by later siblings). */
 @keyframes fadeInPage {
     from {
         opacity: 0;
@@ -116,7 +121,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     }
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: none;
     }
 }
 

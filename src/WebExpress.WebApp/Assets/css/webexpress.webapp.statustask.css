@@ -7,48 +7,60 @@
     line-height: 1;
 }
 
-    .wx-status-dot {
-        display: inline-block;
-        width: 0.75em;
-        height: 0.75em;
-        border-radius: 50%;
-        /* none: a muted, outlined dot so the "unknown" state stays visible on
-           both the light and the dark theme */
-        background-color: transparent;
-        box-shadow: inset 0 0 0 1px #adb5bd;
-        flex: 0 0 auto;
-    }
+.wx-status-dot {
+    display: inline-block;
+    width: 0.75em;
+    height: 0.75em;
+    border-radius: 50%;
+    /* none: a muted, outlined dot so the "unknown" state stays visible on
+        both the light and the dark theme */
+    background-color: transparent;
+    box-shadow: inset 0 0 0 1px #adb5bd;
+    flex: 0 0 auto;
+}
 
-        .wx-status-dot-pending {
-            background-color: #6c757d;
-            box-shadow: none;
-        }
+.wx-status-dot-pending {
+    background-color: #6c757d;
+    box-shadow: none;
+}
 
-        .wx-status-dot-warning {
-            background-color: #ffc107;
-            box-shadow: none;
-        }
+.wx-status-dot-warning {
+    background-color: #ffc107;
+    box-shadow: none;
+}
 
-        .wx-status-dot-error {
-            background-color: #dc3545;
-            box-shadow: none;
-        }
+.wx-status-dot-error {
+    background-color: #dc3545;
+    box-shadow: none;
+}
 
-        .wx-status-dot-done {
-            background-color: #198754;
-            box-shadow: none;
-        }
+.wx-status-dot-done {
+    background-color: #198754;
+    box-shadow: none;
+}
 
-        /* a running task pulses so the "in progress" state reads as live */
-        .wx-status-dot-running {
-            background-color: #0d6efd;
-            box-shadow: none;
-            animation: wx-status-dot-pulse 1.2s ease-in-out infinite;
-        }
+/* a running task pulses so the "in progress" state reads as live */
+.wx-status-dot-running {
+    background-color: #0d6efd;
+    box-shadow: none;
+    animation: wx-status-dot-pulse 1.2s ease-in-out infinite;
+}
 
-    .wx-status-task-label:empty {
-        display: none;
-    }
+.wx-status-task-label:empty {
+    display: none;
+}
+
+/* a starter dot is an actionable trigger: it starts the task on click, so it
+    reads as interactive and shows a keyboard focus ring like a button */
+.wx-status-task-starter {
+    cursor: pointer;
+}
+
+.wx-status-task-starter:focus-visible {
+    outline: 2px solid var(--wx-focus-ring, #0d6efd);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
 
 @keyframes wx-status-dot-pulse {
     0%, 100% {

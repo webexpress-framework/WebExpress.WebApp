@@ -1,5 +1,6 @@
 using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebControl;
+using WebExpress.WebApp.WebData;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
@@ -166,6 +167,85 @@ namespace WebExpress.WebApp.Test.WebControl
 
             // validation
             AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
+
+        /// <summary>
+        /// Tests the AutoStart property - a starter dot that opts into auto start
+        /// carries the <c>data-auto-start</c> attribute so the client posts to the
+        /// start endpoint on load instead of on a click.
+        /// </summary>
+        [Theory]
+        [InlineData(false, @"<div id=""*"" class=""wx-webapp-status-task""></div>")]
+        [InlineData(true, @"<div id=""*"" class=""wx-webapp-status-task"" data-auto-start=""true""></div>")]
+        public void AutoStart(bool value, string expected)
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlStatusTask()
+            {
+                AutoStart = _ => value
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
+
+        /// <summary>
+        /// Tests the Repeat property - a starter dot that opts into repeat carries
+        /// the <c>data-repeat</c> attribute so the client restarts the task once it
+        /// finishes successfully.
+        /// </summary>
+        [Theory]
+        [InlineData(false, @"<div id=""*"" class=""wx-webapp-status-task""></div>")]
+        [InlineData(true, @"<div id=""*"" class=""wx-webapp-status-task"" data-repeat=""true""></div>")]
+        public void Repeat(bool value, string expected)
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlStatusTask()
+            {
+                Repeat = _ => value
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
+
+        /// <summary>
+        /// Tests the starter service - a configured starter service is emitted as a
+        /// hidden <c>wx-service</c> island named "starter" the client posts to in
+        /// order to start the task.
+        /// </summary>
+        [Fact]
+        public void StarterService_EmitsServiceIsland()
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlStatusTask()
+            {
+                ServiceFactory = _ => DataServiceDescriptor.Rest("starter").WithBaseUri("/api/start").WithMethod("POST")
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(@"<div id=""*"" class=""wx-webapp-status-task""><wx-service hidden name=""starter"" kind=""rest"" base-uri=""/api/start"" method=""POST""></wx-service></div>", html);
         }
 
         /// <summary>

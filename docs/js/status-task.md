@@ -26,9 +26,13 @@ The control is bootstrapped from a single host element carrying the `wx-webapp-s
 |-----------------------|---------------------------------------------------------------------------------------------------------------|----------------------------
 | `data-task`           | Optional. The id of the task to follow. The controller filters incoming `webexpress.webapp.progresstask.update` messages by this id. When absent the control is a **static** dot driven by `data-status`. | `data-task="deploy-42"`
 | `data-status`         | Optional. The static status token (`pending`, `running`, `warning`, `error`, `done`) shown when the control is not driven by a task. The implicit default is `none` (a dim, outlined dot). | `data-status="warning"`
-| `data-label`          | Optional. A caption rendered next to the dot that also serves as its tooltip.                                 | `data-label="Deployment"`
+| `data-label`          | Optional. The caption of a **static** dot, and the tooltip fallback of every dot. A **task-driven** dot captions the live server `message` instead (see the [data contract](#data-contract)), so the caption follows the current step and stays empty until the first update. | `data-label="Deployment"`
 | `data-show-on-start`  | When `"true"`, the control stays hidden until the first update for the task arrives.                          | `data-show-on-start="true"`
 | `data-hide-on-finish` | When `"true"`, the control hides itself once the task finishes or is canceled.                                | `data-hide-on-finish="true"`
+| `data-auto-start`     | When `"true"` (and a starter service is configured), the dot posts to the start endpoint on load instead of on a click. | `data-auto-start="true"`
+| `data-repeat`         | When `"true"` (and a starter service is configured), the dot restarts the task once it finishes successfully. A cancel or an error ends the loop. | `data-repeat="true"`
+
+A `starter` [service island](#task-starter) makes the dot a task starter.
 
 The dot's color is applied through the `wx-status-dot-{pending,running,warning,error,done}` modifier classes on an inner `.wx-status-dot` span; the `running` state pulses. The host follows the page theme.
 
@@ -47,11 +51,38 @@ new ControlStatusTask("build-status")
     Status = _ => TypeStatusTask.Warning,
     Label = _ => "Build"
 };
+
+// task starter: a click posts to the start endpoint, the dot follows the
+// started task, and repeat restarts it on a successful finish
+new ControlStatusTask("deploy-status")
+{
+    AutoStart = _ => false,
+    Repeat = _ => true
+}
+.Service("starter", svc => svc.Endpoint<StartDeployApi>().Method(HttpMethod.Post));
 ```
+
+## Task Starter
+
+A `ControlStatusTask` becomes a **task starter** when it declares a `starter` service — a `POST` endpoint, emitted as a hidden `wx-service` island named `starter`. The dot then drives the whole task lifecycle from the client:
+
+1. On a **click** (or on **load** when `data-auto-start` is set) the dot posts to the start endpoint.
+2. The server **starts the task** and answers with its id (a plain string, or an object with `taskId`/`id`). The dot adopts that id and follows it over the MessageQueue, exactly as a fixed `data-task` dot does. So the id need not be known when the page renders.
+3. The dot goes **pending** the moment a start is triggered, before the first server update arrives, so the trigger is acknowledged immediately.
+4. With `data-repeat` a **successful finish** posts to the start endpoint again. A cancel or an error **ends** the loop, so a failing task never restarts forever.
+
+A starter dot carries the `wx-status-task-starter` class, `role="button"` and `tabindex="0"`, so it reads and is operable as a button (Enter/Space activate it). The start posts through the service layer (`webexpress.webapp.ServiceRegistry`), never a bare `fetch`.
+
+| `starter` island attribute | Value
+|----------------------------|----------------------------------
+| `name`                     | `starter`
+| `kind`                     | `rest`
+| `base-uri`                 | The start endpoint, resolved through the sitemap.
+| `method`                   | `POST`
 
 ## Data Contract
 
-There is **no REST endpoint**. Every update arrives as a `webexpress.webapp.progresstask.update` message over the MessageQueue WebSocket — the same message the progress bar consumes — so one server pipeline drives both surfaces.
+Task **updates** never use a REST endpoint. Every update arrives as a `webexpress.webapp.progresstask.update` message over the MessageQueue WebSocket — the same message the progress bar consumes — so one server pipeline drives both surfaces. The optional [starter](#task-starter) endpoint is the only HTTP call, and only to *start* the task, not to observe it.
 
 | Field      | Type     | Purpose
 |------------|----------|--------------------------------------------------------------
@@ -59,7 +90,7 @@ There is **no REST endpoint**. Every update arrives as a `webexpress.webapp.prog
 | `taskId`   | string   | The task the update refers to; the controller ignores updates for other ids.
 | `state`    | number   | The `WebTask.TaskState`: `0` Created, `1` Run, `2` Canceled, `3` Finish. Mapped to the dot color.
 | `progress` | number   | 0–100. Unused by the dot (it shows state, not amount).
-| `message`  | string   | Optional status text; used as the dot's tooltip, never as the visible caption.
+| `message`  | string   | Optional status text; shown as the dot's **caption** (and tooltip), so the caption follows the current step the server reports.
 
 `warning` is intentionally **not** part of the task lifecycle, so it is only reachable through a static `data-status`. This keeps the wire contract identical to the progress bar while still exposing the full status palette to a static dot.
 
@@ -78,6 +109,19 @@ if (status) {
     console.log(status.value); // e.g. "running"
     status.value = "done";     // repaint the dot green
 }
+```
+
+When the control is a [task starter](#task-starter), `start()` posts to the start endpoint, adopts the returned task id and returns a promise that resolves `true` when the task was started. Overlapping starts are ignored, and a `start()` on a dot without a starter service is a no-op.
+
+```javascript
+const element = document.getElementById("deploy-status");
+const status = webexpress.webui.Controller.getInstanceByElement(element);
+
+status.start().then((started) => {
+    if (started) {
+        console.log("the task was started and the dot now follows it");
+    }
+});
 ```
 
 ## Events
