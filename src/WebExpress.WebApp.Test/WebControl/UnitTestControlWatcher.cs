@@ -37,12 +37,12 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
-        /// Tests the RestUri property of the watcher control.
+        /// Tests the service factory of the watcher control.
         /// </summary>
         [Theory]
         [InlineData(null, @"<div class=""wx-webapp-watcher""></div>")]
         [InlineData("https://example.com/api/watchers/INC-00123", @"<div class=""wx-webapp-watcher""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/watchers/INC-00123"" method=""GET"" update-method=""PUT""></wx-service></div>")]
-        public void RestUri(string uriString, string expected)
+        public void Service(string uriString, string expected)
         {
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();

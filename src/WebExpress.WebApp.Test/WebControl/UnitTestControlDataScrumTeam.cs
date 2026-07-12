@@ -44,7 +44,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [Theory]
         [InlineData(null, @"<div class=""wx-webapp-scrum-team""></div>")]
         [InlineData("https://example.com/api/scrum/team", @"<div class=""wx-webapp-scrum-team""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/scrum/team"" method=""GET""></wx-service></div>")]
-        public void RestUri(string uriString, string expected)
+        public void Service(string uriString, string expected)
         {
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();

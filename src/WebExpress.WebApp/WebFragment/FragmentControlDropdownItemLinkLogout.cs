@@ -23,7 +23,7 @@ namespace WebExpress.WebApp.WebFragment
         /// <summary>
         /// Gets or sets the URI associated with this instance.
         /// </summary>
-        public Func<IRenderControlContext, IUri> RestUri { get; set; }
+        public Func<IRenderControlContext, IUri> RestEndpoint { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class.
@@ -37,7 +37,7 @@ namespace WebExpress.WebApp.WebFragment
 
             PrimaryAction = renderContext =>
             {
-                var uri = RestUri?.Invoke(renderContext);
+                var uri = RestEndpoint?.Invoke(renderContext);
                 var targetUri = renderContext.PageContext.ApplicationContext.Route.ToUri();
 
                 return new ActionLogout(uri, targetUri);
@@ -50,7 +50,7 @@ namespace WebExpress.WebApp.WebFragment
         /// <param name="renderContext">The context in which the control is rendered.</param>
         /// <param name="visualTree">The visual tree representing the control's structure.</param>
         /// <returns>An HTML node representing the rendered control.</returns>
-        public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IUri restUri)
+        public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IUri restEndpoint)
         {
             if (!FragmentContext.Conditions.Check(renderContext?.Request))
             {

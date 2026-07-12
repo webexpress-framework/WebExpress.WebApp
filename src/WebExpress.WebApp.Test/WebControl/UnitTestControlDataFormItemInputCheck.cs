@@ -163,7 +163,7 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
-        /// Tests the RestUri property of the REST check control. Verifies that
+        /// Tests the service factory of the REST check control. Verifies that
         /// the configured endpoint is exposed via the wx-service island on the
         /// root element so the client-side module can target it for
         /// GET (initial read) and POST (state changes).
@@ -171,7 +171,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [Theory]
         [InlineData(null, @"<div class=""wx-webapp-input-check form-check""><input type=""checkbox"" class=""form-check-input""><label class=""form-check-label""></label></div>")]
         [InlineData("https://example.com/api/check", @"<div class=""wx-webapp-input-check form-check""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/check"" method=""GET""></wx-service><input type=""checkbox"" class=""form-check-input""><label class=""form-check-label""></label></div>")]
-        public void RestUri(string uriString, string expected)
+        public void Service(string uriString, string expected)
         {
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();

@@ -37,12 +37,12 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
-        /// Tests the RestUri property of the api wizard control.
+        /// Tests the service factory of the api wizard control.
         /// </summary>
         [Theory]
         [InlineData(null, @"<form id=""*"" class=""wx-webapp-restwizard""></form>")]
         [InlineData("https://example.com/api/data", @"<form id=""*"" class=""wx-webapp-restwizard""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/data""></wx-service></form>")]
-        public void RestUri(string uriString, string expected)
+        public void Service(string uriString, string expected)
         {
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();

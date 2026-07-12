@@ -60,13 +60,12 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
-        /// The REST URI carried by <see cref="ControlDataSelectionTheme.RestUri"/>
-        /// is emitted as the wx-service island.
+        /// Tests that the service factory of the theme selection control emits the wx-service island.
         /// </summary>
         [Theory]
         [InlineData(null, @"<div id=""themePicker"" class=""wx-webapp-dropdown-theme"" role=""button""></div>")]
         [InlineData("https://example.com/api/themes", @"<div id=""themePicker"" class=""wx-webapp-dropdown-theme"" role=""button""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/themes"" method=""GET"" update-method=""PUT""></wx-service></div>")]
-        public void RestUri_RendersAsDataUri(string uri, string expected)
+        public void Service(string uri, string expected)
         {
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();

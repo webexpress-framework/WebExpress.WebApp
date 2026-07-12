@@ -245,7 +245,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [Theory]
         [InlineData(null, @"<div class=""wx-webapp-input-unique""></div>")]
         [InlineData("https://example.com/api/data", @"<div class=""wx-webapp-input-unique""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/data"" method=""GET""></wx-service></div>")]
-        public void RestUri(string uriString, string expected)
+        public void Service(string uriString, string expected)
         {
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();

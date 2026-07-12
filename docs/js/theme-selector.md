@@ -76,7 +76,7 @@ public sealed class ThemeApi : RestApiTheme
 // 2. drop the selector onto a page - it is a standalone dropdown:
 new ControlDataSelectionTheme("themeSelector")
 {
-    RestUri = _ => sitemapManager.GetUri<ThemeApi>(applicationContext)
+    RestEndpoint = _ => sitemapManager.GetUri<ThemeApi>(applicationContext)
 };
 
 // 3. tell the visual tree which theme to render with on every request -

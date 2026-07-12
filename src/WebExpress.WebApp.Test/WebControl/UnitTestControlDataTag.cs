@@ -39,12 +39,12 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
-        /// Tests the RestUri property of the tag control.
+        /// Tests the service factory of the tag control.
         /// </summary>
         [Theory]
         [InlineData(null, @"<div class=""wx-webapp-tag""></div>")]
         [InlineData("https://example.com/api/tags/INC-1", @"<div class=""wx-webapp-tag""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/tags/INC-1"" method=""GET""></wx-service></div>")]
-        public void RestUri(string uriString, string expected)
+        public void Service(string uriString, string expected)
         {
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();

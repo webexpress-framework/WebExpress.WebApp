@@ -37,12 +37,12 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
-        /// Tests the RestUri property of the scrum sprint control.
+        /// Tests the service factory of the scrum sprint control.
         /// </summary>
         [Theory]
         [InlineData(null, @"<div id=""*"" class=""wx-webapp-scrum-sprint""></div>")]
         [InlineData("https://example.com/api/scrum/sprint", @"<div id=""*"" class=""wx-webapp-scrum-sprint""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/scrum/sprint"" method=""GET""></wx-service></div>")]
-        public void RestUri(string uriString, string expected)
+        public void Service(string uriString, string expected)
         {
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();

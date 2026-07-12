@@ -19,7 +19,7 @@ namespace WebExpress.WebApp.WebIdentity
         /// <summary>
         /// Gets or sets the REST session endpoint URI used for HTTP requests.
         /// </summary>
-        public IUri RestUri { get; set; }
+        public IUri RestEndpoint { get; set; }
 
         /// <summary>
         /// Returns all identities provided by this source.
@@ -50,7 +50,7 @@ namespace WebExpress.WebApp.WebIdentity
         /// </returns>
         public virtual IResponse CreateAuthenticationPrompt(IRequest request, IPageContext initiator, IIdentity identity)
         {
-            return CreateAuthenticationPrompt(request, initiator, identity, RestUri);
+            return CreateAuthenticationPrompt(request, initiator, identity, RestEndpoint);
         }
 
         /// <summary>
