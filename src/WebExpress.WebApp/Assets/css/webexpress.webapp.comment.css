@@ -370,7 +370,7 @@
     top: 30px;
     left: 50%;
     transform: translateX(-20%);
-    background: var(--bs-body-bg);
+    background: var(--wx-body-bg);
     border: 1px solid var(--wx-webapp-border);
     border-radius: 8px;
     box-shadow: 0 8px 20px rgba(20, 24, 36, 0.16);

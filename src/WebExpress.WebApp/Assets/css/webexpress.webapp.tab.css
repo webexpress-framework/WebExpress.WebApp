@@ -8,12 +8,12 @@
     user-select: none;
     margin-right: 0.35rem;
     vertical-align: middle;
-    color: var(--bs-secondary-color, #6c757d);
+    color: var(--wx-secondary-color, #6c757d);
     line-height: 1;
 }
 
 .wx-webapp-tab-grip:hover {
-    color: var(--bs-body-color);
+    color: var(--wx-body-color);
 }
 
 .wx-webapp-tab-grip:active {
@@ -33,7 +33,7 @@
 }
 
 .wx-webapp-tab-close:hover {
-    color: var(--bs-body-color);
+    color: var(--wx-body-color);
 }
 
 .nav-item.wx-webapp-tab-movable.wx-webapp-tab-dragging {
@@ -42,9 +42,9 @@
 
 /* drop indicators on the side where the dragged tab would be inserted */
 .nav-item.wx-webapp-tab-movable.wx-webapp-tab-drop-before {
-    box-shadow: inset 2px 0 0 0 var(--bs-primary);
+    box-shadow: inset 2px 0 0 0 var(--wx-primary);
 }
 
 .nav-item.wx-webapp-tab-movable.wx-webapp-tab-drop-after {
-    box-shadow: inset -2px 0 0 0 var(--bs-primary);
+    box-shadow: inset -2px 0 0 0 var(--wx-primary);
 }

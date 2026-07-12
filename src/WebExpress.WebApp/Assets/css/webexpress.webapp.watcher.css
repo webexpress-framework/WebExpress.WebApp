@@ -23,9 +23,9 @@
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    border: 1px dashed var(--wx-webapp-border-2, var(--bs-border-color, #ced4da));
+    border: 1px dashed var(--wx-webapp-border-2, var(--wx-border-color, #ced4da));
     background: transparent;
-    color: var(--wx-webapp-text-3, var(--bs-secondary-color, #6c757d));
+    color: var(--wx-webapp-text-3, var(--wx-secondary-color, #6c757d));
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -36,8 +36,8 @@
 }
 
 .wx-watcher-add:hover {
-    border-color: var(--wx-webapp-primary, var(--bs-primary, #0d6efd));
-    color: var(--wx-webapp-primary, var(--bs-primary, #0d6efd));
+    border-color: var(--wx-webapp-primary, var(--wx-primary, #0d6efd));
+    color: var(--wx-webapp-primary, var(--wx-primary, #0d6efd));
 }
 
 .wx-watcher-dropdown {
@@ -48,7 +48,7 @@
     width: 280px;
     max-height: 320px;
     overflow: hidden;
-    background: var(--bs-body-bg);
+    background: var(--wx-body-bg);
     border: 1px solid var(--wx-webapp-border);
     border-radius: var(--wx-webapp-r-md);
     box-shadow: 0 8px 28px rgba(20, 24, 36, 0.12);

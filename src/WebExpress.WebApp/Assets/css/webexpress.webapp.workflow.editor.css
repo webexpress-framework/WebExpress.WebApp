@@ -14,22 +14,22 @@
 
 /* ───────── Design tokens ───────── */
 .wx-workflow-editor {
-    --wx-we-bg:            var(--bs-body-bg, #fff);
-    --wx-we-surface:       var(--bs-body-bg, #fff);
-    --wx-we-surface-2:     var(--bs-tertiary-bg, var(--bs-secondary-bg, #f5f7fa));
-    --wx-we-surface-3:     var(--bs-secondary-bg, #eef0f4);
-    --wx-we-border:        var(--bs-border-color, #dee2e6);
+    --wx-we-bg:            var(--wx-body-bg, #fff);
+    --wx-we-surface:       var(--wx-body-bg, #fff);
+    --wx-we-surface-2:     var(--wx-tertiary-bg, var(--wx-secondary-bg, #f5f7fa));
+    --wx-we-surface-3:     var(--wx-secondary-bg, #eef0f4);
+    --wx-we-border:        var(--wx-border-color, #dee2e6);
     --wx-we-divider:       color-mix(in oklab, var(--wx-we-border) 80%, transparent);
-    --wx-we-text-1:        var(--bs-body-color, #1f2328);
-    --wx-we-text-2:        var(--bs-secondary-color, color-mix(in oklab, var(--bs-body-color, #1f2328) 75%, var(--bs-body-bg, #fff)));
-    --wx-we-text-3:        color-mix(in oklab, var(--bs-body-color, #1f2328) 60%, var(--bs-body-bg, #fff));
-    --wx-we-text-muted:    color-mix(in oklab, var(--bs-body-color, #1f2328) 45%, var(--bs-body-bg, #fff));
-    --wx-we-primary:       var(--bs-primary, #0d6efd);
+    --wx-we-text-1:        var(--wx-body-color, #1f2328);
+    --wx-we-text-2:        var(--wx-secondary-color, color-mix(in oklab, var(--wx-body-color, #1f2328) 75%, var(--wx-body-bg, #fff)));
+    --wx-we-text-3:        color-mix(in oklab, var(--wx-body-color, #1f2328) 60%, var(--wx-body-bg, #fff));
+    --wx-we-text-muted:    color-mix(in oklab, var(--wx-body-color, #1f2328) 45%, var(--wx-body-bg, #fff));
+    --wx-we-primary:       var(--wx-primary, #0d6efd);
     --wx-we-primary-soft:  color-mix(in oklab, var(--wx-we-primary) 12%, var(--wx-we-bg));
     --wx-we-primary-strong:color-mix(in oklab, var(--wx-we-primary) 35%, var(--wx-we-bg));
-    --wx-we-success:       var(--bs-success, #198754);
-    --wx-we-danger:        var(--bs-danger, #dc3545);
-    --wx-we-warning:       var(--bs-warning, #f59e0b);
+    --wx-we-success:       var(--wx-success, #198754);
+    --wx-we-danger:        var(--wx-danger, #dc3545);
+    --wx-we-warning:       var(--wx-warning, #f59e0b);
 
     --wx-we-radius-sm:     6px;
     --wx-we-radius:        8px;

@@ -31,8 +31,8 @@
     height: 15px;
     padding: 0 3px;
     border-radius: 999px;
-    border: 1px solid var(--bs-body-bg, #fff);
-    background: var(--wx-webapp-primary, var(--bs-primary, #0d6efd));
+    border: 1px solid var(--wx-body-bg, #fff);
+    background: var(--wx-webapp-primary, var(--wx-primary, #0d6efd));
     color: #fff;
     font-size: 9px;
     font-weight: 700;
@@ -43,15 +43,15 @@
 
 .wx-scrum-team-total {
     margin-left: 10px;
-    border: 1px solid var(--wx-webapp-border, var(--bs-border-color, #dee2e6));
-    background: var(--wx-webapp-surface-2, var(--bs-tertiary-bg, #eef1f4));
+    border: 1px solid var(--wx-webapp-border, var(--wx-border-color, #dee2e6));
+    background: var(--wx-webapp-surface-2, var(--wx-tertiary-bg, #eef1f4));
     border-radius: 999px;
     padding: 0;
     cursor: pointer;
 }
 
 .wx-scrum-team-total:hover {
-    border-color: var(--wx-webapp-primary, var(--bs-primary, #0d6efd));
+    border-color: var(--wx-webapp-primary, var(--wx-primary, #0d6efd));
 }
 
 .wx-scrum-team-total-pill {
@@ -59,17 +59,17 @@
     padding: 4px 9px;
     font-size: 11px;
     font-weight: 600;
-    color: var(--wx-webapp-text-2, var(--bs-body-color, #495057));
+    color: var(--wx-webapp-text-2, var(--wx-body-color, #495057));
     font-family: var(--wx-webapp-font-mono, var(--bs-font-monospace, ui-monospace, SFMono-Regular, Menlo, monospace));
 }
 
 .wx-scrum-team-total:hover .wx-scrum-team-total-pill {
-    color: var(--wx-webapp-primary, var(--bs-primary, #0d6efd));
+    color: var(--wx-webapp-primary, var(--wx-primary, #0d6efd));
 }
 
 .wx-scrum-team-empty-row {
     font-size: 12.5px;
-    color: var(--wx-webapp-text-3, var(--bs-secondary-color, #6c757d));
+    color: var(--wx-webapp-text-3, var(--wx-secondary-color, #6c757d));
 }
 
 /* modal table */
@@ -85,14 +85,14 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: var(--wx-webapp-text-3, var(--bs-secondary-color, #6c757d));
+    color: var(--wx-webapp-text-3, var(--wx-secondary-color, #6c757d));
     padding: 8px 10px;
-    border-bottom: 1px solid var(--wx-webapp-divider, var(--bs-border-color, #dee2e6));
+    border-bottom: 1px solid var(--wx-webapp-divider, var(--wx-border-color, #dee2e6));
 }
 
 .wx-scrum-team-table tbody td {
     padding: 8px 10px;
-    border-bottom: 1px dashed var(--wx-webapp-divider, var(--bs-border-color-translucent, #e9ecef));
+    border-bottom: 1px dashed var(--wx-webapp-divider, var(--wx-border-color-translucent, #e9ecef));
     vertical-align: middle;
 }
 
@@ -102,9 +102,9 @@
 
 .wx-scrum-team-table tfoot td {
     padding: 10px;
-    border-top: 2px solid var(--wx-webapp-divider, var(--bs-border-color, #dee2e6));
+    border-top: 2px solid var(--wx-webapp-divider, var(--wx-border-color, #dee2e6));
     font-weight: 700;
-    color: var(--wx-webapp-text, var(--bs-body-color, #212529));
+    color: var(--wx-webapp-text, var(--wx-body-color, #212529));
 }
 
 .wx-scrum-team-points-col {
@@ -126,7 +126,7 @@
     height: 26px;
     flex: 0 0 auto;
     border-radius: 50%;
-    border: 1px solid var(--wx-webapp-border, var(--bs-border-color, #dee2e6));
+    border: 1px solid var(--wx-webapp-border, var(--wx-border-color, #dee2e6));
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -144,13 +144,13 @@
 }
 
 .wx-scrum-team-person-name {
-    color: var(--wx-webapp-text, var(--bs-body-color, #212529));
+    color: var(--wx-webapp-text, var(--wx-body-color, #212529));
     font-weight: 500;
 }
 
 .wx-scrum-team-person-team {
     font-size: 11px;
-    color: var(--wx-webapp-text-3, var(--bs-secondary-color, #6c757d));
+    color: var(--wx-webapp-text-3, var(--wx-secondary-color, #6c757d));
 }
 
 .wx-scrum-team-points-badge {
@@ -158,9 +158,9 @@
     min-width: 26px;
     padding: 2px 8px;
     border-radius: 999px;
-    background: var(--wx-webapp-surface-2, var(--bs-tertiary-bg, #eef1f4));
-    border: 1px solid var(--wx-webapp-border, var(--bs-border-color, #dee2e6));
-    color: var(--wx-webapp-text-2, var(--bs-body-color, #495057));
+    background: var(--wx-webapp-surface-2, var(--wx-tertiary-bg, #eef1f4));
+    border: 1px solid var(--wx-webapp-border, var(--wx-border-color, #dee2e6));
+    color: var(--wx-webapp-text-2, var(--wx-body-color, #495057));
     font-weight: 700;
 }
 
@@ -177,7 +177,7 @@
     max-width: 100%;
     height: 4px;
     border-radius: 999px;
-    background: var(--wx-webapp-surface-2, var(--bs-tertiary-bg, #eef1f4));
+    background: var(--wx-webapp-surface-2, var(--wx-tertiary-bg, #eef1f4));
     overflow: hidden;
 }
 
@@ -191,6 +191,6 @@
 .wx-scrum-team-empty {
     padding: 16px;
     text-align: center;
-    color: var(--wx-webapp-text-3, var(--bs-secondary-color, #6c757d));
+    color: var(--wx-webapp-text-3, var(--wx-secondary-color, #6c757d));
     font-size: 12.5px;
 }

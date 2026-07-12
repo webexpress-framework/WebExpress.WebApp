@@ -1,5 +1,37 @@
-﻿#wx-header {
-    background: var(--bs-dark);
+﻿/* =====================================================================
+   Application theme palette
+   ---------------------------------------------------------------------
+   This theme loads after the framework, so redefining any --wx-* token
+   here re-skins every control through the Bootstrap bridge in
+   webexpress.webui.css. The values below mirror the framework defaults and
+   mark the intended customization surface — change a hue here and it flows
+   app-wide, in both light and dark mode. Add a [data-bs-theme="dark"]
+   block to tune dark values independently.
+   ===================================================================== */
+:root {
+    --wx-primary: #0d6efd;
+    --wx-primary-rgb: 13, 110, 253;
+    --wx-secondary: #6c757d;
+    --wx-secondary-rgb: 108, 117, 125;
+    --wx-success: #198754;
+    --wx-success-rgb: 25, 135, 84;
+    --wx-info: #0dcaf0;
+    --wx-info-rgb: 13, 202, 240;
+    --wx-warning: #ffc107;
+    --wx-warning-rgb: 255, 193, 7;
+    --wx-danger: #dc3545;
+    --wx-danger-rgb: 220, 53, 69;
+
+    --wx-highlight: #ff8c00;
+    --wx-highlight-rgb: 255, 140, 0;
+    --wx-highlight-contrast: #212529;
+
+    /* app-specific accent for the split/login backdrop gradient */
+    --wx-app-splash: #120348;
+}
+
+#wx-header {
+    background: var(--wx-dark);
 }
 
 #wx-header-appnavigator {
@@ -7,63 +39,63 @@
 }
 
 #wx-header-apptitle {
-    color: var(--bs-body-bg);
+    color: var(--wx-body-bg);
 }
 
 [data-bs-theme="dark"] #wx-header-apptitle {
-    color: var(--bs-body-color);
+    color: var(--wx-body-color);
 }
 
 #wx-header-appnavigation {
-    color: var(--bs-body-bg);
+    color: var(--wx-body-bg);
 }
 
 [data-bs-theme="dark"] #wx-header-appnavigation {
-    color: var(--bs-body-color);
+    color: var(--wx-body-color);
 }
     
 #wx-header-appnavigation .active {
-    color: var(--bs-info);
+    color: var(--wx-info);
 }
 
 #wx-header-appnavigation > *:hover:not(.wx-overflow-menu:hover):not(.dropdown-menu) {
-    background: var(--bs-gray-800);
+    background: var(--wx-gray-800);
 }
 
 #wx-header-appnavigation > *:focus {
-    background: var(--bs-gray-800);
+    background: var(--wx-gray-800);
 }
 
 #wx-header-quickcreate {
 }
 
 #wx-header-notifications {
-    color: var(--bs-body-bg);
+    color: var(--wx-body-bg);
 }
 
 #wx-header-notifications:hover {
-    background: var(--bs-gray-800);
+    background: var(--wx-gray-800);
 }
 
 #wx-header-help {
-    color: var(--bs-body-bg);
+    color: var(--wx-body-bg);
 }
 
 #wx-header-help:hover {
-    background: var(--bs-gray-800);
+    background: var(--wx-gray-800);
 }
 
 #wx-header-settings {
-    color: var(--bs-body-bg);
+    color: var(--wx-body-bg);
 }
 
 #wx-header-settings:hover {
-    background: var(--bs-gray-800);
+    background: var(--wx-gray-800);
 }
 
 #wx-toast {
-    background: var(--bs-warning);
-    color: var(--bs-body-color);
+    background: var(--wx-warning);
+    color: var(--wx-body-color);
 }
 
 [data-bs-theme="dark"] #wx-toast {
@@ -93,15 +125,15 @@
 }
 
 #wx-split-gutter {
-    background-color: var(--bs-border-color) !important;
+    background-color: var(--wx-border-color) !important;
 }
 
 #wx-split-p2 {
-    background: linear-gradient( 180deg, var(--bs-light) 0%, var(--bs-gray-200) 100% );
+    background: linear-gradient( 180deg, var(--wx-light) 0%, var(--wx-gray-200) 100% );
 }
 
 html[data-bs-theme="dark"] #wx-split-p2 {
-    background: linear-gradient(150deg, var(--bs-dark) 50%, #120348 100%)
+    background: linear-gradient(150deg, var(--wx-dark) 50%, var(--wx-app-splash) 100%)
 }
 
 #wx-content {
@@ -128,20 +160,20 @@ html[data-bs-theme="dark"] #wx-content {
 }
 
 #wx-content-main-headline-more {
-    background: var(--bs-body-bg);
+    background: var(--wx-body-bg);
 }
 
 #wx-content-property {
-    background: var(--bs-tertiary-bg);
+    background: var(--wx-tertiary-bg);
 }
 
 #wx-footer {
 }
 
 .wx-login {
-    background: linear-gradient( 180deg, var(--bs-light) 0%, var(--bs-gray-200) 100% );
+    background: linear-gradient( 180deg, var(--wx-light) 0%, var(--wx-gray-200) 100% );
 }
 
 html[data-bs-theme="dark"] .wx-login {
-    background: linear-gradient(150deg, var(--bs-dark) 50%, #120348 100%)
+    background: linear-gradient(150deg, var(--wx-dark) 50%, var(--wx-app-splash) 100%)
 }

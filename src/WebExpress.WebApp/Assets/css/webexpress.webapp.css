@@ -46,7 +46,7 @@ main {
 }
 
 .wx-appnavigation > .wx-overflow-menu:hover {
-    background: var(--bs-body-bg);
+    background: var(--wx-body-bg);
 }
 
 .wx-appnavigation > .wx-overflow-menu > .btn {
@@ -66,7 +66,7 @@ main {
 }
 
 .wx-appnavigation .wx-overflow-menu-item {
-    color: rgba(var(--bs-link-color-rgb), var(--bs-link-opacity, 1));
+    color: rgba(var(--wx-link-color-rgb), var(--bs-link-opacity, 1));
 }
 
 .wx-app-dropdown {
@@ -80,7 +80,7 @@ main {
 }
 
 [data-bs-theme="dark"] .wx-app-dropdown > .btn {
-    color: var(--bs-body-color);
+    color: var(--wx-body-color);
 }
 
 .wx-toast {
@@ -108,7 +108,7 @@ main {
 
 .wx-proterty {
     display: block;
-    background: var(--bs-tertiary-bg);
+    background: var(--wx-tertiary-bg);
     min-height: 100%;
     min-width: 15%;
     height: 100%;
@@ -147,8 +147,8 @@ main {
 
 @keyframes wx-data-changed-flash {
     0% {
-        background-color: var(--bs-primary-bg-subtle, rgba(13, 110, 253, 0.2));
-        box-shadow: 0 0 0 0.2rem var(--bs-primary-border-subtle, rgba(13, 110, 253, 0.35));
+        background-color: var(--wx-primary-bg-subtle, rgba(13, 110, 253, 0.2));
+        box-shadow: 0 0 0 0.2rem var(--wx-primary-border-subtle, rgba(13, 110, 253, 0.35));
     }
 
     100% {

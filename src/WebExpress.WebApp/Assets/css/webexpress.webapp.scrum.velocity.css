@@ -16,13 +16,13 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--wx-webapp-text-3, var(--bs-secondary-color, #6c757d));
+    color: var(--wx-webapp-text-3, var(--wx-secondary-color, #6c757d));
 }
 
 .wx-scrum-velocity-avg {
     font-size: 12px;
     font-weight: 700;
-    color: var(--wx-webapp-text-2, var(--bs-body-color, #212529));
+    color: var(--wx-webapp-text-2, var(--wx-body-color, #212529));
     font-family: var(--wx-webapp-font-mono, var(--bs-font-monospace, ui-monospace, SFMono-Regular, Menlo, monospace));
 }
 
@@ -32,7 +32,7 @@
     align-items: stretch;
     gap: 8px;
     height: 150px;
-    border-bottom: 1px solid var(--wx-webapp-border, var(--bs-border-color, #dee2e6));
+    border-bottom: 1px solid var(--wx-webapp-border, var(--wx-border-color, #dee2e6));
 }
 
 .wx-scrum-velocity-col {
@@ -47,8 +47,8 @@
     right: 14%;
     bottom: 0;
     min-height: 2px;
-    background: var(--wx-webapp-surface-2, var(--bs-tertiary-bg, #eef1f4));
-    border: 1px solid var(--wx-webapp-border, var(--bs-border-color, #dee2e6));
+    background: var(--wx-webapp-surface-2, var(--wx-tertiary-bg, #eef1f4));
+    border: 1px solid var(--wx-webapp-border, var(--wx-border-color, #dee2e6));
     border-bottom: 0;
     border-radius: 4px 4px 0 0;
 }
@@ -74,7 +74,7 @@
     text-align: center;
     font-size: 10.5px;
     font-weight: 700;
-    color: var(--wx-webapp-text-2, var(--bs-body-color, #212529));
+    color: var(--wx-webapp-text-2, var(--wx-body-color, #212529));
     font-family: var(--wx-webapp-font-mono, var(--bs-font-monospace, ui-monospace, SFMono-Regular, Menlo, monospace));
 }
 
@@ -83,7 +83,7 @@
     left: 0;
     right: 0;
     height: 2px;
-    background: var(--wx-webapp-text-3, var(--bs-secondary-color, #6c757d));
+    background: var(--wx-webapp-text-3, var(--wx-secondary-color, #6c757d));
     opacity: 0.9;
     pointer-events: none;
 }
@@ -98,7 +98,7 @@
     min-width: 0;
     text-align: center;
     font-size: 10.5px;
-    color: var(--wx-webapp-text-3, var(--bs-secondary-color, #6c757d));
+    color: var(--wx-webapp-text-3, var(--wx-secondary-color, #6c757d));
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -108,7 +108,7 @@
     display: flex;
     gap: 14px;
     font-size: 11px;
-    color: var(--wx-webapp-text-3, var(--bs-secondary-color, #6c757d));
+    color: var(--wx-webapp-text-3, var(--wx-secondary-color, #6c757d));
 }
 
 .wx-scrum-velocity-legend-item {
@@ -129,13 +129,13 @@
 }
 
 .wx-scrum-velocity-swatch.committed {
-    background: var(--wx-webapp-surface-2, var(--bs-tertiary-bg, #eef1f4));
-    border: 1px solid var(--wx-webapp-border, var(--bs-border-color, #dee2e6));
+    background: var(--wx-webapp-surface-2, var(--wx-tertiary-bg, #eef1f4));
+    border: 1px solid var(--wx-webapp-border, var(--wx-border-color, #dee2e6));
 }
 
 .wx-scrum-velocity-empty {
     padding: 16px;
     text-align: center;
-    color: var(--wx-webapp-text-3, var(--bs-secondary-color, #6c757d));
+    color: var(--wx-webapp-text-3, var(--wx-secondary-color, #6c757d));
     font-size: 12.5px;
 }

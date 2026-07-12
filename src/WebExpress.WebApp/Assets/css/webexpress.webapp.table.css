@@ -3,7 +3,7 @@
     justify-content: space-between;
     margin-bottom: 0.5rem;
     align-items: center;
-    color: var(--bs-body-color);
+    color: var(--wx-body-color);
 }
 
 .wx-table-statusbar {
@@ -11,5 +11,5 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 0.5rem;
-    color: var(--bs-body-color);
+    color: var(--wx-body-color);
 }

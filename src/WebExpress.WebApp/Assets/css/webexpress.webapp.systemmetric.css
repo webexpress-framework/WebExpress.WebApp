@@ -18,7 +18,7 @@
 
 .wx-system-metric-label {
     font-size: 0.875em;
-    color: var(--bs-secondary-color);
+    color: var(--wx-secondary-color);
 }
 
 .wx-system-metric-value {
@@ -28,22 +28,22 @@
 
 /* the threshold color, shared by the bar fill and the chart line/area */
 .wx-system-metric {
-    --wx-system-metric-color: var(--bs-success);
+    --wx-system-metric-color: var(--wx-success);
 }
 
 .wx-system-metric-warn {
-    --wx-system-metric-color: var(--bs-warning);
+    --wx-system-metric-color: var(--wx-warning);
 }
 
 .wx-system-metric-critical {
-    --wx-system-metric-color: var(--bs-danger);
+    --wx-system-metric-color: var(--wx-danger);
 }
 
 /* bar layout */
 .wx-system-metric-track {
     height: 0.5rem;
     border-radius: 0.25rem;
-    background: var(--bs-secondary-bg);
+    background: var(--wx-secondary-bg);
     overflow: hidden;
 }
 
@@ -65,10 +65,10 @@
        svg content (the area and the trace) is drawn over it. the grid is a css
        background, so it stays crisp and square regardless of the stretched
        viewBox. */
-    background-color: var(--bs-secondary-bg);
+    background-color: var(--wx-secondary-bg);
     background-image:
-        linear-gradient(to right, var(--bs-border-color-translucent) 1px, transparent 1px),
-        linear-gradient(to bottom, var(--bs-border-color-translucent) 1px, transparent 1px);
+        linear-gradient(to right, var(--wx-border-color-translucent) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--wx-border-color-translucent) 1px, transparent 1px);
     background-size: 0.75rem 0.75rem;
 }
 

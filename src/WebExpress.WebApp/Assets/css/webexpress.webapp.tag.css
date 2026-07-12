@@ -20,17 +20,17 @@
     margin-left: 0.2em;
     font-size: inherit;
     line-height: 1;
-    border: 1px dashed var(--bs-border-color, #ced4da);
+    border: 1px dashed var(--wx-border-color, #ced4da);
     border-radius: 0.2em;
     background: transparent;
-    color: var(--bs-secondary-color, #6c757d);
+    color: var(--wx-secondary-color, #6c757d);
     cursor: pointer;
 }
 
 .wx-tag-surface > .wx-tag-add:hover {
-    color: var(--bs-body-color);
-    border-color: var(--bs-body-color);
-    background-color: var(--bs-secondary-bg, rgba(0, 0, 0, 0.05));
+    color: var(--wx-body-color);
+    border-color: var(--wx-body-color);
+    background-color: var(--wx-secondary-bg, rgba(0, 0, 0, 0.05));
 }
 
 /* editable tag surface inside the modal: autocomplete dropdown
@@ -55,8 +55,8 @@
     list-style: none;
     max-height: 16rem;
     overflow-y: auto;
-    background-color: var(--bs-body-bg);
-    border: 1px solid var(--bs-border-color);
+    background-color: var(--wx-body-bg);
+    border: 1px solid var(--wx-border-color);
     border-radius: var(--bs-border-radius, 0.375rem);
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
 }
@@ -66,7 +66,7 @@
     height: auto;
     padding: 0.35rem 0.75rem;
     cursor: pointer;
-    color: var(--bs-body-color);
+    color: var(--wx-body-color);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -74,6 +74,6 @@
 
 .wx-webapp-tag-editor > ul.wx-tag-suggestions > li.wx-tag-suggestion:hover,
 .wx-webapp-tag-editor > ul.wx-tag-suggestions > li.wx-tag-suggestion.active {
-    background-color: var(--bs-primary);
-    color: var(--bs-white);
+    background-color: var(--wx-primary);
+    color: var(--wx-white);
 }
