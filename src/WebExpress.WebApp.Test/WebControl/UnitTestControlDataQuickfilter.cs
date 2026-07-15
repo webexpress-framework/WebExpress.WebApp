@@ -81,7 +81,7 @@ namespace WebExpress.WebApp.Test.WebControl
             {
                 Text = _ => "Games",
                 Multiple = _ => true,
-                Uri = _ => new UriEndpoint("https://example.com/api/games")
+                RestEndpoint = _ => new UriEndpoint("https://example.com/api/games")
             });
             var html = control.Render(context, visualTree);
 
@@ -109,7 +109,7 @@ namespace WebExpress.WebApp.Test.WebControl
             {
                 Text = _ => "Platform",
                 Group = _ => "platform",
-                Uri = _ => new UriEndpoint("https://example.com/api/platforms")
+                RestEndpoint = _ => new UriEndpoint("https://example.com/api/platforms")
             });
             var html = control.Render(context, visualTree);
 

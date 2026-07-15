@@ -35,9 +35,9 @@ namespace WebExpress.WebApp.WebControl
 
         /// <summary>
         /// Gets or sets the REST endpoint returning the option list, an array of
-        /// <c>{ id, name, group?, exclusive?, icon? }</c> objects.
+        /// <c>{ id, name, group?, exclusive?, icon?, badge? }</c> objects.
         /// </summary>
-        public Func<IRenderControlContext, IUri> Uri { get; set; }
+        public Func<IRenderControlContext, IUri> RestEndpoint { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether several options may be active at
@@ -71,7 +71,7 @@ namespace WebExpress.WebApp.WebControl
         {
             var text = I18N.Translate(renderContext, Text?.Invoke(renderContext));
             var icon = Icon?.Invoke(renderContext);
-            var uri = Uri?.Invoke(renderContext);
+            var uri = RestEndpoint?.Invoke(renderContext);
             var multiple = Multiple?.Invoke(renderContext) ?? false;
             var group = Group?.Invoke(renderContext);
 

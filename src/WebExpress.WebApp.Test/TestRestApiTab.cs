@@ -48,6 +48,7 @@ namespace WebExpress.WebApp.Test
                 Name = "Created Tab",
                 Icon = "fas fa-star",
                 TemplateId = "defaultTemplate",
+                Badge = "1",
                 Binding = new
                 {
                     title = "Created Tab",

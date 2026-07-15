@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
+using WebExpress.WebUI.WebControl;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -65,14 +67,25 @@ namespace WebExpress.WebApp.WebRestApi
         public string Badge { get; set; }
 
         /// <summary>
-        /// Gets or sets the badge color css class, for example "text-bg-primary".
+        /// Gets or sets the badge background color. The typed color is authored
+        /// here and collapses into the serialized css class or inline style, so
+        /// no caller ever writes a raw CSS string.
         /// </summary>
-        public string BadgeColor { get; set; }
+        [JsonIgnore]
+        public PropertyColorBackgroundBadge BadgeColor { get; set; }
 
         /// <summary>
-        /// Gets or sets an inline badge style, for a bespoke badge color.
+        /// Gets the CSS class of a system badge color, derived from <see cref="BadgeColor"/>,
+        /// for example "text-bg-primary".
         /// </summary>
-        public string BadgeStyle { get; set; }
+        [JsonPropertyName("badgeColor")]
+        public string BadgeColorCss => BadgeColor?.ToClass();
+
+        /// <summary>
+        /// Gets the inline style of a user-defined badge color, derived from <see cref="BadgeColor"/>.
+        /// </summary>
+        [JsonPropertyName("badgeStyle")]
+        public string BadgeColorStyle => BadgeColor?.ToStyle();
 
         /// <summary>
         /// Gets or sets whether a node that owns children starts expanded.

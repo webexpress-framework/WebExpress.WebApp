@@ -129,14 +129,20 @@ webexpress.webapp.QuickFilterCtrl = class extends webexpress.webui.QuickFilterCt
                 if (response && Array.isArray(response.filters)) {
                     this._registry.registerFilters(response.filters);
 
-                    // set up button configs for all filters
+                    // set up button configs for all filters; the icon spec is a
+                    // css class or an image uri, both handled by the icon factory
                     this._staticButtonConfigs = response.filters.map(flt => {
                         return {
                             id: flt.id,
                             label: flt.name,
+                            icon: flt.icon || null,
+                            color: flt.color || null,
+                            colorValue: flt.colorValue || null,
+                            badge: flt.badge != null ? String(flt.badge) : null,
+                            badgeColor: flt.badgeColor || null,
+                            badgeStyle: flt.badgeStyle || null,
                             class: "wx-quickfilter-btn-chip",
                             primaryAction: { target: flt.id }
-                            // add more properties as needed (icon, color, etc.)
                         };
                     });
 
@@ -190,11 +196,10 @@ webexpress.webapp.QuickFilterCtrl = class extends webexpress.webui.QuickFilterCt
             btnElem.className = "wx-quickfilter-btn-chip";
             btnElem.textContent = btnCfg.label;
 
-            // add icon element if specified in config
-            if (btnCfg.icon) {
-                const icon = document.createElement("i");
-                icon.className = btnCfg.icon;
-                btnElem.prepend(icon);
+            // a system color travels as a btn-<color> class through data-color,
+            // which the button controller consumes into a class
+            if (btnCfg.color) {
+                btnElem.dataset.color = btnCfg.color;
             }
 
             // mark button as active if filter is enabled
@@ -203,7 +208,7 @@ webexpress.webapp.QuickFilterCtrl = class extends webexpress.webui.QuickFilterCt
                 btnElem.classList.add("active");
                 btnElem.setAttribute("aria-pressed", "true");
             }
-            
+
             // add click event handler to toggle filter
             btnElem.onclick = () => {
                 // toggle the filter in the registry
@@ -212,6 +217,21 @@ webexpress.webapp.QuickFilterCtrl = class extends webexpress.webui.QuickFilterCt
 
             // instantiate ButtonCtrl for consistent event and logic handling
             webexpress.webui.Controller.createInstanceByClassType("wx-webui-button", btnElem);
+
+            // the icon and the badge are added after the button controller ran,
+            // because the controller rebuilds the chip content and would drop
+            // earlier children; the icon factory renders a css spec as <i> and
+            // an image spec as <img>
+            const icon = webexpress.webui.Icon.create(btnCfg.icon);
+            if (icon) {
+                btnElem.prepend(icon);
+            }
+
+            // a user-defined color feeds the chip accent directly
+            if (btnCfg.colorValue) {
+                btnElem.style.setProperty("--wx-quickfilter-accent", btnCfg.colorValue);
+            }
+            this._appendBadge(btnElem, btnCfg.badge, btnCfg.badgeColor, btnCfg.badgeStyle);
             container.appendChild(btnElem);
         }
 

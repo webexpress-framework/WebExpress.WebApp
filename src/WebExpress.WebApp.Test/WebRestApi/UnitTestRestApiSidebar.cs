@@ -4,6 +4,7 @@ using System.Text.Json;
 using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebRestApi;
 using WebExpress.WebCore.WebMessage;
+using WebExpress.WebUI.WebControl;
 
 namespace WebExpress.WebApp.Test.WebRestApi
 {
@@ -25,14 +26,14 @@ namespace WebExpress.WebApp.Test.WebRestApi
                 return
                 [
                     new RestApiSidebarItemHeader("Navigation"),
-                    new RestApiSidebarItem { Label = "Inbox", Icon = "fas fa-inbox", Badge = "12", BadgeColor = "text-bg-primary" },
+                    new RestApiSidebarItem { Label = "Inbox", Icon = "fas fa-inbox", Badge = "12", BadgeColor = new PropertyColorBackgroundBadge(TypeColorBackgroundBadge.Primary) },
                     new RestApiSidebarItem
                     {
                         Label = "Projects",
                         Expanded = true,
                         Items =
                         [
-                            new RestApiSidebarItem { Label = "Alpha", Badge = "3" }
+                            new RestApiSidebarItem { Label = "Alpha", Badge = "3", BadgeColor = new PropertyColorBackgroundBadge("#7c3aed") }
                         ]
                     },
                     new RestApiSidebarItemDivider()
@@ -85,6 +86,11 @@ namespace WebExpress.WebApp.Test.WebRestApi
             Assert.Single(children);
             Assert.Equal("Alpha", children[0].GetProperty("label").GetString());
             Assert.Equal("3", children[0].GetProperty("badge").GetString());
+
+            // a user-defined badge color collapses into the inline style and
+            // leaves the css class out of the payload
+            Assert.Equal("background:#7c3aed;", children[0].GetProperty("badgeStyle").GetString());
+            Assert.False(children[0].TryGetProperty("badgeColor", out _));
 
             // divider carries its type
             Assert.Equal("divider", items[3].GetProperty("type").GetString());

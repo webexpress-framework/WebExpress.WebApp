@@ -52,6 +52,8 @@ The controller expects JSON with an `items` array:
       "name": "All known profiles",
       "icon": "fas fa-umbrella-beach",
       "color": "text-primary",
+      "badge": "12",
+      "badgeColor": "text-bg-danger",
       "primaryAction": "open",
       "primaryTarget": "self",
       "templateId": "profileTemplate",
@@ -63,6 +65,8 @@ The controller expects JSON with an `items` array:
   ]
 }
 ```
+
+The optional `badge` renders at the trailing edge of the tab header, typically a count. Its color arrives as the `badgeColor` css class (a system color) or the `badgeStyle` inline style (a user-defined color); on the server both derive from the typed `BadgeColor` property (`PropertyColorBackgroundBadge`) of `RestApiTabView`.
 
 ### POST (create tab)
 
