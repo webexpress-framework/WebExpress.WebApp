@@ -1,16 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using WebExpress.WebApp.WebData;
 using WebExpress.WebApp.WebFragment;
 using WebExpress.WebApp.WebSection;
 using WebExpress.WebCore;
 using WebExpress.WebCore.WebHtml;
-using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
-using WebExpress.WebUI.WebSection;
 
 namespace WebExpress.WebApp.WebControl
 {
@@ -164,12 +161,12 @@ namespace WebExpress.WebApp.WebControl
                 applicationContext,
                 [GetType()]
             );
-            var templatePrimary = fragmentManager.GetFragments<IFragmentControlDataTabTemplate, SectionViewItemPrimary>
+            var templatePrimary = fragmentManager.GetFragments<IFragmentControlDataTabTemplate, SectionTabTemplatePrimary>
             (
                 applicationContext,
                 [GetType()]
             );
-            var templateSecondary = fragmentManager.GetFragments<IFragmentControlDataTabTemplate, SectionViewItemSecondary>
+            var templateSecondary = fragmentManager.GetFragments<IFragmentControlDataTabTemplate, SectionTabTemplateSecondary>
             (
                 applicationContext,
                 [GetType()]
