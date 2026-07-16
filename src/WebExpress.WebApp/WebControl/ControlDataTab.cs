@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using WebExpress.WebApp.WebData;
 using WebExpress.WebApp.WebFragment;
-using WebExpress.WebApp.WebSection;
 using WebExpress.WebCore;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
+using WebExpress.WebUI.WebSection;
 
 namespace WebExpress.WebApp.WebControl
 {
@@ -156,17 +156,17 @@ namespace WebExpress.WebApp.WebControl
             var applicationContext = renderContext?.PageContext?.ApplicationContext;
 
             // templates
-            var templatePreferences = fragmentManager.GetFragments<IFragmentControlDataTabTemplate, SectionTabTemplatePreferences>
+            var templatePreferences = fragmentManager.GetFragments<IFragmentControlDataTabTemplate, SectionTabViewPreferences>
             (
                 applicationContext,
                 [GetType()]
             );
-            var templatePrimary = fragmentManager.GetFragments<IFragmentControlDataTabTemplate, SectionTabTemplatePrimary>
+            var templatePrimary = fragmentManager.GetFragments<IFragmentControlDataTabTemplate, SectionTabViewPrimary>
             (
                 applicationContext,
                 [GetType()]
             );
-            var templateSecondary = fragmentManager.GetFragments<IFragmentControlDataTabTemplate, SectionTabTemplateSecondary>
+            var templateSecondary = fragmentManager.GetFragments<IFragmentControlDataTabTemplate, SectionTabViewSecondary>
             (
                 applicationContext,
                 [GetType()]

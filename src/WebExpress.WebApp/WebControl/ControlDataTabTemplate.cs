@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using WebExpress.WebApp.WebSection;
+using WebExpress.WebCore;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebIcon;
 using WebExpress.WebUI.WebControl;
+using WebExpress.WebUI.WebFragment;
 using WebExpress.WebUI.WebIcon;
 using WebExpress.WebUI.WebPage;
 
@@ -123,6 +126,25 @@ namespace WebExpress.WebApp.WebControl
             var description = Description?.Invoke(renderContext);
             var multiplicity = Multiplicity?.Invoke(renderContext);
             var iconClass = icon is Icon webUiIcon ? webUiIcon.Class : null;
+            var fragmentManager = WebEx.ComponentHub.FragmentManager;
+            var applicationContext = renderContext?.PageContext?.ApplicationContext;
+
+            // views
+            var viewPreferences = fragmentManager.GetFragments<IFragmentControl, SectionTabTemplatePreferences>
+            (
+                applicationContext,
+                [GetType()]
+            );
+            var viewPrimary = fragmentManager.GetFragments<IFragmentControl, SectionTabTemplatePrimary>
+            (
+                applicationContext,
+                [GetType()]
+            );
+            var viewSecondary = fragmentManager.GetFragments<IFragmentControl, SectionTabTemplateSecondary>
+            (
+                applicationContext,
+                [GetType()]
+            );
 
             var templateDiv = new HtmlElementTextContentDiv()
             {
@@ -133,7 +155,10 @@ namespace WebExpress.WebApp.WebControl
                 .AddUserAttribute("data-name", name)
                 .AddUserAttribute("data-description", description)
                 .AddUserAttribute("data-multiplicity", multiplicity?.ToString(System.Globalization.CultureInfo.InvariantCulture))
-                .Add(content.Select(x => x.Render(renderContext, visualTree)));
+                .Add(viewPreferences.Select(x => x.Render(renderContext, visualTree)))
+                .Add(content.Select(x => x.Render(renderContext, visualTree)))
+                .Add(viewPrimary.Select(x => x.Render(renderContext, visualTree)))
+                .Add(viewSecondary.Select(x => x.Render(renderContext, visualTree)));
 
             bind?.ApplyUserAttributes(templateDiv);
 
