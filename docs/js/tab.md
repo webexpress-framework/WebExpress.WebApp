@@ -16,7 +16,7 @@ The `webexpress.webapp.TabCtrl` component is a REST-enabled tab controller. It e
 
 ## Declarative Configuration
 
-The initial structure is defined in HTML. The root element is the tab host (`.wx-webapp-tab`), and children with `.wx-template` (or native `<template>`) are used as pane templates.
+The initial structure is defined in HTML. The root element is the tab host (`.wx-webapp-tab`), and native `<template>` children (or legacy `.wx-template` divs) are used as pane templates. Prefer native `<template>` elements: their content is inert, so nested controls are not instantiated and their `wx-service` islands are not consumed before the tab control extracts the template. A `.wx-template` div is live DOM — the controller initializes its content in place, which breaks panes created from it later.
 
 ### Container Element Attributes
 
@@ -287,9 +287,9 @@ The component dispatches events for tab interactions:
         </div>
     </div>
 
-    <div id="profile-tab" class="wx-template" data-icon="fas fa-map" data-name="Profile" data-description="Profile">
+    <template id="profile-tab" data-icon="fas fa-map" data-name="Profile" data-description="Profile">
         <h5 data-wx-bind="title"></h5>
         <p data-wx-bind="name"></p>
-    </div>
+    </template>
 </div>
 ```

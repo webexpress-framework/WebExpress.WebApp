@@ -391,7 +391,7 @@ namespace WebExpress.WebApp.Test.WebFragment
 
             // validation
             Assert.Single(html);
-            AssertExtensions.EqualWithPlaceholders(@"<div id=""webexpress-webapp-test-testfragmentcontroldatatabtemplate"" class=""wx-template""></div>", html.FirstOrDefault()?.ToString()?.Trim());
+            AssertExtensions.EqualWithPlaceholders(@"<template id=""webexpress-webapp-test-testfragmentcontroldatatabtemplate""></template>", html.FirstOrDefault()?.ToString()?.Trim());
         }
 
         /// <summary>
@@ -431,7 +431,7 @@ namespace WebExpress.WebApp.Test.WebFragment
 
             // validation
             Assert.Single(html);
-            AssertExtensions.EqualWithPlaceholders(@"<div id=""webexpress-webapp-test-testfragmentcontroldatatabtemplate"" class=""wx-template""></div>", html.FirstOrDefault()?.ToString()?.Trim());
+            AssertExtensions.EqualWithPlaceholders(@"<template id=""webexpress-webapp-test-testfragmentcontroldatatabtemplate""></template>", html.FirstOrDefault()?.ToString()?.Trim());
         }
 
         /// <summary>

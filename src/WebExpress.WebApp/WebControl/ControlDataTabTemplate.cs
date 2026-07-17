@@ -146,10 +146,13 @@ namespace WebExpress.WebApp.WebControl
                 [GetType()]
             );
 
-            var templateDiv = new HtmlElementTextContentDiv()
+            // a native <template> keeps the content inert, so the client
+            // controller's depth-first scan cannot instantiate the nested
+            // controls or consume their wx-service islands before the tab
+            // control snapshots the template
+            var templateElement = new HtmlElementWebFragmentsTemplate()
             {
-                Id = Id,
-                Class = "wx-template"
+                Id = Id
             }
                 .AddUserAttribute("data-icon", iconClass)
                 .AddUserAttribute("data-name", name)
@@ -160,9 +163,9 @@ namespace WebExpress.WebApp.WebControl
                 .Add(viewPrimary.Select(x => x.Render(renderContext, visualTree)))
                 .Add(viewSecondary.Select(x => x.Render(renderContext, visualTree)));
 
-            bind?.ApplyUserAttributes(templateDiv);
+            bind?.ApplyUserAttributes(templateElement);
 
-            return templateDiv;
+            return templateElement;
         }
     }
 

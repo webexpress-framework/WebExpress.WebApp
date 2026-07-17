@@ -298,8 +298,18 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
      * @returns {Object|null}
      */
     _resolveTemplate(templateId) {
-        return this._templates.get(templateId)
-            || this._templates.get("default")
+        const template = this._templates.get(templateId);
+        if (template) {
+            return template;
+        }
+
+        // a server item referencing an unknown template renders the fallback,
+        // which would otherwise hide the id mismatch behind an empty pane
+        if (templateId && this._templates.size > 0) {
+            console.warn(`tab template "${templateId}" not found, using fallback; known templates:`, this._templateOrder);
+        }
+
+        return this._templates.get("default")
             || (this._templateOrder.length > 0 ? this._templates.get(this._templateOrder[0]) : null);
     }
 
@@ -589,6 +599,14 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
                 continue;
             }
 
+            // data-wx-bind is shared with the WebUI bind system (search, filter,
+            // paging, show, ...); a bare WebUI bind key carries no item data, so
+            // writing its empty value would wipe the host's children including
+            // its wx-service/wx-state islands. only bind keys that carry data.
+            if (!this._isItemBindingKey(el, item, bindingMap, key)) {
+                continue;
+            }
+
             const mode = (el.getAttribute("data-wx-bind-" + key + "-mode") || "text").trim().toLowerCase();
             const name = (el.getAttribute("data-wx-bind-" + key + "-name") || "").trim();
             const targetSelector = (el.getAttribute("data-wx-bind-" + key + "-target") || "self").trim();
@@ -604,24 +622,58 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
     }
 
     /**
-     * Removes binding metadata attributes from an element after applying binding.
+     * Determines whether a data-wx-bind key is a tab item binding the tab
+     * controller owns, rather than a WebUI bind (search, filter, paging,
+     * show, ...) that only shares the attribute name. An item binding either
+     * declares per-key template metadata or resolves to a field the item
+     * carries; a bare WebUI bind key has neither, so it is left untouched and
+     * its host keeps its islands and content.
      * @param {HTMLElement} el - Bound element.
+     * @param {Object} item - Data item.
+     * @param {Object} bindingMap - Binding map.
+     * @param {string} key - The binding key.
+     * @returns {boolean} True when the key is a tab item binding.
      */
-    _cleanupBindingAttributes(el) {
-        if (el.hasAttribute("data-wx-bind")) {
+    _isItemBindingKey(el, item, bindingMap, key) {
+        if (el.hasAttribute("data-wx-bind-" + key + "-mode")
+            || el.hasAttribute("data-wx-bind-" + key + "-name")
+            || el.hasAttribute("data-wx-bind-" + key + "-target")) {
+            return true;
+        }
+
+        return Object.prototype.hasOwnProperty.call(bindingMap, key)
+            || (item != null && item[key] !== undefined);
+    }
+
+    /**
+     * Removes the tab item-binding metadata from an element after binding,
+     * while preserving a WebUI bind (search, filter, paging, show, ...) that
+     * shares the data-wx-bind attribute, so its wiring survives the pane build.
+     * @param {HTMLElement} el - Bound element.
+     * @param {Object} item - Data item.
+     * @param {Object} bindingMap - Binding map.
+     */
+    _cleanupBindingAttributes(el, item, bindingMap) {
+        const bindAttr = el.getAttribute("data-wx-bind");
+        if (bindAttr === null) {
+            return;
+        }
+
+        const keys = bindAttr.split(",").map((s) => s.trim()).filter((s) => s !== "");
+        const itemKeys = keys.filter((key) => this._isItemBindingKey(el, item, bindingMap, key));
+
+        for (let i = 0; i < itemKeys.length; i++) {
+            const key = itemKeys[i];
+            el.removeAttribute("data-wx-bind-" + key + "-mode");
+            el.removeAttribute("data-wx-bind-" + key + "-name");
+            el.removeAttribute("data-wx-bind-" + key + "-target");
+        }
+
+        const remainingKeys = keys.filter((key) => !itemKeys.includes(key));
+        if (remainingKeys.length > 0) {
+            el.setAttribute("data-wx-bind", remainingKeys.join(", "));
+        } else {
             el.removeAttribute("data-wx-bind");
-        }
-
-        const attrsToRemove = [];
-        for (let i = 0; i < el.attributes.length; i++) {
-            const attrName = el.attributes[i].name;
-            if (attrName.startsWith("data-wx-bind-") && attrName !== "data-wx-bind") {
-                attrsToRemove.push(attrName);
-            }
-        }
-
-        for (let i = 0; i < attrsToRemove.length; i++) {
-            el.removeAttribute(attrsToRemove[i]);
         }
     }
 
@@ -635,6 +687,11 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         const html = template ? template.html : "";
         pane.innerHTML = html;
 
+        // a template renders once on the server, so instantiating it into more
+        // than one pane repeats its baked-in ids; uniquify them before the
+        // bindings resolve any #id targets and before the controls mount.
+        this._uniquifyIds(pane, item.id);
+
         const bindingMap = (item.binding && typeof item.binding === "object") ? item.binding : {};
         const boundElements = Array.from(pane.querySelectorAll("[data-wx-bind]"));
 
@@ -645,7 +702,123 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
 
         // cleanup after all binding writes
         for (let i = 0; i < boundElements.length; i++) {
-            this._cleanupBindingAttributes(boundElements[i]);
+            this._cleanupBindingAttributes(boundElements[i], item, bindingMap);
+        }
+    }
+
+    /**
+     * Makes every id defined inside a freshly built pane unique and rewrites the
+     * intra-pane references that point at those ids. A template renders once on
+     * the server, so several tabs from one template - or a template with a
+     * multiplicity above one - would otherwise repeat every baked-in id, and a
+     * duplicate id makes a document-global lookup (for example a bind source
+     * resolved through document.querySelector) resolve to the wrong pane. Only
+     * ids the pane declares are renamed, and only references whose target is one
+     * of them, so a reference to a shared element outside the template keeps
+     * pointing there.
+     * @param {HTMLElement} pane - The pane whose subtree was just built.
+     * @param {string} suffix - A per-pane unique suffix; the pane id is unique per tab.
+     */
+    _uniquifyIds(pane, suffix) {
+        const safeSuffix = (suffix != null && String(suffix) !== "")
+            ? String(suffix)
+            : ("p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
+
+        // collect the ids the pane defines (querySelectorAll excludes the pane
+        // itself, so its own id - already unique per tab - is left alone)
+        const owned = Array.from(pane.querySelectorAll("[id]"));
+        const rename = new Map();
+        for (let i = 0; i < owned.length; i++) {
+            const oldId = owned[i].id;
+            if (oldId && !rename.has(oldId)) {
+                rename.set(oldId, oldId + "__" + safeSuffix);
+            }
+        }
+
+        if (rename.size === 0) {
+            return;
+        }
+
+        for (let i = 0; i < owned.length; i++) {
+            const next = rename.get(owned[i].id);
+            if (next) {
+                owned[i].id = next;
+            }
+        }
+
+        const all = Array.from(pane.querySelectorAll("*"));
+        for (let i = 0; i < all.length; i++) {
+            this._rewriteIdReferences(all[i], rename);
+        }
+    }
+
+    /**
+     * Rewrites the id references of a single element against a rename map so a
+     * pane whose ids were made unique stays internally consistent. Bare-id
+     * attributes carry a whitespace separated id list; selector attributes carry
+     * a "#id" reference. Only ids present in the map are replaced, so a reference
+     * that leaves the pane is preserved.
+     * @param {HTMLElement} el - The element to rewrite.
+     * @param {Map<string, string>} rename - The old id to new id map.
+     */
+    _rewriteIdReferences(el, rename) {
+        // attributes whose value is a whitespace separated list of bare ids
+        const bareIdAttributes = [
+            "for", "form", "list", "headers",
+            "aria-controls", "aria-labelledby", "aria-describedby", "aria-owns", "aria-activedescendant"
+        ];
+        for (let i = 0; i < bareIdAttributes.length; i++) {
+            const name = bareIdAttributes[i];
+            const value = el.getAttribute(name);
+            if (value === null) {
+                continue;
+            }
+            const rewritten = value.split(/\s+/).map((token) => rename.get(token) || token).join(" ");
+            if (rewritten !== value) {
+                el.setAttribute(name, rewritten);
+            }
+        }
+
+        // snapshot the names first, since the values are rewritten in place
+        const attributeNames = Array.from(el.attributes || []).map((attr) => attr.name);
+        for (let i = 0; i < attributeNames.length; i++) {
+            const name = attributeNames[i];
+            const value = el.getAttribute(name);
+            if (typeof value !== "string" || value.indexOf("#") === -1) {
+                continue;
+            }
+
+            let rewritten = value;
+
+            // "#id" selector references, only on the data-wx-source family, the
+            // tab template binding targets and the bootstrap and framework target
+            // attributes, so a value that merely contains "#" (a colour, a
+            // fragment) is not misread as a selector
+            const isSelectorAttribute = name === "href"
+                || name === "data-bs-target"
+                || name === "data-bs-parent"
+                || name === "data-wx-target"
+                || name === "data-wx-source"
+                || name.startsWith("data-wx-source-")
+                || (name.startsWith("data-wx-bind-") && name.endsWith("-target"));
+            if (isSelectorAttribute) {
+                rewritten = rewritten.replace(/#([\w-]+)/g, (match, id) => {
+                    const next = rename.get(id);
+                    return next ? "#" + next : match;
+                });
+            }
+
+            // svg "url(#id)" references may sit in any attribute, style included
+            if (rewritten.indexOf("url(") !== -1) {
+                rewritten = rewritten.replace(/(url\(\s*['"]?#)([\w-]+)/g, (match, prefix, id) => {
+                    const next = rename.get(id);
+                    return next ? prefix + next : match;
+                });
+            }
+
+            if (rewritten !== value) {
+                el.setAttribute(name, rewritten);
+            }
         }
     }
 

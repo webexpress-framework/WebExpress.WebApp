@@ -16,8 +16,8 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the id property of the api tab control.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div class=""wx-template""></div>")]
-        [InlineData("id", @"<div id=""id"" class=""wx-template""></div>")]
+        [InlineData(null, @"<template></template>")]
+        [InlineData("id", @"<template id=""id""></template>")]
         public void Id(string id, string expected)
         {
             // arrange
@@ -58,15 +58,15 @@ namespace WebExpress.WebApp.Test.WebControl
             var html = control.Render(context, visualTree);
 
             // validation
-            AssertExtensions.EqualWithPlaceholders(@"<div id=""template"" class=""wx-template"" data-icon=""fas fa-user"" data-name=""User Template"" data-description=""Template description""></div>", html);
+            AssertExtensions.EqualWithPlaceholders(@"<template id=""template"" data-icon=""fas fa-user"" data-name=""User Template"" data-description=""Template description""></template>", html);
         }
 
         /// <summary>
         /// Tests that the multiplicity property emits a data-multiplicity attribute when set.
         /// </summary>
         [Theory]
-        [InlineData(1, @"<div id=""template"" class=""wx-template"" data-multiplicity=""1""></div>")]
-        [InlineData(5, @"<div id=""template"" class=""wx-template"" data-multiplicity=""5""></div>")]
+        [InlineData(1, @"<template id=""template"" data-multiplicity=""1""></template>")]
+        [InlineData(5, @"<template id=""template"" data-multiplicity=""5""></template>")]
         public void Multiplicity(int multiplicity, string expected)
         {
             // arrange
@@ -106,7 +106,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var html = control.Render(context, visualTree);
 
             // validation
-            AssertExtensions.EqualWithPlaceholders(@"<div id=""template"" class=""wx-template""></div>", html);
+            AssertExtensions.EqualWithPlaceholders(@"<template id=""template""></template>", html);
         }
 
         /// <summary>
