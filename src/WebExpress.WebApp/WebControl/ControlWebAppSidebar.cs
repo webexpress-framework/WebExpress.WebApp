@@ -248,7 +248,9 @@ namespace WebExpress.WebApp.WebControl
             var sidebarCtlr = items.Any()
                 ? new ControlSidebar(Id)
                 {
-                    Breakpoint = _ => 80
+                    Breakpoint = _ => 80,
+                    ScrollActiveIntoView = _ => true,
+                    HoverExpanded = _ => true
                 }
                     .Add(items)
                     .Add(tools)
