@@ -147,6 +147,9 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
      * @param {Object} data - The json payload containing columns and layout.
      */
     updateData(data) {
+        // the server owns which widget types the board may add
+        this._availableWidgets = webexpress.webapp.dashboardModel.normalizeAvailableWidgets(data);
+
         const columns = webexpress.webapp.dashboardModel.normalizeColumns(data);
         if (columns) {
             this._columns = columns;
@@ -167,8 +170,11 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
                 const payload = {
                     action: e.detail.action,
                     layout: e.detail.layout,
-                    // column rename / reorder / delete carries the full column list
-                    columns: e.detail.columns
+                    // column rename / reorder / delete / add carries the full column list
+                    columns: e.detail.columns,
+                    // widget add / delete / settings carries the full board, so the
+                    // per-widget name, color and params round-trip to the server
+                    board: e.detail.board
                 };
                 this._sendStateToServer(payload);
             }

@@ -65,5 +65,35 @@ namespace WebExpress.WebApp.Test.WebControl
             // validation
             AssertExtensions.EqualWithPlaceholders(expected, html);
         }
+
+        /// <summary>
+        /// Tests the board menu capability flags emit their data attributes only when true.
+        /// </summary>
+        [Theory]
+        [InlineData(false, false, false, @"<div id=""*"" class=""wx-webapp-dashboard""></div>")]
+        [InlineData(true, false, false, @"<div id=""*"" class=""wx-webapp-dashboard"" data-addable-column=""true""></div>")]
+        [InlineData(false, true, false, @"<div id=""*"" class=""wx-webapp-dashboard"" data-addable-widget=""true""></div>")]
+        [InlineData(false, false, true, @"<div id=""*"" class=""wx-webapp-dashboard"" data-configurable-widget=""true""></div>")]
+        [InlineData(true, true, true, @"<div id=""*"" class=""wx-webapp-dashboard"" data-addable-column=""true"" data-addable-widget=""true"" data-configurable-widget=""true""></div>")]
+        public void MenuFlags(bool addableColumn, bool addableWidget, bool configurableWidget, string expected)
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlDataDashboard()
+            {
+                AddableColumn = _ => addableColumn,
+                AddableWidget = _ => addableWidget,
+                ConfigurableWidget = _ => configurableWidget
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
     }
 }

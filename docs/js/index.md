@@ -8,6 +8,7 @@ This section documents the JavaScript controllers and client-side behavior used 
 
 - [CollaborativeCtrl](collaborative.md)
 - [CommentCtrl](comment.md)
+- [DashboardCtrl](dashboard.md)
 - [GanttCtrl](gantt.md)
 - [InputCascadingCtrl](cascading.md)
 - [RestFormCtrl](form.md)

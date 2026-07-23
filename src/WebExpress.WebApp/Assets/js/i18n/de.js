@@ -325,6 +325,22 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "column.edit": "Spalte umbenennen",
     "column.move": "Spalte verschieben",
     "column.delete": "Spalte löschen",
+    "column.add": "Neue Spalte",
+    "column.new": "Neue Spalte",
+    "column.menu": "Spaltenoptionen",
+    "column.size": "Größe",
+    "column.size.auto": "Auto",
+    "column.color": "Farbe",
+    "column.color.none": "Keine",
+    "back": "Zurück",
+
+    // dashboard board and widget menus
+    "dashboard.menu": "Optionen",
+    "dashboard.widget.add": "Element hinzufügen",
+    "dashboard.widget.menu": "Optionen",
+    "dashboard.widget.settings": "Einstellungen",
+    "dashboard.widget.scrum_velocity.title": "Velocity",
+    "dashboard.widget.scrum_velocity.max_sprints": "Anzahl Sprints",
 
     // tags
     "tag.title": "Schlagwörter",

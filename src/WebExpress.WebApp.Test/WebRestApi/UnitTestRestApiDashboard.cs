@@ -50,6 +50,10 @@ namespace WebExpress.WebApp.Test.WebRestApi
             Assert.Equal("Title", root.GetProperty("title").GetString());
             var items = root.GetProperty("columns").EnumerateArray().ToList();
             Assert.Empty(items);
+
+            // the available widgets are always emitted, empty by default
+            var widgets = root.GetProperty("availableWidgets").EnumerateArray().ToList();
+            Assert.Empty(widgets);
         }
 
         /// <summary>
@@ -85,6 +89,46 @@ namespace WebExpress.WebApp.Test.WebRestApi
             Assert.Equal("Alpha", api.LastColumns[0].Title);
             Assert.Equal("33%", api.LastColumns[0].Size);
             Assert.Equal("b", api.LastColumns[1].Id);
+        }
+
+        /// <summary>
+        /// Verifies that a PUT carrying a full board (widget add / delete /
+        /// settings) reaches the board-update hook with the per-widget name,
+        /// color and params, and does not fall through to the column hook.
+        /// </summary>
+        [Fact]
+        public void UpdateBoardLayout()
+        {
+            // arrange
+            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var api = new TestRestApiDashboard();
+            var request = UnitTestControlFixture.CreateRequestMock
+            (
+                "PUT / HTTP/1.1\r\n" +
+                "Host: localhost\r\n" +
+                "Content-Type: application/json\r\n" +
+                "\r\n" +
+                "{\"action\":\"settings\",\"board\":[{\"id\":\"a\",\"title\":\"Alpha\",\"size\":\"1fr\"," +
+                "\"widgets\":[{\"id\":\"widget_scrum_velocity\",\"title\":\"Velocity\",\"color\":\"#00bcd4\"," +
+                "\"params\":{\"maxSprints\":\"8\"}}]}]}",
+                "https://example.com/"
+            );
+
+            // act
+            var result = api.Update(request);
+
+            // validation
+            Assert.NotNull(result);
+            Assert.Equal(200, result.Status);
+            Assert.Null(api.LastColumns);
+            Assert.NotNull(api.LastBoard);
+            Assert.Single(api.LastBoard);
+            Assert.Equal("a", api.LastBoard[0].Id);
+            var widget = Assert.Single(api.LastBoard[0].Widgets);
+            Assert.Equal("widget_scrum_velocity", widget.Id);
+            Assert.Equal("Velocity", widget.Title);
+            Assert.Equal("#00bcd4", widget.Color);
+            Assert.Equal("8", widget.Params["maxSprints"]);
         }
     }
 }

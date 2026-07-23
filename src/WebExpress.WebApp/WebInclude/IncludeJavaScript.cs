@@ -95,6 +95,7 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/js/panels/webexpress.webapp.panel.workflow.validator.js")]
     [Asset("/assets/js/syntax/wql.js")]
     [Asset("/assets/js/templates/default.js")]
+    [Asset("/assets/js/widgets/default.js")]
     public sealed class IncludeJavaScript : IInclude
     {
     }

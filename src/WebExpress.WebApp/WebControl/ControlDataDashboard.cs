@@ -49,6 +49,29 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, bool> DeletableColumn { get; set; }
 
         /// <summary>
+        /// Gets or sets a value indicating whether the board offers the "…" menu
+        /// to add a new column. The menu shares the look and feel of the tab add
+        /// (+) control; the new column layout is persisted to the REST endpoint.
+        /// </summary>
+        public Func<IRenderControlContext, bool> AddableColumn { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the board offers the "…" menu
+        /// to add a new widget (dashboard item). The available item types are
+        /// restricted by <see cref="AvailableWidgets"/> when set, otherwise every
+        /// widget the client registry flags as available is offered.
+        /// </summary>
+        public Func<IRenderControlContext, bool> AddableWidget { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether each widget offers a settings
+        /// entry in its "…" menu. The settings dialog always carries the name and
+        /// color, plus any type-specific fields the widget declares. The delete
+        /// entry stays available independently of this flag.
+        /// </summary>
+        public Func<IRenderControlContext, bool> ConfigurableWidget { get; set; }
+
+        /// <summary>
         /// Gets the data service descriptors of the control, emitted together as
         /// the data-wx-service island that the JavaScript engine consumes in
         /// preference to the legacy data-uri fallback, which keeps the endpoint
@@ -109,6 +132,9 @@ namespace WebExpress.WebApp.WebControl
             var editableColumn = EditableColumn?.Invoke(renderContext) ?? false;
             var movableColumn = MovableColumn?.Invoke(renderContext) ?? false;
             var deletableColumn = DeletableColumn?.Invoke(renderContext) ?? false;
+            var addableColumn = AddableColumn?.Invoke(renderContext) ?? false;
+            var addableWidget = AddableWidget?.Invoke(renderContext) ?? false;
+            var configurableWidget = ConfigurableWidget?.Invoke(renderContext) ?? false;
 
             var html = new HtmlElementTextContentDiv()
             {
@@ -119,6 +145,9 @@ namespace WebExpress.WebApp.WebControl
                 .AddUserAttribute("data-editable-column", editableColumn ? "true" : null)
                 .AddUserAttribute("data-movable-column", movableColumn ? "true" : null)
                 .AddUserAttribute("data-deletable-column", deletableColumn ? "true" : null)
+                .AddUserAttribute("data-addable-column", addableColumn ? "true" : null)
+                .AddUserAttribute("data-addable-widget", addableWidget ? "true" : null)
+                .AddUserAttribute("data-configurable-widget", configurableWidget ? "true" : null)
                 .EmitDataIslands(this, renderContext);
 
             return html;

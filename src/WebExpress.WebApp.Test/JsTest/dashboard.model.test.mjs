@@ -46,6 +46,62 @@ test("normalize columns maps columns and widgets with defaults", () => {
     assert.equal(cols[0].widgets[0].instanceId.startsWith("wx_inst_c1_0_"), true);
 });
 
+test("normalize columns carries the widget name from title or label", () => {
+    const { wxapp } = load();
+    const cols = wxapp.dashboardModel.normalizeColumns({
+        columns: [
+            { id: "c1", widgets: [{ id: "w1", title: "Named" }, { id: "w2", label: "Labelled" }, { id: "w3" }] }
+        ]
+    });
+
+    // title wins when present, label is the fallback, both stay in sync so the
+    // card header and the settings dialog show the same value
+    assert.equal(cols[0].widgets[0].title, "Named");
+    assert.equal(cols[0].widgets[0].label, "Named");
+    assert.equal(cols[0].widgets[1].title, "Labelled");
+    assert.equal(cols[0].widgets[1].label, "Labelled");
+    assert.equal(cols[0].widgets[2].title, null);
+    assert.equal(cols[0].widgets[2].label, null);
+});
+
+test("normalize columns carries the column color", () => {
+    const { wxapp } = load();
+    const cols = wxapp.dashboardModel.normalizeColumns({
+        columns: [
+            { id: "c1", color: "#0d6efd" },
+            { id: "c2" }
+        ]
+    });
+
+    assert.equal(cols[0].color, "#0d6efd");
+    assert.equal(cols[1].color, null);
+});
+
+test("normalize available widgets maps the server list and drops idless entries", () => {
+    const { wxapp } = load();
+    const widgets = wxapp.dashboardModel.normalizeAvailableWidgets({
+        availableWidgets: [
+            { id: "widget_scrum_velocity", title: "Velocity", icon: "fas fa-chart-column", description: "d" },
+            { title: "no id" },
+            { id: "widget_info" }
+        ]
+    });
+
+    assert.equal(widgets.length, 2);
+    assert.equal(widgets[0].id, "widget_scrum_velocity");
+    assert.equal(widgets[0].title, "Velocity");
+    assert.equal(widgets[0].icon, "fas fa-chart-column");
+    assert.equal(widgets[0].description, "d");
+    assert.equal(widgets[1].id, "widget_info");
+    assert.equal(widgets[1].title, null);
+});
+
+test("normalize available widgets returns an empty array when absent", () => {
+    const { wxapp } = load();
+    assert.deepEqual(wxapp.dashboardModel.normalizeAvailableWidgets({}), []);
+    assert.deepEqual(wxapp.dashboardModel.normalizeAvailableWidgets(null), []);
+});
+
 test("normalize columns returns null when the response carries no columns", () => {
     const { wxapp } = load();
     assert.equal(wxapp.dashboardModel.normalizeColumns({}), null);

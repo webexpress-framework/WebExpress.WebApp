@@ -29,10 +29,14 @@ webexpress.webapp.dashboardModel = {
             id: col.id,
             label: col.label || "",
             size: col.size || "1fr",
+            color: col.color || null,
             widgets: (col.widgets || []).map((w, i) => ({
                 instanceId: "wx_inst_" + col.id + "_" + i + "_" + Date.now(),
                 id: w.id,
-                label: w.label || null,
+                // the widget name is authored either as title or label; carry both
+                // so the card header and the settings dialog show the same value
+                title: w.title || w.label || null,
+                label: w.label || w.title || null,
                 icon: w.icon || null,
                 image: w.image || null,
                 color: w.color || null,
@@ -42,5 +46,26 @@ webexpress.webapp.dashboardModel = {
                 params: w.params || {}
             }))
         }));
+    },
+
+    /**
+     * Normalises the widget types the server offers for adding into a plain list
+     * of { id, title, icon, description }. The server owns which widgets a board
+     * may use; the client resolves the render and any missing display metadata
+     * from its widget registry. A missing list yields an empty array.
+     * @param {object} data - The raw dashboard response.
+     * @returns {Array<object>} The available widget descriptors.
+     */
+    normalizeAvailableWidgets(data) {
+        const list = data && Array.isArray(data.availableWidgets) ? data.availableWidgets : [];
+
+        return list
+            .filter((widget) => widget && widget.id)
+            .map((widget) => ({
+                id: widget.id,
+                title: widget.title || null,
+                icon: widget.icon || null,
+                description: widget.description || null
+            }));
     }
 };

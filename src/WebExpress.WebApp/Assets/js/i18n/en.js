@@ -325,6 +325,22 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "column.edit": "Rename column",
     "column.move": "Reorder column",
     "column.delete": "Delete column",
+    "column.add": "New column",
+    "column.new": "New column",
+    "column.menu": "Column options",
+    "column.size": "Size",
+    "column.size.auto": "Auto",
+    "column.color": "Color",
+    "column.color.none": "None",
+    "back": "Back",
+
+    // dashboard board and widget menus
+    "dashboard.menu": "Options",
+    "dashboard.widget.add": "Add item",
+    "dashboard.widget.menu": "Options",
+    "dashboard.widget.settings": "Settings",
+    "dashboard.widget.scrum_velocity.title": "Velocity",
+    "dashboard.widget.scrum_velocity.max_sprints": "Number of sprints",
 
     // tags
     "tag.title": "Tags",

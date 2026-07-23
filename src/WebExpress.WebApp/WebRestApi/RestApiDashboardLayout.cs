@@ -33,5 +33,13 @@ namespace WebExpress.WebApp.WebRestApi
         /// </summary>
         [JsonPropertyName("columns")]
         public List<RestApiLayoutColumn> Columns { get; set; }
+
+        /// <summary>
+        /// Gets or sets the full board - columns with their widgets including the
+        /// per-widget name, color and params - sent when a widget is added,
+        /// deleted or reconfigured. Null for arrangement-only or column updates.
+        /// </summary>
+        [JsonPropertyName("board")]
+        public List<RestApiDashboardBoardColumn> Board { get; set; }
     }
 }

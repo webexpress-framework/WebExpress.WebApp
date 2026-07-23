@@ -27,6 +27,12 @@ namespace WebExpress.WebApp.WebRestApi
         public string Size { get; set; }
 
         /// <summary>
+        /// Gets or sets the column accent color.
+        /// </summary>
+        [JsonPropertyName("color")]
+        public string Color { get; set; }
+
+        /// <summary>
         /// Gets or sets the list of widgets in this column.
         /// </summary>
         [JsonPropertyName("widgets")]

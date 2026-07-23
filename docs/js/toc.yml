@@ -4,6 +4,8 @@
   href: collaborative.md
 - name: CommentCtrl
   href: comment.md
+- name: DashboardCtrl
+  href: dashboard.md
 - name: GanttCtrl
   href: gantt.md
 - name: InputCascadingCtrl

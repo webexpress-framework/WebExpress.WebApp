@@ -23,5 +23,20 @@ namespace WebExpress.WebApp.WebControl
         /// Gets a value indicating whether the columns can be deleted.
         /// </summary>
         Func<IRenderControlContext, bool> DeletableColumn { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether the board offers the "…" menu to add a new column.
+        /// </summary>
+        Func<IRenderControlContext, bool> AddableColumn { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether the board offers the "…" menu to add a new widget.
+        /// </summary>
+        Func<IRenderControlContext, bool> AddableWidget { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether each widget offers a settings entry in its "…" menu.
+        /// </summary>
+        Func<IRenderControlContext, bool> ConfigurableWidget { get; }
     }
 }
