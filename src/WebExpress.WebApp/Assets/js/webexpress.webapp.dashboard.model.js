@@ -30,6 +30,11 @@ webexpress.webapp.dashboardModel = {
             label: col.label || "",
             size: col.size || "1fr",
             color: col.color || null,
+            // an optional trailing badge (e.g. the widget count), coloured either
+            // by a css class (system color) or an inline style
+            badge: col.badge != null ? String(col.badge) : null,
+            badgeColor: col.badgeColor || null,
+            badgeStyle: col.badgeStyle || null,
             widgets: (col.widgets || []).map((w, i) => ({
                 instanceId: "wx_inst_" + col.id + "_" + i + "_" + Date.now(),
                 id: w.id,
@@ -42,6 +47,10 @@ webexpress.webapp.dashboardModel = {
                 color: w.color || null,
                 removable: w.removable !== false,
                 movable: w.movable !== false,
+                // an optional trailing badge in the widget header (e.g. an item count)
+                badge: w.badge != null ? String(w.badge) : null,
+                badgeColor: w.badgeColor || null,
+                badgeStyle: w.badgeStyle || null,
                 html: w.html || "",
                 params: w.params || {}
             }))

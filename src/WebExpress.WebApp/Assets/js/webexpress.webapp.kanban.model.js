@@ -23,11 +23,25 @@ webexpress.webapp.kanbanModel = {
         data = data || {};
         const out = {};
 
+        // the board carries the persisted wql filter so the settings dialog seeds
+        // its field; a present-but-null filter reads as an empty (cleared) filter
+        if (Object.prototype.hasOwnProperty.call(data, "filter")) {
+            out.filter = data.filter || "";
+        }
+
         if (data.columns) {
             out.columns = data.columns.map((col) => ({
                 id: col.id,
                 label: col.label,
-                size: col.size || "1fr"
+                size: col.size || "1fr",
+                // the column "…" menu persists a hex accent color; older boards
+                // that only carry the legacy colorCss class leave it null
+                color: col.color || null,
+                // an optional trailing badge (e.g. the card count), coloured
+                // either by a css class (system color) or an inline style
+                badge: col.badge != null ? String(col.badge) : null,
+                badgeColor: col.badgeColor || null,
+                badgeStyle: col.badgeStyle || null
             }));
         }
 
@@ -35,7 +49,14 @@ webexpress.webapp.kanbanModel = {
             out.swimlanes = data.swimlanes.map((lane) => ({
                 id: lane.id,
                 label: lane.label,
-                expanded: lane.expanded !== false
+                expanded: lane.expanded !== false,
+                // the per-swimlane wql filter, seeded so the settings dialog
+                // reflects the current value
+                filter: lane.filter || "",
+                // an optional trailing badge (e.g. the lane card count)
+                badge: lane.badge != null ? String(lane.badge) : null,
+                badgeColor: lane.badgeColor || null,
+                badgeStyle: lane.badgeStyle || null
             }));
         }
 
@@ -54,6 +75,9 @@ webexpress.webapp.kanbanModel = {
                 assigneeInitials: item.assigneeInitials || null,
                 assigneeColor: item.assigneeColor || null,
                 assigneeImage: item.assigneeImage || null,
+                badge: item.badge != null ? String(item.badge) : null,
+                badgeColor: item.badgeColor || null,
+                badgeStyle: item.badgeStyle || null,
                 footer: this._normalizeFooter(item.footer),
                 primaryAction: item.primaryAction || {},
                 secondaryAction: item.secondaryAction || {}

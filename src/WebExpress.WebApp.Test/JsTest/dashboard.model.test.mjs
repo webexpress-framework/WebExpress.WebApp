@@ -77,6 +77,23 @@ test("normalize columns carries the column color", () => {
     assert.equal(cols[1].color, null);
 });
 
+test("normalize columns carries badges on columns and widgets", () => {
+    const { wxapp } = load();
+    const cols = wxapp.dashboardModel.normalizeColumns({
+        columns: [
+            { id: "c1", badge: 3, badgeColor: "text-bg-secondary", widgets: [{ id: "w1", badge: "New", badgeStyle: "background:#ff8800;" }] },
+            { id: "c2" }
+        ]
+    });
+
+    assert.equal(cols[0].badge, "3");
+    assert.equal(cols[0].badgeColor, "text-bg-secondary");
+    assert.equal(cols[0].widgets[0].badge, "New");
+    assert.equal(cols[0].widgets[0].badgeStyle, "background:#ff8800;");
+    assert.equal(cols[1].badge, null);
+    assert.equal(cols[1].badgeColor, null);
+});
+
 test("normalize available widgets maps the server list and drops idless entries", () => {
     const { wxapp } = load();
     const widgets = wxapp.dashboardModel.normalizeAvailableWidgets({

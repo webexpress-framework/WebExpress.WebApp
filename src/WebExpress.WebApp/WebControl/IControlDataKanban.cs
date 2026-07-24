@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
@@ -23,5 +23,43 @@ namespace WebExpress.WebApp.WebControl
         /// Gets a value indicating whether the columns can be deleted.
         /// </summary>
         Func<IRenderControlContext, bool> DeletableColumn { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether the board offers the "…" menu to add a new column.
+        /// </summary>
+        Func<IRenderControlContext, bool> AddableColumn { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether the board offers the "…" menu to add a new swimlane.
+        /// </summary>
+        Func<IRenderControlContext, bool> AddableSwimlane { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether a swimlane can be renamed through its "…" menu.
+        /// </summary>
+        Func<IRenderControlContext, bool> EditableSwimlane { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether a swimlane can be deleted through its "…" menu.
+        /// </summary>
+        Func<IRenderControlContext, bool> DeletableSwimlane { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether a swimlane can be reordered (moved up or
+        /// down) through its "…" menu.
+        /// </summary>
+        Func<IRenderControlContext, bool> MovableSwimlane { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether the board offers the "…" menu entry that
+        /// opens the settings dialog carrying the WQL filter.
+        /// </summary>
+        Func<IRenderControlContext, bool> ConfigurableBoard { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether a swimlane offers the "…" menu entry that
+        /// opens the settings dialog carrying the swimlane WQL filter.
+        /// </summary>
+        Func<IRenderControlContext, bool> ConfigurableSwimlane { get; }
     }
 }

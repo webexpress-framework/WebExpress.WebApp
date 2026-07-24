@@ -34,6 +34,7 @@ test("normalize board maps columns, swimlanes and cards with defaults", () => {
     assert.equal(board.columns.length, 2);
     assert.equal(board.columns[0].size, "1fr");
     assert.equal(board.columns[1].size, "2fr");
+    assert.equal(board.columns[0].color, null);
     assert.equal(board.swimlanes[0].expanded, false);
     assert.equal(board.cards[0].id, "i1");
     assert.equal(board.cards[0].label, "Card");
@@ -78,12 +79,53 @@ test("normalize board returns only the present parts and tolerates empties", () 
     const partial = wxapp.kanbanModel.normalizeBoard({ items: [{ id: "x" }] });
     assert.equal("columns" in partial, false);
     assert.equal("swimlanes" in partial, false);
+    assert.equal("filter" in partial, false);
     assert.equal(partial.cards.length, 1);
 
     const lanes = wxapp.kanbanModel.normalizeBoard({ swimlanes: [{ id: "s", label: "L" }] });
     assert.equal(lanes.swimlanes[0].expanded, true);
 
     assert.deepEqual(wxapp.kanbanModel.normalizeBoard(null), {});
+});
+
+test("normalize board carries the wql filter and the column color", () => {
+    const { wxapp } = load();
+
+    // a present filter is carried through; a present-but-null filter reads as cleared
+    assert.equal(wxapp.kanbanModel.normalizeBoard({ filter: "priority = 'high'" }).filter, "priority = 'high'");
+    assert.equal(wxapp.kanbanModel.normalizeBoard({ filter: null }).filter, "");
+
+    const board = wxapp.kanbanModel.normalizeBoard({ columns: [{ id: "c1", label: "To Do", color: "#0d6efd" }] });
+    assert.equal(board.columns[0].color, "#0d6efd");
+});
+
+test("normalize board carries badges on columns, swimlanes and cards", () => {
+    const { wxapp } = load();
+    const board = wxapp.kanbanModel.normalizeBoard({
+        columns: [{ id: "c1", label: "To Do", badge: 2, badgeColor: "text-bg-secondary" }],
+        swimlanes: [{ id: "s1", label: "Lane", badge: "3", badgeStyle: "background:#ff8800;" }],
+        items: [{ id: "i1", columnId: "c1", badge: "#42", badgeColor: "text-bg-primary" }]
+    });
+
+    assert.equal(board.columns[0].badge, "2");
+    assert.equal(board.columns[0].badgeColor, "text-bg-secondary");
+    assert.equal(board.swimlanes[0].badge, "3");
+    assert.equal(board.swimlanes[0].badgeStyle, "background:#ff8800;");
+    assert.equal(board.cards[0].badge, "#42");
+    assert.equal(board.cards[0].badgeColor, "text-bg-primary");
+});
+
+test("normalize board carries the per-swimlane filter and defaults missing badges to null", () => {
+    const { wxapp } = load();
+    const board = wxapp.kanbanModel.normalizeBoard({
+        swimlanes: [{ id: "s1", label: "Lane", filter: "team = 'a'" }, { id: "s2", label: "Other" }],
+        items: [{ id: "i1", columnId: "c1" }]
+    });
+
+    assert.equal(board.swimlanes[0].filter, "team = 'a'");
+    assert.equal(board.swimlanes[1].filter, "");
+    assert.equal(board.swimlanes[1].badge, null);
+    assert.equal(board.cards[0].badge, null);
 });
 
 test("model loads the board and persists a move through a service", async () => {

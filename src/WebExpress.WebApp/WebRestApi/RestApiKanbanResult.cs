@@ -24,6 +24,13 @@ namespace WebExpress.WebApp.WebRestApi
         public string Title { get; set; }
 
         /// <summary>
+        /// Gets or sets the active WQL filter of the board, echoed back so the
+        /// settings dialog can seed its filter field with the current value.
+        /// </summary>
+        [JsonPropertyName("filter")]
+        public string Filter { get; set; }
+
+        /// <summary>
         /// Gets or sets the collection of columns defined for the Kanban board.
         /// </summary>
         [JsonPropertyName("columns")]
@@ -52,6 +59,7 @@ namespace WebExpress.WebApp.WebRestApi
             var data = new
             {
                 title = Title,
+                filter = Filter,
                 columns = Columns,
                 swimlanes = Swimlanes,
                 items = Cards

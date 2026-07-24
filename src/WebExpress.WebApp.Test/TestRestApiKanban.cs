@@ -22,7 +22,7 @@ namespace WebExpress.WebApp.Test
         }
 
         /// <summary>
-        /// Gets the action of the most recent column-layout update.
+        /// Gets the action of the most recent update.
         /// </summary>
         public string LastAction { get; private set; }
 
@@ -30,6 +30,16 @@ namespace WebExpress.WebApp.Test
         /// Gets the columns of the most recent column-layout update.
         /// </summary>
         public IReadOnlyList<RestApiLayoutColumn> LastColumns { get; private set; }
+
+        /// <summary>
+        /// Gets the swimlanes of the most recent swimlane-layout update.
+        /// </summary>
+        public IReadOnlyList<RestApiLayoutSwimlane> LastSwimlanes { get; private set; }
+
+        /// <summary>
+        /// Gets the wql filter of the most recent settings update.
+        /// </summary>
+        public string LastFilter { get; private set; }
 
         /// <summary>
         /// Captures the column-layout update for verification.
@@ -40,6 +50,28 @@ namespace WebExpress.WebApp.Test
         {
             LastAction = layout?.Action;
             LastColumns = layout?.Columns;
+        }
+
+        /// <summary>
+        /// Captures the swimlane-layout update for verification.
+        /// </summary>
+        /// <param name="layout">The layout payload.</param>
+        /// <param name="request">The incoming request.</param>
+        protected override void UpdateSwimlanes(RestApiDashboardLayout layout, IRequest request)
+        {
+            LastAction = layout?.Action;
+            LastSwimlanes = layout?.Swimlanes;
+        }
+
+        /// <summary>
+        /// Captures the settings update for verification.
+        /// </summary>
+        /// <param name="layout">The layout payload.</param>
+        /// <param name="request">The incoming request.</param>
+        protected override void UpdateSettings(RestApiDashboardLayout layout, IRequest request)
+        {
+            LastAction = layout?.Action;
+            LastFilter = layout?.Filter;
         }
 
         /// <summary>

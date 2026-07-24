@@ -42,6 +42,12 @@ Each attribute is emitted only when its `ControlDataDashboard` flag is set, so a
 
 Adding a column rebalances every column to an equal `1fr` fraction, so the existing columns make room for the new one.
 
+While a column is dragged by its grip, the header under the pointer shows an insertion indicator on the edge where the column would land (`wx-board-col-drop-before` / `wx-board-col-drop-after`) and the dragged header dims (`wx-board-col-dragging`); after the drop the header at the new position briefly flashes (`wx-board-col-moved`, respecting `prefers-reduced-motion`) — the same feedback as the kanban.
+
+## Badges
+
+A column header and a widget header each render an optional trailing badge (`wx-board-col-badge`, `wx-dashboard-widget-badge`) — for example the widget count on a column or an item count on a widget. The badge text comes from `badge`; its color from `badgeColor` (a system color css class) or `badgeStyle` (an inline user color), like the tab header badge. On the server `RestApiDashboardColumn` and `RestApiDashboardWidget` each carry a `Badge` plus a typed `BadgeColor` (`PropertyColorBackgroundBadge`) that collapses into `badgeColor` / `badgeStyle` at serialization time.
+
 ## Widget Settings
 
 The settings dialog always carries **Name** (the widget title) and **Color** (the card accent, edited with the framework color control — the same one `ControlFormItemInputColor` renders). A widget contributes type-specific fields by declaring a `settings` schema on its registration; each field is written back into the widget's `params`.
@@ -77,9 +83,9 @@ Supported field `type`s: `text`, `number` (`min` / `max` / `step`), `select` (`o
     "title": "Dashboard",
     "columns": [
         {
-            "id": "info", "label": "Locations", "size": "33%", "color": "#0d6efd",
+            "id": "info", "label": "Locations", "size": "33%", "color": "#0d6efd", "badge": "2", "badgeColor": "text-bg-secondary",
             "widgets": [
-                { "id": "widget_info", "title": "Scumm Bar", "color": "brown", "params": { "title": "Scumm Bar", "desc": "…" } }
+                { "id": "widget_info", "title": "Scumm Bar", "color": "brown", "badge": "New", "badgeColor": "text-bg-success", "params": { "title": "Scumm Bar", "desc": "…" } }
             ]
         }
     ],

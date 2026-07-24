@@ -13,8 +13,35 @@
 
 .wx-wql .wx-wql-input {
     resize: vertical;
-    overflow: auto; 
+    overflow: auto;
     min-height: 1.5em;
+}
+
+/* clear button: a subtle themed xmark that shares the field border (no left
+   border, so it reads as part of the input) and turns danger-red on hover */
+.wx-wql-clear {
+    border: 1px solid var(--wx-border-color, #ced4da);
+    border-left: none;
+    background-color: var(--wx-body-bg, #fff);
+    color: var(--wx-secondary-color, #6c757d);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.65rem;
+    line-height: 1;
+    transition: color 0.15s, background-color 0.15s;
+}
+
+.wx-wql-clear:hover,
+.wx-wql-clear:focus {
+    color: var(--wx-danger, #dc3545);
+    background-color: var(--wx-tertiary-bg, rgba(0, 0, 0, 0.03));
+}
+
+/* keep the focus ring subtle and on-brand */
+.wx-wql-clear:focus {
+    box-shadow: none;
+    outline: none;
 }
 
 /* show error if input is marked invalid */

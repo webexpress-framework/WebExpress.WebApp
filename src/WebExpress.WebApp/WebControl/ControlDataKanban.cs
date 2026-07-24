@@ -49,6 +49,58 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, bool> DeletableColumn { get; set; }
 
         /// <summary>
+        /// Gets or sets a value indicating whether the board offers the "…" menu
+        /// to add a new column. The menu shares the look and feel of the
+        /// dashboard board menu; the new column layout is persisted to the REST
+        /// endpoint.
+        /// </summary>
+        public Func<IRenderControlContext, bool> AddableColumn { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the board offers the "…" menu
+        /// to add a new swimlane. The new swimlane list is persisted to the REST
+        /// endpoint.
+        /// </summary>
+        public Func<IRenderControlContext, bool> AddableSwimlane { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether a swimlane can be renamed
+        /// through its "…" menu. The new swimlane list is persisted to the REST
+        /// endpoint.
+        /// </summary>
+        public Func<IRenderControlContext, bool> EditableSwimlane { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether a swimlane can be deleted
+        /// through its "…" menu. The new swimlane list is persisted to the REST
+        /// endpoint.
+        /// </summary>
+        public Func<IRenderControlContext, bool> DeletableSwimlane { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether a swimlane can be reordered
+        /// (moved up or down) through its "…" menu. The new swimlane order is
+        /// persisted to the REST endpoint.
+        /// </summary>
+        public Func<IRenderControlContext, bool> MovableSwimlane { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the board offers the "…" menu
+        /// entry that opens the settings dialog. The dialog carries the WQL
+        /// filter that restricts which cards the board loads; the submitted
+        /// filter is persisted to the REST endpoint and applied on the next load.
+        /// </summary>
+        public Func<IRenderControlContext, bool> ConfigurableBoard { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether a swimlane offers the "…" menu
+        /// entry that opens the settings dialog. The dialog carries the swimlane
+        /// WQL filter that restricts which cards the lane shows; the submitted
+        /// filter is persisted to the REST endpoint.
+        /// </summary>
+        public Func<IRenderControlContext, bool> ConfigurableSwimlane { get; set; }
+
+        /// <summary>
         /// Gets the data service descriptors of the control, emitted together as
         /// the data-wx-service island that the JavaScript engine consumes in
         /// preference to the legacy data-uri fallback, which keeps the endpoint
@@ -109,6 +161,13 @@ namespace WebExpress.WebApp.WebControl
             var editableColumn = EditableColumn?.Invoke(renderContext) ?? false;
             var movableColumn = MovableColumn?.Invoke(renderContext) ?? false;
             var deletableColumn = DeletableColumn?.Invoke(renderContext) ?? false;
+            var addableColumn = AddableColumn?.Invoke(renderContext) ?? false;
+            var addableSwimlane = AddableSwimlane?.Invoke(renderContext) ?? false;
+            var editableSwimlane = EditableSwimlane?.Invoke(renderContext) ?? false;
+            var deletableSwimlane = DeletableSwimlane?.Invoke(renderContext) ?? false;
+            var movableSwimlane = MovableSwimlane?.Invoke(renderContext) ?? false;
+            var configurableBoard = ConfigurableBoard?.Invoke(renderContext) ?? false;
+            var configurableSwimlane = ConfigurableSwimlane?.Invoke(renderContext) ?? false;
 
             var html = new HtmlElementTextContentDiv()
             {
@@ -119,6 +178,13 @@ namespace WebExpress.WebApp.WebControl
                 .AddUserAttribute("data-editable-column", editableColumn ? "true" : null)
                 .AddUserAttribute("data-movable-column", movableColumn ? "true" : null)
                 .AddUserAttribute("data-deletable-column", deletableColumn ? "true" : null)
+                .AddUserAttribute("data-addable-column", addableColumn ? "true" : null)
+                .AddUserAttribute("data-addable-swimlane", addableSwimlane ? "true" : null)
+                .AddUserAttribute("data-editable-swimlane", editableSwimlane ? "true" : null)
+                .AddUserAttribute("data-deletable-swimlane", deletableSwimlane ? "true" : null)
+                .AddUserAttribute("data-movable-swimlane", movableSwimlane ? "true" : null)
+                .AddUserAttribute("data-configurable-board", configurableBoard ? "true" : null)
+                .AddUserAttribute("data-configurable-swimlane", configurableSwimlane ? "true" : null)
                 .EmitDataIslands(this, renderContext);
 
             return html;

@@ -342,6 +342,18 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "dashboard.widget.scrum_velocity.title": "Velocity",
     "dashboard.widget.scrum_velocity.max_sprints": "Number of sprints",
 
+    // kanban board and swimlane menus
+    "kanban.menu": "Options",
+    "board.settings": "Settings",
+    "swimlane.add": "New swimlane",
+    "swimlane.new": "New swimlane",
+    "swimlane.menu": "Swimlane options",
+    "swimlane.edit": "Rename swimlane",
+    "swimlane.delete": "Delete swimlane",
+    "swimlane.settings": "Settings",
+    "swimlane.moveup": "Move up",
+    "swimlane.movedown": "Move down",
+
     // tags
     "tag.title": "Tags",
     "tag.edit": "Edit tags"

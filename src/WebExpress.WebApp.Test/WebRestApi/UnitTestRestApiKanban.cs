@@ -52,6 +52,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             var root = doc.RootElement;
 
             Assert.Equal("Title", root.GetProperty("title").GetString());
+            Assert.Equal(JsonValueKind.Null, root.GetProperty("filter").ValueKind);
             var columns = root.GetProperty("columns").EnumerateArray().ToList();
             Assert.Empty(columns);
 
@@ -87,6 +88,27 @@ namespace WebExpress.WebApp.Test.WebRestApi
             using var userDoc = JsonDocument.Parse(userJson);
             Assert.Equal(JsonValueKind.Null, userDoc.RootElement.GetProperty("colorCss").ValueKind);
             Assert.Equal("background:#ff8800;", userDoc.RootElement.GetProperty("colorStyle").GetString());
+        }
+
+        /// <summary>
+        /// Verifies that a column badge serializes its typed color into the css
+        /// class (system color), while the typed color itself stays off the wire.
+        /// </summary>
+        [Fact]
+        public void SerializeColumnBadge()
+        {
+            // arrange
+            var column = new RestApiKanbanColumn { Id = "todo", Label = "To Do", Badge = "3", BadgeColor = new PropertyColorBackgroundBadge(TypeColorBackgroundBadge.Secondary) };
+
+            // act
+            var json = JsonSerializer.Serialize(column);
+
+            // validation
+            using var doc = JsonDocument.Parse(json);
+            Assert.Equal("3", doc.RootElement.GetProperty("badge").GetString());
+            Assert.Equal("text-bg-secondary", doc.RootElement.GetProperty("badgeColor").GetString());
+            Assert.Equal(JsonValueKind.Null, doc.RootElement.GetProperty("badgeStyle").ValueKind);
+            Assert.False(doc.RootElement.TryGetProperty("BadgeColor", out _));
         }
 
         /// <summary>
@@ -147,6 +169,73 @@ namespace WebExpress.WebApp.Test.WebRestApi
             Assert.Equal("1fr", api.LastColumns[0].Size);
             Assert.Equal("b", api.LastColumns[1].Id);
             Assert.Equal("Beta", api.LastColumns[1].Title);
+        }
+
+        /// <summary>
+        /// Verifies that a PUT carrying a swimlane-layout change (add / rename /
+        /// reorder / delete) reaches the swimlane-update hook with the ordered
+        /// swimlane list.
+        /// </summary>
+        [Fact]
+        public void UpdateSwimlaneLayout()
+        {
+            // arrange
+            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var api = new TestRestApiKanban();
+            var request = UnitTestControlFixture.CreateRequestMock
+            (
+                "PUT / HTTP/1.1\r\n" +
+                "Host: localhost\r\n" +
+                "Content-Type: application/json\r\n" +
+                "\r\n" +
+                "{\"action\":\"swimlanes\",\"swimlanes\":[{\"id\":\"melee\",\"title\":\"Mêlée\",\"filter\":\"team = 'a'\"},{\"id\":\"new\",\"title\":\"New lane\"}]}",
+                "https://example.com/"
+            );
+
+            // act
+            var result = api.Update(request);
+
+            // validation
+            Assert.NotNull(result);
+            Assert.Equal(200, result.Status);
+            Assert.Equal("swimlanes", api.LastAction);
+            Assert.NotNull(api.LastSwimlanes);
+            Assert.Equal(2, api.LastSwimlanes.Count);
+            Assert.Equal("melee", api.LastSwimlanes[0].Id);
+            Assert.Equal("Mêlée", api.LastSwimlanes[0].Title);
+            Assert.Equal("team = 'a'", api.LastSwimlanes[0].Filter);
+            Assert.Equal("new", api.LastSwimlanes[1].Id);
+            Assert.Equal("New lane", api.LastSwimlanes[1].Title);
+        }
+
+        /// <summary>
+        /// Verifies that a PUT carrying a settings change reaches the settings
+        /// hook with the wql filter.
+        /// </summary>
+        [Fact]
+        public void UpdateSettingsFilter()
+        {
+            // arrange
+            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var api = new TestRestApiKanban();
+            var request = UnitTestControlFixture.CreateRequestMock
+            (
+                "PUT / HTTP/1.1\r\n" +
+                "Host: localhost\r\n" +
+                "Content-Type: application/json\r\n" +
+                "\r\n" +
+                "{\"action\":\"settings\",\"filter\":\"priority = 'high'\"}",
+                "https://example.com/"
+            );
+
+            // act
+            var result = api.Update(request);
+
+            // validation
+            Assert.NotNull(result);
+            Assert.Equal(200, result.Status);
+            Assert.Equal("settings", api.LastAction);
+            Assert.Equal("priority = 'high'", api.LastFilter);
         }
     }
 }

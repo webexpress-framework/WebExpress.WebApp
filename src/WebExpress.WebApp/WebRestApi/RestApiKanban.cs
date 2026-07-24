@@ -57,6 +57,12 @@ namespace WebExpress.WebApp.WebRestApi
             // quickfilters
             query = Filter(filters, query, request);
 
+            // the board settings dialog persists a wql filter that arrives as a
+            // request parameter on the next load; a server that stores it can
+            // seed the value through RetrieveFilter for full page reloads
+            var wql = RetrieveFilter(request.GetParameter("wql")?.Value, request);
+            query = ApplyWql(wql, query, request);
+
             var columns = RetrieveColumns(request);
             var swimlanes = RetrieveSwimlanes(request);
             var cards = RetrieveCards(query, context, request);
@@ -66,6 +72,7 @@ namespace WebExpress.WebApp.WebRestApi
                 var result = new RestApiKanbanResult()
                 {
                     Title = I18N.Translate(request, Title),
+                    Filter = wql,
                     Columns = columns,
                     Swimlanes = swimlanes,
                     Cards = cards
@@ -99,7 +106,20 @@ namespace WebExpress.WebApp.WebRestApi
                     var bodyString = Encoding.UTF8.GetString(requestData.Content);
                     var payload = JsonSerializer.Deserialize<RestApiDashboardLayout>(bodyString, _jsonOptions);
 
-                    UpdtaeColumns(payload, request);
+                    // the client tags every structural change with an action; a
+                    // card move carries none and is intentionally ignored here
+                    switch (payload?.Action)
+                    {
+                        case "columns":
+                            UpdtaeColumns(payload, request);
+                            break;
+                        case "swimlanes":
+                            UpdateSwimlanes(payload, request);
+                            break;
+                        case "settings":
+                            UpdateSettings(payload, request);
+                            break;
+                    }
                 }
 
                 var responseObj = new { success = true };
@@ -144,6 +164,50 @@ namespace WebExpress.WebApp.WebRestApi
         /// </param>
         protected virtual void UpdtaeColumns(RestApiDashboardLayout layout, IRequest request)
         {
+        }
+
+        /// <summary>
+        /// Updates the swimlanes of the board (add / rename / reorder / delete)
+        /// based on the ordered swimlane list carried in the payload.
+        /// </summary>
+        /// <param name="layout">
+        /// The layout payload whose <see cref="RestApiDashboardLayout.Swimlanes"/>
+        /// carries the new swimlane list.
+        /// </param>
+        /// <param name="request">
+        /// The request containing the details for updating the swimlanes.
+        /// </param>
+        protected virtual void UpdateSwimlanes(RestApiDashboardLayout layout, IRequest request)
+        {
+        }
+
+        /// <summary>
+        /// Updates the board settings (currently the WQL filter) based on the
+        /// payload. The filter narrows the card query on the next load.
+        /// </summary>
+        /// <param name="layout">
+        /// The layout payload whose <see cref="RestApiDashboardLayout.Filter"/>
+        /// carries the submitted WQL filter.
+        /// </param>
+        /// <param name="request">
+        /// The request containing the details for updating the settings.
+        /// </param>
+        protected virtual void UpdateSettings(RestApiDashboardLayout layout, IRequest request)
+        {
+        }
+
+        /// <summary>
+        /// Resolves the active WQL filter of the board. By default it echoes the
+        /// filter carried on the request; a server that persists the filter
+        /// through <see cref="UpdateSettings"/> overrides this to seed the stored
+        /// value when the request carries none (e.g. after a full page reload).
+        /// </summary>
+        /// <param name="wql">The WQL filter carried on the request, or null.</param>
+        /// <param name="request">The incoming request.</param>
+        /// <returns>The active WQL filter, or null when the board has none.</returns>
+        protected virtual string RetrieveFilter(string wql, IRequest request)
+        {
+            return wql;
         }
 
         /// <summary>
@@ -215,6 +279,28 @@ namespace WebExpress.WebApp.WebRestApi
         /// the filter statement.
         /// </returns>
         protected virtual IQuery<TIndexItem> Filter(IEnumerable<string> filters, IQuery<TIndexItem> query, IRequest request)
+        {
+            return query;
+        }
+
+        /// <summary>
+        /// Applies the WQL filter of the board settings to the card query.
+        /// </summary>
+        /// <param name="wql">
+        /// The WQL filter persisted through the board settings dialog, or null
+        /// when the board carries no filter.
+        /// </param>
+        /// <param name="query">
+        /// The query object the filter narrows.
+        /// </param>
+        /// <param name="request">
+        /// The request that provides the operational context.
+        /// </param>
+        /// <returns>
+        /// A query representing the filtered set of items; the unchanged query
+        /// when no filter is set.
+        /// </returns>
+        protected virtual IQuery<TIndexItem> ApplyWql(string wql, IQuery<TIndexItem> query, IRequest request)
         {
             return query;
         }

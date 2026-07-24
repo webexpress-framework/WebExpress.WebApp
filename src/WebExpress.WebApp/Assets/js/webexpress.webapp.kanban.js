@@ -117,7 +117,8 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
         this._loading = true;
         this._element.classList.add("placeholder-glow");
 
-        const result = await this._service.query({});
+        // the board settings wql filter narrows the server query when set
+        const result = await this._service.query(this._filter ? { wql: this._filter } : {});
 
         if (!result.ok) {
             // a superseded query arrives as an abort result and is ignored
@@ -144,6 +145,11 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
     updateData(data) {
         const board = webexpress.webapp.kanbanModel.normalizeBoard(data);
 
+        // the board echoes the persisted wql filter so the settings dialog seeds
+        // its field with the current value
+        if (board.filter !== undefined) {
+            this._filter = board.filter;
+        }
         if (board.columns) {
             this._columns = board.columns;
         }
@@ -177,14 +183,29 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
             }
         });
 
-        // column rename / reorder / delete is dispatched as a change-value event
+        // structural changes (column rename / reorder / delete, swimlane add /
+        // rename / delete and the board settings wql filter) each arrive as a
+        // change-value event tagged with their action; forward the relevant
+        // fields to the server so every kind of change round-trips
         const changeEvent = (evRoot && evRoot.CHANGE_VALUE_EVENT) ? evRoot.CHANGE_VALUE_EVENT : "webexpress.webui.change.value";
         element.addEventListener(changeEvent, (e) => {
-            if (e.detail && e.detail.id === this._element.id && e.detail.action === "columns") {
-                this._sendStateToServer({
-                    action: "columns",
-                    columns: e.detail.columns
-                });
+            if (!e.detail || e.detail.id !== this._element.id) {
+                return;
+            }
+
+            switch (e.detail.action) {
+                case "columns":
+                    this._sendStateToServer({ action: "columns", columns: e.detail.columns });
+                    break;
+                case "swimlanes":
+                    this._sendStateToServer({ action: "swimlanes", swimlanes: e.detail.swimlanes });
+                    break;
+                case "settings":
+                    this._filter = e.detail.filter || "";
+                    this._sendStateToServer({ action: "settings", filter: this._filter });
+                    // apply the new filter immediately by reloading the board
+                    this.update();
+                    break;
             }
         });
     }

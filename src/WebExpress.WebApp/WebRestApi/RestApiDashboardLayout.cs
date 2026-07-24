@@ -35,6 +35,22 @@ namespace WebExpress.WebApp.WebRestApi
         public List<RestApiLayoutColumn> Columns { get; set; }
 
         /// <summary>
+        /// Gets or sets the full ordered swimlane list when the action is
+        /// <c>"swimlanes"</c> (kanban only). The order represents the new swimlane
+        /// order; a renamed swimlane carries the new title; a deleted swimlane is
+        /// omitted.
+        /// </summary>
+        [JsonPropertyName("swimlanes")]
+        public List<RestApiLayoutSwimlane> Swimlanes { get; set; }
+
+        /// <summary>
+        /// Gets or sets the WQL filter when the action is <c>"settings"</c>
+        /// (kanban only). It restricts which cards the board loads.
+        /// </summary>
+        [JsonPropertyName("filter")]
+        public string Filter { get; set; }
+
+        /// <summary>
         /// Gets or sets the full board - columns with their widgets including the
         /// per-widget name, color and params - sent when a widget is added,
         /// deleted or reconfigured. Null for arrangement-only or column updates.

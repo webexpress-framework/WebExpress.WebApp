@@ -45,10 +45,34 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         this._attachListeners();
         this._attachViewState(element);
 
-        // load history asynchronously after initialization
-        setTimeout(() => {
-            this._loadHistoryFromApi();
-        }, 200);
+        if (this._apiUri) {
+            // load history asynchronously after initialization
+            setTimeout(() => {
+                this._loadHistoryFromApi();
+            }, 200);
+        } else {
+            // standalone (no wx-service): the prompt is a syntax-highlighting WQL
+            // editor only, with no server suggestions, history or validation. it
+            // is used this way inside dialogs (e.g. the kanban filter settings).
+            this._setHintHtml(this._i18n("webexpress.webapp:wql.status.ready") || "Ready.");
+        }
+    }
+
+    /**
+     * Gets the current WQL text. Public accessor so hosts (e.g. a settings
+     * dialog) can read the value without reaching into the internals.
+     * @returns {string} The WQL text.
+     */
+    get value() {
+        return this._getInputText();
+    }
+
+    /**
+     * Sets the WQL text and re-applies syntax highlighting.
+     * @param {string} text - The WQL text.
+     */
+    set value(text) {
+        this._setInputText(text != null ? String(text) : "");
     }
 
     /**
@@ -128,13 +152,19 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
 
         inputGroup.appendChild(this._input);
 
-        // clear button resets the prompt to a fresh input line
+        // clear button resets the prompt to a fresh input line; a themed xmark
+        // icon blends with the field instead of a raw glyph in an outline box
         this._clearBtn = document.createElement("button");
         this._clearBtn.type = "button";
-        this._clearBtn.className = "btn btn-outline-secondary wx-wql-clear";
+        this._clearBtn.className = "btn wx-wql-clear";
         this._clearBtn.title = this._i18n("webexpress.webapp:wql.clear") || "Clear";
         this._clearBtn.setAttribute("aria-label", this._clearBtn.title);
-        this._clearBtn.innerHTML = "&times;";
+        // resolve the icon through the theme when available; a lean runtime
+        // without the icon helper falls back to the plain Font Awesome class
+        const clearIcon = (typeof this._iconClass === "function")
+            ? this._iconClass("fas fa-xmark", "wx-icon-light-xmark")
+            : "fas fa-xmark";
+        this._clearBtn.innerHTML = `<i class="${clearIcon}"></i>`;
         this._clearBtn.addEventListener("click", () => this._onClearInput());
         inputGroup.appendChild(this._clearBtn);
 
@@ -388,6 +418,11 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
      * Uses AbortController to cancel stale requests.
      */
     async _refreshContextAndSuggestions() {
+        // standalone prompts (no service) offer no server-driven suggestions
+        if (!this._apiUri) {
+            return;
+        }
+
         // cancel previous pending request
         if (this._abortController) {
             this._abortController.abort();
@@ -786,6 +821,11 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
      * @returns {Promise<boolean>} True when the statement may be submitted.
      */
     async _validateInput(text) {
+        // a standalone prompt has no server to validate against; accept as-is
+        if (!this._apiUri) {
+            return true;
+        }
+
         try {
             const resp = await webexpress.webapp.ServiceRegistry.request(this._analyzeUrl(text, text.length));
 
