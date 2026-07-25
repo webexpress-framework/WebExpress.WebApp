@@ -21,7 +21,15 @@ namespace WebExpress.WebApp.WebRestApi
         public string Label { get; set; }
 
         /// <summary>
-        /// Gets or sets the CSS color value associated with this swimlane
+        /// Gets or sets the optional accent color (hex) of the swimlane header,
+        /// chosen through the swimlane "…" menu.
+        /// </summary>
+        [JsonPropertyName("color")]
+        public string Color { get; set; }
+
+        /// <summary>
+        /// Gets or sets the CSS color value associated with this swimlane.
+        /// </summary>
         [JsonPropertyName("colorCss")]
         public string ColorCss { get; set; }
 

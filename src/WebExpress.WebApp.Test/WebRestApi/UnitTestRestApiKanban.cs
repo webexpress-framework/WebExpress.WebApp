@@ -188,7 +188,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
                 "Host: localhost\r\n" +
                 "Content-Type: application/json\r\n" +
                 "\r\n" +
-                "{\"action\":\"swimlanes\",\"swimlanes\":[{\"id\":\"melee\",\"title\":\"Mêlée\",\"filter\":\"team = 'a'\"},{\"id\":\"new\",\"title\":\"New lane\"}]}",
+                "{\"action\":\"swimlanes\",\"swimlanes\":[{\"id\":\"melee\",\"title\":\"Mêlée\",\"filter\":\"team = 'a'\",\"color\":\"#198754\"},{\"id\":\"new\",\"title\":\"New lane\"}]}",
                 "https://example.com/"
             );
 
@@ -204,8 +204,10 @@ namespace WebExpress.WebApp.Test.WebRestApi
             Assert.Equal("melee", api.LastSwimlanes[0].Id);
             Assert.Equal("Mêlée", api.LastSwimlanes[0].Title);
             Assert.Equal("team = 'a'", api.LastSwimlanes[0].Filter);
+            Assert.Equal("#198754", api.LastSwimlanes[0].Color);
             Assert.Equal("new", api.LastSwimlanes[1].Id);
             Assert.Equal("New lane", api.LastSwimlanes[1].Title);
+            Assert.Null(api.LastSwimlanes[1].Color);
         }
 
         /// <summary>

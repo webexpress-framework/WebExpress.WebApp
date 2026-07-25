@@ -53,6 +53,9 @@ webexpress.webapp.kanbanModel = {
                 // the per-swimlane wql filter, seeded so the settings dialog
                 // reflects the current value
                 filter: lane.filter || "",
+                // the swimlane "…" menu persists a hex accent color, mirroring
+                // the column color
+                color: lane.color || null,
                 // an optional trailing badge (e.g. the lane card count)
                 badge: lane.badge != null ? String(lane.badge) : null,
                 badgeColor: lane.badgeColor || null,

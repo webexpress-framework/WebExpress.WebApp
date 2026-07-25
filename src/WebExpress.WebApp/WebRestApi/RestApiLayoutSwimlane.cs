@@ -27,5 +27,12 @@ namespace WebExpress.WebApp.WebRestApi
         /// </summary>
         [JsonPropertyName("filter")]
         public string Filter { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional accent color (hex) of the swimlane,
+        /// submitted through the swimlane "…" menu.
+        /// </summary>
+        [JsonPropertyName("color")]
+        public string Color { get; set; }
     }
 }

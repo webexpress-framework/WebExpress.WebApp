@@ -349,6 +349,8 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "swimlane.new": "Neue Swimlane",
     "swimlane.menu": "Swimlane-Optionen",
     "swimlane.edit": "Swimlane umbenennen",
+    "swimlane.color": "Farbe",
+    "swimlane.color.none": "Keine",
     "swimlane.delete": "Swimlane löschen",
     "swimlane.settings": "Einstellungen",
     "swimlane.moveup": "Nach oben verschieben",

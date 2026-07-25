@@ -99,6 +99,17 @@ test("normalize board carries the wql filter and the column color", () => {
     assert.equal(board.columns[0].color, "#0d6efd");
 });
 
+test("normalize board carries the swimlane color and defaults it to null", () => {
+    const { wxapp } = load();
+
+    const board = wxapp.kanbanModel.normalizeBoard({
+        swimlanes: [{ id: "s1", label: "Lane", color: "#198754" }, { id: "s2", label: "Other" }]
+    });
+
+    assert.equal(board.swimlanes[0].color, "#198754");
+    assert.equal(board.swimlanes[1].color, null);
+});
+
 test("normalize board carries badges on columns, swimlanes and cards", () => {
     const { wxapp } = load();
     const board = wxapp.kanbanModel.normalizeBoard({
