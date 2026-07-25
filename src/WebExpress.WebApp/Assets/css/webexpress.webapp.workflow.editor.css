@@ -44,8 +44,11 @@
 
     --wx-we-font-mono:     var(--bs-font-monospace, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
 
-    /* override-friendly host height; falls back to the parent's intrinsic size. */
-    --wx-we-host-min-height: 480px;
+    /* The editor's height. It is definite rather than content-driven, so the
+       canvas keeps its size while the properties panel fills and empties.
+       Override --wx-we-host-height (or set an inline height) to give the editor
+       a different extent, for example 100% inside a parent that has one. */
+    --wx-we-host-min-height: 600px;
 }
 
 [data-bs-theme="dark"] .wx-workflow-editor {
@@ -57,8 +60,16 @@
     display: flex;
     flex-direction: column;
     width: 100%;
+
+    /* A definite height, not a content-driven one. With `height: 100%` against
+       an auto-height parent the editor is sized by whatever its panes contain,
+       so it grew and shrank as the properties panel filled with rule lists or
+       was collapsed - the canvas jumped under the pointer on every selection.
+       The height is now stable and each pane scrolls inside it. A host that
+       wants a different extent sets --wx-we-host-height (or an inline height). */
+    height: var(--wx-we-host-height, var(--wx-we-host-min-height));
     min-height: var(--wx-we-host-min-height);
-    height: 100%;
+
     background: var(--wx-we-bg);
     color: var(--wx-we-text-1);
     border: 1px solid var(--wx-we-border);
@@ -66,10 +77,19 @@
     overflow: hidden;
 }
 
-/* The Split host fills the remaining vertical space. */
+/* The Split host fills the remaining vertical space. Both panes are capped by
+   it (min-height: 0), so neither can push the editor taller than it is. */
 .wx-workflow-editor-split {
     flex: 1 1 auto;
     min-height: 0;
+    height: 100%;
+}
+
+.wx-workflow-editor-split > .wx-main-pane,
+.wx-workflow-editor-split > .wx-side-pane {
+    min-height: 0;
+    max-height: 100%;
+    overflow: hidden;
 }
 
 /* ───────── Canvas pane (main) ───────── */
@@ -110,6 +130,24 @@
     display: none !important;
 }
 
+/* creation actions sit above the panel body and stay put while the body is
+   rebuilt for the current selection */
+.wx-workflow-editor-props-actions {
+    flex: 0 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--wx-we-space-2);
+    padding: var(--wx-we-space-2) var(--wx-we-space-3);
+    border-bottom: 1px solid var(--wx-we-border);
+    background: var(--wx-we-surface-2);
+}
+
+.wx-workflow-editor-props-actions .wx-workflow-editor-btn.is-active {
+    border-color: var(--wx-we-primary);
+    background: var(--wx-we-primary-soft);
+    color: var(--wx-we-primary);
+}
+
 .wx-workflow-editor-props-host {
     flex: 1 1 auto;
     min-height: 0;
@@ -117,10 +155,12 @@
 }
 
 /* ───────── Properties view (mirrors prototype `.props`) ───────── */
+/* the shell grows with its content and the host around it scrolls; capping it
+   at 100% would make a long rule list unreachable instead of scrollable */
 .wx-workflow-editor-props {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    min-height: 100%;
     background: var(--wx-we-surface);
 }
 
@@ -361,6 +401,63 @@
     border-radius: var(--wx-we-radius-sm);
     background: var(--wx-we-surface);
     cursor: pointer;
+}
+
+/* the framework colour control brings its own trigger, so the row only has to
+   give it the width the other inputs use */
+.wx-workflow-editor-prop-row__color-control {
+    min-width: 90px;
+}
+
+.wx-workflow-editor-prop-row__toggle {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: var(--wx-we-primary);
+}
+
+/* ───────── Persistence status ───────── */
+.wx-workflow-editor-status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--wx-we-space-2);
+    margin-left: auto;
+    padding: 0 var(--wx-we-space-2);
+    font-size: 0.8125rem;
+    white-space: nowrap;
+    color: var(--wx-we-text-muted, #6c757d);
+}
+
+.wx-workflow-editor-status--dirty {
+    color: var(--wx-we-text-muted, #6c757d);
+}
+
+.wx-workflow-editor-status--saving {
+    color: var(--wx-we-primary, #0d6efd);
+}
+
+.wx-workflow-editor-status--saved {
+    color: #198754;
+}
+
+.wx-workflow-editor-status--error {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.wx-workflow-editor-status__retry {
+    padding: 2px var(--wx-we-space-2);
+    border: 1px solid currentColor;
+    border-radius: var(--wx-we-radius-sm);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.wx-workflow-editor-status__retry:hover {
+    background: rgba(220, 53, 69, 0.1);
 }
 
 /* ───────── Sections (mirror prototype `.prop-section`) ───────── */

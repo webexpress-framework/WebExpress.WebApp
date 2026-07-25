@@ -9,6 +9,5 @@ contract({
     file: "webexpress.webapp.workflow.editor.js",
     selector: "wx-webapp-workflow-editor",
     ctrl: "WorkflowEditorCtrl",
-    deps: ["webexpress.webapp.workflow.editor.model.js"],
-    registrationOnly: "the workflow graph editor renders a deep SVG structure that the headless stub does not provide"
+    deps: ["webexpress.webapp.workflow.editor.model.js"]
 });

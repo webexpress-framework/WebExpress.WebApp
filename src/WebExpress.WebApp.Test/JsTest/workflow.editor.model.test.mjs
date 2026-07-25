@@ -69,14 +69,47 @@ test("to wire payload mirrors nodes and edges under states and transitions", () 
     assert.equal(p.id, "w1");
     assert.equal(p.name, "W");
     assert.equal(p.description, "d");
-    assert.equal(p.nodes, nodes);
-    assert.equal(p.states, nodes);
-    assert.equal(p.edges, edges);
-    assert.equal(p.transitions, edges);
+    assert.deepEqual(p.nodes, nodes);
+    assert.deepEqual(p.edges, edges);
+
+    // the two spellings are the same array, which is what lets a backend read
+    // either one
+    assert.equal(p.states, p.nodes);
+    assert.equal(p.transitions, p.edges);
 
     const p2 = wxapp.workflowEditorModel.toWirePayload(null, null);
     assert.deepEqual(p2.nodes, []);
     assert.deepEqual(p2.states, []);
+});
+
+test("to wire payload rounds the positions to whole numbers", () => {
+    const { wxapp } = load();
+
+    // the canvas works in continuous space; a consumer that models a coordinate
+    // as a whole number rejects the whole payload over a fractional one, which
+    // would turn the first drag into the last successful save
+    const p = wxapp.workflowEditorModel.toWirePayload({}, {
+        nodes: [{ id: "n1", x: 40.5, y: 119.6 }],
+        edges: [{ id: "e1", waypoints: [{ x: 12.4, y: -7.5 }] }]
+    });
+
+    assert.equal(p.states[0].x, 41);
+    assert.equal(p.states[0].y, 120);
+    assert.equal(p.transitions[0].waypoints[0].x, 12);
+    assert.equal(p.transitions[0].waypoints[0].y, -7);
+});
+
+test("to wire payload leaves a node without a position untouched", () => {
+    const { wxapp } = load();
+
+    const p = wxapp.workflowEditorModel.toWirePayload({}, {
+        nodes: [{ id: "n1", label: "A" }],
+        edges: [{ id: "e1" }]
+    });
+
+    assert.equal(p.states[0].x, undefined, "no coordinate is invented");
+    assert.equal(p.states[0].label, "A", "the remaining fields survive");
+    assert.equal(p.transitions[0].waypoints, undefined, "an edge without waypoints keeps none");
 });
 
 test("model loads and persists the workflow through a service end to end", async () => {

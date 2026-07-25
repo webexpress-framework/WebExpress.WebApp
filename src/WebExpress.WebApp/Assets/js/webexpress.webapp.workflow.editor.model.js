@@ -84,8 +84,8 @@ webexpress.webapp.workflowEditorModel = {
     toWirePayload(meta, model) {
         meta = meta || {};
         model = model || {};
-        const nodes = model.nodes || [];
-        const edges = model.edges || [];
+        const nodes = (model.nodes || []).map((n) => webexpress.webapp.workflowEditorModel._roundPosition(n));
+        const edges = (model.edges || []).map((e) => webexpress.webapp.workflowEditorModel._roundWaypoints(e));
         return {
             id: meta.id,
             name: meta.name,
@@ -97,5 +97,36 @@ webexpress.webapp.workflowEditorModel = {
             states: nodes,
             transitions: edges
         };
+    },
+
+    /**
+     * Copies a node with its position rounded to whole numbers.
+     *
+     * The canvas works in continuous space, so a dragged state carries a
+     * fractional position. A consumer that models a coordinate as a whole number
+     * rejects the payload over it, which turns the first drag into the last
+     * successful save. Sub-pixel precision carries no meaning for a stored
+     * layout, so it is dropped here rather than defended against downstream.
+     * @param {object} node - The node.
+     * @returns {object} The copy with whole-number coordinates.
+     */
+    _roundPosition(node) {
+        const out = Object.assign({}, node);
+        if (Number.isFinite(out.x)) { out.x = Math.round(out.x); }
+        if (Number.isFinite(out.y)) { out.y = Math.round(out.y); }
+        return out;
+    },
+
+    /**
+     * Copies an edge with its waypoint positions rounded to whole numbers.
+     * @param {object} edge - The edge.
+     * @returns {object} The copy with whole-number waypoints.
+     */
+    _roundWaypoints(edge) {
+        const out = Object.assign({}, edge);
+        if (Array.isArray(out.waypoints)) {
+            out.waypoints = out.waypoints.map((wp) => webexpress.webapp.workflowEditorModel._roundPosition(wp));
+        }
+        return out;
     }
 };

@@ -11,12 +11,14 @@ namespace WebExpress.WebApp.WebRestApi
         /// Gets or sets the X coordinate value.
         /// </summary>
         [JsonPropertyName("x")]
+        [JsonConverter(typeof(RestApiCoordinateConverter))]
         public int X { get; set; }
 
         /// <summary>
         /// Gets or sets the Y-coordinate value.
         /// </summary>
         [JsonPropertyName("y")]
+        [JsonConverter(typeof(RestApiCoordinateConverter))]
         public int Y { get; set; }
     }
 }

@@ -79,6 +79,19 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, DataState> StateFactory { get; set; }
 
         /// <summary>
+        /// Gets or sets the cell size of the designer's background grid, in canvas
+        /// units. A value of 0 (the default) leaves the grid off; the grid is a
+        /// layout aid, so it is shown only where it is asked for.
+        /// </summary>
+        public Func<IRenderControlContext, int> Grid { get; set; }
+
+        /// <summary>
+        /// Gets or sets whether dragging a state or a waypoint snaps it to the grid.
+        /// Has no effect while <see cref="Grid"/> is 0.
+        /// </summary>
+        public Func<IRenderControlContext, bool> GridSnap { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The control id.</param>
@@ -96,12 +109,16 @@ namespace WebExpress.WebApp.WebControl
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
 
+            var grid = Grid?.Invoke(renderContext) ?? 0;
+
             var html = new HtmlElementTextContentDiv()
             {
                 Id = Id,
                 Class = Css.Concatenate("wx-webapp-workflow-editor", GetClasses(renderContext)),
                 Style = GetStyles(renderContext)
             }
+                .AddUserAttribute("data-grid", grid > 0 ? grid.ToString() : null)
+                .AddUserAttribute("data-grid-snap", grid > 0 && (GridSnap?.Invoke(renderContext) ?? false) ? "true" : null)
                 .EmitDataIslands(this, renderContext);
 
             return html;

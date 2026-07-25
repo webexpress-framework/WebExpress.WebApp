@@ -9,7 +9,14 @@
  * navigation. It is kept separate so the lean engine tests are unaffected.
  *
  * It is not a browser and it is not jsdom.
+ *
+ * Elements created through createElementNS in the SVG namespace additionally
+ * carry the geometry surface from controls.dom-stub.svg.mjs, because the graph
+ * controls (and the workflow editor deriving from them) build their whole
+ * interaction model on it.
  */
+
+import { createSvgElementClass, SVG_NAMESPACE } from "./controls.dom-stub.svg.mjs";
 
 class TextNode {
     constructor(text) {
@@ -91,8 +98,10 @@ function matchesCompound(el, compound) {
         if (operator && el.getAttribute(name) !== value) { return false; }
     }
 
+    // a type selector matches the local name; SVG keeps that name lower case,
+    // HTML reports it upper case, so the comparison ignores case
     const tagMatch = compound.match(/^[\w-]+/);
-    if (tagMatch && el.tagName !== tagMatch[0].toUpperCase()) { return false; }
+    if (tagMatch && String(el.tagName).toUpperCase() !== tagMatch[0].toUpperCase()) { return false; }
 
     return true;
 }
@@ -213,7 +222,9 @@ class Element {
     }
     getAttribute(name) {
         if (name === "id") { return this._id; }
-        if (name === "class") { return this.className; }
+        // always the serialized attribute value; an SVG element exposes
+        // className as an SVGAnimatedString, which getAttribute must not leak
+        if (name === "class") { return Array.from(this._classes).join(" "); }
         return this._attrs.has(name) ? this._attrs.get(name) : null;
     }
     hasAttribute(name) {
@@ -393,13 +404,16 @@ class Element {
     }
 
     cloneNode(deep) {
-        const copy = new Element(this.tagName);
+        // the concrete class carries behaviour (an SVG element clones to an SVG
+        // element), so the copy is built from the same constructor
+        const copy = new this.constructor(this.tagName);
         copy._id = this._id;
         copy._classes = new Set(this._classes);
         copy._attrs = new Map(this._attrs);
         copy.dataset = { ...this.dataset };
         copy.value = this.value;
         copy.checked = this.checked;
+        copy._rect = this._rect;
         if (deep) {
             for (const child of this.childNodes) {
                 copy.appendChild(child.nodeType === 3 ? new TextNode(child._text) : child.cloneNode(true));
@@ -415,6 +429,12 @@ class Element {
     scroll() { }
     scrollTo() { }
 
+    // pointer capture is a routing detail of the real event system; the stub
+    // dispatches directly, so capturing is recorded but has no further effect
+    setPointerCapture(pointerId) { this._capturedPointer = pointerId; }
+    releasePointerCapture() { this._capturedPointer = null; }
+    hasPointerCapture(pointerId) { return this._capturedPointer === pointerId; }
+
     get offsetWidth() { return 0; }
     get offsetHeight() { return 0; }
     get clientWidth() { return 0; }
@@ -423,8 +443,19 @@ class Element {
     get scrollHeight() { return 0; }
     get offsetParent() { return this.parentElement; }
 
+    /**
+     * The stub has no layout, so every box is empty unless a test assigns one
+     * through _rect. Controls that lay themselves out against the host size
+     * (the graph viewport is the prominent one) need a non-empty box to do
+     * anything observable at all.
+     */
     getBoundingClientRect() {
-        return { x: 0, y: 0, top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0 };
+        const rect = this._rect || {};
+        const left = rect.left !== undefined ? rect.left : (rect.x || 0);
+        const top = rect.top !== undefined ? rect.top : (rect.y || 0);
+        const width = rect.width || 0;
+        const height = rect.height || 0;
+        return { x: left, y: top, top, left, right: left + width, bottom: top + height, width, height };
     }
 
     /**
@@ -446,6 +477,8 @@ class Element {
         });
     }
 }
+
+const SvgElement = createSvgElementClass(Element);
 
 /**
  * Finds an element with the given id in a subtree.
@@ -490,7 +523,9 @@ export function createDocument() {
         activeElement: body,
         defaultView: null,
         createElement(tag) { return new Element(tag); },
-        createElementNS(namespace, tag) { return new Element(tag); },
+        createElementNS(namespace, tag) {
+            return namespace === SVG_NAMESPACE ? new SvgElement(tag) : new Element(tag);
+        },
         createDocumentFragment() { return new Element("#document-fragment"); },
         createTextNode(text) { return new TextNode(text); },
         getElementById(id) { return findById(body, String(id)); },
@@ -512,4 +547,4 @@ export function createDocument() {
     };
 }
 
-export { Element, TextNode };
+export { Element, SvgElement, TextNode };
