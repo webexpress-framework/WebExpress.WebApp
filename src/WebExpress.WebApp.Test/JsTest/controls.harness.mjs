@@ -54,6 +54,9 @@ const WEBUI_BASE_CONTROLS = [
     "webexpress.webui.table.reorderable.js",
     "webexpress.webui.graph.viewer.js",
     "webexpress.webui.graph.editor.js",
+    // the schedule renders its mini calendar with the framework date control
+    "webexpress.webui.input.date.js",
+    "webexpress.webui.schedule.js",
     // the graph and workflow editors render their colour fields with the
     // framework colour control rather than a bare native input
     "webexpress.webui.input.color.js",

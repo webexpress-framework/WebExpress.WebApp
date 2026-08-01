@@ -103,6 +103,38 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
+        /// Declares the standard data service of the schedule, which loads the
+        /// items of the shown period with GET and persists their mutations
+        /// against the same base.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The schedule control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataSchedule DataService<TEndpoint>(this ControlDataSchedule control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, DataServiceDescriptor.ScheduleData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
+        }
+
+        /// <summary>
+        /// Declares the holidays service of the schedule, which answers the
+        /// holidays of a year and a region with GET. It is declared separately
+        /// from the items, because holidays change once a year while the items
+        /// change constantly, and the two are almost never owned by the same
+        /// source.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The schedule control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataSchedule HolidayService<TEndpoint>(this ControlDataSchedule control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, HolidaysPreset, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
+        }
+
+        /// <summary>
         /// Declares the standard data service of the graph viewer, which loads
         /// the nodes and edges with GET. The viewer is read-only, so the preset
         /// declares no write path.
@@ -718,6 +750,15 @@ namespace WebExpress.WebApp.WebControl
             => BindResource<ControlDataGantt, TResource>(control);
 
         /// <summary>
+        /// Binds the schedule to a ViewState resource by type.
+        /// </summary>
+        /// <typeparam name="TResource">The resource type.</typeparam>
+        /// <param name="control">The schedule control.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataSchedule Resource<TResource>(this ControlDataSchedule control) where TResource : IDataResource
+            => BindResource<ControlDataSchedule, TResource>(control);
+
+        /// <summary>
         /// Binds the graph viewer to a ViewState resource by type.
         /// </summary>
         /// <typeparam name="TResource">The resource type.</typeparam>
@@ -928,6 +969,21 @@ namespace WebExpress.WebApp.WebControl
         private static DataServiceDescriptor PoliciesPreset(string baseUri)
         {
             return DataServiceDescriptor.Rest("policies").WithBaseUri(baseUri).WithMethod("GET");
+        }
+
+        /// <summary>
+        /// The preset of the named holidays service, which answers the holidays
+        /// of a year and a region with GET.
+        /// </summary>
+        /// <param name="baseUri">The resolved endpoint.</param>
+        /// <returns>The configured descriptor.</returns>
+        private static DataServiceDescriptor HolidaysPreset(string baseUri)
+        {
+            return DataServiceDescriptor.Rest("holidays")
+                .WithBaseUri(baseUri)
+                .WithMethod("GET")
+                .MapQuery("year", "year")
+                .MapQuery("region", "region");
         }
 
         /// <summary>

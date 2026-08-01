@@ -20,6 +20,8 @@
   href: theme-selector.md
 - name: PermissionCtrl
   href: permission.md
+- name: ScheduleCtrl
+  href: schedule.md
 - name: WatcherCtrl
   href: watcher.md
 - name: TabCtrl

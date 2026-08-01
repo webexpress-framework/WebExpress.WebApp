@@ -284,6 +284,12 @@ namespace WebExpress.WebApp.Test.WebFragment
         public void GetFragments_DataPermission_ContentSecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(FragmentControlDataPermission), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<div id=""webexpress-webapp-test-testfragmentcontroldatapermission"" class=""wx-webapp-permission""*</div>");
 
         /// <summary>
+        /// Test the get fragments function of the fragment manager for the schedule control.
+        /// </summary>
+        [Fact]
+        public void GetFragments_DataSchedule_ContentSecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(FragmentControlDataSchedule), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<div id=""webexpress-webapp-test-testfragmentcontroldataschedule"" class=""wx-webapp-schedule"" role=""region""*</div>");
+
+        /// <summary>
         /// Test the get fragments function of the fragment manager for the scrum backlog control.
         /// </summary>
         [Fact]

@@ -173,6 +173,25 @@ namespace WebExpress.WebApp.WebData
         }
 
         /// <summary>
+        /// Creates the data service descriptor for the schedule. It loads the
+        /// items of a period with GET and persists their mutations against the
+        /// same base - POST to create, PUT to update, DELETE to remove. The
+        /// period travels as the from and to parameters, because a calendar is
+        /// queried by the range it shows rather than by a page number.
+        /// </summary>
+        /// <param name="baseUri">The resolved endpoint.</param>
+        /// <returns>The configured descriptor.</returns>
+        public static DataServiceDescriptor ScheduleData(string baseUri)
+        {
+            return Rest("data")
+                .WithBaseUri(baseUri)
+                .WithMethod("GET")
+                .WithUpdateMethod("PUT")
+                .MapQuery("from", "from")
+                .MapQuery("to", "to");
+        }
+
+        /// <summary>
         /// Creates the data service descriptor for the REST tab control. It loads
         /// with GET and persists with PUT, maps the logical id parameter and
         /// projects the items response, which mirrors
