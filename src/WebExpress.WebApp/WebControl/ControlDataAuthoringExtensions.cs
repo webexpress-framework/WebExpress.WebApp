@@ -103,6 +103,21 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
+        /// Declares the standard data service of the graph viewer, which loads
+        /// the nodes and edges with GET. The viewer is read-only, so the preset
+        /// declares no write path.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The graph viewer control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataGraphViewer DataService<TEndpoint>(this ControlDataGraphViewer control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
+        }
+
+        /// <summary>
         /// Declares the standard data service of the dashboard, which loads its
         /// state with GET and persists it with PUT.
         /// </summary>
@@ -701,6 +716,15 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>The control for chaining.</returns>
         public static ControlDataGantt Resource<TResource>(this ControlDataGantt control) where TResource : IDataResource
             => BindResource<ControlDataGantt, TResource>(control);
+
+        /// <summary>
+        /// Binds the graph viewer to a ViewState resource by type.
+        /// </summary>
+        /// <typeparam name="TResource">The resource type.</typeparam>
+        /// <param name="control">The graph viewer control.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataGraphViewer Resource<TResource>(this ControlDataGraphViewer control) where TResource : IDataResource
+            => BindResource<ControlDataGraphViewer, TResource>(control);
 
         /// <summary>
         /// Binds the dashboard to a ViewState resource by type.

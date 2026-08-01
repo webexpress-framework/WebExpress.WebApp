@@ -272,6 +272,12 @@ namespace WebExpress.WebApp.Test.WebFragment
         public void GetFragments_DataGantt_ContentSecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(FragmentControlDataGantt), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<div id=""webexpress-webapp-test-testfragmentcontroldatagantt"" class=""wx-webapp-gantt""*</div>");
 
         /// <summary>
+        /// Test the get fragments function of the fragment manager for the graph viewer control.
+        /// </summary>
+        [Fact]
+        public void GetFragments_DataGraphViewer_ContentSecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(FragmentControlDataGraphViewer), typeof(SectionContentSecondary), typeof(TestPageA), 1, @"<div id=""webexpress-webapp-test-testfragmentcontroldatagraphviewer"" class=""wx-webapp-graph-viewer"" role=""region""*</div>");
+
+        /// <summary>
         /// Test the get fragments function of the fragment manager for the permission control.
         /// </summary>
         [Fact]

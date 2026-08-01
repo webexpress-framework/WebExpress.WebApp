@@ -10,6 +10,7 @@ This section documents the JavaScript controllers and client-side behavior used 
 - [CommentCtrl](comment.md)
 - [DashboardCtrl](dashboard.md)
 - [GanttCtrl](gantt.md)
+- [GraphViewerCtrl](graph.viewer.md)
 - [InputCascadingCtrl](cascading.md)
 - [RestFormCtrl](form.md)
 - [RestFormEditorCtrl](form-editor.md)

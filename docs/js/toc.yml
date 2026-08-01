@@ -8,6 +8,8 @@
   href: dashboard.md
 - name: GanttCtrl
   href: gantt.md
+- name: GraphViewerCtrl
+  href: graph.viewer.md
 - name: InputCascadingCtrl
   href: cascading.md
 - name: RestFormCtrl

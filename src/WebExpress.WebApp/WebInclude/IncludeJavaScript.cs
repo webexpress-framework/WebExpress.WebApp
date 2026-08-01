@@ -35,6 +35,8 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/js/webexpress.webapp.dropdown.theme.js")]
     [Asset("/assets/js/webexpress.webapp.gantt.model.js")]
     [Asset("/assets/js/webexpress.webapp.gantt.js")]
+    [Asset("/assets/js/webexpress.webapp.graph.viewer.model.js")]
+    [Asset("/assets/js/webexpress.webapp.graph.viewer.js")]
     [Asset("/assets/js/webexpress.webapp.input.cascading.js")]
     [Asset("/assets/js/webexpress.webapp.input.selection.model.js")]
     [Asset("/assets/js/webexpress.webapp.input.selection.js")]
