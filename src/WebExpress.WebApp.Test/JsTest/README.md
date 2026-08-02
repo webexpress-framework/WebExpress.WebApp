@@ -73,3 +73,7 @@ the normal xUnit suite and guards the build pipeline. The headless tests in this
 folder guard the runtime behaviour of the engine and are intended to run wherever
 Node is available, for example on a developer machine or in continuous
 integration.
+
+## AI transparency notice
+
+Parts of this software, its documentation, and its assets were created with the assistance of AI-based tools, including large language models. AI-assisted contributions are reviewed by the project maintainer before they are included.
