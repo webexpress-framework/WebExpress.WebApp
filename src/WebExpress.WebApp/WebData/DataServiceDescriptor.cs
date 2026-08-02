@@ -173,6 +173,22 @@ namespace WebExpress.WebApp.WebData
         }
 
         /// <summary>
+        /// Creates the data service descriptor for the service level agreement.
+        /// It loads the state with GET and requests a transition with POST,
+        /// because a pause or a settlement is an action the endpoint applies to
+        /// the agreement rather than a new representation the client dictates.
+        /// </summary>
+        /// <param name="baseUri">The resolved endpoint.</param>
+        /// <returns>The configured descriptor.</returns>
+        public static DataServiceDescriptor SlaData(string baseUri)
+        {
+            return Rest("data")
+                .WithBaseUri(baseUri)
+                .WithMethod("GET")
+                .WithUpdateMethod("POST");
+        }
+
+        /// <summary>
         /// Creates the data service descriptor for the schedule. It loads the
         /// items of a period with GET and persists their mutations against the
         /// same base - POST to create, PUT to update, DELETE to remove. The

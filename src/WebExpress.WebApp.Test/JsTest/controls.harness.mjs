@@ -75,6 +75,9 @@ const WEBUI_BASE_CONTROLS = [
     "webexpress.webui.tag.js",
     "webexpress.webui.traffic.light.js",
     "webexpress.webui.input.traffic.light.js",
+    // the data-driven agreement is the framework agreement with its state
+    // sourced from a service, so the base control has to be present
+    "webexpress.webui.sla.js",
     "webexpress.webui.tab.js",
     "webexpress.webui.selection.js",
     "webexpress.webui.tile.js",
