@@ -133,6 +133,29 @@
     border: 1px solid var(--wx-webapp-border, var(--wx-border-color, #dee2e6));
 }
 
+.wx-scrum-velocity-filter {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.wx-scrum-velocity-filter-caption {
+    flex: 0 0 auto;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--wx-webapp-text-3, var(--wx-secondary-color, #6c757d));
+}
+
+/* the slider ships with the padding of a form field; inside the chart it is a
+   footer control rather than a form row, so the vertical air is taken back and
+   only the room the value labels need is left */
+.wx-scrum-velocity-filter .wx-scrum-velocity-slider {
+    padding: 0 0.55rem 1.25rem 0.55rem;
+    min-height: 0;
+}
+
 .wx-scrum-velocity-empty {
     padding: 16px;
     text-align: center;

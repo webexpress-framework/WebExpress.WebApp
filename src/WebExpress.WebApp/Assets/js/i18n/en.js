@@ -250,6 +250,7 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "scrum.velocity.completed": "Completed",
     "scrum.velocity.points_abbr": "pts",
     "scrum.velocity.empty": "No completed sprints yet.",
+    "scrum.velocity.filter": "Sprints",
 
     // permission
     "permission.title": "Permissions",

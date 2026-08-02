@@ -4,7 +4,7 @@
 
 The `ScrumVelocityCtrl` component renders the velocity of the last few sprints as a small column chart. Each column is one sprint: the solid bar is the **completed** story points (the sprint's velocity), the faint backdrop bar is the **committed** points, and a dashed line marks the **average** velocity across the shown sprints. The header carries the rolling average. Only the last *N* sprints are drawn, so the chart stays compact in a sidebar or dashboard tile.
 
-The control is read-only: it loads its data via a single `GET` and never mutates it. The chart is built from plain HTML/CSS so the labels and values stay crisp across themes.
+The control is read-only: it loads its data via a single `GET` and never mutates it — the optional [sprint filter](#sprint-filter) narrows the view, never the history behind it. The chart is built from plain HTML/CSS so the labels and values stay crisp across themes.
 
 ```
    ┌──────────────────────────────────────────────────────────┐
@@ -27,9 +27,10 @@ The control is bootstrapped from a single host element carrying the `wx-webapp-s
 
 ### Container Element Attributes
 
-| Attribute            | Description                                                                                         | Example
-|----------------------|----------------------------------------------------------------------------------------------------|-----------------------------
-| `data-max-sprints`   | Maximum number of most recent sprints drawn in the chart. Defaults to `6`.                         | `data-max-sprints="8"`
+| Attribute                  | Description                                                                                         | Example
+|----------------------------|-----------------------------------------------------------------------------------------------------|-----------------------------
+| `data-max-sprints`         | Maximum number of most recent sprints drawn in the chart. Defaults to `6`.                          | `data-max-sprints="8"`
+| `data-show-sprint-filter`  | Adds the slider that narrows the plot to a window of the loaded history. Off unless set to `true`.  | `data-show-sprint-filter="true"`
 
 The data endpoint is not spelled as an attribute. It is contributed in C# by `.DataService<TEndpoint>()` on `ControlDataScrumVelocity`, which emits the hidden `wx-service` island the client consumes.
 
@@ -49,6 +50,28 @@ The endpoint returns the sprints in **chronological order (oldest first)**; the 
 ]
 ```
 
+## Sprint Filter
+
+`MaxSprints` decides how much history the chart shows; `ShowSprintFilter` hands that decision to the visitor. It renders a [`wx-webui-input-slider`](../../../WebExpress.WebUI/docs/js/slider.md) below the legend whose scale is the **position in the loaded history** and whose two handles narrow the plot to a window of it — drag them together to compare two sprints, apart to read the whole series. The average line and the rolling average in the header are computed from the window, not from the history, because an average over sprints that are not on screen answers a question nobody asked.
+
+```csharp
+new ControlDataScrumVelocity("sprint-velocity")
+{
+    MaxSprints = _ => 6,
+    ShowSprintFilter = _ => true
+}
+    .DataService<RestApiScrumVelocity>();
+```
+
+The slider starts on exactly the window `MaxSprints` describes, so switching the filter on changes what the visitor *can* do, never what they first see. It is **opt-in** for the same reason: the chart is otherwise a read-only tile, and a wall display should not invite an interaction nobody is standing in front of.
+
+Two details are worth knowing when the history changes underneath the filter:
+
+- a reload that returns a **shorter** history clamps the window instead of resetting it, so a visitor who narrowed the chart down to two sprints is not sent back to the default;
+- a history of a **different length** gets a new slider, because the slider reads its scale once, in its constructor.
+
+Below **two** sprints no filter is rendered at all — a slider over a single sprint would offer a choice that does not exist. The slider's own `CHANGE_VALUE_EVENT` is stopped at the filter row: it is an implementation detail of the chart, and letting it bubble would reach a page that listens for the value changes of its own inputs.
+
 ## Programmatic Control
 
 Once initialized, the `ScrumVelocityCtrl` instance is retrievable via `getInstanceByElement(element)` for refreshing the chart or reading the current sprints.
@@ -67,6 +90,10 @@ if (velocityCtrl) {
 
 // read the current sprints (a copy of { id, name, committed, completed })
 const sprints = velocityCtrl ? velocityCtrl.value : [];
+
+// read the plotted window as one based, inclusive sprint indices; null while
+// the filter is off and the chart shows the trailing data-max-sprints slice
+const window = velocityCtrl ? velocityCtrl.sprintWindow : null;
 ```
 
 ## Events

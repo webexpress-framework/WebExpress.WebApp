@@ -83,6 +83,17 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, int?> MaxSprints { get; set; }
 
         /// <summary>
+        /// Gets or sets whether the chart offers a slider that narrows the
+        /// plotted sprints to a window of the loaded history. It is opt-in
+        /// because the chart is otherwise a read-only tile, and a control that
+        /// invites interaction on a wall display invites it from people who
+        /// cannot act on it. The slider starts on the window
+        /// <see cref="MaxSprints"/> describes, so switching it on changes what
+        /// the visitor can do, never what they first see.
+        /// </summary>
+        public Func<IRenderControlContext, bool> ShowSprintFilter { get; set; }
+
+        /// <summary>
         /// Gets or sets the color of the completed (velocity) bars. Accepts a
         /// system color (emitted as a CSS class) or a user-defined color (emitted
         /// as an inline style), exactly like a control button. When not set, the
@@ -126,6 +137,7 @@ namespace WebExpress.WebApp.WebControl
             }
 
             var maxSprints = MaxSprints?.Invoke(renderContext);
+            var showSprintFilter = ShowSprintFilter?.Invoke(renderContext) ?? false;
             var colorCompleted = ColorCompleted?.Invoke(renderContext);
             var colorCommitted = ColorCommitted?.Invoke(renderContext);
             var colorAverage = ColorAverage?.Invoke(renderContext);
@@ -139,6 +151,7 @@ namespace WebExpress.WebApp.WebControl
             }
                 .EmitDataIslands(this, renderContext)
                 .AddUserAttribute("data-max-sprints", maxSprints?.ToString())
+                .AddUserAttribute("data-show-sprint-filter", showSprintFilter ? "true" : null)
                 .AddUserAttribute("data-color-completed-css", colorCompleted?.ToClass())
                 .AddUserAttribute("data-color-completed-style", colorCompleted?.ToStyle())
                 .AddUserAttribute("data-color-committed-css", colorCommitted?.ToClass())

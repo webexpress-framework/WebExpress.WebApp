@@ -88,8 +88,34 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
-        /// Tests the id, the data service and the MaxSprints attribute rendering
-        /// together.
+        /// Tests that the sprint filter is opt-in: it renders into the
+        /// <c>data-show-sprint-filter</c> attribute only when switched on, so a
+        /// chart that was never asked for it stays a read-only tile.
+        /// </summary>
+        [Theory]
+        [InlineData(false, @"<div class=""wx-webapp-scrum-velocity""></div>")]
+        [InlineData(true, @"<div class=""wx-webapp-scrum-velocity"" data-show-sprint-filter=""true""></div>")]
+        public void ShowSprintFilter(bool showSprintFilter, string expected)
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlDataScrumVelocity()
+            {
+                ShowSprintFilter = _ => showSprintFilter
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
+
+        /// <summary>
+        /// Tests the id, the data service, the MaxSprints attribute and the
+        /// sprint filter rendering together.
         /// </summary>
         [Fact]
         public void AllAttributes()
@@ -101,14 +127,15 @@ namespace WebExpress.WebApp.Test.WebControl
             var control = new ControlDataScrumVelocity("v1")
             {
                 ServiceFactory = _ => DataServiceDescriptor.QueryData("https://example.com/api/scrum/velocity"),
-                MaxSprints = _ => 6
+                MaxSprints = _ => 6,
+                ShowSprintFilter = _ => true
             };
 
             // act
             var html = control.Render(context, visualTree);
 
             // validation
-            AssertExtensions.EqualWithPlaceholders(@"<div id=""v1"" class=""wx-webapp-scrum-velocity"" data-max-sprints=""6""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/scrum/velocity"" method=""GET""></wx-service></div>", html);
+            AssertExtensions.EqualWithPlaceholders(@"<div id=""v1"" class=""wx-webapp-scrum-velocity"" data-max-sprints=""6"" data-show-sprint-filter=""true""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/scrum/velocity"" method=""GET""></wx-service></div>", html);
         }
 
         /// <summary>

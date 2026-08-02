@@ -82,6 +82,26 @@ namespace WebExpress.WebApp.WWW.Settings.System
 
             UploadButton.PrimaryAction = _ => new ActionPluginPackage(packageApiUri, RequestMethod.POST.ToString(), true);
 
+            visualTree.Content.MainPanel.Headline.AddSecondary(UploadButton);
+            visualTree.Content.MainPanel.AddPrimary(Description);
+            visualTree.Content.MainPanel.AddPrimary(Label);
+
+            // GetPackages, not Catalog.Packages: the catalog only knows what was installed from a
+            // *.wxp file, while a build deployment references every plugin statically
+            var packages = _componentHub?.PackageManager.GetPackages().OrderBy(x => x.Id).ToList() ?? [];
+
+            if (packages.Count == 0)
+            {
+                visualTree.Content.MainPanel.AddPrimary(new ControlEmptyState()
+                {
+                    Icon = _ => new IconPuzzlePiece(),
+                    Title = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.plugin.empty.title"),
+                    Message = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.plugin.empty.message")
+                });
+
+                return;
+            }
+
             var packageTable = new ControlTable() { Striped = _ => TypeStripedTable.Row };
             packageTable.AddColumn("");
             packageTable.AddColumn(I18N.Translate(renderContext, "webexpress.webapp:setting.plugin.name.label"));
@@ -89,7 +109,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
             packageTable.AddColumn(I18N.Translate(renderContext, "webexpress.webapp:setting.plugin.state.label"));
             packageTable.AddColumn(I18N.Translate(renderContext, "webexpress.webapp:setting.plugin.actions.label"));
 
-            foreach (var package in _componentHub?.PackageManager.Catalog.Packages.Where(x => x is not null).OrderBy(x => x.Id))
+            foreach (var package in packages)
             {
                 var pluginContext = package.Plugins.FirstOrDefault();
                 var packageName = pluginContext?.PluginName ?? package.Id;
@@ -142,7 +162,16 @@ namespace WebExpress.WebApp.WWW.Settings.System
                             Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Null),
                             Size = _ => new PropertySizeText(TypeSizeText.Small)
                         } : null,
-                        new ControlText()
+                        // a built-in plugin has no package file to name; what the reader needs to
+                        // know instead is why the row carries no actions
+                        package.BuiltIn ? new ControlText()
+                        {
+                            Text = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.plugin.builtin.hint"),
+                            Format = _ => TypeFormatText.Default,
+                            TextColor = _ => new PropertyColorText(TypeColorText.Secondary),
+                            Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Null),
+                            Size = _ => new PropertySizeText(TypeSizeText.Small)
+                        } : new ControlText()
                         {
                             Text = _ => string.Format
                             (
@@ -160,18 +189,25 @@ namespace WebExpress.WebApp.WWW.Settings.System
                         Text = _ => packageVersion,
                         Format = _ => TypeFormatText.Code
                     }),
-                    new ControlTableCellPanel().Add(new ControlText()
-                    {
-                        Text = _ => I18N.Translate(renderContext, packageState),
-                        Format = _ => TypeFormatText.Default
-                    }),
+                    new ControlTableCellPanel().Add
+                    (
+                        new ControlText()
+                        {
+                            Text = _ => I18N.Translate(renderContext, packageState),
+                            Format = _ => TypeFormatText.Default
+                        },
+                        package.BuiltIn ? new ControlBadge()
+                        {
+                            Value = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.plugin.builtin.label"),
+                            BackgroundColor = _ => new PropertyColorBackgroundBadge(TypeColorBackgroundBadge.Secondary),
+                            Pill = _ => TypePillBadge.Pill,
+                            Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Null)
+                        } : null
+                    ),
                     actions
                 );
             }
 
-            visualTree.Content.MainPanel.Headline.AddSecondary(UploadButton);
-            visualTree.Content.MainPanel.AddPrimary(Description);
-            visualTree.Content.MainPanel.AddPrimary(Label);
             visualTree.Content.MainPanel.AddPrimary(packageTable);
         }
 
@@ -185,6 +221,11 @@ namespace WebExpress.WebApp.WWW.Settings.System
         /// <returns>The action panel.</returns>
         private static ControlTableCellPanel CreateActions(IRenderContext renderContext, PackageCatalogItem package, IUri apiUri, string packageIdEscaped)
         {
+            if (package.BuiltIn)
+            {
+                return CreateBuiltInActions(renderContext);
+            }
+
             var activateUri = BuildUri(apiUri, $"action/activate/{packageIdEscaped}");
             var deactivateUri = BuildUri(apiUri, $"action/deactivate/{packageIdEscaped}");
             var updateUri = BuildUri(apiUri, $"action/update/{packageIdEscaped}");
@@ -238,6 +279,48 @@ namespace WebExpress.WebApp.WWW.Settings.System
                 {
                     ConfirmText = I18N.Translate(renderContext, "webexpress.webapp:setting.plugin.action.delete.confirm", package.Id)
                 }
+            });
+
+            return actions;
+        }
+
+        /// <summary>
+        /// Creates the action cell of a plugin that ships with the application.
+        /// </summary>
+        /// <remarks>
+        /// The buttons are rendered rather than dropped so the column keeps its shape, but they
+        /// carry no action and are disabled: an assembly in the application directory cannot be
+        /// deactivated, replaced or removed while the process runs. The hint below them says why,
+        /// because a row of greyed out buttons without a reason reads as a defect.
+        /// </remarks>
+        /// <param name="renderContext">The render context.</param>
+        /// <returns>The action panel.</returns>
+        private static ControlTableCellPanel CreateBuiltInActions(IRenderContext renderContext)
+        {
+            var actions = new ControlTableCellPanel();
+
+            foreach (var label in new[]
+            {
+                "webexpress.webapp:setting.plugin.action.deactivate.label",
+                "webexpress.webapp:setting.plugin.action.update.label",
+                "webexpress.webapp:setting.plugin.action.delete.label"
+            })
+            {
+                actions.Add(new ControlButton()
+                {
+                    Text = _ => label,
+                    Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two),
+                    BackgroundColor = _ => new PropertyColorButton(TypeColorButton.Secondary),
+                    Active = _ => TypeActive.Disabled
+                });
+            }
+
+            actions.Add(new ControlText()
+            {
+                Text = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.plugin.builtin.actions.hint"),
+                Format = _ => TypeFormatText.Default,
+                TextColor = _ => new PropertyColorText(TypeColorText.Secondary),
+                Size = _ => new PropertySizeText(TypeSizeText.Small)
             });
 
             return actions;

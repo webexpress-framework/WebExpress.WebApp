@@ -17,6 +17,12 @@ namespace WebExpress.WebApp.WebControl
         Func<IRenderControlContext, int?> MaxSprints { get; }
 
         /// <summary>
+        /// Gets whether the chart offers a slider that narrows the plotted
+        /// sprints to a window of the loaded history.
+        /// </summary>
+        Func<IRenderControlContext, bool> ShowSprintFilter { get; }
+
+        /// <summary>
         /// Gets the color of the completed (velocity) bars.
         /// </summary>
         Func<IRenderControlContext, PropertyColorBackground> ColorCompleted { get; }

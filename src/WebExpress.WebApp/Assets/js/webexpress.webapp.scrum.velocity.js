@@ -9,7 +9,11 @@
  * across themes. The control is read-only and loads its data via a single GET.
  *
  * Declarative configuration: the host carries a wx-service island named "data"
- * for the velocity endpoint and an optional data-max-sprints attribute.
+ * for the velocity endpoint, an optional data-max-sprints attribute and an
+ * optional data-show-sprint-filter flag. The filter is the framework's dual
+ * handle slider (wx-webui-input-slider) over the loaded history: it narrows the
+ * plotted sprints to a window of it, starting on exactly the window
+ * data-max-sprints describes.
  *
  * It is ViewState-capable: when the host carries a data-wx-resource binding the
  * sprints are a slice of an enclosing ViewState, so the control
@@ -43,6 +47,14 @@ webexpress.webapp.ScrumVelocityCtrl = class extends webexpress.webapp.Data {
         super(element, { state: initialState, services: services });
 
         this._maxSprints = parseInt(element.dataset.maxSprints || "6", 10);
+        this._showSprintFilter = element.dataset.showSprintFilter === "true";
+        // the plotted window, as one based inclusive indices into the loaded
+        // sprints; seeded from the trailing MaxSprints slice on the first render
+        this._window = null;
+        // the sprint count the current filter was built for, so a history that
+        // changed length is answered with a new slider rather than with a stale scale
+        this._filterTotal = -1;
+        this._filter = null;
         // the resource a ViewState renders; when present the sprints are a pure
         // view of a central resource the enclosing ViewState owns, when absent the
         // control loads itself (standalone)
@@ -61,6 +73,7 @@ webexpress.webapp.ScrumVelocityCtrl = class extends webexpress.webapp.Data {
         // clean host
         element.textContent = "";
         element.removeAttribute("data-max-sprints");
+        element.removeAttribute("data-show-sprint-filter");
         element.classList.add("wx-scrum-velocity");
 
         // subscribe to the store, perform the first render and run onMount
@@ -177,29 +190,158 @@ webexpress.webapp.ScrumVelocityCtrl = class extends webexpress.webapp.Data {
      * Renders the velocity chart from `this._sprints`.
      */
     _render() {
-        this._element.replaceChildren();
-
         const model = webexpress.webapp.scrumVelocityModel;
-        const sprints = model.lastN(this._sprints, this._maxSprints);
+
+        if (this._showSprintFilter) {
+            this._clampWindow(this._sprints.length);
+        }
+
+        const sprints = this._visibleSprints();
+        const children = [];
 
         if (sprints.length === 0) {
             const empty = document.createElement("div");
             empty.className = "wx-scrum-velocity-empty";
             empty.textContent = this._i18n("webexpress.webapp:scrum.velocity.empty", "No completed sprints yet.");
-            this._element.appendChild(empty);
-            this._dispatch(webexpress.webui.Event.UPDATED_EVENT, {});
+            children.push(empty);
+        } else {
+            const average = model.average(sprints);
+            const scale = model.maxValue(sprints) * webexpress.webapp.ScrumVelocityCtrl.HEADROOM;
+
+            children.push(this._buildHeader(average));
+            children.push(this._buildPlot(sprints, average, scale));
+            children.push(this._buildLabels(sprints));
+            children.push(this._buildLegend());
+        }
+
+        const filter = this._filterRow();
+        if (filter) {
+            children.push(filter);
+        }
+
+        // the filter outlives the chart it narrows, so the children are replaced
+        // in one operation: emptying the host first would leave the slider
+        // detached long enough for the controller to tear its instance down
+        this._element.replaceChildren(...children);
+
+        this._dispatch(webexpress.webui.Event.UPDATED_EVENT, {});
+    }
+
+    /**
+     * Returns the sprints the chart plots: the window the filter selects, or the
+     * trailing MaxSprints slice while there is no filter.
+     * @returns {Array<object>} The sprints to plot, oldest first.
+     */
+    _visibleSprints() {
+        const sprints = this._sprints;
+
+        if (!this._showSprintFilter) {
+            return webexpress.webapp.scrumVelocityModel.lastN(sprints, this._maxSprints);
+        }
+
+        return this._window ? sprints.slice(this._window.min - 1, this._window.max) : [];
+    }
+
+    /**
+     * Keeps the selected window inside the loaded history.
+     *
+     * Untouched, the window is the trailing MaxSprints slice, so switching the
+     * filter on does not change what the chart first shows. A history that came
+     * back shorter is clamped rather than reset, because a visitor who narrowed
+     * the chart down to two sprints did not ask to be sent back to the default.
+     *
+     * @param {number} total - The number of loaded sprints.
+     */
+    _clampWindow(total) {
+        if (total === 0) {
+            this._window = null;
             return;
         }
 
-        const average = model.average(sprints);
-        const scale = model.maxValue(sprints) * webexpress.webapp.ScrumVelocityCtrl.HEADROOM;
+        if (!this._window) {
+            const size = this._maxSprints > 0 ? Math.min(this._maxSprints, total) : total;
+            this._window = { min: total - size + 1, max: total };
+            return;
+        }
 
-        this._element.appendChild(this._buildHeader(average));
-        this._element.appendChild(this._buildPlot(sprints, average, scale));
-        this._element.appendChild(this._buildLabels(sprints));
-        this._element.appendChild(this._buildLegend());
+        const min = Math.min(Math.max(1, this._window.min), total);
 
-        this._dispatch(webexpress.webui.Event.UPDATED_EVENT, {});
+        this._window = { min: min, max: Math.min(Math.max(min, this._window.max), total) };
+    }
+
+    /**
+     * Returns the filter row, rebuilding it whenever the loaded history changed
+     * length. The slider reads its scale once, in its constructor, so a
+     * different sprint count is answered with a new slider rather than with an
+     * update of the old one.
+     * @returns {HTMLElement|null} The filter row, or null when there is nothing to narrow.
+     */
+    _filterRow() {
+        const total = this._sprints.length;
+
+        // a single sprint is already the whole history; a slider over it would
+        // offer a choice that does not exist
+        if (!this._showSprintFilter || total < 2 || !this._window) {
+            return null;
+        }
+
+        if (this._filterTotal !== total) {
+            this._filter = this._buildFilter(total);
+            this._filterTotal = total;
+        }
+
+        return this._filter;
+    }
+
+    /**
+     * Builds the filter row: a caption and the framework's dual handle slider
+     * over the loaded history.
+     * @param {number} total - The number of loaded sprints.
+     * @returns {HTMLElement|null} The filter row, or null when the slider control is not on the page.
+     */
+    _buildFilter(total) {
+        const registry = webexpress.webui.Controller && webexpress.webui.Controller.classRegistry;
+        if (!registry || !registry.has("wx-webui-input-slider")) {
+            return null;
+        }
+
+        const row = document.createElement("div");
+        row.className = "wx-scrum-velocity-filter";
+
+        const caption = document.createElement("span");
+        caption.className = "wx-scrum-velocity-filter-caption";
+        caption.textContent = this._i18n("webexpress.webapp:scrum.velocity.filter", "Sprints");
+        row.appendChild(caption);
+
+        const host = document.createElement("div");
+        host.className = "wx-scrum-velocity-slider";
+        // the scale is the position in the history rather than the sprint name,
+        // because the names are already spelled out under the columns
+        host.dataset.min = "1";
+        host.dataset.max = String(total);
+        host.dataset.step = "1";
+        host.dataset.valueMin = String(this._window.min);
+        host.dataset.valueMax = String(this._window.max);
+        row.appendChild(host);
+
+        // the marker class is consumed by the controller on instantiation, so
+        // the styling hook has to be a second class
+        host.classList.add("wx-webui-input-slider");
+        webexpress.webui.Controller.createInstances(host);
+
+        host.addEventListener(webexpress.webui.Event.CHANGE_VALUE_EVENT, (e) => {
+            // the slider's own change is an implementation detail of the chart;
+            // letting it bubble would reach a page that listens for the value
+            // changes of its own inputs under the same name
+            if (typeof e.stopPropagation === "function") {
+                e.stopPropagation();
+            }
+
+            this._window = { min: e.detail.valueMin, max: e.detail.valueMax };
+            this._render();
+        });
+
+        return row;
     }
 
     /**
@@ -422,6 +564,15 @@ webexpress.webapp.ScrumVelocityCtrl = class extends webexpress.webapp.Data {
      */
     get value() {
         return this._sprints.slice();
+    }
+
+    /**
+     * Gets the window the chart plots, as one based inclusive indices into the
+     * loaded sprints, or null while the filter is off.
+     * @returns {{min:number, max:number}|null} The window.
+     */
+    get sprintWindow() {
+        return this._window ? { min: this._window.min, max: this._window.max } : null;
     }
 };
 

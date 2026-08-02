@@ -57,6 +57,8 @@ const WEBUI_BASE_CONTROLS = [
     // the schedule renders its mini calendar with the framework date control
     "webexpress.webui.input.date.js",
     "webexpress.webui.schedule.js",
+    // the velocity chart narrows its sprint window with the framework slider
+    "webexpress.webui.input.slider.js",
     // the graph and workflow editors render their colour fields with the
     // framework colour control rather than a bare native input
     "webexpress.webui.input.color.js",

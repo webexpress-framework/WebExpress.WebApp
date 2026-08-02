@@ -41,14 +41,16 @@ namespace WebExpress.WebApp.WWW.Api.V1
         [Method(RequestMethod.GET)]
         public Response Retrieve(Request request)
         {
-            var packages = _componentHub?.PackageManager.Catalog.Packages
-                .Where(x => x is not null)
+            // GetPackages, not Catalog.Packages: the catalog only knows what was installed from a
+            // *.wxp file, and in a build deployment every plugin is referenced statically
+            var packages = _componentHub?.PackageManager.GetPackages()
                 .OrderBy(x => x.Id)
                 .Select(x => new
                 {
                     id = x.Id,
                     file = x.File,
                     state = x.State.ToString(),
+                    builtIn = x.BuiltIn,
                     version = x.Metadata?.Version,
                     title = x.Metadata?.Title,
                     description = x.Metadata?.Description,
