@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using WebExpress.WebApp.WebControl;
 using WebExpress.WebApp.WebScope;
 using WebExpress.WebApp.WebSettingPage;
 using WebExpress.WebCore;
@@ -37,109 +39,194 @@ namespace WebExpress.WebApp.WWW.Settings.System
         /// <param name="visualTree">The visual tree of the web application.</param>
         public void Process(IRenderContext renderContext, VisualTreeWebAppSetting visualTree)
         {
-            // visual container for the page content
             var panel = visualTree.Content.MainPanel;
 
-            // add a title for the general statistics section
-            panel.AddPrimary(new ControlText()
-            {
-                Text = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.group.statistics.label"),
-                TextColor = _ => new PropertyColorText(TypeColorText.Info),
-                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two)
-            });
-
-            // create a table to display scalar metric values
-            var statsTable = new ControlTable()
-            {
-                Striped = _ => TypeStripedTable.Row,
-                SuppressHeaders = _ => true
-            };
-
-            statsTable.AddColumn("");
-            statsTable.AddColumn("");
-
-            // add current system time row
-            statsTable.AddRow
-            (
-                new ControlTableCell()
-                {
-                    Text = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.currenttime")
-                },
-                new ControlTableCellPanel().Add(new ControlText()
-                {
-                    Text = _ => DateTime.Now.ToString(renderContext.Request.Culture),
-                    Format = _ => TypeFormatText.Code
-                })
-            );
-
-            // add uptime row
-            statsTable.AddRow
-            (
-                new ControlTableCell()
-                {
-                    Text = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.uptime")
-                },
-                new ControlTableCellPanel().Add(new ControlText()
-                {
-                    Text = _ => (DateTime.Now - WebExpress.WebCore.HttpServer.ExecutionTime).ToString(@"dd\.hh\:mm\:ss"),
-                    Format = _ => TypeFormatText.Code
-                })
-            );
-
-            // add total requests row
-            var totalRequests = 0;
-            lock (WebExpress.WebCore.HttpServer.Statistics)
-            {
-                totalRequests = WebExpress.WebCore.HttpServer.Statistics.Sum(x => x.Requests);
-            }
-
-            statsTable.AddRow
-            (
-                new ControlTableCell()
-                {
-                    Text = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.totalrequests")
-                },
-                new ControlTableCellPanel().Add(new ControlText()
-                {
-                    Text = _ => totalRequests.ToString(),
-                    Format = _ => TypeFormatText.Code
-                })
-            );
-
-            panel.AddPrimary(statsTable);
-
-            // create a copy of the statistics to avoid modification issues during enumeration
+            // a copy taken under the lock: the request pipeline keeps appending to the
+            // collection while the page renders
             List<HttpServerStatisticItem> statistics;
             lock (HttpServer.Statistics)
             {
                 statistics = [.. HttpServer.Statistics];
             }
 
-            // prepare data lists
-            var labels = new List<string>();
-            var dataRequests = new ControlChartDatasetPointCollection([.. statistics.Select(x => x.Requests)]);
-            var dataErrors = new ControlChartDatasetPointCollection([.. statistics.Select(x => x.Errors)]);
-            var dataMin = new ControlChartDatasetPointCollection([.. statistics.Select(x => x.MinDuration)]);
-            var dataMax = new ControlChartDatasetPointCollection([.. statistics.Select(x => x.MaxDuration)]);
-            var dataAvg = new ControlChartDatasetPointCollection([.. statistics.Select(x => (float)x.AverageDuration)]);
-            var dataCpu = new ControlChartDatasetPointCollection([.. statistics.Select(x => (float)x.CpuUsage)]);
-            var dataMem = new ControlChartDatasetPointCollection([.. statistics.Select(x => (float)x.MemoryUsage)]);
+            panel.AddPrimary(CreateSectionTitle(renderContext, "webexpress.webapp:setting.monitor.group.statistics.label"));
+            panel.AddPrimary(CreateSummary(renderContext, statistics));
 
-            // fill labels
-            foreach (var item in statistics)
+            // the gauges subscribe to the message queue and keep updating on their own, so
+            // the current load stays true while the charts below remain the snapshot the
+            // page was rendered from
+            panel.AddPrimary(CreateSectionTitle(renderContext, "webexpress.webapp:setting.monitor.group.load.label"));
+            panel.AddPrimary(new ControlPanel()
             {
-                labels.Add(item.Timestamp.ToString("HH:mm"));
+                Classes = ["d-flex", "flex-wrap", "gap-4", "m-2"]
+            }
+                .Add
+                (
+                    new ControlSystemMetric()
+                    {
+                        Metric = _ => TypeSystemMetric.Cpu,
+                        Label = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.dataset.cpu")
+                    },
+                    new ControlSystemMetric()
+                    {
+                        Metric = _ => TypeSystemMetric.Ram,
+                        Label = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.dataset.memory")
+                    }
+                ));
+
+            if (statistics.Count == 0)
+            {
+                panel.AddPrimary(new ControlEmptyState()
+                {
+                    Icon = _ => new IconChartLine(),
+                    Title = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.empty.title"),
+                    Message = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.empty.message")
+                });
+
+                return;
             }
 
-            // chart 1: traffic (requests and errors)
-            panel.AddPrimary(new ControlText()
+            var labels = statistics.Select(x => x.Timestamp.ToString("HH:mm")).ToList();
+            var time = I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.chart.axis.x");
+
+            panel.AddPrimary(CreateSectionTitle(renderContext, "webexpress.webapp:setting.monitor.group.chart.traffic.label"));
+            panel.AddPrimary(CreateChart
+            (
+                labels,
+                time,
+                I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.chart.axis.y"),
+                CreateDataset(I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.dataset.requests"), statistics.Select(x => (float)x.Requests), "#007bff", true),
+                CreateDataset(I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.dataset.errors"), statistics.Select(x => (float)x.Errors), "#dc3545", true)
+            ));
+
+            panel.AddPrimary(CreateSectionTitle(renderContext, "webexpress.webapp:setting.monitor.group.chart.performance.label"));
+            panel.AddPrimary(CreateChart
+            (
+                labels,
+                time,
+                I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.axis.duration"),
+                CreateDataset(I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.dataset.avg_duration"), statistics.Select(x => (float)x.AverageDuration), "#28a745"),
+                CreateDataset(I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.dataset.max_duration"), statistics.Select(x => (float)x.MaxDuration), "#ffc107"),
+                CreateDataset(I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.dataset.min_duration"), statistics.Select(x => (float)x.MinDuration), "#ff6000")
+            ));
+
+            // cpu and memory get a chart each: a percentage and a megabyte reading on one
+            // axis would scale each other into a flat line
+            panel.AddPrimary(CreateSectionTitle(renderContext, "webexpress.webapp:setting.monitor.group.chart.resources.label"));
+            panel.AddPrimary(CreateChart
+            (
+                labels,
+                time,
+                I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.axis.percent"),
+                CreateDataset(I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.dataset.cpu"), statistics.Select(x => (float)x.CpuUsage), "#6f42c1", true)
+            ));
+
+            panel.AddPrimary(CreateChart
+            (
+                labels,
+                time,
+                I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.axis.megabyte"),
+                CreateDataset(I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.dataset.memory"), statistics.Select(x => (float)x.MemoryUsage), "#17a2b8", true)
+            ));
+        }
+
+        /// <summary>
+        /// Creates the row of key figures shown above the charts. It answers the questions an
+        /// operator opens the page with - how long has the server been up, how much has it
+        /// served, how much of it failed and how fast was it - before they read any curve.
+        /// </summary>
+        /// <param name="renderContext">The render context.</param>
+        /// <param name="statistics">The collected statistics.</param>
+        /// <returns>The summary panel.</returns>
+        private static ControlPanel CreateSummary(IRenderContext renderContext, IEnumerable<HttpServerStatisticItem> statistics)
+        {
+            var culture = renderContext.Request.Culture;
+            var requests = statistics.Sum(x => x.Requests);
+            var errors = statistics.Sum(x => x.Errors);
+            var duration = requests > 0 ? (double)statistics.Sum(x => x.TotalDuration) / requests : 0;
+            var errorRate = requests > 0 ? errors * 100d / requests : 0;
+
+            var summary = new ControlPanel()
             {
-                Text = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.group.chart.traffic.label"),
+                Classes = ["d-flex", "flex-wrap", "gap-2", "m-2"]
+            };
+
+            summary.Add
+                (
+                    new ControlStat()
+                    {
+                        Icon = _ => new IconClock(),
+                        Label = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.currenttime"),
+                        Value = _ => DateTime.Now.ToString("T", culture)
+                    },
+                    new ControlStat()
+                    {
+                        Icon = _ => new IconHourglass(),
+                        Label = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.uptime"),
+                        Value = _ => (DateTime.Now - HttpServer.ExecutionTime).ToString(@"dd\.hh\:mm\:ss")
+                    },
+                    new ControlStat()
+                    {
+                        Icon = _ => new IconRightLeft(),
+                        Label = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.totalrequests"),
+                        Value = _ => requests.ToString("N0", culture)
+                    },
+                    new ControlStat()
+                    {
+                        Icon = _ => new IconTriangleExclamation(),
+                        Label = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.dataset.errors"),
+                        Value = _ => errors.ToString("N0", culture),
+                        Delta = _ => string.Format
+                        (
+                            I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.errorrate"),
+                            errorRate.ToString("N1", culture)
+                        ),
+                        // a failing server is the finding, so any error rate is called out in
+                        // the negative color and a clean one stays quiet rather than positive
+                        Trend = _ => errors > 0 ? TypeStatTrend.Down : TypeStatTrend.Neutral
+                    },
+                    new ControlStat()
+                    {
+                        Icon = _ => new IconStopwatch(),
+                        Label = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.avgresponse"),
+                        Value = _ => string.Format
+                        (
+                            I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.millisecond"),
+                            duration.ToString("N0", culture)
+                        )
+                    }
+                );
+
+            return summary;
+        }
+
+        /// <summary>
+        /// Creates the caption that introduces a section.
+        /// </summary>
+        /// <param name="renderContext">The render context.</param>
+        /// <param name="key">The internationalization key of the caption.</param>
+        /// <returns>The caption control.</returns>
+        private static ControlText CreateSectionTitle(IRenderContext renderContext, string key)
+        {
+            return new ControlText()
+            {
+                Text = _ => I18N.Translate(renderContext, key),
                 TextColor = _ => new PropertyColorText(TypeColorText.Info),
                 Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two)
-            });
+            };
+        }
 
-            var chartTraffic = new ControlChart()
+        /// <summary>
+        /// Creates a time series chart over the collected intervals.
+        /// </summary>
+        /// <param name="labels">The interval labels.</param>
+        /// <param name="titleX">The caption of the time axis.</param>
+        /// <param name="titleY">The caption of the value axis, which names the unit.</param>
+        /// <param name="datasets">The series to plot.</param>
+        /// <returns>The chart control.</returns>
+        private static ControlChart CreateChart(IEnumerable<string> labels, string titleX, string titleY, params ControlChartDataset[] datasets)
+        {
+            var chart = new ControlChart()
             {
                 Type = _ => TypeChart.Line,
                 Height = _ => 300,
@@ -147,125 +234,55 @@ namespace WebExpress.WebApp.WWW.Settings.System
                 MaintainAspectRatio = _ => false,
                 TitleDisplay = _ => false,
                 LegendDisplay = _ => true,
-                YBeginAtZero = _ => true
+                YBeginAtZero = _ => true,
+                TitleX = _ => titleX,
+                TitleY = _ => titleY
             };
 
-            chartTraffic.AddLabel(labels);
+            chart.AddLabel(labels);
+            chart.AddDataset(datasets);
 
-            chartTraffic.AddDataset(new ControlChartDataset()
+            return chart;
+        }
+
+        /// <summary>
+        /// Creates a chart series.
+        /// </summary>
+        /// <remarks>
+        /// The fill color is derived from the line color rather than passed separately, so a
+        /// series cannot end up drawn in one color and filled in another.
+        /// </remarks>
+        /// <param name="title">The legend entry.</param>
+        /// <param name="values">The values, one per interval.</param>
+        /// <param name="color">The line color as a hex triplet.</param>
+        /// <param name="fill">Whether the area below the line is filled.</param>
+        /// <returns>The dataset.</returns>
+        private static ControlChartDataset CreateDataset(string title, IEnumerable<float> values, string color, bool fill = false)
+        {
+            return new ControlChartDataset()
             {
-                Title = I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.dataset.requests"),
-                Data = dataRequests,
-                BorderColor = "#007bff", // primary blue
-                BackgroundColor = "rgba(0, 123, 255, 0.1)",
+                Title = title,
+                Data = new ControlChartDatasetPointCollection([.. values]),
+                BorderColor = color,
+                BackgroundColor = ToTransparent(color),
                 BorderWidth = 2,
-                Fill = TypeFillChart.Origin
-            });
-
-            chartTraffic.AddDataset(new ControlChartDataset()
-            {
-                Title = I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.dataset.errors"),
-                Data = dataErrors,
-                BorderColor = "#dc3545", // danger red
-                BackgroundColor = "rgba(220, 53, 69, 0.1)",
-                BorderWidth = 2,
-                Fill = TypeFillChart.Origin
-            });
-
-            panel.AddPrimary(chartTraffic);
-
-            // chart 2: performance (duration in ms)
-            panel.AddPrimary(new ControlText()
-            {
-                Text = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.group.chart.performance.label"),
-                TextColor = _ => new PropertyColorText(TypeColorText.Info),
-                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two)
-            });
-
-            var chartPerformance = new ControlChart()
-            {
-                Type = _ => TypeChart.Line,
-                Height = _ => 300,
-                Responsive = _ => true,
-                MaintainAspectRatio = _ => false,
-                TitleDisplay = _ => false,
-                LegendDisplay = _ => true,
-                YBeginAtZero = _ => true
+                Fill = fill ? TypeFillChart.Origin : TypeFillChart.None
             };
+        }
 
-            chartPerformance.AddLabel(labels);
+        /// <summary>
+        /// Converts a hex color triplet into the translucent rgba notation used for the area
+        /// below a line.
+        /// </summary>
+        /// <param name="color">The color as "#rrggbb".</param>
+        /// <returns>The color as an rgba string.</returns>
+        private static string ToTransparent(string color)
+        {
+            var red = int.Parse(color.Substring(1, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+            var green = int.Parse(color.Substring(3, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+            var blue = int.Parse(color.Substring(5, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
 
-            chartPerformance.AddDataset(new ControlChartDataset()
-            {
-                Title = I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.dataset.avg_duration"),
-                Data = dataAvg,
-                BorderColor = "#28a745", // success green
-                BackgroundColor = "rgba(40, 167, 69, 0.1)",
-                BorderWidth = 2,
-                Point = TypePointChart.Rect
-            });
-
-            chartPerformance.AddDataset(new ControlChartDataset()
-            {
-                Title = I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.dataset.max_duration"),
-                Data = dataMax,
-                BorderColor = "#ffc107", // warning yellow
-                BackgroundColor = "rgba(255, 193, 7, 0.1)",
-                BorderWidth = 2
-            });
-
-            chartPerformance.AddDataset(new ControlChartDataset()
-            {
-                Title = I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.dataset.min_duration"),
-                Data = dataMin,
-                BorderColor = "#ff6000", // orange
-                BackgroundColor = "rgba(255, 96, 0, 0.1)",
-                BorderWidth = 2
-            });
-
-            panel.AddPrimary(chartPerformance);
-
-            // chart 3: resources (cpu % and memory mb)
-            panel.AddPrimary(new ControlText()
-            {
-                Text = _ => I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.group.chart.resources.label"),
-                TextColor = _ => new PropertyColorText(TypeColorText.Info),
-                Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two)
-            });
-
-            var chartResources = new ControlChart()
-            {
-                Type = _ => TypeChart.Line,
-                Height = _ => 300,
-                Responsive = _ => true,
-                MaintainAspectRatio = _ => false,
-                TitleDisplay = _ => false,
-                LegendDisplay = _ => true,
-                YBeginAtZero = _ => true
-            };
-
-            chartResources.AddLabel(labels);
-
-            chartResources.AddDataset(new ControlChartDataset()
-            {
-                Title = I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.dataset.cpu"),
-                Data = dataCpu,
-                BorderColor = "#6f42c1", // purple
-                BackgroundColor = "rgba(111, 66, 193, 0.1)",
-                BorderWidth = 2,
-                Fill = TypeFillChart.Origin
-            });
-
-            chartResources.AddDataset(new ControlChartDataset()
-            {
-                Title = I18N.Translate(renderContext, "webexpress.webapp:setting.monitor.dataset.memory"),
-                Data = dataMem,
-                BorderColor = "#17a2b8", // info cyan
-                BackgroundColor = "rgba(23, 162, 184, 0.1)",
-                BorderWidth = 2
-            });
-
-            panel.AddPrimary(chartResources);
+            return $"rgba({red}, {green}, {blue}, 0.1)";
         }
     }
 }
