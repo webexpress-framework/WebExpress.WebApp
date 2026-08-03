@@ -12,6 +12,8 @@ namespace WebExpress.WebApp.WebJob
     /// The job starts at 0:30 a.m. on the first day of each month.
     /// </summary>
     [Job("30", "0", "1", "*", "*")]
+    [Name("webexpress.webapp:job.sessioncleaning.name")]
+    [Description("webexpress.webapp:job.sessioncleaning.description")]
     public sealed class JobSessionCleaning : IJob
     {
         private readonly IJobContext _jobContext;

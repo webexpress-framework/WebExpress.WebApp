@@ -126,7 +126,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
         private static ControlTableRow CreateRow(IRenderContext renderContext, IComponentHub componentHub, PackageCatalogItem package, IUri apiUri)
         {
             var pluginContext = package.Plugins.FirstOrDefault();
-            var pluginIcon = ResolveIcon(componentHub, pluginContext);
+            var pluginIcon = SettingIcon.Resolve(componentHub, pluginContext, pluginContext?.Icon);
             var packageName = pluginContext?.PluginName ?? package.Id;
             var packageVersion = package.Metadata?.Version ?? pluginContext?.Version ?? "-";
 
@@ -170,44 +170,6 @@ namespace WebExpress.WebApp.WWW.Settings.System
             }
 
             return row;
-        }
-
-        /// <summary>
-        /// Resolves the uri the plugin icon is actually served under.
-        /// </summary>
-        /// <remarks>
-        /// The icon a plugin declares is plugin-relative, and the plugin manager can only
-        /// prefix it with the server route - which is not where the file lives, because an
-        /// asset is published under the route of every application the plugin belongs to.
-        /// The asset manager owns that mapping, so the icon is looked up there rather than
-        /// assembled a second time here. Any of the registered routes serves the file, so
-        /// the first match wins; a plugin whose asset is not published has no icon.
-        ///
-        /// The lookup keys on the endpoint id rather than on the route, because the folder
-        /// separator of an asset route depends on how the project embeds its resources: a
-        /// logical name yields "assets/img/logo.svg", the default naming "assets/img.logo.svg".
-        /// The endpoint id flattens both to the same dotted form.
-        /// </remarks>
-        /// <param name="componentHub">The component hub.</param>
-        /// <param name="pluginContext">The plugin, or null for a package that is not loaded.</param>
-        /// <returns>The icon uri, or null when the plugin has none.</returns>
-        private static IUri ResolveIcon(IComponentHub componentHub, IPluginContext pluginContext)
-        {
-            const string marker = "/assets/";
-
-            var declared = pluginContext?.Icon?.ToString();
-            var start = declared?.IndexOf(marker, StringComparison.OrdinalIgnoreCase) ?? -1;
-
-            if (start < 0)
-            {
-                return null;
-            }
-
-            var endpointId = $"{pluginContext.PluginId}.{declared[(start + marker.Length)..].Replace('/', '.')}";
-
-            return componentHub?.AssetManager?.GetAssets(pluginContext)
-                .FirstOrDefault(x => string.Equals(x.EndpointId?.ToString(), endpointId, StringComparison.OrdinalIgnoreCase))
-                ?.Route?.ToUri();
         }
 
         /// <summary>

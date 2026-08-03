@@ -70,6 +70,8 @@ pagesettingmanager.resourceless=Zu der Einstellungsseite '{0}' aus dem Plugin '{
 search.label=Suche
 search.placeholder=Geben Sie hier Ihre Suchbegriffe ein.
 
+job.sessioncleaning.name=Sitzungsbereinigung
+job.sessioncleaning.description=Entfernt Sitzungen, die nicht mehr verwendet werden.
 job.sessioncleaning.process=Der Job zur Sitzungsbereinigung mit der Id '{0}'wurde ausgeführt.
 
 setting.label=Einstellungen:
@@ -107,6 +109,51 @@ setting.group.system.label=System
 setting.title.plugin.label=Plugins
 setting.title.systeminformation.label=Systeminformationen
 setting.title.log.label=Log
+setting.title.application.label=Anwendungen
+setting.title.job.label=Zeitpläne
+setting.title.restapi.label=REST-Schnittstellen
+
+setting.title.theme.label=Designs
+
+setting.theme.description=Ein Design wird von der Anwendung festgelegt, nicht vom Betreiber. Diese Seite zeigt, welche Designs eine Anwendung mitbringt und welches davon wirkt.
+setting.theme.name.label=Design
+setting.theme.mode.label=Farbschema
+setting.theme.mode.light=Hell
+setting.theme.mode.dark=Dunkel
+setting.theme.icon.label=Symbole
+setting.theme.icon.default=Standard
+setting.theme.icon.light=Leicht
+setting.theme.application.label=Anwendung
+setting.theme.state.label=Status
+setting.theme.state.default=Standard
+setting.theme.state.fallback=Wirksam
+setting.theme.state.stylesheet=Eigenes CSS
+setting.theme.empty.title=Keine Designs
+setting.theme.empty.message=Es ist kein Design registriert. Die Anwendungen verwenden das Erscheinungsbild des Frameworks.
+setting.application.description=Jede Anwendung ist unter einem eigenen Pfad eingebunden. Welche Seiten und Schnittstellen dort erreichbar sind, ergibt sich aus den Plugins, die für die Anwendung registriert sind.
+setting.application.name.label=Name
+setting.application.route.label=Pfad
+setting.application.plugin.label=Plugin
+setting.application.theme.label=Design
+setting.application.theme.none=Standard
+setting.application.empty.title=Keine Anwendungen
+setting.application.empty.message=Es ist keine Anwendung eingebunden. Ohne Anwendung liefert der Server keine Seiten aus.
+
+setting.job.description=Zeitpläne laufen unbeaufsichtigt im Hintergrund. Die Ausführungszeiten sind in Cron-Notation angegeben: Minute, Stunde, Tag, Monat und Wochentag.
+setting.job.name.label=Auftrag
+setting.job.plugin.label=Plugin
+setting.job.schedule.label=Ausführung
+setting.job.application.label=Anwendung
+setting.job.empty.title=Keine Zeitpläne
+setting.job.empty.message=Es ist kein Auftrag registriert. Ein Plugin meldet Aufträge über das Job-Attribut an.
+
+setting.restapi.description=Die aufgeführten Adressen sind über HTTP erreichbar. Die Version ist Teil des Pfades, sodass mehrere Fassungen einer Schnittstelle nebeneinander bestehen können.
+setting.restapi.route.label=Adresse
+setting.restapi.method.label=Methoden
+setting.restapi.version.label=Version
+setting.restapi.application.label=Anwendung
+setting.restapi.empty.title=Keine Schnittstellen
+setting.restapi.empty.message=Es ist keine REST-Schnittstelle registriert.
 
 setting.logfile.label=Logdatei:
 setting.logfile.path=Speicherort:
@@ -235,6 +282,18 @@ setting.usermanager.user.edit.groups.selected=Ausgewählte Gruppen
 
 setting.sitemap.title=Sitemap
 setting.sitemap.label=Sitemap
+setting.sitemap.stat.page=Seiten
+setting.sitemap.stat.restapi=Schnittstellen
+setting.sitemap.stat.socket=Sockets
+setting.sitemap.stat.resource=Ressourcen
+setting.sitemap.stat.asset=Dateien
+setting.sitemap.kind.page=Seite
+setting.sitemap.kind.restapi=Schnittstelle
+setting.sitemap.kind.socket=Socket
+setting.sitemap.kind.resource=Ressource
+setting.sitemap.kind.asset=Datei
+setting.sitemap.empty.title=Keine Routen
+setting.sitemap.empty.message=Es ist keine Seite und keine Schnittstelle eingebunden.
 setting.sitemap.description=Hier können Sie die Sitemap der Webanwendung einsehen. Die Sitemap stellt die Struktur der Webseite dar und zeigt alle verfügbaren Seiten und deren Hierarchie an. Sie können die Sitemap verwenden, um schnell zu bestimmten Seiten zu navigieren oder um einen Überblick über die gesamte Webseite zu erhalten.
 
 setting.monitor.title.label=Monitor

@@ -70,6 +70,8 @@ pagesettingmanager.resourceless=No associated resource could be found for the se
 search.label=Search
 search.placeholder=Enter your search terms here.
 
+job.sessioncleaning.name=Session cleaning
+job.sessioncleaning.description=Removes sessions that are no longer in use.
 job.sessioncleaning.process=The job for session cleaning with the id '{0}' has been executed.
 
 setting.label=Settings:
@@ -122,6 +124,51 @@ setting.group.system.label=System
 setting.title.plugin.label=Plugins
 setting.title.systeminformation.label=System information
 setting.title.log.label=Log
+setting.title.application.label=Applications
+setting.title.job.label=Schedules
+setting.title.restapi.label=REST interfaces
+
+setting.title.theme.label=Themes
+
+setting.theme.description=A theme is chosen by the application, not by the operator. This page shows which themes an application brings and which of them takes effect.
+setting.theme.name.label=Theme
+setting.theme.mode.label=Color scheme
+setting.theme.mode.light=Light
+setting.theme.mode.dark=Dark
+setting.theme.icon.label=Icons
+setting.theme.icon.default=Default
+setting.theme.icon.light=Light
+setting.theme.application.label=Application
+setting.theme.state.label=State
+setting.theme.state.default=Default
+setting.theme.state.fallback=In effect
+setting.theme.state.stylesheet=Own CSS
+setting.theme.empty.title=No themes
+setting.theme.empty.message=No theme is registered. The applications use the appearance of the framework.
+setting.application.description=Every application is mounted under a path of its own. Which pages and interfaces are reachable there follows from the plugins registered for the application.
+setting.application.name.label=Name
+setting.application.route.label=Path
+setting.application.plugin.label=Plugin
+setting.application.theme.label=Theme
+setting.application.theme.none=Default
+setting.application.empty.title=No applications
+setting.application.empty.message=No application is mounted. Without one the server serves no pages.
+
+setting.job.description=Schedules run unattended in the background. The execution times are given in cron notation: minute, hour, day, month and weekday.
+setting.job.name.label=Job
+setting.job.plugin.label=Plugin
+setting.job.schedule.label=Execution
+setting.job.application.label=Application
+setting.job.empty.title=No schedules
+setting.job.empty.message=No job is registered. A plugin announces its jobs through the job attribute.
+
+setting.restapi.description=The listed addresses are reachable over HTTP. The version is part of the path, so several revisions of an interface can exist side by side.
+setting.restapi.route.label=Address
+setting.restapi.method.label=Methods
+setting.restapi.version.label=Version
+setting.restapi.application.label=Application
+setting.restapi.empty.title=No interfaces
+setting.restapi.empty.message=No REST interface is registered.
 
 setting.plugin.label=Installed applications
 setting.plugin.description=
@@ -235,6 +282,18 @@ setting.usermanager.user.edit.groups.selected=Selected groups
 
 setting.sitemap.title=Sitemap
 setting.sitemap.label=Sitemap
+setting.sitemap.stat.page=Pages
+setting.sitemap.stat.restapi=Interfaces
+setting.sitemap.stat.socket=Sockets
+setting.sitemap.stat.resource=Resources
+setting.sitemap.stat.asset=Files
+setting.sitemap.kind.page=Page
+setting.sitemap.kind.restapi=Interface
+setting.sitemap.kind.socket=Socket
+setting.sitemap.kind.resource=Resource
+setting.sitemap.kind.asset=File
+setting.sitemap.empty.title=No routes
+setting.sitemap.empty.message=Neither a page nor an interface is mounted.
 setting.sitemap.notavailable=The sitemap is not available. Please make sure that the sitemap module is installed and activated.
 setting.sitemap.description=The sitemap provides an overview of the structure of the web application. It lists all available pages and their relationships to each other. This allows users to quickly navigate to the desired page and get an overview of the content offered by the web application.
 
