@@ -253,6 +253,8 @@ webexpress.webapp.QuickFilterCtrl = class extends webexpress.webui.QuickFilterCt
             }
         }
 
+        this._renderAddChips(container);
+
         el.appendChild(container);
     }
 
