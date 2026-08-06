@@ -140,7 +140,7 @@ webexpress.webapp.GraphViewerCtrl = class extends webexpress.webui.GraphViewerCt
         if (!result.ok) {
             // a superseded query arrives as an abort result and is ignored
             if (result.error.kind !== "abort") {
-                console.error("graph viewer load failed:", result.error.message);
+                console.error("graph viewer load failed:", webexpress.webapp.ServiceResult.describe(result));
                 this._element.classList.remove("placeholder-glow");
                 this._loading = false;
             }

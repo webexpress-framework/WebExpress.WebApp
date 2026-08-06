@@ -411,15 +411,10 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
                 return;
             }
 
-            // the message alone says nothing about a failure the server reported,
-            // so the kind, the status and the query that caused it travel along
-            console.error("TableCtrl Request failed:", {
-                kind: result.error.kind,
-                status: result.error.status,
-                message: result.error.message,
+            console.error("TableCtrl Request failed:", webexpress.webapp.ServiceResult.describe(result, {
                 uri: this._restUri,
                 params: params
-            });
+            }));
             this._store.setState({ error: result.error });
             this._toggleProgress(false);
             this._isLoading = false;
@@ -601,7 +596,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
         }
         this._service.update(stateObj).then((result) => {
             if (!result.ok && result.error.kind !== "abort") {
-                console.error("Update state failed", result.error.message);
+                console.error("Update state failed", webexpress.webapp.ServiceResult.describe(result));
             }
         });
     }

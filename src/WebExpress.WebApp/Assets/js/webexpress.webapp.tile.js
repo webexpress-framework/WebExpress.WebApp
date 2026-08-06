@@ -323,7 +323,7 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
         if (!result.ok) {
             // ignore aborts (a newer query replaced this one); report the rest
             if (result.error.kind !== "abort") {
-                console.error("TileCtrl Request failed:", result.error.message);
+                console.error("TileCtrl Request failed:", webexpress.webapp.ServiceResult.describe(result));
                 this._store.setState({ loading: false, error: result.error });
                 this._element.classList.remove("placeholder-glow");
                 this._toggleProgress(false);

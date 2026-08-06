@@ -81,7 +81,7 @@ webexpress.webapp.SidebarCtrl = class extends webexpress.webui.SidebarCtrl {
         if (!result.ok) {
             // ignore aborts (a newer query replaced this one); report the rest
             if (result.error.kind !== "abort") {
-                console.error("the sidebar could not be loaded:", result.error.message);
+                console.error("the sidebar could not be loaded:", webexpress.webapp.ServiceResult.describe(result));
                 this._store.setState({ loading: false, error: result.error });
             }
             return;

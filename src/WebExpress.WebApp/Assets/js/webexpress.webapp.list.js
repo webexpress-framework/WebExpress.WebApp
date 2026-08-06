@@ -209,7 +209,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
         if (!result.ok) {
             // ignore aborts (a newer query replaced this one); report the rest
             if (result.error.kind !== "abort") {
-                console.error("the request could not be completed successfully:", result.error.message);
+                console.error("the request could not be completed successfully:", webexpress.webapp.ServiceResult.describe(result));
                 this._store.setState({ loading: false, error: result.error });
             }
             this._progressDiv.style.visibility = "hidden";

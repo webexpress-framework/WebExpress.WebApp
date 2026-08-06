@@ -540,7 +540,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
             if (result.error.kind === "abort") {
                 return;
             }
-            console.error("gantt load failed:", result.error.message);
+            console.error("gantt load failed:", webexpress.webapp.ServiceResult.describe(result));
             this.setState({ loading: false, error: result.error.message || "load failed" });
             return;
         }
@@ -614,7 +614,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         this._service.create(webexpress.webapp.ganttModel.taskToWire(task), { path: "/tasks" }).then((result) => {
             if (!result.ok) {
                 if (result.error.kind !== "abort") {
-                    console.error("gantt create task failed:", result.error.message);
+                    console.error("gantt create task failed:", webexpress.webapp.ServiceResult.describe(result));
                 }
                 return;
             }
@@ -638,7 +638,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         this._service.update(webexpress.webapp.ganttModel.taskToWire(task), { path: "/tasks/" + encodeURIComponent(task.id) })
             .then((result) => {
                 if (!result.ok && result.error.kind !== "abort") {
-                    console.error("gantt update task failed:", result.error.message);
+                    console.error("gantt update task failed:", webexpress.webapp.ServiceResult.describe(result));
                 }
             });
     }
@@ -653,7 +653,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         }
         this._service.remove({ path: "/tasks/" + encodeURIComponent(id) }).then((result) => {
             if (!result.ok && result.error.kind !== "abort") {
-                console.error("gantt delete task failed:", result.error.message);
+                console.error("gantt delete task failed:", webexpress.webapp.ServiceResult.describe(result));
             }
         });
     }
@@ -669,7 +669,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         this._service.create(webexpress.webapp.ganttModel.linkToWire(link), { path: "/links" }).then((result) => {
             if (!result.ok) {
                 if (result.error.kind !== "abort") {
-                    console.error("gantt create link failed:", result.error.message);
+                    console.error("gantt create link failed:", webexpress.webapp.ServiceResult.describe(result));
                 }
                 return;
             }
@@ -694,7 +694,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         }
         this._service.remove({ path: "/links/" + encodeURIComponent(id) }).then((result) => {
             if (!result.ok && result.error.kind !== "abort") {
-                console.error("gantt delete link failed:", result.error.message);
+                console.error("gantt delete link failed:", webexpress.webapp.ServiceResult.describe(result));
             }
         });
     }

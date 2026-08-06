@@ -32,6 +32,25 @@ webexpress.webapp.ServiceResult = {
             error: { kind: kind, status: status, message: message, retriable: retriable },
             status: status
         };
+    },
+
+    /**
+     * Builds the diagnostic view of a failed result for a log. The message alone
+     * says nothing about a failure the server reported - and is empty for some -
+     * so the kind and the status travel along, together with whatever the caller
+     * adds about the request that caused it.
+     * @param {object} result - The normalised failure result.
+     * @param {object} [context={}] - What the caller knows: uri, params, id, ...
+     * @returns {object} The diagnostic view.
+     */
+    describe(result, context = {}) {
+        const error = (result && result.error) || {};
+
+        return Object.assign({
+            kind: error.kind || "unknown",
+            status: error.status || 0,
+            message: error.message || ""
+        }, context);
     }
 };
 

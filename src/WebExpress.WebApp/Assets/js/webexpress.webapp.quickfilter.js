@@ -65,6 +65,21 @@ webexpress.webapp.QuickFilterCtrl = class extends webexpress.webui.QuickFilterCt
     }
 
     /**
+     * Builds the error thrown for a failed service call. The diagnosis rides
+     * along on the error, because the message alone says nothing about what the
+     * server answered - the catch logs it in place of the bare error.
+     * @param {string} message - what did not work.
+     * @param {Object} result - the failed service result.
+     * @returns {Error} the error to throw.
+     */
+    _failure(message, result) {
+        const error = new Error(message);
+        error.detail = webexpress.webapp.ServiceResult.describe(result, { uri: this._restUri });
+
+        return error;
+    }
+
+    /**
      * Returns the id identifying this control as the origin of a definition
      * change, so it can ignore the event it caused itself.
      * @returns {string} the origin id.
@@ -96,14 +111,14 @@ webexpress.webapp.QuickFilterCtrl = class extends webexpress.webui.QuickFilterCt
         })
             .then((res) => {
                 if (!res || !res.ok) {
-                    throw new Error("quick filter could not be saved");
+                    throw this._failure("quick filter could not be saved", res);
                 }
 
                 const item = this._firstFilter(res.data) || values;
                 this._applyFilter(item, create);
             })
             .catch((error) => {
-                console.error("quick filter save failed:", error);
+                console.error("quick filter save failed:", error.detail || error);
                 this._dispatch(webexpress.webui.Event.DATA_ERROR_EVENT, { error: error });
             });
     }
@@ -126,7 +141,7 @@ webexpress.webapp.QuickFilterCtrl = class extends webexpress.webui.QuickFilterCt
         })
             .then((res) => {
                 if (!res || !res.ok) {
-                    throw new Error("quick filter could not be removed");
+                    throw this._failure("quick filter could not be removed", res);
                 }
 
                 this._staticButtonConfigs = this._staticButtonConfigs.filter((x) => x.id !== id);
@@ -134,7 +149,7 @@ webexpress.webapp.QuickFilterCtrl = class extends webexpress.webui.QuickFilterCt
                 this.render();
             })
             .catch((error) => {
-                console.error("quick filter removal failed:", error);
+                console.error("quick filter removal failed:", error.detail || error);
                 this._dispatch(webexpress.webui.Event.DATA_ERROR_EVENT, { error: error });
             });
     }
@@ -295,7 +310,7 @@ webexpress.webapp.QuickFilterCtrl = class extends webexpress.webui.QuickFilterCt
                     throw abort;
                 }
                 if (!res.ok) {
-                    throw new Error("REST quick filter request failed");
+                    throw this._failure("REST quick filter request failed", res);
                 }
                 return res.data;
             })
@@ -324,7 +339,7 @@ webexpress.webapp.QuickFilterCtrl = class extends webexpress.webui.QuickFilterCt
                 if (error.name === "AbortError") {
                     return;
                 }
-                console.error("REST quick filter load failed:", error);
+                console.error("REST quick filter load failed:", error.detail || error);
                 this._element.classList.remove("placeholder-glow");
                 this._abortController = null;
             });

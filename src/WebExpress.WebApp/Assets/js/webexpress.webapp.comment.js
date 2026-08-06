@@ -286,7 +286,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
         if (result.ok) {
             this._categories = this._normalizeCategories(result.data);
         } else {
-            console.warn("CommentCtrl: categories load failed", result.error.message);
+            console.warn("CommentCtrl: categories load failed", webexpress.webapp.ServiceResult.describe(result));
             this._categories = {};
         }
     }
@@ -479,7 +479,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
         if (result.ok) {
             this._comments = result.data;
         } else {
-            console.warn("CommentCtrl: load failed", result.error.message);
+            console.warn("CommentCtrl: load failed", webexpress.webapp.ServiceResult.describe(result));
             this._comments = [];
         }
         // pre-warm user cache for everyone referenced
@@ -520,7 +520,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
                 this._userCache[u.id] = u;
             }
         } else {
-            console.warn("CommentCtrl: user preload failed", result.error.message);
+            console.warn("CommentCtrl: user preload failed", webexpress.webapp.ServiceResult.describe(result));
         }
     }
 
@@ -1032,7 +1032,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
             this._renderList();
             this._dispatch(webexpress.webapp.Event.COMMENT_UPDATED_EVENT, { comment: updated });
         } else {
-            console.warn("CommentCtrl: edit failed", result.error.message);
+            console.warn("CommentCtrl: edit failed", webexpress.webapp.ServiceResult.describe(result));
         }
     }
 
@@ -1053,7 +1053,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
             this._renderList();
             this._dispatch(webexpress.webapp.Event.COMMENT_DELETED_EVENT, { id: comment.id });
         } else {
-            console.warn("CommentCtrl: delete failed", result.error.message);
+            console.warn("CommentCtrl: delete failed", webexpress.webapp.ServiceResult.describe(result));
         }
     }
 
@@ -1073,7 +1073,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
             this._renderList();
             this._dispatch(webexpress.webapp.Event.COMMENT_UPDATED_EVENT, { comment });
         } else {
-            console.warn("CommentCtrl: like failed", result.error.message);
+            console.warn("CommentCtrl: like failed", webexpress.webapp.ServiceResult.describe(result));
         }
     }
 
@@ -1093,7 +1093,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
             this._renderList();
             this._dispatch(webexpress.webapp.Event.COMMENT_UPDATED_EVENT, { comment });
         } else {
-            console.warn("CommentCtrl: pin failed", result.error.message);
+            console.warn("CommentCtrl: pin failed", webexpress.webapp.ServiceResult.describe(result));
         }
     }
 
@@ -1114,7 +1114,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
             this._renderList();
             this._dispatch(webexpress.webapp.Event.COMMENT_REACTION_EVENT, { commentId: comment.id, emoji, reactions: comment.reactions });
         } else {
-            console.warn("CommentCtrl: reaction failed", result.error.message);
+            console.warn("CommentCtrl: reaction failed", webexpress.webapp.ServiceResult.describe(result));
         }
     }
 
@@ -1137,7 +1137,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
             this._renderList();
             this._dispatch(webexpress.webapp.Event.COMMENT_REPLY_EVENT, { commentId: comment.id, reply });
         } else {
-            console.warn("CommentCtrl: reply failed", result.error.message);
+            console.warn("CommentCtrl: reply failed", webexpress.webapp.ServiceResult.describe(result));
         }
     }
 

@@ -413,7 +413,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
                 return;
             }
 
-            console.error("request failed:", result.error.message);
+            console.error("request failed:", webexpress.webapp.ServiceResult.describe(result));
             this._element.classList.remove("placeholder-glow");
             this._isLoading = false;
             return;
@@ -472,7 +472,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
                 console.error("failed to create new tab:", "post response did not contain newTab");
             }
         } else {
-            console.error("failed to create new tab:", result.error.message);
+            console.error("failed to create new tab:", webexpress.webapp.ServiceResult.describe(result));
         }
 
         // restore button state
@@ -1165,7 +1165,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
                     order: order
                 });
             } else if (result.error.kind !== "abort") {
-                console.error("failed to persist tab order:", result.error.message);
+                console.error("failed to persist tab order:", webexpress.webapp.ServiceResult.describe(result));
             }
         });
     }
@@ -1184,7 +1184,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
             this._service.remove({ params: { id: tabId } }).then((result) => {
                 if (!result.ok && result.error.kind !== "abort") {
                     // optionally show error, but still remove tab from ui to ensure responsiveness
-                    console.error("delete request failed (still removing tab locally):", result.error.message);
+                    console.error("delete request failed (still removing tab locally):", webexpress.webapp.ServiceResult.describe(result));
                 }
             });
         }

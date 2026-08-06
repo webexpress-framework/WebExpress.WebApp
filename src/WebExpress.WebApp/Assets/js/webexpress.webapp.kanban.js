@@ -126,7 +126,7 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
                 return;
             }
             // log error and reset state
-            console.error("kanban load failed:", result.error.message);
+            console.error("kanban load failed:", webexpress.webapp.ServiceResult.describe(result));
             this._element.classList.remove("placeholder-glow");
             this._loading = false;
             return;
@@ -222,7 +222,7 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
         this._service.update(payload).then((result) => {
             if (!result.ok && result.error.kind !== "abort") {
                 // log failed update request
-                console.error("kanban update state failed", result.error.message);
+                console.error("kanban update state failed", webexpress.webapp.ServiceResult.describe(result));
             }
         });
     }
