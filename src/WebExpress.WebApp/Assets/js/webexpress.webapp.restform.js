@@ -637,7 +637,10 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
                 this.options.onSuccess(json, result.response);
             }
 
-            this._dispatch(webexpress.webui.Event.UPLOAD_SUCCESS_EVENT, { response: json, status: result.status, form: this._element });
+            // the endpoint travels with the event so a surface that reads the same
+            // service can tell that its data changed and reload; without it a
+            // listener cannot distinguish a write to its own service from any other
+            this._dispatch(webexpress.webui.Event.UPLOAD_SUCCESS_EVENT, { response: json, status: result.status, form: this._element, endpoint: this.options.api });
             this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, { type: "submit", data: json });
 
             // when bound to a ViewState, re-query the resource so a ViewState-bound

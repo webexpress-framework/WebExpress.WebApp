@@ -85,5 +85,23 @@ namespace WebExpress.WebApp.WebRestApi
         /// </summary>
         [JsonPropertyName("badgeStyle")]
         public string BadgeColorStyle => BadgeColor?.ToStyle();
+
+        /// <summary>
+        /// Gets or sets whether the filter was defined by the user rather than by
+        /// the application. Only a user-defined filter offers the client the
+        /// options to change and to delete it, so an endpoint marks exactly those
+        /// filters the current user is allowed to manage.
+        /// </summary>
+        [JsonPropertyName("custom")]
+        public bool Custom { get; set; }
+
+        /// <summary>
+        /// Gets or sets what the filter selects. The framework never interprets
+        /// this value; it travels unchanged between the endpoint and the client
+        /// dialog, so an application is free to store a query, an expression or a
+        /// serialized object of its own.
+        /// </summary>
+        [JsonPropertyName("criteria")]
+        public string Criteria { get; set; }
     }
 }

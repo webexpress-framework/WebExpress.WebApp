@@ -411,7 +411,15 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
                 return;
             }
 
-            console.error("TableCtrl Request failed:", result.error.message);
+            // the message alone says nothing about a failure the server reported,
+            // so the kind, the status and the query that caused it travel along
+            console.error("TableCtrl Request failed:", {
+                kind: result.error.kind,
+                status: result.error.status,
+                message: result.error.message,
+                uri: this._restUri,
+                params: params
+            });
             this._store.setState({ error: result.error });
             this._toggleProgress(false);
             this._isLoading = false;

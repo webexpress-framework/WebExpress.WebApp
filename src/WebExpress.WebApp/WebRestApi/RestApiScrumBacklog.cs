@@ -90,7 +90,7 @@ namespace WebExpress.WebApp.WebRestApi
             }
             catch (Exception ex)
             {
-                return new ResponseBadRequest(new StatusMessage($"Error processing request.{ex}"));
+                return RestApiFault.BadRequest(request, ex, "Error processing request.");
             }
         }
 
@@ -143,7 +143,7 @@ namespace WebExpress.WebApp.WebRestApi
             }
             catch (Exception ex)
             {
-                return new ResponseBadRequest(new StatusMessage($"Error creating resource: {ex.Message}"));
+                return RestApiFault.BadRequest(request, ex, "Error creating resource.");
             }
         }
 
@@ -326,7 +326,7 @@ namespace WebExpress.WebApp.WebRestApi
             }
             catch (Exception ex)
             {
-                return new ResponseBadRequest(new StatusMessage($"Error updating resource: {ex.Message}"));
+                return RestApiFault.BadRequest(request, ex, "Error updating resource.");
             }
         }
 
@@ -378,7 +378,7 @@ namespace WebExpress.WebApp.WebRestApi
             }
             catch (Exception ex)
             {
-                return new ResponseBadRequest(new StatusMessage($"Error deleting resource: {ex.Message}"));
+                return RestApiFault.BadRequest(request, ex, "Error deleting resource.");
             }
         }
 

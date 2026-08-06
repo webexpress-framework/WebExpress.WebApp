@@ -108,6 +108,10 @@ namespace WebExpress.WebApp.WebControl
                 Style = GetStyles(renderContext)
             }
                 .Add(items.Select(x => x.Render(renderContext, visualTree)))
+                // this control builds its own element instead of taking the base one, so the
+                // prototype the base emits has to be carried over by hand; without it the chips
+                // the user defined offer removing but no editing
+                .Add(RenderEditAction(renderContext))
                 .EmitDataIslands(this, renderContext);
 
             return html;

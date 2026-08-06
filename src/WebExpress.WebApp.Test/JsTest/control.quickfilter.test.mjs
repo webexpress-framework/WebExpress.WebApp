@@ -72,3 +72,133 @@ test("wx-webapp-quickfilter renders REST-loaded filters with icon and badge", as
     const tinted = chips.find((c) => c.id === "tinted");
     assert.equal(tinted.style.getPropertyValue("--wx-quickfilter-accent"), "#00aa88", "the user color feeds the chip accent");
 });
+
+/**
+ * Loads a quickfilter bound to a REST endpoint that serves one application
+ * filter and one user-defined filter, and returns the runtime, the host and the
+ * calls the endpoint received.
+ * @param {object} [options] - Optional overrides: write (the write response).
+ * @returns {Promise<object>} The runtime, the host element and the calls.
+ */
+async function loadCustomQuickfilter(options = {}) {
+    const calls = [];
+    const rt = loadControl({
+        file: "webexpress.webapp.quickfilter.js",
+        fetch: async (url, init) => {
+            const method = (init && init.method) || "GET";
+            calls.push({ url: String(url), method: method, body: init && init.body });
+
+            const payload = method === "GET"
+                ? {
+                    filters: [
+                        { id: "classics", name: "Classics" },
+                        { id: "mine", name: "Mine", custom: true, criteria: "author:me" }
+                    ]
+                }
+                : (options.write !== undefined ? options.write : { filters: [{ id: "fresh", name: "Fresh", custom: true }] });
+
+            return {
+                ok: true,
+                status: method === "DELETE" ? 204 : 200,
+                headers: { get: () => "application/json" },
+                json: async () => payload
+            };
+        }
+    });
+
+    const host = rt.createElement("div");
+    appendServiceIsland(rt.document, host, { name: "data", baseUri: "/api/filters", method: "GET" });
+
+    // the authored edit action, which the client copies onto the options menu of
+    // every user-defined chip
+    if (options.editAction !== false) {
+        const prototype = rt.createElement("div");
+        prototype.classList.add("wx-quickfilter-edit-action");
+        prototype.dataset.wxPrimaryAction = "modal";
+        prototype.dataset.wxPrimaryTarget = "#filtereditor";
+        prototype.dataset.wxPrimaryUri = "/games";
+        host.appendChild(prototype);
+    }
+
+    rt.document.body.appendChild(host);
+
+    const ctrl = new rt.wxapp.QuickFilterCtrl(host);
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    return { rt, host, ctrl, calls };
+}
+
+test("wx-webapp-quickfilter offers the options menu only on a user-defined filter", async () => {
+    const { host } = await loadCustomQuickfilter();
+
+    const mine = host.querySelectorAll(".wx-quickfilter-btn-chip").find((c) => c.id === "mine");
+    assert.ok(mine.querySelector(".wx-quickfilter-menu-toggle"), "the user-defined chip carries the options toggle");
+
+    // a button holds no buttons, so the menu is a sibling of the chip inside the
+    // wrapper the two share
+    const wrapper = host.querySelectorAll(".wx-quickfilter-chip-wrap")
+        .find((w) => w.querySelector(".wx-quickfilter-btn-chip")?.id === "mine");
+    assert.ok(wrapper, "the user-defined chip sits in a wrapper");
+    const entries = wrapper.querySelectorAll(".wx-quickfilter-menu .dropdown-item");
+    assert.equal(entries.length, 2, "the menu offers edit and remove");
+    assert.equal(mine.querySelectorAll("button").length, 0, "the chip nests no buttons");
+
+    // editing runs the authored action, so the dialog behind it is the
+    // application's; the uri names the filter it opens on
+    assert.equal(entries[0].dataset.wxPrimaryAction, "modal", "the edit entry carries the authored action");
+    assert.equal(entries[0].dataset.wxPrimaryUri, "/games?id=mine", "the uri names the filter being edited");
+
+    const classics = host.querySelectorAll(".wx-quickfilter-btn-chip").find((c) => c.id === "classics");
+    assert.equal(classics.querySelectorAll(".wx-quickfilter-menu-toggle").length, 0, "an application filter carries no menu");
+});
+
+test("wx-webapp-quickfilter removes a user-defined filter at once", async () => {
+    const { rt, host, ctrl, calls } = await loadCustomQuickfilter();
+
+    assert.ok(rt.wx.FilterRegistry.getFilterConfig("mine"), "the filter is known before the removal");
+
+    ctrl._removeFilter({ id: "mine" });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const del = calls.find((c) => c.method === "DELETE");
+    assert.ok(del, "the removal reaches the endpoint");
+    assert.ok(del.url.includes("id=mine"), "the removal names the filter");
+
+    const ids = host.querySelectorAll(".wx-quickfilter-btn-chip").map((c) => c.id);
+    assert.ok(!ids.includes("mine"), "the chip is gone without a reload");
+    assert.ok(ids.includes("classics"), "the remaining filters stay");
+    assert.equal(rt.wx.FilterRegistry.getFilterConfig("mine"), null, "the definition is dropped from the registry");
+});
+
+test("wx-webapp-quickfilter shows a created filter at once and applies it", async () => {
+    const { rt, host, ctrl, calls } = await loadCustomQuickfilter();
+
+    ctrl._saveFilter({ id: null, name: "Fresh", icon: null, color: "#123456", criteria: "state:open" });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const post = calls.find((c) => c.method === "POST");
+    assert.ok(post, "the creation reaches the endpoint");
+    assert.ok(post.body.includes("state:open"), "the criteria travel to the endpoint");
+
+    const ids = host.querySelectorAll(".wx-quickfilter-btn-chip").map((c) => c.id);
+    assert.ok(ids.includes("fresh"), "the new chip appears without a reload");
+    assert.ok(rt.wx.FilterRegistry.getActiveFilters().includes("fresh"), "the new filter is applied right away");
+});
+
+test("wx-webapp-quickfilter adopts a changed filter without a reload", async () => {
+    const { rt, host, ctrl } = await loadCustomQuickfilter({
+        write: { filters: [{ id: "mine", name: "Renamed", custom: true, criteria: "author:me" }] }
+    });
+
+    ctrl._saveFilter({ id: "mine", name: "Renamed", icon: null, color: null, criteria: "author:me" });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const mine = host.querySelectorAll(".wx-quickfilter-btn-chip").find((c) => c.id === "mine");
+    assert.ok(mine.textContent.includes("Renamed"), "the chip shows the new name at once");
+    assert.equal(rt.wx.FilterRegistry.getFilterConfig("mine").name, "Renamed", "the registry carries the new name");
+});

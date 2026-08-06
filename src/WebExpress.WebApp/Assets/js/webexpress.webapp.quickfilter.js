@@ -22,10 +22,185 @@ webexpress.webapp.QuickFilterCtrl = class extends webexpress.webui.QuickFilterCt
 
         this._attachViewState(element);
 
+        // a definition changed elsewhere - a second bar on the page, another
+        // surface - is adopted by reloading; the originating control has already
+        // updated itself and skips its own event, so this cannot loop
+        document.addEventListener(webexpress.webui.Event.CHANGE_FILTER_DEFINITION_EVENT, (e) => {
+            if (this._restUri && e.detail?.origin !== this._originId()) {
+                this._receiveData();
+            }
+        });
+
+        // a filter defined in a dialog of the application is written by that dialog's
+        // form rather than through this control, so nothing here knew about it and the
+        // new chip only appeared on the next page load; a successful write to this
+        // bar's own service is therefore taken as a change to its filters
+        document.addEventListener(webexpress.webui.Event.UPLOAD_SUCCESS_EVENT, (e) => {
+            if (this._restUri && this._isOwnService(e.detail?.endpoint)) {
+                this._receiveData();
+            }
+        });
+
         // initial load if a REST endpoint is defined
         if (this._restUri) {
             this._receiveData();
         }
+    }
+
+    /**
+     * Determines whether an address addresses the service this bar reads its
+     * filters from. The two are compared without their query, because a form
+     * writes to the same route the bar reads and only differs in what it appends.
+     * @param {string} endpoint - the address that was written to.
+     * @returns {boolean} true when the write concerned this bar's filters.
+     */
+    _isOwnService(endpoint) {
+        if (!endpoint || !this._restUri) {
+            return false;
+        }
+
+        const strip = (uri) => String(uri).split("?")[0].replace(/\/+$/, "");
+
+        return strip(endpoint) === strip(this._restUri);
+    }
+
+    /**
+     * Returns the id identifying this control as the origin of a definition
+     * change, so it can ignore the event it caused itself.
+     * @returns {string} the origin id.
+     */
+    _originId() {
+        if (!this._origin) {
+            this._origin = this._element.id || `wx-quickfilter-${Math.random().toString(36).slice(2)}`;
+        }
+        return this._origin;
+    }
+
+    /**
+     * Creates or changes a user-defined filter through the service and shows the
+     * result at once: the endpoint owns the id and may normalise the values, so
+     * the returned item - not the entered one - is adopted.
+     * @param {Object} values - the values entered in the dialog.
+     */
+    _saveFilter(values) {
+        if (!this._restUri) {
+            return;
+        }
+
+        const create = !values.id;
+
+        webexpress.webapp.ServiceRegistry.request(this._restUri, {
+            method: create ? "POST" : "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(values)
+        })
+            .then((res) => {
+                if (!res || !res.ok) {
+                    throw new Error("quick filter could not be saved");
+                }
+
+                const item = this._firstFilter(res.data) || values;
+                this._applyFilter(item, create);
+            })
+            .catch((error) => {
+                console.error("quick filter save failed:", error);
+                this._dispatch(webexpress.webui.Event.DATA_ERROR_EVENT, { error: error });
+            });
+    }
+
+    /**
+     * Removes a user-defined filter through the service and drops it from the
+     * bar at once.
+     * @param {Object} config - the filter to remove.
+     */
+    _removeFilter(config) {
+        const id = config?.id;
+        if (!this._restUri || !id) {
+            return;
+        }
+
+        const separator = this._restUri.indexOf("?") >= 0 ? "&" : "?";
+
+        webexpress.webapp.ServiceRegistry.request(`${this._restUri}${separator}id=${encodeURIComponent(id)}`, {
+            method: "DELETE"
+        })
+            .then((res) => {
+                if (!res || !res.ok) {
+                    throw new Error("quick filter could not be removed");
+                }
+
+                this._staticButtonConfigs = this._staticButtonConfigs.filter((x) => x.id !== id);
+                this._registry.undefineFilter(id, this._originId());
+                this.render();
+            })
+            .catch((error) => {
+                console.error("quick filter removal failed:", error);
+                this._dispatch(webexpress.webui.Event.DATA_ERROR_EVENT, { error: error });
+            });
+    }
+
+    /**
+     * Adopts a created or changed filter into the local configurations, the
+     * registry and the rendered bar, so the change is visible without a reload.
+     * @param {Object} item - the filter as the endpoint returned it.
+     * @param {boolean} create - whether the filter was newly created.
+     */
+    _applyFilter(item, create) {
+        const config = this._toButtonConfig(item);
+        const index = this._staticButtonConfigs.findIndex((x) => x.id === config.id);
+
+        if (index >= 0) {
+            this._staticButtonConfigs[index] = config;
+        } else {
+            this._staticButtonConfigs.push(config);
+        }
+
+        this._registry.defineFilter(item, this._originId());
+
+        // a newly created filter is applied right away, which is what the user
+        // asked for by defining it; the registry re-renders every bound control
+        if (create && item.id) {
+            this._registry.activate(item.id);
+        }
+
+        this.render();
+    }
+
+    /**
+     * Maps a filter as the service delivers it onto the chip configuration the
+     * renderer expects. The user-defined flag and the opaque criteria travel
+     * along, because the options menu and the dialog are built from them.
+     * @param {Object} filter - the filter as the service delivered it.
+     * @returns {Object} the chip configuration.
+     */
+    _toButtonConfig(filter) {
+        return {
+            id: filter.id,
+            label: filter.name,
+            icon: filter.icon || null,
+            color: filter.color || null,
+            colorValue: filter.colorValue || null,
+            badge: filter.badge != null ? String(filter.badge) : null,
+            badgeColor: filter.badgeColor || null,
+            badgeStyle: filter.badgeStyle || null,
+            custom: filter.custom === true,
+            criteria: filter.criteria ?? null,
+            class: "wx-quickfilter-btn-chip",
+            primaryAction: { target: filter.id }
+        };
+    }
+
+    /**
+     * Reads the single filter out of a write response, which carries the same
+     * shape as the list response.
+     * @param {Object} data - the response payload.
+     * @returns {Object|null} the filter, or null when the response carries none.
+     */
+    _firstFilter(data) {
+        if (Array.isArray(data)) {
+            return data[0] || null;
+        }
+        return (data && Array.isArray(data.filters)) ? (data.filters[0] || null) : null;
     }
 
     /**
@@ -131,20 +306,7 @@ webexpress.webapp.QuickFilterCtrl = class extends webexpress.webui.QuickFilterCt
 
                     // set up button configs for all filters; the icon spec is a
                     // css class or an image uri, both handled by the icon factory
-                    this._staticButtonConfigs = response.filters.map(flt => {
-                        return {
-                            id: flt.id,
-                            label: flt.name,
-                            icon: flt.icon || null,
-                            color: flt.color || null,
-                            colorValue: flt.colorValue || null,
-                            badge: flt.badge != null ? String(flt.badge) : null,
-                            badgeColor: flt.badgeColor || null,
-                            badgeStyle: flt.badgeStyle || null,
-                            class: "wx-quickfilter-btn-chip",
-                            primaryAction: { target: flt.id }
-                        };
-                    });
+                    this._staticButtonConfigs = response.filters.map((flt) => this._toButtonConfig(flt));
 
                     // initialize registry state using saved cookie
                     this._registry.init();
@@ -232,7 +394,7 @@ webexpress.webapp.QuickFilterCtrl = class extends webexpress.webui.QuickFilterCt
                 btnElem.style.setProperty("--wx-quickfilter-accent", btnCfg.colorValue);
             }
             this._appendBadge(btnElem, btnCfg.badge, btnCfg.badgeColor, btnCfg.badgeStyle);
-            container.appendChild(btnElem);
+            container.appendChild(this._withCustomMenu(btnElem, btnCfg));
         }
 
         // gather all filter ids represented by static buttons

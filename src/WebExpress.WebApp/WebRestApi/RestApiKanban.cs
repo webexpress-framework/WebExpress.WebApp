@@ -82,7 +82,7 @@ namespace WebExpress.WebApp.WebRestApi
             }
             catch (Exception ex)
             {
-                return new ResponseBadRequest(new StatusMessage($"error processing get request: {ex.Message}"));
+                return RestApiFault.BadRequest(request, ex, "error processing get request.");
             }
         }
 
@@ -132,7 +132,7 @@ namespace WebExpress.WebApp.WebRestApi
             }
             catch (Exception ex)
             {
-                return new ResponseBadRequest(new StatusMessage($"error processing put request: {ex.Message}"));
+                return RestApiFault.BadRequest(request, ex, "error processing put request.");
             }
         }
 
