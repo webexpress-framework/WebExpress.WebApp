@@ -1,16 +1,10 @@
 /**
- * Headless tests for the permission control on the Component base (View,
- * State and Service). They instantiate the real control file in the harness
- * (alongside its model) and assert that it extends Component, seeds its
- * assignments from the wx-state island and skips the network load in that
- * case, otherwise loads from the service, renders the table and the pager,
- * assigns through POST and revokes a pair through DELETE. An assignment is
- * the pair (groupId, policyId): a group may carry several policies, so the
- * selects exclude pairs rather than groups.
- *
- * The search box is the embedded webexpress.webui.SearchCtrl, which is not
- * part of the engine harness; the control degrades to a surface without a
- * search box there, and the filter path is driven through the host event.
+ * Headless behaviour tests for the permission control. They instantiate the
+ * real control file on the real runtime and assert that it renders the
+ * assignments as a table of one row per group, offers the add row in front of
+ * it, revokes a group through DELETE, replaces a policy set through PUT and
+ * assigns a new group through POST. The surface derives from the REST table, so
+ * the table control and the WebUI column templates are part of the runtime.
  *
  * Run with Node 18 or newer from the JsTest folder:
  *   node --test
@@ -18,357 +12,283 @@
 
 import { test } from "node:test";
 import assert from "node:assert";
-import { loadEngine, webappAsset, appendServiceIsland, appendStateIsland } from "./harness.mjs";
+import { loadControl } from "./controls.harness.mjs";
 
-function load(options) {
-    return loadEngine(Object.assign(
-        {
-            extraFiles: [
-                webappAsset("webexpress.webapp.permission.model.js"),
-                webappAsset("webexpress.webapp.permission.js")
-            ]
-        },
-        options
-    ));
+const GROUPS = [
+    { id: "g1", name: "IT Support" },
+    { id: "g2", name: "Service Desk" },
+    { id: "g3", name: "Incident Managers" }
+];
+
+const POLICIES = [
+    { id: "p1", name: "class_edit_policy" },
+    { id: "p2", name: "class_view_policy" },
+    { id: "p3", name: "class_admin_policy" }
+];
+
+/**
+ * Loads the runtime with the permission control on top of the REST table.
+ * @returns {object} The loaded runtime.
+ */
+function load() {
+    return loadControl({
+        deps: [
+            "webexpress.webapp.table.model.js",
+            "webexpress.webapp.table.js",
+            "webexpress.webapp.permission.model.js"
+        ],
+        file: "webexpress.webapp.permission.js"
+    });
 }
 
 /**
- * Awaits the asynchronous load and the batched store notification.
- * @returns {Promise<void>} Resolves after the macrotask and microtask queues drain.
+ * Builds a fetch mock over an entry store, recording every call.
+ * @param {object} rt - The loaded runtime.
+ * @param {Array<object>} entries - The entries the data endpoint answers with.
+ * @returns {Array<object>} The recorded calls.
  */
-function settle() {
-    return new Promise((resolve) => setTimeout(resolve, 0));
-}
-
-test("permission extends the component base", () => {
-    const { wxapp, createElement, setFetch, document } = load();
-    setFetch(async () => ({ ok: true, status: 200, json: async () => ({ items: [], total: 0 }) }));
-
-    const element = createElement("div");
-    appendServiceIsland(document, element, { name: "data", kind: "rest", baseUri: "/api/permissions", method: "GET" });
-
-    const ctrl = new wxapp.PermissionCtrl(element);
-
-    assert.ok(ctrl instanceof wxapp.Data);
-    assert.equal(typeof ctrl.store, "object");
-});
-
-test("permission seeds its assignments from the wx-state island and skips the load", async () => {
-    const { wxapp, createElement, setFetch, document } = load();
-    let fetchCount = 0;
-    setFetch(async () => { fetchCount++; return { ok: true, status: 200, json: async () => ({ items: [], total: 0 }) }; });
-
-    const element = createElement("div");
-    appendServiceIsland(document, element, { name: "data", kind: "rest", baseUri: "/api/permissions", method: "GET" });
-    appendStateIsland(document, element, {
-        assignments: [{ groupId: "g1", groupName: "IT Support", policyId: "p1", policyName: "class_edit_policy" }],
-        total: 1
-    });
-
-    const ctrl = new wxapp.PermissionCtrl(element);
-
-    // the store is seeded synchronously, so the value is available at once
-    assert.equal(ctrl.value.length, 1);
-    assert.equal(ctrl.value[0].groupId, "g1");
-
-    // the seed also derives the pair set for the select exclusion
-    assert.deepEqual(ctrl.state.assignedPairs, [{ groupId: "g1", policyId: "p1" }]);
-
-    // the table renders the seeded row on mount
-    assert.equal(ctrl._tbody.childNodes.length, 1);
-    assert.equal(ctrl._tbody.childNodes[0].childNodes[0].textContent, "IT Support");
-    assert.equal(ctrl._tbody.childNodes[0].childNodes[1].textContent, "class_edit_policy");
-
-    // the seed avoids the round trip
-    await settle();
-    assert.equal(fetchCount, 0);
-});
-
-test("permission loads from the service when no state island is present", async () => {
-    const { wxapp, createElement, setFetch, document } = load();
+function stubFetch(rt, entries) {
     const calls = [];
-    setFetch(async (url) => {
-        calls.push(url);
-        return {
-            ok: true, status: 200, json: async () => ({
-                items: [{ groupId: "g9", groupName: "Incident Managers", policyId: "p3", policyName: "class_admin_policy" }],
-                total: 1
-            })
-        };
-    });
 
-    const element = createElement("div");
-    appendServiceIsland(document, element, { name: "data", kind: "rest", baseUri: "/api/permissions", method: "GET" });
-
-    const ctrl = new wxapp.PermissionCtrl(element);
-    assert.equal(ctrl.value.length, 0);
-
-    await settle();
-
-    assert.equal(calls.length, 1);
-    assert.ok(calls[0].includes("p=0"));
-    assert.ok(calls[0].includes("l=10"));
-    assert.equal(ctrl.value.length, 1);
-    assert.equal(ctrl.value[0].groupId, "g9");
-});
-
-test("permission fills the assign selects from the groups and policies services", async () => {
-    const { wxapp, createElement, setFetch, document } = load();
-    setFetch(async (url) => {
-        if (url.includes("/api/groups")) {
-            return { ok: true, status: 200, json: async () => [{ id: "g1", name: "IT Support" }] };
-        }
-        if (url.includes("/api/policies")) {
-            return { ok: true, status: 200, json: async () => [{ id: "p1", name: "class_edit_policy", description: "Edit" }] };
-        }
-        return { ok: true, status: 200, json: async () => ({ items: [], total: 0 }) };
-    });
-
-    const element = createElement("div");
-    appendServiceIsland(document, element, { name: "data", kind: "rest", baseUri: "/api/permissions", method: "GET" });
-    appendServiceIsland(document, element, { name: "groups", kind: "rest", baseUri: "/api/groups", method: "GET" });
-    appendServiceIsland(document, element, { name: "policies", kind: "rest", baseUri: "/api/policies", method: "GET" });
-
-    const ctrl = new wxapp.PermissionCtrl(element);
-    await settle();
-
-    // one placeholder option plus the loaded record each
-    assert.equal(ctrl._groupSelect.select.childNodes.length, 2);
-    assert.equal(ctrl._groupSelect.select.childNodes[1].textContent, "IT Support");
-    assert.equal(ctrl._policySelect.select.childNodes.length, 2);
-    assert.equal(ctrl._policySelect.select.childNodes[1].textContent, "class_edit_policy");
-});
-
-test("permission excludes the selected group's policies from the policy select", async () => {
-    const { wxapp, createElement, setFetch, document } = load();
-    setFetch(async (url) => {
-        if (url.includes("/api/groups")) {
-            return {
-                ok: true, status: 200, json: async () => [
-                    { id: "g1", name: "IT Support" },
-                    { id: "g2", name: "Service Desk" }
-                ]
-            };
-        }
-        if (url.includes("/api/policies")) {
-            return {
-                ok: true, status: 200, json: async () => [
-                    { id: "p1", name: "class_edit_policy" },
-                    { id: "p2", name: "class_view_policy" }
-                ]
-            };
-        }
-        return {
-            ok: true, status: 200, json: async () => ({
-                items: [{ groupId: "g1", groupName: "IT Support", policyId: "p1", policyName: "class_edit_policy" }],
-                total: 1,
-                assignedPairs: [{ groupId: "g1", policyId: "p1" }]
-            })
-        };
-    });
-
-    const element = createElement("div");
-    appendServiceIsland(document, element, { name: "data", kind: "rest", baseUri: "/api/permissions", method: "GET" });
-    appendServiceIsland(document, element, { name: "groups", kind: "rest", baseUri: "/api/groups", method: "GET" });
-    appendServiceIsland(document, element, { name: "policies", kind: "rest", baseUri: "/api/policies", method: "GET" });
-
-    const ctrl = new wxapp.PermissionCtrl(element);
-    await settle();
-
-    // without a selected group the full policy directory is offered, and g1
-    // stays selectable because it does not carry every policy yet
-    assert.deepEqual(ctrl._groupSelect.select.childNodes.map((o) => o.value), ["", "g1", "g2"]);
-    assert.deepEqual(ctrl._policySelect.select.childNodes.map((o) => o.value), ["", "p1", "p2"]);
-
-    // selecting g1 narrows the policies to the unassigned one
-    ctrl._groupSelect.select.value = "g1";
-    ctrl._renderPolicyOptions();
-    assert.deepEqual(ctrl._policySelect.select.childNodes.map((o) => o.value), ["", "p2"]);
-});
-
-test("permission drops a fully assigned group from the group select", async () => {
-    const { wxapp, createElement, setFetch, document } = load();
-    setFetch(async (url) => {
-        if (url.includes("/api/groups")) {
-            return {
-                ok: true, status: 200, json: async () => [
-                    { id: "g1", name: "IT Support" },
-                    { id: "g2", name: "Service Desk" }
-                ]
-            };
-        }
-        if (url.includes("/api/policies")) {
-            return {
-                ok: true, status: 200, json: async () => [
-                    { id: "p1", name: "class_edit_policy" },
-                    { id: "p2", name: "class_view_policy" }
-                ]
-            };
-        }
-        return {
-            ok: true, status: 200, json: async () => ({
-                items: [{ groupId: "g1", groupName: "IT Support", policyId: "p1", policyName: "class_edit_policy" }],
-                total: 3,
-                assignedPairs: [
-                    { groupId: "g1", policyId: "p1" },
-                    { groupId: "g1", policyId: "p2" },
-                    { groupId: "g2", policyId: "p1" }
-                ]
-            })
-        };
-    });
-
-    const element = createElement("div");
-    appendServiceIsland(document, element, { name: "data", kind: "rest", baseUri: "/api/permissions", method: "GET" });
-    appendServiceIsland(document, element, { name: "groups", kind: "rest", baseUri: "/api/groups", method: "GET" });
-    appendServiceIsland(document, element, { name: "policies", kind: "rest", baseUri: "/api/policies", method: "GET" });
-
-    const ctrl = new wxapp.PermissionCtrl(element);
-    await settle();
-
-    // g1 carries every policy (even though only one row is on this page), g2
-    // can still receive p2
-    assert.deepEqual(ctrl._groupSelect.select.childNodes.map((o) => o.value), ["", "g2"]);
-});
-
-test("permission assigns through POST and reloads the page", async () => {
-    const { wxapp, createElement, setFetch, document } = load();
-    const calls = [];
-    setFetch(async (url, init) => {
+    rt.setFetch(async (url, init) => {
         const method = (init && init.method) || "GET";
         calls.push({ url: url, method: method, body: init && init.body });
-        if (method === "POST") {
-            return {
-                ok: true, status: 200, json: async () =>
-                    ({ groupId: "g2", groupName: "Service Desk", policyId: "p2", policyName: "class_view_policy" })
-            };
+
+        if (url.includes("/api/groups")) {
+            return { ok: true, status: 200, json: async () => GROUPS };
         }
-        return {
-            ok: true, status: 200, json: async () => ({
-                items: [{ groupId: "g2", groupName: "Service Desk", policyId: "p2", policyName: "class_view_policy" }],
-                total: 1
-            })
-        };
-    });
-
-    const element = createElement("div");
-    appendServiceIsland(document, element, { name: "data", kind: "rest", baseUri: "/api/permissions", method: "GET" });
-    appendStateIsland(document, element, { assignments: [{ groupId: "g1", groupName: "IT", policyId: "p1", policyName: "x" }], total: 1 });
-
-    const ctrl = new wxapp.PermissionCtrl(element);
-
-    ctrl._groupSelect.select.value = "g2";
-    ctrl._policySelect.select.value = "p2";
-    await ctrl._assign();
-
-    assert.equal(calls[0].method, "POST");
-    assert.deepEqual(JSON.parse(calls[0].body), { groupId: "g2", policyId: "p2" });
-
-    // the reload keeps paging and filtering authoritative on the server
-    assert.equal(calls[1].method, "GET");
-    assert.equal(ctrl.value.length, 1);
-    assert.equal(ctrl.value[0].groupId, "g2");
-
-    // the selects return to the placeholder after a successful assign
-    assert.equal(ctrl._groupSelect.select.value, "");
-    assert.equal(ctrl._policySelect.select.value, "");
-});
-
-test("permission revokes a pair through DELETE and reloads the page", async () => {
-    const { wxapp, createElement, setFetch, document } = load();
-    const calls = [];
-    setFetch(async (url, init) => {
-        const method = (init && init.method) || "GET";
-        calls.push({ url: url, method: method });
+        if (url.includes("/api/policies")) {
+            return { ok: true, status: 200, json: async () => POLICIES };
+        }
         if (method === "DELETE") {
             return { ok: true, status: 204 };
         }
-        return { ok: true, status: 200, json: async () => ({ items: [], total: 0 }) };
+        if (method === "POST" || method === "PUT") {
+            return { ok: true, status: 200, json: async () => entries[0] };
+        }
+        return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+                items: entries,
+                total: entries.length,
+                assignedGroupIds: entries.map((x) => x.groupId)
+            })
+        };
     });
 
-    const element = createElement("div");
-    appendServiceIsland(document, element, { name: "data", kind: "rest", baseUri: "/api/permissions", method: "GET" });
-    appendStateIsland(document, element, { assignments: [{ groupId: "g 1", groupName: "IT", policyId: "p1", policyName: "x" }], total: 1 });
+    return calls;
+}
 
-    const ctrl = new wxapp.PermissionCtrl(element);
-    await ctrl._remove(ctrl.value[0]);
+/**
+ * Builds the host the server renders: the marker class, the page size and the
+ * three service islands.
+ * @param {object} rt - The loaded runtime.
+ * @param {object} [options] - Overrides such as readonly.
+ * @returns {object} The host element.
+ */
+function createHost(rt, options = {}) {
+    const element = rt.createElement("div");
+    element.id = "permissions";
+    element.classList.add("wx-webapp-permission");
+    element.setAttribute("data-page-size", String(options.pageSize || 10));
+    element.dataset.pageSize = String(options.pageSize || 10);
 
-    assert.equal(calls[0].method, "DELETE");
-    // both pair segments are encoded into the path
-    assert.equal(calls[0].url.endsWith("/g%201/p1"), true);
-    assert.equal(calls[1].method, "GET");
-    assert.equal(ctrl.value.length, 0);
+    if (options.readonly) {
+        element.setAttribute("data-readonly", "true");
+        element.dataset.readonly = "true";
+    }
+
+    for (const descriptor of [
+        { name: "data", baseUri: "/api/permissions" },
+        { name: "groups", baseUri: "/api/groups" },
+        { name: "policies", baseUri: "/api/policies" }
+    ]) {
+        const island = rt.document.createElement("wx-service");
+        island.setAttribute("name", descriptor.name);
+        island.setAttribute("kind", "rest");
+        island.setAttribute("base-uri", descriptor.baseUri);
+        island.setAttribute("method", "GET");
+        element.appendChild(island);
+    }
+
+    rt.document.body.appendChild(element);
+    return element;
+}
+
+/**
+ * Drains the microtask and macrotask queues so the load, the directories and
+ * the batched render have completed.
+ * @returns {Promise<void>} Resolves once the queues are drained.
+ */
+async function settle() {
+    for (let round = 0; round < 5; round++) {
+        for (let i = 0; i < 40; i++) {
+            await Promise.resolve();
+        }
+        await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+}
+
+/**
+ * Returns the rendered data rows, which are every row but the add row.
+ * @param {object} ctrl - The control instance.
+ * @returns {Array<object>} The row elements.
+ */
+function dataRows(ctrl) {
+    return ctrl._body.children.filter((row) => !row.classList.contains("wx-permission-add"));
+}
+
+test("permission renders one row per group with the policies as chips", async () => {
+    const rt = load();
+    stubFetch(rt, [
+        { groupId: "g1", groupName: "IT Support", policyIds: ["p1", "p2"] },
+        { groupId: "g2", groupName: "Service Desk", policyIds: ["p2"] }
+    ]);
+
+    const ctrl = new rt.wxapp.PermissionCtrl(createHost(rt));
+    await settle();
+
+    assert.deepEqual(ctrl.value, [
+        { groupId: "g1", policyIds: ["p1", "p2"] },
+        { groupId: "g2", policyIds: ["p2"] }
+    ]);
+
+    const rows = dataRows(ctrl);
+    assert.equal(rows.length, 2);
+    assert.ok(rows[0].textContent.includes("IT Support"), "the first column names the group");
+
+    // the chips resolve their labels through the policy directory
+    assert.ok(rows[0].textContent.includes("class_edit_policy"), "the policy chips are labelled");
+    assert.ok(rows[0].textContent.includes("class_view_policy"), "every policy of the group is a chip");
 });
 
-test("permission filters through the search host event with a debounce", async () => {
-    const { wxapp, createElement, setFetch, document } = load();
-    const calls = [];
-    setFetch(async (url) => {
-        calls.push(url);
-        return { ok: true, status: 200, json: async () => ({ items: [], total: 0 }) };
-    });
+test("permission puts the add row in front of the entries", async () => {
+    const rt = load();
+    stubFetch(rt, [{ groupId: "g1", groupName: "IT Support", policyIds: ["p1"] }]);
 
-    const element = createElement("div");
-    appendServiceIsland(document, element, { name: "data", kind: "rest", baseUri: "/api/permissions", method: "GET" });
-    appendStateIsland(document, element, { assignments: [{ groupId: "g1", groupName: "IT", policyId: "p1", policyName: "x" }], total: 1 });
+    const ctrl = new rt.wxapp.PermissionCtrl(createHost(rt));
+    await settle();
 
-    const ctrl = new wxapp.PermissionCtrl(element);
+    const first = ctrl._body.children[0];
+    assert.ok(first.classList.contains("wx-permission-add"), "the add row is the first row");
 
-    // the embedded search control announces its value through the filter
-    // event on its host; the harness drives the host directly, because the
-    // webui control itself is not part of the engine harness (the event name
-    // resolves to undefined in the stub, on both sides)
-    ctrl._searchHost.dispatchEvent({ type: undefined, detail: { value: "desk" } });
-
-    // the debounce delays the query
-    assert.equal(calls.length, 0);
-    await new Promise((resolve) => setTimeout(resolve, 300));
-
-    assert.equal(calls.length, 1);
-    assert.ok(calls[0].includes("q=desk"));
-    assert.ok(calls[0].includes("p=0"));
-    assert.equal(ctrl.state.search, "desk");
+    // the select offers the groups that do not own a row yet
+    assert.deepEqual(
+        ctrl._groupSelect.children.map((option) => option.value),
+        ["", "g2", "g3"]);
 });
 
-test("permission renders the pager window and hides it for a single page", () => {
-    const { wxapp, createElement, setFetch, document } = load();
-    setFetch(async () => ({ ok: true, status: 200, json: async () => ({ items: [], total: 0 }) }));
+test("permission assigns the picked group through POST and reloads", async () => {
+    const rt = load();
+    const calls = stubFetch(rt, [{ groupId: "g1", groupName: "IT Support", policyIds: ["p1"] }]);
 
-    const element = createElement("div");
-    appendServiceIsland(document, element, { name: "data", kind: "rest", baseUri: "/api/permissions", method: "GET" });
-    appendStateIsland(document, element, {
-        assignments: [{ groupId: "g1", groupName: "IT", policyId: "p1", policyName: "x" }],
-        total: 25
-    });
+    const ctrl = new rt.wxapp.PermissionCtrl(createHost(rt));
+    await settle();
 
-    const ctrl = new wxapp.PermissionCtrl(element);
+    ctrl._groupSelect.value = "g2";
+    ctrl._addSmartEdit.value = ["p2", "p3"];
+    await ctrl._assign();
+    await settle();
 
-    // prev, three pages (25 rows at page size 10) and next
-    assert.equal(ctrl._pager.childNodes.length, 5);
-    assert.equal(ctrl._pager.childNodes[0].disabled, true);
-    assert.equal(ctrl._pager.childNodes[1].textContent, "1");
-    assert.ok(ctrl._pager.childNodes[1].classList.contains("wx-permission-pager-current"));
-    assert.equal(ctrl._pager.childNodes[4].disabled, false);
+    const post = calls.find((call) => call.method === "POST");
+    assert.ok(post, "the assignment is a POST against the data endpoint");
+    assert.deepEqual(JSON.parse(post.body), { groupId: "g2", policyIds: ["p2", "p3"] });
 
-    // a single page renders no pager
-    ctrl.setState({ total: 5 });
-    ctrl._renderPager();
-    assert.equal(ctrl._pager.childNodes.length, 0);
+    // the add row returns to its empty state
+    assert.equal(ctrl._groupSelect.value, "");
+    assert.deepEqual(ctrl._addSmartEdit.value, []);
 });
 
-test("permission readonly suppresses the assign row and the remove affordance", () => {
-    const { wxapp, createElement, setFetch, document } = load();
-    setFetch(async () => ({ ok: true, status: 200, json: async () => ({ items: [], total: 0 }) }));
+test("permission writes an inline edit of the chips through PUT", async () => {
+    const rt = load();
+    const calls = stubFetch(rt, [{ groupId: "g1", groupName: "IT Support", policyIds: ["p1"] }]);
 
-    const element = createElement("div");
-    element.dataset.readonly = "true";
-    element.setAttribute("data-readonly", "true");
-    appendServiceIsland(document, element, { name: "data", kind: "rest", baseUri: "/api/permissions", method: "GET" });
-    appendStateIsland(document, element, { assignments: [{ groupId: "g1", groupName: "IT", policyId: "p1", policyName: "x" }], total: 1 });
+    const ctrl = new rt.wxapp.PermissionCtrl(createHost(rt));
+    await settle();
 
-    const ctrl = new wxapp.PermissionCtrl(element);
+    await ctrl._setPolicies("g1", ["p1", "p3"]);
+    await settle();
 
-    assert.equal(ctrl._assignRow, undefined);
-    // the action cell of the row stays empty
-    assert.equal(ctrl._tbody.childNodes[0].childNodes[2].childNodes.length, 0);
+    const put = calls.find((call) => call.method === "PUT");
+    assert.ok(put, "the policy set is written with a PUT");
+    assert.ok(put.url.endsWith("/g1"), "the group is addressed through the path");
+    assert.deepEqual(JSON.parse(put.body), { policyIds: ["p1", "p3"] });
+});
+
+test("permission revokes a group through DELETE and reloads", async () => {
+    const rt = load();
+    const calls = stubFetch(rt, [{ groupId: "g 1", groupName: "IT Support", policyIds: ["p1"] }]);
+
+    const ctrl = new rt.wxapp.PermissionCtrl(createHost(rt));
+    await settle();
+
+    await ctrl._revoke("g 1");
+    await settle();
+
+    const remove = calls.find((call) => call.method === "DELETE");
+    assert.ok(remove, "the revocation is a DELETE");
+    assert.ok(remove.url.endsWith("/g%201"), "the group id is encoded into the path");
+});
+
+test("permission offers the revoke entry in the options menu of every row", async () => {
+    const rt = load();
+    stubFetch(rt, [{ groupId: "g1", groupName: "IT Support", policyIds: ["p1"] }]);
+
+    const ctrl = new rt.wxapp.PermissionCtrl(createHost(rt));
+    await settle();
+
+    const options = ctrl._rows[0].options;
+    assert.equal(options.length, 1);
+    assert.equal(options[0].command, "revoke");
+    assert.equal(options[0].groupId, "g1");
+});
+
+test("permission readonly drops the add row, the options and the inline edit", async () => {
+    const rt = load();
+    stubFetch(rt, [{ groupId: "g1", groupName: "IT Support", policyIds: ["p1"] }]);
+
+    const ctrl = new rt.wxapp.PermissionCtrl(createHost(rt, { readonly: true }));
+    await settle();
+
+    assert.equal(ctrl._body.children.filter((row) => row.classList.contains("wx-permission-add")).length, 0);
+    assert.equal(ctrl._rows[0].options, null);
+    assert.equal(ctrl._columns[1].rendererOptions.editable, false);
+});
+
+test("permission pages through the pagination control it is bound to", async () => {
+    const rt = load();
+
+    const entries = [];
+    for (let i = 0; i < 25; i++) {
+        entries.push({ groupId: `g${i}`, groupName: `Group ${i}`, policyIds: ["p1"] });
+    }
+
+    const calls = stubFetch(rt, entries);
+
+    const host = createHost(rt, { pageSize: 10 });
+    host.setAttribute("data-wx-source-paging", "#permissions_pager");
+    host.dataset.wxSourcePaging = "#permissions_pager";
+
+    // the pager is created by the controller, exactly as the emitted markup is
+    // picked up on a page, so the surface finds its instance
+    const pager = rt.createElement("div");
+    pager.id = "permissions_pager";
+    pager.classList.add("wx-webui-pagination");
+    rt.document.body.appendChild(pager);
+    rt.wx.Controller.createInstances(pager);
+    const pagerCtrl = rt.wx.Controller.getInstanceByElement(pager);
+
+    const ctrl = new rt.wxapp.PermissionCtrl(host);
+    await settle();
+
+    // the stub answers with the whole store, so the page count follows the
+    // reported total rather than the received rows
+    assert.equal(pagerCtrl.total, 3);
+
+    ctrl.paging(2);
+    await settle();
+
+    const paged = calls.filter((call) => call.method === "GET" && call.url.includes("/api/permissions"));
+    assert.ok(paged[paged.length - 1].url.includes("p=2"), "the requested page reaches the endpoint");
 });

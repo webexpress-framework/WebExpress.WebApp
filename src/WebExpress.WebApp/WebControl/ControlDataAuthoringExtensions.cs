@@ -363,8 +363,9 @@ namespace WebExpress.WebApp.WebControl
 
         /// <summary>
         /// Declares the standard data service of the permission surface, which
-        /// queries the group-to-policy assignments with GET; assignments and
-        /// revocations shape their own requests against the same base.
+        /// queries the group-to-policy assignments with GET; the add row, the
+        /// inline editing of the policy chips and the revocation shape their own
+        /// POST, PUT and DELETE requests against the same base.
         /// </summary>
         /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
         /// <param name="control">The permission control.</param>
@@ -378,7 +379,7 @@ namespace WebExpress.WebApp.WebControl
 
         /// <summary>
         /// Declares the groups service of the permission surface, which
-        /// resolves the assignable identity groups with GET.
+        /// resolves the identity groups the add row offers with GET.
         /// </summary>
         /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
         /// <param name="control">The permission control.</param>
@@ -392,7 +393,7 @@ namespace WebExpress.WebApp.WebControl
 
         /// <summary>
         /// Declares the policies service of the permission surface, which
-        /// resolves the assignable identity policies with GET.
+        /// resolves the identity policies the chips are picked from with GET.
         /// </summary>
         /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
         /// <param name="control">The permission control.</param>

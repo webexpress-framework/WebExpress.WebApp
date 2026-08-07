@@ -1,558 +1,479 @@
 /**
  * A control managing the group-to-policy assignments of a protected resource
  * (see the identity model: Identity -> Group -> Policy -> Permission). It is
- * typically hosted inside a modal ("Manage permissions for ...") and renders
- * an assign row (group select, policy select, assign button), a searchable,
- * paged table of the current assignments and a remove affordance per row.
- * The search box is the existing basic search control
- * (webexpress.webui.SearchCtrl), instantiated on a nested host.
+ * typically hosted inside a modal ("Manage permissions for ...").
  *
- * An assignment is the pair (groupId, policyId): a group may carry several
- * policies, mirroring IIdentityGroup.Policies in the identity model. The
- * selects therefore exclude assigned pairs: the policy select drops the
- * policies the selected group already carries, and a group only disappears
- * from the group select once it carries every policy.
+ * The surface is a single table, which is why the control derives from the REST
+ * table rather than rendering a layout of its own: the first column names the
+ * group, the second carries the policies of that group as chips that are edited
+ * inline with the move control, the first row assigns a further group and the
+ * options menu of a row revokes it. Paging is left to the pagination control the
+ * host binds through the paging bind, so the surface itself stays a table.
  *
- * Declarative configuration: the host carries a wx-service island named
- * "data" for the assignment endpoint plus two islands named "groups" and
- * "policies" that feed the assign selects.
+ * A row is a group with all of its policies, mirroring IIdentityGroup.Policies
+ * in the identity model. The group id is therefore the row identity and the
+ * policy set is the edited value, which keeps a group's chips together on one
+ * page.
+ *
+ * Declarative configuration: the host carries a wx-service island named "data"
+ * for the assignment endpoint plus two islands named "groups" and "policies"
+ * that supply the directories - the groups the add row offers and the policies
+ * the chips are picked from.
  *
  * REST contract:
- *   GET  {data}?q=…&p=…&l=…                        → { items: [{ groupId, groupName, policyId, policyName }], total, assignedPairs }
- *   POST {data}     body { groupId, policyId }     → { groupId, groupName, policyId, policyName }
- *   DELETE {data}/{groupId}/{policyId}             → 204
- *   GET  {groups}?q=…                              → [{ id, name }]
- *   GET  {policies}?q=…                            → [{ id, name, description }]
+ *   GET    {data}?q=…&p=…&l=…                    → { items: [{ groupId, groupName, policyIds }], total, assignedGroupIds }
+ *   POST   {data}   body { groupId, policyIds }  → the created entry
+ *   PUT    {data}/{groupId} body { policyIds }   → the updated entry
+ *   DELETE {data}/{groupId}                      → 204
+ *   GET    {groups}?q=…                          → [{ id, name }]
+ *   GET    {policies}?q=…                        → [{ id, name, description }]
  *
- * assignedPairs spans all pages, so the exclusion holds beyond the visible
- * window. A POST for an already assigned pair is idempotent on the server.
+ * assignedGroupIds spans all pages, so a group that already owns a row beyond
+ * the visible window is still kept out of the add row.
  *
  * Events dispatched on the host element:
- *   webexpress.webapp.Event.PERMISSION_ASSIGNED_EVENT detail: { assignment }
- *   webexpress.webapp.Event.PERMISSION_REMOVED_EVENT  detail: { assignment }
+ *   webexpress.webapp.Event.PERMISSION_ASSIGNED_EVENT detail: { groupId, policyIds }
+ *   webexpress.webapp.Event.PERMISSION_REMOVED_EVENT  detail: { groupId }
  */
-webexpress.webapp.PermissionCtrl = class extends webexpress.webapp.Data {
+webexpress.webapp.PermissionCtrl = class extends webexpress.webapp.TableCtrl {
     /**
      * Construct a new PermissionCtrl.
      * @param {HTMLElement} element - host element.
      */
     constructor(element) {
-        // resolve the services and the initial state before super, so the
-        // Component seeds its store from the optional wx-state island and owns
-        // the service map
+        // the table base consumes the islands, seeds the store, wires the pager
+        // and issues the first load; the directories are fetched alongside it
+        super(element);
+
         const services = webexpress.webapp.ServiceRegistry.fromElement(element);
-        const initialState = Object.assign(
-            { assignments: [], total: 0, page: 0, search: "" },
-            webexpress.webapp.Data.readState(element)
-        );
-        // a seeded island rarely carries the full pair set; deriving it from the
-        // seeded assignments keeps the first paint of the selects consistent
-        if (!Array.isArray(initialState.assignedPairs)) {
-            initialState.assignedPairs = (initialState.assignments || [])
-                .map((a) => ({ groupId: a.groupId, policyId: a.policyId }));
-        }
+        this._groupsService = services.groups || null;
+        this._policiesService = services.policies || null;
 
-        super(element, { state: initialState, services: services });
-
-        this._pageSize = parseInt(element.dataset.pageSize || "10", 10);
-        this._readonly = element.dataset.readonly === "true";
-        this._service = this.useService("data");
-        this._groups = this.useService("groups");
-        this._policies = this.useService("policies");
-
-        this._searchTimer = null;
         this._groupRecords = [];
         this._policyRecords = [];
+        this._assignedGroupIds = [];
 
-        // clean host
-        element.textContent = "";
-        element.removeAttribute("data-page-size");
-        element.removeAttribute("data-readonly");
         element.classList.add("wx-permission");
 
-        this._buildDom();
-        this._attachEventHandlers();
+        // the inline editor and the options menu report through bubbling events,
+        // so a single listener on the host covers every row of every page
+        element.addEventListener(webexpress.webui.Event.SAVE_INLINE_EDIT_EVENT, (e) => this._onInlineSave(e));
+        element.addEventListener(webexpress.webui.Event.CLICK_EVENT, (e) => this._onOptionClick(e));
 
-        // subscribe to the store, perform the first render and run onMount
-        this.mount();
+        this._directories = this._loadDirectories();
 
-        this._loadOptions();
-
-        // when the server seeded the assignments through the wx-state island the
-        // first paint needs no round trip; otherwise load them from the endpoint
-        if (this._assignments.length === 0) {
-            this._load();
-        }
+        // guards the add row against the placeholder render the base performs
+        // while this constructor is still running
+        this._ready = true;
     }
 
     /**
-     * The assignments, backed by the component store so the store is the
-     * single source of truth and a change triggers a re-render through the
-     * subscription.
-     * @returns {Array<Object>} The current assignments.
+     * Indicates whether the surface only reports the assignments. Read from the
+     * host rather than cached, because the base renders once before this
+     * constructor body runs.
+     * @returns {boolean} True when the surface is read-only.
      */
-    get _assignments() {
-        return this.state.assignments || [];
+    get _readonly() {
+        return this._element.dataset.readonly === "true";
     }
 
     /**
-     * Renders the table and the pager on the first paint.
+     * Keeps the layout of the permission endpoint out of the column persistence
+     * of the REST table: the surface has two fixed columns, so there is nothing
+     * to persist and the endpoint carries no configure route.
      */
-    onMount() {
-        this._render();
+    _initPersistenceListeners() {
     }
 
     /**
-     * Renders the table and the pager whenever the assignment state changes.
+     * Reserves the actions column even before the first group was assigned,
+     * because the add row always carries the add affordance.
      */
-    onUpdate() {
-        this._render();
-    }
+    _recalculateHasOptions() {
+        super._recalculateHasOptions();
 
-    /**
-     * Builds the static DOM scaffold (assign row, search toolbar, table and
-     * pager). Only the table body, the pager and the select options are
-     * re-rendered on updates.
-     */
-    _buildDom() {
         if (!this._readonly) {
-            this._assignRow = document.createElement("div");
-            this._assignRow.className = "wx-permission-assign";
-
-            this._groupSelect = this._makeSelect(
-                this._i18n("webexpress.webapp:permission.assign.group.label", "Assign group"));
-            this._policySelect = this._makeSelect(
-                this._i18n("webexpress.webapp:permission.assign.policy.label", "Policy"));
-
-            this._assignBtn = document.createElement("button");
-            this._assignBtn.type = "button";
-            this._assignBtn.className = "wx-permission-assign-btn";
-            this._assignBtn.appendChild(webexpress.webui.Icon.create("fas fa-plus"));
-            this._assignBtn.appendChild(document.createTextNode(
-                " " + this._i18n("webexpress.webapp:permission.assign", "Assign")));
-
-            this._assignRow.appendChild(this._groupSelect.wrapper);
-            this._assignRow.appendChild(this._policySelect.wrapper);
-            this._assignRow.appendChild(this._assignBtn);
-            this._element.appendChild(this._assignRow);
-        }
-
-        this._toolbar = document.createElement("div");
-        this._toolbar.className = "wx-permission-toolbar";
-
-        // the search box is the existing basic search control on a nested
-        // host; in the headless harness the control class is absent and the
-        // surface simply renders without a search box
-        this._searchHost = document.createElement("div");
-        this._searchHost.className = "wx-permission-search";
-        this._searchHost.setAttribute("placeholder",
-            this._i18n("webexpress.webapp:permission.search.placeholder", "Search…"));
-        this._toolbar.appendChild(this._searchHost);
-        this._element.appendChild(this._toolbar);
-
-        try {
-            this._searchCtrl = new webexpress.webui.SearchCtrl(this._searchHost);
-        } catch (err) {
-            console.warn("PermissionCtrl: failed to initialize search", err);
-            this._searchCtrl = null;
-        }
-
-        this._table = document.createElement("table");
-        this._table.className = "wx-permission-table";
-
-        const thead = document.createElement("thead");
-        const headRow = document.createElement("tr");
-        const thGroup = document.createElement("th");
-        thGroup.textContent = this._i18n("webexpress.webapp:permission.column.group", "Assigned group");
-        const thPolicy = document.createElement("th");
-        thPolicy.textContent = this._i18n("webexpress.webapp:permission.column.policy", "Effective policy");
-        const thAction = document.createElement("th");
-        thAction.className = "wx-permission-action";
-        headRow.appendChild(thGroup);
-        headRow.appendChild(thPolicy);
-        headRow.appendChild(thAction);
-        thead.appendChild(headRow);
-
-        this._tbody = document.createElement("tbody");
-        this._table.appendChild(thead);
-        this._table.appendChild(this._tbody);
-        this._element.appendChild(this._table);
-
-        this._empty = document.createElement("div");
-        this._empty.className = "wx-permission-empty";
-        this._empty.textContent = this._i18n("webexpress.webapp:permission.empty", "No assignments yet");
-        this._element.appendChild(this._empty);
-
-        this._pager = document.createElement("nav");
-        this._pager.className = "wx-permission-pager";
-        this._element.appendChild(this._pager);
-    }
-
-    /**
-     * Builds a labeled select for the assign row.
-     * @param {string} label - The visible label text.
-     * @returns {{wrapper: HTMLElement, select: HTMLSelectElement}}
-     */
-    _makeSelect(label) {
-        const wrapper = document.createElement("label");
-        wrapper.className = "wx-permission-field";
-
-        const caption = document.createElement("span");
-        caption.className = "wx-permission-field-label";
-        caption.textContent = label;
-
-        const select = document.createElement("select");
-        select.className = "wx-permission-select";
-        select.appendChild(this._makePlaceholderOption());
-
-        wrapper.appendChild(caption);
-        wrapper.appendChild(select);
-
-        return { wrapper: wrapper, select: select };
-    }
-
-    /**
-     * Builds the placeholder option of an assign select.
-     * @returns {HTMLOptionElement}
-     */
-    _makePlaceholderOption() {
-        const placeholder = document.createElement("option");
-        placeholder.value = "";
-        placeholder.textContent = this._i18n("webexpress.webapp:permission.select.placeholder", "Please select…");
-        return placeholder;
-    }
-
-    /**
-     * Wires the assign button, the debounced search filter and the group
-     * selection, which narrows the policy options to the unassigned ones.
-     */
-    _attachEventHandlers() {
-        if (!this._readonly) {
-            this._assignBtn.addEventListener("click", () => this._assign());
-            this._groupSelect.select.addEventListener("change", () => this._renderPolicyOptions());
-        }
-
-        // the embedded search control announces its value through the filter
-        // event; the debounce keeps fast typing to a single query
-        this._searchHost.addEventListener(webexpress.webui.Event.CHANGE_FILTER_EVENT, (e) => {
-            const value = ((e.detail && e.detail.value) || "").trim();
-            clearTimeout(this._searchTimer);
-            this._searchTimer = setTimeout(() => {
-                this.setState({ search: value, page: 0 });
-                this._load();
-            }, 250);
-        });
-    }
-
-    /**
-     * Loads the group and policy directories for the assign selects. Runs
-     * once on construction; a readonly surface carries no selects and skips it.
-     */
-    async _loadOptions() {
-        if (this._readonly) {
-            return;
-        }
-        await Promise.all([this._loadGroups(), this._loadPolicies()]);
-    }
-
-    /**
-     * Queries the groups service and keeps the raw directory records; the
-     * options themselves are rebuilt from these records on every render, so
-     * fully assigned groups drop out of the select as the assignments change.
-     */
-    async _loadGroups() {
-        if (!this._groups) {
-            return;
-        }
-        try {
-            const res = await this._groups.query({});
-            if (!res.ok) throw new Error(res.error ? res.error.message : String(res.status));
-            this._groupRecords = Array.isArray(res.data) ? res.data : [];
-            this._renderGroupOptions();
-        } catch (e) {
-            console.warn("PermissionCtrl: groups load failed", e);
+            this._hasOptions = true;
         }
     }
 
     /**
-     * Queries the policies service and keeps the raw directory records; the
-     * options are rebuilt on every render and on group selection, excluding
-     * the policies the selected group already carries.
-     */
-    async _loadPolicies() {
-        if (!this._policies) {
-            return;
-        }
-        try {
-            const res = await this._policies.query({});
-            if (!res.ok) throw new Error(res.error ? res.error.message : String(res.status));
-            this._policyRecords = Array.isArray(res.data) ? res.data : [];
-            this._renderPolicyOptions();
-            // group coverage depends on the policy directory size
-            this._renderGroupOptions();
-        } catch (e) {
-            console.warn("PermissionCtrl: policies load failed", e);
-        }
-    }
-
-    /**
-     * Loads the assignment page described by the current state. When a
-     * removal empties the last page, the page is clamped and re-queried, so
-     * the user never faces an empty window while rows remain.
+     * Loads the requested page of entries and renders it as a table. When a
+     * revocation empties the last page, the page is clamped and re-queried, so
+     * the user never faces an empty window while entries remain.
+     * @returns {Promise<void>} Resolves when the load completed.
      */
     async _load() {
-        if (!this._service) {
-            this.setState({ assignments: [], total: 0 });
-            return;
-        }
-        try {
-            const params = { page: this.state.page, pageSize: this._pageSize };
-            if (this.state.search) {
-                params.search = this.state.search;
-            }
-            const res = await this._service.query(params);
-            if (!res.ok) throw new Error(res.error ? res.error.message : String(res.status));
-
-            const model = webexpress.webapp.permissionModel;
-            const page = model.normalizeList(res.data);
-            const clamped = model.clampPage(this.state.page, model.pageCount(page.total, this._pageSize));
-            if (clamped !== this.state.page && page.items.length === 0 && page.total > 0) {
-                this.setState({ page: clamped });
-                return this._load();
-            }
-
-            this.setState({ assignments: page.items, total: page.total, assignedPairs: page.assignedPairs });
-        } catch (e) {
-            console.warn("PermissionCtrl: load failed", e);
-            this.setState({ assignments: [], total: 0, assignedPairs: [] });
-        }
-    }
-
-    /**
-     * Renders the table body, the empty hint, the pager and the select
-     * options from the state.
-     */
-    _render() {
-        this._tbody.replaceChildren();
-        for (const assignment of this._assignments) {
-            this._tbody.appendChild(this._makeRow(assignment));
-        }
-
-        this._empty.style.display = this._assignments.length === 0 ? "" : "none";
-        this._table.style.display = this._assignments.length === 0 ? "none" : "";
-
-        this._renderPager();
-        this._renderGroupOptions();
-        this._renderPolicyOptions();
-    }
-
-    /**
-     * Rebuilds the group select from the directory records, excluding the
-     * groups that already carry every policy. A still-assignable selection
-     * survives the rebuild; a selection that just got fully assigned falls
-     * back to the placeholder.
-     */
-    _renderGroupOptions() {
-        if (this._readonly || !this._groupSelect) {
+        if (!this._restUri || !this._service) {
             return;
         }
 
-        const select = this._groupSelect.select;
-        const current = select.value;
-        const available = webexpress.webapp.permissionModel.availableGroups(
-            this._groupRecords, this.state.assignedPairs, this._policyRecords);
+        this._toggleProgress(true);
 
-        select.replaceChildren(this._makePlaceholderOption());
-        for (const group of available) {
-            const option = document.createElement("option");
-            option.value = group.id;
-            option.textContent = group.name;
-            select.appendChild(option);
-        }
+        const state = this._store.getState();
+        const result = await this._service.query({
+            search: state.search || "",
+            page: state.page || 0,
+            pageSize: state.pageSize
+        });
 
-        select.value = available.some((g) => g.id === current) ? current : "";
-    }
+        if (!result.ok) {
+            // a superseded query arrives as an abort and is not an error
+            if (result.error.kind === "abort") {
+                return;
+            }
 
-    /**
-     * Rebuilds the policy select from the directory records, excluding the
-     * policies the selected group already carries. A still-assignable
-     * selection survives the rebuild.
-     */
-    _renderPolicyOptions() {
-        if (this._readonly || !this._policySelect) {
+            console.error("PermissionCtrl: load failed", webexpress.webapp.ServiceResult.describe(result, { uri: this._restUri }));
+            this._store.setState({ error: result.error });
+            this._toggleProgress(false);
             return;
         }
 
-        const select = this._policySelect.select;
-        const current = select.value;
-        const available = webexpress.webapp.permissionModel.availablePolicies(
-            this._policyRecords, this.state.assignedPairs, this._groupSelect.select.value);
+        // the chips resolve their labels through the policy directory, so the
+        // first page waits for it rather than painting unlabeled chips
+        await this._directories;
 
-        select.replaceChildren(this._makePlaceholderOption());
-        for (const policy of available) {
-            const option = document.createElement("option");
-            option.value = policy.id;
-            option.textContent = policy.name;
-            if (policy.description) {
-                option.title = policy.description;
-            }
-            select.appendChild(option);
+        const model = webexpress.webapp.permissionModel;
+        const page = model.normalizeList(result.data);
+        const clamped = model.clampPage(state.page || 0, model.pageCount(page.total, this._pageSize));
+
+        if (clamped !== (state.page || 0) && page.items.length === 0 && page.total > 0) {
+            this._store.setState({ page: clamped });
+            return this._load();
         }
 
-        select.value = available.some((p) => p.id === current) ? current : "";
+        this._assignedGroupIds = page.assignedGroupIds;
+        this._store.setState({ total: page.total, page: clamped, error: null });
+
+        // the directory may have arrived after an earlier page was built, so the
+        // columns carrying the chip options are rebuilt with every page
+        this._columns = null;
+        this.updateData({
+            columns: this._buildColumns(),
+            rows: page.items.map((entry) => this._buildRow(entry))
+        });
+
+        this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, { id: this._element.id, page: this._page });
+        this._toggleProgress(false);
     }
 
     /**
-     * Builds a single assignment row with the remove affordance.
-     * @param {Object} assignment - The assignment record.
-     * @returns {HTMLElement}
+     * Loads the group and the policy directory once. A missing service yields
+     * an empty directory, which degrades the add row and the chip picker to
+     * empty pickers rather than failing the surface.
+     * @returns {Promise<void>} Resolves when both directories arrived.
      */
-    _makeRow(assignment) {
-        const row = document.createElement("tr");
+    async _loadDirectories() {
+        const [groups, policies] = await Promise.all([
+            this._queryDirectory(this._groupsService),
+            this._queryDirectory(this._policiesService)
+        ]);
 
-        const group = document.createElement("td");
-        group.className = "wx-permission-group";
-        group.textContent = assignment.groupName || assignment.groupId;
+        this._groupRecords = groups;
+        this._policyRecords = policies;
+    }
 
-        const policy = document.createElement("td");
-        policy.className = "wx-permission-policy";
-        policy.textContent = assignment.policyName || assignment.policyId;
-
-        const action = document.createElement("td");
-        action.className = "wx-permission-action";
-        if (!this._readonly) {
-            const remove = document.createElement("button");
-            remove.type = "button";
-            remove.className = "wx-permission-remove";
-            remove.title = this._i18n("webexpress.webapp:permission.remove", "Remove assignment");
-            remove.setAttribute("aria-label", remove.title);
-            remove.appendChild(webexpress.webui.Icon.create("fas fa-xmark"));
-            remove.addEventListener("click", () => this._remove(assignment));
-            action.appendChild(remove);
+    /**
+     * Queries a directory service and normalises its answer, tolerating both a
+     * flat array and an items envelope.
+     * @param {object} service - The directory service, may be null.
+     * @returns {Promise<Array<object>>} The directory records.
+     */
+    async _queryDirectory(service) {
+        if (!service) {
+            return [];
         }
 
-        row.appendChild(group);
-        row.appendChild(policy);
-        row.appendChild(action);
+        const result = await service.query({});
+        if (!result.ok) {
+            console.warn("PermissionCtrl: directory load failed", webexpress.webapp.ServiceResult.describe(result));
+            return [];
+        }
+
+        return Array.isArray(result.data) ? result.data : ((result.data && result.data.items) || []);
+    }
+
+    /**
+     * Builds the two columns of the surface. The policy column declares the
+     * move template, which renders the chips read-only and opens the move
+     * control for the inline edit.
+     * @returns {Array<object>} The column descriptors.
+     */
+    _buildColumns() {
+        return [
+            {
+                id: "group",
+                name: "group",
+                label: this._i18n("webexpress.webapp:permission.column.group", "Group"),
+                visible: true
+            },
+            {
+                id: "policies",
+                name: "policies",
+                label: this._i18n("webexpress.webapp:permission.column.policies", "Permissions"),
+                visible: true,
+                template: {
+                    type: "move",
+                    options: {
+                        editable: !this._readonly,
+                        options: JSON.stringify(webexpress.webapp.permissionModel.policyOptions(this._policyRecords))
+                    }
+                }
+            }
+        ];
+    }
+
+    /**
+     * Builds the row of one entry. The policy set travels as the semicolon
+     * separated value the move control reads.
+     * @param {object} entry - The entry record.
+     * @returns {object} The row descriptor.
+     */
+    _buildRow(entry) {
+        const policyIds = webexpress.webapp.permissionModel.policyIds(entry);
+
+        return {
+            id: entry.groupId,
+            cells: [
+                { content: entry.groupName || entry.groupId },
+                { content: policyIds.join(";") }
+            ],
+            options: this._readonly ? null : [this._buildRevokeOption(entry)]
+        };
+    }
+
+    /**
+     * Builds the revoke entry of the options menu. The group id travels on the
+     * item, so the click handler resolves the row without reading the DOM.
+     * @param {object} entry - The entry record.
+     * @returns {object} The dropdown item.
+     */
+    _buildRevokeOption(entry) {
+        return {
+            id: `${this._element.id}_revoke_${entry.groupId}`,
+            type: "item",
+            command: "revoke",
+            groupId: entry.groupId,
+            text: this._i18n("webexpress.webapp:permission.remove", "Revoke"),
+            icon: this._iconClass("fas fa-trash", "wx-icon-light-trash"),
+            color: "text-danger"
+        };
+    }
+
+    /**
+     * Renders the table and puts the add row in front of it. The base replaces
+     * the whole body on every pass, so the add row is re-inserted rather than
+     * rebuilt, which keeps the picked but not yet assigned values.
+     */
+    render() {
+        super.render();
+
+        if (!this._ready || this._readonly) {
+            return;
+        }
+
+        if (!this._addRowElement) {
+            this._addRowElement = this._buildAddRow();
+        }
+
+        this._syncAddRow();
+        this._body.prepend(this._addRowElement);
+    }
+
+    /**
+     * Builds the add row: a group select, the chip picker of the new entry and
+     * the add affordance in the actions cell.
+     * @returns {HTMLElement} The add row element.
+     */
+    _buildAddRow() {
+        const row = document.createElement("div");
+        row.className = "wx-grid-row wx-permission-add";
+        row.setAttribute("role", "row");
+
+        const groupCell = document.createElement("div");
+        groupCell.className = "wx-grid-cell";
+        this._groupSelect = document.createElement("select");
+        this._groupSelect.className = "form-select wx-permission-group";
+        groupCell.appendChild(this._groupSelect);
+
+        const policyCell = document.createElement("div");
+        policyCell.className = "wx-grid-cell";
+        policyCell.appendChild(this._buildAddEditor());
+
+        const actionCell = document.createElement("div");
+        actionCell.className = "wx-grid-cell wx-table-actions";
+        this._assignButton = document.createElement("button");
+        this._assignButton.type = "button";
+        this._assignButton.className = "wx-permission-assign-btn";
+        this._assignButton.title = this._i18n("webexpress.webapp:permission.assign", "Assign");
+        this._assignButton.setAttribute("aria-label", this._assignButton.title);
+        this._assignButton.appendChild(webexpress.webui.Icon.create(this._iconClass("fas fa-plus", "wx-icon-light-plus")));
+        this._assignButton.addEventListener("click", () => this._assign());
+        actionCell.appendChild(this._assignButton);
+
+        row.appendChild(groupCell);
+        row.appendChild(policyCell);
+        row.appendChild(actionCell);
+
         return row;
     }
 
     /**
-     * Renders the pager (prev, windowed page numbers, next). A single page
-     * needs no pager and renders nothing.
+     * Builds the chip picker of the add row. It is the same inline editor the
+     * assigned rows use, so picking policies for a new group behaves exactly
+     * like changing them for an existing one.
+     * @returns {HTMLElement} The editor container.
      */
-    _renderPager() {
+    _buildAddEditor() {
+        const container = document.createElement("div");
+        const editor = document.createElement("div");
+        editor.id = `${this._element.id}_add_policies`;
+
+        this._addEditorCtrl = new webexpress.webui.InputMoveCtrl(editor);
+        this._addEditorCtrl.options = webexpress.webapp.permissionModel.policyOptions(this._policyRecords);
+        editor._wx_controller = this._addEditorCtrl;
+        container.appendChild(editor);
+
+        this._addSmartEdit = new webexpress.webui.SmartEditCtrl(container);
+
+        return container;
+    }
+
+    /**
+     * Refreshes the group select of the add row, which offers the groups that
+     * do not own a row yet. A still assignable selection survives the rebuild,
+     * so a reload does not discard what the user picked. The chip picker needs
+     * no refresh: the policy directory is loaded once, before the first row is
+     * rendered.
+     */
+    _syncAddRow() {
         const model = webexpress.webapp.permissionModel;
-        const count = model.pageCount(this.state.total, this._pageSize);
+        const available = model.availableGroups(this._groupRecords, this._assignedGroupIds);
+        const current = this._groupSelect.value;
 
-        this._pager.replaceChildren();
-        if (count <= 1) {
-            return;
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = this._i18n("webexpress.webapp:permission.select.placeholder", "Please select…");
+
+        this._groupSelect.replaceChildren(placeholder);
+        for (const group of available) {
+            const option = document.createElement("option");
+            option.value = group.id;
+            option.textContent = group.name || group.id;
+            this._groupSelect.appendChild(option);
         }
-
-        const current = model.clampPage(this.state.page, count);
-
-        const prev = this._makePagerButton(
-            "‹ " + this._i18n("webexpress.webapp:permission.pager.prev", "Prev"),
-            current - 1, current === 0);
-        prev.classList.add("wx-permission-pager-prev");
-        this._pager.appendChild(prev);
-
-        for (const page of model.pages(current, count)) {
-            const btn = this._makePagerButton(String(page + 1), page, false);
-            if (page === current) {
-                btn.classList.add("wx-permission-pager-current");
-                btn.setAttribute("aria-current", "page");
-            }
-            this._pager.appendChild(btn);
-        }
-
-        const next = this._makePagerButton(
-            this._i18n("webexpress.webapp:permission.pager.next", "Next") + " ›",
-            current + 1, current === count - 1);
-        next.classList.add("wx-permission-pager-next");
-        this._pager.appendChild(next);
+        this._groupSelect.value = available.some((group) => String(group.id) === current) ? current : "";
     }
 
     /**
-     * Builds a single pager button that navigates to a page on click.
-     * @param {string} label - The button label.
-     * @param {number} page - The zero-based target page.
-     * @param {boolean} disabled - Whether the button is inert.
-     * @returns {HTMLElement}
-     */
-    _makePagerButton(label, page, disabled) {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "wx-permission-pager-btn";
-        btn.textContent = label;
-        btn.disabled = disabled;
-        if (!disabled) {
-            btn.addEventListener("click", () => {
-                this.setState({ page: page });
-                this._load();
-            });
-        }
-        return btn;
-    }
-
-    /**
-     * Assigns the selected policy to the selected group through POST and
-     * reloads the current page, so paging and filtering stay authoritative
-     * on the server.
+     * Assigns the picked policies to the selected group and reloads the page,
+     * so paging and filtering stay authoritative on the server.
+     * @returns {Promise<void>} Resolves when the assignment completed.
      */
     async _assign() {
-        const groupId = this._groupSelect.select.value;
-        const policyId = this._policySelect.select.value;
-        if (!groupId || !policyId || !this._service) {
+        const groupId = this._groupSelect.value;
+        if (!groupId || !this._service) {
             return;
         }
-        try {
-            const res = await this._service.create({ groupId: groupId, policyId: policyId });
-            if (!res.ok) throw new Error(res.error ? res.error.message : String(res.status));
-            const assignment = res.data;
-            this._groupSelect.select.value = "";
-            this._policySelect.select.value = "";
-            await this._load();
-            this._dispatch(webexpress.webapp.Event.PERMISSION_ASSIGNED_EVENT, { assignment: assignment });
-        } catch (e) {
-            console.warn("PermissionCtrl: assign failed", e);
-        }
-    }
 
-    /**
-     * Revokes an assignment pair through DELETE and reloads the current page.
-     * @param {Object} assignment - The assignment to revoke.
-     */
-    async _remove(assignment) {
-        if (!this._service) {
+        const policyIds = webexpress.webapp.permissionModel.policyIds(this._addSmartEdit.value);
+        const result = await this._service.create({ groupId: groupId, policyIds: policyIds });
+
+        if (!result.ok) {
+            console.warn("PermissionCtrl: assign failed", webexpress.webapp.ServiceResult.describe(result));
             return;
         }
-        try {
-            const path = webexpress.webapp.permissionModel.removePath(assignment.groupId, assignment.policyId);
-            const res = await this._service.remove({ path: path });
-            if (!res.ok && res.status !== 204) throw new Error(res.error ? res.error.message : String(res.status));
-            await this._load();
-            this._dispatch(webexpress.webapp.Event.PERMISSION_REMOVED_EVENT, { assignment: assignment });
-        } catch (e) {
-            console.warn("PermissionCtrl: remove failed", e);
+
+        this._groupSelect.value = "";
+        this._addSmartEdit.value = [];
+
+        await this._load();
+        this._dispatch(webexpress.webapp.Event.PERMISSION_ASSIGNED_EVENT, { groupId: groupId, policyIds: policyIds });
+    }
+
+    /**
+     * Applies an inline edit of the policy chips. The add row keeps its picked
+     * value locally until it is assigned, so only the rows of stored entries
+     * reach the endpoint.
+     * @param {Event} e - The inline edit save event.
+     */
+    _onInlineSave(e) {
+        const sender = e.detail && e.detail.sender;
+        const row = sender && typeof sender.closest === "function" ? sender.closest(".wx-grid-row") : null;
+
+        if (!row || row === this._addRowElement || !row._dataRowRef) {
+            return;
+        }
+
+        this._setPolicies(row._dataRowRef.id, e.detail.value);
+    }
+
+    /**
+     * Applies a click on an entry of an options menu.
+     * @param {Event} e - The dropdown click event.
+     */
+    _onOptionClick(e) {
+        const item = e.detail && e.detail.item;
+
+        if (item && item.command === "revoke") {
+            this._revoke(item.groupId);
         }
     }
 
     /**
-     * Re-fetches the current page from the server (useful after external
-     * state changes).
+     * Replaces the policy set of a group through PUT and reloads the page.
+     * @param {string} groupId - The id of the group.
+     * @param {Array<string>|string} value - The new policy set.
+     * @returns {Promise<void>} Resolves when the update completed.
      */
-    refresh() {
-        return this._load();
+    async _setPolicies(groupId, value) {
+        if (!groupId || !this._service) {
+            return;
+        }
+
+        const model = webexpress.webapp.permissionModel;
+        const policyIds = model.policyIds(value);
+        const result = await this._service.update({ policyIds: policyIds }, { path: model.entryPath(groupId) });
+
+        if (!result.ok) {
+            console.warn("PermissionCtrl: update failed", webexpress.webapp.ServiceResult.describe(result));
+            return;
+        }
+
+        await this._load();
+        this._dispatch(webexpress.webapp.Event.PERMISSION_ASSIGNED_EVENT, { groupId: groupId, policyIds: policyIds });
     }
 
     /**
-     * Gets the assignments of the currently loaded page.
-     * @returns {Array<Object>}
+     * Revokes every policy of a group through DELETE and reloads the page.
+     * @param {string} groupId - The id of the group.
+     * @returns {Promise<void>} Resolves when the revocation completed.
+     */
+    async _revoke(groupId) {
+        if (!groupId || !this._service) {
+            return;
+        }
+
+        const result = await this._service.remove({ path: webexpress.webapp.permissionModel.entryPath(groupId) });
+
+        if (!result.ok && result.status !== 204) {
+            console.warn("PermissionCtrl: revoke failed", webexpress.webapp.ServiceResult.describe(result));
+            return;
+        }
+
+        await this._load();
+        this._dispatch(webexpress.webapp.Event.PERMISSION_REMOVED_EVENT, { groupId: groupId });
+    }
+
+    /**
+     * Gets the entries of the currently loaded page.
+     * @returns {Array<object>} The entries as { groupId, policyIds }.
      */
     get value() {
-        return this._assignments.slice();
+        return this._rows.map((row) => ({
+            groupId: row.id,
+            policyIds: webexpress.webapp.permissionModel.policyIds(row.cells[1] && row.cells[1].content)
+        }));
     }
 };
 

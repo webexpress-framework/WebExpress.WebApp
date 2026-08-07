@@ -257,7 +257,7 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
 
         // update textual info
         if (this._infoDiv) {
-            this._infoDiv.textContent = "Page " + (currentPage + 1) + " of " + totalPages + " / " + itemsOnPage + " of " + total + " items";
+            this._infoDiv.textContent = webexpress.webapp.pagingInfo(this, currentPage, totalPages, itemsOnPage, total);
         }
     }
     

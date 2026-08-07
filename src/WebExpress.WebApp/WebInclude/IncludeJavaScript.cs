@@ -50,8 +50,6 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/js/webexpress.webapp.list.js")]
     [Asset("/assets/js/webexpress.webapp.login.js")]
     [Asset("/assets/js/webexpress.webapp.message.queue.status.js")]
-    [Asset("/assets/js/webexpress.webapp.permission.model.js")]
-    [Asset("/assets/js/webexpress.webapp.permission.js")]
     [Asset("/assets/js/webexpress.webapp.popupnotification.js")]
     [Asset("/assets/js/webexpress.webapp.progress.task.js")]
     [Asset("/assets/js/webexpress.webapp.status.task.js")]
@@ -81,6 +79,10 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/js/webexpress.webapp.tab.js")]
     [Asset("/assets/js/webexpress.webapp.table.model.js")]
     [Asset("/assets/js/webexpress.webapp.table.js")]
+    // the permission surface is a table, so it breaks the alphabetical order to
+    // follow the base control it derives from
+    [Asset("/assets/js/webexpress.webapp.permission.model.js")]
+    [Asset("/assets/js/webexpress.webapp.permission.js")]
     [Asset("/assets/js/webexpress.webapp.tag.js")]
     [Asset("/assets/js/webexpress.webapp.traffic.light.js")]
     [Asset("/assets/js/webexpress.webapp.tile.model.js")]

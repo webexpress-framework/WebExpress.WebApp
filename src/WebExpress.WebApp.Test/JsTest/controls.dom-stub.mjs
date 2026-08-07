@@ -168,6 +168,12 @@ class Element {
     }
 
     appendChild(node) {
+        // a fragment is a transport, not a node: inserting it moves its
+        // children, which is what the batched renderers of the controls rely on
+        if (node.nodeType === 11) {
+            for (const child of node.childNodes.slice()) { this.appendChild(child); }
+            return node;
+        }
         if (node.parentNode) { node.parentNode.removeChild(node); }
         this.childNodes.push(node);
         node.parentNode = this;
@@ -175,6 +181,10 @@ class Element {
     }
 
     insertBefore(node, reference) {
+        if (node.nodeType === 11) {
+            for (const child of node.childNodes.slice()) { this.insertBefore(child, reference); }
+            return node;
+        }
         if (node.parentNode) { node.parentNode.removeChild(node); }
         if (reference == null) {
             this.childNodes.push(node);
@@ -526,7 +536,11 @@ export function createDocument() {
         createElementNS(namespace, tag) {
             return namespace === SVG_NAMESPACE ? new SvgElement(tag) : new Element(tag);
         },
-        createDocumentFragment() { return new Element("#document-fragment"); },
+        createDocumentFragment() {
+            const fragment = new Element("#document-fragment");
+            fragment.nodeType = 11;
+            return fragment;
+        },
         createTextNode(text) { return new TextNode(text); },
         getElementById(id) { return findById(body, String(id)); },
         getElementsByClassName(name) { return documentElement.querySelectorAll("." + name); },

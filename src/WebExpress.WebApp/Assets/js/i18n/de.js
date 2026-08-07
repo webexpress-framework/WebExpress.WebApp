@@ -252,19 +252,17 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "scrum.velocity.empty": "Noch keine abgeschlossenen Sprints.",
     "scrum.velocity.filter": "Sprints",
 
+    // paging (the info line the paged data controls render below their content)
+    "paging.info": "Seite {0} von {1} / {2} von {3} Einträgen",
+    "paging.info.loading": "Seite {0} von {1} – wird geladen…",
+
     // permission
     "permission.title": "Berechtigungen",
-    "permission.assign.group.label": "Gruppe zuweisen",
-    "permission.assign.policy.label": "Richtlinie",
     "permission.assign": "Zuweisen",
     "permission.select.placeholder": "Bitte wählen…",
-    "permission.search.placeholder": "Suchen…",
-    "permission.column.group": "Zugewiesene Gruppe",
-    "permission.column.policy": "Wirksame Richtlinie",
-    "permission.remove": "Zuweisung entfernen",
-    "permission.empty": "Noch keine Zuweisungen",
-    "permission.pager.prev": "Zurück",
-    "permission.pager.next": "Weiter",
+    "permission.column.group": "Gruppe",
+    "permission.column.policies": "Berechtigungen",
+    "permission.remove": "Gruppe entfernen",
 
     // watcher
     "watcher.title": "Beobachter",

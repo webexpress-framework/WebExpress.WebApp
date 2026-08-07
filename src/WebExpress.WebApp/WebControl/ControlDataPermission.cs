@@ -8,20 +8,33 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Renders the host element for the permission management surface, which
+    /// Renders the host element of the permission management surface, which
     /// administers the group-to-policy assignments of a protected resource
     /// (see the identity model: Identity -> Group -> Policy -> Permission).
-    /// The control only emits the placeholder div; the assign row, the
-    /// searchable assignment table and the pager are built by the client-side
-    /// <c>webexpress.webapp.PermissionCtrl</c>, which talks to the configured
-    /// data, groups and policies services.
+    /// The surface is a single table: the first column names the group, the
+    /// second carries its policies as inline editable chips, the first row
+    /// adds a further group and the options menu of a row revokes it.
+    ///
+    /// The control emits the placeholder div plus the pagination control it
+    /// binds through <see cref="BindPaging"/>, so the page count is navigated
+    /// by the framework pager rather than by a pager of its own. The table
+    /// itself is built by the client-side <c>webexpress.webapp.PermissionCtrl</c>,
+    /// which talks to the configured data and policies services.
     /// </summary>
     public class ControlDataPermission : Control, IDataIsland
     {
         /// <summary>
+        /// The number of groups per page when the page is silent about it. The
+        /// surface is usually hosted in a modal, so it pages earlier than the
+        /// full page table does.
+        /// </summary>
+        private const int DefaultPageSize = 10;
+
+        /// <summary>
         /// Gets the data service descriptors of the control, emitted as
         /// wx-service island elements: the data service backs the assignment
-        /// table, the groups and policies services back the assign selects.
+        /// table, the groups service backs the group select of the add row and
+        /// the policies service supplies the selectable policy chips.
         /// </summary>
         public IList<Func<IRenderControlContext, DataServiceDescriptor>> ServiceFactories { get; } = [];
 
@@ -56,24 +69,31 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, DataState> StateFactory { get; set; }
 
         /// <summary>
-        /// Gets or sets the number of assignments shown per page. Defaults to
-        /// <c>10</c> on the client side when not provided.
+        /// Gets or sets the number of groups shown per page. Defaults to
+        /// <see cref="DefaultPageSize"/>.
         /// </summary>
         public Func<IRenderControlContext, int?> PageSize { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether the surface is read-only.
-        /// When <see langword="true"/>, the assign row and the per-row remove
-        /// affordance are suppressed.
+        /// When <see langword="true"/>, the add row, the inline editing of the
+        /// policy chips and the options menu are suppressed.
         /// </summary>
         public Func<IRenderControlContext, bool> Readonly { get; set; }
+
+        /// <summary>
+        /// Gets or sets an additional binding, for example a search control
+        /// bound through <see cref="BindSearch"/>. The paging bind that
+        /// connects the emitted pagination control is always added on top.
+        /// </summary>
+        public Func<IRenderControlContext, IBinding> Bind { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">Optional host element id.</param>
         public ControlDataPermission(string id = null)
-            : base(id)
+            : base(id ?? RandomId.Create())
         {
         }
 
@@ -91,10 +111,11 @@ namespace WebExpress.WebApp.WebControl
                 return null;
             }
 
-            var pageSize = PageSize?.Invoke(renderContext);
+            var pageSize = PageSize?.Invoke(renderContext) ?? DefaultPageSize;
             var readOnly = Readonly?.Invoke(renderContext) ?? false;
+            var pagerId = $"{Id}_pager";
 
-            return new HtmlElementTextContentDiv()
+            var host = new HtmlElementTextContentDiv()
             {
                 Id = Id,
                 Class = Css.Concatenate("wx-webapp-permission", GetClasses(renderContext)),
@@ -102,8 +123,15 @@ namespace WebExpress.WebApp.WebControl
                 Role = Role?.Invoke(renderContext)
             }
                 .EmitDataIslands(this, renderContext)
-                .AddUserAttribute("data-page-size", pageSize?.ToString())
+                .AddUserAttribute("data-page-size", pageSize.ToString())
                 .AddUserAttribute("data-readonly", readOnly ? "true" : null);
+
+            var binding = Bind?.Invoke(renderContext) ?? new Binding();
+            binding.Add(new BindPaging { Source = pagerId }).ApplyUserAttributes(host);
+
+            var pager = new ControlPagination(pagerId);
+
+            return new HtmlList(host, pager.Render(renderContext, visualTree));
         }
     }
 }

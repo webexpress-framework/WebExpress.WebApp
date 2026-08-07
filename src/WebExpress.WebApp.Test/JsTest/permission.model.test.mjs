@@ -1,11 +1,11 @@
 /**
  * Headless unit tests for the permission model helpers (View, State and
  * Service). These cover the pure logic extracted from
- * webexpress.webapp.permission.js, namely the page normalisation, the pager
- * math and the pair-based select exclusion, plus an end to end path that
- * loads assignments with a query, assigns one with a create and revokes one
- * with a remove through a service. An assignment is the pair (groupId,
- * policyId): a group may carry several policies.
+ * webexpress.webapp.permission.js, namely the page normalisation, the policy
+ * set parsing, the group exclusion of the add row and the pager math, plus an
+ * end to end path that loads entries with a query, adds one with a create,
+ * replaces a policy set with an update and revokes a group with a remove
+ * through a service. A row is a group with all of its policies.
  *
  * Run with Node 18 or newer from the JsTest folder:
  *   node --test
@@ -26,67 +26,63 @@ test("normalize list handles pages, flat arrays and malformed payloads", () => {
     const { wxapp } = load();
     assert.deepEqual(
         wxapp.permissionModel.normalizeList({
-            items: [{ groupId: "g1", policyId: "p1" }],
+            items: [{ groupId: "g1", policyIds: ["p1"] }],
             total: 7,
-            assignedPairs: [{ groupId: "g1", policyId: "p1" }, { groupId: "g2", policyId: "p1" }]
+            assignedGroupIds: ["g1", "g2"]
         }),
         {
-            items: [{ groupId: "g1", policyId: "p1" }],
+            items: [{ groupId: "g1", policyIds: ["p1"] }],
             total: 7,
-            assignedPairs: [{ groupId: "g1", policyId: "p1" }, { groupId: "g2", policyId: "p1" }]
+            assignedGroupIds: ["g1", "g2"]
         });
+
+    // a flat array is a single page, and the group set is derived from it
     assert.deepEqual(
-        wxapp.permissionModel.normalizeList([{ groupId: "g1", policyId: "p1" }]),
-        { items: [{ groupId: "g1", policyId: "p1" }], total: 1, assignedPairs: [{ groupId: "g1", policyId: "p1" }] });
-    // a response without the explicit pair set derives it from the items
+        wxapp.permissionModel.normalizeList([{ groupId: "g1", policyIds: ["p1"] }]),
+        { items: [{ groupId: "g1", policyIds: ["p1"] }], total: 1, assignedGroupIds: ["g1"] });
+
+    // a page without an explicit group set falls back to the items
     assert.deepEqual(
-        wxapp.permissionModel.normalizeList({ items: [{ groupId: "g1", policyId: "p1" }] }),
-        { items: [{ groupId: "g1", policyId: "p1" }], total: 1, assignedPairs: [{ groupId: "g1", policyId: "p1" }] });
-    assert.deepEqual(wxapp.permissionModel.normalizeList(null), { items: [], total: 0, assignedPairs: [] });
-    assert.deepEqual(wxapp.permissionModel.normalizeList({ total: 3 }), { items: [], total: 0, assignedPairs: [] });
+        wxapp.permissionModel.normalizeList({ items: [{ groupId: "g3" }] }),
+        { items: [{ groupId: "g3" }], total: 1, assignedGroupIds: ["g3"] });
+
+    assert.deepEqual(wxapp.permissionModel.normalizeList(null), { items: [], total: 0, assignedGroupIds: [] });
+    assert.deepEqual(wxapp.permissionModel.normalizeList({ nope: 1 }), { items: [], total: 0, assignedGroupIds: [] });
 });
 
-test("available groups drops a group only once it carries every policy", () => {
+test("policy ids accept an entry, an array and the serialized chip value", () => {
     const { wxapp } = load();
-    const groups = [{ id: "g1" }, { id: "g2" }, { id: "g3" }];
-    const policies = [{ id: "p1" }, { id: "p2" }];
-    const pairs = [
-        { groupId: "g1", policyId: "p1" },
-        { groupId: "g1", policyId: "p2" },
-        { groupId: "g2", policyId: "p1" }
-    ];
+    assert.deepEqual(wxapp.permissionModel.policyIds({ groupId: "g1", policyIds: ["p1", "p2"] }), ["p1", "p2"]);
+    assert.deepEqual(wxapp.permissionModel.policyIds(["p1", "p2"]), ["p1", "p2"]);
 
-    // g1 carries every policy and drops out, g2 can still receive p2
-    assert.deepEqual(
-        wxapp.permissionModel.availableGroups(groups, pairs, policies).map((g) => g.id), ["g2", "g3"]);
-    // without a policy directory coverage cannot be determined, nothing drops
-    assert.deepEqual(
-        wxapp.permissionModel.availableGroups(groups, pairs, []).map((g) => g.id), ["g1", "g2", "g3"]);
-    assert.deepEqual(
-        wxapp.permissionModel.availableGroups(groups, null, policies).map((g) => g.id), ["g1", "g2", "g3"]);
-    assert.deepEqual(wxapp.permissionModel.availableGroups(null, pairs, policies), []);
+    // the move control serializes its value with semicolons
+    assert.deepEqual(wxapp.permissionModel.policyIds("p1;p2"), ["p1", "p2"]);
+    assert.deepEqual(wxapp.permissionModel.policyIds(" p1 ; ; p2 "), ["p1", "p2"]);
+
+    assert.deepEqual(wxapp.permissionModel.policyIds(""), []);
+    assert.deepEqual(wxapp.permissionModel.policyIds(null), []);
+    assert.deepEqual(wxapp.permissionModel.policyIds({ groupId: "g1" }), []);
 });
 
-test("available policies excludes the policies the selected group carries", () => {
+test("available groups drop the ones that already own a row", () => {
     const { wxapp } = load();
-    const policies = [{ id: "p1" }, { id: "p2" }, { id: "p3" }];
-    const pairs = [
-        { groupId: "g1", policyId: "p1" },
-        { groupId: "g1", policyId: "p3" },
-        { groupId: "g2", policyId: "p2" }
-    ];
+    const groups = [{ id: "g1", name: "IT Support" }, { id: "g2", name: "Service Desk" }];
 
-    assert.deepEqual(
-        wxapp.permissionModel.availablePolicies(policies, pairs, "g1").map((p) => p.id), ["p2"]);
-    assert.deepEqual(
-        wxapp.permissionModel.availablePolicies(policies, pairs, "g3").map((p) => p.id), ["p1", "p2", "p3"]);
-    // without a selected group there is no pair to exclude yet
-    assert.deepEqual(
-        wxapp.permissionModel.availablePolicies(policies, pairs, "").map((p) => p.id), ["p1", "p2", "p3"]);
-    assert.deepEqual(wxapp.permissionModel.availablePolicies(null, pairs, "g1"), []);
+    assert.deepEqual(wxapp.permissionModel.availableGroups(groups, ["g1"]).map((g) => g.id), ["g2"]);
+    assert.deepEqual(wxapp.permissionModel.availableGroups(groups, []).map((g) => g.id), ["g1", "g2"]);
+    assert.deepEqual(wxapp.permissionModel.availableGroups(groups, ["g1", "g2"]), []);
+    assert.deepEqual(wxapp.permissionModel.availableGroups(null, ["g1"]), []);
 });
 
-test("page count spans at least one page and rounds up", () => {
+test("policy options carry the id and fall back to the id as the label", () => {
+    const { wxapp } = load();
+    assert.deepEqual(
+        wxapp.permissionModel.policyOptions([{ id: "p1", name: "class_edit_policy" }, { id: "p2" }]),
+        [{ id: "p1", label: "class_edit_policy" }, { id: "p2", label: "p2" }]);
+    assert.deepEqual(wxapp.permissionModel.policyOptions(undefined), []);
+});
+
+test("page count never drops below one page", () => {
     const { wxapp } = load();
     assert.equal(wxapp.permissionModel.pageCount(0, 10), 1);
     assert.equal(wxapp.permissionModel.pageCount(10, 10), 1);
@@ -95,7 +91,7 @@ test("page count spans at least one page and rounds up", () => {
     assert.equal(wxapp.permissionModel.pageCount(5, 0), 5);
 });
 
-test("clamp page keeps the index inside the valid range", () => {
+test("clamp page keeps the index inside the range", () => {
     const { wxapp } = load();
     assert.equal(wxapp.permissionModel.clampPage(0, 3), 0);
     assert.equal(wxapp.permissionModel.clampPage(2, 3), 2);
@@ -104,21 +100,12 @@ test("clamp page keeps the index inside the valid range", () => {
     assert.equal(wxapp.permissionModel.clampPage(4, 0), 0);
 });
 
-test("pages windows around the current page and clamps to the ends", () => {
+test("entry path encodes the group segment", () => {
     const { wxapp } = load();
-    assert.deepEqual(wxapp.permissionModel.pages(0, 3), [0, 1, 2]);
-    assert.deepEqual(wxapp.permissionModel.pages(0, 10), [0, 1, 2, 3, 4]);
-    assert.deepEqual(wxapp.permissionModel.pages(5, 10), [3, 4, 5, 6, 7]);
-    assert.deepEqual(wxapp.permissionModel.pages(9, 10), [5, 6, 7, 8, 9]);
-    assert.deepEqual(wxapp.permissionModel.pages(1, 10, 3), [0, 1, 2]);
+    assert.equal(wxapp.permissionModel.entryPath("a b/c"), "/a%20b%2Fc");
 });
 
-test("remove path encodes both pair segments", () => {
-    const { wxapp } = load();
-    assert.equal(wxapp.permissionModel.removePath("a b", "p/1"), "/a%20b/p%2F1");
-});
-
-test("model loads, assigns and revokes through a service end to end", async () => {
+test("model loads, adds, updates and revokes through a service end to end", async () => {
     const { wxapp, setFetch } = load();
     const calls = [];
     setFetch(async (url, init) => {
@@ -127,19 +114,19 @@ test("model loads, assigns and revokes through a service end to end", async () =
         if (method === "GET") {
             return {
                 ok: true, status: 200, json: async () => ({
-                    items: [{ groupId: "g1", groupName: "IT Support", policyId: "p1", policyName: "class_edit_policy" }],
+                    items: [{ groupId: "g1", groupName: "IT Support", policyIds: ["p1"] }],
                     total: 1,
-                    assignedPairs: [{ groupId: "g1", policyId: "p1" }]
+                    assignedGroupIds: ["g1"]
                 })
             };
         }
-        if (method === "POST") {
-            return {
-                ok: true, status: 200, json: async () =>
-                    ({ groupId: "g2", groupName: "Service Desk", policyId: "p2", policyName: "class_view_policy" })
-            };
+        if (method === "DELETE") {
+            return { ok: true, status: 204 };
         }
-        return { ok: true, status: 204 };
+        return {
+            ok: true, status: 200, json: async () =>
+                ({ groupId: "g2", groupName: "Service Desk", policyIds: ["p2"] })
+        };
     });
 
     const service = wxapp.ServiceRegistry.create({ name: "data", kind: "rest", baseUri: "/api/permissions", method: "GET" });
@@ -151,17 +138,23 @@ test("model loads, assigns and revokes through a service end to end", async () =
     assert.ok(calls[0].url.includes("p=1"));
     assert.ok(calls[0].url.includes("l=10"));
     const page = wxapp.permissionModel.normalizeList(loaded.data);
-    assert.deepEqual(page.items.map((a) => a.groupId), ["g1"]);
-    assert.deepEqual(page.assignedPairs, [{ groupId: "g1", policyId: "p1" }]);
+    assert.deepEqual(page.items.map((x) => x.groupId), ["g1"]);
+    assert.deepEqual(page.assignedGroupIds, ["g1"]);
 
-    const created = await service.create({ groupId: "g2", policyId: "p2" });
+    const created = await service.create({ groupId: "g2", policyIds: ["p2"] });
     assert.equal(calls[1].method, "POST");
-    assert.deepEqual(JSON.parse(calls[1].body), { groupId: "g2", policyId: "p2" });
+    assert.deepEqual(JSON.parse(calls[1].body), { groupId: "g2", policyIds: ["p2"] });
     assert.equal(created.data.groupId, "g2");
 
-    const removed = await service.remove({ path: wxapp.permissionModel.removePath("g1", "p1") });
-    assert.equal(calls[2].method, "DELETE");
-    assert.equal(calls[2].url.endsWith("/g1/p1"), true);
+    const updated = await service.update({ policyIds: ["p2"] }, { path: wxapp.permissionModel.entryPath("g2") });
+    assert.equal(calls[2].method, "PUT");
+    assert.equal(calls[2].url.endsWith("/g2"), true);
+    assert.deepEqual(JSON.parse(calls[2].body), { policyIds: ["p2"] });
+    assert.equal(updated.ok, true);
+
+    const removed = await service.remove({ path: wxapp.permissionModel.entryPath("g1") });
+    assert.equal(calls[3].method, "DELETE");
+    assert.equal(calls[3].url.endsWith("/g1"), true);
     assert.equal(removed.ok, true);
     assert.equal(removed.data, null);
 });

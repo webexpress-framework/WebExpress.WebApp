@@ -252,19 +252,17 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "scrum.velocity.empty": "No completed sprints yet.",
     "scrum.velocity.filter": "Sprints",
 
+    // paging (the info line the paged data controls render below their content)
+    "paging.info": "Page {0} of {1} / {2} of {3} items",
+    "paging.info.loading": "Page {0} of {1} - loading…",
+
     // permission
     "permission.title": "Permissions",
-    "permission.assign.group.label": "Assign group",
-    "permission.assign.policy.label": "Policy",
     "permission.assign": "Assign",
     "permission.select.placeholder": "Please select…",
-    "permission.search.placeholder": "Search…",
-    "permission.column.group": "Assigned group",
-    "permission.column.policy": "Effective policy",
-    "permission.remove": "Remove assignment",
-    "permission.empty": "No assignments yet",
-    "permission.pager.prev": "Prev",
-    "permission.pager.next": "Next",
+    "permission.column.group": "Group",
+    "permission.column.policies": "Permissions",
+    "permission.remove": "Revoke group",
 
     // watcher
     "watcher.title": "Watchers",

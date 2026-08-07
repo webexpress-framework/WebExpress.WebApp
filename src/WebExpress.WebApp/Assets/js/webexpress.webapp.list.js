@@ -463,9 +463,9 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
             }
         }
 
-        // update textual info using template literals
+        // update textual info
         if (this._infoDiv) {
-            this._infoDiv.textContent = `Page ${currentPage + 1} of ${totalPages} / ${itemsOnPage} of ${total} items`;
+            this._infoDiv.textContent = webexpress.webapp.pagingInfo(this, currentPage, totalPages, itemsOnPage, total);
         }
     }
 
@@ -488,7 +488,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
         this._page = page;
 
         if (this._infoDiv) {
-            this._infoDiv.textContent = `Page ${this._page + 1} of ${totalPages} - loading…`;
+            this._infoDiv.textContent = webexpress.webapp.pagingInfoLoading(this, this._page, totalPages);
         }
 
         this.load();

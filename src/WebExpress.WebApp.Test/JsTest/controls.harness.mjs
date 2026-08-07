@@ -84,7 +84,15 @@ const WEBUI_BASE_CONTROLS = [
     "webexpress.webui.selection.js",
     "webexpress.webui.tile.js",
     "webexpress.webui.sidebar.js",
-    "webexpress.webui.smartedit.js"
+    "webexpress.webui.smartedit.js",
+    // the permission surface picks its policy chips with the move control, in
+    // the read-only and in the editable variant
+    "webexpress.webui.move.js",
+    "webexpress.webui.input.move.js",
+    // the table column templates the data tables render their cells with
+    "templates/default.js",
+    // the pager the data controls bind through the paging bind
+    "webexpress.webui.pagination.js"
 ];
 
 /**

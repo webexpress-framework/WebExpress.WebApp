@@ -33,6 +33,9 @@ export function webappAsset(name) {
 // load order mirrors the Asset attribute order in IncludeJavaScript
 // the engine lives in WebExpress.WebApp (WebUI carries only static controls)
 const ENGINE_FILES = [
+    // the namespace core: the event names and the small helpers the controls
+    // share, which a control file may reference at construction time
+    "webexpress.webapp.js",
     "webexpress.webapp.service.js",
     "webexpress.webapp.renderer.js",
     "webexpress.webapp.template.js",

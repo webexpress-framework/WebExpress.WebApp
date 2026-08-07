@@ -1,97 +1,29 @@
+/* the surface is the framework table, so only the add row and the chip cell
+   need styling of their own; everything else is inherited from wx-table */
+
 .wx-permission {
     display: flex;
     flex-direction: column;
     gap: 12px;
 }
 
-.wx-permission-assign {
-    display: flex;
-    align-items: flex-end;
-    flex-wrap: wrap;
-    gap: 12px;
+.wx-permission-add {
+    align-items: center;
+    background: var(--wx-webapp-surface-2);
 }
 
-.wx-permission-field {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 200px;
-}
-
-.wx-permission-field-label {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--wx-webapp-text-3, var(--wx-secondary-color, #6c757d));
-}
-
-.wx-permission-select {
-    padding: 6px 10px;
+.wx-permission-group {
+    padding: 4px 8px;
     font: inherit;
     font-size: 13px;
     color: var(--wx-webapp-text);
     background: var(--wx-body-bg);
     border: 1px solid var(--wx-webapp-border-2, var(--wx-border-color, #ced4da));
     border-radius: var(--wx-webapp-r-md);
+    width: 100%;
 }
 
 .wx-permission-assign-btn {
-    padding: 6px 14px;
-    font: inherit;
-    font-size: 13px;
-    font-weight: 500;
-    color: #fff;
-    background: var(--wx-webapp-primary, var(--wx-primary, #0d6efd));
-    border: 0;
-    border-radius: var(--wx-webapp-r-md);
-    cursor: pointer;
-}
-
-.wx-permission-assign-btn:hover {
-    filter: brightness(0.92);
-}
-
-.wx-permission-toolbar {
-    display: flex;
-    justify-content: flex-end;
-}
-
-/* host of the embedded basic search control (webexpress.webui.SearchCtrl),
-   which brings its own inner styling; the host only constrains the width */
-.wx-permission-search {
-    width: 260px;
-}
-
-.wx-permission-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-}
-
-.wx-permission-table th {
-    padding: 8px 10px;
-    text-align: left;
-    font-weight: 600;
-    color: var(--wx-webapp-text-3);
-    border-bottom: 2px solid var(--wx-webapp-divider);
-}
-
-.wx-permission-table td {
-    padding: 8px 10px;
-    color: var(--wx-webapp-text);
-    border-bottom: 1px solid var(--wx-webapp-divider);
-}
-
-.wx-permission-policy {
-    font-family: var(--bs-font-monospace, monospace);
-    font-size: 12.5px;
-}
-
-.wx-permission-action {
-    width: 36px;
-    text-align: right;
-}
-
-.wx-permission-remove {
     width: 26px;
     height: 26px;
     display: inline-flex;
@@ -100,53 +32,16 @@
     background: transparent;
     border: 0;
     border-radius: 50%;
-    color: var(--wx-webapp-text-3, var(--wx-secondary-color, #6c757d));
-    cursor: pointer;
-}
-
-.wx-permission-remove:hover {
-    color: var(--wx-danger, #dc3545);
-    background: var(--wx-webapp-surface-2);
-}
-
-.wx-permission-empty {
-    padding: 24px;
-    text-align: center;
-    color: var(--wx-webapp-text-3);
-    font-size: 12.5px;
-}
-
-.wx-permission-pager {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 4px;
-}
-
-.wx-permission-pager-btn {
-    min-width: 28px;
-    padding: 4px 8px;
-    font: inherit;
-    font-size: 12.5px;
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: var(--wx-webapp-r-md);
-    color: var(--wx-webapp-text);
-    cursor: pointer;
-}
-
-.wx-permission-pager-btn:hover:not(:disabled) {
-    background: var(--wx-webapp-surface-2);
-}
-
-.wx-permission-pager-btn:disabled {
-    color: var(--wx-webapp-text-3);
-    cursor: default;
-    opacity: 0.6;
-}
-
-.wx-permission-pager-current {
-    border-color: var(--wx-webapp-primary, var(--wx-primary, #0d6efd));
     color: var(--wx-webapp-primary, var(--wx-primary, #0d6efd));
-    font-weight: 600;
+    cursor: pointer;
+}
+
+.wx-permission-assign-btn:hover {
+    background: var(--wx-webapp-surface-3, var(--wx-webapp-surface-2));
+}
+
+/* the move control renders its dual list at full height, which only fits while
+   the cell is in edit mode; the read view is a chip row and stays compact */
+.wx-permission .wx-grid-cell > .wx-smart-edit > .wx-move > .wx-move-list > ul {
+    height: 12rem;
 }

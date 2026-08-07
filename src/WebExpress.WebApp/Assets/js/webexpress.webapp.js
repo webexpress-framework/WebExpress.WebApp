@@ -399,11 +399,46 @@ webexpress.webapp.Event = class {
     static TAG_ADDED_EVENT = "webexpress.webapp.tag.added";
     // Event triggered when a tag is removed
     static TAG_REMOVED_EVENT = "webexpress.webapp.tag.removed";
-    // Event triggered when a group is assigned to a policy
+    // Event triggered when the policy set of a group is assigned or changed
     static PERMISSION_ASSIGNED_EVENT = "webexpress.webapp.permission.assigned";
-    // Event triggered when a group-to-policy assignment is revoked
+    // Event triggered when every policy of a group is revoked
     static PERMISSION_REMOVED_EVENT = "webexpress.webapp.permission.removed";
 }
+
+/**
+ * Builds the caption of the paging info line the paged data controls (table,
+ * list, tile) render below their content. It lives here rather than in each of
+ * them so the wording and its translation stay in one place. The control is
+ * passed in because the translation goes through its inherited _i18n, which
+ * carries the fallback for a bundle that does not know the key.
+ * @param {object} ctrl - The control that renders the line.
+ * @param {number} page - The zero-based current page.
+ * @param {number} pageCount - The number of pages.
+ * @param {number} itemsOnPage - The number of items on the current page.
+ * @param {number} total - The number of items in total.
+ * @returns {string} The caption.
+ */
+webexpress.webapp.pagingInfo = function (ctrl, page, pageCount, itemsOnPage, total) {
+    return ctrl._i18n("webexpress.webapp:paging.info", "Page {0} of {1} / {2} of {3} items")
+        .replace("{0}", String(page + 1))
+        .replace("{1}", String(pageCount))
+        .replace("{2}", String(itemsOnPage))
+        .replace("{3}", String(total));
+};
+
+/**
+ * Builds the caption of the paging info line while the requested page is still
+ * loading, so the line does not keep reporting the previous window.
+ * @param {object} ctrl - The control that renders the line.
+ * @param {number} page - The zero-based requested page.
+ * @param {number} pageCount - The number of pages.
+ * @returns {string} The caption.
+ */
+webexpress.webapp.pagingInfoLoading = function (ctrl, page, pageCount) {
+    return ctrl._i18n("webexpress.webapp:paging.info.loading", "Page {0} of {1} - loading…")
+        .replace("{0}", String(page + 1))
+        .replace("{1}", String(pageCount));
+};
 
 // initialize the WebSocket connection after the DOM is fully loaded    
 document.addEventListener("DOMContentLoaded", function () {  
