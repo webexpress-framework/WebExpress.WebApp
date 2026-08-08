@@ -54,6 +54,9 @@ header.setting.systeminformation.label=System information
 headline.more.title=More options
 toolbar.more.title=More options
 
+tab.empty.title=No tabs
+tab.empty.message=No tab has been created yet.
+
 status.400.title=Bad Request
 status.400.description=The HTTP status code 400 indicates that the server cannot or will not process the request due to something that is perceived to be a client error (e.g., malformed request syntax, invalid request message framing, or deceptive request routing). Possible causes for this include: <ul><li>Malformed request syntax.</li><li>Invalid request message framing.</li><li>Deceptive request routing.</li></ul>
 status.404.title=Resource not found

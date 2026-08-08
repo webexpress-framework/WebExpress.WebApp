@@ -4,8 +4,10 @@ using System.Linq;
 using WebExpress.WebApp.WebData;
 using WebExpress.WebApp.WebFragment;
 using WebExpress.WebCore;
+using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebUI.WebControl;
+using WebExpress.WebUI.WebIcon;
 using WebExpress.WebUI.WebPage;
 using WebExpress.WebUI.WebSection;
 
@@ -54,6 +56,14 @@ namespace WebExpress.WebApp.WebControl
         /// <c>PUT</c> carrying the ordered tab ids.
         /// </summary>
         public Func<IRenderControlContext, bool> MovableTab { get; set; }
+
+        /// <summary>
+        /// Gets or sets the placeholder shown while the tab set carries no items. The
+        /// tab items arrive from the data service at runtime, so the placeholder is
+        /// rendered up front and the client reveals it once it knows the set is empty.
+        /// A null value falls back to a generic placeholder.
+        /// </summary>
+        public ControlEmptyState EmptyState { get; set; }
 
         /// <summary>
         /// Gets the data service descriptors of the control, emitted together as
@@ -183,13 +193,38 @@ namespace WebExpress.WebApp.WebControl
                 .Add(templatePreferences.Select(x => x.Render(renderContext, visualTree)))
                 .Add(templatePrimary.Select(x => x.Render(renderContext, visualTree)))
                 .Add(_templates.Select(x => x.Render(renderContext, visualTree)))
-                .Add(templateSecondary.Select(x => x.Render(renderContext, visualTree)));
+                .Add(templateSecondary.Select(x => x.Render(renderContext, visualTree)))
+                .Add(RenderEmptyState(renderContext, visualTree));
 
             html.EmitDataIslands(this, renderContext);
 
             bind?.ApplyUserAttributes(html);
 
             return html;
+        }
+
+        /// <summary>
+        /// Renders the placeholder for an empty tab set into its host element. The
+        /// element is hidden up front, because only the client knows whether the tab
+        /// set is empty, and a placeholder visible before the control mounts would
+        /// flash next to the tabs that are about to arrive.
+        /// </summary>
+        /// <param name="renderContext">The context in which the control is rendered.</param>
+        /// <param name="visualTree">The visual tree.</param>
+        /// <returns>An HTML node representing the hidden placeholder.</returns>
+        private IHtmlNode RenderEmptyState(IRenderControlContext renderContext, IVisualTreeControl visualTree)
+        {
+            var emptyState = EmptyState ?? new ControlEmptyState()
+            {
+                Icon = _ => new IconControlEmptyState(),
+                Title = _ => I18N.Translate(renderContext, "webexpress.webapp:tab.empty.title"),
+                Message = _ => I18N.Translate(renderContext, "webexpress.webapp:tab.empty.message")
+            };
+
+            return new HtmlElementTextContentDiv(emptyState.Render(renderContext, visualTree))
+            {
+                Class = "wx-webapp-tab-empty d-none"
+            };
         }
     }
 }

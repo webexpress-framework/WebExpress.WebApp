@@ -44,3 +44,53 @@ test("wx-webapp-tab renders REST-loaded tabs with badge and badge color", () => 
     const styled = badges.find((b) => (b.style.cssText || "").includes("#7c3aed"));
     assert.ok(styled, "the user color lands as an inline style");
 });
+
+test("wx-webapp-tab shows the empty-state placeholder while no tab item exists", () => {
+    const rt = loadControl({
+        file: "webexpress.webapp.tab.js",
+        deps: ["webexpress.webapp.tab.model.js"]
+    });
+
+    const host = rt.createElement("div");
+    const placeholder = rt.createElement("div");
+    placeholder.className = "wx-webapp-tab-empty d-none";
+    placeholder.appendChild(rt.createElement("div"));
+    host.appendChild(placeholder);
+    rt.document.body.appendChild(host);
+
+    const ctrl = new rt.wxapp.TabCtrl(host);
+    const content = host.querySelector(".wx-tab-content");
+
+    // no data source, so the tab set is known to be empty right away
+    assert.equal(placeholder.parentNode, content, "the placeholder sits in the pane host");
+    assert.equal(placeholder.classList.contains("d-none"), false, "the server-side hiding is lifted");
+
+    ctrl.updateData([{ id: "tab-plain", label: "Plain" }]);
+    assert.equal(placeholder.parentNode, null, "a tab item replaces the placeholder");
+    assert.equal(placeholder._wxDetached, true, "the detach is flagged, so the controller keeps its instances");
+
+    ctrl.updateData([]);
+    assert.equal(placeholder.parentNode, content, "an empty payload brings the placeholder back");
+});
+
+test("wx-webapp-tab keeps the empty-state placeholder away while the first load is in flight", () => {
+    const rt = loadControl({
+        file: "webexpress.webapp.tab.js",
+        deps: ["webexpress.webapp.tab.model.js"]
+    });
+
+    const host = rt.createElement("div");
+    const island = rt.createElement("wx-service");
+    island.setAttribute("name", "data");
+    island.setAttribute("base-uri", "/api/1/tab");
+    host.appendChild(island);
+
+    const placeholder = rt.createElement("div");
+    placeholder.className = "wx-webapp-tab-empty d-none";
+    host.appendChild(placeholder);
+    rt.document.body.appendChild(host);
+
+    new rt.wxapp.TabCtrl(host);
+
+    assert.equal(placeholder.parentNode, null, "a pending load must not read as an empty tab set");
+});

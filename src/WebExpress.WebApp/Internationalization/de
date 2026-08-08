@@ -54,6 +54,9 @@ header.setting.systeminformation.label=System Informationen
 headline.more.title=Weitere Optionen
 toolbar.more.title=Weitere Optionen
 
+tab.empty.title=Keine Registerkarten
+tab.empty.message=Es ist noch keine Registerkarte vorhanden.
+
 status.400.title=Fehlerhafte Anfrage
 status.400.description=Der HTTP-Statuscode 400 bedeutet, dass die Anfrage des Clients fehlerhaft war und vom Server nicht verarbeitet werden konnte. Dies kann verschiedene Ursachen haben, wie z.B. ungültige Syntax, fehlende Parameter oder ungültige Datenformate. Der Server konnte die Anfrage nicht verstehen und hat daher diesen Fehlercode zurückgegeben. Bitte überprüfen Sie die Anfrage und versuchen Sie es erneut.
 status.404.title=Ressource nicht gefunden

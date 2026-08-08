@@ -26,6 +26,12 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
     _addTemplateMenu = null;
     _templateMenuItems = new Map();
 
+    // the server-rendered placeholder for an empty tab set, and whether a tab
+    // set was applied at all; the placeholder must not flash while the first
+    // payload is still in flight
+    _emptyStateElement = null;
+    _dataApplied = false;
+
     /**
      * Constructor for the REST-enabled TabCtrl class.
      * @param {HTMLElement} element - The DOM element associated with the control.
@@ -71,6 +77,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
 
         // extract and store templates
         this._extractTemplates();
+        this._extractEmptyState();
 
         // add specific class for designer styling
         if (this._navElement !== null) {
@@ -95,6 +102,11 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
             if (dataChanges) {
                 (element._wxCleanup = element._wxCleanup || []).push(() => dataChanges.detach());
             }
+        } else {
+            // without a data source no payload will ever arrive, so the tab set is
+            // already known to be empty
+            this._dataApplied = true;
+            this._updateEmptyState();
         }
     }
 
@@ -142,6 +154,11 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
 
         if (slice.data) {
             this.updateData(webexpress.webapp.tabModel.mapTabs(slice.data));
+        } else if (slice.loading === false && !slice.error) {
+            // a settled load without a payload is an empty tab set, not a pending
+            // one, so the placeholder applies
+            this._dataApplied = true;
+            this._updateEmptyState();
         }
 
         this._element.classList.remove("placeholder-glow");
@@ -181,6 +198,61 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
             if (tpl.parentNode !== null) {
                 tpl.parentNode.removeChild(tpl);
             }
+        }
+    }
+
+    /**
+     * Takes the placeholder for an empty tab set out of the host element. It is
+     * authored on the server (ControlEmptyState), so its icon, wording and
+     * actions stay with the control declaration instead of being rebuilt here.
+     * The server hides it, because only the client knows whether the tab set is
+     * empty; it is shown again the moment it gets attached.
+     */
+    _extractEmptyState() {
+        const placeholder = this._element.querySelector(":scope > .wx-webapp-tab-empty");
+
+        if (placeholder === null) {
+            return;
+        }
+
+        placeholder.classList.remove("d-none");
+
+        this._emptyStateElement = placeholder;
+        this._detachEmptyState();
+    }
+
+    /**
+     * Detaches the placeholder while keeping the instances of its call-to-action
+     * controls alive, so a placeholder that is shown, hidden and shown again
+     * keeps working.
+     */
+    _detachEmptyState() {
+        if (this._emptyStateElement === null || this._emptyStateElement.parentNode === null) {
+            return;
+        }
+
+        this._emptyStateElement._wxDetached = true;
+        this._emptyStateElement.parentNode.removeChild(this._emptyStateElement);
+    }
+
+    /**
+     * Attaches the placeholder while the tab set carries no items and detaches it
+     * as soon as a tab exists, so an empty control reads as deliberately empty
+     * rather than broken. A load still in flight keeps the placeholder away.
+     */
+    _updateEmptyState() {
+        if (this._emptyStateElement === null || this._contentElement === null) {
+            return;
+        }
+
+        // updateData empties the pane host, so the placeholder is re-attached
+        // rather than assumed to still be in place
+        if (this._dataApplied && this._tabs.length === 0) {
+            if (this._emptyStateElement.parentNode !== this._contentElement) {
+                this._contentElement.appendChild(this._emptyStateElement);
+            }
+        } else {
+            this._detachEmptyState();
         }
     }
 
@@ -832,6 +904,8 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
             return;
         }
 
+        this._dataApplied = true;
+
         // clear existing headers except the add button and toolbar
         if (this._navElement !== null) {
             const headers = Array.from(this._navElement.children);
@@ -841,6 +915,10 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
                 }
             }
         }
+
+        // the placeholder leaves through the flagged detach, so wiping the pane
+        // host cannot tear down the instances of its call-to-action controls
+        this._detachEmptyState();
 
         // clear existing panes
         if (this._contentElement !== null) {
@@ -861,6 +939,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
 
         // refresh add button state for the loaded tab set
         this._updateAddButtonState();
+        this._updateEmptyState();
     }
 
     /**
@@ -897,6 +976,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
 
         this._tabs.push(tabData);
         this._updateAddButtonState();
+        this._updateEmptyState();
 
         // build header using the overridden method
         const navItem = this._buildTabHeader(tabData);
@@ -1236,6 +1316,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
 
         // refresh the add button availability after the tab list changed
         this._updateAddButtonState();
+        this._updateEmptyState();
 
         // notify external components about tab removal
         this._dispatch(webexpress.webapp.Event.TAB_CLOSED_EVENT, {

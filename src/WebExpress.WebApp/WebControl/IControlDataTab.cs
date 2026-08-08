@@ -33,6 +33,12 @@ namespace WebExpress.WebApp.WebControl
         Func<IRenderControlContext, bool> MovableTab { get; }
 
         /// <summary>
+        /// Gets the placeholder shown while the tab set carries no items. A null
+        /// value falls back to a generic placeholder.
+        /// </summary>
+        ControlEmptyState EmptyState { get; }
+
+        /// <summary>
         /// Adds one or more templates to the tab control.
         /// </summary>
         /// <param name="templates">The templates to add.</param>

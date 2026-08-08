@@ -27,6 +27,21 @@ The initial structure is defined in HTML. The root element is the tab host (`.wx
 |`data-readonly`|Disables add/close interactions when set to `true`. | `data-readonly="true"`
 |`data-movable-tab`|Enables drag-and-drop reordering of the tabs when set to `true`. Each tab header gets a ⠿ grip handle; dropping persists the new order via `PUT`. | `data-movable-tab="true"`
 
+### Empty-State Placeholder
+
+An optional `.wx-webapp-tab-empty` child of the host carries the placeholder shown while the tab set holds no items. The controller takes it out of the markup on init and puts it into the content area whenever the tab set is empty — after a load, after the last tab was closed, or right away when no data service is configured. While the first request is still in flight the placeholder stays away, so a pending load does not read as "nothing here".
+
+The server renders it hidden (`d-none`), because only the client knows whether the tab set is empty; the controller lifts the hiding. On the server side the placeholder is the `EmptyState` property of `ControlDataTab` (a `ControlEmptyState`), which also renders a generic default when none is authored.
+
+```html
+<div class="wx-webapp-tab-empty d-none">
+    <div class="wx-empty-state">
+        <span class="wx-empty-state-title">No tabs</span>
+        <span class="wx-empty-state-message">No tab has been created yet.</span>
+    </div>
+</div>
+```
+
 ### Tab Template Element Attributes
 
 | Attribute                | Description                                                        | Example                         |
