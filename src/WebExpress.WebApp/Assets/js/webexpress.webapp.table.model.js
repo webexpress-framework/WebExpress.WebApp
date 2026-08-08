@@ -164,6 +164,9 @@ webexpress.webapp.tableModel = {
                 image: r.image || null,
                 icon: r.icon || null,
                 uri: r.uri || r.url || null,
+                // the endpoint the row's record is written through; a cell renderer that
+                // offers an editor reads it to know where to send the new value
+                restApi: r.restApi || r.editApi || null,
                 target: r.target || null,
                 primaryAction: r.primaryAction || null,
                 secondaryAction: r.secondaryAction || null,

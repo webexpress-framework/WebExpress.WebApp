@@ -72,6 +72,20 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, DataState> StateFactory { get; set; }
 
         /// <summary>
+        /// Gets or sets the name the prompt is collected under when it sits in a form.
+        /// </summary>
+        /// <remarks>
+        /// The prompt writes in a content-editable surface, and no form collects one of
+        /// those. A prompt that is given a name therefore carries a hidden field of that
+        /// name and keeps it in step with the visible text, so an enclosing form treats it
+        /// like any other input: it reads the expression on submit and writes into it on
+        /// load. A prompt without a name stays what it was — a standalone surface that
+        /// announces a submitted expression through the change filter event or writes it
+        /// into the ViewState it drives.
+        /// </remarks>
+        public Func<IRenderControlContext, string> Name { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The control id.</param>
@@ -94,6 +108,7 @@ namespace WebExpress.WebApp.WebControl
                 Class = Css.Concatenate("wx-webapp-wql-prompt", GetClasses(renderContext)),
                 Style = GetStyles(renderContext)
             }
+                .AddUserAttribute("name", Name?.Invoke(renderContext))
                 .EmitDataIslands(this, renderContext);
 
             return html;

@@ -22,6 +22,9 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         this._service = islandServices.data || null;
         this._apiUri = this._service ? this._service.baseUri : null;
 
+        // the form field of a named prompt, created in _initUi
+        this._field = null;
+
         // internal history state
         this._history = [];
         this._historyIndex = 0;
@@ -73,6 +76,21 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
      */
     set value(text) {
         this._setInputText(text != null ? String(text) : "");
+    }
+
+    /**
+     * Mirrors the current text into the form field of a named prompt.
+     *
+     * The prompt writes in a content-editable surface, and no form collects one of those.
+     * A prompt that was given a name therefore carries a hidden field of that name beside
+     * it and keeps it in step, so an enclosing form treats the prompt like any other
+     * input: on submit it reads the expression out of the field, and on load it finds the
+     * field by name and assigns through to this controller, which owns the visible text.
+     */
+    _syncField() {
+        if (this._field) {
+            this._field.value = this._getInputText();
+        }
     }
 
     /**
@@ -179,6 +197,18 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
 
         formGroup.appendChild(this._hint);
         this._element.appendChild(formGroup);
+
+        // a named prompt is a form field: the hidden input carries the expression into
+        // the form data, and the name is taken off the host so it is not collected twice
+        const name = this._element.getAttribute("name");
+
+        if (name) {
+            this._element.removeAttribute("name");
+            this._field = document.createElement("input");
+            this._field.type = "hidden";
+            this._field.name = name;
+            this._element.appendChild(this._field);
+        }
     }
 
     /**
@@ -245,6 +275,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
     _setInputText(value) {
         this._input.innerText = value;
         this._highlightSyntax();
+        this._syncField();
     }
 
     /**
@@ -252,6 +283,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
      */
     _onInput() {
         this._setValidState();
+        this._syncField();
 
         if (this._historyIndex === this._history.length) {
             this._unsentInput = this._getInputText();

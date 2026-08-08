@@ -211,7 +211,10 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
      */
     abort() {
         if (this._abort) {
-            this._abort.abort("aborted");
+            // aborted without a reason on purpose: a reason replaces the AbortError the
+            // fetch would otherwise reject with, and the outcome would then be classified
+            // as a network failure rather than as the cancellation it is
+            this._abort.abort();
             this._abort = null;
         }
     }
@@ -461,7 +464,7 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
 
         if (request.abortable) {
             if (this._abort) {
-                this._abort.abort("replaced");
+                this._abort.abort();
             }
             abort = new AbortController();
             this._abort = abort;
@@ -501,7 +504,11 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
                 return webexpress.webapp.ServiceResult.fail("parse", response.status, "response was not valid json", false);
             }
         } catch (networkError) {
-            if (networkError && networkError.name === "AbortError") {
+            // the signal is the authority on why the request ended: a controller aborted
+            // with a reason rejects with that reason rather than with an AbortError, and
+            // taking the rejection alone would report a cancellation as a network failure
+            // — which is retriable, so a superseded request would be sent again and logged
+            if ((abort && abort.signal.aborted) || (networkError && networkError.name === "AbortError")) {
                 return webexpress.webapp.ServiceResult.fail("abort", 0, "request was aborted", false);
             }
             return webexpress.webapp.ServiceResult.fail("network", 0, networkError ? networkError.message : "network error", true);
