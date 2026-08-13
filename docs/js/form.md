@@ -40,8 +40,10 @@ The form controller manages the complete lifecycle of user interactions, from in
 
 - **Validation**
   - The controller uses the native HTML5 validation API (`required`, `pattern`, `min`/`max`, `type="email"`, etc.).
+  - A control that stores its value in a hidden input — a tile picker, a segmented choice — is barred from native constraint validation, so `required` has no effect on it. Such a control declares `data-wx-required="true"` on its hidden input instead, which is checked in the same pass; `data-wx-required-message` overrides the default wording.
   - In case of errors, submission is prevented, the first invalid field is focused, and an error message is displayed.
   - Specific validations for email patterns are additionally checked to compensate for browser inconsistencies.
+  - A validation message may carry `{name}` placeholders, which are filled from the values the rule was checked against (`{minlength}`, `{maxlength}`, `{min}`/`{max}`).
 
 - **Submission**
   - The browser's standard submit is prevented.

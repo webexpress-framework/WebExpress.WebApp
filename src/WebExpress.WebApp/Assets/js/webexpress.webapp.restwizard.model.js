@@ -55,5 +55,46 @@ webexpress.webapp.restWizardModel = {
             }
         }
         return true;
+    },
+
+    /**
+     * Describes the position of the current step among the active ones, counting
+     * skipped steps out of both the position and the total. This is what the step
+     * counter in the footer reads back to the user.
+     * @param {Array<object>} pages - The wizard pages.
+     * @param {number} currentIndex - The current page index.
+     * @returns {{position: number, total: number}} The one-based position and the total.
+     */
+    describePosition(pages, currentIndex) {
+        pages = pages || [];
+
+        let position = 0;
+        let total = 0;
+
+        for (let i = 0; i < pages.length; i++) {
+            if (pages[i].skipped) {
+                continue;
+            }
+            total++;
+            if (i <= currentIndex) {
+                position = total;
+            }
+        }
+
+        return { position: position, total: total };
+    },
+
+    /**
+     * Derives the progress state of a step from its position relative to the
+     * current one.
+     * @param {number} index - The index of the step.
+     * @param {number} currentIndex - The current page index.
+     * @returns {"completed"|"active"|"pending"} The state of the step.
+     */
+    stateOf(index, currentIndex) {
+        if (index < currentIndex) {
+            return "completed";
+        }
+        return index === currentIndex ? "active" : "pending";
     }
 };

@@ -54,54 +54,86 @@ form.wx-webapp-restwizard {
     min-height: 250px; /* Prevent UI jumping on empty pages */
 }
 
+/* Only the pages scroll. The progress indicator and the dialog footer stay put, so
+   the user keeps the step he is on and the way forward in view no matter how long
+   the step is. This requires the chain from the dialog body down to the pages to be
+   a flex column that may shrink (min-height: 0), and the body itself to stop
+   scrolling — Bootstrap's .modal-dialog-scrollable would otherwise scroll the whole
+   wizard including its header. The selector outranks that rule on specificity. */
+form.wx-webapp-restwizard .modal-body {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+}
+
+form.wx-webapp-restwizard .modal-body > .wx-restwizard-root {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* the error, confirmation and prologue banners the form control keeps as direct
+   children of the body stay above the scrolling pages at their natural height */
+form.wx-webapp-restwizard .modal-body > .wx-restform-error-container,
+form.wx-webapp-restwizard .modal-body > .wx-restform-confirm,
+form.wx-webapp-restwizard .modal-body > .wx-restform-prolog-container {
+    flex: 0 0 auto;
+}
+
+.wx-restwizard-root > .wx-restwizard-static-container,
+.wx-restwizard-root > .wx-restwizard-progress,
+.wx-restwizard-root > .wx-restwizard-actions {
+    flex: 0 0 auto;
+}
+
+/* an empty static container must not add its bottom margin as a gap */
+.wx-restwizard-static-container:empty {
+    display: none;
+}
+
 /* Hide original wizard pages until the JS initializes them */
 form.wx-webapp-restwizard > .wx-wizard-page {
     display: none;
 }
 
-/* Progress indicator wrapper */
+/* Progress indicator wrapper. The steps themselves are the shared step indicator
+   (.wx-steps, see webexpress.webui.steps.css), so a wizard header looks like every
+   other stepper; only its placement is defined here. */
 .wx-restwizard-progress {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 0.5rem;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--wx-border-color, #dee2e6);
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: thin;
 }
 
-/* Individual progress steps */
-.wx-restwizard-progress .wx-restwizard-step {
-    flex: 1 1 0;
-    min-width: 0;
-    text-align: center;
-    padding: 0.75rem 0.5rem;
-    font-size: 0.9rem;
-    border-bottom: 3px solid var(--wx-border-color, #dee2e6);
+/* A step already passed can be clicked to return to it */
+.wx-restwizard-progress .wx-steps-item-clickable {
+    cursor: pointer;
+}
+
+.wx-restwizard-progress .wx-steps-item-clickable:hover .wx-steps-label {
+    text-decoration: underline;
+}
+
+/* Step counter beside the back button */
+.wx-restwizard-counter {
     color: var(--wx-secondary-color, #6c757d);
-    transition: all 0.3s ease;
+    font-size: 0.875rem;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
-/* Active progress step */
-.wx-restwizard-progress .wx-restwizard-step.active {
-    border-bottom-color: var(--wx-primary, #0d6efd);
-    color: var(--wx-primary, #0d6efd);
-    font-weight: 600;
-}
-
-/* Completed progress steps */
-.wx-restwizard-progress .wx-restwizard-step.completed {
-    border-bottom-color: var(--wx-success, #198754);
-    color: var(--wx-success, #198754);
-}
-
-/* Page container and animation */
+/* Page container and animation. This is the one part of the wizard that scrolls;
+   min-height: 0 lets it shrink below its content so the overflow lands here rather
+   than pushing the footer out of the dialog. */
 .wx-restwizard-pages-container {
     position: relative;
-    flex-grow: 1;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
 }
 
 /* Subtle fade-in for wizard pages when they are displayed */

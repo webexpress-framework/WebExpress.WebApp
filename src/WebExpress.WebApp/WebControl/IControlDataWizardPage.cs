@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using WebExpress.WebCore.WebPage;
+using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
@@ -11,6 +12,27 @@ namespace WebExpress.WebApp.WebControl
     /// </summary>
     public interface IControlDataWizardPage : IWebUIElement<IRenderControlContext, IVisualTreeControl>
     {
+        /// <summary>
+        /// Gets the title of the step, shown in the progress indicator.
+        /// </summary>
+        Func<IRenderControlContext, string> Title { get; }
+
+        /// <summary>
+        /// Gets the secondary text of the step, shown below its title.
+        /// </summary>
+        Func<IRenderControlContext, string> Subtitle { get; }
+
+        /// <summary>
+        /// Gets the name of the input whose selected label replaces the subtitle once
+        /// the step has been answered.
+        /// </summary>
+        Func<IRenderControlContext, string> SummarySource { get; }
+
+        /// <summary>
+        /// Gets the uri the step is loaded from, or null for a step rendered upfront.
+        /// </summary>
+        Func<IRenderControlContext, IUri> Uri { get; }
+
         /// <summary>
         /// Gets the form layout.
         /// </summary>

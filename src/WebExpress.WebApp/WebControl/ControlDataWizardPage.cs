@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using WebExpress.WebCore;
+using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebHtml;
+using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebFragment;
 using WebExpress.WebUI.WebPage;
@@ -22,6 +24,32 @@ namespace WebExpress.WebApp.WebControl
         /// Gets or sets the id.
         /// </summary>
         public string Id { get; set; }
+
+        /// <summary>
+        /// Gets or sets the title of the step, shown in the progress indicator.
+        /// </summary>
+        public Func<IRenderControlContext, string> Title { get; set; }
+
+        /// <summary>
+        /// Gets or sets the secondary text of the step, shown below its title. It states
+        /// what the step asks for while the step is still open.
+        /// </summary>
+        public Func<IRenderControlContext, string> Subtitle { get; set; }
+
+        /// <summary>
+        /// Gets or sets the name of the input whose selected label replaces the subtitle
+        /// once the step has been answered, so the progress indicator reads back what was
+        /// chosen rather than what was asked.
+        /// </summary>
+        public Func<IRenderControlContext, string> SummarySource { get; set; }
+
+        /// <summary>
+        /// Gets or sets the uri the step is loaded from. A step with a uri is fetched
+        /// with the current form payload when it is reached; a step answering
+        /// <c>204 No Content</c> is skipped. Leave it unset for a step rendered upfront.
+        /// </summary>
+        public Func<IRenderControlContext, IUri> Uri { get; set; }
+
 
         /// <summary>
         /// Gets or sets the form layout.
@@ -107,16 +135,21 @@ namespace WebExpress.WebApp.WebControl
         public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IEnumerable<IControlFormItem> items)
         {
             var itemLayout = ItemLayout?.Invoke(renderContext) ?? TypeLayoutFormItem.Vertical;
-
             var renderFormContext = new RenderControlFormContext(renderContext, null);
 
-            // generate html
+            // generate html. The items are not rendered here: the hidden ones are
+            // emitted below as direct children so they submit regardless of layout,
+            // and the visible ones through the layout group of the main section. Adding
+            // them here as well would put every input into the form twice.
             var html = new HtmlElementTextContentDiv()
             {
                 Id = Id,
                 Class = "wx-wizard-page"
             }
-                .Add(items.Select(x => x.Render(renderFormContext, visualTree)));
+                .AddUserAttribute("data-title", I18N.Translate(renderContext, Title?.Invoke(renderContext)))
+                .AddUserAttribute("data-subtitle", I18N.Translate(renderContext, Subtitle?.Invoke(renderContext)))
+                .AddUserAttribute("data-summary-source", SummarySource?.Invoke(renderContext))
+                .AddUserAttribute("data-uri", Uri?.Invoke(renderContext)?.ToString());
 
             var header = new HtmlElementSectionHeader();
 
@@ -139,9 +172,9 @@ namespace WebExpress.WebApp.WebControl
             header.Add(headerPrimary.Select(x => x.Render(renderContext, visualTree)));
             header.Add(headerSecondary.Select(x => x.Render(renderContext, visualTree)));
 
-            foreach (var item in _items.Where(x => x is ControlFormItemInputHidden))
+            foreach (var item in items.Where(x => x is ControlFormItemInputHidden))
             {
-                html.Add(item.Render(renderContext, visualTree));
+                html.Add(item.Render(renderFormContext, visualTree));
             }
 
             var main = new HtmlElementSectionMain();
@@ -159,7 +192,15 @@ namespace WebExpress.WebApp.WebControl
                 group.Items.Add(item);
             }
 
-            main.Add(group.Render(renderContext, visualTree));
+            // a form item renders to nothing unless it is handed a form context, so the
+            // group of the main section is rendered with the same context as the hidden
+            // items above rather than with the plain control context. A page without
+            // visible items — a step whose content is loaded from its uri — contributes no
+            // group at all rather than an empty wrapper.
+            if (group.Items.Count > 0)
+            {
+                main.Add(group.Render(renderFormContext, visualTree));
+            }
 
             var footer = new HtmlElementSectionFooter();
             var footerPreferences = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionFormFooterPreferences>

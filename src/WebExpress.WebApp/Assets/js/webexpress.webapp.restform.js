@@ -429,6 +429,25 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
+     * Substitutes the named and positional placeholders of a message with the
+     * supplied values, so a translated message can carry the numbers it talks
+     * about. A placeholder without a value is left untouched.
+     * @param {string} message The message carrying {name} placeholders.
+     * @param {Object} params The values, keyed by placeholder name.
+     * @returns {string} The message with the placeholders replaced.
+     */
+    _applyParams(message, params) {
+        if (!message || !params) {
+            return message || "";
+        }
+
+        return String(message).replace(/\{(\w+)\}/g, (match, name) => {
+            const value = params[name];
+            return (value === undefined || value === null) ? match : String(value);
+        });
+    }
+
+    /**
      * Validates a single form field element.
      * Can be overridden by subclasses or used by them.
      * @param {HTMLElement} el The element to validate.
@@ -440,6 +459,13 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
         }
 
         let msg = null;
+
+        // a control that stores its value in a hidden input (a picker, a segmented
+        // choice) is barred from native constraint validation, so it declares a
+        // required value through data-wx-required instead
+        if (el.dataset && el.dataset.wxRequired === "true" && !String(el.value || "").trim()) {
+            return el.dataset.wxRequiredMessage || this._i18n("webexpress.webapp:validation.required");
+        }
 
         if (!el.validity.valid) {
             msg = el.validationMessage || this._i18n("webexpress.webapp:validation.invalid");

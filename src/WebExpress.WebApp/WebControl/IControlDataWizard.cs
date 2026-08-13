@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using WebExpress.WebCore.WebIcon;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
@@ -27,6 +28,16 @@ namespace WebExpress.WebApp.WebControl
         /// the specified render control context.
         /// </summary>
         Func<IRenderControlContext, string> ItemId { get; }
+
+        /// <summary>
+        /// Gets the label of the button that leaves the wizard on its last step.
+        /// </summary>
+        Func<IRenderControlContext, string> FinishLabel { get; }
+
+        /// <summary>
+        /// Gets the icon of the button that leaves the wizard on its last step.
+        /// </summary>
+        Func<IRenderControlContext, IIcon> FinishIcon { get; }
 
         /// <summary>
         /// Adds one or more pages to the wizard control.

@@ -2,8 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using WebExpress.WebApp.WebData;
+using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebHtml;
+using WebExpress.WebCore.WebIcon;
 using WebExpress.WebUI.WebControl;
+using WebExpress.WebUI.WebIcon;
 using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.WebControl
@@ -65,10 +68,21 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, TypeRestFormMode> Mode { get; set; } = _ => TypeRestFormMode.Default;
 
         /// <summary>
-        /// Gets a delegate that returns the unique identifier for an item within 
+        /// Gets a delegate that returns the unique identifier for an item within
         /// the specified render control context.
         /// </summary>
         public Func<IRenderControlContext, string> ItemId { get; set; }
+
+        /// <summary>
+        /// Gets or sets the label of the button that leaves the wizard on its last step.
+        /// Defaults to the generic "finish" of the framework.
+        /// </summary>
+        public Func<IRenderControlContext, string> FinishLabel { get; set; }
+
+        /// <summary>
+        /// Gets or sets the icon of the button that leaves the wizard on its last step.
+        /// </summary>
+        public Func<IRenderControlContext, IIcon> FinishIcon { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class.
@@ -149,6 +163,8 @@ namespace WebExpress.WebApp.WebControl
             }
                 .AddUserAttribute("data-mode", mode.ToMode())
                 .AddUserAttribute("data-id", itemId?.ToString())
+                .AddUserAttribute("data-finish-label", I18N.Translate(renderContext, FinishLabel?.Invoke(renderContext)))
+                .AddUserAttribute("data-finish-icon", (FinishIcon?.Invoke(renderContext) as Icon)?.Class)
                 .Add(_pages.Select(x => x.Render(renderContext, visualTree)))
                 .EmitDataIslands(this, renderContext);
 

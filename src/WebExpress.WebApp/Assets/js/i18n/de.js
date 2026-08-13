@@ -21,6 +21,7 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "wizard.previous": "Zurück",
     "wizard.next": "Weiter",
     "wizard.finish": "Abschließen",
+    "wizard.step": "Schritt {0} von {1}",
 
     "input.unique.error": "Eindeutigkeit kann nicht überprüft werden - Server ist nicht erreichbar.",
     "input.unique.checking": "Eindeutigkeit wird überprüft...",
@@ -31,6 +32,7 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
 
     // validation messages
     "validation.invalid": "Ungültiger Wert",
+    "validation.required": "Bitte treffen Sie eine Auswahl.",
     "validation.email.invalid": "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
     "validation.format.invalid": "Ungültiges Format.",
     "validation.number.range": "Wert muss {max} sein.",

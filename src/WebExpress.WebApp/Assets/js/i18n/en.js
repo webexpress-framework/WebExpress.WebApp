@@ -18,9 +18,10 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "form.edit_row": "Edit Row",
     "form.edit_item": "Edit Item",
     
-    "wizard.previous": "Previous",
+    "wizard.previous": "Back",
     "wizard.next": "Next",
     "wizard.finish": "Finish",
+    "wizard.step": "Step {0} of {1}",
 
     "input.unique.error": "Unable to check uniqueness - server could not be reached.",
     "input.unique.checking": "Checking uniqueness...",
@@ -31,6 +32,7 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
 
     // validation messages
     "validation.invalid": "Invalid value",
+    "validation.required": "Please make a selection.",
     "validation.email.invalid": "Please enter a valid email address.",
     "validation.format.invalid": "Invalid format.",
     "validation.number.range": "Value must be {max}.",
