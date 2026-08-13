@@ -41,8 +41,14 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         { id: "col-mix",        label: "Two columns · mix" }
     ];
 
-    // logical field types accepted by the editor
-    static FIELD_TYPES = ["string", "text", "timestamp", "ref", "enum", "tags", "number", "file"];
+    // logical field types accepted by the editor. They are coarser than the field types an
+    // application models: several of those share a shape and are previewed alike — a
+    // calendar reads as a date, a cascading selection as a list.
+    static FIELD_TYPES = [
+        "string", "text", "richtext", "password", "timestamp", "daterange", "ref", "enum",
+        "choice", "tags", "number", "range", "rating", "estimate", "color", "avatar",
+        "tile", "move", "file"
+    ];
 
     _restUrl = null;
     _previewOn = true;
@@ -880,17 +886,99 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
                 input.placeholder = this._t("formeditor.preview.placeholder.enter", node.placeholder || "");
                 return input;
             }
-            case "text": {
+            case "text":
+            case "richtext": {
                 const ta = document.createElement("textarea");
                 ta.className = "wx-form-editor-preview-textarea";
+                if (node.type === "richtext") {
+                    ta.classList.add("wx-form-editor-preview-richtext");
+                }
                 ta.placeholder = this._t("formeditor.preview.placeholder.describe", node.placeholder || "");
                 return ta;
+            }
+            case "password": {
+                const input = document.createElement("input");
+                input.className = "wx-form-editor-preview-input";
+                input.value = "••••••••";
+                return input;
             }
             case "timestamp": {
                 const input = document.createElement("input");
                 input.className = "wx-form-editor-preview-input";
                 input.value = "2026-03-14 14:32";
                 return input;
+            }
+            case "daterange": {
+                const input = document.createElement("input");
+                input.className = "wx-form-editor-preview-input";
+                input.value = "2026-03-14 – 2026-03-21";
+                return input;
+            }
+            case "range": {
+                const range = document.createElement("div");
+                range.className = "wx-form-editor-preview-range";
+                const bar = document.createElement("span");
+                bar.className = "wx-form-editor-preview-range-bar";
+                range.appendChild(bar);
+                const knob = document.createElement("span");
+                knob.className = "wx-form-editor-preview-range-knob";
+                range.appendChild(knob);
+                return range;
+            }
+            case "rating": {
+                const rating = document.createElement("div");
+                rating.className = "wx-form-editor-preview-rating";
+                rating.textContent = "★ ★ ★ ☆ ☆";
+                return rating;
+            }
+            case "estimate": {
+                return this._renderPreviewPills(["1", "2", "3", "5", "8"], 2);
+            }
+            case "choice": {
+                return this._renderPreviewPills(["A", "B", "C"], 1);
+            }
+            case "color": {
+                const color = document.createElement("div");
+                color.className = "wx-form-editor-preview-color";
+                for (const value of ["#dc3545", "#fd7e14", "#0d6efd", "#20723d"]) {
+                    const dot = document.createElement("span");
+                    dot.className = "wx-form-editor-preview-color-dot";
+                    dot.style.backgroundColor = value;
+                    color.appendChild(dot);
+                }
+                return color;
+            }
+            case "avatar": {
+                const avatar = document.createElement("div");
+                avatar.className = "wx-form-editor-preview-ref";
+                const dot = document.createElement("span");
+                dot.className = "wx-form-editor-preview-ref-dot";
+                dot.textContent = (node.label || "?")[0];
+                avatar.appendChild(dot);
+                const txt = document.createElement("span");
+                txt.textContent = this._t("formeditor.preview.placeholder.image", "Choose an image…");
+                avatar.appendChild(txt);
+                return avatar;
+            }
+            case "tile": {
+                const tiles = document.createElement("div");
+                tiles.className = "wx-form-editor-preview-tiles";
+                for (let i = 0; i < 2; i++) {
+                    const card = document.createElement("span");
+                    card.className = "wx-form-editor-preview-tile";
+                    tiles.appendChild(card);
+                }
+                return tiles;
+            }
+            case "move": {
+                const move = document.createElement("div");
+                move.className = "wx-form-editor-preview-move";
+                for (let i = 0; i < 2; i++) {
+                    const column = document.createElement("span");
+                    column.className = "wx-form-editor-preview-move-column";
+                    move.appendChild(column);
+                }
+                return move;
             }
             case "ref": {
                 const ref = document.createElement("div");
@@ -929,6 +1017,26 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
                 return input;
             }
         }
+    }
+
+    /**
+     * Renders a row of pills, one of them marked as chosen.
+     * @param {string[]} values - The labels of the pills.
+     * @param {number} active - The index of the chosen pill.
+     * @returns {HTMLElement}
+     */
+    _renderPreviewPills(values, active) {
+        const wrap = document.createElement("div");
+        wrap.className = "wx-form-editor-preview-pills";
+
+        values.forEach((value, index) => {
+            const pill = document.createElement("span");
+            pill.className = "wx-form-editor-preview-pill" + (index === active ? " active" : "");
+            pill.textContent = value;
+            wrap.appendChild(pill);
+        });
+
+        return wrap;
     }
 
     /**

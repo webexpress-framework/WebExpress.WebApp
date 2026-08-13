@@ -107,6 +107,7 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "formeditor.preview.placeholder.enter": "{0} eingeben",
     "formeditor.preview.placeholder.describe": "{0} beschreiben…",
     "formeditor.preview.placeholder.unassigned": "Nicht zugewiesen",
+    "formeditor.preview.placeholder.image": "Bild auswählen…",
     "formeditor.preview.placeholder.file": "Dateien ablegen oder auswählen…",
     "formeditor.structure.title": "Struktur · {0}",
     "formeditor.structure.meta": "{0} Elemente",
