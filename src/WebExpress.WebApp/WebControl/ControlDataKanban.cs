@@ -142,6 +142,14 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, DataState> StateFactory { get; set; }
 
         /// <summary>
+        /// Gets or sets a value indicating whether clicking a card selects it. A selected
+        /// card is marked active and announced through the selection event, which is what
+        /// lets a board drive a master-detail view like a list or a backlog does. Turn it
+        /// off for a board that is purely a drag surface.
+        /// </summary>
+        public Func<IRenderControlContext, bool> Selectable { get; set; } = _ => true;
+
+        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The control id.</param>
@@ -168,6 +176,7 @@ namespace WebExpress.WebApp.WebControl
             var movableSwimlane = MovableSwimlane?.Invoke(renderContext) ?? false;
             var configurableBoard = ConfigurableBoard?.Invoke(renderContext) ?? false;
             var configurableSwimlane = ConfigurableSwimlane?.Invoke(renderContext) ?? false;
+            var selectable = Selectable?.Invoke(renderContext) ?? true;
 
             var html = new HtmlElementTextContentDiv()
             {
@@ -185,6 +194,9 @@ namespace WebExpress.WebApp.WebControl
                 .AddUserAttribute("data-movable-swimlane", movableSwimlane ? "true" : null)
                 .AddUserAttribute("data-configurable-board", configurableBoard ? "true" : null)
                 .AddUserAttribute("data-configurable-swimlane", configurableSwimlane ? "true" : null)
+                // emitted only to opt out, so the attribute stays absent on the common
+                // selectable board and the client default carries it
+                .AddUserAttribute("data-selectable", selectable ? null : "false")
                 .EmitDataIslands(this, renderContext);
 
             return html;
