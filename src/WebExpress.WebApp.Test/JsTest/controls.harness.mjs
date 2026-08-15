@@ -69,6 +69,9 @@ const WEBUI_BASE_CONTROLS = [
     "webexpress.webui.kanban.js",
     "webexpress.webui.input.cascading.js",
     "webexpress.webui.dropdown.js",
+    // the suggestion search is the framework search box with its suggestions
+    // sourced from a service, so the base control has to be present
+    "webexpress.webui.search.js",
     "webexpress.webui.list.js",
     "webexpress.webui.input.selection.js",
     "webexpress.webui.input.password.js",

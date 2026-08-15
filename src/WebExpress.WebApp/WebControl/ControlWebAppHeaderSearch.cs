@@ -73,7 +73,10 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control, or null when no search box is present.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            var searches = Searches.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlSearch, SectionAppSearch>
+            // the boxes are collected through the fragment contract rather than through the plain
+            // search fragment, so a box built on a richer control - a data bound one, for example -
+            // lands in the same slot
+            var searches = Searches.Cast<IControl>().Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControlSearch, SectionAppSearch>
             (
                 renderContext?.PageContext
             ));
@@ -85,9 +88,11 @@ namespace WebExpress.WebApp.WebControl
                 return null;
             }
 
+            // the wrapper carries its own class: wx-search is what the search box itself is marked
+            // with on the client, and sharing it would apply the box styling to the wrapper
             return new ControlPanel(Id)
             {
-                Classes = [Css.Concatenate("wx-search", GetClasses(renderContext))],
+                Classes = [Css.Concatenate("wx-header-search", GetClasses(renderContext))],
                 Styles = [GetStyles(renderContext)]
             }
                 .Add(searches)

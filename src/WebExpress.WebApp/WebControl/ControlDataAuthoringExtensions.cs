@@ -234,6 +234,22 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
+        /// Declares the standard data service of the suggestion search, which
+        /// queries its suggestions with GET. It shares the query shape of the
+        /// remote dropdown, because both ask the same way: the term in q, the
+        /// entry cap in l, and an items envelope back.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The search control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataSearch DataService<TEndpoint>(this ControlDataSearch control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
+        }
+
+        /// <summary>
         /// Declares the standard data service of the data sidebar, which queries
         /// its navigation tree with GET.
         /// </summary>

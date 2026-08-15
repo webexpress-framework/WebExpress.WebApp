@@ -4,6 +4,7 @@
 webexpress.webui.I18N.register("en", "webexpress.webapp", {
 
     "dropdown.search.placeholder": "Search...",
+    "search.suggestion.empty": "No matches found.",
 
     "statustask.none": "Unknown",
     "statustask.pending": "Pending",

@@ -22,6 +22,8 @@
   href: permission.md
 - name: ScheduleCtrl
   href: schedule.md
+- name: SearchSuggestionCtrl
+  href: search.suggestion.md
 - name: WatcherCtrl
   href: watcher.md
 - name: TabCtrl

@@ -38,8 +38,8 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests that a directly contributed search box is wrapped and rendered.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div class=""wx-search p-0 ms-3"">*</div>")]
-        [InlineData("id", @"<div id=""id"" class=""wx-search p-0 ms-3"">*</div>")]
+        [InlineData(null, @"<div class=""wx-header-search p-0 ms-3"">*</div>")]
+        [InlineData("id", @"<div id=""id"" class=""wx-header-search p-0 ms-3"">*</div>")]
         public void Search(string id, string expected)
         {
             // arrange
@@ -54,6 +54,27 @@ namespace WebExpress.WebApp.Test.WebControl
             var html = control.Render(context, visualTree);
 
             AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
+
+        /// <summary>
+        /// Tests that a search box with endpoint backed suggestions is wrapped and rendered as
+        /// well, so the slot is not limited to the static search box.
+        /// </summary>
+        [Fact]
+        public void DataSearch()
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlWebAppHeaderSearch("id")
+                .Add(new ControlDataSearch("search"));
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            AssertExtensions.EqualWithPlaceholders(@"<div id=""id"" class=""wx-header-search p-0 ms-3""><div id=""search"" class=""wx-webapp-search-suggestion""></div></div>", html);
         }
     }
 }

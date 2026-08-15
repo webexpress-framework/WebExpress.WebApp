@@ -85,6 +85,13 @@ namespace WebExpress.WebApp.WebControl
         public IEnumerable<IControl> Content => _content;
 
         /// <summary>
+        /// Gets or sets the initial search term the box opens with, so a page reached with a term
+        /// already in hand shows it rather than an empty box. The controls the search drives read
+        /// their own initial term from their state, so the term is authored on both.
+        /// </summary>
+        public Func<IRenderControlContext, string> Value { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The control id.</param>
@@ -149,6 +156,8 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, params IControl[] controls)
         {
+            var value = Value?.Invoke(renderContext);
+
             var html = new HtmlElementTextContentDiv()
             {
                 Id = Id,
@@ -156,7 +165,8 @@ namespace WebExpress.WebApp.WebControl
                 Style = GetStyles(renderContext)
             }
                 .Add(controls.Select(x => x.Render(renderContext, visualTree)))
-                .EmitDataIslands(this, renderContext);
+                .EmitDataIslands(this, renderContext)
+                .AddUserAttribute("data-value", !string.IsNullOrEmpty(value) ? value : null);
 
             return html;
         }

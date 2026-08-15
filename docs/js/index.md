@@ -17,6 +17,7 @@ This section documents the JavaScript controllers and client-side behavior used 
 - [DropdownThemeCtrl](theme-selector.md)
 - [PermissionCtrl](permission.md)
 - [ScheduleCtrl](schedule.md)
+- [SearchSuggestionCtrl](search.suggestion.md)
 - [SlaCtrl](sla.md)
 - [WatcherCtrl](watcher.md)
 - [TabCtrl](tab.md)

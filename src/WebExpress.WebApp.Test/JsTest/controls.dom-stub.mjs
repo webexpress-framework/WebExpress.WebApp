@@ -149,6 +149,16 @@ class Element {
 
     get classList() { return new ClassList(this); }
 
+    // url-valued properties reflect their content attribute, the way an anchor
+    // or an image does in the browser. A control that writes the property and
+    // reads the attribute back - which is how a link target is authored and how
+    // it is resolved again - would otherwise lose the value in between.
+    get href() { return this.getAttribute("href"); }
+    set href(value) { this.setAttribute("href", value); }
+
+    get src() { return this.getAttribute("src"); }
+    set src(value) { this.setAttribute("src", value); }
+
     get children() { return this.childNodes.filter((n) => n.nodeType === 1); }
 
     get innerText() { return this.textContent; }
@@ -434,7 +444,17 @@ class Element {
 
     focus() { }
     blur() { }
-    click() { this.dispatchEvent({ type: "click" }); }
+    // a synthesized click carries the members a handler expects of a real event; a bare
+    // { type } would trip over the preventDefault that every link handler calls
+    click() {
+        this.dispatchEvent({
+            type: "click",
+            target: this,
+            defaultPrevented: false,
+            preventDefault() { this.defaultPrevented = true; },
+            stopPropagation() { }
+        });
+    }
     scrollIntoView() { }
     scroll() { }
     scrollTo() { }
