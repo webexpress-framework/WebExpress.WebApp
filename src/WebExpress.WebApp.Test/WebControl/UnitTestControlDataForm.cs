@@ -119,12 +119,12 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the method property of the rest form control.
         /// </summary>
         [Theory]
-        [InlineData(RequestMethod.NONE, @"<form id=""*"" class=""wx-webapp-restform"" *>*</form>")]
-        [InlineData(RequestMethod.POST, @"<form id=""*"" class=""wx-webapp-restform"" *>*</form>")]
-        [InlineData(RequestMethod.PUT, @"<form id=""*"" class=""wx-webapp-restform"" *>*</form>")]
-        [InlineData(RequestMethod.GET, @"<form id=""*"" class=""wx-webapp-restform"" *>*</form>")]
-        [InlineData(RequestMethod.PATCH, @"<form id=""*"" class=""wx-webapp-restform"" *>*</form>")]
-        [InlineData(RequestMethod.DELETE, @"<form id=""*"" class=""wx-webapp-restform"" *>*</form>")]
+        [InlineData(RequestMethod.NONE, @"<form id=""*"" class=""wx-webapp-restform"">*</form>")]
+        [InlineData(RequestMethod.POST, @"<form id=""*"" class=""wx-webapp-restform"" method=""POST"" data-method=""POST"">*</form>")]
+        [InlineData(RequestMethod.PUT, @"<form id=""*"" class=""wx-webapp-restform"" method=""PUT"" data-method=""PUT"">*</form>")]
+        [InlineData(RequestMethod.GET, @"<form id=""*"" class=""wx-webapp-restform"" method=""GET"" data-method=""GET"">*</form>")]
+        [InlineData(RequestMethod.PATCH, @"<form id=""*"" class=""wx-webapp-restform"" method=""PATCH"" data-method=""PATCH"">*</form>")]
+        [InlineData(RequestMethod.DELETE, @"<form id=""*"" class=""wx-webapp-restform"" method=""DELETE"" data-method=""DELETE"">*</form>")]
         public void Method(RequestMethod method, string expected)
         {
             // arrange

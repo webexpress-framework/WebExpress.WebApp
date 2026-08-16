@@ -61,6 +61,32 @@ test("restform seeds its ui state from the wx-state island", () => {
     assert.equal(ctrl.state.submitting, true);
 });
 
+test("restform falls back to post when the form declares no method", () => {
+    const { wxapp, createElement, setFetch } = load();
+    setFetch(async () => ({ ok: true, status: 200, headers: { get: () => "application/json" }, json: async () => ({}) }));
+
+    const element = createElement("form");
+    // a browser reports the html default of "get" through the idl property even
+    // when the markup carries no method attribute
+    element.method = "get";
+
+    const ctrl = new wxapp.RestFormCtrl(element);
+
+    assert.equal(ctrl.options.method, "POST");
+});
+
+test("restform honours a declared method attribute", () => {
+    const { wxapp, createElement, setFetch } = load();
+    setFetch(async () => ({ ok: true, status: 200, headers: { get: () => "application/json" }, json: async () => ({}) }));
+
+    const element = createElement("form");
+    element.setAttribute("method", "put");
+
+    const ctrl = new wxapp.RestFormCtrl(element);
+
+    assert.equal(ctrl.options.method, "PUT");
+});
+
 test("restform destroy tears down without throwing", () => {
     const { wxapp, createElement, setFetch } = load();
     setFetch(async () => ({ ok: true, status: 200, headers: { get: () => "application/json" }, json: async () => ({}) }));

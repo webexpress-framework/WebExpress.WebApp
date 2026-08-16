@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using WebExpress.WebCore.WebIcon;
+using WebExpress.WebCore.WebMessage;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
@@ -17,6 +18,12 @@ namespace WebExpress.WebApp.WebControl
         /// or is rendered.
         /// </summary>
         Func<IRenderControlContext, TypeRestFormMode> Mode { get; }
+
+        /// <summary>
+        /// Gets the http method the final submit of the wizard uses. When left unset
+        /// it follows the mode.
+        /// </summary>
+        Func<IRenderControlContext, RequestMethod> Method { get; }
 
         /// <summary>
         /// Gets the collection of wizard pages associated with the control.

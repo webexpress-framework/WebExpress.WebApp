@@ -5,6 +5,7 @@ using WebExpress.WebApp.WebData;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebIcon;
+using WebExpress.WebCore.WebMessage;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebIcon;
 using WebExpress.WebUI.WebPage;
@@ -66,6 +67,14 @@ namespace WebExpress.WebApp.WebControl
         /// or is rendered.
         /// </summary>
         public Func<IRenderControlContext, TypeRestFormMode> Mode { get; set; } = _ => TypeRestFormMode.Default;
+
+        /// <summary>
+        /// Gets or sets the http method the final submit of the wizard uses, emitted as
+        /// the data-method attribute. It must be emitted even though it is derivable,
+        /// because a form element carries no method attribute here and therefore reports
+        /// the html default of GET to the client, which would turn the submit into a query.
+        /// </summary>
+        public Func<IRenderControlContext, RequestMethod> Method { get; set; }
 
         /// <summary>
         /// Gets a delegate that returns the unique identifier for an item within
@@ -151,24 +160,51 @@ namespace WebExpress.WebApp.WebControl
         {
             var mode = Mode?.Invoke(renderContext) ?? TypeRestFormMode.Default;
             var itemId = ItemId?.Invoke(renderContext);
+            var method = Method?.Invoke(renderContext) ?? GetDefaultMethod(mode, itemId);
+            var methodName = method != RequestMethod.NONE ? method.ToString() : null;
             var role = Role?.Invoke(renderContext);
 
-            // generate html
+            // generate html. The method is carried twice on purpose: the controller reads
+            // data-method but strips it from the dom once it has initialized, so only the
+            // method attribute survives to tell a later initialization of the same element
+            // what the submit is.
             var html = new HtmlElementFormForm()
             {
                 Id = Id,
                 Class = Css.Concatenate("wx-webapp-restwizard", GetClasses(renderContext)),
                 Style = GetStyles(renderContext),
-                Role = role
+                Role = role,
+                Method = methodName
             }
+                .AddUserAttribute("data-method", methodName)
                 .AddUserAttribute("data-mode", mode.ToMode())
                 .AddUserAttribute("data-id", itemId?.ToString())
                 .AddUserAttribute("data-finish-label", I18N.Translate(renderContext, FinishLabel?.Invoke(renderContext)))
                 .AddUserAttribute("data-finish-icon", (FinishIcon?.Invoke(renderContext) as Icon)?.Class)
-                .Add(_pages.Select(x => x.Render(renderContext, visualTree)))
+                .Add(pages.Select(x => x.Render(renderContext, visualTree)))
                 .EmitDataIslands(this, renderContext);
 
             return html;
+        }
+
+        /// <summary>
+        /// Determines the http method the submit falls back to when none is declared.
+        /// The derivation mirrors the client, which treats a wizard as an edit as soon
+        /// as an item id is present, so that the emitted method and the mode the client
+        /// infers never disagree.
+        /// </summary>
+        /// <param name="mode">The mode the wizard is rendered in.</param>
+        /// <param name="itemId">The identifier of the record the wizard works on, if any.</param>
+        /// <returns>The http method of the final submit.</returns>
+        private static RequestMethod GetDefaultMethod(TypeRestFormMode mode, string itemId)
+        {
+            return mode switch
+            {
+                TypeRestFormMode.Add or TypeRestFormMode.Clone => RequestMethod.POST,
+                TypeRestFormMode.Edit => RequestMethod.PUT,
+                TypeRestFormMode.Delete => RequestMethod.DELETE,
+                _ => string.IsNullOrWhiteSpace(itemId) ? RequestMethod.POST : RequestMethod.PUT
+            };
         }
     }
 }

@@ -49,7 +49,10 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
         this.options = {
             id: ds.id || null,
             api: this._service ? this._service.baseUri : null,
-            method: (ds.method || this._element.method || "POST").toUpperCase(),
+            // read the method attribute rather than the idl property, which reports
+            // the html default of "get" when the attribute is absent and would make
+            // the post fallback unreachable
+            method: (ds.method || element.getAttribute("method") || "POST").toUpperCase(),
             headers: {},
             json: parseBool(ds.json, true),
             validateOnSubmit: parseBool(ds.validateOnSubmit, true),

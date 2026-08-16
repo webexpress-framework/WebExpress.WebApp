@@ -124,17 +124,25 @@ namespace WebExpress.WebApp.WebControl
             var formLayout = FormLayout?.Invoke(renderContext) ?? TypeLayoutForm.Default;
             var id = ItemId?.Invoke(renderContext);
             var method = Method?.Invoke(renderContext) ?? RequestMethod.NONE;
+            // an undeclared method is omitted rather than emitted verbatim, so that the
+            // client falls back to its post default instead of issuing a request with a
+            // method the server cannot answer
+            var methodName = method != RequestMethod.NONE ? method.ToString() : null;
             var role = Role?.Invoke(renderContext);
 
-            // generate html
+            // generate html. The method is carried twice on purpose: the controller reads
+            // data-method but strips it from the dom once it has initialized, so only the
+            // method attribute survives to tell a later initialization of the same element
+            // what the submit is.
             var form = new HtmlElementFormForm()
             {
                 Id = Id,
                 Class = Css.Concatenate("wx-webapp-restform", GetClasses(renderContext)),
                 Style = GetStyles(renderContext),
-                Role = role
+                Role = role,
+                Method = methodName
             }
-                .AddUserAttribute("data-method", method.ToString())
+                .AddUserAttribute("data-method", methodName)
                 .AddUserAttribute("data-mode", mode)
                 .AddUserAttribute("data-id", id?.ToString());
 
