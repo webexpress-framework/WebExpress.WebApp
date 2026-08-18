@@ -271,6 +271,13 @@ export function createDocument() {
             return this.querySelectorAll(selector)[0] || null;
         },
         querySelectorAll(selector) {
+            // the source binds address their surface by id, which is the form
+            // BindSearch and BindPaging emit
+            const id = /^#([^\s#.,\[\]]+)$/.exec(String(selector));
+            if (id) {
+                const match = findById(body, id[1]);
+                return match ? [match] : [];
+            }
             const attribute = parseAttributeSelector(selector);
             if (!attribute) {
                 return [];

@@ -6,6 +6,7 @@ This section documents the JavaScript controllers and client-side behavior used 
 
 ## Available Components
 
+- [Binds](bind.md)
 - [CollaborativeCtrl](collaborative.md)
 - [CommentCtrl](comment.md)
 - [DashboardCtrl](dashboard.md)
