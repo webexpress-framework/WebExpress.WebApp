@@ -1,7 +1,60 @@
+/* =====================================================================
+   Application shell
+   ---------------------------------------------------------------------
+   The shell owns the viewport rather than the document: the window itself
+   never scrolls, the header, breadcrumb and footer stay put as bands, and
+   only the panes between them scroll. Scoping the scroll to the panes is
+   what keeps a long table from pushing the footer off screen and from
+   putting a second scrollbar next to the pane's own.
+
+   The lock only holds while every link of the chain may shrink below its
+   content, hence the min-height:0 repeated on each nested flex container:
+   a flex item's automatic minimum size is its content, which would
+   otherwise let a long table grow the pane past the viewport and take the
+   lock down with it.
+   ===================================================================== */
 body {
-    height: 100%;
+    height: 100vh;
+    /* dvh tracks the browser chrome that mobile shows and hides while
+       scrolling, so the footer never ends up underneath it; the vh above
+       stays as the fallback for engines without dvh */
+    height: 100dvh;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
+}
+
+/* the bands keep their intrinsic height and never yield it to the growing
+   region. They are named one by one rather than caught by body > *, so a
+   fragment rendered into one of the body sections keeps the default and is
+   still allowed to give way when the viewport is short */
+body > #wx-header,
+body > #wx-toast,
+body > #wx-breadcrumb,
+body > #wx-prologue,
+body > #wx-settingtab,
+body > #wx-epilogue,
+body > #wx-footer {
+    flex: 0 0 auto;
+}
+
+/* the region between the bands. The sidebar split claims it on pages that
+   have a sidebar; on pages without one the split control renders its single
+   panel unwrapped, which promotes the content to a direct child of the body,
+   so both have to be able to take the role. The login shell has neither and
+   brings its own */
+body > #wx-split,
+body > #wx-content,
+body > #login {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* the login shell has no pane of its own to scroll, so the region takes the
+   job: on a short screen the form gives way rather than being clipped by the
+   viewport lock */
+body > #login {
+    overflow-y: auto;
 }
 
 main {
@@ -106,6 +159,26 @@ main {
     justify-content: flex-start;
 }
 
+/* Every shell pane scrolls on its own. The split control only does this for
+   its main pane, and a side pane carrying a long navigation tree or a tall
+   property sheet needs it just as much. The rule stays on the two shell
+   splits by id so the splits inside the editors keep the overflow their own
+   canvases depend on. Only the vertical axis is declared: the horizontal one
+   follows it to auto on its own, which is what a table too wide for the pane
+   needs - pinning it to hidden would put that table out of reach. And
+   overscroll-behavior stops a pane that has hit its end from handing the
+   gesture to the page behind it, which on a touch device would otherwise read
+   as the whole shell bouncing. */
+#wx-split > .wx-side-pane,
+#wx-split > .wx-main-pane,
+#wx-splitter-content > .wx-side-pane,
+#wx-splitter-content > .wx-main-pane {
+    min-width: 0;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
 .wx-proterty {
     display: block;
     background: var(--wx-tertiary-bg);
@@ -115,14 +188,137 @@ main {
     padding: 0.5em;
 }
 
+/* the content column: the toolbar is a band of its own, so it stays in place
+   while the area below it scrolls */
 .wx-content {
     width: 100%;
     flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+#wx-content > #wx-content-toolbar {
+    flex: 0 0 auto;
+}
+
+/* the scrolling body of the content column - the nested property split where
+   the page has a property panel, the main panel itself where it has none */
+#wx-content > #wx-splitter-content {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* main already grows through the generic main rule above; what it lacks is
+   permission to shrink below its content and a scrollport of its own. It is
+   reached both as a column child of the content and as a row child of the
+   property split's main pane, so it has to grow on either axis */
+#wx-content-main {
+    min-height: 0;
+    min-width: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .wx-footer {
     display: flex;
     justify-content: space-between;
+}
+
+/* ---------------------------------------------------------------------
+   Compact screens
+   ---------------------------------------------------------------------
+   Below the tablet breakpoint there is no room for two panes beside each
+   other, so the shell stacks them: navigation above content, content above
+   the property sheet. Only the direction is declared here - the split
+   control follows the container's computed flex-direction and moves
+   dragging, collapsing and pane sizing onto the same axis, so the divider
+   keeps working between the stacked panes instead of turning into a dead
+   sliver. The bands and the per-pane scrollports are unchanged, so the
+   viewport stays locked and each pane keeps its own scrollbar.
+   --------------------------------------------------------------------- */
+@media (max-width: 767.98px) {
+    #wx-split,
+    #wx-splitter-content {
+        flex-direction: column;
+    }
+
+    /* the side pane keeps the extent the controller wrote for it and is the
+       only one of the two that may not be shrunk, so a tall main pane cannot
+       squeeze the navigation down to a sliver */
+    #wx-split > .wx-side-pane,
+    #wx-splitter-content > .wx-side-pane {
+        flex: 0 0 auto;
+    }
+
+    /* stacked, the navigation is a strip above the content rather than a third
+       of the screen: the configured extent was picked as a width and means
+       nothing as a height. The cap leaves the divider free to size it below */
+    #wx-split > .wx-side-pane {
+        max-height: 35vh;
+    }
+
+    /* the property sheet is capped against its own container rather than the
+       viewport, because what it sits in is already what the navigation strip
+       above left over - measured against the viewport it would take nearly all
+       of that remainder and leave the content it describes a few lines tall */
+    #wx-splitter-content > .wx-side-pane {
+        max-height: 45%;
+    }
+
+    /* the main pane takes what the side pane leaves. A zero basis is what keeps
+       it out of the shrink competition - sized from its content it would bid
+       for the whole stack and take the side pane's extent with it */
+    #wx-split > .wx-main-pane,
+    #wx-splitter-content > .wx-main-pane {
+        flex: 1 1 0;
+        min-height: 0;
+    }
+
+    /* a 6px divider is below what a fingertip can reliably hit, and a
+       double tap on it is what brings a stacked pane back */
+    #wx-split > .wx-splitter,
+    #wx-splitter-content > .wx-splitter {
+        height: 0.75rem;
+    }
+}
+
+/* ---------------------------------------------------------------------
+   Print
+   ---------------------------------------------------------------------
+   The viewport lock is a screen affordance. On paper it would reduce the
+   whole application to the one screenful that happened to be on screen, so
+   printing releases it and lets the panes flow at their full length, one
+   after another. The extents the split controller wrote are pixel values
+   for a screen-sized container and only yield to !important.
+   --------------------------------------------------------------------- */
+@media print {
+    body {
+        display: block;
+        height: auto;
+        overflow: visible;
+    }
+
+    #wx-split,
+    #wx-splitter-content,
+    #wx-content,
+    #wx-content-main,
+    #wx-split > .wx-side-pane,
+    #wx-split > .wx-main-pane,
+    #wx-splitter-content > .wx-side-pane,
+    #wx-splitter-content > .wx-main-pane {
+        display: block;
+        width: auto !important;
+        height: auto !important;
+        max-height: none;
+        overflow: visible !important;
+    }
+
+    /* a divider is something to drag; on paper it is a stripe of ink */
+    #wx-split > .wx-splitter,
+    #wx-splitter-content > .wx-splitter {
+        display: none;
+    }
 }
 
 .wx-message-queue-status {
