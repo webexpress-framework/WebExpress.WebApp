@@ -179,12 +179,27 @@ main {
     overscroll-behavior: contain;
 }
 
+/* The tint of the property sheet belongs to the pane, not to the sheet. The
+   pane is the scrollport, and a scroll container paints its own background
+   across the visible area whatever the scroll offset is - so the tint holds on
+   both axes and at every position. Painted on the sheet it did not: the sheet
+   is a block box inside that scrollport, so it ended where its content box
+   ended, and scrolling past it uncovered untinted pane below the properties.
+   Sizing the sheet to fill instead only ever fixed the vertical half of that,
+   and only until a sheet grew wider than its pane.
+
+   The split renders #wx-splitter-content only for a page that has a property
+   panel, and its side pane is that panel - the same pairing the overflow rule
+   above relies on. */
+#wx-splitter-content > .wx-side-pane {
+    background: var(--wx-tertiary-bg);
+}
+
+/* what is left for the sheet is the content flow: a block that keeps a usable
+   width and holds its properties off the pane edges */
 .wx-proterty {
     display: block;
-    background: var(--wx-tertiary-bg);
-    min-height: 100%;
     min-width: 15%;
-    height: 100%;
     padding: 0.5em;
 }
 
@@ -229,8 +244,16 @@ main {
    that ancestry has to be both: a column, so it hands a height down, and a
    growing item, so it has one to hand - a panel left at its content height
    would pass on nothing and the region would sit at its minimum. The panels
-   beside it keep the default and stay at their content height. */
-#wx-content-main :has(.wx-master-detail-fill) {
+   beside it keep the default and stay at their content height.
+
+   The two :not() guards keep the rule from *revealing* anything. It carries an
+   id, so it outweighs every class-only rule that hides an element - including
+   `.tab-content > .tab-pane { display: none }`. Without the guards a tab set
+   whose panes each hold a filling region laid all of them out at once, and the
+   panes shared the height the active one was supposed to get: the region then
+   landed on its 12rem floor, the one outcome the mode exists to prevent. The
+   .d-none of the view control needs no guard - it hides with !important. */
+#wx-content-main :has(.wx-master-detail-fill):not([hidden]):not(.tab-pane:not(.active)) {
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
