@@ -97,7 +97,10 @@ namespace WebExpress.WebApp.WebSettingPage
                 Border = _ => new PropertyBorder(true),
                 Orientation = _ => TypeOrientationSplit.Horizontal,
                 SidePanelInitialSize = _ => 350,
-                SidePanelMinSize = _ => 45
+                SidePanelMinSize = _ => 45,
+                // the toggle that expands the sidebar again sits in the sidebar's
+                // own toolbar, so the collapse has to leave the icon rail standing
+                SidePanelCollapseSize = _ => 45
             };
 
             html.Body.Add
