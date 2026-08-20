@@ -220,6 +220,23 @@ main {
     overscroll-behavior: contain;
 }
 
+/* A region that asks to fill the pane - a master-detail carrying a whole view,
+   for instance - can only do so if every panel between it and the main panel
+   hands the height down. A page of stacked sections must not: a section allowed
+   to shrink below its content clips it instead of scrolling it. So the chain
+   turns into a column only while such a region is on the page, and only along
+   that region's own ancestry, which is what the :has() selects. Each panel on
+   that ancestry has to be both: a column, so it hands a height down, and a
+   growing item, so it has one to hand - a panel left at its content height
+   would pass on nothing and the region would sit at its minimum. The panels
+   beside it keep the default and stay at their content height. */
+#wx-content-main :has(.wx-master-detail-fill) {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
 .wx-footer {
     display: flex;
     justify-content: space-between;
