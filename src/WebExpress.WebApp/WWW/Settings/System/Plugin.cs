@@ -292,7 +292,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
             yield return new ControlDropdownItemLink()
             {
                 Text = _ => "webexpress.webapp:setting.plugin.action.delete.label",
-                Icon = _ => new IconTrashAlt(),
+                Icon = _ => new IconTrash(),
                 Color = _ => TypeColorText.Danger,
                 PrimaryAction = _ => new ActionPluginPackage
                 (

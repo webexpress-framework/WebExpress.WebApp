@@ -73,8 +73,7 @@ const BOOTSTRAP = `
         }
         _i18n(key, fallback) { return fallback; }
         _isVisible() { return true; }
-        _iconTheme() { return "dark"; }
-        _iconClass(faClass, lightClass) { return faClass || lightClass || ""; }
+        _iconClass(icon) { return icon || ""; }
     };
     // a minimal Controller registry so that application control files, which
     // register their class at the end, can be loaded into the harness alongside
