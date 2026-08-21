@@ -26,7 +26,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
                 return
                 [
                     new RestApiSidebarItemHeader("Navigation"),
-                    new RestApiSidebarItem { Label = "Inbox", Icon = "fas fa-inbox", Badge = "12", BadgeColor = new PropertyColorBackgroundBadge(TypeColorBackgroundBadge.Primary) },
+                    new RestApiSidebarItem { Label = "Inbox", Icon = "wx-icon-light wx-icon-light-inbox", Badge = "12", BadgeColor = new PropertyColorBackgroundBadge(TypeColorBackgroundBadge.Primary) },
                     new RestApiSidebarItem
                     {
                         Label = "Projects",

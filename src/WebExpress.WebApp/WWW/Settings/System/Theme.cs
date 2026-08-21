@@ -74,7 +74,6 @@ namespace WebExpress.WebApp.WWW.Settings.System
             var table = new ControlTable() { Striped = _ => TypeStripedTable.Row };
             table.AddColumn(I18N.Translate(renderContext, "webexpress.webapp:setting.theme.name.label"));
             table.AddColumn(I18N.Translate(renderContext, "webexpress.webapp:setting.theme.mode.label"));
-            table.AddColumn(I18N.Translate(renderContext, "webexpress.webapp:setting.theme.icon.label"));
             table.AddColumn(I18N.Translate(renderContext, "webexpress.webapp:setting.theme.application.label"));
             table.AddColumn(I18N.Translate(renderContext, "webexpress.webapp:setting.theme.state.label"));
 
@@ -131,14 +130,6 @@ namespace WebExpress.WebApp.WWW.Settings.System
                     BackgroundColor = _ => new PropertyColorBackgroundBadge(themeContext.ThemeMode == ThemeMode.Dark
                         ? TypeColorBackgroundBadge.Dark
                         : TypeColorBackgroundBadge.Light),
-                    Pill = _ => TypePillBadge.Pill
-                }),
-                new ControlTableCellPanel().Add(new ControlBadge()
-                {
-                    Value = _ => I18N.Translate(renderContext, themeContext.IconTheme == TypeIconTheme.Light
-                        ? "webexpress.webapp:setting.theme.icon.light"
-                        : "webexpress.webapp:setting.theme.icon.default"),
-                    BackgroundColor = _ => new PropertyColorBackgroundBadge(TypeColorBackgroundBadge.Secondary),
                     Pill = _ => TypePillBadge.Pill
                 }),
                 new ControlTableCell()

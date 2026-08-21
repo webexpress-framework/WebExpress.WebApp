@@ -114,14 +114,14 @@ webexpress.webapp.PopupNotificationCtrl = class extends webexpress.webui.Ctrl {
         alert.setAttribute("role", "alert");
         alert.dataset.notificationId = id;
 
-        // close button - Font Awesome "times" icon, anchored top-right via
+        // close button - the "xmark" icon, anchored top-right via
         // the wx-popup-close CSS class
         const closeButton = document.createElement("button");
         closeButton.type = "button";
         closeButton.className = "wx-popup-close";
         closeButton.setAttribute("aria-label", "Close");
         closeButton.setAttribute("title", "Close");
-        closeButton.innerHTML = `<i class="${this._iconClass("fas fa-times", "wx-icon-light-xmark")}" aria-hidden="true"></i>`;
+        closeButton.innerHTML = `<i class="${this._iconClass("xmark")}" aria-hidden="true"></i>`;
         closeButton.addEventListener("click", (e) => {
             e.preventDefault();
             e.stopPropagation();

@@ -31,7 +31,7 @@ webexpress.webui.DialogPanels.register("workflow-validator-management", {
                 const row = document.createElement("div");
                 row.className = "d-flex align-items-center mb-1 ms-3";
                 
-                const iconClass = (node.type === "AND" || node.type === "OR") ? "fas fa-folder text-warning" : "fas fa-check-double text-secondary";
+                const iconClass = (node.type === "AND" || node.type === "OR") ? "wx-icon-light wx-icon-light-folder text-warning" : "wx-icon-light wx-icon-light-check-double text-secondary";
                 row.innerHTML = `<i class="${iconClass} me-2"></i><span class="flex-grow-1 small">${node.label}</span>`;
                 
                 const del = document.createElement("span");

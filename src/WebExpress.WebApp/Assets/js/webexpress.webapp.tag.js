@@ -344,7 +344,7 @@ webexpress.webapp.TagCtrl = class extends webexpress.webui.TagCtrl {
             this._addButton = document.createElement("button");
             this._addButton.type = "button";
             this._addButton.className = "wx-tag-add";
-            this._addButton.innerHTML = `<i class="${this._iconClass("fas fa-plus", "wx-icon-light-plus")}"></i>`;
+            this._addButton.innerHTML = `<i class="${this._iconClass("plus")}"></i>`;
             this._addButton.setAttribute("aria-label", this._i18n("webexpress.webapp:tag.edit", "Edit tags"));
             this._addButton.addEventListener("click", () => this._openEditor());
             element.appendChild(this._addButton);

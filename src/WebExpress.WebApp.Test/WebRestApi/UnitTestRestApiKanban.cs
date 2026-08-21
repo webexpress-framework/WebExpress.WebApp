@@ -129,7 +129,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
 
             // validation
             using var glyphDoc = JsonDocument.Parse(glyphJson);
-            Assert.Equal("fas fa-star", glyphDoc.RootElement.GetProperty("icon").GetString());
+            Assert.Equal("wx-icon-light wx-icon-light-star", glyphDoc.RootElement.GetProperty("icon").GetString());
 
             using var pictureDoc = JsonDocument.Parse(pictureJson);
             Assert.Equal("/img/star.png", pictureDoc.RootElement.GetProperty("icon").GetString());

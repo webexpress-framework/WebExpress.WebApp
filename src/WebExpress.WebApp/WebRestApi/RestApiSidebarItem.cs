@@ -31,7 +31,7 @@ namespace WebExpress.WebApp.WebRestApi
         public string Label { get; set; }
 
         /// <summary>
-        /// Gets or sets the icon css class, for example "fas fa-inbox".
+        /// Gets or sets the icon css class, for example "wx-icon-light wx-icon-light-inbox".
         /// </summary>
         public string Icon { get; set; }
 

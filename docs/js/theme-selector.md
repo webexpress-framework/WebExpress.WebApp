@@ -83,10 +83,10 @@ new ControlDataSelectionTheme("themeSelector")
 //    the framework does not consult your store on its own:
 public override void Process(IRenderContext ctx, VisualTreeWebApp visualTree)
 {
-    if (MyStore.Get(ctx.Request) == typeof(LightIconTheme).FullName?.ToLower())
-        visualTree.UseTheme<LightIconTheme>();
+    if (MyStore.Get(ctx.Request) == typeof(LightModeTheme).FullName?.ToLower())
+        visualTree.UseTheme<LightModeTheme>();
     else
-        visualTree.UseTheme<DefaultIconTheme>();
+        visualTree.UseTheme<DarkModeTheme>();
 
     base.Process(ctx, visualTree);
 }
@@ -101,7 +101,7 @@ The visual tree picks the active theme in the following order:
 1. Explicit per-request `visualTree.UseTheme<TTheme>()` (called by application code from the page's `Process` override based on whatever the application stored).
 2. Application's `[Theme<TTheme>]` default.
 3. First theme registered for the application (legacy fallback).
-4. `null` -> icon theme falls back to `TypeIconTheme.Default`.
+4. `null` -> the page renders without a theme.
 
 The framework does NOT inspect cookies, sessions, or identities - persistence and theme activation are owned by the application.
 

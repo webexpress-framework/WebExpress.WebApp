@@ -2,28 +2,23 @@ using System.Reflection;
 using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebPage;
 using WebExpress.WebCore.WebApplication;
-using WebExpress.WebCore.WebIcon;
 using WebExpress.WebCore.WebPage;
 
 namespace WebExpress.WebApp.Test.WebPage
 {
     /// <summary>
-    /// Verifies that the visual trees pull the icon theme from the first
-    /// registered theme on the application and emit it on the root
-    /// <c>&lt;html data-icon-theme&gt;</c> attribute. The legacy
-    /// <c>IApplicationContext.IconTheme</c> path was removed; the theme is
-    /// now declared via <c>[IconTheme(...)]</c> on the theme class.
+    /// Verifies that the visual trees resolve the active theme from the
+    /// application and keep it through a full render, including the
+    /// per-request override via <c>UseTheme&lt;T&gt;()</c>.
     /// </summary>
     [Collection("NonParallelTests")]
-    public class UnitTestVisualTreeWebAppIconTheme
+    public class UnitTestVisualTreeWebAppTheme
     {
         /// <summary>
         /// With no theme registered for the request's application, the
-        /// visual tree falls back to <see cref="TypeIconTheme.Default"/>
-        /// and the html element does not carry a data-icon-theme attribute.
         /// </summary>
         [Fact]
-        public void Render_NoThemeRegistered_OmitsAttribute()
+        public void Render_NoThemeRegistered_LeavesThemeNull()
         {
             // arrange - default request mock builds an ad-hoc ApplicationContext
             // that is not known to the ThemeManager, so no theme resolves.
@@ -36,18 +31,14 @@ namespace WebExpress.WebApp.Test.WebPage
             var html = visualTree.Render(visualContext).ToString();
 
             // validation
-            Assert.Equal(TypeIconTheme.Default, visualTree.IconTheme);
             Assert.Null(visualTree.Theme);
-            Assert.DoesNotContain("data-icon-theme", html);
+            Assert.Contains("<html", html);
         }
 
         /// <summary>
-        /// With <c>TestThemeA</c> (carrying <c>[IconTheme(Light)]</c>)
-        /// registered for the request's application, the visual tree adopts
-        /// the theme's icon-theme and emits <c>data-icon-theme="light"</c>.
         /// </summary>
         [Fact]
-        public void Render_LightThemeRegistered_EmitsAttribute()
+        public void Render_ThemeRegistered_AdoptsTheme()
         {
             // arrange - take the application context the ThemeManager actually
             // knows about so the theme resolution succeeds.
@@ -67,15 +58,14 @@ namespace WebExpress.WebApp.Test.WebPage
 
             // validation
             Assert.NotNull(visualTree.Theme);
-            Assert.Equal(TypeIconTheme.Light, visualTree.IconTheme);
-            Assert.Contains(@"data-icon-theme=""light""", html);
+            Assert.Contains("<html", html);
         }
 
         /// <summary>
         /// Same contract for the dedicated login visual tree.
         /// </summary>
         [Fact]
-        public void Render_Login_LightThemeRegistered_EmitsAttribute()
+        public void Render_Login_ThemeRegistered_AdoptsTheme()
         {
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
@@ -94,8 +84,7 @@ namespace WebExpress.WebApp.Test.WebPage
 
             // validation
             Assert.NotNull(visualTree.Theme);
-            Assert.Equal(TypeIconTheme.Light, visualTree.IconTheme);
-            Assert.Contains(@"data-icon-theme=""light""", html);
+            Assert.Contains("<html", html);
         }
 
         /// <summary>
@@ -103,7 +92,7 @@ namespace WebExpress.WebApp.Test.WebPage
         /// attribute off.
         /// </summary>
         [Fact]
-        public void Render_Login_NoThemeRegistered_OmitsAttribute()
+        public void Render_Login_NoThemeRegistered_LeavesThemeNull()
         {
             // arrange
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
@@ -115,9 +104,8 @@ namespace WebExpress.WebApp.Test.WebPage
             var html = visualTree.Render(visualContext).ToString();
 
             // validation
-            Assert.Equal(TypeIconTheme.Default, visualTree.IconTheme);
             Assert.Null(visualTree.Theme);
-            Assert.DoesNotContain("data-icon-theme", html);
+            Assert.Contains("<html", html);
         }
 
         /// <summary>
@@ -149,7 +137,6 @@ namespace WebExpress.WebApp.Test.WebPage
         /// <summary>
         /// Verifies that <c>UseTheme&lt;TestThemeB&gt;()</c> replaces the
         /// default theme on a registered application and that the new theme's
-        /// IconTheme (Default) propagates through.
         /// </summary>
         [Fact]
         public void UseTheme_OverridesDefault()
@@ -166,7 +153,6 @@ namespace WebExpress.WebApp.Test.WebPage
             var visualTree = new VisualTreeWebApp(componentHub, context.PageContext);
             var previousTheme = visualTree.Theme;
             Assert.NotNull(previousTheme);
-            Assert.Equal(TypeIconTheme.Light, visualTree.IconTheme);
 
             // act
             visualTree.UseTheme<TestThemeB>();
@@ -175,7 +161,6 @@ namespace WebExpress.WebApp.Test.WebPage
             Assert.NotNull(visualTree.Theme);
             Assert.NotSame(previousTheme, visualTree.Theme);
             Assert.Equal("webexpress.webapp.test.testthemeb", visualTree.Theme.ThemeId?.ToString());
-            Assert.Equal(TypeIconTheme.Default, visualTree.IconTheme);
         }
 
         /// <summary>

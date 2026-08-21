@@ -140,7 +140,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var html = control.Render(context, visualTree);
 
             // validation
-            AssertExtensions.EqualWithPlaceholders(@"<div class=""wx-webapp-search-suggestion"" placeholder=""abc"" data-icon=""fas fa-star"" data-emptytext=""nothing found""></div>", html);
+            AssertExtensions.EqualWithPlaceholders(@"<div class=""wx-webapp-search-suggestion"" placeholder=""abc"" data-icon=""wx-icon-light wx-icon-light-star"" data-emptytext=""nothing found""></div>", html);
         }
 
         /// <summary>

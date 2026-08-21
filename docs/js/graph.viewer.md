@@ -49,9 +49,9 @@ The data endpoint is not spelled as an attribute. It is contributed in C# by `.D
 ```json
 {
     "nodes": [
-        { "id": "web", "label": "Web", "icon": "fas fa-globe", "x": 100, "y": 120, "backgroundColor": "#e0f7fa" },
-        { "id": "api", "label": "API", "icon": "fas fa-server", "x": 320, "y": 120 },
-        { "id": "db",  "label": "Database", "shape": "circle", "icon": "fas fa-database" }
+        { "id": "web", "label": "Web", "icon": "globe", "x": 100, "y": 120, "backgroundColor": "#e0f7fa" },
+        { "id": "api", "label": "API", "icon": "server", "x": 320, "y": 120 },
+        { "id": "db",  "label": "Database", "shape": "circle", "icon": "database" }
     ],
     "edges": [
         { "id": "e1", "from": "web", "to": "api", "label": "HTTPS" },
@@ -69,7 +69,7 @@ The data endpoint is not spelled as an attribute. It is contributed in C# by `.D
 | `x` / `y`                                 | The **top left corner** of the node. Omit **both** to let the layout simulation place it.
 | `shape`                                   | `rect` (default) or `circle`.
 | `layout`                                  | `label-inside` (default) or `label-below`. Falls back to `data-node-style`.
-| `icon`                                    | A CSS class, for example `fas fa-server`.
+| `icon`                                    | A CSS class, for example `server`.
 | `image`                                   | A URL. Not interchangeable with `icon` — see below.
 | `uri`                                     | The target the node links to.
 | `backgroundColor` / `backgroundCss`       | The node fill, as a literal colour or as a CSS class.
@@ -167,9 +167,9 @@ public sealed class RestApiServiceTopology : RestApiGraph
     {
         return
         [
-            new() { Id = "web", Label = "Web", Icon = "fas fa-globe", X = 100, Y = 120 },
-            new() { Id = "api", Label = "API", Icon = "fas fa-server", X = 320, Y = 120 },
-            new() { Id = "db",  Label = "Database", Shape = "circle", Icon = "fas fa-database" }
+            new() { Id = "web", Label = "Web", Icon = "globe", X = 100, Y = 120 },
+            new() { Id = "api", Label = "API", Icon = "server", X = 320, Y = 120 },
+            new() { Id = "db",  Label = "Database", Shape = "circle", Icon = "database" }
         ];
     }
 

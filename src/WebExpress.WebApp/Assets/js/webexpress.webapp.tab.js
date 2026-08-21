@@ -7,7 +7,7 @@
  * - webexpress.webapp.Event.TAB_CLOSED_EVENT
  */
 webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
-    static _defaultTemplateIcon = "far fa-square";
+    static _defaultTemplateIcon = "wx-icon-light wx-icon-light-card";
 
     // configuration
     _restUri = "";
@@ -271,7 +271,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         this._addTabButton.className = "nav-link text-primary";
         this._addTabButton.type = "button";
         this._addTabButton.setAttribute("role", "tab");
-        this._addTabButton.innerHTML = `<i class="${this._iconClass("fas fa-plus", "wx-icon-light-plus")}"></i>`;
+        this._addTabButton.innerHTML = `<i class="${this._iconClass("plus")}"></i>`;
 
         const hasMultipleTemplates = this._templateOrder.length > 1;
         if (hasMultipleTemplates) {
@@ -522,10 +522,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
 
         // indicate loading state on the button
         const originalHtml = this._addTabButton.innerHTML;
-        // spinner animation is FontAwesome-only - the light theme has no
-        // animated SVG equivalent so _iconClass falls back to FA in both
-        // themes, which is intentional here.
-        this._addTabButton.innerHTML = `<i class="${this._iconClass("fas fa-spinner fa-spin", null)}"></i>`;
+        this._addTabButton.innerHTML = `<i class="${this._iconClass("spinner") + " wx-icon-spin"}"></i>`;
         this._addTabButton.disabled = true;
 
         const result = await this._service.create(webexpress.webapp.tabModel.createBody(templateId));
@@ -1023,7 +1020,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
             closeBtn.style.cursor = "pointer";
             closeBtn.title = this._i18n("webexpress.webui:close", "Close");
             closeBtn.setAttribute("aria-label", closeBtn.title);
-            closeBtn.innerHTML = `<i class="${this._iconClass("fas fa-xmark", "wx-icon-light-xmark")}"></i>`;
+            closeBtn.innerHTML = `<i class="${this._iconClass("xmark")}"></i>`;
 
             // attach event listener to remove the tab
             closeBtn.addEventListener("click", (e) => {

@@ -24,7 +24,7 @@ namespace WebExpress.WebApp.WebControl
         public ControlFormItemButtonSubmit Submit { get; } = new ControlFormItemButtonSubmit
         {
             Text = _ => "webexpress.webui:new.label",
-            Icon = renderContext => new IconPlus(renderContext.GetIconTheme()),
+            Icon = renderContext => new IconPlus(),
             Color = _ => new PropertyColorButton(TypeColorButton.Success)
         };
 

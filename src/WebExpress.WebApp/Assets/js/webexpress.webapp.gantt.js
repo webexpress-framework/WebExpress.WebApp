@@ -813,7 +813,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
             const add = document.createElement("button");
             add.type = "button";
             add.className = "wx-gantt-btn wx-gantt-btn--primary wx-gantt-add";
-            const icon = this._icon("fas fa-plus");
+            const icon = this._icon("wx-icon-light wx-icon-light-plus");
             if (icon) {
                 add.appendChild(icon);
             }
@@ -835,7 +835,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         gridToggle.type = "button";
         gridToggle.className = "wx-gantt-btn wx-gantt-grid-toggle" + (this._gridCollapsed ? " is-active" : "");
         gridToggle.title = this._i18n("webexpress.webapp:gantt.toggle_grid", "Show or hide the task list");
-        const gridIcon = this._icon("fas fa-columns");
+        const gridIcon = this._icon("wx-icon-light wx-icon-light-columns");
         if (gridIcon) {
             gridToggle.appendChild(gridIcon);
         } else {
@@ -1134,7 +1134,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
             del.type = "button";
             del.className = "wx-gantt-row-delete";
             del.title = this._i18n("webexpress.webapp:gantt.delete_task", "Delete task");
-            const icon = this._icon("fas fa-trash");
+            const icon = this._icon("wx-icon-light wx-icon-light-trash");
             if (icon) {
                 del.appendChild(icon);
             } else {

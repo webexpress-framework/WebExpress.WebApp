@@ -50,7 +50,7 @@ test("wx-webapp-quickfilter renders REST-loaded filters with icon and badge", as
     assert.equal(chips.length, 5, "every REST filter renders as a chip");
 
     const classics = chips.find((c) => c.id === "classics");
-    assert.ok(classics.querySelector("i.fa-star"), "the icon spec renders as an icon element");
+    assert.ok(classics.querySelector("i.wx-icon-light-star"), "the icon spec renders as an icon element");
     const classicsBadge = classics.querySelector(".wx-quickfilter-badge");
     assert.ok(classicsBadge, "the chip carries the badge");
     assert.equal(classicsBadge.textContent, "5", "the badge carries the count");

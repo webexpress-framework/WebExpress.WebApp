@@ -47,7 +47,7 @@ The server renders it hidden (`d-none`), because only the client knows whether t
 | Attribute                | Description                                                        | Example                         |
 |--------------------------|--------------------------------------------------------------------|---------------------------------|
 | `id`                     | Template identifier (`templateId` reference from REST payload).    | `id="monkeyTemplate"`          |
-| `data-icon`              | Icon CSS class shown in the template picker.                       | `data-icon="fas fa-map"`       |
+| `data-icon`              | Icon CSS class shown in the template picker.                       | `data-icon="map"`       |
 | `data-name`              | Display name shown in the template picker.                         | `data-name="Monkey Island"`    |
 | `data-description`       | Optional description shown under the template name in picker menu. | `data-description="Adventure"` |
 | `data-multiplicity`      | Optional maximum number of tab items that may be created from this template. Once the limit is reached, the add button (or this template's entry in the picker menu) is disabled. If omitted, the template is unlimited. | `data-multiplicity="3"`        |
@@ -65,7 +65,7 @@ The controller expects JSON with an `items` array:
       "id": "tab_profile",
       "label": "Profiles",
       "name": "All known profiles",
-      "icon": "fas fa-umbrella-beach",
+      "icon": "umbrella-beach",
       "color": "text-primary",
       "badge": "12",
       "badgeColor": "text-bg-danger",
@@ -302,7 +302,7 @@ The component dispatches events for tab interactions:
         </div>
     </div>
 
-    <template id="profile-tab" data-icon="fas fa-map" data-name="Profile" data-description="Profile">
+    <template id="profile-tab" data-icon="map" data-name="Profile" data-description="Profile">
         <h5 data-wx-bind="title"></h5>
         <p data-wx-bind="name"></p>
     </template>

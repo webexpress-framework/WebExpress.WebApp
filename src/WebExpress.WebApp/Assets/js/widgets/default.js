@@ -14,7 +14,7 @@
  */
 webexpress.webui.DashboardWidgets.register("widget_scrum_velocity", {
     title: webexpress.webui.I18N.translate("webexpress.webapp:dashboard.widget.scrum_velocity.title"),
-    icon: "fas fa-chart-column",
+    icon: "wx-icon-light wx-icon-light-chart-column",
 
     settings: [
         {

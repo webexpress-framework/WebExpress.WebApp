@@ -68,7 +68,7 @@ namespace WebExpress.WebApp.WebRestApi
 
         /// <summary>
         /// Gets or sets an optional icon shown before the task name in the grid
-        /// and on the bar, either a CSS icon class (for example "fas fa-ship")
+        /// and on the bar, either a CSS icon class (for example "wx-icon-light wx-icon-light-ship")
         /// or an image URL.
         /// </summary>
         [JsonPropertyName("icon")]

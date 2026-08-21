@@ -177,11 +177,11 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         this._clearBtn.className = "btn wx-wql-clear";
         this._clearBtn.title = this._i18n("webexpress.webapp:wql.clear") || "Clear";
         this._clearBtn.setAttribute("aria-label", this._clearBtn.title);
-        // resolve the icon through the theme when available; a lean runtime
-        // without the icon helper falls back to the plain Font Awesome class
+        // resolve through the icon set when available; a lean runtime without the
+        // helper falls back to the class pair the set would have produced
         const clearIcon = (typeof this._iconClass === "function")
-            ? this._iconClass("fas fa-xmark", "wx-icon-light-xmark")
-            : "fas fa-xmark";
+            ? this._iconClass("xmark")
+            : "wx-icon-light wx-icon-light-xmark";
         this._clearBtn.innerHTML = `<i class="${clearIcon}"></i>`;
         this._clearBtn.addEventListener("click", () => this._onClearInput());
         inputGroup.appendChild(this._clearBtn);

@@ -60,7 +60,7 @@ The model separates data from presentation. A project is a plain JSON structure:
 - Any two of `start`, `end` and `duration` suffice; the third is derived. A task with `duration: 0` is a milestone (diamond).
 - `progress` is clamped to 0..100; `resources` accepts an array of strings, objects with a `name` or a comma separated string.
 - `parentId` forms the container hierarchy. A container needs no own dates: start, end and the duration-weighted progress are rolled up from its subtree.
-- `icon` optionally names a per-task icon — a CSS icon class (for example `"fas fa-ship"`) or an image URL, both resolved through the shared icon factory — shown before the task name in the grid and on the bar.
+- `icon` optionally names a per-task icon — a CSS icon class (for example `"ship"`) or an image URL, both resolved through the shared icon factory — shown before the task name in the grid and on the bar.
 - `type` is one of `FS` (finish-to-start, default), `SS`, `FF` and `SF`. Links that are self-referential, duplicated, dangling or would close a cycle are dropped on load and refused on creation.
 
 ### REST Contract

@@ -55,7 +55,7 @@ The settings dialog always carries **Name** (the widget title) and **Color** (th
 ```javascript
 webexpress.webui.DashboardWidgets.register("widget_scrum_velocity", {
     title: webexpress.webui.I18N.translate("webexpress.webapp:dashboard.widget.scrum_velocity.title"),
-    icon: "fas fa-chart-column",
+    icon: "chart-column",
     // configurable: true (default) — set false to hide the Settings entry for this type
     // removable:    true (default) — set false to hide the Delete entry for this type
     settings: [
@@ -90,7 +90,7 @@ Supported field `type`s: `text`, `number` (`min` / `max` / `step`), `select` (`o
         }
     ],
     "availableWidgets": [
-        { "id": "widget_scrum_velocity", "title": "Velocity", "icon": "fas fa-chart-column", "description": "Sprint velocity chart" }
+        { "id": "widget_scrum_velocity", "title": "Velocity", "icon": "chart-column", "description": "Sprint velocity chart" }
     ]
 }
 ```
@@ -157,7 +157,7 @@ public sealed class MyDashboardApi : RestApiDashboard
     // GET → the widget types the board may add (server owns the set)
     protected override IEnumerable<RestApiDashboardAvailableWidget> RetrieveAvailableWidgets(IRequest request) =>
     [
-        new() { Id = "widget_scrum_velocity", Title = "Velocity", Icon = "fas fa-chart-column", Description = "…" }
+        new() { Id = "widget_scrum_velocity", Title = "Velocity", Icon = "chart-column", Description = "…" }
     ];
 
     // PUT action:"columns" → reconcile the column list (add / rename / reorder / recolor / delete)

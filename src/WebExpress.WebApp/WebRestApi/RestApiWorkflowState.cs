@@ -48,7 +48,7 @@ namespace WebExpress.WebApp.WebRestApi
 
         /// <summary>
         /// Gets or sets the icon identifier associated with this object. This is a
-        /// CSS class (for example a FontAwesome glyph), never a URL; a state whose
+        /// CSS class (for example an icon of the active set), never a URL; a state whose
         /// symbol is a picture uses <see cref="Image"/> instead, because the client
         /// renders the two through different SVG elements.
         /// </summary>

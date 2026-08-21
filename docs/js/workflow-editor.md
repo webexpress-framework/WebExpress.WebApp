@@ -66,7 +66,7 @@ functions the rule pickers offer. The autosave `PUT` mirrors that shape.
   "states": [
     {
       "id": "draft", "label": "Draft", "x": 40, "y": 120,
-      "icon": "fas fa-pen",        // a CSS class
+      "icon": "pen",        // a CSS class
       "image": "/assets/draft.png",// a URL - never put one into "icon"
       "isStart": true, "isEnd": false,
       "backgroundColor": "#ffffff", "foregroundColor": "#000000",

@@ -32,7 +32,7 @@ namespace WebExpress.WebApp.WebControl
         public ControlFormItemButtonSubmit Submit { get; } = new ControlFormItemButtonSubmit
         {
             Text = _ => "webexpress.webui:delete.label",
-            Icon = renderContext => new IconTrash(renderContext.GetIconTheme()),
+            Icon = renderContext => new IconTrash(),
             Color = _ => new PropertyColorButton(TypeColorButton.Danger)
         };
 

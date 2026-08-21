@@ -56,7 +56,7 @@ The response is a JSON array of node objects:
         "id": "europe",
         "label": "Europe",
         "labelColor": null,
-        "icon": "fas fa-globe",
+        "icon": "globe",
         "image": null,
         "content": "<b>Europe</b>",
         "disabled": false

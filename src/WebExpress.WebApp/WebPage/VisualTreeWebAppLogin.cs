@@ -9,7 +9,6 @@ using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebComponent;
 using WebExpress.WebCore.WebEndpoint;
 using WebExpress.WebCore.WebHtml;
-using WebExpress.WebCore.WebIcon;
 using WebExpress.WebCore.WebPage;
 using WebExpress.WebCore.WebTheme;
 using WebExpress.WebCore.WebUri;
@@ -140,10 +139,6 @@ namespace WebExpress.WebApp.WebPage
             if (Theme?.ThemeMode == ThemeMode.Dark)
             {
                 html.Body.AddUserAttribute("data-bs-theme", "dark");
-            }
-            if (IconTheme == TypeIconTheme.Light)
-            {
-                html.AddUserAttribute("data-icon-theme", "light");
             }
             html.Body.Add(MessageQueueUri);
             html.Body.Add(Header.Render(renderContext, this));

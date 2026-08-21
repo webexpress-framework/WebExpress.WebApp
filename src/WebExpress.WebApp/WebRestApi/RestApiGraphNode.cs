@@ -39,7 +39,7 @@ namespace WebExpress.WebApp.WebRestApi
 
         /// <summary>
         /// Gets or sets the icon of the node. This is a CSS class (for example a
-        /// FontAwesome glyph), never a URL; a node whose symbol is a picture uses
+        /// icon of the active set), never a URL; a node whose symbol is a picture uses
         /// <see cref="Image"/> instead, because the client renders the two
         /// through different SVG elements.
         /// </summary>

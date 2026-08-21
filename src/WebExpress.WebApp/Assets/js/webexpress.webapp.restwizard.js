@@ -136,7 +136,7 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
         this._btnPrev.type = "button";
         this._btnPrev.className = "btn btn-link wx-restwizard-prev";
         this._btnPrev.innerHTML =
-            `<i class="${this._iconClass("fas fa-chevron-left", "wx-icon-light-chevron-left")} me-2"></i>` +
+            `<i class="${this._iconClass("chevron-left")} me-2"></i>` +
             this._escapeHtml(this._i18n("webexpress.webapp:wizard.previous") || "Previous");
         this._btnPrev.addEventListener("click", () => {
             this._navigate(-1);
@@ -152,7 +152,7 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
         this._btnNext.className = "btn btn-primary wx-restwizard-next";
         this._btnNext.innerHTML =
             this._escapeHtml(this._i18n("webexpress.webapp:wizard.next") || "Next") +
-            `<i class="${this._iconClass("fas fa-chevron-right", "wx-icon-light-chevron-right")} ms-2"></i>`;
+            `<i class="${this._iconClass("chevron-right")} ms-2"></i>`;
         this._btnNext.addEventListener("click", () => {
             this._navigate(1);
         });

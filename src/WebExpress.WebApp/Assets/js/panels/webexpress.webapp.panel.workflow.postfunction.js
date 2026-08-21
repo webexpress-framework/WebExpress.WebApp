@@ -32,7 +32,7 @@ webexpress.webui.DialogPanels.register("workflow-postfunction-management", {
                 const row = document.createElement("div");
                 row.className = "d-flex align-items-center mb-1";
                 
-                row.innerHTML = `<i class="fas fa-bolt text-info me-2"></i><span class="flex-grow-1 small">${node.label}</span>`;
+                row.innerHTML = `<i class="wx-icon-light wx-icon-light-bolt text-info me-2"></i><span class="flex-grow-1 small">${node.label}</span>`;
                 
                 const del = document.createElement("span");
                 del.className = "text-danger ms-2 fw-bold";

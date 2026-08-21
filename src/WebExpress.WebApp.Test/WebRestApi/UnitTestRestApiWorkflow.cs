@@ -49,7 +49,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             (
                 new RestApiWorkflowResult { Id = "wf1", Name = "Approval", Version = "1" },
                 [
-                    new RestApiWorkflowState { Id = "draft", Label = "Draft", IsStart = true, Icon = "fas fa-pen" },
+                    new RestApiWorkflowState { Id = "draft", Label = "Draft", IsStart = true, Icon = "wx-icon-light wx-icon-light-pen" },
                     new RestApiWorkflowState { Id = "done", Label = "Done", IsEnd = true, Image = "/assets/done.png" }
                 ],
                 [
@@ -109,7 +109,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             using var doc = JsonDocument.Parse(json);
             var states = doc.RootElement.GetProperty("states").EnumerateArray().ToList();
 
-            Assert.Equal("fas fa-pen", states[0].GetProperty("icon").GetString());
+            Assert.Equal("wx-icon-light wx-icon-light-pen", states[0].GetProperty("icon").GetString());
             Assert.True(states[0].GetProperty("isStart").GetBoolean());
             Assert.False(states[0].GetProperty("isEnd").GetBoolean());
 

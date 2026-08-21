@@ -9,7 +9,6 @@ using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebComponent;
 using WebExpress.WebCore.WebEndpoint;
 using WebExpress.WebCore.WebHtml;
-using WebExpress.WebCore.WebIcon;
 using WebExpress.WebCore.WebPage;
 using WebExpress.WebCore.WebTheme;
 using WebExpress.WebCore.WebUri;
@@ -176,10 +175,6 @@ namespace WebExpress.WebApp.WebPage
             if (Theme?.ThemeMode == ThemeMode.Dark)
             {
                 html.AddUserAttribute("data-bs-theme", "dark");
-            }
-            if (IconTheme == TypeIconTheme.Light)
-            {
-                html.AddUserAttribute("data-icon-theme", "light");
             }
 
             var preferences = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionBodyPreferences>

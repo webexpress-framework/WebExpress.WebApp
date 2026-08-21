@@ -52,7 +52,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             // the typed icon collapses into its css class, the chip color into
             // its button class, the badge carries the count and the system
             // badge color its css class
-            Assert.Equal("fas fa-star", items[0].GetProperty("icon").GetString());
+            Assert.Equal("wx-icon-light wx-icon-light-star", items[0].GetProperty("icon").GetString());
             Assert.Equal("btn-success", items[0].GetProperty("color").GetString());
             Assert.Equal("2", items[0].GetProperty("badge").GetString());
             Assert.Equal("text-bg-danger", items[0].GetProperty("badgeColor").GetString());

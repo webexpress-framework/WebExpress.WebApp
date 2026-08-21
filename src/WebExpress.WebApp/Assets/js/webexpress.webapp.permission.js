@@ -255,7 +255,7 @@ webexpress.webapp.PermissionCtrl = class extends webexpress.webapp.TableCtrl {
             command: "revoke",
             groupId: entry.groupId,
             text: this._i18n("webexpress.webapp:permission.remove", "Revoke"),
-            icon: this._iconClass("fas fa-trash", "wx-icon-light-trash"),
+            icon: this._iconClass("trash"),
             color: "text-danger"
         };
     }
@@ -307,7 +307,7 @@ webexpress.webapp.PermissionCtrl = class extends webexpress.webapp.TableCtrl {
         this._assignButton.className = "wx-permission-assign-btn";
         this._assignButton.title = this._i18n("webexpress.webapp:permission.assign", "Assign");
         this._assignButton.setAttribute("aria-label", this._assignButton.title);
-        this._assignButton.appendChild(webexpress.webui.Icon.create(this._iconClass("fas fa-plus", "wx-icon-light-plus")));
+        this._assignButton.appendChild(webexpress.webui.Icon.create(this._iconClass("plus")));
         this._assignButton.addEventListener("click", () => this._assign());
         actionCell.appendChild(this._assignButton);
 

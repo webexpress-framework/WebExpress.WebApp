@@ -44,7 +44,7 @@ webexpress.webapp.InputTileCtrl = class extends webexpress.webui.InputTileCtrl {
         this._searchBtn = document.createElement("button");
         this._searchBtn.type = "button";
         this._searchBtn.className = "btn btn-outline-secondary btn-sm position-relative";
-        this._searchBtn.innerHTML = '<i class="fas fa-search"></i>';
+        this._searchBtn.innerHTML = '<i class="wx-icon-light wx-icon-light-search"></i>';
         this._searchBtn.setAttribute("aria-label", "Show search field");
         toolbarDiv.appendChild(this._searchBtn);
         element.insertBefore(toolbarDiv, this._tileList);

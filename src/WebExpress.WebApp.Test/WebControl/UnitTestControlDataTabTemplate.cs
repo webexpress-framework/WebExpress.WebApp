@@ -58,7 +58,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var html = control.Render(context, visualTree);
 
             // validation
-            AssertExtensions.EqualWithPlaceholders(@"<template id=""template"" data-icon=""fas fa-user"" data-name=""User Template"" data-description=""Template description""></template>", html);
+            AssertExtensions.EqualWithPlaceholders(@"<template id=""template"" data-icon=""wx-icon-light wx-icon-light-user"" data-name=""User Template"" data-description=""Template description""></template>", html);
         }
 
         /// <summary>

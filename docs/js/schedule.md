@@ -46,7 +46,7 @@ The endpoints are not spelled as attributes. They are contributed in C# by `.Dat
             "allDay": false,
             "category": "crew",
             "colorCss": "bg-success",
-            "icon": "fas fa-users",
+            "icon": "users",
             "uri": "/meetings/standup",
             "meta": { "room": "Scumm Bar" }
         }

@@ -55,35 +55,29 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Per-affordance icon mapping. The active theme is resolved at lookup
-     * time through {@link webexpress.webui.Ctrl#_iconClass}, which reads the
-     * page-wide <c>&lt;html data-icon-theme&gt;</c> attribute and falls back
-     * to whichever variant is supplied when one is missing.
+     * Per-affordance icon mapping. The names are symbolic; the active icon set turns them
+     * into css classes at lookup time, so an affordance keeps working when the drawing
+     * behind the name changes.
      */
     static ICONS = {
-        likeFilled:   { fa: "fas fa-heart",         light: "wx-icon-light wx-icon-light-heart" },
-        likeOutline:  { fa: "far fa-heart",         light: "wx-icon-light wx-icon-light-heart" },
-        pin:          { fa: "fas fa-thumbtack",     light: "wx-icon-light wx-icon-light-thumbtack" },
-        chevronDown:  { fa: "fas fa-chevron-down",  light: "wx-icon-light wx-icon-light-chevron-down" },
-        chevronRight: { fa: "fas fa-chevron-right", light: "wx-icon-light wx-icon-light-chevron-right" },
-        edit:         { fa: "fas fa-pen",           light: "wx-icon-light wx-icon-light-pen" },
-        delete:       { fa: "fas fa-trash",         light: "wx-icon-light wx-icon-light-trash" },
-        reply:        { fa: "fas fa-reply",         light: "wx-icon-light wx-icon-light-share-nodes" },
-        plus:         { fa: "fas fa-plus",          light: "wx-icon-light wx-icon-light-plus" }
+        likeFilled: "heart",
+        likeOutline: "heart",
+        pin: "thumbtack",
+        chevronDown: "chevron-down",
+        chevronRight: "chevron-right",
+        edit: "pen",
+        delete: "trash",
+        reply: "share-nodes",
+        plus: "plus"
     };
 
     /**
-     * Resolves an affordance name to a concrete CSS class string for the
-     * active icon theme.
+     * Resolves an affordance name to a concrete CSS class string.
      * @param {string} name - Affordance key into {@link CommentCtrl.ICONS}.
      * @returns {string} The CSS class string for an <c>&lt;i&gt;</c> element.
      */
     _affordanceIconClass(name) {
-        const entry = webexpress.webapp.CommentCtrl.ICONS[name];
-        if (!entry) {
-            return "fas fa-question";
-        }
-        return this._iconClass(entry.fa, entry.light);
+        return this._iconClass(webexpress.webapp.CommentCtrl.ICONS[name] || "question");
     }
 
     /**
@@ -736,9 +730,9 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Builds a small icon-only action button rendered with a Font Awesome
+     * Builds a small icon-only action button rendered with an icon of the
      * glyph.
-     * @param {string} iconClass - The Font Awesome class (e.g. "fas fa-heart").
+     * @param {string} iconClass - The resolved icon class (e.g. "wx-icon-light wx-icon-light-heart").
      * @param {string} title - Accessible label.
      * @returns {HTMLButtonElement}
      */

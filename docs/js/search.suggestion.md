@@ -79,7 +79,7 @@ The response is the shape `RestApiDropdown<T>` already produces:
 {
     "items": [
         { "type": "header", "text": "Recently opened" },
-        { "type": "item", "id": "…", "text": "Guybrush Threepwood", "uri": "/crew/1", "icon": "fas fa-user" },
+        { "type": "item", "id": "…", "text": "Guybrush Threepwood", "uri": "/crew/1", "icon": "user" },
         { "type": "divider" },
         { "type": "item", "id": "…", "text": "Mêlée Island", "uri": "/islands/2", "image": "/assets/img/melee.png" }
     ]

@@ -40,7 +40,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
                         Id = "tab-1",
                         Title = "Tab 1",
                         Name = "Name 1",
-                        Icon = "fas fa-ship",
+                        Icon = "wx-icon-light wx-icon-light-ship",
                         TemplateId = "template-1",
                         Uri = "/api/tab/1",
                         Color = "text-primary",
@@ -76,7 +76,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             Assert.Equal("tab-1", first.GetProperty("id").GetString());
             Assert.Equal("Tab 1", first.GetProperty("label").GetString());
             Assert.Equal("Name 1", first.GetProperty("name").GetString());
-            Assert.Equal("fas fa-ship", first.GetProperty("icon").GetString());
+            Assert.Equal("wx-icon-light wx-icon-light-ship", first.GetProperty("icon").GetString());
             Assert.Equal("template-1", first.GetProperty("templateId").GetString());
             Assert.Equal("/api/tab/1", first.GetProperty("uri").GetString());
             Assert.Equal("text-primary", first.GetProperty("color").GetString());

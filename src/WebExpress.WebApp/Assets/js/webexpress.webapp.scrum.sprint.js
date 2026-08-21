@@ -344,7 +344,7 @@ webexpress.webapp.ScrumSprintCtrl = class extends webexpress.webapp.Data {
         const wrap = document.createElement("div");
         wrap.className = "wx-scrum-sprint-state wx-scrum-sprint-error";
 
-        wrap.appendChild(webexpress.webui.Icon.create("fas fa-exclamation-triangle"));
+        wrap.appendChild(webexpress.webui.Icon.create("wx-icon-light wx-icon-light-triangle-exclamation"));
 
         const msg = document.createElement("span");
         const errText = this._error && this._error.message ? this._error.message : "";
