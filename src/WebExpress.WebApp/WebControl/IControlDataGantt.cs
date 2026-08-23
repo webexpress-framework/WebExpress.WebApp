@@ -38,5 +38,11 @@ namespace WebExpress.WebApp.WebControl
         /// leaving the full width to the timeline.
         /// </summary>
         Func<IRenderControlContext, bool> GridCollapsed { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether the chart takes the height its host
+        /// offers instead of bringing one of its own.
+        /// </summary>
+        Func<IRenderControlContext, bool> Fill { get; }
     }
 }

@@ -33,6 +33,17 @@ namespace WebExpress.WebApp.WebControl
         Func<IRenderControlContext, bool> MovableTab { get; }
 
         /// <summary>
+        /// Gets the layout of the tab headers.
+        /// </summary>
+        Func<IRenderControlContext, TypeLayoutTab> Layout { get; }
+
+        /// <summary>
+        /// Gets the highlight color of the active tab, which only takes effect
+        /// in the underline layout.
+        /// </summary>
+        Func<IRenderControlContext, PropertyColorText> HighlightColor { get; }
+
+        /// <summary>
         /// Gets the placeholder shown while the tab set carries no items. A null
         /// value falls back to a generic placeholder.
         /// </summary>

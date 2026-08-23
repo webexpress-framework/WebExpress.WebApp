@@ -61,5 +61,11 @@ namespace WebExpress.WebApp.WebControl
         /// opens the settings dialog carrying the swimlane WQL filter.
         /// </summary>
         Func<IRenderControlContext, bool> ConfigurableSwimlane { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether the board takes the height its host offers
+        /// instead of growing with its longest column.
+        /// </summary>
+        Func<IRenderControlContext, bool> Fill { get; }
     }
 }

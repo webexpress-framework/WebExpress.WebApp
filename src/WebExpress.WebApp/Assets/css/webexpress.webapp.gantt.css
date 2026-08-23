@@ -26,6 +26,21 @@
     overflow: hidden;
 }
 
+/* Fill mode: the chart takes the height its host offers instead of bringing one
+   of its own, which is what an application shell asks of the content of a pane.
+   Only the flex basis is restated, not the height: the two panes and their
+   scrollports need a definite height, so where a host hands nothing down the
+   basis has to be one - the self-imposed height of the base rule, capped by
+   max-height wherever the host does have an extent of its own. A height of 100%
+   would resolve to auto against an auto-height host, which is the content, and
+   the content is what this mode exists to stop the chart from following. The
+   240px floor of the base rule stands, so a pane too short to hold the toolbar
+   and a row of the grid scrolls rather than crushing them. */
+.wx-gantt.wx-fill {
+    flex: 1 1 var(--wx-gantt-height, 480px);
+    max-height: 100%;
+}
+
 .wx-gantt:focus {
     outline: none;
 }

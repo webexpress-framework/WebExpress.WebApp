@@ -141,3 +141,16 @@ element.addEventListener(webexpress.webapp.GanttCtrl.LINK_CREATE_EVENT, (e) => {
 ## Layout & Theming
 
 The host is a flexible column that fills its container width; its height defaults to `480px` and is overridable through the `--wx-gantt-height` CSS variable, the initial grid pane width through `--wx-gantt-grid-w` (the splitter overrides it interactively). The timeline always fills its pane: when the project range is shorter than the visible width, the scale is padded with filler days. Below `768px` the grid collapses to the name column. All colors derive from the bootstrap theme variables, so the control follows the active theme.
+
+### Filling the pane
+
+A height of its own is right for a plan shown among other blocks on a page. Where the chart *is* the view, it is wrong: inside an application shell the page does not scroll, the panes do, and a chart with its own height either leaves dead space below it or reaches past the pane, which then scrolls around panes that already scroll. `Fill` takes the height from the host instead:
+
+```csharp
+new ControlDataGantt("plan")
+{
+    Fill = _ => true
+};
+```
+
+The host is marked `wx-fill`, and a flex column host then drives the chart: it grows into the free space and shrinks with it. In a `WebExpress.WebApp` shell the content panel becomes one on its own as soon as a filling control is on the page, so `Fill` is all a page there has to set; elsewhere, make the host a flex column with `min-height: 0`. A host that hands nothing down leaves the chart at `--wx-gantt-height`, **never at its content height** - the grid and the timeline are scrollports, and a scrollport only exists while its container is bounded. `max-height: 100%` keeps the chart inside a host that does have an extent.

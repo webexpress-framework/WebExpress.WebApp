@@ -170,6 +170,19 @@ public sealed class MyDashboardApi : RestApiDashboard
 
 A widget whose concrete C# type is not known ahead of time (anything a user adds through the add menu) is stored with `RestApiDashboardWidgetGeneric`, which carries the client type id and a pass-through `params` dictionary.
 
+## Filling the pane
+
+Growing with its longest column is right for a board among other blocks on a page. Where the board *is* the view, it is wrong: inside an application shell the page does not scroll, the panes do, and a growing board takes the "…" menu above the columns out of view with the page — the way to add a column or a widget leaves the screen. `Fill` takes the height from the host instead — on `ControlDashboard` as on `ControlDataDashboard`:
+
+```csharp
+new ControlDataDashboard("board")
+{
+    Fill = _ => true
+};
+```
+
+The host is marked `wx-fill`, and a flex column host then drives the board: the columns scroll together below a menu bar that stays. In a `WebExpress.WebApp` shell the content panel becomes a flex column on its own as soon as a filling control is on the page, so `Fill` is all a page there has to set; elsewhere, make the host a flex column with `min-height: 0`. A host that hands nothing down leaves the board at `--wx-dashboard-height` (default `70vh`), **never at its content height** — the columns only scroll while the board is bounded. `max-height: 100%` keeps it inside a host that does have an extent.
+
 ## ViewState Binding
 
 `ControlDataDashboard` is **ViewState-capable**. Bound to a resource of an enclosing `ControlViewState` with `.Resource<TResource>()`, the board becomes a slice of that ViewState's shared state: the control emits only the `data-wx-resource` binding, the ViewState owns the central load, and the control re-renders when the ViewState re-queries the resource. Layout changes still persist through the ViewState's update service. Left unbound, the control owns its own `wx-service` island and loads itself.

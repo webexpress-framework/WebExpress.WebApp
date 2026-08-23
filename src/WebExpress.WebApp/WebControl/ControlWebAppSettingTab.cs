@@ -37,6 +37,14 @@ namespace WebExpress.WebApp.WebControl
         public IEnumerable<IControlNavigationItem> Secondary => _secondary;
 
         /// <summary>
+        /// Gets or sets the layout of the category navigation. The tab layout is
+        /// the default, because the setting categories are the tabs of the
+        /// settings shell; an application that carries the band in a different
+        /// place - a sidebar, a slim header - picks the layout that fits there.
+        /// </summary>
+        public Func<IRenderControlContext, TypeLayoutTab> Layout { get; set; } = _ => TypeLayoutTab.Tab;
+
+        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The control id.</param>
@@ -120,7 +128,7 @@ namespace WebExpress.WebApp.WebControl
 
             return new ControlNavigation(Id, [.. items])
             {
-                Layout = _ => TypeLayoutTab.Tab
+                Layout = Layout
             }.Render(renderContext, visualTree);
         }
 

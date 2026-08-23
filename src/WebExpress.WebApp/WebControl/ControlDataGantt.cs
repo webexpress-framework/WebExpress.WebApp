@@ -65,6 +65,26 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, bool> GridCollapsed { get; set; }
 
         /// <summary>
+        /// Gets or sets whether the control takes the height its host offers
+        /// instead of bringing one of its own.
+        /// </summary>
+        /// <remarks>
+        /// The grid and the timeline scroll in step, which needs a definite
+        /// height, and a host rarely has one - hence the self-imposed default of
+        /// the <c>--wx-gantt-height</c> custom property. That is the right shape
+        /// for a plan shown among other blocks on a page. Where the chart *is*
+        /// the view, it is the wrong one: a chart with a height of its own inside
+        /// an application-shell pane either leaves dead space below it or reaches
+        /// past the pane, which then scrolls around panes that already scroll.
+        ///
+        /// A host that is a flex column - which the WebApp content panel becomes
+        /// on its own for a filling control - drives the height. A host that hands
+        /// nothing down falls back to the self-imposed height, never to the
+        /// content: the scrollports only exist while the chart is bounded.
+        /// </remarks>
+        public Func<IRenderControlContext, bool> Fill { get; set; } = _ => false;
+
+        /// <summary>
         /// Gets the data service descriptors of the control, emitted as
         /// wx-service island elements. The data service loads the project with
         /// GET and persists task and link mutations against the same base:
@@ -125,11 +145,12 @@ namespace WebExpress.WebApp.WebControl
             var columns = Columns?.Invoke(renderContext);
             var readOnly = ReadOnly?.Invoke(renderContext) ?? false;
             var gridCollapsed = GridCollapsed?.Invoke(renderContext) ?? false;
+            var fill = Fill?.Invoke(renderContext) ?? false;
 
             var html = new HtmlElementTextContentDiv()
             {
                 Id = Id,
-                Class = Css.Concatenate("wx-webapp-gantt", GetClasses(renderContext)),
+                Class = Css.Concatenate("wx-webapp-gantt", fill ? "wx-fill" : null, GetClasses(renderContext)),
                 Style = GetStyles(renderContext)
             }
                 .AddUserAttribute("data-scale", scale)

@@ -38,5 +38,11 @@ namespace WebExpress.WebApp.WebControl
         /// Gets a value indicating whether each widget offers a settings entry in its "…" menu.
         /// </summary>
         Func<IRenderControlContext, bool> ConfigurableWidget { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether the board takes the height its host
+        /// offers instead of growing with its longest column.
+        /// </summary>
+        Func<IRenderControlContext, bool> Fill { get; }
     }
 }

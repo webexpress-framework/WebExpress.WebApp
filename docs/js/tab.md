@@ -22,7 +22,7 @@ The initial structure is defined in HTML. The root element is the tab host (`.wx
 
 |Attribute     |Description                                                                           | Example 
 |---------------|---------------------------------------------------------------------------------------|----------------------------
-|`data-layout` |Visual style of tabs. Supported values: `tab`, `pill`, `underline`.                                            | `data-layout="underline"`
+|`data-layout` |Visual style of tabs. Supported values: `tab`, `pill`, `underline`. Omitted for the default layout. On the server side it is the `Layout` property of `ControlDataTab`; its `HighlightColor` colors the marker of the `underline` layout. | `data-layout="underline"`
 |`data-uri`    |The uri is used to determine the tabs.   | `/api/1/tab`
 |`data-readonly`|Disables add/close interactions when set to `true`. | `data-readonly="true"`
 |`data-movable-tab`|Enables drag-and-drop reordering of the tabs when set to `true`. Each tab header gets a ⠿ grip handle; dropping persists the new order via `PUT`. | `data-movable-tab="true"`

@@ -133,6 +133,31 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
+        /// Tests that the fill mode marks the host, which is what makes the shell
+        /// hand a height down to the editor instead of letting it grow.
+        /// </summary>
+        [Theory]
+        [InlineData(false, @"<div class=""wx-webapp-restform-editor""></div>")]
+        [InlineData(true, @"<div class=""wx-webapp-restform-editor wx-fill""></div>")]
+        public void Fill(bool fill, string expected)
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlDataFormEditor()
+            {
+                Fill = _ => fill
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
+
+        /// <summary>
         /// Tests that the default values match the constants exposed on the control.
         /// </summary>
         [Fact]

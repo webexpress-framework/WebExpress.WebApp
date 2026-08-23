@@ -26,5 +26,11 @@ namespace WebExpress.WebApp.WebControl
         /// interactively via drag-and-drop.
         /// </summary>
         Func<IRenderControlContext, bool> MovableRow { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether the table takes the height its host
+        /// offers instead of growing with its rows.
+        /// </summary>
+        Func<IRenderControlContext, bool> Fill { get; }
     }
 }

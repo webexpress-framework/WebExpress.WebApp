@@ -58,6 +58,19 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, bool> MovableTab { get; set; }
 
         /// <summary>
+        /// Gets or sets the layout of the tab headers. The headers are built on the
+        /// client from the data the service delivers, so the layout only travels there
+        /// as an attribute instead of turning into a css class here.
+        /// </summary>
+        public Func<IRenderControlContext, TypeLayoutTab> Layout { get; set; }
+
+        /// <summary>
+        /// Gets or sets the highlight color of the active tab. It only takes effect in
+        /// the underline layout, whose bootstrap variables it overrides.
+        /// </summary>
+        public Func<IRenderControlContext, PropertyColorText> HighlightColor { get; set; }
+
+        /// <summary>
         /// Gets or sets the placeholder shown while the tab set carries no items. The
         /// tab items arrive from the data service at runtime, so the placeholder is
         /// rendered up front and the client reveals it once it knows the set is empty.
@@ -162,8 +175,20 @@ namespace WebExpress.WebApp.WebControl
             var bind = Bind?.Invoke(renderContext);
             var @readonly = Readonly?.Invoke(renderContext) ?? false;
             var movableTab = MovableTab?.Invoke(renderContext) ?? false;
+            var layout = Layout?.Invoke(renderContext) ?? TypeLayoutTab.Default;
             var fragmentManager = WebEx.ComponentHub.FragmentManager;
             var applicationContext = renderContext?.PageContext?.ApplicationContext;
+
+            // the underline layout draws the active marker from bootstrap variables, so a
+            // highlight color reaches the tab headers only by overriding them on the host
+            var highlightColor = layout == TypeLayoutTab.Underline
+                ? ResolveHighlightColor(HighlightColor?.Invoke(renderContext))
+                : null;
+            string[] highlightStyles = highlightColor == null ? [] :
+            [
+                $"--bs-nav-underline-border-color: {highlightColor};",
+                $"--bs-nav-underline-link-active-color: {highlightColor};"
+            ];
 
             // templates
             var templatePreferences = fragmentManager.GetFragments<IFragmentControlDataTabTemplate, SectionTabViewPreferences>
@@ -186,8 +211,9 @@ namespace WebExpress.WebApp.WebControl
             {
                 Id = Id,
                 Class = Css.Concatenate("wx-webapp-tab", GetClasses(renderContext)),
-                Style = GetStyles(renderContext)
+                Style = Css.Concatenate(GetStyles(renderContext), highlightStyles)
             }
+                .AddUserAttribute("data-layout", layout != TypeLayoutTab.Default ? layout.ToString().ToLower() : null)
                 .AddUserAttribute("data-readonly", @readonly ? "true" : null)
                 .AddUserAttribute("data-movable-tab", movableTab ? "true" : null)
                 .Add(templatePreferences.Select(x => x.Render(renderContext, visualTree)))
@@ -201,6 +227,29 @@ namespace WebExpress.WebApp.WebControl
             bind?.ApplyUserAttributes(html);
 
             return html;
+        }
+
+        /// <summary>
+        /// Resolves a highlight color into a css color value. The bootstrap variables of
+        /// the underline layout take a color, not a class, so a system color has to be
+        /// mapped onto its css variable instead of onto the class the color would emit.
+        /// </summary>
+        /// <param name="color">The highlight color, or null when none is set.</param>
+        /// <returns>The css color value, or null when the default color applies.</returns>
+        private static string ResolveHighlightColor(PropertyColorText color)
+        {
+            if (color == null)
+            {
+                return null;
+            }
+
+            return (TypeColor)color.SystemColor switch
+            {
+                TypeColor.Default => null,
+                TypeColor.User => !string.IsNullOrWhiteSpace(color.UserColor) ? color.UserColor : null,
+                TypeColor.Highlight => "var(--wx-highlight)",
+                var systemColor => $"var(--bs-{systemColor.ToClass()})"
+            };
         }
 
         /// <summary>

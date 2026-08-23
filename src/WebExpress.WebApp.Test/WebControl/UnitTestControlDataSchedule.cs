@@ -37,6 +37,32 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
+        /// Tests that the fill mode of the static schedule reaches the data-bound
+        /// host as well, which is the one that usually carries a whole view.
+        /// </summary>
+        [Theory]
+        [InlineData(false, @"<div id=""*"" class=""wx-webapp-schedule"" role=""region""></div>")]
+        [InlineData(true, @"<div id=""*"" class=""wx-webapp-schedule wx-fill"" role=""region""></div>")]
+        public void Fill(bool fill, string expected)
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlDataSchedule()
+            {
+                Fill = _ => fill
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
+
+        /// <summary>
         /// Tests that the view configuration inherited from the static schedule
         /// is emitted by the data-driven one as well, because the client reads
         /// the same contract in both.

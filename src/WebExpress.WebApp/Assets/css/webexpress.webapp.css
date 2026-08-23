@@ -236,7 +236,8 @@ main {
 }
 
 /* A region that asks to fill the pane - a master-detail carrying a whole view,
-   for instance - can only do so if every panel between it and the main panel
+   a board, a calendar, a chart or an editor that is the view - can only do so if
+   every panel between it and the main panel
    hands the height down. A page of stacked sections must not: a section allowed
    to shrink below its content clips it instead of scrolling it. So the chain
    turns into a column only while such a region is on the page, and only along
@@ -252,8 +253,13 @@ main {
    whose panes each hold a filling region laid all of them out at once, and the
    panes shared the height the active one was supposed to get: the region then
    landed on its 12rem floor, the one outcome the mode exists to prevent. The
-   .d-none of the view control needs no guard - it hides with !important. */
-#wx-content-main :has(.wx-master-detail-fill):not([hidden]):not(.tab-pane:not(.active)) {
+   .d-none of the view control needs no guard - it hides with !important.
+
+   .wx-fill is the marker every filling control carries - board, calendar, chart,
+   form editor - and what each of them makes of the height it is handed is stated
+   in its own stylesheet. The master-detail predates the marker and keeps its own
+   class, so both are named here. */
+#wx-content-main :has(.wx-master-detail-fill, .wx-fill):not([hidden]):not(.tab-pane:not(.active)) {
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;

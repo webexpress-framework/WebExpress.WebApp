@@ -72,6 +72,25 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, bool> ConfigurableWidget { get; set; }
 
         /// <summary>
+        /// Gets or sets whether the board takes the height its host offers
+        /// instead of growing with its longest column.
+        /// </summary>
+        /// <remarks>
+        /// A board that grows is the right shape for one block among others on a
+        /// page. Where the board *is* the view, it is the wrong one: the page
+        /// scrolls around it and takes the "…" menu above the columns along, so
+        /// the way to add a column or a widget leaves the screen. Filling bounds
+        /// the board, and the widgets scroll below a menu bar that stays.
+        ///
+        /// A host that is a flex column - which the WebApp content panel becomes
+        /// on its own for a filling control - drives the height. A host that hands
+        /// nothing down falls back to the self-imposed default of the
+        /// <c>--wx-dashboard-height</c> custom property, never to the content: the
+        /// columns only scroll while the board is bounded.
+        /// </remarks>
+        public Func<IRenderControlContext, bool> Fill { get; set; } = _ => false;
+
+        /// <summary>
         /// Gets the data service descriptors of the control, emitted together as
         /// the data-wx-service island that the JavaScript engine consumes in
         /// preference to the legacy data-uri fallback, which keeps the endpoint
@@ -135,11 +154,12 @@ namespace WebExpress.WebApp.WebControl
             var addableColumn = AddableColumn?.Invoke(renderContext) ?? false;
             var addableWidget = AddableWidget?.Invoke(renderContext) ?? false;
             var configurableWidget = ConfigurableWidget?.Invoke(renderContext) ?? false;
+            var fill = Fill?.Invoke(renderContext) ?? false;
 
             var html = new HtmlElementTextContentDiv()
             {
                 Id = Id,
-                Class = Css.Concatenate("wx-webapp-dashboard", GetClasses(renderContext)),
+                Class = Css.Concatenate("wx-webapp-dashboard", fill ? "wx-fill" : null, GetClasses(renderContext)),
                 Style = GetStyles(renderContext)
             }
                 .AddUserAttribute("data-editable-column", editableColumn ? "true" : null)

@@ -10,7 +10,7 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Visual form-editor control. Renders a <c>&lt;div class="wx-webui-form-editor"&gt;</c>
+    /// Visual form-editor control. Renders a <c>&lt;div class="wx-webapp-restform-editor"&gt;</c>
     /// host element with declarative <c>data-*</c> attributes. The associated
     /// <c>webexpress.webui.FormEditorCtrl</c> JavaScript controller hydrates the
     /// host element with the full Designer UI (tab bar, structure tree, live
@@ -73,6 +73,26 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, bool> Readonly { get; set; }
 
         /// <summary>
+        /// Gets or sets whether the editor takes the height its host offers
+        /// instead of growing with the form it edits.
+        /// </summary>
+        /// <remarks>
+        /// An editor that grows is the right shape for one block among others on
+        /// a page. Where the editor *is* the view, it is the wrong one: the page
+        /// scrolls around it and takes the head and the foot along, so the form
+        /// name above and the save state below leave the screen while the user
+        /// works. Filling bounds the editor instead, and the structure tree and
+        /// the preview scroll on their own between chrome that stays.
+        ///
+        /// A host that is a flex column - which the WebApp content panel becomes
+        /// on its own for a filling control - drives the height. A host that hands
+        /// nothing down falls back to the self-imposed default of the
+        /// <c>--wx-form-editor-height</c> custom property, never to the content:
+        /// the panes only scroll while the editor is bounded.
+        /// </remarks>
+        public Func<IRenderControlContext, bool> Fill { get; set; } = _ => false;
+
+        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The id of the control.</param>
@@ -93,6 +113,7 @@ namespace WebExpress.WebApp.WebControl
             var preview = Preview?.Invoke(renderContext) ?? true;
             var @readonly = Readonly?.Invoke(renderContext) ?? false;
             var role = Role?.Invoke(renderContext);
+            var fill = Fill?.Invoke(renderContext) ?? false;
             var classes = Classes.ToList();
 
             indent = indent < 8 ? 8 : indent > 32 ? 32 : indent;
@@ -100,7 +121,7 @@ namespace WebExpress.WebApp.WebControl
             var html = new HtmlElementTextContentDiv()
             {
                 Id = Id,
-                Class = Css.Concatenate("wx-webapp-restform-editor", classes),
+                Class = Css.Concatenate("wx-webapp-restform-editor", [fill ? "wx-fill" : null, .. classes]),
                 Style = GetStyles(renderContext),
                 Role = role
             }

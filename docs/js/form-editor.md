@@ -22,7 +22,7 @@ The `FormEditorCtrl` is a self-contained visual editor for form definitions. It 
 
 ## Declarative Configuration
 
-The editor is configured entirely via `data-` attributes on the host element. The element must carry the class `wx-webui-form-editor` (the `ControlFormEditor` C# control sets this automatically).
+The editor is configured entirely via `data-` attributes on the host element. The element must carry the class `wx-webapp-restform-editor` (the `ControlDataFormEditor` C# control sets this automatically); the controller adds `wx-form-editor`, which is what the stylesheet is written against.
 
 ### Container Attributes
 
@@ -40,6 +40,19 @@ The editor is configured entirely via `data-` attributes on the host element. Th
 ### Wire format
 
 The editor exchanges JSON shapes that mirror the `WebExpress.WebApp.WebForm.Dto` payloads exactly. A field node looks like `{"id":"…","kind":"field","name":"Title","type":"string","required":true}`; a group node like `{"id":"…","kind":"group","layout":"horizontal","label":"Reported","children":[…]}`. Field types are one of `string`, `text`, `timestamp`, `ref`, `enum`, `tags`, `number`, `file`. Group layouts are one of `vertical`, `horizontal`, `mix`, `col-vertical`, `col-horizontal`, `col-mix`.
+
+## Filling the pane
+
+Growing with the form it edits is right for an editor among other blocks on a page. Where the editor *is* the view, it is wrong: inside an application shell the page does not scroll, the panes do, and a growing editor takes its head and its foot along with the page - the form name above and the save state below leave the screen while the user works. `Fill` takes the height from the host instead:
+
+```csharp
+new ControlDataFormEditor("editor")
+{
+    Fill = _ => true
+};
+```
+
+The host is marked `wx-fill`, and a flex column host then drives the editor: it grows into the free space and shrinks with it, and the structure tree and the preview scroll on their own between chrome that stays. In a `WebExpress.WebApp` shell the content panel becomes one on its own as soon as a filling control is on the page, so `Fill` is all a page there has to set; elsewhere, make the host a flex column with `min-height: 0`. A host that hands nothing down leaves the editor at `--wx-form-editor-height` (default `70vh`), **never at its content height** - the panes are scrollports, and a scrollport only exists while its container is bounded. `max-height: 100%` keeps the editor inside a host that does have an extent.
 
 ## Programmatic Control
 
@@ -74,11 +87,11 @@ A form editor can also be created entirely programmatically and attached to a ho
 
 ```javascript
 const host = document.getElementById('form-editor');
-host.classList.add('wx-webui-form-editor', 'wx-form-editor');
+host.classList.add('wx-webapp-restform-editor');
 host.dataset.restUrl = '/api/1/FormStructure';
 host.dataset.formId = '00000000-0000-0000-0000-000000000001';
 
-const editor = new webexpress.webui.FormEditorCtrl(host);
+const editor = new webexpress.webapp.RestFormEditorCtrl(host);
 ```
 
 ### Public API
@@ -131,7 +144,7 @@ When the structure tree has focus (no inline rename is active and no input is fo
 
 ```html
 <div id="bug-default-form-editor"
-     class="wx-webui-form-editor"
+     class="wx-webapp-restform-editor"
      data-form-id="00000000-0000-0000-0000-000000000001"
      data-rest-url="/api/1/FormStructure"
      data-field-catalog-url="/api/1/FormFieldCatalog"
@@ -142,7 +155,7 @@ When the structure tree has focus (no inline rename is active and no input is fo
 ### Offline preview seeded with an inline structure
 
 ```html
-<div class="wx-webui-form-editor"
+<div class="wx-webapp-restform-editor"
      data-layout="three-pane"
      data-initial-structure='{
        "formId": "demo",

@@ -13,5 +13,11 @@ namespace WebExpress.WebApp.WebControl
         /// Gets or sets the binding.
         /// </summary>
         Func<IRenderControlContext, IBinding> Bind { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether the tiles take the height their host
+        /// offers instead of growing with their number.
+        /// </summary>
+        Func<IRenderControlContext, bool> Fill { get; }
     }
 }

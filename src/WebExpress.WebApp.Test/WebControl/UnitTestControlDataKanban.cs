@@ -127,5 +127,31 @@ namespace WebExpress.WebApp.Test.WebControl
             // validation
             AssertExtensions.EqualWithPlaceholders(expected, html);
         }
+
+        /// <summary>
+        /// Tests that the fill mode marks the host, which is what makes the shell
+        /// hand a height down to the board instead of letting it grow.
+        /// </summary>
+        [Theory]
+        [InlineData(false, @"<div id=""*"" class=""wx-webapp-kanban""></div>")]
+        [InlineData(true, @"<div id=""*"" class=""wx-webapp-kanban wx-fill""></div>")]
+        public void Fill(bool fill, string expected)
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlDataKanban()
+            {
+                Fill = _ => fill
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
     }
 }

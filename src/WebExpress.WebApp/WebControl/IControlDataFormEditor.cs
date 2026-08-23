@@ -26,5 +26,11 @@ namespace WebExpress.WebApp.WebControl
         /// Whether the editor is read-only (suppresses mutation UI and REST writes).
         /// </summary>
         Func<IRenderControlContext, bool> Readonly { get; }
+
+        /// <summary>
+        /// Whether the editor takes the height its host offers instead of growing
+        /// with the form it edits.
+        /// </summary>
+        Func<IRenderControlContext, bool> Fill { get; }
     }
 }

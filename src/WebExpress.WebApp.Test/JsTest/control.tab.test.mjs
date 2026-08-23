@@ -94,3 +94,20 @@ test("wx-webapp-tab keeps the empty-state placeholder away while the first load 
 
     assert.equal(placeholder.parentNode, null, "a pending load must not read as an empty tab set");
 });
+
+test("wx-webapp-tab takes the header layout from the server-rendered data-layout", () => {
+    const rt = loadControl({
+        file: "webexpress.webapp.tab.js",
+        deps: ["webexpress.webapp.tab.model.js"]
+    });
+
+    const host = rt.createElement("div");
+    host.dataset.layout = "underline";
+    rt.document.body.appendChild(host);
+
+    new rt.wxapp.TabCtrl(host);
+
+    const nav = host.querySelector(".wx-tab-nav");
+    assert.ok(nav.classList.contains("nav-underline"), "the authored layout reaches the header list");
+    assert.equal(nav.classList.contains("nav-tabs"), false, "the default layout no longer applies");
+});

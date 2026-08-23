@@ -40,6 +40,25 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, IBinding> Bind { get; set; }
 
         /// <summary>
+        /// Gets or sets whether the tiles take the height their host offers
+        /// instead of growing with their number.
+        /// </summary>
+        /// <remarks>
+        /// Growing is the right shape for a set of tiles among other blocks on a
+        /// page. Where the tiles *are* the view, it is the wrong one: the page
+        /// scrolls around them, and the pager and the info line the control keeps
+        /// below them sit at the end of that scroll rather than in reach. Filling
+        /// bounds the control, and the tiles scroll above chrome that stays.
+        ///
+        /// A host that is a flex column - which the WebApp content panel becomes
+        /// on its own for a filling control - drives the height. A host that hands
+        /// nothing down falls back to the self-imposed default of the
+        /// <c>--wx-tile-height</c> custom property, never to the content: the
+        /// tiles only scroll while the control is bounded.
+        /// </remarks>
+        public Func<IRenderControlContext, bool> Fill { get; set; } = _ => false;
+
+        /// <summary>
         /// Gets the data service descriptors of the control, emitted together as
         /// the data-wx-service island that the JavaScript engine consumes in
         /// preference to the legacy data-uri fallback, which keeps the endpoint
@@ -99,11 +118,12 @@ namespace WebExpress.WebApp.WebControl
         {
             var pageSize = PageSize?.Invoke(renderContext) ?? 0;
             var bind = Bind?.Invoke(renderContext);
+            var fill = Fill?.Invoke(renderContext) ?? false;
 
             var html = new HtmlElementTextContentDiv()
             {
                 Id = Id,
-                Class = Css.Concatenate("wx-webapp-tile", GetClasses(renderContext)),
+                Class = Css.Concatenate("wx-webapp-tile", fill ? "wx-fill" : null, GetClasses(renderContext)),
                 Style = GetStyles(renderContext)
             }
                 .AddUserAttribute("data-page-size", pageSize > 0 ? pageSize.ToString() : null)

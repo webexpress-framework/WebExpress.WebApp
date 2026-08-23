@@ -221,8 +221,11 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     --wx-fe-primary-border: color-mix(in oklab, var(--wx-primary, #0d6efd) 35%, var(--wx-body-bg, #fff));
 }
 
-/* root host */
-.wx-webui-form-editor.wx-form-editor {
+/* root host. The class is the one the controller sets on whatever element it is
+   mounted on, so the rule reaches every host - it used to name a second class
+   that no control emits any more, and the editor was left without its own
+   column, its border and its background. */
+.wx-form-editor {
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -233,6 +236,42 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     line-height: var(--bs-body-line-height);
     border: 1px solid var(--wx-border-color);
     border-radius: var(--bs-border-radius);
+}
+
+/* Fill mode: the editor takes the height its host offers instead of growing with
+   the form it edits, which is what an application shell asks of the content of a
+   pane. What it buys is the head and the foot staying put - the name of the form
+   above, the save state below - while the structure and the preview scroll on
+   their own, rather than the whole editor riding the pane's scrollbar.
+
+   Both the basis and the height are stated: a flex column host drives the basis,
+   and where a host hands nothing down the height still has to come from the
+   environment rather than from the content. 100% would resolve to auto against
+   an auto-height host, which is the content - the one answer this mode must not
+   give. The floor keeps a pane too short for the chrome scrolling rather than
+   crushing it. */
+.wx-form-editor.wx-fill {
+    flex: 1 1 var(--wx-form-editor-height, 70vh);
+    height: var(--wx-form-editor-height, 70vh);
+    max-height: 100%;
+    min-height: 12rem;
+    overflow: hidden;
+}
+
+.wx-form-editor.wx-fill > .wx-form-editor-head,
+.wx-form-editor.wx-fill > .wx-form-editor-foot {
+    flex: 0 0 auto;
+}
+
+.wx-form-editor.wx-fill > .wx-form-editor-body {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* the panes are where the overflow lands: the structure tree and the preview
+   each scroll on their own, so a long form never moves the other side */
+.wx-form-editor.wx-fill .wx-form-editor-pane-body {
+    overflow: auto;
 }
 
 /* header */

@@ -48,6 +48,27 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, bool> MovableRow { get; set; }
 
         /// <summary>
+        /// Gets or sets whether the table takes the height its host offers
+        /// instead of growing with its rows.
+        /// </summary>
+        /// <remarks>
+        /// A table that grows is the right shape for one block among others on a
+        /// page. Where the table *is* the view, it is the wrong one: the page
+        /// scrolls around it and takes the column header along, so the reader
+        /// loses what the columns mean, and a table wider than the pane pushes
+        /// the pane sideways instead of scrolling itself. Filling bounds the
+        /// table, and the rows then scroll under a header that stays, with the
+        /// pager and the info line below them staying as well.
+        ///
+        /// A host that is a flex column - which the WebApp content panel becomes
+        /// on its own for a filling control - drives the height. A host that hands
+        /// nothing down falls back to the self-imposed default of the
+        /// <c>--wx-table-height</c> custom property, never to the content: the
+        /// rows only scroll while the table is bounded.
+        /// </remarks>
+        public Func<IRenderControlContext, bool> Fill { get; set; } = _ => false;
+
+        /// <summary>
         /// Gets the data service descriptors of the control, emitted together as
         /// the data-wx-service island that the JavaScript engine consumes in
         /// preference to the legacy data-uri fallback, which keeps the endpoint
@@ -106,11 +127,12 @@ namespace WebExpress.WebApp.WebControl
         {
             var pageSize = PageSize?.Invoke(renderContext);
             var bind = Bind?.Invoke(renderContext);
+            var fill = Fill?.Invoke(renderContext) ?? false;
 
             var html = new HtmlElementTextContentDiv()
             {
                 Id = Id,
-                Class = Css.Concatenate("wx-webapp-table", GetClasses(renderContext)),
+                Class = Css.Concatenate("wx-webapp-table", fill ? "wx-fill" : null, GetClasses(renderContext)),
                 Style = GetStyles(renderContext)
             }
                 .AddUserAttribute("data-page-size", pageSize > 0 ? pageSize.ToString() : null)

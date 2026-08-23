@@ -88,6 +88,89 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
+        /// Tests that the layout reaches the client as a data-layout attribute, which the
+        /// tab controller needs because it builds the headers itself.
+        /// </summary>
+        [Theory]
+        [InlineData(TypeLayoutTab.Default, @"<div id=""*"" class=""wx-webapp-tab""><div class=""wx-webapp-tab-empty d-none"">*</div></div>")]
+        [InlineData(TypeLayoutTab.Pill, @"<div id=""*"" class=""wx-webapp-tab"" data-layout=""pill""><div class=""wx-webapp-tab-empty d-none"">*</div></div>")]
+        [InlineData(TypeLayoutTab.Underline, @"<div id=""*"" class=""wx-webapp-tab"" data-layout=""underline""><div class=""wx-webapp-tab-empty d-none"">*</div></div>")]
+        public void Layout(TypeLayoutTab layout, string expected)
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlDataTab()
+            {
+                Layout = _ => layout
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
+
+        /// <summary>
+        /// Tests that a highlight color overrides the underline variables, and only does
+        /// so in the layout that draws an underline at all.
+        /// </summary>
+        [Theory]
+        [InlineData(TypeLayoutTab.Underline, @"<div id=""*"" class=""wx-webapp-tab"" style=""--bs-nav-underline-border-color: #ff0000; --bs-nav-underline-link-active-color: #ff0000;"" data-layout=""underline""><div class=""wx-webapp-tab-empty d-none"">*</div></div>")]
+        [InlineData(TypeLayoutTab.Pill, @"<div id=""*"" class=""wx-webapp-tab"" data-layout=""pill""><div class=""wx-webapp-tab-empty d-none"">*</div></div>")]
+        public void HighlightColorUser(TypeLayoutTab layout, string expected)
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlDataTab()
+            {
+                Layout = _ => layout,
+                HighlightColor = _ => new PropertyColorText("#ff0000")
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
+
+        /// <summary>
+        /// Tests that a system highlight color resolves to its css variable, because the
+        /// underline variables take a color rather than the class the color would emit.
+        /// </summary>
+        [Fact]
+        public void HighlightColorSystem()
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlDataTab()
+            {
+                Layout = _ => TypeLayoutTab.Underline,
+                HighlightColor = _ => new PropertyColorText(TypeColorText.Danger)
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders
+            (
+                @"<div id=""*"" class=""wx-webapp-tab"" style=""--bs-nav-underline-border-color: var(--bs-danger); --bs-nav-underline-link-active-color: var(--bs-danger);"" data-layout=""underline""><div class=""wx-webapp-tab-empty d-none"">*</div></div>",
+                html
+            );
+        }
+
+        /// <summary>
         /// Tests that an authored empty state replaces the generic placeholder.
         /// </summary>
         [Fact]
