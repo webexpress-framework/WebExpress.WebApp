@@ -1,5 +1,5 @@
-.wx-comment {
-    background: var(-wx-webapp-surface);
+﻿.wx-comment {
+    background: var(--wx-webapp-surface);
     border: 1px solid var(--wx-webapp-border);
     border-radius: var(--wx-webapp-r-md);
     overflow: hidden;
@@ -587,6 +587,12 @@
     padding: 3px 8px;
     font-size: 12px;
     background: var(--wx-webapp-surface);
+    /* a native select inherits neither the page's text colour nor its scheme:
+       the user agent paints both from color-scheme, so without these two the
+       field keeps the system's idea of a form control - black on white on a
+       dark card - and its popup opens in the wrong scheme with it */
+    color: var(--wx-webapp-text-2);
+    color-scheme: inherit;
 }
  
 .wx-comment-composer-editor {

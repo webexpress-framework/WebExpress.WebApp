@@ -1,3 +1,60 @@
+﻿/* =====================================================================
+   Application tokens
+   ---------------------------------------------------------------------
+   The surfaces this layer adds on top of WebUI - the comment thread and
+   its composer, the permission matrix, the watcher list, the relation
+   view and the scrum boards - share one palette, addressed through
+   --wx-webapp-*. It is a naming layer over the semantic --wx-* tokens of
+   webexpress.webui.css rather than a second palette: every value resolves
+   through one of those, so re-skinning --wx-primary or switching
+   [data-bs-theme] carries this layer along and it needs no dark block of
+   its own to keep in step.
+
+   Defining them here is also what makes them optional at the call site.
+   Most sheets read them as an override in front of a framework token -
+   var(--wx-webapp-surface, var(--wx-body-bg)) - but a sheet that reads one
+   bare is just as correct, and without a definition those declarations are
+   invalid at computed-value time: the surface loses its background, its
+   border and its radius and is left with whatever the browser paints by
+   itself. That failure hides in light mode, where the fallback is a light
+   surface on a light page, and shows in dark mode - most plainly on a
+   native <select>, which reverts to a white field on a dark card.
+
+   An application still overrides any of these in its own theme sheet,
+   which loads last; that is the app level override the feature sheets
+   refer to.
+   ===================================================================== */
+:root {
+    /* surfaces: the card, the bars framing it, and a third level for the
+       rows nested inside one */
+    --wx-webapp-surface: var(--wx-body-bg);
+    --wx-webapp-surface-2: var(--wx-tertiary-bg);
+    --wx-webapp-surface-3: var(--wx-secondary-bg);
+
+    /* text: emphasised, normal, muted, subtle */
+    --wx-webapp-text: var(--wx-emphasis-color);
+    --wx-webapp-text-2: var(--wx-body-color);
+    --wx-webapp-text-3: var(--wx-secondary-color);
+    --wx-webapp-text-muted: var(--wx-tertiary-color);
+
+    /* lines: a drawn border, a softer one, and the divider inside a card */
+    --wx-webapp-border: var(--wx-border-color);
+    --wx-webapp-border-2: var(--wx-border-color-translucent);
+    --wx-webapp-divider: var(--wx-border-color-translucent);
+
+    /* accents */
+    --wx-webapp-primary: var(--wx-primary);
+    --wx-webapp-primary-soft: var(--wx-primary-bg-subtle);
+    --wx-webapp-primary-border: var(--wx-primary-border-subtle);
+    --wx-webapp-warn: var(--wx-warning);
+    --wx-webapp-danger: var(--wx-danger);
+
+    /* geometry and type */
+    --wx-webapp-r-sm: var(--bs-border-radius-sm);
+    --wx-webapp-r-md: var(--bs-border-radius);
+    --wx-webapp-font-mono: var(--bs-font-monospace);
+}
+
 /* =====================================================================
    Application shell
    ---------------------------------------------------------------------
