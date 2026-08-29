@@ -16,6 +16,9 @@
     --wx-relation-accent: var(--wx-webapp-primary, var(--wx-primary, #0d6efd));
     --wx-relation-radius: var(--wx-webapp-r-md, 8px);
     --wx-relation-radius-sm: var(--wx-webapp-r-sm, 5px);
+    /* the step a row takes against the head of its group. one icon plus its gap, so
+       the glyph of a row lands under the label of the group it belongs to */
+    --wx-relation-row-indent: 1rem;
 
     display: flex;
     flex-direction: column;
@@ -145,11 +148,13 @@
     font-variant-numeric: tabular-nums;
 }
 
+/* the indent is padding rather than a margin, so the row keeps its full width: the
+   hover still spans the list while only the content steps in under its group */
 .wx-relation-view-row {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 8px 14px;
+    padding: 8px 14px 8px calc(14px + var(--wx-relation-row-indent));
     border-bottom: 1px solid var(--wx-relation-border);
     font-size: 13.5px;
     cursor: pointer;
@@ -338,9 +343,16 @@
 
 .wx-relation-view-flat .wx-relation-view-group-head,
 .wx-relation-view-flat .wx-relation-view-row {
-    padding-left: 0;
     padding-right: 0;
     background: transparent;
+}
+
+.wx-relation-view-flat .wx-relation-view-group-head {
+    padding-left: 0;
+}
+
+.wx-relation-view-flat .wx-relation-view-row {
+    padding-left: var(--wx-relation-row-indent);
 }
 
 .wx-relation-view-flat .wx-relation-view-row:hover,

@@ -24,7 +24,7 @@ The control interprets the generic link structure and nothing else. Which system
    └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Every row starts with the icon of its relation, so a link stays recognisable by what it says even when the group heading has scrolled out of sight. Picking a row opens the **detail dialog** of that link — the note it was created with, what a plugin carries on it and the actions that change or drop it. Clicking the key itself follows the link instead, because that is what a link is for.
+Every row starts with the icon of its relation, so a link stays recognisable by what it says even when the group heading has scrolled out of sight. A row is set one step in from the head of its group (`--wx-relation-row-indent`), so the list reads as headings with entries under them rather than as one flat run of lines. The step is padding rather than a margin, so a hovered row still spans the full width of the list. Picking a row opens the **detail dialog** of that link — the note it was created with, what a plugin carries on it and the actions that change or drop it. Clicking the key itself follows the link instead, because that is what a link is for.
 
 ## Reading a link from two sides
 
