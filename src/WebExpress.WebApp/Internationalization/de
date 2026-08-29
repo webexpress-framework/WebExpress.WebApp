@@ -347,3 +347,52 @@ status.401.title=Nicht autorisiert
 status.401.description=Der HTTP-Statuscode 401 bedeutet, dass die Anfrage nicht bearbeitet wurde, da gültige Authentifizierungsdaten für die Zielressource fehlen. <ul><li>Der Benutzer hat sich nicht authentifiziert.</li><li>Die angegebenen Anmeldedaten sind ungültig oder abgelaufen.</li><li>Die Authentifizierungsmethode wird nicht unterstützt.</li></ul>
 status.403.title=Verboten
 status.403.description=Der HTTP-Statuscode 403 bedeutet, dass der Server die Anfrage verstanden hat, aber die Autorisierung verweigert. Im Gegensatz zu 401 macht eine erneute Authentifizierung keinen Unterschied. <ul><li>Der authentifizierte Benutzer verfügt nicht über die erforderlichen Berechtigungen.</li><li>Der Zugriff auf die angeforderte Ressource ist eingeschränkt.</li><li>Das Benutzerkonto könnte gesperrt oder deaktiviert sein.</li></ul>
+
+# link entity: the relation types and link systems WebExpress ships natively.
+# The labels are keys rather than prose in the registry, so the same catalog
+# reads in the language of the request.
+relation.system.object.label=Objekt
+relation.system.object.description=Verknüpfung mit einem anderen Vorgang, Projekt oder Dokument der Anwendung.
+relation.system.web.label=Webseite
+relation.system.web.description=Verknüpfung mit einer Adresse außerhalb der Anwendung.
+
+relation.type.blocks.label=blockiert
+relation.type.blocks.inverse=wird blockiert von
+relation.type.blocks.description=Der Zielvorgang kann nicht abgeschlossen werden, solange dieser Vorgang offen ist.
+relation.type.causes.label=verursacht
+relation.type.causes.inverse=wird verursacht von
+relation.type.causes.description=Dieser Vorgang ist die Ursache des Zielvorgangs.
+relation.type.references.label=referenziert
+relation.type.references.inverse=wird referenziert von
+relation.type.references.description=Ein sachlicher Verweis ohne Auswirkung auf den Ablauf.
+relation.type.similar.label=ähnlich zu
+relation.type.similar.description=Beide Vorgänge beschreiben einen vergleichbaren Sachverhalt.
+relation.type.duplicate.label=Duplikat von
+relation.type.duplicate.inverse=hat Duplikat
+relation.type.duplicate.description=Dieser Vorgang beschreibt denselben Sachverhalt wie das Ziel und wird mit ihm geschlossen.
+relation.type.parent.label=übergeordnet zu
+relation.type.parent.inverse=untergeordnet zu
+relation.type.parent.description=Der Fortschritt der untergeordneten Vorgänge wird in diesem Vorgang zusammengefasst.
+relation.type.replaces.label=ersetzt
+relation.type.replaces.inverse=wird ersetzt durch
+relation.type.replaces.description=Dieses Dokument löst sein Vorgängerdokument ab.
+relation.type.weblink.label=Weblink
+relation.type.weblink.description=Verweis auf eine externe Adresse.
+
+# link validation: the codes the link endpoints answer a rejected link with.
+relation.unknown.source=Der Ausgangsvorgang der Verknüpfung existiert nicht.
+relation.unknown.target=Der Zielvorgang der Verknüpfung existiert nicht.
+relation.unknown.system=Das angegebene Linksystem ist nicht registriert.
+relation.unknown.type=Der angegebene Verknüpfungstyp ist nicht registriert.
+relation.disabled.system=Das angegebene Linksystem ist deaktiviert.
+relation.inactive.type=Der angegebene Verknüpfungstyp ist deaktiviert.
+relation.type.system.mismatch=Der Verknüpfungstyp wird von diesem Linksystem nicht angeboten.
+relation.target.class=Der Verknüpfungstyp lässt diese Zielklasse nicht zu.
+relation.self=Ein Vorgang kann nicht mit sich selbst verknüpft werden.
+relation.duplicate=Diese Verknüpfung besteht bereits.
+relation.cardinality=Die Kardinalität des Verknüpfungstyps ist bereits ausgeschöpft.
+relation.invalid.address=Bitte geben Sie eine Adresse an, die mit http:// oder https:// beginnt.
+relation.type.label.required=Bitte benennen Sie die Beziehung.
+relation.type.inverse.required=Bitte benennen Sie das Gegenstück oder markieren Sie die Beziehung als symmetrisch.
+relation.type.duplicate=Ein Verknüpfungstyp mit dieser Kennung existiert bereits.
+relation.type.in.use=Der Verknüpfungstyp wird noch verwendet und kann nur deaktiviert werden.

@@ -1,0 +1,790 @@
+/* The link surface, its add dialog, the relation type administration and its
+   editor. The four share one palette because they are read as one feature: the
+   surface states the relations, the administration defines them.
+
+   Every colour resolves through the framework tokens, with an app level
+   --wx-webapp-* override in front, so a theme re-skins the surface without
+   touching this file. */
+
+.wx-relation-view,
+.wx-relation-editor {
+    --wx-relation-surface: var(--wx-webapp-surface, var(--wx-body-bg, #fff));
+    --wx-relation-surface-2: var(--wx-webapp-surface-2, var(--wx-tertiary-bg, #f6f7f9));
+    --wx-relation-border: var(--wx-webapp-border, var(--wx-border-color, #dee2e6));
+    --wx-relation-text: var(--wx-webapp-text, var(--wx-body-color, #212529));
+    --wx-relation-muted: var(--wx-webapp-text-3, var(--wx-secondary-color, #6c757d));
+    --wx-relation-accent: var(--wx-webapp-primary, var(--wx-primary, #0d6efd));
+    --wx-relation-radius: var(--wx-webapp-r-md, 8px);
+    --wx-relation-radius-sm: var(--wx-webapp-r-sm, 5px);
+
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--wx-relation-border);
+    border-radius: var(--wx-relation-radius);
+    background: var(--wx-relation-surface);
+    color: var(--wx-relation-text);
+    overflow: hidden;
+}
+
+/* ---------------------------------------------------------------- toolbar */
+
+.wx-relation-view-toolbar,
+.wx-relation-editor-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--wx-relation-surface-2);
+    border-bottom: 1px solid var(--wx-relation-border);
+    flex-wrap: wrap;
+}
+
+.wx-relation-view-heading {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.wx-relation-view-caption,
+.wx-relation-editor-caption {
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--wx-relation-muted);
+}
+
+.wx-relation-view-total {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 10px;
+    background: var(--wx-relation-border);
+    color: var(--wx-relation-text);
+    font-size: 12px;
+}
+
+.wx-relation-view-views {
+    display: inline-flex;
+    margin-left: auto;
+    padding: 2px;
+    border-radius: var(--wx-relation-radius-sm);
+    background: var(--wx-relation-border);
+}
+
+.wx-relation-view-view {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border: 0;
+    border-radius: var(--wx-relation-radius-sm);
+    background: transparent;
+    color: var(--wx-relation-muted);
+    font-size: 12.5px;
+    cursor: pointer;
+}
+
+.wx-relation-view-view.wx-relation-view-active {
+    background: var(--wx-relation-surface);
+    color: var(--wx-relation-text);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .08);
+}
+
+.wx-relation-view-add {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* ------------------------------------------------------------------- list */
+
+.wx-relation-view-body {
+    display: flex;
+    flex-direction: column;
+}
+
+/* the body and the panes of the contributed presentations are hidden through
+   the hidden attribute, which a display rule of our own would otherwise beat */
+.wx-relation-view [hidden] {
+    display: none;
+}
+
+/* a contributed presentation renders whatever controls it likes; the surface
+   only gives it the same room the list has */
+.wx-relation-view-pane {
+    display: flex;
+    flex-direction: column;
+    padding: 12px 14px;
+}
+
+.wx-relation-view-empty {
+    padding: 24px 14px;
+    text-align: center;
+    color: var(--wx-relation-muted);
+    font-size: 13px;
+}
+
+.wx-relation-view-group-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--wx-relation-surface-2);
+    border-bottom: 1px solid var(--wx-relation-border);
+    font-size: 11.5px;
+}
+
+.wx-relation-view-group-icon {
+    color: var(--wx-relation-muted);
+}
+
+.wx-relation-view-group-label {
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--wx-relation-text);
+}
+
+.wx-relation-view-group-counterpart {
+    padding: 1px 7px;
+    border-radius: var(--wx-relation-radius-sm);
+    background: var(--wx-relation-border);
+    color: var(--wx-relation-muted);
+}
+
+.wx-relation-view-group-count {
+    margin-left: auto;
+    color: var(--wx-relation-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.wx-relation-view-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--wx-relation-border);
+    font-size: 13.5px;
+    cursor: pointer;
+}
+
+.wx-relation-view-row:hover,
+.wx-relation-view-row:focus-visible {
+    background: var(--wx-relation-surface-2);
+}
+
+.wx-relation-view-row-icon {
+    color: var(--wx-relation-muted);
+    flex: 0 0 auto;
+}
+
+.wx-relation-view-row-more {
+    color: var(--wx-relation-muted);
+    flex: 0 0 auto;
+}
+
+.wx-relation-view-obsolete {
+    opacity: .55;
+}
+
+.wx-relation-view-obsolete .wx-relation-view-key {
+    text-decoration: line-through;
+}
+
+.wx-relation-view-key {
+    font-family: var(--bs-font-monospace, monospace);
+    color: var(--wx-relation-accent);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.wx-relation-view-key:hover {
+    text-decoration: underline;
+}
+
+.wx-relation-view-class {
+    padding: 1px 7px;
+    border: 1px solid var(--wx-relation-border);
+    border-radius: var(--wx-relation-radius-sm);
+    color: var(--wx-relation-muted);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.wx-relation-view-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wx-relation-view-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 1px 9px;
+    border: 1px solid var(--wx-relation-border);
+    border-radius: 10px;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.wx-relation-view-status::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.wx-relation-view-status-success { color: var(--wx-success, #198754); }
+.wx-relation-view-status-info { color: var(--wx-info, #0dcaf0); }
+.wx-relation-view-status-warning { color: var(--wx-warning, #ffc107); }
+.wx-relation-view-status-danger { color: var(--wx-danger, #dc3545); }
+.wx-relation-view-status-secondary { color: var(--wx-relation-muted); }
+
+.wx-relation-view-since {
+    color: var(--wx-relation-muted);
+    font-size: 12.5px;
+    white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ graph */
+
+.wx-relation-view-body-graph {
+    min-height: 320px;
+}
+
+.wx-relation-view-graph {
+    height: 320px;
+}
+
+/* the state of a node, painted through the framework palette; two class
+   selectors, so they beat the neutral default of the graph viewer */
+.wx-graph-viewer .wx-relation-view-node-success { fill: var(--wx-success, #198754); }
+.wx-graph-viewer .wx-relation-view-node-info { fill: var(--wx-info, #0dcaf0); }
+.wx-graph-viewer .wx-relation-view-node-warning { fill: var(--wx-warning, #ffc107); }
+.wx-graph-viewer .wx-relation-view-node-danger { fill: var(--wx-danger, #dc3545); }
+
+/* the object the surface belongs to is the one node the reader has to find
+   first; the two class selectors beat the base fill of the graph viewer */
+.wx-graph-viewer .wx-relation-view-node-subject {
+    fill: var(--wx-primary-bg-subtle, #cfe2ff);
+    stroke: var(--wx-primary, #0d6efd);
+    stroke-width: 2;
+}
+
+.wx-graph-viewer .wx-relation-view-node-subject-label {
+    fill: var(--wx-primary-text-emphasis, #052c65);
+    font-weight: 600;
+}
+
+.wx-relation-view-loading {
+    opacity: .6;
+}
+
+/* ------------------------------------------------------- layout: flat */
+
+/* A card separates by drawing a box; the flat layout separates by typography
+   and whitespace, so it can sit in a column of sections without claiming a
+   break the content does not have. Everything that draws the box is taken back
+   and the heading grows a hairline across the remaining width, which is the
+   only line the layout draws. */
+
+.wx-relation-view-flat {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    overflow: visible;
+}
+
+.wx-relation-view-flat .wx-relation-view-toolbar {
+    padding: 0.15rem 0;
+    gap: 0.45rem;
+    background: transparent;
+    border-bottom: 0;
+}
+
+.wx-relation-view-flat .wx-relation-view-heading {
+    flex: 1 1 auto;
+}
+
+/* the count is part of the label rather than a badge on a filled bar */
+.wx-relation-view-flat .wx-relation-view-total {
+    min-width: 0;
+    height: auto;
+    padding: 0;
+    background: transparent;
+    color: var(--wx-relation-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.wx-relation-view-flat .wx-relation-view-view {
+    padding: 2px 8px;
+    font-size: 12px;
+}
+
+.wx-relation-view-flat .wx-relation-view-view.wx-relation-view-active {
+    background: var(--wx-relation-surface-2);
+    box-shadow: none;
+}
+
+.wx-relation-view-flat .wx-relation-view-add {
+    padding: 0.15rem 0.6rem;
+    font-size: 12.5px;
+}
+
+/* the rows lose the inset of the card and hang off the same left edge as the
+   heading, which is what ties them to it */
+.wx-relation-view-flat .wx-relation-view-body,
+.wx-relation-view-flat .wx-relation-view-pane {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.wx-relation-view-flat .wx-relation-view-body {
+    padding-top: 0.5rem;
+}
+
+.wx-relation-view-flat .wx-relation-view-group-head,
+.wx-relation-view-flat .wx-relation-view-row {
+    padding-left: 0;
+    padding-right: 0;
+    background: transparent;
+}
+
+.wx-relation-view-flat .wx-relation-view-row:hover,
+.wx-relation-view-flat .wx-relation-view-row:focus-visible {
+    background: var(--wx-relation-surface-2);
+    /* the row keeps its left edge, so the hover reaches into the gutter rather
+       than starting a second, narrower column */
+    box-shadow: -8px 0 0 var(--wx-relation-surface-2), 8px 0 0 var(--wx-relation-surface-2);
+}
+
+/* a trailing hairline under the last row would hang below the section without
+   anything to separate */
+.wx-relation-view-flat .wx-relation-view-group:last-child .wx-relation-view-row:last-child {
+    border-bottom: 0;
+}
+
+.wx-relation-view-flat .wx-relation-view-empty {
+    padding: 12px 0;
+    text-align: left;
+}
+
+/* --------------------------------------------------------- detail dialog */
+
+.wx-relation-view-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.wx-relation-view-detail-row {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    font-size: 13.5px;
+}
+
+.wx-relation-view-detail-label {
+    flex: 0 0 34%;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--wx-secondary-color, #6c757d);
+}
+
+.wx-relation-view-detail-value {
+    flex: 1 1 auto;
+    min-width: 0;
+    word-break: break-word;
+}
+
+.wx-relation-view-note {
+    margin: 10px 0 0 0;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--wx-tertiary-bg, #f6f7f9);
+    font-size: 13px;
+}
+
+.wx-relation-view-meta {
+    color: var(--wx-secondary-color, #6c757d);
+    font-family: var(--bs-font-monospace, monospace);
+    font-size: 12px;
+}
+
+.wx-relation-view-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.wx-relation-view-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* ------------------------------------------------------------ add dialog */
+
+/* the dialog is the framework sidebar modal, so the split, the tree and the
+   page panes are styled by webexpress.webui; only the fields a link page
+   renders belong here */
+
+.wx-relation-view-dialog .wx-page-pane {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* a flex item refuses to shrink below its content unless it is told to, which
+   is what pushes a long suggestion title into a horizontal scrollbar instead of
+   an ellipsis */
+.wx-relation-view-dialog .wx-main-pane,
+.wx-relation-view-dialog .wx-pages,
+.wx-relation-view-dialog .wx-page-pane {
+    min-width: 0;
+}
+
+.wx-relation-view-dialog-hint {
+    padding: 10px 12px;
+    border: 1px solid var(--wx-info-border-subtle, #b6effb);
+    border-radius: 8px;
+    background: var(--wx-info-bg-subtle, #cff4fc);
+    color: var(--wx-info-text-emphasis, #055160);
+    font-size: 13px;
+}
+
+.wx-relation-view-dialog-hint:empty {
+    display: none;
+}
+
+.wx-relation-view-dialog-label {
+    margin-top: 10px;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--wx-secondary-color, #6c757d);
+}
+
+.wx-relation-view-dialog-label-optional {
+    font-weight: 400;
+}
+
+/* the two pickers are the framework selection control, so the field, the
+   dropdown and the filter are styled by webexpress.webui; only the caption of a
+   candidate belongs here */
+
+.wx-relation-view-dialog-suggestion {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.wx-relation-view-dialog-suggestion-key {
+    font-family: var(--bs-font-monospace, monospace);
+    color: var(--wx-primary, #0d6efd);
+    white-space: nowrap;
+}
+
+.wx-relation-view-dialog-suggestion-class {
+    padding: 1px 7px;
+    border: 1px solid var(--wx-border-color, #dee2e6);
+    border-radius: 5px;
+    font-size: 12px;
+    color: var(--wx-secondary-color, #6c757d);
+    white-space: nowrap;
+}
+
+.wx-relation-view-dialog-suggestion-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* the dropdown item around it already carries the padding */
+.wx-relation-view-dialog-empty {
+    color: var(--wx-secondary-color, #6c757d);
+    font-size: 13px;
+}
+
+/* -------------------------------------------------- type administration */
+
+.wx-relation-editor-counts {
+    margin-right: auto;
+    font-size: 12.5px;
+    color: var(--wx-relation-muted);
+}
+
+.wx-relation-editor-table {
+    display: flex;
+    flex-direction: column;
+}
+
+.wx-relation-editor-head,
+.wx-relation-editor-row {
+    display: grid;
+    grid-template-columns: 26px minmax(180px, 1.6fr) minmax(140px, 1.4fr) 110px minmax(120px, 1fr) 90px 60px 70px;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--wx-relation-border);
+}
+
+.wx-relation-editor-head {
+    background: var(--wx-relation-surface-2);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--wx-relation-muted);
+}
+
+.wx-relation-editor-row {
+    font-size: 13.5px;
+}
+
+.wx-relation-editor-row:hover {
+    background: var(--wx-relation-surface-2);
+}
+
+.wx-relation-editor-inactive {
+    opacity: .5;
+}
+
+/* the reorder marks are the ones every reorderable control of the framework
+   uses, so a drop reads the same here as on a tile or a board column: the row
+   that would be pushed aside carries a line on the side the drop lands */
+.wx-relation-editor-row.wx-drop-target {
+    position: relative;
+}
+
+.wx-relation-editor-row.wx-drop-before::after,
+.wx-relation-editor-row.wx-drop-after::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--wx-relation-accent);
+    pointer-events: none;
+    z-index: 3;
+}
+
+.wx-relation-editor-row.wx-drop-before::after {
+    top: -1px;
+}
+
+.wx-relation-editor-row.wx-drop-after::after {
+    bottom: -1px;
+}
+
+.wx-relation-editor-row.wx-relation-editor-dragging {
+    opacity: .55;
+    cursor: grabbing;
+}
+
+.wx-relation-editor-grip {
+    color: var(--wx-relation-muted);
+    cursor: grab;
+}
+
+.wx-relation-editor-pair {
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+}
+
+.wx-relation-editor-forward {
+    font-weight: 600;
+}
+
+.wx-relation-editor-backward {
+    color: var(--wx-relation-muted);
+    font-size: 12.5px;
+}
+
+.wx-relation-editor-symmetric {
+    align-self: flex-start;
+    margin-top: 2px;
+    padding: 0 6px;
+    border: 1px solid var(--wx-relation-border);
+    border-radius: 4px;
+    font-size: 11px;
+    color: var(--wx-relation-muted);
+}
+
+.wx-relation-editor-classes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.wx-relation-editor-chip {
+    padding: 1px 7px;
+    border: 1px solid var(--wx-relation-border);
+    border-radius: var(--wx-relation-radius-sm);
+    font-size: 12px;
+    color: var(--wx-relation-muted);
+    white-space: nowrap;
+}
+
+.wx-relation-editor-chip-all {
+    border-color: var(--wx-primary-border-subtle, #9ec5fe);
+    background: var(--wx-primary-bg-subtle, #cfe2ff);
+    color: var(--wx-primary-text-emphasis, #052c65);
+}
+
+.wx-relation-editor-cardinality {
+    font-family: var(--bs-font-monospace, monospace);
+}
+
+.wx-relation-editor-usage {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.wx-relation-editor-menu {
+    display: flex;
+    justify-content: flex-end;
+    gap: 4px;
+}
+
+.wx-relation-editor-option {
+    border: 0;
+    background: transparent;
+    color: var(--wx-relation-muted);
+    cursor: pointer;
+    padding: 2px 4px;
+}
+
+.wx-relation-editor-option:hover {
+    color: var(--wx-relation-accent);
+}
+
+.wx-relation-editor-option-danger:hover {
+    color: var(--wx-danger, #dc3545);
+}
+
+/* ------------------------------------------------------ type editor */
+
+/* the editor is one page of the framework sidebar modal, which renders it in
+   its single pane mode; only the fields of that page belong here */
+.wx-relation-editor-dialog {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.wx-relation-editor-dialog-pair,
+.wx-relation-editor-dialog-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.wx-relation-editor-dialog-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.wx-relation-editor-dialog-label {
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--wx-secondary-color, #6c757d);
+}
+
+.wx-relation-editor-dialog-hint {
+    color: var(--wx-secondary-color, #6c757d);
+    font-size: 12px;
+}
+
+.wx-relation-editor-dialog-check,
+.wx-relation-editor-dialog-class {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border: 1px solid var(--wx-border-color, #dee2e6);
+    border-radius: 6px;
+    font-size: 12.5px;
+    cursor: pointer;
+}
+
+.wx-relation-editor-dialog-classes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.wx-relation-editor-dialog-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    border: 1px dashed var(--wx-border-color, #dee2e6);
+    border-radius: 8px;
+    background: var(--wx-tertiary-bg, #f6f7f9);
+}
+
+.wx-relation-editor-dialog-preview-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+}
+
+.wx-relation-editor-dialog-preview-chip {
+    padding: 2px 8px;
+    border: 1px solid var(--wx-border-color, #dee2e6);
+    border-radius: 5px;
+    background: var(--wx-body-bg, #fff);
+    font-family: var(--bs-font-monospace, monospace);
+    font-size: 12.5px;
+}
+
+.wx-relation-editor-dialog-preview-subject {
+    border-color: var(--wx-primary-border-subtle, #9ec5fe);
+    background: var(--wx-primary-bg-subtle, #cfe2ff);
+    color: var(--wx-primary-text-emphasis, #052c65);
+}
+
+.wx-relation-editor-dialog-preview-relation {
+    color: var(--wx-secondary-color, #6c757d);
+}
+
+.wx-relation-editor-dialog-impact {
+    margin-top: 10px;
+    font-size: 12.5px;
+    color: var(--wx-secondary-color, #6c757d);
+}
+
+/* the surface is dense; on a narrow viewport the table columns that only carry
+   secondary facts step aside rather than squeezing the type pair */
+@media (max-width: 900px) {
+    .wx-relation-editor-head,
+    .wx-relation-editor-row {
+        grid-template-columns: 26px minmax(140px, 2fr) minmax(120px, 1fr) 70px 60px 70px;
+    }
+
+    .wx-relation-editor-cardinality,
+    .wx-relation-editor-effect {
+        display: none;
+    }
+}

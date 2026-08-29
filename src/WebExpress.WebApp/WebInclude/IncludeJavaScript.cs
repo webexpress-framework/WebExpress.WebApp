@@ -46,6 +46,12 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/js/webexpress.webapp.input.unique.js")]
     [Asset("/assets/js/webexpress.webapp.kanban.model.js")]
     [Asset("/assets/js/webexpress.webapp.kanban.js")]
+    // the link panels read the registry key off the model at load time, so the
+    // model is declared before them
+    [Asset("/assets/js/webexpress.webapp.relation.view.model.js")]
+    [Asset("/assets/js/webexpress.webapp.relation.view.js")]
+    [Asset("/assets/js/webexpress.webapp.relation.editor.model.js")]
+    [Asset("/assets/js/webexpress.webapp.relation.editor.js")]
     [Asset("/assets/js/webexpress.webapp.list.model.js")]
     [Asset("/assets/js/webexpress.webapp.list.js")]
     [Asset("/assets/js/webexpress.webapp.login.js")]
@@ -96,6 +102,9 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/js/action/default.js")]
     [Asset("/assets/js/i18n/en.js")]
     [Asset("/assets/js/i18n/de.js")]
+    [Asset("/assets/js/panels/webexpress.webapp.panel.relation.object.js")]
+    [Asset("/assets/js/panels/webexpress.webapp.panel.relation.web.js")]
+    [Asset("/assets/js/panels/webexpress.webapp.panel.relation.editor.js")]
     [Asset("/assets/js/panels/webexpress.webapp.panel.workflow.guard.js")]
     [Asset("/assets/js/panels/webexpress.webapp.panel.workflow.postfunction.js")]
     [Asset("/assets/js/panels/webexpress.webapp.panel.workflow.state.properties.js")]

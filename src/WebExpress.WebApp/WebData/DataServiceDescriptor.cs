@@ -268,6 +268,51 @@ namespace WebExpress.WebApp.WebData
         }
 
         /// <summary>
+        /// Creates the data service descriptor for the link surface, which loads
+        /// the grouped links of an object with GET and shapes its own POST, PUT
+        /// and DELETE requests against the same base. The filter names are the
+        /// ones the link endpoint reads, so the surface carries no wire knowledge
+        /// of its own.
+        /// </summary>
+        /// <param name="baseUri">The resolved link endpoint.</param>
+        /// <returns>The configured descriptor.</returns>
+        public static DataServiceDescriptor RelationViewData(string baseUri)
+        {
+            return Rest("data")
+                .WithBaseUri(baseUri)
+                .WithMethod("GET")
+                .WithUpdateMethod("PUT")
+                .MapQuery("kind", "kind")
+                .MapQuery("type", "type")
+                .MapQuery("system", "system")
+                .MapQuery("status", "status")
+                .MapQuery("target", "target")
+                .MapQuery("search", "q")
+                .MapResponse("groups", "groups")
+                .MapResponse("total", "total");
+        }
+
+        /// <summary>
+        /// Creates the data service descriptor for the relation type
+        /// administration, which loads the administered types with GET and
+        /// defines, changes, reorders and removes them against the same base.
+        /// </summary>
+        /// <param name="baseUri">The resolved link type endpoint.</param>
+        /// <returns>The configured descriptor.</returns>
+        public static DataServiceDescriptor RelationEditorData(string baseUri)
+        {
+            return Rest("data")
+                .WithBaseUri(baseUri)
+                .WithMethod("GET")
+                .WithUpdateMethod("PUT")
+                .MapQuery("search", "q")
+                .MapQuery("class", "class")
+                .MapQuery("system", "system")
+                .MapResponse("items", "items")
+                .MapResponse("total", "total");
+        }
+
+        /// <summary>
         /// Creates the data service descriptor for a control that submits to its
         /// endpoint with POST, which is the shape the login form uses.
         /// </summary>

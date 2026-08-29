@@ -63,6 +63,10 @@ use the helper script, which locates node automatically:
 | `selection.model.test.mjs` | Unit tests for the REST selection model helpers: the request url and init shaping and the response item mapping, plus a search through the shared request.
 | `input.selection.model.test.mjs` | Unit tests for the REST input selection model helpers: the request url and init shaping and the item mapping with its data and aria tuples, plus a search through the shared request.
 | `dropdown.theme.model.test.mjs` | Unit tests for the theme dropdown model helpers: the theme item mapping and the theme list normalisation, plus a themes load through the shared request.
+| `link.model.test.mjs`  | Unit tests for the link model helpers: the result and system normalisation, the perspective that picks the opposite end of a link, the create bodies of both link categories, the sidebar sections, the graph projection and the reading of a rejection.
+| `link.type.model.test.mjs` | Unit tests for the relation type model helpers: the definition normalisation, what a symmetric relation implies for its counterpart, the request body, the completeness rules, the two readings of the preview and the reordering.
+| `control.link.test.mjs` | End-to-end tests for the link surface: the grouping, the perspective, the category tabs that re-query the endpoint, the lifecycle actions and the add dialog with its registered systems and its two native panels.
+| `control.link-type.test.mjs` | End-to-end tests for the relation type administration: the table, the guard that keeps a used relation from being dropped, the activation toggle, the reordering and the editor with its two readings.
 
 ## Relationship to the .NET test suite
 

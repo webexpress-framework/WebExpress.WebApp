@@ -407,6 +407,29 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
     }
 
     /**
+     * Reads the body of a failed response, when the endpoint sent a json one.
+     * A body that cannot be read is not an additional failure: the status and
+     * the message already describe the outcome, so the reason is simply absent.
+     * @param {Response} response - The failed response.
+     * @returns {Promise<object|null>} The parsed body, or null.
+     */
+    async _readFault(response) {
+        const contentType = (response.headers && typeof response.headers.get === "function"
+            ? response.headers.get("content-type")
+            : "") || "";
+
+        if (response.status === 204 || !contentType.includes("application/json")) {
+            return null;
+        }
+
+        try {
+            return await response.json();
+        } catch (parseError) {
+            return null;
+        }
+    }
+
+    /**
      * Performs a request, honours the declared retry policy and reports the
      * final failure to the error channel. A retriable failure, which is a
      * network error or an http 5xx response, is retried up to the configured
@@ -490,7 +513,14 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
                 const mapped = this._descriptor.errors && this._descriptor.errors[String(response.status)];
                 // a mapped entry may be an i18n key (see the descriptor doc); plain text falls through untouched
                 const message = (mapped && (webexpress?.webui?.I18N?.translate(mapped) ?? mapped)) || ("request failed with status " + response.status);
-                return webexpress.webapp.ServiceResult.fail("http", response.status, message, response.status >= 500);
+                const result = webexpress.webapp.ServiceResult.fail("http", response.status, message, response.status >= 500);
+
+                // an endpoint that refuses a write says why in the body; keeping
+                // it lets the caller report that reason instead of a bare status,
+                // which is what the request path already does
+                result.data = await this._readFault(response);
+
+                return result;
             }
 
             if (response.status === 204 || method === "DELETE") {

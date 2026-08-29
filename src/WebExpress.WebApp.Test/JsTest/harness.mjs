@@ -100,6 +100,18 @@ const BOOTSTRAP = `
     // a faithful minimal copy of the webexpress.webui.Icon factory so control
     // files that build their icons through it can be instantiated in the harness;
     // the css-versus-image decision itself is covered by the WebUI icon tests.
+    // a faithful minimal copy of the icon set resolver, so a model that hands a
+    // symbolic icon name on to a control resolves it the way the framework does
+    webexpress.webui.IconSet = {
+        PREFIX: "wx-icon-light",
+        resolve(icon) {
+            var value = (icon || "").trim();
+            if (!value) { return ""; }
+            if (value.startsWith(this.PREFIX + " ")) { return value; }
+            if (value.startsWith(this.PREFIX + "-")) { return this.PREFIX + " " + value; }
+            return this.PREFIX + " " + this.PREFIX + "-" + value;
+        }
+    };
     webexpress.webui.Icon = {
         create(spec, extraClass) {
             var value = (spec || "").trim();

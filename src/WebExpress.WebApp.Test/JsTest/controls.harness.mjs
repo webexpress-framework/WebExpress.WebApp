@@ -50,6 +50,10 @@ const WEBUI_BASE_CONTROLS = [
     "webexpress.webui.modal.js",
     "webexpress.webui.modal.page.js",
     "webexpress.webui.modal.form.js",
+    // the sidebar dialog the link surface opens is a split with a tree in it
+    "webexpress.webui.split.js",
+    "webexpress.webui.tree.js",
+    "webexpress.webui.modal.sidebar.panel.js",
     "webexpress.webui.table.js",
     "webexpress.webui.table.reorderable.js",
     "webexpress.webui.graph.viewer.js",
@@ -193,7 +197,7 @@ function createBrowserGlobals(document) {
         requestAnimationFrame: (callback) => safeSetTimeout(() => callback(Date.now()), 0),
         cancelAnimationFrame: (handle) => clearTimeout(handle),
         getSelection: () => ({ rangeCount: 0, isCollapsed: true, removeAllRanges() { }, addRange() { }, getRangeAt() { return null; } }),
-        scrollTo() { }, scrollBy() { },
+        scrollTo() { }, scrollBy() { }, open() { },
         setTimeout: safeSetTimeout, clearTimeout, setInterval: safeSetInterval, clearInterval
     };
     window.window = window;

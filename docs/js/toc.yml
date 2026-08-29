@@ -14,6 +14,10 @@
   href: graph.viewer.md
 - name: InputCascadingCtrl
   href: cascading.md
+- name: RelationViewCtrl
+  href: relation.view.md
+- name: RelationEditorCtrl
+  href: relation.editor.md
 - name: RestFormCtrl
   href: form.md
 - name: RestFormEditorCtrl

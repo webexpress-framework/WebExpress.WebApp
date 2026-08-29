@@ -422,6 +422,69 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
+        /// Declares the standard data service of the link surface, which loads
+        /// the grouped links of an object with GET; establishing, changing and
+        /// removing a link shape their own POST, PUT and DELETE requests against
+        /// the same base.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The link control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataRelationView DataService<TEndpoint>(this ControlDataRelationView control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, DataServiceDescriptor.RelationViewData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
+        }
+
+        /// <summary>
+        /// Declares the systems service of the link surface, which answers the
+        /// registered link systems and the relations they offer. It is what makes
+        /// the add dialog extensible: a system a plugin registered appears in the
+        /// sidebar without a change to the page.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The link control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataRelationView SystemsService<TEndpoint>(this ControlDataRelationView control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, RelationSystemsPreset, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
+        }
+
+        /// <summary>
+        /// Declares the targets service of the link surface, which searches the
+        /// objects a link may point at. The relation travels with the query, so
+        /// the endpoint offers only what the picked type accepts.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The link control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataRelationView TargetsService<TEndpoint>(this ControlDataRelationView control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, RelationTargetsPreset, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
+        }
+
+        /// <summary>
+        /// Declares the standard data service of the relation type
+        /// administration, which loads the administered types with GET; defining,
+        /// changing, reordering and removing a type shape their own requests
+        /// against the same base.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The link type control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataRelationEditor DataService<TEndpoint>(this ControlDataRelationEditor control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, DataServiceDescriptor.RelationEditorData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
+        }
+
+        /// <summary>
         /// Declares the users service of the scrum backlog, which resolves the
         /// candidate assignees with GET when an item is assigned.
         /// </summary>
@@ -853,6 +916,15 @@ namespace WebExpress.WebApp.WebControl
             => BindResource<ControlDataTag, TResource>(control);
 
         /// <summary>
+        /// Binds the link surface to a ViewState resource by type.
+        /// </summary>
+        /// <typeparam name="TResource">The resource type.</typeparam>
+        /// <param name="control">The link control.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataRelationView Resource<TResource>(this ControlDataRelationView control) where TResource : IDataResource
+            => BindResource<ControlDataRelationView, TResource>(control);
+
+        /// <summary>
         /// Binds the watcher surface to a ViewState resource by type.
         /// </summary>
         /// <typeparam name="TResource">The resource type.</typeparam>
@@ -978,6 +1050,39 @@ namespace WebExpress.WebApp.WebControl
         private static DataServiceDescriptor UsersPreset(string baseUri)
         {
             return DataServiceDescriptor.Rest("users").WithBaseUri(baseUri).WithMethod("GET");
+        }
+
+        /// <summary>
+        /// The preset of the named systems service of the link surface, which
+        /// answers the registered link systems with GET.
+        /// </summary>
+        /// <param name="baseUri">The resolved endpoint.</param>
+        /// <returns>The configured descriptor.</returns>
+        private static DataServiceDescriptor RelationSystemsPreset(string baseUri)
+        {
+            return DataServiceDescriptor.Rest("systems")
+                .WithBaseUri(baseUri)
+                .WithMethod("GET")
+                .MapQuery("kind", "kind")
+                .MapQuery("enabled", "enabled");
+        }
+
+        /// <summary>
+        /// The preset of the named targets service of the link surface, which
+        /// searches the objects a link may point at with GET.
+        /// </summary>
+        /// <param name="baseUri">The resolved endpoint.</param>
+        /// <returns>The configured descriptor.</returns>
+        private static DataServiceDescriptor RelationTargetsPreset(string baseUri)
+        {
+            return DataServiceDescriptor.Rest("targets")
+                .WithBaseUri(baseUri)
+                .WithMethod("GET")
+                .MapQuery("search", "q")
+                .MapQuery("type", "type")
+                .MapQuery("system", "system")
+                .MapQuery("source", "source")
+                .MapQuery("pageSize", "l");
         }
 
         /// <summary>

@@ -403,6 +403,18 @@ webexpress.webapp.Event = class {
     static PERMISSION_ASSIGNED_EVENT = "webexpress.webapp.permission.assigned";
     // Event triggered when every policy of a group is revoked
     static PERMISSION_REMOVED_EVENT = "webexpress.webapp.permission.removed";
+    // Event triggered when a link was established
+    static RELATION_ADDED_EVENT = "webexpress.webapp.relation.added";
+    // Event triggered when the status or the note of a link changed
+    static RELATION_UPDATED_EVENT = "webexpress.webapp.relation.updated";
+    // Event triggered when a link was removed
+    static RELATION_REMOVED_EVENT = "webexpress.webapp.relation.removed";
+    // Event triggered when a link type was defined or changed
+    static RELATION_TYPE_SAVED_EVENT = "webexpress.webapp.relation.editor.saved";
+    // Event triggered when a link type was removed
+    static RELATION_TYPE_REMOVED_EVENT = "webexpress.webapp.relation.editor.removed";
+    // Event triggered when the link types were rearranged
+    static RELATION_TYPE_REORDERED_EVENT = "webexpress.webapp.relation.editor.reordered";
 }
 
 /**

@@ -349,3 +349,52 @@ status.401.title=Unauthorized
 status.401.description=The HTTP status code 401 indicates that the request was not applied because it lacks valid authentication credentials for the target resource. <ul><li>The user has not authenticated.</li><li>The provided credentials are invalid or expired.</li><li>The authentication method is not supported.</li></ul>
 status.403.title=Forbidden
 status.403.description=The HTTP status code 403 indicates that the server understood the request but refuses to authorize it. Unlike 401, re-authenticating will make no difference. <ul><li>The authenticated user does not have the required permissions.</li><li>Access to the requested resource is restricted.</li><li>The user account may be locked or disabled.</li></ul>
+
+# link entity: the relation types and link systems WebExpress ships natively.
+# The labels are keys rather than prose in the registry, so the same catalog
+# reads in the language of the request.
+relation.system.object.label=Object
+relation.system.object.description=Link to another item, project or document of the application.
+relation.system.web.label=Website
+relation.system.web.description=Link to an address outside the application.
+
+relation.type.blocks.label=blocks
+relation.type.blocks.inverse=is blocked by
+relation.type.blocks.description=The target cannot be completed while this item is open.
+relation.type.causes.label=causes
+relation.type.causes.inverse=is caused by
+relation.type.causes.description=This item is the cause of the target.
+relation.type.references.label=references
+relation.type.references.inverse=is referenced by
+relation.type.references.description=A factual reference without an effect on the workflow.
+relation.type.similar.label=similar to
+relation.type.similar.description=Both items describe a comparable situation.
+relation.type.duplicate.label=duplicate of
+relation.type.duplicate.inverse=has duplicate
+relation.type.duplicate.description=This item describes the same situation as the target and is closed with it.
+relation.type.parent.label=parent of
+relation.type.parent.inverse=child of
+relation.type.parent.description=The progress of the children is aggregated into this item.
+relation.type.replaces.label=replaces
+relation.type.replaces.inverse=is replaced by
+relation.type.replaces.description=This document supersedes its predecessor.
+relation.type.weblink.label=Web link
+relation.type.weblink.description=Reference to an external address.
+
+# link validation: the codes the link endpoints answer a rejected link with.
+relation.unknown.source=The source of the link does not exist.
+relation.unknown.target=The target of the link does not exist.
+relation.unknown.system=The link system is not registered.
+relation.unknown.type=The link type is not registered.
+relation.disabled.system=The link system is disabled.
+relation.inactive.type=The link type is deactivated.
+relation.type.system.mismatch=The link type is not offered by this link system.
+relation.target.class=The link type does not accept this target class.
+relation.self=An item cannot be linked with itself.
+relation.duplicate=This link already exists.
+relation.cardinality=The cardinality of the link type is already exhausted.
+relation.invalid.address=Please enter an address starting with http:// or https://.
+relation.type.label.required=Please name the relation.
+relation.type.inverse.required=Please name the counterpart, or mark the relation as symmetric.
+relation.type.duplicate=A link type with this id already exists.
+relation.type.in.use=The link type is still in use and can only be deactivated.
