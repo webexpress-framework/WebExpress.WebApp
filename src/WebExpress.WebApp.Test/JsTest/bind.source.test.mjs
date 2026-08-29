@@ -1,5 +1,5 @@
 /**
- * Headless unit tests for the source binds: search, paging and filter.
+ * Headless unit tests for the source binds: search, paging, filter and upload.
  *
  * These are the read direction of a surface that produces a value for someone
  * else. BindSearch and BindPaging declare them on the data component - the
@@ -18,6 +18,7 @@ import { loadEngine } from "./harness.mjs";
 
 const CHANGE_FILTER_EVENT = "webexpress.webui.change.filter";
 const CHANGE_PAGE_EVENT = "webexpress.webui.change.page";
+const UPLOAD_SUCCESS_EVENT = "webexpress.webui.upload.success";
 
 /**
  * Loads an engine whose Event constants are the real ones and whose controller
@@ -32,6 +33,7 @@ function loadRuntime(component) {
 
     engine.wx.Event.CHANGE_FILTER_EVENT = CHANGE_FILTER_EVENT;
     engine.wx.Event.CHANGE_PAGE_EVENT = CHANGE_PAGE_EVENT;
+    engine.wx.Event.UPLOAD_SUCCESS_EVENT = UPLOAD_SUCCESS_EVENT;
 
     const instances = new Map();
     engine.wx.Controller.getInstanceByElement = (element) => instances.get(element) || null;
@@ -82,8 +84,10 @@ function recorder() {
         store: {},
         searched: [],
         paged: [],
+        uploads: [],
         search(pattern, type) { this.searched.push({ pattern, type }); },
-        page(index) { this.paged.push(index); }
+        page(index) { this.paged.push(index); },
+        uploaded(file) { this.uploads.push(file); }
     };
 }
 
@@ -208,6 +212,57 @@ test("a component without a search method is reported rather than called", () =>
     // the guard exists because the binds are declared on the server, where
     // nothing checks that the target control implements the dispatch surface
     assert.doesNotThrow(() => rt.fire(CHANGE_FILTER_EVENT, { sender: source, value: "vpn" }));
+});
+
+test("an upload bind shows the file the named upload control uploaded", () => {
+    const component = recorder();
+    const rt = loadRuntime(component);
+    const { source } = rt.bind("upload", "upload-box");
+    const file = { name: "Photo.jpg", size: 2048 };
+
+    rt.fire(UPLOAD_SUCCESS_EVENT, { sender: source, file: file });
+
+    assert.deepEqual(component.uploads, [file], "the file reaches the component that lists the files");
+});
+
+test("an upload bind matches the upload control even after it moved its id inward", () => {
+    const component = recorder();
+    const rt = loadRuntime(component);
+    const { source } = rt.bind("upload", "upload-box");
+
+    // the upload control takes the id off its host and puts it on the hidden
+    // file input it builds, so the selector resolves to a descendant of the
+    // sender rather than to the sender itself
+    source.id = null;
+    const input = rt.engine.document.createElement("input");
+    input.id = "upload-box";
+    source.appendChild(input);
+
+    rt.fire(UPLOAD_SUCCESS_EVENT, { sender: source, file: { name: "Photo.jpg" } });
+
+    assert.equal(component.uploads.length, 1, "an identity check alone would never match");
+});
+
+test("an upload bind ignores an upload control it does not name", () => {
+    const component = recorder();
+    const rt = loadRuntime(component);
+    rt.bind("upload", "upload-box");
+
+    const other = rt.engine.document.createElement("div");
+    other.id = "another-box";
+    rt.engine.document.body.appendChild(other);
+
+    rt.fire(UPLOAD_SUCCESS_EVENT, { sender: other, file: { name: "Photo.jpg" } });
+
+    assert.deepEqual(component.uploads, [], "a foreign upload changes nothing");
+});
+
+test("a component without an uploaded method is reported rather than called", () => {
+    const component = { store: {}, searched: [], search(pattern) { this.searched.push(pattern); } };
+    const rt = loadRuntime(component);
+    const { source } = rt.bind("upload", "upload-box");
+
+    assert.doesNotThrow(() => rt.fire(UPLOAD_SUCCESS_EVENT, { sender: source, file: {} }));
 });
 
 test("the filter bind is registered, so declaring it is not reported as unknown", () => {

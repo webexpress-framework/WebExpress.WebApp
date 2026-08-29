@@ -38,7 +38,10 @@
  *                                     driven; the filter registry owns the
  *                                     term, so the bind only has to exist
  *
- * The three source binds are declared on the data component (the reader), not on
+ *   data-wx-bind="upload"           - shows what an upload control uploaded
+ *     data-wx-source-upload="#id"   - the upload control to follow
+ *
+ * The source binds are declared on the data component (the reader), not on
  * the surface that produces the value, which is why they carry a selector rather
  * than a store path: the component subscribes to the control named by the
  * selector and translates its event into its own dispatch surface. That keeps a
@@ -384,6 +387,64 @@
             });
         }
     });
+
+    // upload bind - shows a file the named upload control just finished
+    // uploading in the data component that lists the files, so the user sees the
+    // result of an upload without reloading the page. The component owns what a
+    // new file means (it shows it and re-queries), the bind only carries the file
+    webexpress.webui.Binds.register("upload", {
+        bind(element) {
+            const selector = element.getAttribute("data-wx-source-upload");
+
+            if (!selector) {
+                console.warn("upload bind without data-wx-source-upload", element);
+                return;
+            }
+
+            withComponent(element, (component) => {
+                const handler = (event) => {
+                    if (!isUpload(event, selector)) {
+                        return;
+                    }
+
+                    if (typeof component.uploaded !== "function") {
+                        console.warn("upload bind on a component without an uploaded method", element);
+                        return;
+                    }
+
+                    component.uploaded(event.detail.file);
+                };
+
+                document.addEventListener(webexpress.webui.Event.UPLOAD_SUCCESS_EVENT, handler);
+                onRemove(element, () => document.removeEventListener(webexpress.webui.Event.UPLOAD_SUCCESS_EVENT, handler));
+            });
+        }
+    });
+
+    /**
+     * Tells whether an upload event came from the upload control a selector
+     * names.
+     * @remarks
+     * The upload control moves the id of its host onto the hidden file input it
+     * builds, so that the input is what a label and a form refer to. A selector
+     * naming the control therefore resolves to that input once the control is
+     * mounted, while the event reports the host as its sender - which is why the
+     * host containing the resolved element counts as a match and a plain
+     * identity check, as the other source binds use, would never match.
+     * @param {Event} event - The upload event.
+     * @param {string} selector - The selector naming the upload control.
+     * @returns {boolean} True when the event came from that control.
+     */
+    function isUpload(event, selector) {
+        const sender = event.detail && event.detail.sender;
+        const named = document.querySelector(selector);
+
+        if (!sender || !named) {
+            return false;
+        }
+
+        return sender === named || (typeof sender.contains === "function" && sender.contains(named));
+    }
 
     // filter bind - the quickfilter registry owns the active filters and writes
     // them into the shared state itself, so nothing has to be wired here. The

@@ -23,6 +23,7 @@ import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const sheet = path.resolve(here, "..", "..", "WebExpress.WebApp", "Assets", "css", "webexpress.webapp.relation.css");
+const switcher = path.resolve(here, "..", "..", "..", "..", "WebExpress.WebUI", "src", "WebExpress.WebUI", "Assets", "css", "webexpress.webui.view.switcher.css");
 
 /**
  * Reads the declarations of every rule written for a selector. A selector may
@@ -31,8 +32,8 @@ const sheet = path.resolve(here, "..", "..", "WebExpress.WebApp", "Assets", "css
  * @param {string} selector - Selector to look up, matched verbatim.
  * @returns {string|null} The declarations, or null when the selector carries no rule.
  */
-function rule(selector) {
-    const css = fs.readFileSync(sheet, "utf8");
+function rule(selector, file = sheet) {
+    const css = fs.readFileSync(file, "utf8");
     const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const matches = [...css.matchAll(new RegExp("(?:^|[};/])\\s*" + escaped + "\\s*\\{([^}]*)\\}", "g"))];
 
@@ -40,11 +41,24 @@ function rule(selector) {
 }
 
 test("the presentation switch keeps itself to the right", () => {
-    const views = rule(".wx-relation-view-views");
+    // the switch is the shared one, so the rule that places it lives with it
+    const views = rule(".wx-view-switcher", switcher);
 
     assert.ok(views, "the switch carries a rule at all");
     assert.match(views, /margin-left:\s*auto/,
         "the switch collects the free space of the toolbar itself, so it stays right without a header");
+});
+
+test("the surface re-skins the shared switch rather than restating its layout", () => {
+    const skin = rule(".wx-relation-view .wx-view-switcher");
+
+    assert.ok(skin, "the surface hands the switch its own palette");
+
+    // only custom properties: a layout declaration here would be the second
+    // place the switch is described, which is what sharing it was meant to end
+    for (const declaration of skin.split(";").map((x) => x.trim()).filter(Boolean)) {
+        assert.match(declaration, /^--wx-view-switcher-/, `unexpected declaration: ${declaration}`);
+    }
 });
 
 test("the header does not push the switch, so it may be left out", () => {

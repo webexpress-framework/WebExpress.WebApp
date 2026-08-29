@@ -2,11 +2,11 @@
  * Default intent definitions for the intent registry.
  * Registers the generic, reusable intents that controls and binds compose
  * with, plus the query intents of the data query control families: the list,
- * the table and the tile share the query state contract (search, wql, filter,
- * page) and the load surface, so one definition serves all three domains and
- * each family keeps its own domain name per the naming convention. Domain
- * specific intents that belong to a single control, for example tab add, are
- * registered by the control that owns them.
+ * the table, the tile and the file view share the query state contract
+ * (search, wql, filter, page) and the load surface, so one definition serves
+ * all those domains and each family keeps its own domain name per the naming
+ * convention. Domain specific intents that belong to a single control, for
+ * example tab add, are registered by the control that owns them.
  *
  * An intent definition has an optional reduce, which is a pure state transition
  * that returns a patch, and an optional effect, which performs input or output.
@@ -65,7 +65,8 @@ webexpress.webapp.Intents.register("viewstate/reload", {
     }
 });
 
-// the query intents of the data query control families (list, table, tile).
+// the query intents of the data query control families (list, table, tile,
+// file view).
 // each reducer is a pure state transition and each effect triggers the load
 // through the dispatching component, so a test can dispatch an intent and
 // assert the resulting state without involving the network.
@@ -74,7 +75,7 @@ webexpress.webapp.Intents.register("viewstate/reload", {
         typeof context.component?.load === "function" ? context.component.load() : undefined
     );
 
-    for (const domain of ["list", "table", "tile"]) {
+    for (const domain of ["list", "table", "tile", "fileview"]) {
         // <domain>/search - sets the search or wql pattern, resets the page and loads
         webexpress.webapp.Intents.register(domain + "/search", {
             reduce(state, payload) {

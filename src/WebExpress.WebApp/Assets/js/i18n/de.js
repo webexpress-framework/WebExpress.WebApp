@@ -18,6 +18,12 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
 
     "form.edit_row": "Eintrag bearbeiten",
     "form.edit_item": "Element bearbeiten",
+
+    "fileview.list": "Liste",
+    "fileview.tile": "Kacheln",
+    "fileview.count": "{0} Datei(en)",
+    "fileview.versions": "{0} Versionen",
+    "fileview.description.placeholder": "Beschreibung",
     
     "wizard.previous": "Zurück",
     "wizard.next": "Weiter",

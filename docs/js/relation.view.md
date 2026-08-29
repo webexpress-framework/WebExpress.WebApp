@@ -183,6 +183,8 @@ The three sections - `SectionRelationViewPreferences`, `SectionRelationViewPrima
 
 A view is **rendered on the server** and handed to the client as a hidden pane inside the host, carrying its token, its caption and its icon as data attributes. The client builds the switch entry from the pane itself and only shows and hides it. That keeps a contributed view free to use any control of the framework - it does not have to be expressible in the client model of the surface - and switching to it costs no round trip.
 
+The switch itself is the shared one (`webexpress.webui.ViewSwitcher`), the same control `ControlView` and `ControlDataFileView` offer their presentations through, so a contributed view joins a switch a user already knows. The surface only hands it its own palette through the `--wx-view-switcher-*` custom properties; the layout of the switch is stated once, with the switch.
+
 ## The graph view
 
 The same relations are also rendered as a graph around the object: one node per linked end, one edge per link, labelled with the relation as it reads on this object. The model is derived from the links that are already loaded rather than from a second endpoint, so switching the presentation costs no round trip and the two views can never disagree.

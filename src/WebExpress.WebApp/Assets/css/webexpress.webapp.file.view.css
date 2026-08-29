@@ -1,0 +1,199 @@
+/* Root container of the file view */
+.wx-file-view {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    color: var(--wx-body-color);
+    box-sizing: border-box;
+}
+
+/* Toolbar carrying the presentation switch. The switch collects the free space
+   itself, so it stays on the right whether or not a title stands beside it. */
+.wx-file-view-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    border-bottom: 1px solid var(--wx-border-color);
+    flex: 0 0 auto;
+}
+
+/* Title block of the default layout, which names the active presentation */
+.wx-file-view-title {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.wx-file-view-title h5 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.wx-file-view-title small {
+    font-size: 0.75rem;
+}
+
+/* Loading indicator, a hairline above the panes */
+.wx-file-view-progress {
+    height: 0.25rem;
+    flex: 0 0 auto;
+}
+
+.wx-file-view-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+}
+
+.wx-file-view-pane {
+    width: 100%;
+}
+
+.wx-file-view-statusbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    flex: 0 0 auto;
+}
+
+/* Tile board */
+.wx-file-view-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+    gap: 0.75rem;
+    padding: 0.75rem;
+    align-items: stretch;
+}
+
+.wx-file-view-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.5rem;
+    border: 1px solid var(--wx-border-color);
+    border-radius: var(--bs-border-radius);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .05);
+    background-color: var(--wx-body-bg);
+    overflow: hidden;
+}
+
+.wx-file-view-card-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 5rem;
+    /* the preview is the part of a card the eye lands on first, so it keeps its
+       height even for a file that has no image and shows only its glyph */
+    flex: 0 0 auto;
+    overflow: hidden;
+}
+
+.wx-file-view-card-preview img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.wx-file-view-card-preview i {
+    font-size: 2.5rem;
+    color: var(--wx-secondary-color);
+}
+
+.wx-file-view-card-name {
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.wx-file-view-card-description {
+    flex: 1 1 auto;
+    font-size: 0.8rem;
+    color: var(--wx-secondary-color);
+    min-height: 1.2rem;
+    overflow: hidden;
+}
+
+.wx-file-view-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--wx-secondary-color);
+}
+
+.wx-file-view-card-meta > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25em;
+}
+
+/* Earlier versions of a file, folded behind the card of the current one */
+.wx-file-view-card-versions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25em;
+    align-self: flex-start;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 0.75rem;
+    color: var(--wx-secondary-color);
+}
+
+.wx-file-view-card-version-list {
+    list-style: none;
+    margin: 0;
+    padding: 0.25rem 0 0 0.75rem;
+    font-size: 0.75rem;
+    color: var(--wx-secondary-color);
+}
+
+.wx-file-view-card-version-list > li {
+    display: flex;
+    gap: 0.5em;
+    white-space: nowrap;
+}
+
+/* The description is the flexible column of the list: it is what the inline
+   editor needs room for, while name, size and date are as wide as they read.
+   Without this the cell shrinks to the text it holds, and the pencil - which the
+   smart edit control pins to the right edge of its host - lands inside the
+   sentence instead of at the end of the column. */
+.wx-file-view .wx-file-list > .wx-upload-preview > table > tbody > tr > td:nth-child(2) {
+    width: 100%;
+}
+
+.wx-file-view .wx-file-list > .wx-upload-preview > table > tbody > tr > td:nth-child(2) > div {
+    display: flex;
+    width: 100%;
+}
+
+/* Inline editable description, in the list as well as on a card. The editor is
+   only as wide as its column, so the input must not impose a width of its own. */
+.wx-file-view-description {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-width: 0;
+    /* the pencil is absolutely positioned against this box, so it has to take
+       the whole column rather than only the width of the text in it */
+    flex: 1 1 auto;
+}
+
+.wx-file-view-description input {
+    min-width: 0;
+}
+
+/* on a card the columns are stacked, so the editor takes the card's width */
+.wx-file-view-card-description > .wx-file-view-description {
+    width: 100%;
+}

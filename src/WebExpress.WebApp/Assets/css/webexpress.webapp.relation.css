@@ -67,31 +67,14 @@
     font-size: 12px;
 }
 
-.wx-relation-view-views {
-    display: inline-flex;
-    margin-left: auto;
-    padding: 2px;
-    border-radius: var(--wx-relation-radius-sm);
-    background: var(--wx-relation-border);
-}
-
-.wx-relation-view-view {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 3px 10px;
-    border: 0;
-    border-radius: var(--wx-relation-radius-sm);
-    background: transparent;
-    color: var(--wx-relation-muted);
-    font-size: 12.5px;
-    cursor: pointer;
-}
-
-.wx-relation-view-view.wx-relation-view-active {
-    background: var(--wx-relation-surface);
-    color: var(--wx-relation-text);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, .08);
+/* the presentation switch is the shared one; the surface only hands it its own
+   palette, so its layout stays stated in one place */
+.wx-relation-view .wx-view-switcher {
+    --wx-view-switcher-track: var(--wx-relation-border);
+    --wx-view-switcher-surface: var(--wx-relation-surface);
+    --wx-view-switcher-text: var(--wx-relation-text);
+    --wx-view-switcher-muted: var(--wx-relation-muted);
+    --wx-view-switcher-radius: var(--wx-relation-radius-sm);
 }
 
 .wx-relation-view-add {
@@ -324,12 +307,14 @@
     font-variant-numeric: tabular-nums;
 }
 
-.wx-relation-view-flat .wx-relation-view-view {
+.wx-relation-view-flat .wx-view-switcher-item {
     padding: 2px 8px;
     font-size: 12px;
 }
 
-.wx-relation-view-flat .wx-relation-view-view.wx-relation-view-active {
+/* the flat layout sits on the page rather than in a card, so the selected entry
+   is lifted by tone alone rather than by a shadow the page has nothing to cast on */
+.wx-relation-view-flat .wx-view-switcher-item.wx-view-switcher-active {
     background: var(--wx-relation-surface-2);
     box-shadow: none;
 }

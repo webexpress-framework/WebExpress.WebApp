@@ -92,6 +92,10 @@ const WEBUI_BASE_CONTROLS = [
     "webexpress.webui.tile.js",
     "webexpress.webui.sidebar.js",
     "webexpress.webui.smartedit.js",
+    // the list presentation of the data file view is the framework file list
+    "webexpress.webui.filelist.js",
+    // the presentation switch every surface with several views of one subject uses
+    "webexpress.webui.view.switcher.js",
     // the permission surface picks its policy chips with the move control, in
     // the read-only and in the editable variant
     "webexpress.webui.move.js",

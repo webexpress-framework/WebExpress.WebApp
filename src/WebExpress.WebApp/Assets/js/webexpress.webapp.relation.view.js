@@ -166,18 +166,26 @@ webexpress.webapp.RelationViewCtrl = class extends webexpress.webapp.Data {
             heading.appendChild(this._totalBadge);
         }
 
-        this._viewTabs = document.createElement("div");
-        this._viewTabs.className = "wx-relation-view-views";
-        this._listTab = this._buildViewTab("list", "list", this._i18n("webexpress.webapp:relation.view.list", "List"));
-        this._graphTab = this._buildViewTab("graph", "share-nodes", this._i18n("webexpress.webapp:relation.view.graph", "Graph"));
-        this._viewTabs.appendChild(this._listTab);
-        this._viewTabs.appendChild(this._graphTab);
+        // the shared presentation switch, so the surface offers its views the
+        // way every other one does
+        this._switcher = new webexpress.webui.ViewSwitcher({
+            views: [
+                { name: "list", icon: "list", label: this._i18n("webexpress.webapp:relation.view.list", "List") },
+                { name: "graph", icon: "share-nodes", label: this._i18n("webexpress.webapp:relation.view.graph", "Graph") },
+                // a contributed presentation states its caption and its icon on
+                // the pane itself, so the page declares it once and the switch
+                // follows
+                ...this._panes.map((pane) => ({
+                    name: pane.getAttribute("data-view"),
+                    label: pane.getAttribute("data-label") || pane.getAttribute("data-view"),
+                    icon: pane.getAttribute("data-icon"),
+                    image: pane.getAttribute("data-image")
+                }))
+            ],
+            active: this.state.view,
+            onSelect: (view) => this.setState({ view: view })
+        });
 
-        // a contributed presentation states its caption and its icon on the pane
-        // itself, so the page declares it once and the switch follows
-        for (const pane of this._panes) {
-            this._viewTabs.appendChild(this._buildPaneTab(pane));
-        }
 
         this._addButton = document.createElement("button");
         this._addButton.type = "button";
@@ -191,7 +199,7 @@ webexpress.webapp.RelationViewCtrl = class extends webexpress.webapp.Data {
             this._toolbar.appendChild(heading);
         }
 
-        this._toolbar.appendChild(this._viewTabs);
+        this._toolbar.appendChild(this._switcher.element);
 
         if (!this._readonly) {
             this._toolbar.appendChild(this._addButton);
@@ -209,67 +217,11 @@ webexpress.webapp.RelationViewCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Builds the switch entry of a contributed presentation from the pane the
-     * server rendered.
-     * @param {HTMLElement} pane - The pane of the presentation.
-     * @returns {HTMLElement} The tab.
-     */
-    _buildPaneTab(pane) {
-        const view = pane.getAttribute("data-view");
-        const tab = document.createElement("button");
-
-        tab.type = "button";
-        tab.className = "wx-relation-view-view";
-        tab.dataset.view = view;
-        tab.setAttribute("data-view-tab", view);
-
-        const icon = webexpress.webui.Icon.create(pane.getAttribute("data-image") || pane.getAttribute("data-icon"));
-        if (icon) {
-            tab.appendChild(icon);
-        }
-
-        const text = document.createElement("span");
-        text.textContent = pane.getAttribute("data-label") || view;
-        tab.appendChild(text);
-
-        return tab;
-    }
-
-    /**
-     * Builds one presentation tab of the toolbar.
-     * @param {string} view - The presentation the tab selects.
-     * @param {string} icon - The symbolic icon name.
-     * @param {string} label - The caption.
-     * @returns {HTMLElement} The tab.
-     */
-    _buildViewTab(view, icon, label) {
-        const tab = document.createElement("button");
-        tab.type = "button";
-        tab.className = "wx-relation-view-view";
-        tab.dataset.view = view;
-        tab.setAttribute("data-view-tab", view);
-        tab.appendChild(webexpress.webui.Icon.create(this._iconClass(icon)));
-
-        const text = document.createElement("span");
-        text.textContent = label;
-        tab.appendChild(text);
-
-        return tab;
-    }
-
-    /**
      * Wires the toolbar. The rows report through one delegated listener on the
-     * body, so a re-rendered group needs no listeners of its own.
+     * body, so a re-rendered group needs no listeners of its own; the switch
+     * reports through its own callback.
      */
     _attachEventHandlers() {
-        this._viewTabs.addEventListener("click", (e) => {
-            const tab = e.target.closest ? e.target.closest("[data-view-tab]") : null;
-
-            if (tab && tab.getAttribute("data-view-tab") !== this.state.view) {
-                this.setState({ view: tab.getAttribute("data-view-tab") });
-            }
-        });
-
         this._addButton.addEventListener("click", () => this._openDialog());
 
         this._body.addEventListener("click", (e) => this._onBodyClick(e));
@@ -352,9 +304,7 @@ webexpress.webapp.RelationViewCtrl = class extends webexpress.webapp.Data {
             this._totalBadge.textContent = String(state.total || 0);
         }
 
-        for (const tab of this._viewTabs.childNodes) {
-            tab.classList.toggle("wx-relation-view-active", tab.getAttribute("data-view-tab") === (contributed ? state.view : (state.view === "graph" ? "graph" : "list")));
-        }
+        this._switcher.active = contributed ? state.view : (state.view === "graph" ? "graph" : "list");
 
         // a contributed presentation is server rendered, so switching to it only
         // reveals its pane and puts the built-in body aside

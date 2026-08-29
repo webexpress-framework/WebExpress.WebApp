@@ -146,6 +146,18 @@ class Element {
     querySelectorAll() { return []; }
     closest() { return null; }
 
+    // ancestry is real in this stub even though selectors are not, because a
+    // bind that has to tell whether an event came from inside a control asks
+    // exactly this and nothing else
+    contains(node) {
+        let current = node;
+        while (current) {
+            if (current === this) { return true; }
+            current = current.parentNode;
+        }
+        return false;
+    }
+
     get textContent() {
         return this.childNodes.map((n) => (n.nodeType === 3 ? n._text : n.textContent)).join("");
     }

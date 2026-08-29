@@ -279,7 +279,7 @@ test("the toolbar carries the add affordance as the primary action", async () =>
     assert.equal(host.querySelectorAll(".wx-relation-view-kind").length, 0);
     assert.equal(host.querySelectorAll(".wx-relation-view-settings").length, 0);
     assert.deepEqual(
-        host.querySelectorAll(".wx-relation-view-view").map((x) => x.getAttribute("data-view-tab")),
+        host.querySelectorAll(".wx-view-switcher-item").map((x) => x.getAttribute("data-view-tab")),
         ["list", "graph"]);
 });
 
@@ -290,12 +290,12 @@ test("the presentation switch needs no round trip", async () => {
     await settle();
     requests.length = 0;
 
-    ctrl._viewTabs.dispatchEvent({ type: "click", target: ctrl._graphTab });
+    ctrl._switcher.element.dispatchEvent({ type: "click", target: ctrl._switcher.itemOf("graph") });
     await settle();
 
     assert.equal(requests.length, 0, "the graph is derived from the links that are already loaded");
     assert.equal(host.querySelectorAll(".wx-relation-view-graph").length, 1);
-    assert.ok(ctrl._graphTab.classList.contains("wx-relation-view-active"));
+    assert.ok(ctrl._switcher.itemOf("graph").classList.contains("wx-view-switcher-active"));
 });
 
 test("the graph marks the object the surface belongs to", async () => {
@@ -352,23 +352,23 @@ test("a contributed presentation joins the switch and is shown as its pane", asy
     await settle();
 
     assert.deepEqual(
-        host.querySelectorAll(".wx-relation-view-view").map((x) => x.getAttribute("data-view-tab")),
+        host.querySelectorAll(".wx-view-switcher-item").map((x) => x.getAttribute("data-view-tab")),
         ["list", "graph", "timeline"],
         "the contributed presentation follows the built-in ones");
 
-    const tab = host.querySelectorAll(".wx-relation-view-view")[2];
+    const tab = ctrl._switcher.itemOf("timeline");
     assert.ok(tab.textContent.includes("Timeline"), "the caption comes from the pane");
 
     // the list is shown, the contributed pane is not
     assert.equal(pane.hasAttribute("hidden"), true);
     assert.equal(ctrl._body.hasAttribute("hidden"), false);
 
-    ctrl._viewTabs.dispatchEvent({ type: "click", target: tab });
+    ctrl._switcher.element.dispatchEvent({ type: "click", target: tab });
     await settle();
 
     assert.equal(pane.hasAttribute("hidden"), false, "switching reveals the server rendered pane");
     assert.equal(ctrl._body.hasAttribute("hidden"), true, "the built-in body steps aside");
-    assert.ok(tab.classList.contains("wx-relation-view-active"));
+    assert.ok(tab.classList.contains("wx-view-switcher-active"));
 });
 
 test("a contributed presentation needs no round trip and keeps its content", async () => {
@@ -894,7 +894,7 @@ test("a page that names the section itself switches the header parts off", async
         "an empty heading would still claim the gap of the toolbar");
 
     // what the header does not show is still there to be used
-    assert.equal(host.querySelectorAll(".wx-relation-view-view").length, 2);
+    assert.equal(host.querySelectorAll(".wx-view-switcher-item").length, 2);
     assert.equal(host.querySelectorAll(".wx-relation-view-add").length, 1);
 });
 

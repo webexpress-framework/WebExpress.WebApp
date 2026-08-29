@@ -8,6 +8,8 @@
   href: comment.md
 - name: DashboardCtrl
   href: dashboard.md
+- name: FileViewCtrl
+  href: file.view.md
 - name: GanttCtrl
   href: gantt.md
 - name: GraphViewerCtrl
