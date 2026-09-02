@@ -1,4 +1,4 @@
-/**
+﻿/**
  * A REST-backed list control extending the base flat ListCtrl.
  * - simple list view without toolbar or pagination controls
  * - shows bootstrap placeholders while loading
@@ -12,6 +12,9 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
     _restUri = "";
     _viewState = null;
     _sliceTotal = 0;
+
+    // a query that was asked for while the control was hidden and still has to run
+    _pendingLoad = false;
     _progressDiv = this._createProgressDiv();
 
     /**
@@ -77,6 +80,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
         });
 
         this._initPager(element);
+        this._initVisibilityReload(element);
 
         if (this._resource) {
             // ViewState mode: the enclosing ViewState loads the resource centrally; this
@@ -303,18 +307,54 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
     }
 
     /**
+     * Subscribes to the visibility changes of the enclosing view, so a query that
+     * was deferred while the control was hidden runs when it is shown.
+     * @param {HTMLElement} element - The host element.
+     */
+    _initVisibilityReload(element) {
+        const handler = () => {
+            if (!this._pendingLoad || !this._isVisible()) {
+                return;
+            }
+
+            this._pendingLoad = false;
+            this._load();
+        };
+
+        document.addEventListener(webexpress.webui.Event.CHANGE_VISIBILITY_EVENT, handler);
+        (element._wxCleanup = element._wxCleanup || []).push(
+            () => document.removeEventListener(webexpress.webui.Event.CHANGE_VISIBILITY_EVENT, handler));
+    }
+
+    /**
      * Loads the list when it is backed by a service and visible. Intent
      * effects call this after their reducer updated the store.
+     * @remarks
+     * A hidden list is not queried, but the query it would have run is
+     * remembered and issued the moment it is shown. The presentations of one
+     * view - table, list, tile - share a search box and a quickfilter bar, so a
+     * term entered while this one was hidden belongs to it as well; without the
+     * deferral, switching the presentation answers with whatever was on screen
+     * before the filter was typed.
      * @returns {Promise<void>|undefined} Resolves when the load completes.
      */
     load() {
         if (this._viewState) {
             return this._viewState.reload(this._resource);
         }
-        if (this._restUri && this._isVisible()) {
-            return this._load();
+
+        if (!this._restUri) {
+            return undefined;
         }
-        return undefined;
+
+        if (!this._isVisible()) {
+            this._pendingLoad = true;
+            return undefined;
+        }
+
+        this._pendingLoad = false;
+
+        return this._load();
     }
 
     /**
@@ -381,18 +421,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
      * @param {HTMLElement} host The host element to search or attach the pager to.
      */
     _initPager(host) {
-        // find existing pager element based on dataset
-        const paginationId = host.dataset.wxSourcePaging || null;
-
-        const init = () => {
-            if (paginationId) {
-                this._pagerElement = document.querySelector(paginationId);
-                if (this._pagerElement) {
-                    this._pagerCtrl = webexpress.webui.Controller.getInstanceByElement(this._pagerElement);
-                }
-            }
-            this._syncPagerAndInfo();
-        };
+        const init = () => this._syncPagerAndInfo();
 
         if (document.readyState === "loading") {
             document.addEventListener("DOMContentLoaded", () => {
@@ -412,10 +441,44 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
     }
 
     /**
+     * Resolves the pagination control the list reports its page count to, and
+     * remembers it once it exists.
+     * @remarks
+     * The pager is a sibling control rather than a child, and the controller
+     * builds a view's controls in document order - the pager sits below the
+     * list, so its instance does not exist yet while the list is being
+     * constructed. Resolving once therefore left the reference empty for good:
+     * the list wrote its page count into the pager's dataset, nothing read it,
+     * and the pager kept offering the single page it had rendered at startup.
+     * @returns {object|null} The pagination control, or null while there is none.
+     */
+    _resolvePager() {
+        const selector = (this._element && this._element.dataset)
+            ? (this._element.dataset.wxSourcePaging || null)
+            : null;
+
+        if (!selector) {
+            return null;
+        }
+
+        if (!this._pagerElement) {
+            this._pagerElement = document.querySelector(selector);
+        }
+
+        if (this._pagerElement && !this._pagerCtrl) {
+            this._pagerCtrl = webexpress.webui.Controller.getInstanceByElement(this._pagerElement);
+        }
+
+        return this._pagerCtrl;
+    }
+
+    /**
      * Updates pager state and info text.
      * Falls back to native rendering if external control is not available.
      */
     _syncPagerAndInfo() {
+        this._resolvePager();
+
         const total = Number(this._totalRecords) || 0;
         let totalPages = 1;
 

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * A REST tile control extending the standard tile controller with REST API integration.
  * Fetches tile data from a REST endpoint.
  * Supports server-side sorting, filtering, and paging synchronization.
@@ -11,6 +11,9 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
     _restUri = "";
     _viewState = null;
     _sliceTotal = 0;
+
+    // a query that was asked for while the control was hidden and still has to run
+    _pendingLoad = false;
 
     // received data
     _items = {};
@@ -70,6 +73,7 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
 
         this._initProgressBar(element);
         this._initPager(element);
+        this._initVisibilityReload(element);
 
         if (this._resource) {
             // ViewState mode: the enclosing ViewState loads the resource centrally; this
@@ -177,31 +181,53 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
      * @param {HTMLElement} host - The host element to search or attach the pager to.
      */
     _initPager(host) {
-        // find existing pager element
-        const paginationId = host.dataset.wxSourcePaging || null;
-        const init = () => {
-            this._pagerElement = document.querySelector(paginationId);
-
-            if (this._pagerElement) {
-                this._pagerCtrl = webexpress.webui.Controller.getInstanceByElement(this._pagerElement);
-            }
-
-            this._syncPagerAndInfo();
-        }
+        const init = () => this._syncPagerAndInfo();
 
         if (document.readyState === "loading") {
             document.addEventListener("DOMContentLoaded", () => init());
         } else {
             init();
         }
-        
+
         // create info div to show totals and current page details
         this._infoDiv = document.createElement("div");
         this._infoDiv.className = "text-muted small";
         this._infoDiv.style.marginTop = "0.25rem";
         this._infoDiv.textContent = "";
-        
+
         host.appendChild(this._infoDiv);
+    }
+
+    /**
+     * Resolves the pagination control the tile view reports its page count to,
+     * and remembers it once it exists.
+     * @remarks
+     * The pager is a sibling control rather than a child, and the controller
+     * builds a view's controls in document order - the pager sits below the
+     * tiles, so its instance does not exist yet while the tile view is being
+     * constructed. Resolving once therefore left the reference empty for good:
+     * the view wrote its page count into the pager's dataset, nothing read it,
+     * and the pager kept offering the single page it had rendered at startup.
+     * @returns {object|null} The pagination control, or null while there is none.
+     */
+    _resolvePager() {
+        const selector = (this._element && this._element.dataset)
+            ? (this._element.dataset.wxSourcePaging || null)
+            : null;
+
+        if (!selector) {
+            return null;
+        }
+
+        if (!this._pagerElement) {
+            this._pagerElement = document.querySelector(selector);
+        }
+
+        if (this._pagerElement && !this._pagerCtrl) {
+            this._pagerCtrl = webexpress.webui.Controller.getInstanceByElement(this._pagerElement);
+        }
+
+        return this._pagerCtrl;
     }
 
     /**
@@ -209,6 +235,8 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
      * Falls back to native rendering if external control is not available.
      */
     _syncPagerAndInfo() {
+        this._resolvePager();
+
         const total = Number(this._totalRecords) || 0;
         let totalPages = 1;
         if (this._pageSize > 0) {
@@ -466,18 +494,54 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
     }
 
     /**
-     * Loads the tiles when the control is backed by a service and visible.
-     * Intent effects call this after their reducer updated the store.
+     * Subscribes to the visibility changes of the enclosing view, so a query that
+     * was deferred while the control was hidden runs when it is shown.
+     * @param {HTMLElement} element - The host element.
+     */
+    _initVisibilityReload(element) {
+        const handler = () => {
+            if (!this._pendingLoad || !this._isVisible()) {
+                return;
+            }
+
+            this._pendingLoad = false;
+            this._receiveData();
+        };
+
+        document.addEventListener(webexpress.webui.Event.CHANGE_VISIBILITY_EVENT, handler);
+        (element._wxCleanup = element._wxCleanup || []).push(
+            () => document.removeEventListener(webexpress.webui.Event.CHANGE_VISIBILITY_EVENT, handler));
+    }
+
+    /**
+     * Loads the tile view when it is backed by a service and visible. Intent
+     * effects call this after their reducer updated the store.
+     * @remarks
+     * A hidden tile view is not queried, but the query it would have run is
+     * remembered and issued the moment it is shown. The presentations of one
+     * view - table, list, tile - share a search box and a quickfilter bar, so a
+     * term entered while this one was hidden belongs to it as well; without the
+     * deferral, switching the presentation answers with whatever was on screen
+     * before the filter was typed.
      * @returns {Promise<void>|undefined} Resolves when the load completes.
      */
     load() {
         if (this._viewState) {
             return this._viewState.reload(this._resource);
         }
-        if (this._restUri && this._isVisible()) {
-            return this._receiveData();
+
+        if (!this._restUri) {
+            return undefined;
         }
-        return undefined;
+
+        if (!this._isVisible()) {
+            this._pendingLoad = true;
+            return undefined;
+        }
+
+        this._pendingLoad = false;
+
+        return this._receiveData();
     }
 
     /**

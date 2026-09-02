@@ -48,8 +48,19 @@ test("reduce total uses the response total and otherwise infers it", () => {
     const { wxapp } = load();
     assert.equal(wxapp.tileModel.reduceTotal({ total: 42 }, 10, 0, 50), 42);
     assert.equal(wxapp.tileModel.reduceTotal({}, 10, 2, 50), 110);
-    assert.equal(wxapp.tileModel.reduceTotal({ total: "x" }, 3, 0, 50), 0);
+    // a figure that is not a number is no figure: inferring beats reporting a
+    // zero that would claim the result is empty while a full page is on screen
+    assert.equal(wxapp.tileModel.reduceTotal({ total: "x" }, 3, 0, 50), 3);
     assert.equal(wxapp.tileModel.reduceTotal(null, 4, 1, 50), 54);
+});
+
+test("reduce total reads the pagination block the rest tile result carries", () => {
+    const { wxapp } = load();
+
+    // RestApiTileResult reports page, pageSize and total under "pagination";
+    // reading only a top level total makes a full page look like the whole
+    // result and leaves the pager with a single page
+    assert.equal(wxapp.tileModel.reduceTotal({ pagination: { page: 0, pageSize: 50, total: 120 } }, 50, 0, 50), 120);
 });
 
 test("map tiles projects field aliases and defaults the visibility", () => {

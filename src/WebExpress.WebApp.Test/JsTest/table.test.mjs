@@ -122,3 +122,90 @@ test("table search re-queries the resource through the shared ViewState state", 
     assert.match(urls[1], /q=plunder/);
     assert.equal(viewState.getState().search, "plunder");
 });
+
+/**
+ * Names the event constants the table dispatches and listens for. The harness
+ * leaves webexpress.webui.Event empty, so every constant reads as undefined -
+ * a listener registered for undefined then matches every dispatch of undefined,
+ * and the table's own data-arrived event re-enters its persistence listeners
+ * without end. Naming them is what makes the standalone load path testable.
+ * @param {object} engine - The loaded engine.
+ */
+function nameEvents(engine) {
+    Object.assign(engine.wx.Event, {
+        CHANGE_VISIBILITY_EVENT: "webexpress.webui.change.visibility",
+        DATA_ARRIVED_EVENT: "webexpress.webui.data.arrived",
+        UPDATED_EVENT: "webexpress.webui.updated",
+        COLUMN_REORDER_EVENT: "webexpress.webui.column.reorder",
+        COLUMN_VISIBILITY_EVENT: "webexpress.webui.column.visibility",
+        ROW_REORDER_EVENT: "webexpress.webui.row.reorder",
+        TABLE_SORT_EVENT: "webexpress.webui.table.sort"
+    });
+}
+
+/**
+ * Builds a standalone table (no ViewState) over a rest service island.
+ * @param {object} engine - The loaded engine.
+ * @returns {HTMLElement} The table host element.
+ */
+function buildStandaloneTable(engine) {
+    const tableHost = engine.createElement("div");
+    appendServiceIsland(engine.document, tableHost, {
+        name: "data", kind: "rest", baseUri: "/api/issues/table", method: "GET"
+    });
+    engine.document.body.appendChild(tableHost);
+
+    return tableHost;
+}
+
+test("a hidden table defers its query and runs it when the view becomes visible", async () => {
+    const engine = load();
+    nameEvents(engine);
+
+    const urls = [];
+    engine.setFetch(async (url) => {
+        urls.push(url);
+        return { ok: true, status: 200, json: async () => ({ columns: [], rows: [], pagination: { page: 0, pageSize: 50, total: 0 } }) };
+    });
+
+    const table = new engine.wxapp.TableCtrl(buildStandaloneTable(engine));
+    await settle();
+
+    assert.equal(urls.length, 1, "the standalone table loads once on construction");
+
+    // the presentations of one view share the search box and the quickfilter bar,
+    // so a term is applied to the hidden ones as well - they must not query while
+    // off screen, but they must not forget the term either
+    table._isVisible = () => false;
+    table.filter("qf_mine");
+    await settle();
+
+    assert.equal(urls.length, 1, "a hidden table does not query");
+    assert.equal(table._store.getState().filter, "qf_mine", "but it keeps the filter it was given");
+
+    table._isVisible = () => true;
+    engine.document.dispatchEvent({ type: engine.wx.Event.CHANGE_VISIBILITY_EVENT, detail: { visible: true } });
+    await settle();
+
+    assert.equal(urls.length, 2, "showing the table runs the deferred query");
+    assert.match(urls[1], /f=qf_mine/, "and it carries the filter entered while it was hidden");
+});
+
+test("a visible table is not re-queried by a visibility change", async () => {
+    const engine = load();
+    nameEvents(engine);
+
+    const urls = [];
+    engine.setFetch(async (url) => {
+        urls.push(url);
+        return { ok: true, status: 200, json: async () => ({ columns: [], rows: [], pagination: { page: 0, pageSize: 50, total: 0 } }) };
+    });
+
+    new engine.wxapp.TableCtrl(buildStandaloneTable(engine));
+    await settle();
+
+    engine.document.dispatchEvent({ type: engine.wx.Event.CHANGE_VISIBILITY_EVENT, detail: { visible: true } });
+    await settle();
+
+    assert.equal(urls.length, 1, "nothing was deferred, so switching back changes nothing");
+});

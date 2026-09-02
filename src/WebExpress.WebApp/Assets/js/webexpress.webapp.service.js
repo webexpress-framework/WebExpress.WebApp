@@ -353,9 +353,15 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
     project(data) {
         const map = this._descriptor.response || {};
         const itemsKey = map.items || "items";
-        const totalKey = map.total || "total";
         const items = data && Array.isArray(data[itemsKey]) ? data[itemsKey] : [];
-        const total = data && data[totalKey] != null ? Number(data[totalKey]) : items.length;
+
+        // a descriptor that names the total key wins; without one the figure is
+        // read where the REST results report it, which is the pagination block
+        // for the paged control families and the top level for a hand written
+        // payload
+        const mapped = map.total && data ? data[map.total] : null;
+        const counted = mapped != null ? Number(mapped) : webexpress.webapp.pagingOf(data).total;
+        const total = counted == null ? items.length : counted;
 
         return { items: items, total: total };
     }

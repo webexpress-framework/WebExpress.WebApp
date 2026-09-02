@@ -57,5 +57,24 @@ namespace WebExpress.WebApp.WebRestApi
         /// </summary>
         [JsonPropertyName("bind")]
         public IDictionary<string, object> Bind { get; set; }
+
+        /// <summary>
+        /// Gets or sets the items nested beneath this one.
+        /// </summary>
+        /// <remarks>
+        /// An item that owns children is drawn as a tree node: it carries the expander and
+        /// its children are indented beneath it. An absent or empty collection is a leaf and
+        /// draws no expander, so a flat list stays exactly as it was.
+        /// </remarks>
+        [JsonPropertyName("children")]
+        public IEnumerable<RestApiListItem> Children { get; set; }
+
+        /// <summary>
+        /// Gets or sets whether an item that owns children starts expanded. The default is
+        /// <see langword="true"/>, which is what the control assumes for an item that says
+        /// nothing about it.
+        /// </summary>
+        [JsonPropertyName("expanded")]
+        public bool Expanded { get; set; } = true;
     }
 }

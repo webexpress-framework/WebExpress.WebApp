@@ -39,9 +39,11 @@ webexpress.webapp.tableModel = {
 
     /**
      * Reduces a server response into a state patch carrying the total record
-     * count and the clamped page index. When the response omits the total, it
-     * is inferred from the current page, the page size and the number of rows
-     * received, which matches the historical behaviour.
+     * count and the clamped page index. The total is read through
+     * webexpress.webapp.pagingOf, so the pagination block the REST table result
+     * carries counts as well as a top level figure. When the response omits it
+     * altogether, it is inferred from the current page, the page size and the
+     * number of rows received, which matches the historical behaviour.
      * @param {object} state - The current table state.
      * @param {object} response - The raw server response.
      * @returns {object} A state patch.
@@ -52,9 +54,9 @@ webexpress.webapp.tableModel = {
 
         const pageSize = state.pageSize || 50;
         const receivedRows = Array.isArray(response.rows) ? response.rows.length : 0;
-        const totalFromResponse = response.total ?? null;
+        const totalFromResponse = webexpress.webapp.pagingOf(response).total;
         const total = totalFromResponse !== null
-            ? (Number(totalFromResponse) || 0)
+            ? totalFromResponse
             : ((state.page || 0) * pageSize) + receivedRows;
 
         const totalPages = Math.max(1, Math.ceil(total / pageSize));

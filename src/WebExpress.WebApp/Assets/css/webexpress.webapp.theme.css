@@ -157,6 +157,9 @@ html[data-bs-theme="dark"] #wx-content {
 #wx-content-main-headline h2 {
     flex: 1;
     text-align: left;
+    /* the prose rule for a heading inside running text does not apply to the page
+       title: it opens the region and has nothing above it to be separated from */
+    margin-top: 0;
 }
 
 #wx-content-main-headline-more {

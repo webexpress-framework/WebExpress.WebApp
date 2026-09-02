@@ -58,8 +58,10 @@ webexpress.webapp.tileModel = {
 
     /**
      * Determines the total record count, preferring an explicit total from the
-     * response and otherwise inferring it from the page, the page size and the
-     * number of received rows.
+     * response - read through webexpress.webapp.pagingOf, so the pagination
+     * block the REST tile result carries counts as well as a top level figure -
+     * and otherwise inferring it from the page, the page size and the number of
+     * received rows.
      * @param {object} response - The raw response.
      * @param {number} receivedItems - The number of rows on this page.
      * @param {number} page - The zero based page index.
@@ -67,9 +69,9 @@ webexpress.webapp.tileModel = {
      * @returns {number} The total record count.
      */
     reduceTotal(response, receivedItems, page, pageSize) {
-        const total = response ? (response.total ?? null) : null;
-        if (total !== null && total !== undefined) {
-            return Number(total) || 0;
+        const total = webexpress.webapp.pagingOf(response).total;
+        if (total !== null) {
+            return total;
         }
         return (page * pageSize) + receivedItems;
     },

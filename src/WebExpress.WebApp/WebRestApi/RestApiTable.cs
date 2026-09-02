@@ -103,10 +103,15 @@ namespace WebExpress.WebApp.WebRestApi
                     }
                 }
 
-                // paging 
+                using var context = CreateContext();
+
+                // the size of the whole result is asked for before paging narrows the query,
+                // because that is the only point at which it can still be counted
+                var total = RetrieveTotal(query, context, request);
+
+                // paging
                 query = query.WithPaging(pageNumber * pageSize, pageSize);
 
-                using var context = CreateContext();
                 var rows = RetrieveRows(query, context, columns, request) ?? [];
 
                 var result = new RestApiTableResult()
@@ -118,7 +123,10 @@ namespace WebExpress.WebApp.WebRestApi
                     {
                         PageNumber = pageNumber,
                         PageSize = pageSize,
-                        TotalCount = rows.Count()
+
+                        // an endpoint that cannot count its result reports the size of the page
+                        // it returned, which is what every endpoint did before the hook existed
+                        TotalCount = total >= 0 ? total : rows.Count()
                     }
                 };
 
@@ -363,6 +371,35 @@ namespace WebExpress.WebApp.WebRestApi
         /// context. The collection may be empty if no rows match the criteria.
         /// </returns>
         protected abstract IEnumerable<RestApiTableRow> RetrieveRows(IQuery<TIndexItem> query, IQueryContext context, IEnumerable<RestApiTableColumn> columns, IRequest request);
+
+        /// <summary>
+        /// Returns how many rows the filtered result holds in total, before paging narrows it.
+        /// </summary>
+        /// <remarks>
+        /// The client derives the number of pages from this figure, so an endpoint that leaves it
+        /// unknown gets a pager offering a single page no matter how much there is to walk
+        /// through. It is opt-in rather than computed here because only the endpoint knows how to
+        /// count its source cheaply; the base cannot do better than mapping every row through
+        /// <see cref="RetrieveRows"/> a second time, which is a price no endpoint should pay
+        /// without asking.
+        /// </remarks>
+        /// <param name="query">
+        /// The filtered and sorted query, without paging applied.
+        /// </param>
+        /// <param name="context">
+        /// The context in which the query is executed.
+        /// </param>
+        /// <param name="request">
+        /// The request that provides the operational context.
+        /// </param>
+        /// <returns>
+        /// The number of rows in the whole result, or a negative value when the endpoint does
+        /// not count it.
+        /// </returns>
+        protected virtual int RetrieveTotal(IQuery<TIndexItem> query, IQueryContext context, IRequest request)
+        {
+            return -1;
+        }
 
         /// <summary>
         /// Applies filtering criteria to the specified query based on the provided WQL statement.

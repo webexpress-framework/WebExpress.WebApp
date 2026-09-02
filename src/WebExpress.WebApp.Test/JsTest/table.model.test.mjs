@@ -51,6 +51,23 @@ test("reduce response infers the total from page, size and received rows", () =>
     assert.equal(patch.page, 2);
 });
 
+test("reduce response reads the pagination block the rest table result carries", () => {
+    const { wxapp } = load();
+
+    // RestApiTableResult reports page, pageSize and total under "pagination"
+    // and never at the top level. Reading only a top level total makes a full
+    // page look like the whole result: 50 rows of 100 report "50 of 50" and the
+    // pager offers a single page.
+    const rows = Array.from({ length: 50 }, () => ({}));
+    const patch = wxapp.tableModel.reduceResponse(
+        { page: 0, pageSize: 50 },
+        { rows: rows, pagination: { page: 0, pageSize: 50, total: 100, totalPages: 2 } }
+    );
+
+    assert.equal(patch.total, 100, "the whole result is counted, not the page");
+    assert.equal(patch.page, 0);
+});
+
 test("slice rows caps to the page size and tolerates non arrays", () => {
     const { wxapp } = load();
 

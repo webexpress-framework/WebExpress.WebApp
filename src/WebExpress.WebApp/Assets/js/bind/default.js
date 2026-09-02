@@ -34,9 +34,10 @@
  *   data-wx-bind="paging"           - drives a data component from a pager
  *     data-wx-source-paging="#id"   - the pager whose page is applied
  *
- *   data-wx-bind="filter"           - marks a data component as quickfilter
- *                                     driven; the filter registry owns the
- *                                     term, so the bind only has to exist
+ *   data-wx-bind="filter"           - drives a data component from the
+ *                                     quickfilter bar; the filter registry owns
+ *                                     the selection and announces it globally,
+ *                                     so no source selector is needed
  *
  *   data-wx-bind="upload"           - shows what an upload control uploaded
  *     data-wx-source-upload="#id"   - the upload control to follow
@@ -280,56 +281,53 @@
     });
 
     /**
-     * Resolves the Data component a source bind drives and invokes the callback
-     * once it exists. The bind runs before the controller constructs the
-     * element's own instance, so an unresolved component waits for the mount
-     * event every Data component dispatches - the same deferral the store binds
-     * above use.
-     * @param {HTMLElement} element - The bound data component.
-     * @param {Function} callback - Receives the resolved component.
+     * Resolves the reader a source bind drives: the control the bind is declared
+     * on, or else the Data component that control sits in.
+     * @remarks
+     * A reader is whatever answers the dispatch surface the bind speaks, and
+     * that is not necessarily a Data component. The paged data controls (table,
+     * list, tile) own their query state and their intent dispatch while
+     * extending the WebUI control base rather than webexpress.webapp.Data, so
+     * they expose neither a store nor a setState and never announce a mount - a
+     * resolution insisting on those finds nothing for them and the bind stays
+     * silent forever. The element's own instance is therefore accepted for the
+     * methods it exposes, and only a bind declared on something that is not
+     * itself a reader climbs to the enclosing Data component.
+     * @param {HTMLElement} element - The bound element.
+     * @param {Array<string>} methods - The method names the bind may call.
+     * @returns {object|null} The reader, or null while none exists.
      */
-    function withComponent(element, callback) {
-        const resolve = () => {
-            const own = webexpress.webui.Controller.getInstanceByElement(element);
+    function readerOf(element, methods) {
+        const speaks = (candidate) => !!candidate && methods.some((name) => typeof candidate[name] === "function");
+        const own = webexpress.webui.Controller.getInstanceByElement(element);
 
-            return own && own.store ? own : componentOf(element);
-        };
-
-        const component = resolve();
-
-        if (component) {
-            callback(component);
-            return;
+        if (speaks(own)) {
+            return own;
         }
 
-        const handler = () => {
-            const resolved = resolve();
+        const enclosing = componentOf(element);
 
-            if (resolved) {
-                document.removeEventListener("webexpress.webapp.data.mount", handler);
-                callback(resolved);
-            }
-        };
-
-        document.addEventListener("webexpress.webapp.data.mount", handler);
-        onRemove(element, () => document.removeEventListener("webexpress.webapp.data.mount", handler));
+        return speaks(enclosing) ? enclosing : (own || enclosing);
     }
 
     /**
-     * Subscribes a Data component to one event of the surface a source bind
-     * names, and forwards it to the component.
+     * Subscribes a reader to one event of the surface a source bind names, and
+     * forwards it to the reader.
      * @remarks
-     * The listener sits on the document and resolves the named surface when the
-     * event arrives rather than when the bind runs. Document order decides
-     * whether a search box above a list or a pager below it exists yet, and
-     * resolving late removes that ordering question entirely - by the time an
-     * event is dispatched, the surface that dispatched it is constructed.
-     * @param {HTMLElement} element - The bound data component.
+     * The listener sits on the document and resolves both the named surface and
+     * the reader when the event arrives rather than when the bind runs.
+     * Document order decides whether a search box above a list or a pager below
+     * it exists yet, and the controller constructs the reader's own instance
+     * after the bind has run; resolving late removes both ordering questions -
+     * by the time an event is dispatched, everything it concerns is
+     * constructed.
+     * @param {HTMLElement} element - The bound data control.
      * @param {string} name - The bind name, which also names the source attribute.
      * @param {string} eventName - The event the surface dispatches.
-     * @param {Function} apply - Receives the component and the event detail.
+     * @param {Array<string>} methods - The method names the bind may call.
+     * @param {Function} apply - Receives the reader and the event detail.
      */
-    function forward(element, name, eventName, apply) {
+    function forward(element, name, eventName, methods, apply) {
         const selector = element.getAttribute("data-wx-source-" + name);
 
         if (!selector) {
@@ -337,23 +335,27 @@
             return;
         }
 
-        withComponent(element, (component) => {
-            const handler = (event) => {
-                const sender = event.detail && event.detail.sender;
+        const handler = (event) => {
+            const sender = event.detail && event.detail.sender;
 
-                // the events bubble, so the sender is matched against the named
-                // surface; without it any search box on the page would drive
-                // every list on it
-                if (!sender || sender !== document.querySelector(selector)) {
-                    return;
-                }
+            // the events bubble, so the sender is matched against the named
+            // surface; without it any search box on the page would drive
+            // every list on it
+            if (!sender || sender !== document.querySelector(selector)) {
+                return;
+            }
 
-                apply(component, event.detail);
-            };
+            const reader = readerOf(element, methods);
 
-            document.addEventListener(eventName, handler);
-            onRemove(element, () => document.removeEventListener(eventName, handler));
-        });
+            if (!reader) {
+                return;
+            }
+
+            apply(reader, event.detail);
+        };
+
+        document.addEventListener(eventName, handler);
+        onRemove(element, () => document.removeEventListener(eventName, handler));
     }
 
     // search bind - applies the term of a search box to the data component that
@@ -361,7 +363,7 @@
     // its own search intent and re-queries), the bind only carries the term
     webexpress.webui.Binds.register("search", {
         bind(element) {
-            forward(element, "search", webexpress.webui.Event.CHANGE_FILTER_EVENT, (component, detail) => {
+            forward(element, "search", webexpress.webui.Event.CHANGE_FILTER_EVENT, ["search"], (component, detail) => {
                 if (typeof component.search !== "function") {
                     console.warn("search bind on a component without a search method", element);
                     return;
@@ -374,16 +376,23 @@
 
     // paging bind - applies the page a pager was moved to. The reverse direction
     // (the component reporting its page count back to the pager) is owned by the
-    // component, which knows the total only once a response has arrived
+    // component, which knows the total only once a response has arrived.
+    // paging() is the method name of the data control families and therefore the
+    // contract; page() is accepted as well, because a component that keeps its
+    // page under that name answers the same request
     webexpress.webui.Binds.register("paging", {
         bind(element) {
-            forward(element, "paging", webexpress.webui.Event.CHANGE_PAGE_EVENT, (component, detail) => {
-                if (typeof component.page !== "function") {
-                    console.warn("paging bind on a component without a page method", element);
+            forward(element, "paging", webexpress.webui.Event.CHANGE_PAGE_EVENT, ["paging", "page"], (component, detail) => {
+                const apply = typeof component.paging === "function"
+                    ? component.paging
+                    : (typeof component.page === "function" ? component.page : null);
+
+                if (!apply) {
+                    console.warn("paging bind on a component without a paging method", element);
                     return;
                 }
 
-                component.page(Number(detail.page) || 0);
+                apply.call(component, Number(detail.page) || 0);
             });
         }
     });
@@ -401,23 +410,27 @@
                 return;
             }
 
-            withComponent(element, (component) => {
-                const handler = (event) => {
-                    if (!isUpload(event, selector)) {
-                        return;
-                    }
+            const handler = (event) => {
+                if (!isUpload(event, selector)) {
+                    return;
+                }
 
-                    if (typeof component.uploaded !== "function") {
-                        console.warn("upload bind on a component without an uploaded method", element);
-                        return;
-                    }
+                const component = readerOf(element, ["uploaded"]);
 
-                    component.uploaded(event.detail.file);
-                };
+                if (!component) {
+                    return;
+                }
 
-                document.addEventListener(webexpress.webui.Event.UPLOAD_SUCCESS_EVENT, handler);
-                onRemove(element, () => document.removeEventListener(webexpress.webui.Event.UPLOAD_SUCCESS_EVENT, handler));
-            });
+                if (typeof component.uploaded !== "function") {
+                    console.warn("upload bind on a component without an uploaded method", element);
+                    return;
+                }
+
+                component.uploaded(event.detail.file);
+            };
+
+            document.addEventListener(webexpress.webui.Event.UPLOAD_SUCCESS_EVENT, handler);
+            onRemove(element, () => document.removeEventListener(webexpress.webui.Event.UPLOAD_SUCCESS_EVENT, handler));
         }
     });
 
@@ -446,11 +459,44 @@
         return sender === named || (typeof sender.contains === "function" && sender.contains(named));
     }
 
-    // filter bind - the quickfilter registry owns the active filters and writes
-    // them into the shared state itself, so nothing has to be wired here. The
-    // bind is registered so that declaring it is not reported as unknown
+    // filter bind - applies the quickfilter selection to the data control that
+    // renders the result.
+    //
+    // The filter registry owns the selection and announces it on the document
+    // without a sender, which is what tells its event apart from the search
+    // box's: only the registry's carries the active filter list. A control bound
+    // to a ViewState resource is driven by the quickfilter through the shared
+    // state instead - the quickfilter writes the selection there and re-queries
+    // centrally - so it is deliberately left alone here and does not query twice
     webexpress.webui.Binds.register("filter", {
-        bind() {
+        bind(element) {
+            if (element.getAttribute("data-wx-resource") || element.getAttribute("data-wx-model-query")) {
+                return;
+            }
+
+            const handler = (event) => {
+                const filters = event.detail && event.detail.activeFilters;
+
+                if (!Array.isArray(filters)) {
+                    return;
+                }
+
+                const component = readerOf(element, ["filter"]);
+
+                if (!component) {
+                    return;
+                }
+
+                if (typeof component.filter !== "function") {
+                    console.warn("filter bind on a component without a filter method", element);
+                    return;
+                }
+
+                component.filter(filters.join(","));
+            };
+
+            document.addEventListener(webexpress.webui.Event.CHANGE_FILTER_EVENT, handler);
+            onRemove(element, () => document.removeEventListener(webexpress.webui.Event.CHANGE_FILTER_EVENT, handler));
         }
     });
 })();

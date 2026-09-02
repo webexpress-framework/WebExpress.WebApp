@@ -1,4 +1,4 @@
-var webexpress = webexpress || {}
+﻿var webexpress = webexpress || {}
 webexpress.webapp = webexpress.webapp || {}
 
 /**
@@ -40,8 +40,11 @@ webexpress.webapp.listModel = {
 
     /**
      * Reduces a server response into a state patch carrying the paging
-     * information and clearing the loading and error flags. The current state
-     * provides the fallback values, which matches the historical behaviour.
+     * information and clearing the loading and error flags. The figures are
+     * read through webexpress.webapp.pagingOf, so the pagination block the REST
+     * list result carries counts as well as top level figures; the current
+     * state provides the fallback values, which matches the historical
+     * behaviour.
      * @param {object} state - The current list state.
      * @param {object} response - The raw server response.
      * @returns {object} A state patch.
@@ -50,9 +53,10 @@ webexpress.webapp.listModel = {
         state = state || {};
         response = response || {};
 
-        const total = Number(response.total ?? response.totalCount ?? response.count ?? 0) || 0;
-        const page = Number(response.page ?? state.page ?? 0) || 0;
-        const pageSize = Number(response.pageSize ?? state.pageSize ?? 50) || 50;
+        const paging = webexpress.webapp.pagingOf(response);
+        const total = paging.total ?? 0;
+        const page = Number(paging.page ?? state.page ?? 0) || 0;
+        const pageSize = Number(paging.pageSize ?? state.pageSize ?? 50) || 50;
 
         return { total: total, page: page, pageSize: pageSize, loading: false, error: null };
     },
@@ -65,17 +69,27 @@ webexpress.webapp.listModel = {
      * @returns {Array<object>} The normalised list items.
      */
     mapItems(response) {
-        const result = [];
-
         if (!response || !Array.isArray(response.items)) {
-            return result;
+            return [];
         }
 
-        for (const item of response.items) {
+        return webexpress.webapp.listModel.mapItemList(response.items);
+    },
+
+    /**
+     * Maps a raw item array into the normalised list item structures, recursing
+     * into the items nested beneath an item so a hierarchy survives the mapping.
+     * @param {Array} items - The raw items.
+     * @returns {Array<object>} The normalised list items.
+     */
+    mapItemList(items) {
+        const result = [];
+
+        for (const item of Array.isArray(items) ? items : []) {
             if (typeof item === "string") {
                 result.push({ id: null, content: { content: item } });
             } else if (item !== null && typeof item === "object") {
-                result.push({
+                const mapped = {
                     id: item.id || null,
                     class: item.class || null,
                     style: item.style || null,
@@ -92,7 +106,16 @@ webexpress.webapp.listModel = {
                     secondaryAction: item.secondaryAction || null,
                     bind: item.bind || null,
                     options: Array.isArray(item.options) ? item.options : null
-                });
+                };
+
+                // an item that owns children is drawn as a tree node; an item that
+                // carries none keeps exactly the shape it had before
+                if (Array.isArray(item.children) && item.children.length > 0) {
+                    mapped.children = webexpress.webapp.listModel.mapItemList(item.children);
+                    mapped.expanded = typeof item.expanded === "boolean" ? item.expanded : true;
+                }
+
+                result.push(mapped);
             }
         }
 

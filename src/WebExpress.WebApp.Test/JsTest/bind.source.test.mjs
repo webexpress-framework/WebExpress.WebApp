@@ -64,6 +64,29 @@ function loadRuntime(component) {
             return { reader, source };
         },
         /**
+         * Builds a reader that declares the filter bind, which names no surface
+         * because the filter registry announces the selection globally.
+         * @param {object} [attributes] - Extra attributes on the reader.
+         * @returns {HTMLElement} The reader element.
+         */
+        bindFilter(attributes) {
+            const reader = engine.document.createElement("div");
+
+            for (const [name, value] of Object.entries(attributes || {})) {
+                reader.setAttribute(name, value);
+            }
+
+            engine.document.body.appendChild(reader);
+
+            if (component) {
+                instances.set(reader, component);
+            }
+
+            engine.wx.Binds.get("filter").bind(reader);
+
+            return reader;
+        },
+        /**
          * Dispatches one of the surface events on the document, which is where
          * the bind listens because the events bubble.
          * @param {string} type - The event type.
@@ -76,17 +99,25 @@ function loadRuntime(component) {
 }
 
 /**
- * Builds a data component recording what the binds asked it to do.
- * @returns {object} The component.
+ * Builds a data control recording what the binds asked it to do.
+ * @remarks
+ * It carries the surface the shipped controls carry and nothing more: search,
+ * paging, filter and uploaded, but neither a store nor a setState. The paged
+ * control families (table, list, tile) extend the WebUI control base rather
+ * than webexpress.webapp.Data, so a bind that resolves its reader by those
+ * would never find them - which is exactly what a fixture carrying a store
+ * hides.
+ * @returns {object} The control.
  */
 function recorder() {
     return {
-        store: {},
         searched: [],
         paged: [],
+        filtered: [],
         uploads: [],
         search(pattern, type) { this.searched.push({ pattern, type }); },
-        page(index) { this.paged.push(index); },
+        paging(index) { this.paged.push(index); },
+        filter(pattern) { this.filtered.push(pattern); },
         uploaded(file) { this.uploads.push(file); }
     };
 }
@@ -161,7 +192,7 @@ test("a paging bind ignores a pager it does not name", () => {
     assert.deepEqual(component.paged, [], "a foreign pager changes nothing");
 });
 
-test("a component that binds a source late is still driven once it mounts", () => {
+test("a control constructed after the bind ran is still driven", () => {
     const component = recorder();
     const engine = loadEngine();
 
@@ -179,17 +210,19 @@ test("a component that binds a source late is still driven once it mounts", () =
     engine.document.body.appendChild(reader);
 
     // the bind runs before the controller constructs the element's own instance,
-    // which is the real order on a page
+    // which is the real order on a page. the reader is therefore resolved when
+    // an event arrives rather than when the bind runs - waiting for a mount
+    // announcement instead would never resolve a control that is not a Data
+    // component, which is what the paged control families are
     engine.wx.Binds.get("search").bind(reader);
 
     rtFire(engine, CHANGE_FILTER_EVENT, { sender: source, value: "early" });
-    assert.deepEqual(component.searched, [], "nothing is forwarded while the component does not exist");
+    assert.deepEqual(component.searched, [], "nothing is forwarded while the control does not exist");
 
     instances.set(reader, component);
-    engine.document.dispatchEvent({ type: "webexpress.webapp.data.mount", detail: {} });
 
     rtFire(engine, CHANGE_FILTER_EVENT, { sender: source, value: "late" });
-    assert.deepEqual(component.searched, [{ pattern: "late", type: "basic" }], "the mounted component is driven");
+    assert.deepEqual(component.searched, [{ pattern: "late", type: "basic" }], "the constructed control is driven");
 });
 
 test("a bind without a source selector wires nothing instead of throwing", () => {
@@ -205,13 +238,25 @@ test("a bind without a source selector wires nothing instead of throwing", () =>
 });
 
 test("a component without a search method is reported rather than called", () => {
-    const component = { store: {}, paged: [], page(index) { this.paged.push(index); } };
+    const component = { paged: [], paging(index) { this.paged.push(index); } };
     const rt = loadRuntime(component);
     const { source } = rt.bind("search", "search-box");
 
     // the guard exists because the binds are declared on the server, where
     // nothing checks that the target control implements the dispatch surface
     assert.doesNotThrow(() => rt.fire(CHANGE_FILTER_EVENT, { sender: source, value: "vpn" }));
+});
+
+test("a paging bind drives a control that keeps its page under page()", () => {
+    const component = { paged: [], page(index) { this.paged.push(index); } };
+    const rt = loadRuntime(component);
+    const { source } = rt.bind("paging", "pager");
+
+    // paging() is the contract the shipped controls implement, but a component
+    // naming the same request page() answers it just as well
+    rt.fire(CHANGE_PAGE_EVENT, { sender: source, page: 2 });
+
+    assert.deepEqual(component.paged, [2], "the page reaches the component either way");
 });
 
 test("an upload bind shows the file the named upload control uploaded", () => {
@@ -258,17 +303,60 @@ test("an upload bind ignores an upload control it does not name", () => {
 });
 
 test("a component without an uploaded method is reported rather than called", () => {
-    const component = { store: {}, searched: [], search(pattern) { this.searched.push(pattern); } };
+    const component = { searched: [], search(pattern) { this.searched.push(pattern); } };
     const rt = loadRuntime(component);
     const { source } = rt.bind("upload", "upload-box");
 
     assert.doesNotThrow(() => rt.fire(UPLOAD_SUCCESS_EVENT, { sender: source, file: {} }));
 });
 
-test("the filter bind is registered, so declaring it is not reported as unknown", () => {
-    const engine = loadEngine();
+test("a filter bind applies the quickfilter selection to the control", () => {
+    const component = recorder();
+    const rt = loadRuntime(component);
+    const reader = rt.bindFilter();
 
-    assert.ok(engine.wx.Binds.get("filter"), "the quickfilter driven components declare it");
+    // the filter registry announces the selection on the document, without a
+    // sender, because a quickfilter bar drives every reader that declares the
+    // bind rather than one named surface
+    rt.fire(CHANGE_FILTER_EVENT, { activeFilters: ["qf_starred", "qf_mine"] });
+
+    assert.deepEqual(component.filtered, ["qf_starred,qf_mine"], "the selection reaches the control");
+    assert.ok(reader, "the reader is the element the bind was declared on");
+});
+
+test("a filter bind clears the filter when the last chip is switched off", () => {
+    const component = recorder();
+    const rt = loadRuntime(component);
+    rt.bindFilter();
+
+    rt.fire(CHANGE_FILTER_EVENT, { activeFilters: [] });
+
+    assert.deepEqual(component.filtered, [""], "the reset is forwarded like any other selection");
+});
+
+test("a filter bind ignores the change filter event of a search box", () => {
+    const component = recorder();
+    const rt = loadRuntime(component);
+    rt.bindFilter();
+
+    // the search box announces the same event type; only the registry's carries
+    // the active filter list, which is what tells the two apart
+    rt.fire(CHANGE_FILTER_EVENT, { sender: rt.engine.document.body, value: "firewall" });
+
+    assert.deepEqual(component.filtered, [], "a search does not clear the quickfilter selection");
+});
+
+test("a filter bind leaves a viewstate bound control to the shared state", () => {
+    const component = recorder();
+    const rt = loadRuntime(component);
+    rt.bindFilter({ "data-wx-resource": "issues" });
+
+    // in ViewState mode the quickfilter writes the selection into the shared
+    // state and re-queries centrally; driving the control here as well would
+    // query twice for one click
+    rt.fire(CHANGE_FILTER_EVENT, { activeFilters: ["qf_starred"] });
+
+    assert.deepEqual(component.filtered, [], "the central re-query is the only one");
 });
 
 /**

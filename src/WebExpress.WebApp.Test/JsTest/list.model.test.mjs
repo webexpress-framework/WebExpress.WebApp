@@ -61,6 +61,22 @@ test("reduce response falls back to the current state and tolerates alternates",
     assert.equal(patch.pageSize, 50);
 });
 
+test("reduce response reads the pagination block the rest list result carries", () => {
+    const { wxapp } = load();
+
+    // RestApiListResult reports the figures under "pagination" and never at the
+    // top level, so a reducer reading only the top level leaves the pager on a
+    // single page no matter how much there is to walk through
+    const patch = wxapp.listModel.reduceResponse(
+        { page: 0, pageSize: 50 },
+        { items: [], pagination: { page: 1, pageSize: 25, total: 120, totalPages: 5 } }
+    );
+
+    assert.equal(patch.total, 120);
+    assert.equal(patch.page, 1);
+    assert.equal(patch.pageSize, 25);
+});
+
 test("map items projects strings and objects and tolerates a missing array", () => {
     const { wxapp } = load();
 

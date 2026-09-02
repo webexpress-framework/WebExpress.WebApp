@@ -418,6 +418,49 @@ webexpress.webapp.Event = class {
 }
 
 /**
+ * Reads the paging figures out of a data response.
+ * @remarks
+ * The REST results of the paged control families (table, list, tile) report
+ * them in a "pagination" block - the wire shape of RestApiPaginationInfo, which
+ * names them page, pageSize, total and totalPages - while a hand written
+ * endpoint may put the same figures at the top level. Both are accepted, so the
+ * three reducers read one shape and none of them has to know which endpoint
+ * answered. A figure that is absent stays null rather than becoming a zero,
+ * which the callers need in order to tell "the endpoint does not count its
+ * result" from "the result is empty".
+ * @param {object} response - The raw server response.
+ * @returns {{total: number|null, page: number|null, pageSize: number|null}} The paging figures.
+ */
+webexpress.webapp.pagingOf = function (response) {
+    const top = response || {};
+    const block = top.pagination || {};
+
+    const read = function (...names) {
+        for (const name of names) {
+            const value = top[name] ?? block[name];
+
+            if (value === undefined || value === null) {
+                continue;
+            }
+
+            const number = Number(value);
+
+            if (Number.isFinite(number)) {
+                return number;
+            }
+        }
+
+        return null;
+    };
+
+    return {
+        total: read("total", "totalCount", "count"),
+        page: read("page", "pageNumber"),
+        pageSize: read("pageSize")
+    };
+};
+
+/**
  * Builds the caption of the paging info line the paged data controls (table,
  * list, tile) render below their content. It lives here rather than in each of
  * them so the wording and its translation stay in one place. The control is
