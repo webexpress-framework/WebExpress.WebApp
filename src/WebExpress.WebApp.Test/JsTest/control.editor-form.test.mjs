@@ -79,6 +79,10 @@ function build(rt, options = {}) {
     state.dataset.wxMaxDelay = "40";
     state.dataset.wxMenu = "menu";
     state.dataset.wxDiscard = "discard";
+
+    if (options.channel) {
+        state.dataset.wxChannel = options.channel;
+    }
     footer.appendChild(state);
 
     const menu = rt.createElement("div");
@@ -417,4 +421,116 @@ test("the dialog is rebuilt around the indicator without cutting it off from its
 
     assert.ok(body, "the dialog was built");
     assert.ok(body.classList.contains("wx-modal-fill"), "and reserved its body for the writing surface");
+});
+
+test("a stored draft is announced to the other authors of the document", async () => {
+    const rt = loadControl({ file: FILE });
+    const sent = [];
+
+    rt.sandbox.webexpress.webapp.MessageQueue = {
+        status: "online",
+        register() { }, unregister() { },
+        send(message) { sent.push(message); }
+    };
+
+    const surface = build(rt, { answers: { GET: { data: { draft: false } } }, channel: "doc-1" });
+
+    await settle();
+
+    fire(surface.form, "keydown");
+    fire(surface.form, "input");
+    await settle();
+
+    const announcement = sent.find((m) => m.type === "webexpress.webapp.collaborative.draft");
+
+    assert.ok(announcement, "the peers are told the draft moved");
+    assert.equal(announcement.containerId, "doc-1", "on the channel the document is shared on");
+    assert.ok(announcement.author, "and by an author, so the sender can skip its own");
+});
+
+test("a document that is not shared announces nothing", async () => {
+    const rt = loadControl({ file: FILE });
+    const sent = [];
+
+    rt.sandbox.webexpress.webapp.MessageQueue = {
+        status: "online",
+        register() { }, unregister() { },
+        send(message) { sent.push(message); }
+    };
+
+    const surface = build(rt, { answers: { GET: { data: { draft: false } } } });
+
+    await settle();
+
+    fire(surface.form, "keydown");
+    fire(surface.form, "input");
+    await settle();
+
+    assert.deepEqual(sent, [], "there is nobody to tell");
+});
+
+test("an announcement from another author is picked up from the endpoint", async () => {
+    const rt = loadControl({ file: FILE });
+    let listener = null;
+
+    rt.sandbox.webexpress.webapp.MessageQueue = {
+        status: "online",
+        register(fn) { listener = fn; },
+        unregister() { },
+        send() { }
+    };
+
+    const surface = build(rt, { answers: { GET: { data: { draft: false } } }, channel: "doc-1" });
+
+    await settle();
+
+    listener({ type: "webexpress.webapp.collaborative.draft", containerId: "doc-1", author: "somebody-else" });
+    await settle();
+
+    assert.equal(surface.loads(), 1, "the surface reloads what was stored rather than trusting the message");
+    assert.equal(surface.state.getAttribute("data-wx-state"), "draft");
+});
+
+test("an announcement is not adopted over somebody who is still writing", async () => {
+    const rt = loadControl({ file: FILE });
+    let listener = null;
+
+    rt.sandbox.webexpress.webapp.MessageQueue = {
+        status: "online",
+        register(fn) { listener = fn; },
+        unregister() { },
+        send() { }
+    };
+
+    const surface = build(rt, { answers: { GET: { data: { draft: false } } }, channel: "doc-1" });
+
+    await settle();
+
+    // a save of this author's own is queued, so their next write is what the others will adopt
+    fire(surface.form, "keydown");
+    fire(surface.form, "input");
+    listener({ type: "webexpress.webapp.collaborative.draft", containerId: "doc-1", author: "somebody-else" });
+
+    assert.equal(surface.loads(), 0, "the text on screen is not replaced under the caret");
+});
+
+test("an announcement for another document is ignored", async () => {
+    const rt = loadControl({ file: FILE });
+    let listener = null;
+
+    rt.sandbox.webexpress.webapp.MessageQueue = {
+        status: "online",
+        register(fn) { listener = fn; },
+        unregister() { },
+        send() { }
+    };
+
+    const surface = build(rt, { answers: { GET: { data: { draft: false } } }, channel: "doc-1" });
+
+    await settle();
+
+    listener({ type: "webexpress.webapp.collaborative.draft", containerId: "doc-2", author: "somebody-else" });
+    await settle();
+
+    assert.equal(surface.loads(), 0, "the channel is what decides");
 });

@@ -345,7 +345,7 @@ namespace WebExpress.WebApp.WebControl
 
             if (draft != null)
             {
-                yield return RenderState(renderContext, draft);
+                yield return RenderState(renderContext, draft, collaborative ? Channel(renderContext) : null);
                 yield return RenderMenu(renderContext, visualTree);
             }
         }
@@ -373,9 +373,7 @@ namespace WebExpress.WebApp.WebControl
                 return main;
             }
 
-            var id = CollaborationId?.Invoke(renderContext);
-
-            var host = new ControlCollaborative(string.IsNullOrWhiteSpace(id) ? Id : id)
+            var host = new ControlCollaborative(Channel(renderContext))
             {
                 Classes = ["wx-editor-form-collaborative"],
 
@@ -407,8 +405,9 @@ namespace WebExpress.WebApp.WebControl
         /// </remarks>
         /// <param name="renderContext">The context in which the control is rendered.</param>
         /// <param name="draft">The resolved draft service descriptor.</param>
+        /// <param name="channel">The channel the document is shared on, or null when it is not.</param>
         /// <returns>The indicator element.</returns>
-        private IHtmlNode RenderState(IRenderControlContext renderContext, DataServiceDescriptor draft)
+        private IHtmlNode RenderState(IRenderControlContext renderContext, DataServiceDescriptor draft, string channel)
         {
             var show = ShowState?.Invoke(renderContext) ?? true;
             var debounce = Debounce?.Invoke(renderContext) ?? 900;
@@ -426,7 +425,11 @@ namespace WebExpress.WebApp.WebControl
                 .AddUserAttribute("data-wx-debounce", debounce.ToString(CultureInfo.InvariantCulture))
                 .AddUserAttribute("data-wx-max-delay", maxDelay.ToString(CultureInfo.InvariantCulture))
                 .AddUserAttribute("data-wx-menu", Id + "_menu")
-                .AddUserAttribute("data-wx-discard", Id + "_discard");
+                .AddUserAttribute("data-wx-discard", Id + "_discard")
+
+                // only a shared document announces its saves, and only to the people on its own
+                // channel; without one the controller keeps its writes to itself
+                .AddUserAttribute("data-wx-channel", channel);
 
             if (!show)
             {
@@ -497,6 +500,24 @@ namespace WebExpress.WebApp.WebControl
         private static string Translate(IRenderControlContext renderContext, string state)
         {
             return I18N.Translate(renderContext, "webexpress.webapp:editorform.state." + state);
+        }
+
+        /// <summary>
+        /// The channel the document is shared on, which is the collaboration id where one was
+        /// declared and the control id otherwise.
+        /// </summary>
+        /// <remarks>
+        /// The same answer serves the collaborative container and the save indicator, so the
+        /// shared surface and the draft announcements about it cannot end up on two different
+        /// channels - a mismatch that fails silently as "nobody else is here".
+        /// </remarks>
+        /// <param name="renderContext">The context in which the control is rendered.</param>
+        /// <returns>The channel id.</returns>
+        private string Channel(IRenderControlContext renderContext)
+        {
+            var id = CollaborationId?.Invoke(renderContext);
+
+            return string.IsNullOrWhiteSpace(id) ? Id : id;
         }
 
         /// <summary>

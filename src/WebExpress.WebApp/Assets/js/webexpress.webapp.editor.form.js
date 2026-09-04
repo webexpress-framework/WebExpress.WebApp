@@ -42,6 +42,13 @@ webexpress.webapp.EditorFormCtrl = class extends webexpress.webui.Ctrl {
     static MENU_EMPTY_CLASS = "wx-editor-form-menu-empty";
 
     /**
+     * The message a shared surface announces a stored draft with. It travels with the
+     * collaborative family because it means what those messages mean: something one author did
+     * has to reach the others looking at the same document.
+     */
+    static DRAFT_TYPE = "webexpress.webapp.collaborative.draft";
+
+    /**
      * Create a new EditorFormCtrl instance.
      * @param {HTMLElement} element - The save indicator, which carries the configuration.
      */
@@ -76,6 +83,11 @@ webexpress.webapp.EditorFormCtrl = class extends webexpress.webui.Ctrl {
         this._maxDelay = this._duration(ds.wxMaxDelay, 5000);
         this._menuId = ds.wxMenu || null;
         this._discardId = ds.wxDiscard || null;
+        this._channel = ds.wxChannel || null;
+
+        // the announcements carry who sent them, because the queue hands a message to every
+        // listener including the one that sent it
+        this._author = "a-" + Math.random().toString(36).slice(2, 10);
 
         this._service = webexpress.webapp.ServiceRegistry.fromElement(this._form).draft || null;
 
@@ -84,6 +96,7 @@ webexpress.webapp.EditorFormCtrl = class extends webexpress.webui.Ctrl {
         }
 
         this._bind();
+        this._share();
         this.render();
         void this._resume();
     }
@@ -171,6 +184,11 @@ webexpress.webapp.EditorFormCtrl = class extends webexpress.webui.Ctrl {
         this._destroyed = true;
         this._cancel();
         this._unbind();
+
+        if (this._queue && this._onAnnouncement) {
+            this._queue.unregister(this._onAnnouncement);
+        }
+
         this._service?.abort?.();
     }
 
@@ -221,6 +239,76 @@ webexpress.webapp.EditorFormCtrl = class extends webexpress.webui.Ctrl {
                 this._leave();
             }
         });
+    }
+
+    /**
+     * Subscribes to the draft announcements of the other authors of this document.
+     *
+     * A shared surface mirrors what is being typed through the collaborative control, which is
+     * live but skips a field the local author is in and coalesces the rest. The stored draft is
+     * where the document actually converges, so a save is announced and the peers pick it up -
+     * from the endpoint rather than from the message, so what they load is exactly what was
+     * stored.
+     */
+    _share() {
+        this._queue = this._channel ? webexpress.webapp.MessageQueue : null;
+
+        if (!this._queue) {
+            return;
+        }
+
+        this._onAnnouncement = (message) => {
+            if (!message || message.type !== webexpress.webapp.EditorFormCtrl.DRAFT_TYPE) {
+                return;
+            }
+
+            if (message.containerId !== this._channel || message.author === this._author) {
+                return;
+            }
+
+            this._adopt();
+        };
+
+        this._queue.register(this._onAnnouncement);
+    }
+
+    /**
+     * Announces that this author stored the draft.
+     */
+    _announce() {
+        if (!this._queue || this._queue.status !== "online") {
+            return;
+        }
+
+        this._queue.send({
+            type: webexpress.webapp.EditorFormCtrl.DRAFT_TYPE,
+            containerId: this._channel,
+            author: this._author,
+            ts: Date.now()
+        });
+    }
+
+    /**
+     * Loads what another author stored, unless this one is in the middle of writing.
+     *
+     * A reload replaces the text on screen, so it must not happen over somebody's shoulder: a
+     * queued or in-flight save of our own means this author is still writing, and their next
+     * save is what the others will adopt instead. The form is re-loaded rather than fed from the
+     * message, because the record endpoint answers the draft where there is one - so the peer
+     * ends up with exactly what was stored.
+     */
+    _adopt() {
+        if (this._sealed || this._inFlight || this._timer) {
+            return;
+        }
+
+        this._last = null;
+        this._touched = false;
+        this._draft = true;
+
+        this._revealMenu(true);
+        this._render("draft");
+        this._formCtrl()?.load?.();
     }
 
     /**
@@ -447,6 +535,7 @@ webexpress.webapp.EditorFormCtrl = class extends webexpress.webui.Ctrl {
 
         this._revealMenu(true);
         this._render("saved");
+        this._announce();
         this._dispatch(webexpress.webapp.Event.EDITOR_DRAFT_SAVED, { values: values, updated: this._updated });
 
         // a change that arrived while the request was open is written now

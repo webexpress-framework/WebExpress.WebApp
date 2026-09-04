@@ -79,10 +79,16 @@
 
 /* The bar the form contributes to the dialog's own footer bar: it takes the free space to the
    left of the actions, so what it says reads as a comment on them rather than as another one of
-   them. The dialog appends its close button last, which is as far right as the form can reach. */
+   them. The dialog appends its close button last, which is as far right as the form can reach.
+
+   Its contents pack to the right. With a save state that changes nothing - the state grows and
+   pushes the rest over by itself - but a surface that does not draft has no state, and without
+   this its submit would strand at the far left of a bar whose only other occupant is the close
+   button at the far right. Packed right, save and close read as the pair of actions they are. */
 .wx-editor-form-footer {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 0.5rem;
     flex: 1 1 auto;
     margin-right: auto;

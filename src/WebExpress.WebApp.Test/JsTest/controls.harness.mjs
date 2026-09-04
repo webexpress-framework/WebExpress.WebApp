@@ -244,6 +244,13 @@ function createBrowserGlobals(document) {
         localStorage: storage(),
         sessionStorage: storage(),
         WebSocket: WebSocketStub,
+        // a control that looks one of its own nodes up by an id it did not choose - the
+        // collaborative overlays are keyed by the peer's user id - escapes that id before it
+        // goes into a selector. Only the identifier rule is reproduced, which is all such a
+        // lookup needs.
+        CSS: {
+            escape: (value) => String(value).replace(/[^a-zA-Z0-9_-]/g, (c) => "\\" + c)
+        },
         // the graph editor narrows a drag target with an instanceof check, so
         // the SVG constructors have to exist and have to accept the stub's SVG
         // elements; the stub has one element class for every SVG tag, so the

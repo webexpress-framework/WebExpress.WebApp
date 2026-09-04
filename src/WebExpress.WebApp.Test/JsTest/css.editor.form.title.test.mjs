@@ -93,6 +93,16 @@ test("the title bar is only as tall as what it carries", () => {
     assert.doesNotMatch(body, /padding-left|padding-right|padding:\s/, "the name still lines up with the text below it");
 });
 
+test("the footer packs its contents beside the dialog's own actions", () => {
+    const body = rule(".wx-editor-form-footer");
+
+    assert.ok(body, "the form's footer bar carries a rule");
+    assert.match(body, /justify-content:\s*flex-end/, "so a submit does not strand at the far left");
+
+    // with a save state the packing changes nothing: the state grows and pushes the rest over
+    assert.match(rule(".wx-editor-form-state"), /flex:\s*1 1 auto/);
+});
+
 test("the writing surface goes edge to edge", () => {
     const body = rule(".wx-editor-form .modal-body");
 

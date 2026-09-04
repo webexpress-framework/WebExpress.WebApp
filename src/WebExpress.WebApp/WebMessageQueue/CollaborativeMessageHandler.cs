@@ -223,7 +223,8 @@ namespace WebExpress.WebApp.WebMessageQueue
             return type == CollaborativeMessageTypes.Presence
                 || type == CollaborativeMessageTypes.Cursor
                 || type == CollaborativeMessageTypes.Input
-                || type == CollaborativeMessageTypes.Caret;
+                || type == CollaborativeMessageTypes.Caret
+                || type == CollaborativeMessageTypes.Draft;
         }
 
         /// <summary>

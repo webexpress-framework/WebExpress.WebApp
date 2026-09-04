@@ -41,6 +41,19 @@ namespace WebExpress.WebApp.WebMessageQueue
         public const string Caret = Prefix + "caret";
 
         /// <summary>
+        /// An announcement that the shared draft of a document was stored, so the peers editing
+        /// it can pick the new text up.
+        /// </summary>
+        /// <remarks>
+        /// It travels with the collaborative family rather than as a data change of its own,
+        /// because it means the same thing those messages mean: something one author did has to
+        /// reach the others looking at the same thing. What it carries is only the fact and the
+        /// channel - the text itself stays with the endpoint that stored it, so a peer picks up
+        /// exactly what was saved rather than a second copy that could disagree with it.
+        /// </remarks>
+        public const string Draft = Prefix + "draft";
+
+        /// <summary>
         /// Determines whether the specified message type belongs to the
         /// collaborative family and should therefore be routed to the
         /// dedicated handler.
