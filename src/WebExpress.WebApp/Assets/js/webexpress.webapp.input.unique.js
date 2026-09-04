@@ -27,7 +27,13 @@ webexpress.webapp.InputUniqueCtrl = class extends webexpress.webui.Ctrl {
         this._method = (el.getAttribute("data-method") || "GET").toUpperCase();
         this._param = el.getAttribute("data-param") || "v";
         this._responseField = el.getAttribute("data-response-field") || "available";
-        this._minlength = parseInt(el.getAttribute("data-minlength") || "1", 10);
+        // the length below which asking the endpoint is pointless; it falls back to one
+        // and is therefore not a declared constraint - only _minLength is
+        this._checkThreshold = parseInt(el.getAttribute("data-minlength") || "1", 10);
+        this._minLength = el.getAttribute("data-minlength");
+        this._maxLength = el.getAttribute("data-maxlength");
+        this._pattern = el.getAttribute("data-pattern");
+        this._required = el.getAttribute("data-required") === "true";
         this._placeholderText = el.getAttribute("placeholder") || "";
         this._cssAvailable = el.getAttribute("data-css-available") || "is-valid";
         this._cssUnavailable = el.getAttribute("data-css-unavailable") || "is-invalid";
@@ -59,6 +65,9 @@ webexpress.webapp.InputUniqueCtrl = class extends webexpress.webui.Ctrl {
             "data-param",
             "data-response-field",
             "data-minlength",
+            "data-maxlength",
+            "data-pattern",
+            "data-required",
             "data-css-available",
             "data-css-unavailable",
             "data-css-checking",
@@ -99,6 +108,24 @@ webexpress.webapp.InputUniqueCtrl = class extends webexpress.webui.Ctrl {
         this._input.setAttribute("autocapitalize", "none");
         this._input.setAttribute("spellcheck", "false");
         this._input.name = this._fieldName;
+
+        // the host div carries the requirement but is not a form field, so the input
+        // built in its place declares it to the form controller
+        if (this._required) {
+            this._input.dataset.wxRequired = "true";
+        }
+
+        // the declared constraints belong on the input the form validator inspects,
+        // the same way the plain text control renders them onto its own input
+        if (this._minLength !== null) {
+            this._input.setAttribute("minlength", this._minLength);
+        }
+        if (this._maxLength !== null) {
+            this._input.setAttribute("maxlength", this._maxLength);
+        }
+        if (this._pattern !== null) {
+            this._input.setAttribute("pattern", this._pattern);
+        }
 
         // status container
         this._container = document.createElement("span");
@@ -186,7 +213,7 @@ webexpress.webapp.InputUniqueCtrl = class extends webexpress.webui.Ctrl {
         }
 
         // stay idle when minlength is not satisfied
-        if (!this._currentValue || this._currentValue.length < this._minlength) {
+        if (!this._currentValue || this._currentValue.length < this._checkThreshold) {
             this._cancelInFlight("idle");
             return;
         }

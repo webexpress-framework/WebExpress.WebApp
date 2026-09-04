@@ -178,8 +178,11 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
 
             modalFooter.insertBefore(navGroup, modalFooter.firstChild);
 
-            modalFooter.appendChild(this._btnNext);
-            modalFooter.appendChild(this._btnFinish);
+            // the primary action goes ahead of the dismiss button, the order every other
+            // dialog gets from ControlModalForm; a missing dismiss button appends instead
+            const dismissButton = modalFooter.querySelector('[data-wx-dismiss="modal"]');
+            modalFooter.insertBefore(this._btnNext, dismissButton);
+            modalFooter.insertBefore(this._btnFinish, dismissButton);
         } else {
             const actionsContainer = document.createElement("div");
             actionsContainer.className = "wx-restwizard-actions d-flex gap-2 justify-content-between";

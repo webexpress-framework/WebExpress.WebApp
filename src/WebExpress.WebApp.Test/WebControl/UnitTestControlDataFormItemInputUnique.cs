@@ -194,7 +194,7 @@ namespace WebExpress.WebApp.Test.WebControl
         /// </summary>
         [Theory]
         [InlineData(false, @"<div class=""wx-webapp-input-unique""></div>")]
-        [InlineData(true, @"<div class=""wx-webapp-input-unique""></div>")]
+        [InlineData(true, @"<div class=""wx-webapp-input-unique"" data-required=""true""></div>")]
         public void Required(bool required, string expected)
         {
             // arrange
@@ -490,6 +490,72 @@ namespace WebExpress.WebApp.Test.WebControl
             // validation
             AssertExtensions.EqualWithPlaceholders(expected, html);
             Assert.True(processed);
+        }
+
+        /// <summary>
+        /// Tests the server side min length check of the REST unique control. The browser
+        /// is not the only way in, so a value that never passed the native constraint has
+        /// to be caught here.
+        /// </summary>
+        [Theory]
+        [InlineData(null, false)]
+        [InlineData("ab", true)]
+        [InlineData("abc", false)]
+        [InlineData("abcd", false)]
+        public void ValidateMinLength(string value, bool expectedError)
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var form = new ControlForm();
+            var context = new RenderControlFormContext(UnitTestControlFixture.CreateRenderContextMock(), form);
+            var control = new ControlDataFormItemInputUnique("text-box")
+            {
+                MinLength = _ => 3u
+            };
+
+            if (value is not null)
+            {
+                context.SetValue(control, new ControlFormInputValueString(value));
+            }
+
+            // act
+            var results = control.Validate(context).ToList();
+
+            // validation
+            Assert.Equal(expectedError, results.Any(x => x.Type == TypeInputValidity.Error));
+            Assert.DoesNotContain(results, x => x.Text.Contains("System.Func"));
+        }
+
+        /// <summary>
+        /// Tests the server side max length check of the REST unique control.
+        /// </summary>
+        [Theory]
+        [InlineData(null, false)]
+        [InlineData("abc", false)]
+        [InlineData("abcd", false)]
+        [InlineData("abcde", true)]
+        public void ValidateMaxLength(string value, bool expectedError)
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var form = new ControlForm();
+            var context = new RenderControlFormContext(UnitTestControlFixture.CreateRenderContextMock(), form);
+            var control = new ControlDataFormItemInputUnique("text-box")
+            {
+                MaxLength = _ => 4u
+            };
+
+            if (value is not null)
+            {
+                context.SetValue(control, new ControlFormInputValueString(value));
+            }
+
+            // act
+            var results = control.Validate(context).ToList();
+
+            // validation
+            Assert.Equal(expectedError, results.Any(x => x.Type == TypeInputValidity.Error));
+            Assert.DoesNotContain(results, x => x.Text.Contains("System.Func"));
         }
     }
 }

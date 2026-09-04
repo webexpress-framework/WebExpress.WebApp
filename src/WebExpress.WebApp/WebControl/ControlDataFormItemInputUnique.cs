@@ -106,6 +106,7 @@ namespace WebExpress.WebApp.WebApiControl
             var minLength = MinLength?.Invoke(renderContext);
             var maxLength = MaxLength?.Invoke(renderContext);
             var pattern = Pattern?.Invoke(renderContext);
+            var required = Required?.Invoke(renderContext) ?? false;
 
             var html = new HtmlElementTextContentDiv()
             {
@@ -117,6 +118,9 @@ namespace WebExpress.WebApp.WebApiControl
                 .AddUserAttribute("data-minlength", minLength >= 0 ? minLength.ToString() : null)
                 .AddUserAttribute("data-maxlength", maxLength >= 0 ? maxLength.ToString() : null)
                 .AddUserAttribute("data-pattern", pattern)
+                // the input the client controller builds replaces this host, so the
+                // requirement has to travel to it as data rather than as the native attribute
+                .AddUserAttribute("data-required", required ? "true" : null)
                 .AddUserAttribute("data-value", value?.Text)
                 .EmitDataIslands(this, renderContext);
 
@@ -136,6 +140,8 @@ namespace WebExpress.WebApp.WebApiControl
             var value = renderContext.GetValue<ControlFormInputValueString>(this)?.Text;
             var disabled = Disabled?.Invoke(renderContext) ?? false;
             var required = Required?.Invoke(renderContext) ?? false;
+            var minLength = MinLength?.Invoke(renderContext);
+            var maxLength = MaxLength?.Invoke(renderContext);
 
             if (disabled)
             {
@@ -149,14 +155,14 @@ namespace WebExpress.WebApp.WebApiControl
                 return validationResults;
             }
 
-            if (value is not null && int.TryParse(MinLength?.ToString(), out var minLength) && minLength > value.Length)
+            if (value is not null && minLength > value.Length)
             {
-                validationResults.AddRange(new ValidationResult(TypeInputValidity.Error, string.Format(I18N.Translate(renderContext, "webexpress.webui:form.inputtextbox.validation.min"), MinLength)));
+                validationResults.AddRange(new ValidationResult(TypeInputValidity.Error, string.Format(I18N.Translate(renderContext, "webexpress.webui:form.inputtextbox.validation.min"), minLength)));
             }
 
-            if (value is not null && int.TryParse(MaxLength?.ToString(), out var maxLength) && maxLength < value.Length)
+            if (value is not null && maxLength < value.Length)
             {
-                validationResults.AddRange(new ValidationResult(TypeInputValidity.Error, string.Format(I18N.Translate(renderContext, "webexpress.webui:form.inputtextbox.validation.max"), MaxLength)));
+                validationResults.AddRange(new ValidationResult(TypeInputValidity.Error, string.Format(I18N.Translate(renderContext, "webexpress.webui:form.inputtextbox.validation.max"), maxLength)));
             }
 
             return validationResults;

@@ -46,6 +46,7 @@ use the helper script, which locates node automatically:
 | `table.model.test.mjs` | Unit tests for the REST table model helpers (phase two), including the query and the put update through a service.
 | `restform.model.test.mjs` | Unit tests for the REST form model helpers (phase two): request shaping, response classification and error normalisation.
 | `restwizard.model.test.mjs` | Unit tests for the REST wizard model helpers (phase two): step request shaping, cache decision and last step detection.
+| `control.restwizard.footer.test.mjs` | Layout tests for the wizard footer: the primary action is placed ahead of the dialog's dismiss button, the step navigation leads the footer, and a footer without a dismiss button still receives the buttons.
 | `tab.model.test.mjs`   | Unit tests for the REST tab model helpers (phase two): the list, create, reorder and close operations through a service.
 | `comment.model.test.mjs` | Unit tests for the REST comment model helpers (phase two): endpoint url and path building and category normalisation.
 | `kanban.model.test.mjs` | Unit tests for the REST kanban model helpers (phase two): board normalisation and the load and persist operations through a service.
@@ -60,6 +61,7 @@ use the helper script, which locates node automatically:
 | `control.schedule.behavior.test.mjs` | End-to-end tests for the REST schedule: the range query, the reload on navigation and view switch, the range and holiday caches, the separate holidays endpoint, the persisted mutations, the failure fallback and the ViewState binding.
 | `comment.composer.model.test.mjs` | Unit tests for the comment composer model helpers: the categories url, the categories normalisation and the label parsing, plus the categories load and the comment post through a service.
 | `input.unique.model.test.mjs` | Unit tests for the unique input model helpers: the header parsing, the request body shaping and the availability extraction with its field and status and code heuristics, plus a uniqueness check through the shared request.
+| `control.input-unique.test.mjs` | Contract and required tests for the unique input: the requirement declared on the host survives the hand-over to the input the controller builds, and the real form validator rejects that input while it is empty.
 | `selection.model.test.mjs` | Unit tests for the REST selection model helpers: the request url and init shaping and the response item mapping, plus a search through the shared request.
 | `input.selection.model.test.mjs` | Unit tests for the REST input selection model helpers: the request url and init shaping and the item mapping with its data and aria tuples, plus a search through the shared request.
 | `dropdown.theme.model.test.mjs` | Unit tests for the theme dropdown model helpers: the theme item mapping and the theme list normalisation, plus a themes load through the shared request.
