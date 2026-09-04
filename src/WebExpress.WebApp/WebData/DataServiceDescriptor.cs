@@ -340,6 +340,28 @@ namespace WebExpress.WebApp.WebData
         }
 
         /// <summary>
+        /// Creates the data service descriptor of the unpublished draft a document
+        /// form saves into while it is being written. It reads the draft with GET,
+        /// stores it with PUT and drops it with DELETE against the same base.
+        /// </summary>
+        /// <remarks>
+        /// The service is named "draft" rather than "data", because a document form
+        /// declares both: the record service the form loads from and publishes to,
+        /// and this one. Naming is what keeps the two meanings of save apart on the
+        /// client, where the endpoint of a save is decided by which of them the
+        /// change belongs to.
+        /// </remarks>
+        /// <param name="baseUri">The resolved draft endpoint.</param>
+        /// <returns>The configured descriptor.</returns>
+        public static DataServiceDescriptor DraftData(string baseUri)
+        {
+            return Rest("draft")
+                .WithBaseUri(baseUri)
+                .WithMethod("GET")
+                .WithUpdateMethod("PUT");
+        }
+
+        /// <summary>
         /// Sets the base address.
         /// </summary>
         /// <param name="baseUri">The base address.</param>

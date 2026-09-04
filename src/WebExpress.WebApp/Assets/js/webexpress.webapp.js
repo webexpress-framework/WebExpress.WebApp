@@ -391,6 +391,14 @@ webexpress.webapp.Event = class {
     static COMMENT_REACTION_EVENT = "webexpress.webapp.comment.reaction";
     // Event triggered when a reply is added to a comment
     static COMMENT_REPLY_EVENT = "webexpress.webapp.comment.reply";
+    // Event triggered when the unpublished draft of an editor form was stored
+    static EDITOR_DRAFT_SAVED = "webexpress.webapp.editor.draft.saved";
+    // Event triggered when the unpublished draft of an editor form was dropped
+    static EDITOR_DRAFT_DISCARDED = "webexpress.webapp.editor.draft.discarded";
+    // Event triggered when a document was published and its draft therefore ended
+    static EDITOR_PUBLISHED = "webexpress.webapp.editor.published";
+    // Event triggered whenever the save state of an editor form changes
+    static EDITOR_STATE = "webexpress.webapp.editor.state";
     // Event triggered when a watcher is added
     static WATCHER_ADDED_EVENT = "webexpress.webapp.watcher.added";
     // Event triggered when a watcher is removed

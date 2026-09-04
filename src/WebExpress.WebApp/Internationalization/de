@@ -11,6 +11,21 @@ clone.label=Klonen
 delete.title=Löschen
 delete.label=Löschen
 
+# the document form: its submit publishes, and its footer says whether what has been
+# written is safe. The state texts are also carried in Assets/js/i18n, because the
+# indicator is repainted by the client controller after the server painted the first one.
+editorform.publish.label=Veröffentlichen
+editorform.discard.label=Verwerfen
+editorform.menu.tooltip=Weitere Aktionen
+editorform.state.idle=Keine ungespeicherten Änderungen
+editorform.state.draft=Unveröffentlichter Entwurf wird fortgesetzt
+editorform.state.pending=Änderung noch nicht gespeichert...
+editorform.state.saving=Entwurf wird gespeichert...
+editorform.state.saved=Entwurf gespeichert · {0}
+editorform.state.error=Entwurf konnte nicht gespeichert werden - nächste Änderung versucht es erneut
+editorform.state.publishing=Wird veröffentlicht...
+editorform.state.discarding=Entwurf wird verworfen...
+
 confirmation.title=Bestätigung
 confirmation.description=Möchten Sie diese Aktion wirklich durchführen?
 confirmation.delete.label=Löschen

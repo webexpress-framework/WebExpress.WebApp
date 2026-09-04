@@ -625,6 +625,66 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
+        /// Declares the record service of the document form, which loads the
+        /// values the editor opens on and publishes them on submit. It is the
+        /// first of the two endpoints such a form declares; the second is the
+        /// draft below.
+        /// </summary>
+        /// <remarks>
+        /// The document form carries an overload of its own rather than
+        /// inheriting the one of the rest form, so that the two declarations
+        /// chain: the inherited one answers the base type, and the draft cannot
+        /// be declared on that.
+        /// </remarks>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The document form control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ModalDataEditor DataService<TEndpoint>(this ModalDataEditor control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, DataServiceDescriptor.FormData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
+        }
+
+        /// <summary>
+        /// Declares the draft service of the document form, which stores the
+        /// unpublished text with PUT, answers it with GET and drops it with
+        /// DELETE. It is the second of the two endpoints such a form declares:
+        /// this one is what "do not lose what I have written" means, while the
+        /// record service declared with DataService is what "let the readers see
+        /// this" means.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The document form control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ModalDataEditor DraftService<TEndpoint>(this ModalDataEditor control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            var endpoint = Endpoint<TEndpoint>();
+            var domains = Domains<TEndpoint>();
+
+            // the draft is declared apart from the ServiceFactories the presets add
+            // to, because assigning the single ServiceFactory replaces all of them -
+            // a record service declared after the draft would otherwise drop the
+            // autosave without a word
+            control.DraftServiceFactory = renderContext =>
+            {
+                var descriptor = DataServiceDescriptor.DraftData(endpoint(renderContext));
+
+                foreach (var domain in domains)
+                {
+                    descriptor.WithDomain(domain);
+                }
+
+                configure?.Invoke(descriptor);
+                return descriptor;
+            };
+
+            return control;
+        }
+
+        /// <summary>
         /// Declares the standard data service of the wizard, which shapes its
         /// own step and submit requests against the endpoint.
         /// </summary>

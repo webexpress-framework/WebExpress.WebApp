@@ -154,7 +154,15 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
         const headerEl = this._element.querySelector(".modal-body");
         const main = headerEl ? headerEl.querySelector("main") : null;
         if (main) {
-            main.style.display = this.mode === "delete" ? "none" : "block";
+            if (this.mode === "delete") {
+                main.style.display = "none";
+            } else {
+                // the inline value is cleared rather than set to "block", so how the fields are
+                // laid out stays the stylesheet's decision - a form whose body is one filling
+                // surface needs a flex column here, and an inline display outranks every rule
+                // that could say so
+                main.style.removeProperty("display");
+            }
         }
         this.load();
     }
@@ -536,6 +544,20 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
             this._displayAggregatedErrors(messages);
         }
         return formIsValid;
+    }
+
+    /**
+     * Returns what a submit would send, without sending it.
+     *
+     * A surface that writes the same fields somewhere else - the document form saves the
+     * unpublished draft while the author types - has to send the shape the publish sends, or
+     * the endpoint behind it reads two contracts instead of one. Reading the form a second time
+     * would let the two drift apart on the next controlled input, so the payload is built here,
+     * once, for both.
+     * @returns {Object} The payload a submit would send.
+     */
+    serialize() {
+        return this._buildPayload();
     }
 
     /**

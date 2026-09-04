@@ -37,6 +37,7 @@ The form controller manages the complete lifecycle of user interactions, from in
 - **Initialization & Hydration**
   - Upon loading, a container for global error messages (`.restform-error-container`) is created if it does not yet exist.
   - The controller retrieves the data and automatically populates the form fields.
+  - In a modal, the field area (`<main>`) is hidden in `delete` mode and otherwise left to the stylesheet: the controller clears its own inline `display` rather than forcing `block`, because an inline value outranks every rule a host might use to lay the fields out — a body reserved for a filling editor, for instance, needs a flex column there.
 
 - **Validation**
   - The controller uses the native HTML5 validation API (`required`, `pattern`, `min`/`max`, `type="email"`, etc.).

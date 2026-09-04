@@ -19,6 +19,16 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "form.edit_row": "Eintrag bearbeiten",
     "form.edit_item": "Element bearbeiten",
 
+    // der Speicherzustand eines Dokumentformulars; {0} ist die lokale Zeit des letzten Schreibens
+    "editorform.state.idle": "Keine ungespeicherten Änderungen",
+    "editorform.state.draft": "Unveröffentlichter Entwurf wird fortgesetzt",
+    "editorform.state.pending": "Änderung noch nicht gespeichert…",
+    "editorform.state.saving": "Entwurf wird gespeichert…",
+    "editorform.state.saved": "Entwurf gespeichert · {0}",
+    "editorform.state.error": "Entwurf konnte nicht gespeichert werden – nächste Änderung versucht es erneut",
+    "editorform.state.publishing": "Wird veröffentlicht…",
+    "editorform.state.discarding": "Entwurf wird verworfen…",
+
     "fileview.list": "Liste",
     "fileview.tile": "Kacheln",
     "fileview.count": "{0} Datei(en)",

@@ -10,6 +10,7 @@ This section documents the JavaScript controllers and client-side behavior used 
 - [CollaborativeCtrl](collaborative.md)
 - [CommentCtrl](comment.md)
 - [DashboardCtrl](dashboard.md)
+- [EditorFormCtrl](editor.form.md)
 - [FileViewCtrl](file.view.md)
 - [GanttCtrl](gantt.md)
 - [GraphViewerCtrl](graph.viewer.md)

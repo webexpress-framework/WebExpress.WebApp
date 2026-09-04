@@ -59,6 +59,15 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
     static CARET_TYPE = "webexpress.webapp.collaborative.caret";
 
     /**
+     * How long rich-text changes of one field are coalesced before the markup
+     * is broadcast, in milliseconds. A text field sends one message per
+     * keystroke because its value is a short string; a document is the whole
+     * markup of the surface and would saturate the queue at that rate.
+     * @type {number}
+     */
+    static RICH_INPUT_INTERVAL = 250;
+
+    /**
      * Initializes the collaborative control and sets up the required environment.
      * @param {HTMLElement} element - The DOM element associated with this instance.
      */
@@ -88,6 +97,10 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
         this._remoteCarets = new Map();
         this._suppressInput = new Set();
 
+        // the rich-text updates waiting for the next coalescing interval, keyed by field
+        this._pendingRichInput = new Map();
+        this._richInputTimer = 0;
+
         // throttling state setup
         this._pendingCursor = null;
         this._cursorRafId = 0;
@@ -113,18 +126,76 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
 
         this._bindLocalEvents();
 
-        // announce presence and keep peers informed periodically
-        this._sendPresence("join");
-        this._heartbeat = setInterval(() => {
-            this._sendPresence("ping");
-            this._reapStaleUsers();
-        }, 5000);
-
         // gracefully leave on tab close
         this._beforeUnload = () => {
             this._sendPresence("leave");
         };
         window.addEventListener("beforeunload", this._beforeUnload);
+
+        // presence means "is looking at this", and a closed dialog is not looking. A container
+        // inside one therefore joins when the dialog opens and leaves when it closes, so the
+        // people shown are the ones who actually have the document in front of them rather than
+        // everybody who happens to have loaded the page it can be opened from. Everywhere else
+        // the container is the surface, and joining is immediate.
+        //
+        // The ancestor is matched on both names because the controller registry initializes
+        // children before their parents: at this moment the dialog still carries the class it
+        // was authored with, and only becomes ".modal" when its own controller runs.
+        this._dialog = element.closest(".modal, .wx-webui-modal");
+
+        if (this._dialog) {
+            this._onDialogShow = () => this._activate();
+            this._onDialogHide = () => this._deactivate();
+
+            this._dialog.addEventListener(webexpress.webui.Event.MODAL_SHOW_EVENT, this._onDialogShow);
+            this._dialog.addEventListener(webexpress.webui.Event.MODAL_HIDE_EVENT, this._onDialogHide);
+        } else {
+            this._activate();
+        }
+
+        this.render();
+    }
+
+    /**
+     * Joins the channel and starts telling the peers that this client is here.
+     * @returns {void}
+     */
+    _activate() {
+        if (this._active) {
+            return;
+        }
+
+        this._active = true;
+        this._sendPresence("join");
+
+        this._heartbeat = setInterval(() => {
+            this._sendPresence("ping");
+            this._reapStaleUsers();
+        }, 5000);
+    }
+
+    /**
+     * Leaves the channel and forgets the peers.
+     *
+     * What was known about them is dropped rather than kept, because it is only true while this
+     * client is listening: a peer who leaves in the meantime would otherwise still be shown on
+     * the next open, with no message coming to correct it.
+     * @returns {void}
+     */
+    _deactivate() {
+        if (!this._active) {
+            return;
+        }
+
+        this._active = false;
+        this._sendPresence("leave");
+
+        clearInterval(this._heartbeat);
+        this._heartbeat = 0;
+
+        this._remoteUsers.clear();
+        this._remoteCursors.clear();
+        this._remoteCarets.clear();
 
         this.render();
     }
@@ -150,12 +221,17 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
      * Cleans up the instance by announcing departure, removing listeners, and stopping timers.
      */
     destroy() {
-        this._sendPresence("leave");
+        this._deactivate();
         
         if (this._queue) {
             this._queue.unregister(this._messageHandler);
         }
         
+        if (this._dialog) {
+            this._dialog.removeEventListener(webexpress.webui.Event.MODAL_SHOW_EVENT, this._onDialogShow);
+            this._dialog.removeEventListener(webexpress.webui.Event.MODAL_HIDE_EVENT, this._onDialogHide);
+        }
+
         this._unbindLocalEvents();
         window.removeEventListener("beforeunload", this._beforeUnload);
         clearInterval(this._heartbeat);
@@ -164,6 +240,13 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
             cancelAnimationFrame(this._cursorRafId);
         }
         
+        if (this._richInputTimer) {
+            clearTimeout(this._richInputTimer);
+            this._richInputTimer = 0;
+        }
+
+        this._pendingRichInput.clear();
+
         if (this._presenceBar && this._presenceBar.parentNode) {
             this._presenceBar.parentNode.removeChild(this._presenceBar);
         }
@@ -224,6 +307,12 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
 
     /**
      * Builds the presence bar and cursor overlay sub-containers and appends them to the host element.
+     *
+     * The cursors and carets are overlays of the shared area and can only live inside it, but who
+     * is here is a fact about the whole surface rather than about the area they happen to point
+     * at. A host that has a better place for it - a dialog footer bar, say - names that place
+     * through data-collaborative-presence-host, and the bar is docked there instead: still built,
+     * filled and torn down here, so nothing of the presence rendering is duplicated for it.
      */
     _initOverlayDOM() {
         this._presenceBar = document.createElement("div");
@@ -235,7 +324,18 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
         this._caretLayer = document.createElement("div");
         this._caretLayer.className = "wx-collaborative-carets";
 
-        this._element.appendChild(this._presenceBar);
+        const hostId = this._element.dataset.collaborativePresenceHost;
+        const host = hostId ? document.getElementById(hostId) : null;
+
+        if (host) {
+            // the docked bar is laid out by whatever it was docked into, so it drops the
+            // absolute placement it has as an overlay of the shared area
+            this._presenceBar.classList.add("wx-collaborative-presence-docked");
+            host.appendChild(this._presenceBar);
+        } else {
+            this._element.appendChild(this._presenceBar);
+        }
+
         this._element.appendChild(this._cursorLayer);
         this._element.appendChild(this._caretLayer);
     }
@@ -328,7 +428,10 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
 
-        if (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA") {
+        const isFormField = target.tagName === "INPUT" || target.tagName === "TEXTAREA";
+        const isEditable = target.isContentEditable === true;
+
+        if (!isFormField && !isEditable) {
             return;
         }
 
@@ -341,11 +444,73 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
 
-        const value = target.value != null ? target.value : "";
-        const selectionStart = typeof target.selectionStart === "number" ? target.selectionStart : null;
-        const selectionEnd = typeof target.selectionEnd === "number" ? target.selectionEnd : null;
+        if (isFormField) {
+            const value = target.value != null ? target.value : "";
+            const selectionStart = typeof target.selectionStart === "number" ? target.selectionStart : null;
+            const selectionEnd = typeof target.selectionEnd === "number" ? target.selectionEnd : null;
 
-        this._sendInput(fieldId, value, selectionStart, selectionEnd);
+            this._sendInput(fieldId, value, selectionStart, selectionEnd);
+
+            return;
+        }
+
+        // a rich-text surface is broadcast as markup, and the caret offset that travels with it
+        // is counted in plain text characters - the same unit selectionStart uses - so one
+        // remote beam implementation serves both kinds of field
+        const caret = this._localContentEditableCaret(target);
+
+        // a document is orders of magnitude larger than a text field, and every keystroke
+        // rewrites all of it; coalescing turns a burst of typing into one message per interval
+        this._queueRichInput(fieldId, target, caret);
+    }
+
+    /**
+     * Returns the local caret offset inside a contenteditable element, or null when the
+     * selection is not in it.
+     * @param {HTMLElement} target - The contenteditable element.
+     * @returns {number|null} The plain text offset of the caret.
+     */
+    _localContentEditableCaret(target) {
+        const selection = window.getSelection ? window.getSelection() : null;
+
+        if (!selection || selection.rangeCount === 0) {
+            return null;
+        }
+
+        const range = selection.getRangeAt(0);
+
+        if (!target.contains(range.startContainer)) {
+            return null;
+        }
+
+        return this._contentEditableOffset(target, range.startContainer, range.startOffset);
+    }
+
+    /**
+     * Coalesces rich-text updates of one field and sends the latest state per interval.
+     * @param {string} fieldId - The identifier of the field.
+     * @param {HTMLElement} target - The contenteditable element to read on send.
+     * @param {number|null} caret - The caret offset at the time of the change.
+     * @returns {void}
+     */
+    _queueRichInput(fieldId, target, caret) {
+        this._pendingRichInput.set(fieldId, { target, caret });
+
+        if (this._richInputTimer) {
+            return;
+        }
+
+        this._richInputTimer = setTimeout(() => {
+            this._richInputTimer = 0;
+
+            for (const [id, pending] of this._pendingRichInput) {
+                // read the markup at send time rather than at queue time, so the message
+                // carries the state the typing actually ended on
+                this._sendInput(id, pending.target.innerHTML, pending.caret, pending.caret);
+            }
+
+            this._pendingRichInput.clear();
+        }, webexpress.webapp.CollaborativeCtrl.RICH_INPUT_INTERVAL);
     }
 
     /**
@@ -491,6 +656,36 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
             return editable;
         }
         return null;
+    }
+
+    /**
+     * Writes markup a peer sent into a local rich-text surface.
+     *
+     * The write goes through the editor controller when the surface belongs to one, rather
+     * than through the DOM: the controller re-frames the blocks its plugins own (tables,
+     * add-ons), keeps the hidden form input the surface submits through in sync, and leaves
+     * an undo history that still matches what is on screen. Writing innerHTML directly would
+     * leave all three stale, and the surface would submit the value it had before the peer
+     * wrote.
+     *
+     * @param {HTMLElement} field - The contenteditable element receiving the markup.
+     * @param {string} markup - The markup to apply.
+     * @returns {void}
+     */
+    _applyRemoteMarkup(field, markup) {
+        const host = field.closest(".wx-editor");
+        const controller = host && webexpress.webui.Controller
+            ? webexpress.webui.Controller.getInstanceByElement(host)
+            : null;
+
+        if (controller && "value" in controller) {
+            controller.value = markup;
+
+            return;
+        }
+
+        field.innerHTML = markup;
+        field.dispatchEvent(new Event("input", { bubbles: true }));
     }
 
     /**
@@ -781,17 +976,22 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
             this._remoteCarets.delete(msg.userId);
         }
 
-        // only form fields are value-synced; contenteditable content (e.g.
-        // EditorCtrl) carries rich HTML and would lose its formatting if we
-        // wrote it via textContent
+        // a field the local user is typing in is never overwritten: their caret and their
+        // last keystrokes would be lost to a message that was already in flight when they
+        // started. The state converges when they leave the field, which is the last write.
         const isFormField = field.tagName === "INPUT" || field.tagName === "TEXTAREA";
-        if (isFormField && document.activeElement !== field) {
+
+        if (document.activeElement !== field) {
             this._suppressInput.add(msg.fieldId);
 
             try {
-                field.value = msg.value != null ? msg.value : "";
-                // emit native event to ensure frameworks or bindings can react
-                field.dispatchEvent(new Event("input", { bubbles: true }));
+                if (isFormField) {
+                    field.value = msg.value != null ? msg.value : "";
+                    // emit native event to ensure frameworks or bindings can react
+                    field.dispatchEvent(new Event("input", { bubbles: true }));
+                } else if (field.isContentEditable) {
+                    this._applyRemoteMarkup(field, msg.value != null ? msg.value : "");
+                }
             } finally {
                 this._suppressInput.delete(msg.fieldId);
             }

@@ -19,6 +19,16 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "form.edit_row": "Edit Row",
     "form.edit_item": "Edit Item",
 
+    // the save state of a document form; {0} is the local time of the last write
+    "editorform.state.idle": "No unsaved changes",
+    "editorform.state.draft": "Resuming an unpublished draft",
+    "editorform.state.pending": "Change not saved yet…",
+    "editorform.state.saving": "Saving draft…",
+    "editorform.state.saved": "Draft saved · {0}",
+    "editorform.state.error": "Draft could not be saved - the next change retries",
+    "editorform.state.publishing": "Publishing…",
+    "editorform.state.discarding": "Discarding draft…",
+
     "fileview.list": "List",
     "fileview.tile": "Tiles",
     "fileview.count": "{0} file(s)",

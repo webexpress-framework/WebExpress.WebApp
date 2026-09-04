@@ -1,0 +1,163 @@
+/* -------------------------------------------------------------- editor form */
+
+/* The dialog a document is written in: a title where the dialog needs a title anyway, the
+   writing surface as the whole of the content, and a footer bar that says whether what has
+   been written is safe. Nothing here decides how the body is sized - that is the fill contract
+   of the modal and the editor, which this control only takes part in. */
+
+/* --------------------------------------------------------------- title */
+
+/* The title bar is a document's name and the two dialog buttons, nothing else. Its height is
+   whatever those need, so the vertical padding a dialog header carries for a caption is dropped:
+   it would only push the writing surface further down for a row that is already as tall as the
+   controls in it. The horizontal padding stays - the name still has to line up with the text
+   below it. */
+.wx-editor-form .modal-header {
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+/* The title is the name of the document, not a field of a form. The modal lifts this box onto
+   the dialog's title row, which is a flex row (title, fullscreen toggle, close), and the title
+   is the part that grows. */
+.wx-editor-form-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* At rest the field has to be indistinguishable from the dialog's own title, so every mark the
+   framework's form-control puts on it is taken back: no border, no fill, no ring, and the font
+   of the heading it stands in for. The negative margin cancels the padding the box needs when
+   it does show, so the text starts exactly where a plain title's would - without it the title
+   would sit a few pixels in and the swap would be visible after all.
+
+   The form-control class is named in the selector rather than left out, because taking a mark
+   back has to out-rank putting it there: the dark theme fills every form-control with black
+   from a selector of the same weight as this one, in a stylesheet that loads later, and would
+   otherwise win the tie and paint the box back in. */
+.wx-editor-form-header .wx-editor-form-title-input.form-control {
+    width: calc(100% + 0.5rem);
+    margin-left: -0.5rem;
+    padding: 0.15rem 0.5rem;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    box-shadow: none;
+    outline: none;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    text-overflow: ellipsis;
+}
+
+/* Offered by the pointer... */
+.wx-editor-form-header .wx-editor-form-title-input.form-control:hover {
+    border-color: var(--wx-border-color);
+    background: var(--wx-body-bg);
+    cursor: text;
+}
+
+/* ...and taken by the caret. The ring is drawn here rather than left to the framework, because
+   the rule above turns the framework's own off - and a field being edited has to say so to a
+   keyboard user too, for whom the pointer affordance never happens. */
+.wx-editor-form-header .wx-editor-form-title-input.form-control:focus {
+    border-color: var(--wx-primary);
+    background: var(--wx-body-bg);
+    box-shadow: 0 0 0 0.2rem rgba(var(--wx-primary-rgb, 13, 110, 253), 0.25);
+}
+
+/* An empty document still reads as a title rather than as a placeholder in a box. */
+.wx-editor-form-header .wx-editor-form-title-input.form-control::placeholder {
+    color: inherit;
+    opacity: 0.5;
+}
+
+/* ---------------------------------------------------------- footer bar */
+
+/* The bar the form contributes to the dialog's own footer bar: it takes the free space to the
+   left of the actions, so what it says reads as a comment on them rather than as another one of
+   them. The dialog appends its close button last, which is as far right as the form can reach. */
+.wx-editor-form-footer {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1 1 auto;
+    margin-right: auto;
+    min-width: 0;
+    text-align: start;
+}
+
+/* ---------------------------------------------------------- save state */
+
+/* The one line that says whether what has been written is safe. Quiet enough to be ignored
+   while it says nothing and legible the moment it does. The state is carried on the element
+   rather than in a class, so the controller writes one attribute instead of juggling a set.
+
+   It also takes the free space of the bar, which puts the presence and the overflow menu at its
+   right edge - directly left of the publish button the menu is the alternative to. */
+.wx-editor-form-state {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0.35rem 0.1rem 0;
+    min-height: 1.6rem;
+    font-size: 0.8125rem;
+    color: var(--wx-secondary-color);
+}
+
+.wx-editor-form-state[data-wx-state="saved"] {
+    color: var(--wx-success);
+}
+
+.wx-editor-form-state[data-wx-state="draft"],
+.wx-editor-form-state[data-wx-state="pending"] {
+    color: var(--wx-warning-text-emphasis, var(--wx-secondary-color));
+}
+
+.wx-editor-form-state[data-wx-state="error"] {
+    color: var(--wx-danger);
+}
+
+/* ---------------------------------------------------------- presence */
+
+/* Who else is in the document, docked onto the bar by the collaborative controller. It sits at
+   the left end, ahead of the save state: who is here is a fact about the document rather than
+   about the draft, and it is there whether or not anything is being saved. */
+.wx-editor-form-presence {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+/* ------------------------------------------------------- overflow menu */
+
+.wx-editor-form-menu {
+    flex: 0 0 auto;
+}
+
+/* There is nothing to discard until a draft exists, and only the draft endpoint knows whether
+   one does - so the menu is rendered either way and revealed once the answer arrives. */
+.wx-editor-form-menu-empty {
+    display: none;
+}
+
+/* ------------------------------------------------------------- content */
+
+/* The writing surface goes edge to edge. A dialog body is padded for content that needs a
+   margin from the frame, but this body holds one thing that already draws its own - and the
+   padding only takes width away from the text. It is dropped on the body rather than on the
+   content box inside it, because that is the element carrying it.
+
+   The body's padding is zeroed directly rather than through the dialog's padding variable: the
+   footer derives its own padding from that variable by subtracting half a gap from it, so
+   zeroing the variable would give the footer a negative padding. */
+.wx-editor-form .modal-body {
+    padding: 0;
+}
+
+/* The content box and the collaborative container the control inserts need no rule of their
+   own: the modal's fill contract grows every ancestor of the filling element through :has(), so
+   a shared document fills its dialog exactly as an unshared one does. */

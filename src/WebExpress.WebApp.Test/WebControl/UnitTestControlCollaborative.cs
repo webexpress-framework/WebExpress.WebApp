@@ -105,5 +105,41 @@ namespace WebExpress.WebApp.Test.WebControl
             // validation
             AssertExtensions.EqualWithPlaceholders(@"<div id=""collab"" class=""wx-webapp-collaborative""><div>Hello</div></div>", html);
         }
+
+        /// <summary>
+        /// Tests that a rich-text surface nested in the container keeps an id of its own.
+        /// </summary>
+        /// <remarks>
+        /// The id is what makes the field addressable: an incoming caret or markup message
+        /// names the field it belongs to, and the client resolves it by id inside the
+        /// container. A surface that lost its id would take part in presence and cursors but
+        /// silently drop every write meant for it, so the composition is worth pinning.
+        /// </remarks>
+        [Fact]
+        public void NestedRichTextSurfaceIsAddressable()
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var form = new ControlForm();
+            var context = new RenderControlFormContext(UnitTestControlFixture.CreateRenderContextMock(), form);
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var editor = new ControlFormItemInputText("body")
+            {
+                Name = _ => "Body",
+                Format = _ => TypeEditTextFormat.Wysiwyg,
+                Fill = _ => true
+            };
+            var control = new ControlCollaborative("collab", editor);
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders
+            (
+                @"<div id=""collab"" class=""wx-webapp-collaborative""><div id=""body"" class=""wx-webui-editor form-control"" name=""Body"" data-fill=""true""></div></div>",
+                html
+            );
+        }
     }
 }

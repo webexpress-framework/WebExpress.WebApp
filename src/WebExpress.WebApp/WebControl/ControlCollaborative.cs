@@ -51,6 +51,17 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, string> UserColor { get; set; }
 
         /// <summary>
+        /// Gets or sets the resolver of the element id the presence bar is docked into.
+        /// </summary>
+        /// <remarks>
+        /// Who is here is a fact about the whole surface rather than about the shared area they
+        /// happen to point at, so a host with a better place for it - the footer bar of a dialog,
+        /// say - names that place here. The cursors and the carets stay overlays of the container
+        /// either way: they are positions inside it and mean nothing outside it.
+        /// </remarks>
+        public Func<IRenderControlContext, string> PresenceHost { get; set; }
+
+        /// <summary>
         /// Returns the embedded controls rendered within the collaborative host.
         /// </summary>
         public virtual IEnumerable<IControl> Controls => _controls;
@@ -115,6 +126,7 @@ namespace WebExpress.WebApp.WebControl
             var userId = UserId?.Invoke(renderContext);
             var userName = UserName?.Invoke(renderContext);
             var userColor = UserColor?.Invoke(renderContext);
+            var presenceHost = PresenceHost?.Invoke(renderContext);
 
             var html = new HtmlElementTextContentDiv()
             {
@@ -130,6 +142,7 @@ namespace WebExpress.WebApp.WebControl
                 .AddUserAttribute("data-collaborative-user-id", userId)
                 .AddUserAttribute("data-collaborative-user-name", userName)
                 .AddUserAttribute("data-collaborative-color", userColor)
+                .AddUserAttribute("data-collaborative-presence-host", presenceHost)
                 .Add(Controls.Select(x => x.Render(renderContext, visualTree)));
 
             return html;
