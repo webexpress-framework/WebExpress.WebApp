@@ -10,13 +10,13 @@ It is the counterpart of the `ListCtrl` for content that is **read** rather than
    ┌────────────────────────────────────────────────────────────────┐
    │  Maintenance Window                                            │  ← title, links to the entry
    │  04.09.2026 · Admin User                                       │  ← meta
-   │  ┌──────────┐  The ticket system will be unavailable Saturday  │
-   │  │  ▓▓▓▓▓▓  │  night for database maintenance. Lorem ipsum…    │  ← text
-   │  │  ▓ img ▓ │  → more                                          │
-   │  │  ▓▓▓▓▓▓  │                                                  │
-   │  │  · ● ·   │                                                  │  ← slideshow dots
-   │  └──────────┘                                                  │
-   │  ┌─────────┐ ┌───────────┐                    6 👍     0 💬    │  ← tags / figures
+   │  ┌─────────┐  The ticket system will be unavailable Saturday   │
+   │  │ ▓▓▓▓▓▓▓ │  night for database maintenance. Lorem ipsum…     │  ← text
+   │  │ ▓ img ▓ │  → more                                           │
+   │  │ ▓▓▓▓▓▓▓ │                                                   │
+   │  │ · ● ·   │                                                   │  ← slideshow dots
+   │  └─────────┘                                                   │
+   │  ┌─────────┐ ┌───────────┐                    6 👍     0 💬   │  ← tags / figures
    │  │ Backend │ │ Frontend  │                                     │
    │  └─────────┘ └───────────┘                                     │
    ├────────────────────────────────────────────────────────────────┤
@@ -36,20 +36,22 @@ The boot class is consumed at initialization — the controller registry removes
 
 ### Container Element Attributes
 
-| Attribute           | Description                                                                                                                   | Example
-|---------------------|-------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------
-| `data-page-size`    | How many entries a page holds, and therefore how many are shown before the reader asks for more. Defaults to `5`.              | `data-page-size="5"`
-| `data-more-label`   | Caption of the button that fetches the next page. Falls back to `webexpress.webapp:feed.more`.                                 | `data-more-label="Show more"`
-| `data-empty-text`   | Text shown in place of the entries when the feed is empty. Falls back to `webexpress.webapp:feed.empty`.                       | `data-empty-text="Nothing here yet."`
-| `data-open-label`   | Caption of the link each entry carries to what it stands for. Entries without an address carry none.                           | `data-open-label="more"`
+|Attribute         |Description                                                                                                                   | Example
+|------------------|------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------
+|`data-page-size`  |How many entries a page holds, and therefore how many are shown before the reader asks for more. Defaults to `5`.              | `data-page-size="5"`
+|`data-more-label` |Caption of the button that fetches the next page. Falls back to `webexpress.webapp:feed.more`.                                 | `data-more-label="Show more"`
+|`data-empty-text` |Text shown in place of the entries when the feed is empty. Falls back to `webexpress.webapp:feed.empty`.                       | `data-empty-text="Nothing here yet."`
+|`data-open-label` |Caption of the link each entry carries to what it stands for. Entries without an address carry none.                           | `data-open-label="more"`
+
+The column is inset from the edges it runs between — `padding` left and right — but not from what is above or below it: the page already spaces the feed vertically, and adding to that would push the first entry away from the heading it belongs to.
 
 ### REST Contract
 
 One endpoint, one page per request. It reads the same paging parameters as the list family and answers the same envelope, so nothing about *fetching* a page differs between the two.
 
-| Method | URL                       | Response          | Purpose
-|--------|---------------------------|-------------------|--------------------------------------
-| `GET`  | `{service}?p={n}&l={size}` | `FeedResult`      | One page of entries, newest first.
+|Method |URL                        |Response     |Purpose
+|-------|---------------------------|-------------|-------------------------------------
+|`GET`  |`{service}?p={n}&l={size}` |`FeedResult` |One page of entries, newest first.
 
 ```json
 {
@@ -64,8 +66,16 @@ One endpoint, one page per request. It reads the same paging parameters as the l
       "images": ["/assets/img/teaser.svg", "data:image/svg+xml;base64,…"],
       "uri": "/blog/SD-45000",
       "tags": ["Backend", "Frontend"],
+      "read": false,
       "metrics": [
-        { "icon": "wx-icon-light wx-icon-light-thumbs-up", "value": "6", "label": "Likes" },
+        {
+          "icon": "wx-icon-light wx-icon-light-thumbs-up",
+          "value": "6",
+          "label": "Likes",
+          "uri": "/api/1/objects/like",
+          "payload": "{\"object\":\"SD-45000\"}",
+          "active": false
+        },
         { "icon": "wx-icon-light wx-icon-light-comment", "value": "0", "label": "Comments" }
       ]
     }
@@ -81,6 +91,39 @@ The server side is provided by the abstract `WebExpress.WebApp.WebRestApi.RestAp
 ### Knowing when to stop
 
 `RetrieveTotal` matters more here than it does for a list. A pager without a total offers one page and merely looks short; a feed without one cannot know whether anything is left. The control therefore reads the total when it is there and hides the button as soon as it has shown that many entries; where the endpoint does not count, it keeps offering "more" until a page comes back **shorter than it asked for**. Counting the result gives the reader a button that disappears exactly when it should.
+
+## Read and unread
+
+`read` has **three** states, and that is the point of it. `false` marks the entry as new to this
+reader — a dot before the heading and a heavier heading; `true` leaves it undecorated; and `null`,
+which is what an endpoint that does not track reading leaves it as, means the control draws no
+distinction at all. Two states would force such an endpoint to call every entry either read or
+new, and the marker would then say nothing.
+
+Only the unread are marked. Somebody following a stream wants to see what is new to them, and
+decorating everything they have already read would mark the whole page.
+
+## Figures the reader can join
+
+A figure with a `uri` becomes a button. Clicking it `POST`s `payload` to that address and expects
+back the new state of the figure:
+
+```json
+{ "value": "7", "active": true }
+```
+
+The count comes **from the server** rather than being counted up in the browser: two readers
+clicking at once would otherwise each see their own click and neither the other's, and the number
+would drift from the one the next page load shows. The endpoint therefore *toggles* — it is called
+by a control that is showing the current state to somebody who just clicked it.
+
+`active` is what the figure is drawn as, not merely what it says: an active figure is coloured and
+carries `aria-pressed`. A figure without a `uri` stays a figure, and an endpoint that wants to show
+a count to a reader who may not act on it — nobody signed in, no permission — simply leaves the
+address out rather than offering a click that can only fail.
+
+The control emits `webexpress.webui.Event.CHANGE_VALUE_EVENT` after a successful toggle, with
+`{ metric, active }`.
 
 ## Slideshow
 
