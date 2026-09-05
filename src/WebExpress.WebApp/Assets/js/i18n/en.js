@@ -20,6 +20,8 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "form.edit_item": "Edit Item",
 
     // the save state of a document form; {0} is the local time of the last write
+    "feed.more": "Show more",
+    "feed.empty": "Nothing here yet.",
     "editorform.state.idle": "No unsaved changes",
     "editorform.state.draft": "Resuming an unpublished draft",
     "editorform.state.pending": "Change not saved yet…",

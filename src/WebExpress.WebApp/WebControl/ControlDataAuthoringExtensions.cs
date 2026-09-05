@@ -44,6 +44,24 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
+        /// Declares the standard data service of the feed, which queries one page with GET.
+        /// </summary>
+        /// <remarks>
+        /// It shares the list preset: a feed asks for a page exactly as a list does and reads the
+        /// same envelope back. What differs is what the control does with the page - it appends
+        /// rather than replaces - which is a decision of the control, not of the service.
+        /// </remarks>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The feed control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataFeed DataService<TEndpoint>(this ControlDataFeed control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, DataServiceDescriptor.ListData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
+        }
+
+        /// <summary>
         /// Declares the standard data service of the table, which queries with
         /// GET, persists a reordered row set with PUT and carries the
         /// historical table parameter and response names.

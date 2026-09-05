@@ -16,6 +16,7 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/css/webexpress.webapp.comment.css")]
     [Asset("/assets/css/webexpress.webapp.editor.form.css")]
     [Asset("/assets/css/webexpress.webapp.file.view.css")]
+    [Asset("/assets/css/webexpress.webapp.feed.css")]
     [Asset("/assets/css/webexpress.webapp.form.css")]
     [Asset("/assets/css/webexpress.webapp.gantt.css")]
     [Asset("/assets/css/webexpress.webapp.relation.css")]

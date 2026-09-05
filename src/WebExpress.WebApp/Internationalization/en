@@ -11,6 +11,10 @@ clone.label=Clone
 delete.title=Delete item
 delete.label=Delete
 
+# the feed: entries stacked newest first, with a button that appends the next page
+feed.more=Show more
+feed.empty=Nothing here yet.
+
 # the document form: its submit publishes, and its footer says whether what has been
 # written is safe. The state texts are also carried in Assets/js/i18n, because the
 # indicator is repainted by the client controller after the server painted the first one.

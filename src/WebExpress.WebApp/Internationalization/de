@@ -11,6 +11,10 @@ clone.label=Klonen
 delete.title=Löschen
 delete.label=Löschen
 
+# der Feed: Einträge untereinander, neueste zuerst, mit einer Schaltfläche, die die nächste Seite anhängt
+feed.more=Mehr anzeigen
+feed.empty=Hier ist noch nichts.
+
 # the document form: its submit publishes, and its footer says whether what has been
 # written is safe. The state texts are also carried in Assets/js/i18n, because the
 # indicator is repainted by the client controller after the server painted the first one.

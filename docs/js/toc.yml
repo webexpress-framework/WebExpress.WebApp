@@ -10,6 +10,8 @@
   href: dashboard.md
 - name: EditorFormCtrl
   href: editor.form.md
+- name: FeedCtrl
+  href: feed.md
 - name: FileViewCtrl
   href: file.view.md
 - name: GanttCtrl

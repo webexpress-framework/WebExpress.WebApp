@@ -20,6 +20,8 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "form.edit_item": "Element bearbeiten",
 
     // der Speicherzustand eines Dokumentformulars; {0} ist die lokale Zeit des letzten Schreibens
+    "feed.more": "Mehr anzeigen",
+    "feed.empty": "Hier ist noch nichts.",
     "editorform.state.idle": "Keine ungespeicherten Änderungen",
     "editorform.state.draft": "Unveröffentlichter Entwurf wird fortgesetzt",
     "editorform.state.pending": "Änderung noch nicht gespeichert…",
