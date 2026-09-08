@@ -1,0 +1,44 @@
+/* ------------------------------------------------------------------ like
+   The like figure of ControlLike. It is deliberately the same shape as the
+   figures under a feed entry (webexpress.webapp.feed.css): a reader meets the
+   count in both places and should not have to learn it twice. The rules are
+   written out rather than shared with the feed's, because the feed's are scoped
+   to .wx-feed and a control has to stand wherever it is placed. */
+
+.wx-webapp-like {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: var(--wx-secondary-color);
+    font-size: 0.8125rem;
+}
+
+/* a figure the reader can join looks like a figure until it is pointed at: a
+   button competing with the text it belongs to would read as the point of the
+   page rather than as its footnote */
+.wx-webapp-like-action {
+    padding: 0.1rem 0.35rem;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.wx-webapp-like-action:hover {
+    background: var(--wx-secondary-bg);
+    color: var(--wx-body-color);
+}
+
+/* the figure is disabled while its toggle is in flight, so the pointer says the
+   click has been taken rather than inviting a second one */
+.wx-webapp-like-action:disabled {
+    cursor: default;
+    opacity: 0.6;
+}
+
+.wx-webapp-like-active {
+    color: var(--wx-primary, #0d6efd);
+    font-weight: 600;
+}

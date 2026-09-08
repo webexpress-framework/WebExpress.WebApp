@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebUI.WebPage;
 
@@ -46,15 +45,15 @@ namespace WebExpress.WebApp.WebData
                 var resource = viewStateBound.ResourceFactory?.Invoke(renderContext);
                 if (!string.IsNullOrEmpty(resource))
                 {
-                    host.AddUserAttribute("data-wx-resource", WebUtility.HtmlEncode(resource));
+                    host.AddUserAttribute("data-wx-resource", resource);
 
                     var viewStateId = viewStateBound.ViewState?.Invoke(renderContext);
-                    host.AddUserAttribute("data-wx-viewstate", !string.IsNullOrEmpty(viewStateId) ? WebUtility.HtmlEncode(viewStateId) : null);
+                    host.AddUserAttribute("data-wx-viewstate", !string.IsNullOrEmpty(viewStateId) ? viewStateId : null);
 
                     if (viewStateBound is IViewStateBoundUsers viewStateBoundUsers)
                     {
                         var users = viewStateBoundUsers.UsersFactory?.Invoke(renderContext);
-                        host.AddUserAttribute("data-wx-users", !string.IsNullOrEmpty(users) ? WebUtility.HtmlEncode(users) : null);
+                        host.AddUserAttribute("data-wx-users", !string.IsNullOrEmpty(users) ? users : null);
                     }
 
                     // a writing surface drives the resource rather than only
@@ -69,14 +68,14 @@ namespace WebExpress.WebApp.WebData
                         var model = modelBound.ModelFactory?.Invoke(renderContext);
                         if (!string.IsNullOrEmpty(model))
                         {
-                            host.AddUserAttribute("data-wx-model", WebUtility.HtmlEncode(model));
-                            host.AddUserAttribute("data-wx-model-query", WebUtility.HtmlEncode(resource));
+                            host.AddUserAttribute("data-wx-model", model);
+                            host.AddUserAttribute("data-wx-model-query", resource);
                         }
                     }
                     else
                     {
                         var boundTemplate = control.TemplateFactory?.Invoke(renderContext);
-                        host.AddUserAttribute("data-wx-template", !string.IsNullOrEmpty(boundTemplate) ? WebUtility.HtmlEncode(boundTemplate) : null);
+                        host.AddUserAttribute("data-wx-template", !string.IsNullOrEmpty(boundTemplate) ? boundTemplate : null);
 
                         return html;
                     }
@@ -108,7 +107,7 @@ namespace WebExpress.WebApp.WebData
                 host.AddFirst([.. islands]);
             }
 
-            host.AddUserAttribute("data-wx-template", !string.IsNullOrEmpty(template) ? WebUtility.HtmlEncode(template) : null);
+            host.AddUserAttribute("data-wx-template", !string.IsNullOrEmpty(template) ? template : null);
 
             return html;
         }

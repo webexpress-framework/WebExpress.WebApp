@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Net;
 using WebExpress.WebCore.WebHtml;
 
 namespace WebExpress.WebApp.WebData
@@ -132,9 +131,9 @@ namespace WebExpress.WebApp.WebData
         {
             var island = new HtmlElement("wx-resource");
             island.AddUserAttribute("hidden");
-            island.AddUserAttribute("name", Encode(Name));
-            island.AddUserAttribute("service", Encode(string.IsNullOrEmpty(Service) ? "data" : Service));
-            island.AddUserAttribute("target", Encode(string.IsNullOrEmpty(Target) ? Name : Target));
+            island.AddUserAttribute("name", Name);
+            island.AddUserAttribute("service", string.IsNullOrEmpty(Service) ? "data" : Service);
+            island.AddUserAttribute("target", string.IsNullOrEmpty(Target) ? Name : Target);
 
             if (!Auto)
             {
@@ -144,24 +143,13 @@ namespace WebExpress.WebApp.WebData
             foreach (var param in Params)
             {
                 var child = new HtmlElement("wx-param");
-                child.AddUserAttribute("name", Encode(param.Name));
-                child.AddUserAttribute("state", Encode(param.State));
-                child.AddUserAttribute("dir", Encode(string.IsNullOrEmpty(param.Dir) ? "inout" : param.Dir));
+                child.AddUserAttribute("name", param.Name);
+                child.AddUserAttribute("state", param.State);
+                child.AddUserAttribute("dir", string.IsNullOrEmpty(param.Dir) ? "inout" : param.Dir);
                 island.Add(child);
             }
 
             return island;
-        }
-
-        /// <summary>
-        /// HTML encodes an attribute value, because the html attribute writer
-        /// emits values verbatim.
-        /// </summary>
-        /// <param name="value">The raw value.</param>
-        /// <returns>The encoded value, or null when absent.</returns>
-        private static string Encode(string value)
-        {
-            return string.IsNullOrEmpty(value) ? null : WebUtility.HtmlEncode(value);
         }
     }
 

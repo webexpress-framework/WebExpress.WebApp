@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Net;
 using System.Text.RegularExpressions;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebMessage;
@@ -585,15 +584,15 @@ namespace WebExpress.WebApp.WebData
         {
             var island = new HtmlElement("wx-service");
             island.AddUserAttribute("hidden");
-            island.AddUserAttribute("name", Encode(Name));
-            island.AddUserAttribute("kind", Encode(string.IsNullOrEmpty(Kind) ? "rest" : Kind));
-            island.AddUserAttribute("base-uri", Encode(BaseUri));
-            island.AddUserAttribute("method", Encode(Method));
-            island.AddUserAttribute("update-method", Encode(UpdateMethod));
+            island.AddUserAttribute("name", Name);
+            island.AddUserAttribute("kind", string.IsNullOrEmpty(Kind) ? "rest" : Kind);
+            island.AddUserAttribute("base-uri", BaseUri);
+            island.AddUserAttribute("method", Method);
+            island.AddUserAttribute("update-method", UpdateMethod);
 
             if (Domains.Count > 0)
             {
-                island.AddUserAttribute("domains", Encode(string.Join(";", Domains)));
+                island.AddUserAttribute("domains", string.Join(";", Domains));
             }
 
             if (RetryCount > 0)
@@ -624,21 +623,10 @@ namespace WebExpress.WebApp.WebData
             foreach (var entry in mapping)
             {
                 var child = new HtmlElement(elementName);
-                child.AddUserAttribute(keyAttribute, Encode(entry.Key));
-                child.AddUserAttribute(valueAttribute, Encode(entry.Value));
+                child.AddUserAttribute(keyAttribute, entry.Key);
+                child.AddUserAttribute(valueAttribute, entry.Value);
                 island.Add(child);
             }
-        }
-
-        /// <summary>
-        /// HTML encodes an attribute value, because the html attribute writer
-        /// emits values verbatim.
-        /// </summary>
-        /// <param name="value">The raw value.</param>
-        /// <returns>The encoded value, or null when absent.</returns>
-        private static string Encode(string value)
-        {
-            return string.IsNullOrEmpty(value) ? null : WebUtility.HtmlEncode(value);
         }
     }
 }

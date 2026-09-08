@@ -157,7 +157,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var html = control.Render(context, visualTree);
 
             // validation
-            AssertExtensions.EqualWithPlaceholders(@"<div id=""c"" class=""wx-webapp-comment"" data-categories=""{""general"":{""id"":""general""}}""></div>", html);
+            AssertExtensions.EqualWithPlaceholders(@"<div id=""c"" class=""wx-webapp-comment"" data-categories=""{&quot;general&quot;:{&quot;id&quot;:&quot;general&quot;}}""></div>", html);
         }
 
         /// <summary>

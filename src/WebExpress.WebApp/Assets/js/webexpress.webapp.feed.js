@@ -422,7 +422,13 @@ webexpress.webapp.FeedCtrl = class extends webexpress.webui.Ctrl {
 
     /**
      * Builds one figure. A figure the endpoint gave an address to is something the reader can
-     * join - a button that posts and repaints itself from the answer; one without stays a figure.
+     * join; one without stays a number.
+     *
+     * The joining is not implemented here: the figure is shaped as a LikeCtrl host and that
+     * control is attached to it. It is the same figure a server-rendered view places with
+     * ControlLike, so a reader meets one behaviour rather than two that merely resemble each
+     * other, and the posting, the repaint and the failure handling live in one place.
+     *
      * @param {object} metric The figure as the endpoint sent it.
      * @returns {HTMLElement} The figure element.
      */
@@ -430,7 +436,9 @@ webexpress.webapp.FeedCtrl = class extends webexpress.webui.Ctrl {
         const actionable = !!metric.uri;
         const figure = document.createElement(actionable ? "button" : "span");
 
-        figure.className = "wx-feed-entry-metric";
+        // both class families: the feed's places the figure in its row, the control's carries
+        // the look and is what its controller repaints
+        figure.className = "wx-feed-entry-metric wx-webapp-like";
 
         if (metric.label) {
             figure.title = metric.label;
@@ -438,13 +446,13 @@ webexpress.webapp.FeedCtrl = class extends webexpress.webui.Ctrl {
         }
 
         const value = document.createElement("span");
-        value.className = "wx-feed-entry-metric-value";
+        value.className = "wx-feed-entry-metric-value wx-webapp-like-value";
         value.textContent = metric.value ?? "";
         figure.appendChild(value);
 
         if (metric.icon) {
             const icon = document.createElement("span");
-            icon.className = "wx-feed-entry-metric-icon " + metric.icon;
+            icon.className = "wx-feed-entry-metric-icon wx-webapp-like-icon " + metric.icon;
             icon.setAttribute("aria-hidden", "true");
             figure.appendChild(icon);
         }
@@ -454,67 +462,33 @@ webexpress.webapp.FeedCtrl = class extends webexpress.webui.Ctrl {
         }
 
         figure.type = "button";
-        figure.classList.add("wx-feed-entry-metric-action");
-        figure.classList.toggle("wx-feed-entry-metric-active", !!metric.active);
+        figure.classList.add("wx-webapp-like-action");
+        figure.classList.toggle("wx-webapp-like-active", !!metric.active);
         figure.setAttribute("aria-pressed", metric.active ? "true" : "false");
+        figure.dataset.uri = metric.uri;
+        figure.dataset.payload = metric.payload || "{}";
 
-        figure.addEventListener("click", () => this._toggleMetric(figure, value, metric));
+        // constructed directly rather than through the mount class, because the feed builds this
+        // element itself and knows when it is finished; the mount class would additionally invite
+        // the document scanner to wire a second controller onto the same figure
+        new webexpress.webapp.LikeCtrl(figure);
 
-        return figure;
-    }
-
-    /**
-     * Posts a figure's toggle and repaints it from the answer.
-     *
-     * The count comes back from the server rather than being counted up here: two readers
-     * clicking at once would otherwise each see their own click and neither the other's, and the
-     * number would drift from the one the next page load shows.
-     *
-     * @param {HTMLElement} figure The figure element.
-     * @param {HTMLElement} value The element holding the number.
-     * @param {object} metric The figure as the endpoint sent it.
-     */
-    async _toggleMetric(figure, value, metric) {
-        if (figure.disabled) {
-            return;
-        }
-
-        figure.disabled = true;
-
-        try {
-            const response = await fetch(metric.uri, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: metric.payload || "{}"
-            });
-
-            if (!response.ok) {
-                console.error("the request could not be completed successfully:", response.status, metric.uri);
-
+        // the control reports what the figure now shows; the feed reports the same thing in the
+        // shape its own listeners were promised, which names the entry the figure belongs to
+        figure.addEventListener(webexpress.webui.Event.CHANGE_VALUE_EVENT, (event) => {
+            if (event.target !== figure) {
                 return;
             }
 
-            const result = await response.json();
-
-            if (result && result.value !== undefined && result.value !== null) {
-                value.textContent = result.value;
-            }
-
-            const active = !!(result && result.active);
-
-            figure.classList.toggle("wx-feed-entry-metric-active", active);
-            figure.setAttribute("aria-pressed", active ? "true" : "false");
-
             // the entry keeps what it was told, so a second click sends the same body and reads
             // the same state as the first
-            metric.active = active;
+            metric.active = !!event.detail.active;
+            metric.value = event.detail.value;
 
-            this._dispatch(webexpress.webui.Event.CHANGE_VALUE_EVENT, { metric: metric, active: active });
-        } catch (error) {
-            console.error("the request could not be completed successfully:", error);
-        } finally {
-            figure.disabled = false;
-        }
+            this._dispatch(webexpress.webui.Event.CHANGE_VALUE_EVENT, { metric: metric, active: metric.active });
+        });
+
+        return figure;
     }
 
     /**

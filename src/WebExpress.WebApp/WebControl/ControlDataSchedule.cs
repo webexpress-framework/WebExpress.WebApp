@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Net;
 using WebExpress.WebApp.WebData;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebUI.WebControl;
@@ -161,22 +160,11 @@ namespace WebExpress.WebApp.WebControl
                 .AddUserAttribute("data-reload-on-navigate", ReloadOnNavigate != null && !ReloadOnNavigate(renderContext) ? "false" : null)
                 .AddUserAttribute("data-cache", Cache != null && !Cache(renderContext) ? "false" : null)
                 .AddUserAttribute("data-refresh-interval", interval.HasValue && interval.Value > 0 ? interval.Value.ToString(CultureInfo.InvariantCulture) : null)
-                .AddUserAttribute("data-holiday-region", Encode(HolidayRegion?.Invoke(renderContext)))
+                .AddUserAttribute("data-holiday-region", HolidayRegion?.Invoke(renderContext))
                 .AddUserAttribute("data-creatable", (Creatable?.Invoke(renderContext) ?? false) ? "true" : null)
                 .AddUserAttribute("data-deletable", (Deletable?.Invoke(renderContext) ?? false) ? "true" : null);
 
             return html.EmitDataIslands(this, renderContext);
-        }
-
-        /// <summary>
-        /// Encodes a value for an attribute, because attribute values are
-        /// written verbatim by the HTML writer.
-        /// </summary>
-        /// <param name="value">The value.</param>
-        /// <returns>The encoded value, or null when there is none.</returns>
-        private static string Encode(string value)
-        {
-            return string.IsNullOrEmpty(value) ? null : WebUtility.HtmlEncode(value);
         }
     }
 }

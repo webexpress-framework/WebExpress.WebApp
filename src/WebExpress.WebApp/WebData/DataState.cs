@@ -115,7 +115,7 @@ namespace WebExpress.WebApp.WebData
                 var (type, text) = FormatValue(entry.Value);
 
                 var prop = new HtmlElement("wx-prop");
-                prop.AddUserAttribute("name", WebUtility.HtmlEncode(entry.Key));
+                prop.AddUserAttribute("name", entry.Key);
 
                 if (type != null)
                 {

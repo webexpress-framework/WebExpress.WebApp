@@ -16,6 +16,7 @@ This section documents the JavaScript controllers and client-side behavior used 
 - [GanttCtrl](gantt.md)
 - [GraphViewerCtrl](graph.viewer.md)
 - [InputCascadingCtrl](cascading.md)
+- [LikeCtrl](like.md)
 - [RelationViewCtrl](relation.view.md)
 - [RelationEditorCtrl](relation.editor.md)
 - [RestFormCtrl](form.md)

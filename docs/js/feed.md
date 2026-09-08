@@ -122,8 +122,18 @@ carries `aria-pressed`. A figure without a `uri` stays a figure, and an endpoint
 a count to a reader who may not act on it — nobody signed in, no permission — simply leaves the
 address out rather than offering a click that can only fail.
 
+**The joining itself is not the feed's.** A figure with an address is shaped as a
+[`LikeCtrl`](like.md) host — it carries `wx-webapp-like` and, when it can be joined,
+`wx-webapp-like-action` beside the feed's own `wx-feed-entry-metric` — and that control is
+attached to it. The posting, the repaint from the answer and the handling of a failed request
+therefore live in one place, and a figure under a feed entry behaves exactly like one a
+server-rendered view places with `ControlLike`. The look comes from `webexpress.webapp.like.css`;
+the feed's own stylesheet only places the figure in its row.
+
 The control emits `webexpress.webui.Event.CHANGE_VALUE_EVENT` after a successful toggle, with
-`{ metric, active }`.
+`{ metric, active }` — the feed's own shape, naming the entry the figure belongs to. (The like
+control raises the same event on the figure with `{ value, active }`; the feed listens for it and
+re-reports it with the metric.)
 
 ## Slideshow
 

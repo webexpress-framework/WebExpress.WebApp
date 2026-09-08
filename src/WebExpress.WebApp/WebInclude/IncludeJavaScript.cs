@@ -57,6 +57,7 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/js/webexpress.webapp.relation.editor.model.js")]
     [Asset("/assets/js/webexpress.webapp.relation.editor.js")]
     [Asset("/assets/js/webexpress.webapp.list.model.js")]
+    [Asset("/assets/js/webexpress.webapp.like.js")]
     [Asset("/assets/js/webexpress.webapp.list.js")]
     [Asset("/assets/js/webexpress.webapp.login.js")]
     [Asset("/assets/js/webexpress.webapp.message.queue.status.js")]
