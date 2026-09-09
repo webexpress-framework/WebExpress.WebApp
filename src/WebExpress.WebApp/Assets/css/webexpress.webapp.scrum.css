@@ -166,6 +166,12 @@
     box-shadow: inset 0 -2px 0 var(--wx-primary, #0d6efd);
 }
 
+/* The badge is the backing the type icon is drawn on: a drawn icon is painted by masking
+   background-color, so the white below is the ink and the chip underneath is the only thing
+   that makes it readable. The item types are configured per application, so a deployment
+   names types this sheet has never heard of - without a colour of its own such a badge would
+   stay transparent and paint white ink onto the white row, which reads as a missing icon.
+   The neutral chip is therefore the default and the known types override it. */
 .wx-scrum-row .wx-scrum-type {
     display: inline-flex;
     align-items: center;
@@ -176,6 +182,7 @@
     font-size: 0.65rem;
     font-weight: 700;
     color: #fff;
+    background: var(--wx-secondary, #6c757d);
     flex-shrink: 0;
 }
 
@@ -193,6 +200,22 @@
 
 .wx-scrum-type.spike {
     background: #6f42c1;
+}
+
+/* An icon that arrives as a picture rather than as a drawn glyph brings its own colour - the
+   class avatars an application hands over are full-bleed marks, not white ink. Such a picture
+   *is* the badge, so the chip backing is dropped and the image fills the box; only a masked
+   glyph still needs something to be read against. Without this the picture would be painted
+   at glyph size in the middle of a grey chip and read as a decoration on an empty badge. */
+.wx-scrum-row .wx-scrum-type:has(> .wx-icon-img) {
+    background: none;
+}
+
+.wx-scrum-row .wx-scrum-type > .wx-icon-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 0.2rem;
+    object-fit: cover;
 }
 
 .wx-scrum-row .wx-scrum-key {

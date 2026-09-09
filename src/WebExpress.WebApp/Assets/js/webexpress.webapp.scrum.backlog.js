@@ -1209,7 +1209,13 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
         }
 
         const type = document.createElement("span");
-        type.className = "wx-scrum-type " + (item.type || "");
+        // the type is application data and lands in the class list, so it goes through the
+        // token form rather than verbatim - see _typeToken
+        type.className = ("wx-scrum-type " + this._typeToken(item.type)).trim();
+        // the badge carries no label of its own, so the type is readable on hover
+        if (item.type) {
+            type.title = item.type;
+        }
         // the icon is supplied per item by the rest api (item.icon) as either a
         // css class or an image source; fall back to a neutral marker
         const iconSpec = (typeof item.icon === "string" && item.icon.trim()) ? item.icon.trim() : this._iconClass("circle");
@@ -1362,6 +1368,28 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
         }
 
         return row;
+    }
+
+    /**
+     * Turns an item type into a single css class token: lower case, every run of other
+     * characters folded to one hyphen.
+     *
+     * The type is application data - the deployment names its own - and it is written into
+     * the class list of the type badge so a sheet can colour it. Verbatim that misfires in
+     * both directions: a two-word name ("User Story") lands as two classes, of which the
+     * second is a class nobody wrote a rule for, and a name carrying punctuation or a
+     * leading digit is not a valid class at all. The type colours the sheet ships are
+     * written lower case, so a name in the application's own casing is folded to match.
+     *
+     * @param {string|null|undefined} type - The item type as the rest api delivered it.
+     * @returns {string} The class token, or "" when no type was supplied.
+     */
+    _typeToken(type) {
+        return String(type ?? "")
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, "");
     }
 
     /**

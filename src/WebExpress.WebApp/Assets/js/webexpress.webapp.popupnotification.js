@@ -134,8 +134,20 @@ webexpress.webapp.PopupNotificationCtrl = class extends webexpress.webui.Ctrl {
         heading.textContent = notification.heading || "";
         alert.appendChild(heading);
 
-        const content = document.createElement("div");
+        // A notification says that something changed; the reader's next move is almost always
+        // to go and look at it. When the server named an address, the icon and the message
+        // become the way there - a link around the content rather than a caption beside it,
+        // so nothing has to be translated on this side and the whole notification reads as
+        // the one thing it is about. The close button stays outside it.
+        const link = typeof notification.link === "string" && notification.link ? notification.link : null;
+
+        const content = document.createElement(link ? "a" : "div");
         content.className = "wx-popup-content d-flex justify-content-start";
+
+        if (link) {
+            content.href = link;
+            content.classList.add("wx-popup-content-link");
+        }
 
         let icon;
         if (notification.icon) {
@@ -224,6 +236,22 @@ webexpress.webapp.PopupNotificationCtrl = class extends webexpress.webui.Ctrl {
         if (notification.message !== previous.message) {
             data.message.innerHTML = notification.message || "";
         }
+        if (notification.icon !== previous.icon && data.icon && data.icon.tagName === "IMG") {
+            data.icon.src = notification.icon || "";
+        }
+
+        // the address may be replayed with the record, so it is kept in step. An alert that
+        // was built without one is not turned into a link here: that would mean rebuilding
+        // the content element under a notification the reader is already looking at.
+        if (notification.link !== previous.link && data.content && data.content.tagName === "A") {
+            if (notification.link) {
+                data.content.href = notification.link;
+            } else {
+                data.content.removeAttribute("href");
+                data.content.classList.remove("wx-popup-content-link");
+            }
+        }
+
         if (typeof notification.progress === "number"
             && notification.progress !== previous.progress
             && data.progressbar) {

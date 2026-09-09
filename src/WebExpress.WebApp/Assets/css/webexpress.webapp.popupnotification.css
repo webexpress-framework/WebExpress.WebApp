@@ -145,3 +145,26 @@
         animation-duration: 1ms !important;
     }
 }
+/* When the notification names an address, its content is the way there. It is a link, but it
+   is not written as one: the whole notification is already the thing being pointed at, and a
+   blue underline inside an alert would read as a second, separate action. What marks it is
+   the pointer and the way it lifts under the cursor. */
+.wx-popup-content-link {
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color .12s ease-in-out;
+}
+
+.wx-popup-content-link:hover,
+.wx-popup-content-link:focus-visible {
+    color: inherit;
+    text-decoration: none;
+    background-color: rgba(0, 0, 0, .06);
+}
+
+.wx-popup-content-link:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}

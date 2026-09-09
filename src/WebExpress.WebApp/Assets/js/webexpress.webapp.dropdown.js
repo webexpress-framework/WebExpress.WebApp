@@ -81,6 +81,23 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
                 this._ensureStructure(); // still ensure search exists even on error
                 this._updateDynamicItems([]);
             });
+
+            // A standalone dropdown loads once, at construction. Its items are data like any
+            // other control's - a workspace list, a tenant list, a saved search - and a record
+            // created elsewhere on the page (a dialog, another user) would otherwise not be in
+            // the menu until the page was reloaded, which is exactly the case a dropdown of
+            // recently used things is opened for. So it joins the live update channel the way
+            // the table, list, tile and sidebar do; a control whose service declares no domain
+            // stays detached and keeps loading once, as before.
+            //
+            // The reload repeats the term the menu is currently showing rather than the empty
+            // one, so a refresh arriving while the user is filtering does not throw the search
+            // result away.
+            const dataChanges = webexpress.webapp.DataChangeSubscription.attachReload(
+                [this._service], () => this._fetchData(this._searchTerm || ""), element);
+            if (dataChanges) {
+                (element._wxCleanup = element._wxCleanup || []).push(() => dataChanges.detach());
+            }
         } else {
             this._ensureStructure();
             this._updateDynamicItems([]);
