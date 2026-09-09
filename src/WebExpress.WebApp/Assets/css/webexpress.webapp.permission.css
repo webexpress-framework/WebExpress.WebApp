@@ -1,5 +1,6 @@
-/* the surface is the framework table, so only the add row and the chip cell
-   need styling of their own; everything else is inherited from wx-table */
+/* the surface is the framework table, so only the toolbar above it, the assign
+   dialog and the chip cell need styling of their own; everything else is
+   inherited from wx-table */
 
 .wx-permission {
     display: flex;
@@ -7,37 +8,42 @@
     gap: 12px;
 }
 
-.wx-permission-add {
-    align-items: center;
-    background: var(--wx-webapp-surface-2);
+/* the assign affordance sits on the side the table ends on, so it reads as an
+   action on the table rather than as its heading */
+.wx-permission-toolbar {
+    display: flex;
+    justify-content: flex-end;
 }
 
-.wx-permission-group {
-    padding: 4px 8px;
-    font: inherit;
-    font-size: 13px;
-    color: var(--wx-webapp-text);
-    background: var(--wx-body-bg);
-    border: 1px solid var(--wx-webapp-border-2, var(--wx-border-color, #ced4da));
-    border-radius: var(--wx-webapp-r-md);
-    width: 100%;
-}
-
-.wx-permission-assign-btn {
-    width: 26px;
-    height: 26px;
+.wx-permission-assign {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: 0;
-    border-radius: 50%;
-    color: var(--wx-webapp-primary, var(--wx-primary, #0d6efd));
-    cursor: pointer;
 }
 
-.wx-permission-assign-btn:hover {
-    background: var(--wx-webapp-surface-3, var(--wx-webapp-surface-2));
+/* the dialog stacks its fields, which is what leaves the chip picker the full
+   width its dual list needs */
+.wx-permission-assign-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.wx-permission-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.wx-permission-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--wx-webapp-text-2, var(--wx-webapp-text));
+}
+
+/* the required marker leans against its caption instead of floating behind the
+   gap a flex label would put between them */
+.wx-permission-label > .wx-form-required {
+    margin-left: 2px;
 }
 
 /* the move control renders its dual list at full height, which only fits while

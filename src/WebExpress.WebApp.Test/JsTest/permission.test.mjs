@@ -1,10 +1,11 @@
 /**
  * Headless behaviour tests for the permission control. They instantiate the
  * real control file on the real runtime and assert that it renders the
- * assignments as a table of one row per group, offers the add row in front of
- * it, revokes a group through DELETE, replaces a policy set through PUT and
- * assigns a new group through POST. The surface derives from the REST table, so
- * the table control and the WebUI column templates are part of the runtime.
+ * assignments as a table of one row per group and nothing else, assigns a
+ * further group through the dialog the toolbar opens, revokes a group through
+ * DELETE and replaces a policy set through PUT. The surface derives from the
+ * REST table, so the table control and the WebUI column templates are part of
+ * the runtime.
  *
  * Run with Node 18 or newer from the JsTest folder:
  *   node --test
@@ -26,6 +27,31 @@ const POLICIES = [
     { id: "p3", name: "class_admin_policy" }
 ];
 
+// the assign dialog is the framework modal, which drives the bootstrap dialog;
+// headless it only has to open and close, which is what the surface observes
+const BOOTSTRAP_STUB = {
+    Modal: class {
+        static _instances = new Map();
+
+        static getInstance(element) {
+            return BOOTSTRAP_STUB.Modal._instances.get(element) || null;
+        }
+
+        constructor(element) {
+            this._element = element;
+            BOOTSTRAP_STUB.Modal._instances.set(element, this);
+        }
+
+        show() {
+            this._element.classList.add("show");
+        }
+
+        hide() {
+            this._element.classList.remove("show");
+        }
+    }
+};
+
 /**
  * Loads the runtime with the permission control on top of the REST table.
  * @returns {object} The loaded runtime.
@@ -37,7 +63,8 @@ function load() {
             "webexpress.webapp.table.js",
             "webexpress.webapp.permission.model.js"
         ],
-        file: "webexpress.webapp.permission.js"
+        file: "webexpress.webapp.permission.js",
+        extraGlobals: { bootstrap: BOOTSTRAP_STUB }
     });
 }
 
@@ -45,9 +72,10 @@ function load() {
  * Builds a fetch mock over an entry store, recording every call.
  * @param {object} rt - The loaded runtime.
  * @param {Array<object>} entries - The entries the data endpoint answers with.
+ * @param {object} [options] - A rejectGroup predicate that fails the POST of one group.
  * @returns {Array<object>} The recorded calls.
  */
-function stubFetch(rt, entries) {
+function stubFetch(rt, entries, options = {}) {
     const calls = [];
 
     rt.setFetch(async (url, init) => {
@@ -62,6 +90,9 @@ function stubFetch(rt, entries) {
         }
         if (method === "DELETE") {
             return { ok: true, status: 204 };
+        }
+        if (method === "POST" && options.rejectGroup === JSON.parse(init.body).groupId) {
+            return { ok: false, status: 409, json: async () => ({}) };
         }
         if (method === "POST" || method === "PUT") {
             return { ok: true, status: 200, json: async () => entries[0] };
@@ -130,15 +161,6 @@ async function settle() {
     }
 }
 
-/**
- * Returns the rendered data rows, which are every row but the add row.
- * @param {object} ctrl - The control instance.
- * @returns {Array<object>} The row elements.
- */
-function dataRows(ctrl) {
-    return ctrl._body.children.filter((row) => !row.classList.contains("wx-permission-add"));
-}
-
 test("permission renders one row per group with the policies as chips", async () => {
     const rt = load();
     stubFetch(rt, [
@@ -154,8 +176,8 @@ test("permission renders one row per group with the policies as chips", async ()
         { groupId: "g2", policyIds: ["p2"] }
     ]);
 
-    const rows = dataRows(ctrl);
-    assert.equal(rows.length, 2);
+    const rows = ctrl._body.children;
+    assert.equal(rows.length, 2, "the table holds the stored assignments and nothing else");
     assert.ok(rows[0].textContent.includes("IT Support"), "the first column names the group");
 
     // the chips resolve their labels through the policy directory
@@ -163,41 +185,114 @@ test("permission renders one row per group with the policies as chips", async ()
     assert.ok(rows[0].textContent.includes("class_view_policy"), "every policy of the group is a chip");
 });
 
-test("permission puts the add row in front of the entries", async () => {
+test("permission assigns through the dialog the toolbar opens, not through a row", async () => {
     const rt = load();
     stubFetch(rt, [{ groupId: "g1", groupName: "IT Support", policyIds: ["p1"] }]);
 
     const ctrl = new rt.wxapp.PermissionCtrl(createHost(rt));
     await settle();
 
-    const first = ctrl._body.children[0];
-    assert.ok(first.classList.contains("wx-permission-add"), "the add row is the first row");
+    assert.ok(ctrl._assignButton, "the assign affordance sits in the toolbar above the table");
+    assert.equal(ctrl._body.children.length, 1, "the table carries no row for the assignment");
 
-    // the select offers the groups that do not own a row yet
-    assert.deepEqual(
-        ctrl._groupSelect.children.map((option) => option.value),
-        ["", "g2", "g3"]);
+    ctrl._openAssignDialog();
+    await settle();
+
+    // the picker offers the groups that do not own a row yet, as primary chips
+    assert.deepEqual(ctrl._groupPicker.options.map((option) => option.id), ["g2", "g3"]);
+    assert.ok(ctrl._groupPicker.options.every((option) => option.color === "wx-selection-primary"));
+
+    // at least one group is required, so the dialog cannot be confirmed without one
+    assert.equal(ctrl._confirmButton.disabled, true);
+    ctrl._groupPicker.value = ["g2"];
+    assert.equal(ctrl._confirmButton.disabled, false);
+
+    // several groups receive the same policy set in one pass
+    assert.equal(ctrl._groupPicker.multiSelect, true);
+    ctrl._groupPicker.value = ["g2", "g3"];
+    assert.deepEqual(ctrl._groupPicker.value, ["g2", "g3"]);
 });
 
-test("permission assigns the picked group through POST and reloads", async () => {
+test("permission disables the assign affordance once every group owns a row", async () => {
+    const rt = load();
+    stubFetch(rt, GROUPS.map((group) => ({ groupId: group.id, groupName: group.name, policyIds: ["p1"] })));
+
+    const ctrl = new rt.wxapp.PermissionCtrl(createHost(rt));
+    await settle();
+
+    assert.equal(ctrl._assignButton.disabled, true);
+    assert.ok(ctrl._assignButton.title.length > 0, "the button says why it cannot be used");
+});
+
+test("permission assigns the policy set to every picked group and closes the dialog", async () => {
     const rt = load();
     const calls = stubFetch(rt, [{ groupId: "g1", groupName: "IT Support", policyIds: ["p1"] }]);
 
     const ctrl = new rt.wxapp.PermissionCtrl(createHost(rt));
     await settle();
 
-    ctrl._groupSelect.value = "g2";
-    ctrl._addSmartEdit.value = ["p2", "p3"];
+    const events = [];
+    ctrl._element.addEventListener(rt.wxapp.Event.PERMISSION_ASSIGNED_EVENT, (e) => events.push(e.detail.groupId));
+
+    ctrl._openAssignDialog();
+    await settle();
+
+    ctrl._groupPicker.value = ["g2", "g3"];
+    ctrl._policyEditor.value = ["p2", "p3"];
     await ctrl._assign();
     await settle();
 
-    const post = calls.find((call) => call.method === "POST");
-    assert.ok(post, "the assignment is a POST against the data endpoint");
-    assert.deepEqual(JSON.parse(post.body), { groupId: "g2", policyIds: ["p2", "p3"] });
+    const posts = calls.filter((call) => call.method === "POST").map((call) => JSON.parse(call.body));
+    assert.deepEqual(posts, [
+        { groupId: "g2", policyIds: ["p2", "p3"] },
+        { groupId: "g3", policyIds: ["p2", "p3"] }
+    ], "every picked group is an entry of its own on the endpoint");
 
-    // the add row returns to its empty state
-    assert.equal(ctrl._groupSelect.value, "");
-    assert.deepEqual(ctrl._addSmartEdit.value, []);
+    // one event per group, so a listener hears about each assignment
+    assert.deepEqual(events, ["g2", "g3"]);
+
+    // the dialog is done once every assignment was written
+    assert.equal(ctrl._dialog._element.classList.contains("show"), false);
+});
+
+test("permission keeps the dialog open with the groups the endpoint rejected", async () => {
+    const rt = load();
+    const calls = stubFetch(rt, [{ groupId: "g1", groupName: "IT Support", policyIds: ["p1"] }], { rejectGroup: "g3" });
+
+    const ctrl = new rt.wxapp.PermissionCtrl(createHost(rt));
+    await settle();
+
+    ctrl._openAssignDialog();
+    await settle();
+
+    ctrl._groupPicker.value = ["g2", "g3"];
+    await ctrl._assign();
+    await settle();
+
+    assert.equal(calls.filter((call) => call.method === "POST").length, 2, "a rejected group does not stop the batch");
+    assert.equal(ctrl._dialog._element.classList.contains("show"), true, "the dialog stays open for the retry");
+    assert.deepEqual(ctrl._groupPicker.value, ["g3"], "only what was rejected is still picked");
+});
+
+test("permission reopens the dialog empty and against the current state", async () => {
+    const rt = load();
+    stubFetch(rt, [{ groupId: "g1", groupName: "IT Support", policyIds: ["p1"] }]);
+
+    const ctrl = new rt.wxapp.PermissionCtrl(createHost(rt));
+    await settle();
+
+    ctrl._openAssignDialog();
+    await settle();
+    ctrl._groupPicker.value = ["g2"];
+    ctrl._policyEditor.value = ["p2"];
+    ctrl._dialog.hide();
+
+    ctrl._openAssignDialog();
+    await settle();
+
+    assert.deepEqual(ctrl._groupPicker.value, [], "a discarded pick is not resumed");
+    assert.deepEqual(ctrl._policyEditor.value, []);
+    assert.equal(ctrl._confirmButton.disabled, true);
 });
 
 test("permission writes an inline edit of the chips through PUT", async () => {
@@ -244,14 +339,14 @@ test("permission offers the revoke entry in the options menu of every row", asyn
     assert.equal(options[0].groupId, "g1");
 });
 
-test("permission readonly drops the add row, the options and the inline edit", async () => {
+test("permission readonly drops the toolbar, the options and the inline edit", async () => {
     const rt = load();
     stubFetch(rt, [{ groupId: "g1", groupName: "IT Support", policyIds: ["p1"] }]);
 
     const ctrl = new rt.wxapp.PermissionCtrl(createHost(rt, { readonly: true }));
     await settle();
 
-    assert.equal(ctrl._body.children.filter((row) => row.classList.contains("wx-permission-add")).length, 0);
+    assert.equal(ctrl._assignButton, undefined, "a read-only surface offers no way to assign");
     assert.equal(ctrl._rows[0].options, null);
     assert.equal(ctrl._columns[1].rendererOptions.editable, false);
 });

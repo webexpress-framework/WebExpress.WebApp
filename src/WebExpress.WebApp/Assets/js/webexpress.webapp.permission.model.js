@@ -65,8 +65,8 @@ webexpress.webapp.permissionModel = {
     },
 
     /**
-     * Returns the groups the add row still offers, which are the ones that do
-     * not carry a policy yet. The exclusion spans all pages, because the
+     * Returns the groups the assign dialog still offers, which are the ones that
+     * do not carry a policy yet. The exclusion spans all pages, because the
      * endpoint reports the assigned group ids independently of the paging.
      * @param {Array<object>} groups - The group directory records.
      * @param {Array<string>} assignedGroupIds - The ids of the groups that already have a row.
@@ -89,6 +89,33 @@ webexpress.webapp.permissionModel = {
             id: policy.id,
             label: policy.name || policy.id
         }));
+    },
+
+    /**
+     * Maps the group directory records onto the option shape of the selection
+     * control, which labels the picked chip from the label and builds the
+     * dropdown entry from the content markup. The content is escaped, because a
+     * group name is directory data and reaches the dropdown as markup.
+     * @param {Array<object>} groups - The group directory records.
+     * @returns {Array<object>} The selection options.
+     */
+    groupOptions(groups) {
+        return (Array.isArray(groups) ? groups : []).map((group) => {
+            const label = group.name || group.id;
+
+            return {
+                id: group.id,
+                value: group.id,
+                label: label,
+                // a picked group is what the dialog is about to write, so its
+                // chip carries the accent of the confirming action
+                color: "wx-selection-primary",
+                content: String(label ?? "")
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+            };
+        });
     },
 
     /**

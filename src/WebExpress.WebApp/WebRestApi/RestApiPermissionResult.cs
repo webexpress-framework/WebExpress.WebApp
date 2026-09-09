@@ -24,9 +24,9 @@ namespace WebExpress.WebApp.WebRestApi
 
         /// <summary>
         /// Gets or sets the identifiers of all groups that already carry a
-        /// policy, independent of the filter and the paging. The add row offers
-        /// only the remaining groups, which the paged items alone could not
-        /// determine.
+        /// policy, independent of the filter and the paging. The assign dialog
+        /// offers only the remaining groups, which the paged items alone could
+        /// not determine.
         /// </summary>
         [JsonPropertyName("assignedGroupIds")]
         public IEnumerable<string> AssignedGroupIds { get; set; }

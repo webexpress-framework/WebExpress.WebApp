@@ -122,7 +122,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
         /// <summary>
         /// Verifies that <c>GET</c> filters the entries through the <c>q</c>
         /// parameter against the group name, while the assigned groups stay
-        /// unfiltered so the add row keeps excluding every assigned group.
+        /// unfiltered so the assign dialog keeps excluding every assigned group.
         /// </summary>
         [Fact]
         public void Retrieve_FiltersEntries()

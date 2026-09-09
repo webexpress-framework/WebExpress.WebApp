@@ -54,7 +54,7 @@ namespace WebExpress.WebApp.WebRestApi
             try
             {
                 // materialized once, because the full set feeds both the filter
-                // chain and the assigned-group projection of the add row
+                // chain and the assigned-group projection of the assign dialog
                 var entries = Project(RetrieveAssignments(request)).ToList();
                 var filtered = Filter(search, entries, request).ToList();
 

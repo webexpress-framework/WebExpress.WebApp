@@ -2,7 +2,7 @@
  * Headless unit tests for the permission model helpers (View, State and
  * Service). These cover the pure logic extracted from
  * webexpress.webapp.permission.js, namely the page normalisation, the policy
- * set parsing, the group exclusion of the add row and the pager math, plus an
+ * set parsing, the group exclusion of the assign dialog and the pager math, plus an
  * end to end path that loads entries with a query, adds one with a create,
  * replaces a policy set with an update and revokes a group with a remove
  * through a service. A row is a group with all of its policies.
@@ -80,6 +80,23 @@ test("policy options carry the id and fall back to the id as the label", () => {
         wxapp.permissionModel.policyOptions([{ id: "p1", name: "class_edit_policy" }, { id: "p2" }]),
         [{ id: "p1", label: "class_edit_policy" }, { id: "p2", label: "p2" }]);
     assert.deepEqual(wxapp.permissionModel.policyOptions(undefined), []);
+});
+
+test("group options label the primary chip and escape the dropdown markup", () => {
+    const { wxapp } = load();
+    assert.deepEqual(
+        wxapp.permissionModel.groupOptions([{ id: "g1", name: "IT Support" }, { id: "g2" }]),
+        [
+            { id: "g1", value: "g1", label: "IT Support", color: "wx-selection-primary", content: "IT Support" },
+            { id: "g2", value: "g2", label: "g2", color: "wx-selection-primary", content: "g2" }
+        ]);
+
+    // the dropdown entry is built from markup, so a directory name never becomes one
+    assert.equal(
+        wxapp.permissionModel.groupOptions([{ id: "g1", name: "<b>A</b> & B" }])[0].content,
+        "&lt;b&gt;A&lt;/b&gt; &amp; B");
+
+    assert.deepEqual(wxapp.permissionModel.groupOptions(undefined), []);
 });
 
 test("page count never drops below one page", () => {

@@ -281,6 +281,9 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     // permission
     "permission.title": "Berechtigungen",
     "permission.assign": "Zuweisen",
+    "permission.assign.groups": "Gruppen zuweisen",
+    "permission.assign.none": "Alle Gruppen besitzen bereits Berechtigungen.",
+    "permission.groups": "Gruppen",
     "permission.select.placeholder": "Bitte wählen…",
     "permission.column.group": "Gruppe",
     "permission.column.policies": "Berechtigungen",

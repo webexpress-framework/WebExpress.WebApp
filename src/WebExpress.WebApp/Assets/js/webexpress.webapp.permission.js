@@ -6,9 +6,16 @@
  * The surface is a single table, which is why the control derives from the REST
  * table rather than rendering a layout of its own: the first column names the
  * group, the second carries the policies of that group as chips that are edited
- * inline with the move control, the first row assigns a further group and the
- * options menu of a row revokes it. Paging is left to the pagination control the
- * host binds through the paging bind, so the surface itself stays a table.
+ * inline with the move control and the options menu of a row revokes it. Paging
+ * is left to the pagination control the host binds through the paging bind, so
+ * the surface itself stays a table.
+ *
+ * Further groups are assigned through the dialog the toolbar above the table
+ * opens, not through a row of the table: picking groups together with the policy
+ * set they receive needs more room than a table row offers, and a half-filled
+ * row reads like an assignment that already exists. The table therefore shows
+ * stored assignments only. One dialog can assign the same policy set to several
+ * groups at once, which is how a resource is usually opened up.
  *
  * A row is a group with all of its policies, mirroring IIdentityGroup.Policies
  * in the identity model. The group id is therefore the row identity and the
@@ -17,8 +24,8 @@
  *
  * Declarative configuration: the host carries a wx-service island named "data"
  * for the assignment endpoint plus two islands named "groups" and "policies"
- * that supply the directories - the groups the add row offers and the policies
- * the chips are picked from.
+ * that supply the directories - the groups the assign dialog offers and the
+ * policies the chips are picked from.
  *
  * REST contract:
  *   GET    {data}?q=…&p=…&l=…                    → { items: [{ groupId, groupName, policyIds }], total, assignedGroupIds }
@@ -29,7 +36,7 @@
  *   GET    {policies}?q=…                        → [{ id, name, description }]
  *
  * assignedGroupIds spans all pages, so a group that already owns a row beyond
- * the visible window is still kept out of the add row.
+ * the visible window is still kept out of the assign dialog.
  *
  * Events dispatched on the host element:
  *   webexpress.webapp.Event.PERMISSION_ASSIGNED_EVENT detail: { groupId, policyIds }
@@ -52,6 +59,7 @@ webexpress.webapp.PermissionCtrl = class extends webexpress.webapp.TableCtrl {
         this._groupRecords = [];
         this._policyRecords = [];
         this._assignedGroupIds = [];
+        this._dialog = null;
 
         element.classList.add("wx-permission");
 
@@ -62,9 +70,9 @@ webexpress.webapp.PermissionCtrl = class extends webexpress.webapp.TableCtrl {
 
         this._directories = this._loadDirectories();
 
-        // guards the add row against the placeholder render the base performs
-        // while this constructor is still running
-        this._ready = true;
+        if (!this._readonly) {
+            this._buildToolbar();
+        }
     }
 
     /**
@@ -83,18 +91,6 @@ webexpress.webapp.PermissionCtrl = class extends webexpress.webapp.TableCtrl {
      * to persist and the endpoint carries no configure route.
      */
     _initPersistenceListeners() {
-    }
-
-    /**
-     * Reserves the actions column even before the first group was assigned,
-     * because the add row always carries the add affordance.
-     */
-    _recalculateHasOptions() {
-        super._recalculateHasOptions();
-
-        if (!this._readonly) {
-            this._hasOptions = true;
-        }
     }
 
     /**
@@ -153,14 +149,16 @@ webexpress.webapp.PermissionCtrl = class extends webexpress.webapp.TableCtrl {
             rows: page.items.map((entry) => this._buildRow(entry))
         });
 
+        this._syncAssignButton();
+
         this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, { id: this._element.id, page: this._page });
         this._toggleProgress(false);
     }
 
     /**
      * Loads the group and the policy directory once. A missing service yields
-     * an empty directory, which degrades the add row and the chip picker to
-     * empty pickers rather than failing the surface.
+     * an empty directory, which degrades the assign dialog and the chip picker
+     * to empty pickers rather than failing the surface.
      * @returns {Promise<void>} Resolves when both directories arrived.
      */
     async _loadDirectories() {
@@ -261,147 +259,258 @@ webexpress.webapp.PermissionCtrl = class extends webexpress.webapp.TableCtrl {
     }
 
     /**
-     * Renders the table and puts the add row in front of it. The base replaces
-     * the whole body on every pass, so the add row is re-inserted rather than
-     * rebuilt, which keeps the picked but not yet assigned values.
+     * Puts the assign affordance above the table, which is the one action of the
+     * surface that does not belong to a stored assignment.
      */
-    render() {
-        super.render();
+    _buildToolbar() {
+        this._toolbar = document.createElement("div");
+        this._toolbar.className = "wx-permission-toolbar";
 
-        if (!this._ready || this._readonly) {
+        this._assignButton = document.createElement("button");
+        this._assignButton.type = "button";
+        this._assignButton.className = "btn btn-primary wx-permission-assign";
+        this._assignButton.appendChild(webexpress.webui.Icon.create(this._iconClass("plus"), "me-2"));
+        this._assignButton.appendChild(document.createTextNode(this._i18n("webexpress.webapp:permission.assign.groups", "Assign groups")));
+        this._assignButton.addEventListener("click", () => this._openAssignDialog());
+
+        this._toolbar.appendChild(this._assignButton);
+
+        // ahead of the progress bar the base put in front of the table, which
+        // reports on the table rather than on the toolbar
+        this._element.prepend(this._toolbar);
+    }
+
+    /**
+     * Opens the assign dialog. It is built once and refilled on every open, so
+     * a dialog opened after a reload offers the groups of the current state
+     * rather than the ones the first open happened to see.
+     */
+    _openAssignDialog() {
+        if (this._readonly) {
             return;
         }
 
-        if (!this._addRowElement) {
-            this._addRowElement = this._buildAddRow();
+        if (!this._dialog) {
+            this._dialog = this._buildAssignDialog();
         }
 
-        this._syncAddRow();
-        this._body.prepend(this._addRowElement);
+        this._syncAssignDialog();
+        this._dialog.show();
     }
 
     /**
-     * Builds the add row: a group select, the chip picker of the new entry and
-     * the add affordance in the actions cell.
-     * @returns {HTMLElement} The add row element.
+     * Builds the host and the controller of the assign dialog: the groups to
+     * assign, the policies they carry afterwards and the confirming action.
+     * @returns {object} The modal controller of the dialog.
      */
-    _buildAddRow() {
-        const row = document.createElement("div");
-        row.className = "wx-grid-row wx-permission-add";
-        row.setAttribute("role", "row");
+    _buildAssignDialog() {
+        const host = document.createElement("div");
+        host.id = `${this._element.id}_assign`;
+        host.className = "wx-permission-assign-modal";
+        host.setAttribute("data-scrollable", "false");
 
-        const groupCell = document.createElement("div");
-        groupCell.className = "wx-grid-cell";
-        this._groupSelect = document.createElement("select");
-        this._groupSelect.className = "form-select wx-permission-group";
-        groupCell.appendChild(this._groupSelect);
+        const header = document.createElement("span");
+        header.className = "wx-modal-header";
+        header.textContent = this._i18n("webexpress.webapp:permission.assign.groups", "Assign groups");
 
-        const policyCell = document.createElement("div");
-        policyCell.className = "wx-grid-cell";
-        policyCell.appendChild(this._buildAddEditor());
+        const content = document.createElement("div");
+        content.className = "wx-modal-content wx-permission-assign-form";
 
-        const actionCell = document.createElement("div");
-        actionCell.className = "wx-grid-cell wx-table-actions";
-        this._assignButton = document.createElement("button");
-        this._assignButton.type = "button";
-        this._assignButton.className = "wx-permission-assign-btn";
-        this._assignButton.title = this._i18n("webexpress.webapp:permission.assign", "Assign");
-        this._assignButton.setAttribute("aria-label", this._assignButton.title);
-        this._assignButton.appendChild(webexpress.webui.Icon.create(this._iconClass("plus")));
-        this._assignButton.addEventListener("click", () => this._assign());
-        actionCell.appendChild(this._assignButton);
+        const picker = document.createElement("div");
+        picker.id = `${host.id}_groups`;
+        picker.setAttribute("placeholder", this._i18n("webexpress.webapp:permission.select.placeholder", "Please select…"));
 
-        row.appendChild(groupCell);
-        row.appendChild(policyCell);
-        row.appendChild(actionCell);
+        // an assignment without a group has nothing to write, so the field is
+        // marked as required and the confirming action stays disabled until one
+        // is picked
+        picker.setAttribute("aria-required", "true");
+        picker.addEventListener(webexpress.webui.Event.CHANGE_VALUE_EVENT, () => this._syncConfirmButton());
+        content.appendChild(this._buildField(this._i18n("webexpress.webapp:permission.groups", "Groups"), picker, true));
 
-        return row;
-    }
-
-    /**
-     * Builds the chip picker of the add row. It is the same inline editor the
-     * assigned rows use, so picking policies for a new group behaves exactly
-     * like changing them for an existing one.
-     * @returns {HTMLElement} The editor container.
-     */
-    _buildAddEditor() {
-        const container = document.createElement("div");
         const editor = document.createElement("div");
-        editor.id = `${this._element.id}_add_policies`;
+        editor.id = `${host.id}_policies`;
+        content.appendChild(this._buildField(this._i18n("webexpress.webapp:permission.column.policies", "Permissions"), editor));
 
-        this._addEditorCtrl = new webexpress.webui.InputMoveCtrl(editor);
-        this._addEditorCtrl.options = webexpress.webapp.permissionModel.policyOptions(this._policyRecords);
-        editor._wx_controller = this._addEditorCtrl;
-        container.appendChild(editor);
+        const footer = document.createElement("div");
+        footer.className = "wx-modal-footer";
 
-        this._addSmartEdit = new webexpress.webui.SmartEditCtrl(container);
+        this._confirmButton = document.createElement("button");
+        this._confirmButton.type = "button";
+        this._confirmButton.className = "btn btn-primary wx-permission-assign-confirm";
+        this._confirmButton.appendChild(webexpress.webui.Icon.create(this._iconClass("plus"), "me-2"));
+        this._confirmButton.appendChild(document.createTextNode(this._i18n("webexpress.webapp:permission.assign", "Assign")));
+        this._confirmButton.addEventListener("click", () => this._assign());
+        footer.appendChild(this._confirmButton);
 
-        return container;
+        host.appendChild(header);
+        host.appendChild(content);
+        host.appendChild(footer);
+        document.body.appendChild(host);
+
+        // the dialog lives outside the host, so it would outlive the surface it
+        // belongs to unless it is torn down with it
+        (this._element._wxCleanup = this._element._wxCleanup || []).push(() => host.remove());
+
+        // the dialog moves the sections onto its own bars, so the pickers are
+        // mounted afterwards - on the hosts where the section ended up
+        const modal = new webexpress.webui.ModalCtrl(host);
+
+        this._groupPicker = new webexpress.webui.InputSelectionCtrl(picker);
+
+        // several groups usually receive the same policy set at once, so the
+        // dialog assigns the picked set to every picked group rather than being
+        // reopened per group
+        this._groupPicker.multiSelect = true;
+
+        this._policyEditor = new webexpress.webui.InputMoveCtrl(editor);
+
+        return modal;
     }
 
     /**
-     * Refreshes the group select of the add row, which offers the groups that
-     * do not own a row yet. A still assignable selection survives the rebuild,
-     * so a reload does not discard what the user picked. The chip picker needs
-     * no refresh: the policy directory is loaded once, before the first row is
-     * rendered.
+     * Builds one labelled field of the assign dialog.
+     * @param {string} label - The caption of the field.
+     * @param {HTMLElement} control - The control the caption names.
+     * @param {boolean} [required] - Whether the field has to be filled in.
+     * @returns {HTMLElement} The field.
      */
-    _syncAddRow() {
-        const model = webexpress.webapp.permissionModel;
-        const available = model.availableGroups(this._groupRecords, this._assignedGroupIds);
-        const current = this._groupSelect.value;
+    _buildField(label, control, required) {
+        const field = document.createElement("div");
+        field.className = "wx-permission-field";
 
-        const placeholder = document.createElement("option");
-        placeholder.value = "";
-        placeholder.textContent = this._i18n("webexpress.webapp:permission.select.placeholder", "Please select…");
+        const caption = document.createElement("label");
+        caption.className = "wx-permission-label";
+        caption.textContent = label;
 
-        this._groupSelect.replaceChildren(placeholder);
-        for (const group of available) {
-            const option = document.createElement("option");
-            option.value = group.id;
-            option.textContent = group.name || group.id;
-            this._groupSelect.appendChild(option);
+        if (required) {
+            // the asterisk the framework forms mark a mandatory field with
+            const marker = document.createElement("span");
+            marker.className = "wx-form-required";
+            marker.textContent = "*";
+            caption.appendChild(marker);
         }
-        this._groupSelect.value = available.some((group) => String(group.id) === current) ? current : "";
+
+        field.appendChild(caption);
+        field.appendChild(control);
+
+        return field;
     }
 
     /**
-     * Assigns the picked policies to the selected group and reloads the page,
-     * so paging and filtering stay authoritative on the server.
+     * Refills the dialog for a new assignment: the group picker offers the
+     * groups that do not own a row yet and the chip picker starts empty. What a
+     * discarded dialog held is not restored - it is opened to assign a group,
+     * not to resume one. Both option lists are refreshed here rather than at
+     * build time, because the dialog can be opened before the directories
+     * arrive.
+     */
+    _syncAssignDialog() {
+        const model = webexpress.webapp.permissionModel;
+
+        this._groupPicker.options = model.groupOptions(
+            model.availableGroups(this._groupRecords, this._assignedGroupIds));
+        this._groupPicker.value = [];
+
+        this._policyEditor.options = model.policyOptions(this._policyRecords);
+        this._policyEditor.value = [];
+        this._syncConfirmButton();
+    }
+
+    /**
+     * Keeps the confirming action of the dialog in step with the picked groups,
+     * which is what enforces the required field: an assignment without a group
+     * has nothing to write.
+     */
+    _syncConfirmButton() {
+        this._confirmButton.disabled = this._pickedGroupIds().length === 0;
+    }
+
+    /**
+     * Returns the groups the dialog assigns to.
+     * @returns {Array<string>} The picked group ids.
+     */
+    _pickedGroupIds() {
+        return (this._groupPicker.value || []).map(String).filter((id) => id.length > 0);
+    }
+
+    /**
+     * Keeps the assign affordance in step with the directory: once every group
+     * owns a row, the dialog could only offer an empty select, so the button
+     * states that instead of opening one.
+     */
+    _syncAssignButton() {
+        if (!this._assignButton) {
+            return;
+        }
+
+        const exhausted = webexpress.webapp.permissionModel
+            .availableGroups(this._groupRecords, this._assignedGroupIds).length === 0;
+
+        this._assignButton.disabled = exhausted;
+        this._assignButton.title = exhausted
+            ? this._i18n("webexpress.webapp:permission.assign.none", "Every group already carries policies.")
+            : "";
+    }
+
+    /**
+     * Assigns the picked policies to every picked group and reloads the page, so
+     * paging and filtering stay authoritative on the server. The groups are
+     * written one after another, because each one is an entry of its own on the
+     * endpoint; the dialog closes only once all of them were written and keeps
+     * the rejected ones picked, which is what a retry needs.
      * @returns {Promise<void>} Resolves when the assignment completed.
      */
     async _assign() {
-        const groupId = this._groupSelect.value;
-        if (!groupId || !this._service) {
+        const groupIds = this._pickedGroupIds();
+        if (groupIds.length === 0 || !this._service) {
             return;
         }
 
-        const policyIds = webexpress.webapp.permissionModel.policyIds(this._addSmartEdit.value);
-        const result = await this._service.create({ groupId: groupId, policyIds: policyIds });
+        const policyIds = webexpress.webapp.permissionModel.policyIds(this._policyEditor.value);
+        const assigned = [];
+        const rejected = [];
 
-        if (!result.ok) {
-            console.warn("PermissionCtrl: assign failed", webexpress.webapp.ServiceResult.describe(result));
-            return;
+        for (const groupId of groupIds) {
+            const result = await this._service.create({ groupId: groupId, policyIds: policyIds });
+
+            if (result.ok) {
+                assigned.push(groupId);
+            } else {
+                console.warn("PermissionCtrl: assign failed", webexpress.webapp.ServiceResult.describe(result));
+                rejected.push(groupId);
+            }
         }
 
-        this._groupSelect.value = "";
-        this._addSmartEdit.value = [];
+        if (rejected.length === 0) {
+            this._dialog.hide();
+        } else {
+            this._groupPicker.value = rejected;
+        }
+
+        if (assigned.length === 0) {
+            return;
+        }
 
         await this._load();
-        this._dispatch(webexpress.webapp.Event.PERMISSION_ASSIGNED_EVENT, { groupId: groupId, policyIds: policyIds });
+
+        // one event per group, because a listener reacts to the policy set a
+        // group carries rather than to the batch it was assigned in
+        for (const groupId of assigned) {
+            this._dispatch(webexpress.webapp.Event.PERMISSION_ASSIGNED_EVENT, { groupId: groupId, policyIds: policyIds });
+        }
     }
 
     /**
-     * Applies an inline edit of the policy chips. The add row keeps its picked
-     * value locally until it is assigned, so only the rows of stored entries
-     * reach the endpoint.
+     * Applies an inline edit of the policy chips. The dialog reports nothing
+     * here: it lives outside the host and keeps its picked value until it is
+     * assigned, so only the rows of stored entries reach the endpoint.
      * @param {Event} e - The inline edit save event.
      */
     _onInlineSave(e) {
         const sender = e.detail && e.detail.sender;
         const row = sender && typeof sender.closest === "function" ? sender.closest(".wx-grid-row") : null;
 
-        if (!row || row === this._addRowElement || !row._dataRowRef) {
+        if (!row || !row._dataRowRef) {
             return;
         }
 

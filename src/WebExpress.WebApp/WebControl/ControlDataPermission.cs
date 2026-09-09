@@ -12,8 +12,11 @@ namespace WebExpress.WebApp.WebControl
     /// administers the group-to-policy assignments of a protected resource
     /// (see the identity model: Identity -> Group -> Policy -> Permission).
     /// The surface is a single table: the first column names the group, the
-    /// second carries its policies as inline editable chips, the first row
-    /// adds a further group and the options menu of a row revokes it.
+    /// second carries its policies as inline editable chips and the options
+    /// menu of a row revokes it. Further groups are assigned through the dialog
+    /// the toolbar above the table opens - one dialog assigns the same policy
+    /// set to every picked group - so the table itself shows stored assignments
+    /// only.
     ///
     /// The control emits the placeholder div plus the pagination control it
     /// binds through <see cref="BindPaging"/>, so the page count is navigated
@@ -33,8 +36,8 @@ namespace WebExpress.WebApp.WebControl
         /// <summary>
         /// Gets the data service descriptors of the control, emitted as
         /// wx-service island elements: the data service backs the assignment
-        /// table, the groups service backs the group select of the add row and
-        /// the policies service supplies the selectable policy chips.
+        /// table, the groups service backs the group picker of the assign dialog
+        /// and the policies service supplies the selectable policy chips.
         /// </summary>
         public IList<Func<IRenderControlContext, DataServiceDescriptor>> ServiceFactories { get; } = [];
 
@@ -76,8 +79,8 @@ namespace WebExpress.WebApp.WebControl
 
         /// <summary>
         /// Gets or sets a value indicating whether the surface is read-only.
-        /// When <see langword="true"/>, the add row, the inline editing of the
-        /// policy chips and the options menu are suppressed.
+        /// When <see langword="true"/>, the assign toolbar, the inline editing
+        /// of the policy chips and the options menu are suppressed.
         /// </summary>
         public Func<IRenderControlContext, bool> Readonly { get; set; }
 
