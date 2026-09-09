@@ -4,6 +4,8 @@
   href: api/
 - name: JavaScript Components
   href: js/
+- name: Architecture
+  href: architecture/
 - name: User Guide
   href: user-guide.md
 - name: Tutorials

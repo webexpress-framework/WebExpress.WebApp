@@ -43,6 +43,60 @@ webexpress.webui.TableTemplates.register("rest_selection", (val, table, row, cel
     return container;
 });
 
+// Dnf renderer - the disjunctive normal form of a filter column whose terms are
+// queried from an endpoint instead of travelling with the table.
+webexpress.webui.TableTemplates.register("rest_dnf", (val, table, row, cell, name, opts) => {
+    opts = opts || {};
+
+    if ((val === null || val === undefined || val === "") && !opts.editable) {
+        return "";
+    }
+
+    const container = document.createElement("div");
+    const editable = opts.editable === true || opts.editable === "true";
+
+    // the endpoint travels as a client built wx-service island, matching the
+    // single configuration channel the server emits
+    const island = () => webexpress.webapp.ServiceRegistry.islandElement({
+        name: "data", kind: "rest", baseUri: opts.uri, method: "GET"
+    });
+
+    if (editable) {
+        const editor = document.createElement("div");
+        editor.id = "wx_" + Math.random().toString(36).slice(2, 7);
+        editor.setAttribute("name", name);
+        if (opts.placeholder) {
+            editor.setAttribute("placeholder", opts.placeholder);
+        }
+        if (opts.maxGroups) {
+            editor.dataset.maxGroups = opts.maxGroups;
+        }
+        if (opts.uri) {
+            editor.appendChild(island());
+        }
+        const inputCtrl = new webexpress.webapp.InputDnfCtrl(editor);
+        inputCtrl.value = val;
+        editor._wx_controller = inputCtrl;
+        container.appendChild(editor);
+        webexpress.webui.TableTemplates.bindInlineEdit(container, row, name);
+        new webexpress.webui.SmartEditCtrl(container);
+    } else {
+        // a cell is narrower than the expression it may hold, so the read state
+        // clips to one line unless the column asked for the full rendering
+        container.dataset.compact = opts.compact === "false" ? "false" : "true";
+        if (opts.placeholder) {
+            container.dataset.placeholder = opts.placeholder;
+        }
+        if (opts.uri) {
+            container.appendChild(island());
+        }
+        const ctrl = new webexpress.webapp.DnfCtrl(container);
+        ctrl.value = val;
+    }
+
+    return container;
+});
+
 // Status renderer - condenses the cell value into a colored status dot, the
 // table analog of the ControlStatusTask dot (red error, green done, yellow
 // warning, blue running, gray pending).

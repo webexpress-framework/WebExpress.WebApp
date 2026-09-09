@@ -831,6 +831,50 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
+        /// Declares the standard data service of the disjunctive normal form
+        /// input, which queries the selectable terms with GET. Every conjunction
+        /// of the expression picks from that one term set.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The input control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataFormItemInputDnf DataService<TEndpoint>(this ControlDataFormItemInputDnf control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
+        }
+
+        /// <summary>
+        /// Declares the standard data service of the read only disjunctive normal
+        /// form view, which queries the terms its labels are resolved against
+        /// with GET.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The view control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataDnf DataService<TEndpoint>(this ControlDataDnf control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
+        }
+
+        /// <summary>
+        /// Declares the standard data service of the table rest dnf template,
+        /// which queries the selectable terms with GET.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The template control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlTableTemplateRestDnf DataService<TEndpoint>(this ControlTableTemplateRestDnf control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, DataServiceDescriptor.QueryData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
+        }
+
+        /// <summary>
         /// Declares the standard data service of the table rest selection
         /// template, which queries the selectable items with GET.
         /// </summary>

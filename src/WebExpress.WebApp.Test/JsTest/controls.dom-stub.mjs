@@ -333,6 +333,16 @@ class Element {
     }
     dispatchEvent(event) {
         if (event && event.target == null) { event.target = this; }
+        // handlers routinely suppress the default action or the bubbling; the
+        // stub dispatches directly, so it only has to record the intent - but the
+        // methods have to exist, because a real event always carries them
+        if (event && typeof event.preventDefault !== "function") {
+            event.defaultPrevented = false;
+            event.preventDefault = () => { event.defaultPrevented = true; };
+        }
+        if (event && typeof event.stopPropagation !== "function") {
+            event.stopPropagation = () => { };
+        }
         const set = this._listeners[event.type];
         if (set) { Array.from(set).forEach((fn) => fn(event)); }
         return true;

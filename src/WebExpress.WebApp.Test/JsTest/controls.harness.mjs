@@ -47,6 +47,9 @@ export function webappAsset(name) {
 // always loads before the control deriving from it (modal -> modal.page ->
 // modal.form, table -> table.reorderable, graph.viewer -> graph.editor)
 const WEBUI_BASE_CONTROLS = [
+    // the shipped catalogue, so a control that labels itself through _i18n is
+    // tested against the words a page shows rather than against the raw keys
+    "i18n/en.js",
     "webexpress.webui.modal.js",
     "webexpress.webui.modal.page.js",
     "webexpress.webui.modal.form.js",
@@ -78,6 +81,10 @@ const WEBUI_BASE_CONTROLS = [
     "webexpress.webui.search.js",
     "webexpress.webui.list.js",
     "webexpress.webui.input.selection.js",
+    // the disjunctive normal form stacks one selection per conjunction, so it
+    // loads after the selection it composes
+    "webexpress.webui.dnf.js",
+    "webexpress.webui.input.dnf.js",
     "webexpress.webui.input.password.js",
     "webexpress.webui.quickfilter.js",
     "webexpress.webui.input.tag.js",

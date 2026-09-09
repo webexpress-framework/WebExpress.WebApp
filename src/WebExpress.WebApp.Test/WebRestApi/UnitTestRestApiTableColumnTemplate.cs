@@ -270,6 +270,63 @@ namespace WebExpress.WebApp.Test.WebRestApi
         }
 
         /// <summary>
+        /// Verifies the wire contract of the dnf template, whose terms travel as
+        /// an embedded JSON string the renderer parses. The defaults - an unlimited
+        /// number of conjunctions and a clipped read state - are expressed by the
+        /// absence of an option rather than by a value the renderer would have to
+        /// special case.
+        /// </summary>
+        [Fact]
+        public void Dnf()
+        {
+            var root = Parse(new RestApiTableColumnTemplateDnf(true, "Pick a term", 3, false)
+            {
+                Items =
+                [
+                    new RestApiTableColumnTemplateItem() { Id = "a", Text = "Amsterdam", Color = "wx-selection-primary" },
+                    new RestApiTableColumnTemplateItem() { Id = "b", Text = "Berlin" }
+                ]
+            });
+            var options = root.GetProperty("options");
+
+            Assert.Equal("dnf", root.GetProperty("type").GetString());
+            Assert.True(options.GetProperty("editable").GetBoolean());
+            Assert.Equal("Pick a term", options.GetProperty("placeholder").GetString());
+            Assert.Equal(3, options.GetProperty("maxGroups").GetInt32());
+            Assert.Equal("false", options.GetProperty("compact").GetString());
+
+            using var items = JsonDocument.Parse(options.GetProperty("options").GetString());
+            var list = items.RootElement.EnumerateArray().ToList();
+            Assert.Equal(2, list.Count);
+            Assert.Equal("a", list[0].GetProperty("id").GetString());
+            Assert.Equal("Amsterdam", list[0].GetProperty("label").GetString());
+            Assert.Equal("wx-selection-primary", list[0].GetProperty("color").GetString());
+
+            var plain = Parse(new RestApiTableColumnTemplateDnf()).GetProperty("options");
+            Assert.Equal(JsonValueKind.Null, plain.GetProperty("maxGroups").ValueKind);
+            Assert.Equal(JsonValueKind.Null, plain.GetProperty("compact").ValueKind);
+        }
+
+        /// <summary>
+        /// Verifies the wire contract of the rest dnf template, whose terms are
+        /// queried from an endpoint instead of travelling with the table.
+        /// </summary>
+        [Fact]
+        public void RestDnf()
+        {
+            var root = Parse(new RestApiTableColumnTemplateRestDnf(true, "Pick a term")
+            {
+                Uri = new UriEndpoint("https://example.com/api/terms")
+            });
+            var options = root.GetProperty("options");
+
+            Assert.Equal("rest_dnf", root.GetProperty("type").GetString());
+            Assert.True(options.GetProperty("editable").GetBoolean());
+            Assert.Equal("Pick a term", options.GetProperty("placeholder").GetString());
+            Assert.Equal("https://example.com/api/terms", options.GetProperty("uri").GetString());
+        }
+
+        /// <summary>
         /// Verifies the wire contract of the markdown template, which is
         /// read-only and carries no options.
         /// </summary>
