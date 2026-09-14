@@ -202,6 +202,11 @@
 
                 const apply = (value) => {
                     if (as === "value") {
+                        const editor = webexpress.webui.Controller.getInstanceByElement(element);
+                        if (editor instanceof webexpress.webui.EditorCtrl) {
+                            if (value != null) editor.setState(value, { emit: false });
+                            return;
+                        }
                         const next = value == null ? "" : String(value);
                         if (element.value !== next) {
                             element.value = next;
@@ -243,10 +248,16 @@
             const queryResource = element.getAttribute("data-wx-model-query");
 
             withStore(element, (store) => {
+                const instance = webexpress.webui.Controller.getInstanceByElement(element);
+                const editor = webexpress.webui.EditorCtrl && instance instanceof webexpress.webui.EditorCtrl ? instance : null;
                 const isCheckbox = element.type === "checkbox";
-                const eventName = isCheckbox || element.tagName === "SELECT" ? "change" : "input";
+                const eventName = editor ? webexpress.webui.Event.CHANGE_VALUE_EVENT : isCheckbox || element.tagName === "SELECT" ? "change" : "input";
 
                 const write = (value) => {
+                    if (editor) {
+                        if (value != null) editor.setState(value, { emit: false });
+                        return;
+                    }
                     if (isCheckbox) {
                         element.checked = !!value;
                         return;
@@ -257,8 +268,9 @@
                     }
                 };
 
-                const onInput = () => {
-                    const value = isCheckbox ? !!element.checked : element.value;
+                const onInput = (event) => {
+                    if (editor && (editor.disabled || event.target !== element)) return;
+                    const value = editor ? editor.getState() : isCheckbox ? !!element.checked : element.value;
                     const patch = buildPatch(store.getState(), path, value);
                     if (queryResource && typeof store.dispatch === "function") {
                         store.dispatch("viewstate/query", { resource: queryResource, patch: patch });

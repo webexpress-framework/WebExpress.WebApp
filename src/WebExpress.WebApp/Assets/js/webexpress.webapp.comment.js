@@ -859,7 +859,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
         saveBtn.className = "btn btn-primary btn-sm";
         saveBtn.textContent = this._i18n("webexpress.webui:save", "Save");
         saveBtn.addEventListener("click", () => {
-            const newBody = this._editorEditRef ? this._editorEditRef.value : editorHost.innerHTML;
+            const newBody = this._editorEditRef ? this._editorEditRef.exportHtml({ layout: false }) : editorHost.innerHTML;
             this._saveEdit(comment, {
                 body: newBody,
                 category: catSelect.value,

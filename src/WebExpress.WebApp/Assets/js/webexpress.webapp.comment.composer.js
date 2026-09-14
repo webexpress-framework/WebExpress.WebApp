@@ -319,7 +319,7 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webapp.Data {
      * @returns {boolean}
      */
     _hasContent() {
-        const html = this._editorRef ? this._editorRef.value : this._editorHost.innerHTML;
+        const html = this._editorRef ? this._editorRef.exportHtml({ layout: false }) : this._editorHost.innerHTML;
         const trimmed = (html || "").trim();
         return trimmed.length > 0 && trimmed !== "<p><br></p>";
     }
@@ -352,7 +352,7 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webapp.Data {
         if (!this._hasContent()) {
             return;
         }
-        const body = this._editorRef ? this._editorRef.value : this._editorHost.innerHTML;
+        const body = this._editorRef ? this._editorRef.exportHtml({ layout: false }) : this._editorHost.innerHTML;
         const category = this._catSelect.value;
         const labels = webexpress.webapp.commentComposerModel.parseLabels(this._labelsInput.value);
 
