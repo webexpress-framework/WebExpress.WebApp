@@ -140,7 +140,7 @@ element.addEventListener(webexpress.webapp.GanttCtrl.LINK_CREATE_EVENT, (e) => {
 
 ## Layout & Theming
 
-The host is a flexible column that fills its container width; its height defaults to `480px` and is overridable through the `--wx-gantt-height` CSS variable, the initial grid pane width through `--wx-gantt-grid-w` (the splitter overrides it interactively). The timeline always fills its pane: when the project range is shorter than the visible width, the scale is padded with filler days. Below `768px` the grid collapses to the name column. All colors derive from the bootstrap theme variables, so the control follows the active theme.
+The host is a flexible column that fills its container width; its height defaults to `480px` and is overridable through the `--wx-gantt-height` CSS variable, the initial grid pane width through `--wx-gantt-grid-w` (the splitter overrides it interactively). The timeline always fills its pane: when the project range is shorter than the visible width, the scale is padded with filler days. Below `768px` the grid collapses to the name column. All colors derive from the WebExpress theme variables, so the control follows the active theme.
 
 ### Filling the pane
 

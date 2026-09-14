@@ -12,7 +12,7 @@
  *   3. the WebApp core (webexpress.webapp.js) and the engine modules.
  *   4. the control under test and any control specific dependencies.
  *
- * The browser-shaped globals (window, Popper, observers, WebSocket, ...) are
+ * The browser-shaped globals (window, observers, WebSocket, ...) are
  * inert stubs, and the timers detach from the event loop so a control that
  * schedules work at construction time cannot keep the Node test runner alive.
  */
@@ -275,12 +275,7 @@ function createBrowserGlobals(document) {
         ResizeObserver: class { observe() { } unobserve() { } disconnect() { } },
         IntersectionObserver: class { constructor() { this.root = null; } observe() { } unobserve() { } disconnect() { } takeRecords() { return []; } },
         Event: class { constructor(type, init) { init = init || {}; this.type = type; this.bubbles = !!init.bubbles; this.cancelable = !!init.cancelable; this.defaultPrevented = false; } preventDefault() { this.defaultPrevented = true; } stopPropagation() { } },
-        Popper: {
-            createPopper: () => ({
-                update: async () => { }, forceUpdate: () => { }, setOptions: async () => { },
-                destroy: () => { }, state: { elements: {}, modifiersData: {}, rects: {} }
-            })
-        }
+
     };
 }
 

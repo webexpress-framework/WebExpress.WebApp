@@ -28,28 +28,7 @@ const FILE = "webexpress.webapp.relation.editor.js";
 
 // the modal base drives the bootstrap dialog; headless it only has to open and
 // close, which is what the surface observes
-const BOOTSTRAP_STUB = {
-    Modal: class {
-        static _instances = new Map();
 
-        static getInstance(element) {
-            return BOOTSTRAP_STUB.Modal._instances.get(element) || null;
-        }
-
-        constructor(element) {
-            this._element = element;
-            BOOTSTRAP_STUB.Modal._instances.set(element, this);
-        }
-
-        show() {
-            this._element.classList.add("show");
-        }
-
-        hide() {
-            this._element.classList.remove("show");
-        }
-    }
-};
 
 const RESULT = {
     total: 3,
@@ -126,7 +105,7 @@ async function settle(turns = 8) {
  */
 async function openEditor(ctrl, item) {
     ctrl._edit(item);
-    ctrl._dialog._element.dispatchEvent({ type: "shown.bs.modal" });
+    ctrl._dialog._element.dispatchEvent({ type: "webexpress.webui.modal.show" });
     await settle();
 
     return ctrl._dialog;
@@ -163,7 +142,7 @@ function surface(options = {}) {
     const rt = loadControl({
         deps: DEPS,
         file: FILE,
-        extraGlobals: { bootstrap: BOOTSTRAP_STUB },
+
         fetch: async (url, init) => {
             requests.push({ url: String(url), init: init || {} });
             return options.respond

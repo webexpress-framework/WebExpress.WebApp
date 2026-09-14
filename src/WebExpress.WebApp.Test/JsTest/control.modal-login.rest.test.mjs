@@ -15,28 +15,7 @@ import assert from "node:assert";
 import { loadControl } from "./controls.harness.mjs";
 
 // the dialog drives the bootstrap modal; headless it only has to exist
-const BOOTSTRAP_STUB = {
-    Modal: class {
-        static _instances = new Map();
 
-        static getInstance(element) {
-            return BOOTSTRAP_STUB.Modal._instances.get(element) || null;
-        }
-
-        constructor(element) {
-            this._element = element;
-            BOOTSTRAP_STUB.Modal._instances.set(element, this);
-        }
-
-        show() {
-            this._element.classList.add("show");
-        }
-
-        hide() {
-            this._element.classList.remove("show");
-        }
-    }
-};
 
 /**
  * Builds the host the REST login dialog renders: the dialog sections around a REST
@@ -45,7 +24,7 @@ const BOOTSTRAP_STUB = {
  * @returns {object} The dialog host and the login host inside it.
  */
 function renderHost(rt) {
-    const host = rt.createElement("div");
+    const host = rt.createElement("dialog");
     host.id = "signin";
     host.classList.add("wx-webui-modal-login");
 
@@ -81,7 +60,7 @@ function renderHost(rt) {
 }
 
 test("the login dialog frames the REST login with its service and its error container", () => {
-    const rt = loadControl({ file: "webexpress.webapp.login.js", extraGlobals: { bootstrap: BOOTSTRAP_STUB } });
+    const rt = loadControl({ file: "webexpress.webapp.login.js" });
     const { host, login } = renderHost(rt);
 
     rt.wx.Controller.createInstances(host);

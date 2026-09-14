@@ -63,7 +63,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
         likeFilled: "heart",
         likeOutline: "heart",
         pin: "thumbtack",
-        chevronDown: "chevron-down",
+        chevronDown: "angle-down",
         chevronRight: "chevron-right",
         edit: "pen",
         delete: "trash",

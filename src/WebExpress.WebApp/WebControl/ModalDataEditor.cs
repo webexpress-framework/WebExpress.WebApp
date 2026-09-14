@@ -282,11 +282,10 @@ namespace WebExpress.WebApp.WebControl
                 .Add(footer?.Elements ?? [])
                 .Add(loose);
 
-            var modal = new HtmlElementTextContentDiv(title, content, bar)
+            var modal = new HtmlElementInteractiveDialog(title, content, bar)
             {
                 Id = Id,
-                Class = "wx-webui-modal wx-editor-form",
-                Role = "dialog"
+                Class = "wx-webui-modal wx-editor-form"
             }
                 .AddUserAttribute("data-size", size.ToClass())
                 .AddUserAttribute("data-close-label", I18N.Translate(renderContext, CloseLabel?.Invoke(renderContext)))

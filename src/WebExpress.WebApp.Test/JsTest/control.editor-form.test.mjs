@@ -372,7 +372,7 @@ test("the dialog is rebuilt around the indicator without cutting it off from its
     island.setAttribute("update-method", "PUT");
     form.appendChild(island);
 
-    const modal = rt.createElement("div");
+    const modal = rt.createElement("dialog");
     modal.id = "editor";
     modal.classList.add("wx-webui-modal");
 

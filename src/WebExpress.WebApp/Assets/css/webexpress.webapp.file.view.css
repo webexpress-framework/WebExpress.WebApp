@@ -78,7 +78,7 @@
     gap: 0.35rem;
     padding: 0.5rem;
     border: 1px solid var(--wx-border-color);
-    border-radius: var(--bs-border-radius);
+    border-radius: var(--wx-border-radius);
     box-shadow: 0 2px 6px rgba(0, 0, 0, .05);
     background-color: var(--wx-body-bg);
     overflow: hidden;

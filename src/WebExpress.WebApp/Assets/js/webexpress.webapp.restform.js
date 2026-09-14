@@ -80,7 +80,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
                 this.options.headers["Content-Type"] = "application/json; charset=utf-8";
             }
         }
-        
+
         this._element.classList.add("wx-restform");
 
         this._fieldErrorMap = new Map();
@@ -267,24 +267,8 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
             return;
         }
         const modal = this._element.closest(".modal");
-        if (!modal || !window.bootstrap) {
-            return;
-        }
-
-        try {
-            const Modal = window.bootstrap.Modal;
-            let inst = null;
-            if (typeof Modal.getInstance === "function") {
-                inst = Modal.getInstance(modal);
-            }
-            if (!inst) {
-                inst = new Modal(modal);
-            }
-            if (inst) {
-                inst.hide();
-            }
-        } catch (e) {
-            // ignore bootstrap errors
+        if (modal?.open) {
+            modal.close();
         }
     }
 

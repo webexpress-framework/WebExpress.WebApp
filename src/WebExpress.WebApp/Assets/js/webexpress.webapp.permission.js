@@ -347,7 +347,7 @@ webexpress.webapp.PermissionCtrl = class extends webexpress.webapp.TableCtrl {
      * @returns {object} The modal controller of the dialog.
      */
     _buildAssignDialog() {
-        const host = document.createElement("div");
+        const host = document.createElement("dialog");
         host.id = `${this._element.id}_assign`;
         host.className = "wx-permission-assign-modal";
         host.setAttribute("data-scrollable", "false");

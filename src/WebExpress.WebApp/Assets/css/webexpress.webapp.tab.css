@@ -46,7 +46,7 @@
     transform: translateY(-50%);
     border: 0;
     background: transparent;
-    color: var(--wx-secondary-color, var(--bs-secondary-color));
+    color: var(--wx-secondary-color, var(--wx-secondary-color));
     transition: color 0.2s ease-in-out;
     padding: 0.25rem;
     line-height: 1;
@@ -63,7 +63,7 @@
 
 .wx-webapp-tab-close:hover,
 .wx-webapp-tab-close:focus-visible {
-    color: var(--wx-danger, var(--bs-danger));
+    color: var(--wx-danger, var(--wx-danger));
 }
 
 @media (hover: none) {

@@ -1,4 +1,4 @@
-﻿using WebExpress.WebApp.Test.Fixture;
+using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebControl;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
@@ -119,7 +119,7 @@ namespace WebExpress.WebApp.Test.WebControl
         /// so in the layout that draws an underline at all.
         /// </summary>
         [Theory]
-        [InlineData(TypeLayoutTab.Underline, @"<div id=""*"" class=""wx-webapp-tab"" style=""--bs-nav-underline-border-color: #ff0000; --bs-nav-underline-link-active-color: #ff0000;"" data-layout=""underline""><div class=""wx-webapp-tab-empty d-none"">*</div></div>")]
+        [InlineData(TypeLayoutTab.Underline, @"<div id=""*"" class=""wx-webapp-tab"" style=""--wx-nav-underline-border-color: #ff0000; --wx-nav-underline-link-active-color: #ff0000;"" data-layout=""underline""><div class=""wx-webapp-tab-empty d-none"">*</div></div>")]
         [InlineData(TypeLayoutTab.Pill, @"<div id=""*"" class=""wx-webapp-tab"" data-layout=""pill""><div class=""wx-webapp-tab-empty d-none"">*</div></div>")]
         public void HighlightColorUser(TypeLayoutTab layout, string expected)
         {
@@ -165,7 +165,7 @@ namespace WebExpress.WebApp.Test.WebControl
             // validation
             AssertExtensions.EqualWithPlaceholders
             (
-                @"<div id=""*"" class=""wx-webapp-tab"" style=""--bs-nav-underline-border-color: var(--bs-danger); --bs-nav-underline-link-active-color: var(--bs-danger);"" data-layout=""underline""><div class=""wx-webapp-tab-empty d-none"">*</div></div>",
+                @"<div id=""*"" class=""wx-webapp-tab"" style=""--wx-nav-underline-border-color: var(--wx-danger); --wx-nav-underline-link-active-color: var(--wx-danger);"" data-layout=""underline""><div class=""wx-webapp-tab-empty d-none"">*</div></div>",
                 html
             );
         }

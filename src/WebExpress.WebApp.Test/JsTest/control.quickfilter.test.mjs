@@ -134,13 +134,18 @@ test("wx-webapp-quickfilter offers the options menu only on a user-defined filte
     const { host } = await loadCustomQuickfilter();
 
     const mine = host.querySelectorAll(".wx-quickfilter-btn-chip").find((c) => c.id === "mine");
-    assert.ok(mine.querySelector(".wx-quickfilter-menu-toggle"), "the user-defined chip carries the options toggle");
+
 
     // a button holds no buttons, so the menu is a sibling of the chip inside the
     // wrapper the two share
     const wrapper = host.querySelectorAll(".wx-quickfilter-chip-wrap")
         .find((w) => w.querySelector(".wx-quickfilter-btn-chip")?.id === "mine");
     assert.ok(wrapper, "the user-defined chip sits in a wrapper");
+    const toggle = wrapper.querySelector(".wx-quickfilter-menu-toggle");
+    const menu = wrapper.querySelector(".wx-quickfilter-menu");
+    assert.equal(toggle.tagName, "BUTTON");
+    assert.equal(toggle.getAttribute("popovertarget"), menu.id);
+    assert.equal(menu.getAttribute("popover"), "auto");
     const entries = wrapper.querySelectorAll(".wx-quickfilter-menu .dropdown-item");
     assert.equal(entries.length, 2, "the menu offers edit and remove");
     assert.equal(mine.querySelectorAll("button").length, 0, "the chip nests no buttons");

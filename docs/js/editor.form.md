@@ -142,7 +142,7 @@ The control is authored in C#; the markup below is what it renders, and what the
     <wx-service hidden name="data" kind="rest" base-uri="/api/1/documents"></wx-service>
     <wx-service hidden name="draft" kind="rest" base-uri="/api/1/drafts" method="GET" update-method="PUT"></wx-service>
 
-    <div id="editor" class="wx-webui-modal wx-editor-form" role="dialog"
+    <dialog id="editor" class="wx-webui-modal wx-editor-form" role="dialog"
          data-size="modal-fullscreen" data-scrollable="false">
 
         <div class="wx-modal-header wx-editor-form-header">
@@ -169,7 +169,7 @@ The control is authored in C#; the markup below is what it renders, and what the
             </div>
             <div><button type="submit" class="btn btn-success">Publish</button></div>
         </div>
-    </div>
+    </dialog>
 </form>
 ```
 

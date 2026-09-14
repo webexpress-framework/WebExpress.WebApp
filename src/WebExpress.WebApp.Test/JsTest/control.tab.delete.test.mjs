@@ -1,13 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { loadControl } from "./controls.harness.mjs";
-import { bootstrapStub, deferred, settle } from "../../../../WebExpress.WebUI/src/WebExpress.WebUI.Test/JsTest/modal.harness.mjs";
+import { deferred, settle } from "../../../../WebExpress.WebUI/src/WebExpress.WebUI.Test/JsTest/modal.harness.mjs";
 
 function setup(options = {}) {
-    const bootstrap = bootstrapStub();
     const rt = loadControl({ file: "webexpress.webapp.tab.js", deps: [
         "i18n/en.js", "webexpress.webapp.tab.model.js"
-    ], extraGlobals: { bootstrap } });
+    ] });
     const host = rt.createElement("div");
     if (options.readonly) { host.dataset.readonly = "true"; }
     const placeholder = rt.createElement("div");
@@ -24,7 +23,7 @@ function setup(options = {}) {
     } };
     const closed = [];
     host.addEventListener(rt.wxapp.Event.TAB_CLOSED_EVENT, event => closed.push(event.detail.tabId));
-    return { ...rt, bootstrap, host, ctrl, requests, closed, placeholder };
+    return { ...rt, host, ctrl, requests, closed, placeholder };
 }
 
 function open(rt, id = "a") {

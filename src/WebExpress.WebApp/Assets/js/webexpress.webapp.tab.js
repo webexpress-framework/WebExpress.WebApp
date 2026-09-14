@@ -879,12 +879,12 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
             let rewritten = value;
 
             // "#id" selector references, only on the data-wx-source family, the
-            // tab template binding targets and the bootstrap and framework target
+            // tab template binding targets and the WebExpress and framework target
             // attributes, so a value that merely contains "#" (a colour, a
             // fragment) is not misread as a selector
             const isSelectorAttribute = name === "href"
-                || name === "data-bs-target"
-                || name === "data-bs-parent"
+                || name === "data-wx-target"
+                || name === "data-wx-parent"
                 || name === "data-wx-target"
                 || name === "data-wx-source"
                 || name.startsWith("data-wx-source-")

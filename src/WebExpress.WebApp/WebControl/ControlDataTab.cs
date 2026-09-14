@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using WebExpress.WebApp.WebData;
@@ -66,7 +66,7 @@ namespace WebExpress.WebApp.WebControl
 
         /// <summary>
         /// Gets or sets the highlight color of the active tab. It only takes effect in
-        /// the underline layout, whose bootstrap variables it overrides.
+        /// the underline layout, whose WebExpress variables it overrides.
         /// </summary>
         public Func<IRenderControlContext, PropertyColorText> HighlightColor { get; set; }
 
@@ -179,15 +179,15 @@ namespace WebExpress.WebApp.WebControl
             var fragmentManager = WebEx.ComponentHub.FragmentManager;
             var applicationContext = renderContext?.PageContext?.ApplicationContext;
 
-            // the underline layout draws the active marker from bootstrap variables, so a
+            // the underline layout draws the active marker from WebExpress variables, so a
             // highlight color reaches the tab headers only by overriding them on the host
             var highlightColor = layout == TypeLayoutTab.Underline
                 ? ResolveHighlightColor(HighlightColor?.Invoke(renderContext))
                 : null;
             string[] highlightStyles = highlightColor == null ? [] :
             [
-                $"--bs-nav-underline-border-color: {highlightColor};",
-                $"--bs-nav-underline-link-active-color: {highlightColor};"
+                $"--wx-nav-underline-border-color: {highlightColor};",
+                $"--wx-nav-underline-link-active-color: {highlightColor};"
             ];
 
             // templates
@@ -230,7 +230,7 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
-        /// Resolves a highlight color into a css color value. The bootstrap variables of
+        /// Resolves a highlight color into a css color value. The WebExpress variables of
         /// the underline layout take a color, not a class, so a system color has to be
         /// mapped onto its css variable instead of onto the class the color would emit.
         /// </summary>
@@ -248,7 +248,7 @@ namespace WebExpress.WebApp.WebControl
                 TypeColor.Default => null,
                 TypeColor.User => !string.IsNullOrWhiteSpace(color.UserColor) ? color.UserColor : null,
                 TypeColor.Highlight => "var(--wx-highlight)",
-                var systemColor => $"var(--bs-{systemColor.ToClass()})"
+                var systemColor => $"var(--wx-{systemColor.ToClass()})"
             };
         }
 

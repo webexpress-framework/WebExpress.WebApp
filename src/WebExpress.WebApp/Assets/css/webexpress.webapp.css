@@ -1,4 +1,4 @@
-﻿/* =====================================================================
+/* =====================================================================
    Application tokens
    ---------------------------------------------------------------------
    The surfaces this layer adds on top of WebUI - the comment thread and
@@ -7,7 +7,7 @@
    --wx-webapp-*. It is a naming layer over the semantic --wx-* tokens of
    webexpress.webui.css rather than a second palette: every value resolves
    through one of those, so re-skinning --wx-primary or switching
-   [data-bs-theme] carries this layer along and it needs no dark block of
+   [data-wx-theme] carries this layer along and it needs no dark block of
    its own to keep in step.
 
    Defining them here is also what makes them optional at the call site.
@@ -24,7 +24,7 @@
    which loads last; that is the app level override the feature sheets
    refer to.
    ===================================================================== */
-:root {
+:root, [data-wx-theme] {
     /* surfaces: the card, the bars framing it, and a third level for the
        rows nested inside one */
     --wx-webapp-surface: var(--wx-body-bg);
@@ -50,9 +50,9 @@
     --wx-webapp-danger: var(--wx-danger);
 
     /* geometry and type */
-    --wx-webapp-r-sm: var(--bs-border-radius-sm);
-    --wx-webapp-r-md: var(--bs-border-radius);
-    --wx-webapp-font-mono: var(--bs-font-monospace);
+    --wx-webapp-r-sm: var(--wx-border-radius-sm);
+    --wx-webapp-r-md: var(--wx-border-radius);
+    --wx-webapp-font-mono: var(--wx-font-monospace);
 }
 
 /* =====================================================================
@@ -168,15 +168,14 @@ main {
 }
 
 .wx-appnavigation > .wx-dropdown > button {
-    color: unset;
-}
-
-.wx-appnavigation > .wx-dropdown > .dropdown-menu[data-bs-popper] {
-    left: unset;
+    color: inherit;
+    padding-inline: clamp(0.2em, 1vw, 1em);
+    padding-block: 0.5em;
+    border-radius: 0.2em;
 }
 
 .wx-appnavigation .wx-overflow-menu-item {
-    color: rgba(var(--wx-link-color-rgb), var(--bs-link-opacity, 1));
+    color: rgba(var(--wx-link-color-rgb), var(--wx-link-opacity, 1));
 }
 
 .wx-app-dropdown {
@@ -184,14 +183,10 @@ main {
 }
 
 .wx-app-dropdown > .btn {
-    color: var(--bs-bory-bg);
-    border-radius: inherit;
-    border: unset;
+    color: inherit;
 }
 
-[data-bs-theme="dark"] .wx-app-dropdown > .btn {
-    color: var(--wx-body-color);
-}
+
 
 .wx-toast {
     font-size: clamp(0.8em, 0.9vw, 1em);
@@ -209,7 +204,8 @@ main {
     min-height: 100%;
 }
 
-.wx-main-pane {
+#wx-split > .wx-main-pane,
+#wx-splitter-content > .wx-main-pane {
     display: flex;
     flex-direction: row;
     align-items: stretch;
@@ -262,7 +258,7 @@ main {
 
 /* the content column: the toolbar is a band of its own, so it stays in place
    while the area below it scrolls */
-.wx-content {
+#wx-content {
     width: 100%;
     flex-grow: 1;
     display: flex;
@@ -315,8 +311,16 @@ main {
    .wx-fill is the marker every filling control carries - board, calendar, chart,
    form editor - and what each of them makes of the height it is handed is stated
    in its own stylesheet. The master-detail predates the marker and keeps its own
-   class, so both are named here. */
-#wx-content-main :has(.wx-master-detail-fill, .wx-fill):not([hidden]):not(.tab-pane:not(.active)) {
+   class, so both are named here.
+
+   The chain ends at the region. The third :not() keeps the rule off everything
+   *inside* a filling region: a master-detail whose detail frame loads a page that
+   carries a filling control of its own - a class page with its dashboard - would
+   otherwise have its split matched as an ancestor of that control and turned into
+   a column, stacking the list above the detail it was meant to stand beside. What
+   a region does with the height it is handed, and what it loads into itself, is
+   its own stylesheet's business. */
+#wx-content-main :has(.wx-master-detail-fill, .wx-fill):not([hidden]):not(.tab-pane:not(.active)):not(:is(.wx-master-detail-fill, .wx-fill) *) {
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;

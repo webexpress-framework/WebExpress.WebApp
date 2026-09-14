@@ -121,7 +121,7 @@ webexpress.webui.Actions.register("plugin-package", {
  * Supported attributes:
  *   data-wx-{primary|secondary}-heading      - alert heading text
  *   data-wx-{primary|secondary}-message      - alert body html
- *   data-wx-{primary|secondary}-type         - bootstrap alert class
+ *   data-wx-{primary|secondary}-type         - WebExpress alert class
  *                                              (default: "alert-primary")
  *   data-wx-{primary|secondary}-durability   - lifetime in ms (-1 = pinned,
  *                                              default: 5000)

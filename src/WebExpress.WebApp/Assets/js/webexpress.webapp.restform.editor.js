@@ -1172,7 +1172,9 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
             const chev = document.createElement("button");
             chev.type = "button";
             chev.className = "wx-form-editor-chev" + (collapsed ? " collapsed" : "");
-            chev.textContent = collapsed ? "▸" : "▾";
+            const drawing = webexpress.webui.Icon.create("angle-down");
+                    drawing.style.transform = collapsed ? "rotate(-90deg)" : "none";
+                    chev.appendChild(drawing);
             chev.addEventListener("click", (e) => { e.stopPropagation(); this._toggleCollapse(node.id); });
             rowEl.appendChild(chev);
         } else {

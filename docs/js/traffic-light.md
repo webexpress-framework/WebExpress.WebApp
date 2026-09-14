@@ -32,7 +32,7 @@ The control is bootstrapped from a single host element carrying the `wx-webapp-t
 | `data-orientation`   | Optional. `vertical` (default) stacks the lamps; `horizontal` lines them up.                              | `data-orientation="horizontal"`
 | `data-readonly`      | When `"true"`, the lamps are rendered for reading only; a change is neither possible nor persisted.       | `data-readonly="true"`
 
-The `ControlDataTrafficLight.Size` property scales the lamps through the shared `.wx-traffic-light-{xs,sm,lg,xl}` modifier classes (the compact default emits none), and the housing follows the page theme: bright in light mode, dark under `[data-bs-theme="dark"]`.
+The `ControlDataTrafficLight.Size` property scales the lamps through the shared `.wx-traffic-light-{xs,sm,lg,xl}` modifier classes (the compact default emits none), and the housing follows the page theme: bright in light mode, dark under `[data-wx-theme="dark"]`.
 
 The endpoint is authored in C# through the fluent data surface, so the host element is produced by:
 

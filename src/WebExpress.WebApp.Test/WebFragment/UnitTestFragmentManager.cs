@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebFragment;
 using WebExpress.WebApp.WebScope;
@@ -222,14 +222,14 @@ namespace WebExpress.WebApp.Test.WebFragment
         /// Test helper for GetFragments assertions.
         /// </summary>
         [Fact]
-        public void GetFragments_ModalRemoteForm_BodySecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(TestFragmentControlModalRemoteForm), typeof(SectionBodySecondary), typeof(TestPageA), 1, @"<div id=""webexpress-webapp-test-testfragmentcontrolmodalremoteform"" class=""wx-webui-modal-form"" data-close-label=""Close""><div class=""wx-modal-header""></div><div class=""wx-modal-content""></div><div class=""wx-modal-footer""></div></div>");
+        public void GetFragments_ModalRemoteForm_BodySecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(TestFragmentControlModalRemoteForm), typeof(SectionBodySecondary), typeof(TestPageA), 1, @"<dialog id=""webexpress-webapp-test-testfragmentcontrolmodalremoteform"" class=""wx-webui-modal-form"" data-close-label=""Close""><div class=""wx-modal-header""></div><div class=""wx-modal-content""></div><div class=""wx-modal-footer""></div></dialog>");
 
         /// <summary>
         /// Test the get fragments function of the fragment manager.
         /// Test helper for GetFragments assertions.
         /// </summary>
         [Fact]
-        public void GetFragments_IFragmentControl_BodySecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(IFragmentControl), typeof(SectionBodySecondary), typeof(TestPageA), 1, @"<div id=""webexpress-webapp-test-testfragmentcontrolmodalremoteform"" class=""wx-webui-modal-form"" data-close-label=""Close""><div class=""wx-modal-header""></div><div class=""wx-modal-content""></div><div class=""wx-modal-footer""></div></div>");
+        public void GetFragments_IFragmentControl_BodySecondary_TestPageA() => AssertGetFragments(typeof(TestApplication), typeof(IFragmentControl), typeof(SectionBodySecondary), typeof(TestPageA), 1, @"<dialog id=""webexpress-webapp-test-testfragmentcontrolmodalremoteform"" class=""wx-webui-modal-form"" data-close-label=""Close""><div class=""wx-modal-header""></div><div class=""wx-modal-content""></div><div class=""wx-modal-footer""></div></dialog>");
 
         /// <summary>
         /// Test the get fragments function of the fragment manager.

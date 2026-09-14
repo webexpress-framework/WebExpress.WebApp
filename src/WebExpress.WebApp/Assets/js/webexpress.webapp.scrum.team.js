@@ -282,7 +282,7 @@ webexpress.webapp.ScrumTeamCtrl = class extends webexpress.webapp.Data {
     _openModal() {
         const sorted = webexpress.webapp.scrumTeamModel.sortByPoints(this._members);
 
-        const host = document.createElement("div");
+        const host = document.createElement("dialog");
         host.setAttribute("data-size", "modal-lg");
 
         const header = document.createElement("span");

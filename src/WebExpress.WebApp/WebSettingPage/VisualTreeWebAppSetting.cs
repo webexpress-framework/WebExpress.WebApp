@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using WebExpress.WebApp.WebControl;
 using WebExpress.WebApp.WebPage;
 using WebExpress.WebApp.WebSection;
@@ -66,7 +66,7 @@ namespace WebExpress.WebApp.WebSettingPage
             Header.AppTitle.SetTitle(html.Head.Title);
             if (Theme?.ThemeMode == ThemeMode.Dark)
             {
-                html.Body.AddUserAttribute("data-bs-theme", "dark");
+                html.Body.AddUserAttribute("data-wx-theme", "dark");
             }
 
             var preferences = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionBodyPreferences>

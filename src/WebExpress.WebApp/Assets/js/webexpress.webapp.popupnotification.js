@@ -107,7 +107,7 @@ webexpress.webapp.PopupNotificationCtrl = class extends webexpress.webui.Ctrl {
         const typeClass = notification.type || "alert-primary";
 
         const alert = document.createElement("div");
-        // intentionally no "alert-dismissible" / "data-bs-dismiss" so Bootstrap
+        // intentionally no "alert-dismissible" / "data-wx-dismiss" so WebExpress
         // never gets a chance to remove the element on its own - every
         // lifecycle decision is owned by this control.
         alert.className = "alert wx-popup-alert " + typeClass + " fade show";

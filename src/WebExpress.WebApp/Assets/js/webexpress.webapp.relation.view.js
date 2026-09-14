@@ -560,7 +560,7 @@ webexpress.webapp.RelationViewCtrl = class extends webexpress.webapp.Data {
      * @returns {object} The dialog.
      */
     _buildDetailDialog() {
-        const host = document.createElement("div");
+        const host = document.createElement("dialog");
         host.id = `${this._element.id || "wx-relation-view"}_detail`;
         host.classList.add("wx-relation-view-detail-modal");
 
@@ -667,7 +667,7 @@ webexpress.webapp.RelationViewCtrl = class extends webexpress.webapp.Data {
      * @param {string} command - The command the click reports.
      * @param {string} icon - The symbolic icon name.
      * @param {string} label - The caption.
-     * @param {string} [variant] - The bootstrap variant, for an action that is not reversible.
+     * @param {string} [variant] - The WebExpress variant, for an action that is not reversible.
      * @returns {HTMLElement} The button.
      */
     _buildAction(command, icon, label, variant) {
@@ -765,7 +765,7 @@ webexpress.webapp.RelationViewCtrl = class extends webexpress.webapp.Data {
      */
     _buildDialog(systems) {
         const id = `${this._element.id || "wx-relation-view"}_dialog`;
-        const host = document.createElement("div");
+        const host = document.createElement("dialog");
 
         host.id = id;
         host.setAttribute("aria-labelledby", `${id}-label`);

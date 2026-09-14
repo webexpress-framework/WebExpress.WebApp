@@ -42,7 +42,7 @@
     --wx-we-space-3:       12px;
     --wx-we-space-4:       16px;
 
-    --wx-we-font-mono:     var(--bs-font-monospace, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+    --wx-we-font-mono:     var(--wx-font-monospace, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
 
     /* The editor's height. It is definite rather than content-driven, so the
        canvas keeps its size while the properties panel fills and empties.
@@ -50,9 +50,10 @@
        a different extent, for example 100% inside a parent that has one. */
     --wx-we-host-min-height: 600px;
 }
-
-[data-bs-theme="dark"] .wx-workflow-editor {
+@scope ([data-wx-theme="dark"]) to ([data-wx-theme="light"]) {
+:scope .wx-workflow-editor {
     --wx-we-shadow-md: 0 10px 28px rgba(0, 0, 0, 0.5);
+}
 }
 
 /* ───────── Host element ───────── */

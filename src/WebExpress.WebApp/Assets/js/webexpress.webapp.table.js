@@ -744,17 +744,17 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
     }
 
     /**
-     * Creates bootstrap placeholder markup for preview cells.
-     * @param {string} widthClass Bootstrap width class for the placeholder.
-     * @returns {string} Bootstrap placeholder markup.
+     * Creates WebExpress placeholder markup for preview cells.
+     * @param {string} widthClass WebExpress width class for the placeholder.
+     * @returns {string} WebExpress placeholder markup.
      */
     _createPlaceholderCellContent(widthClass = "col-12") {
         return `<span class="placeholder ${widthClass}"></span>`;
     }
 
     /**
-     * Creates a preview row with bootstrap placeholders.
-     * @param {Array<string>} widths Bootstrap width classes for each cell.
+     * Creates a preview row with WebExpress placeholders.
+     * @param {Array<string>} widths WebExpress width classes for each cell.
      * @returns {Object} Preview row definition.
      */
     _createPreviewRow(widths) {

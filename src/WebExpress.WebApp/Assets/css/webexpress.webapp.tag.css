@@ -57,7 +57,7 @@
     overflow-y: auto;
     background-color: var(--wx-body-bg);
     border: 1px solid var(--wx-border-color);
-    border-radius: var(--bs-border-radius, 0.375rem);
+    border-radius: var(--wx-border-radius, 0.375rem);
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
 }
 

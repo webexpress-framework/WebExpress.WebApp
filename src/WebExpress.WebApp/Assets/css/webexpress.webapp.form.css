@@ -28,17 +28,13 @@
     gap: 0.2em;
 }
 
-.wx-restform .modal-content {
-    background-color: var(--wx-light);
-}
-
-[data-bs-theme="dark"] .wx-restform .modal-content {
+.wx-restform dialog.modal {
     background-color: var(--wx-body-bg);
 }
 
-[data-bs-theme="dark"] .form-control {
-    background-color: black;
-}
+
+
+
 
 /* Main form wrapper */
 form.wx-webapp-restwizard {
@@ -58,7 +54,7 @@ form.wx-webapp-restwizard {
    the user keeps the step he is on and the way forward in view no matter how long
    the step is. This requires the chain from the dialog body down to the pages to be
    a flex column that may shrink (min-height: 0), and the body itself to stop
-   scrolling — Bootstrap's .modal-dialog-scrollable would otherwise scroll the whole
+   scrolling — WebExpress's dialog.modal-scrollable would otherwise scroll the whole
    wizard including its header. The selector outranks that rule on specificity. */
 form.wx-webapp-restwizard .modal-body {
     display: flex;
@@ -231,11 +227,11 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     min-height: 0;
     background: var(--wx-body-bg);
     color: var(--wx-body-color);
-    font-family: var(--bs-body-font-family);
-    font-size: var(--bs-body-font-size);
-    line-height: var(--bs-body-line-height);
+    font-family: var(--wx-body-font-family);
+    font-size: var(--wx-body-font-size);
+    line-height: var(--wx-body-line-height);
     border: 1px solid var(--wx-border-color);
-    border-radius: var(--bs-border-radius);
+    border-radius: var(--wx-border-radius);
 }
 
 /* Fill mode: the editor takes the height its host offers instead of growing with
@@ -303,7 +299,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     align-items: center;
     padding: 1px 6px;
     font-size: 11px;
-    font-family: var(--bs-font-monospace);
+    font-family: var(--wx-font-monospace);
     color: var(--wx-secondary-color, var(--wx-body-color));
     background: var(--wx-secondary-bg, var(--wx-tertiary-bg));
     border-radius: 4px;
@@ -321,7 +317,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     display: inline-flex;
     align-items: stretch;
     border: 1px solid var(--wx-border-color);
-    border-radius: var(--bs-border-radius);
+    border-radius: var(--wx-border-radius);
     overflow: hidden;
 }
 
@@ -353,7 +349,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     border: 1px solid var(--wx-border-color);
     background: transparent;
     color: var(--wx-secondary-color, var(--wx-body-color));
-    border-radius: var(--bs-border-radius);
+    border-radius: var(--wx-border-radius);
     padding: 3px 10px;
     font-size: 12px;
     font-weight: 500;
@@ -399,7 +395,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     .wx-form-editor-tab:hover {
         color: var(--wx-body-color);
         background: var(--wx-secondary-bg, var(--wx-tertiary-bg));
-        border-radius: var(--bs-border-radius) var(--bs-border-radius) 0 0;
+        border-radius: var(--wx-border-radius) var(--wx-border-radius) 0 0;
     }
 
     .wx-form-editor-tab.active {
@@ -464,7 +460,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     min-height: 0;
     background: var(--wx-body-bg);
     border: 1px solid var(--wx-border-color);
-    border-radius: var(--bs-border-radius);
+    border-radius: var(--wx-border-radius);
 }
 
 .wx-form-editor-pane-head {
@@ -706,7 +702,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 }
 
 .wx-form-editor-tree-meta {
-    font-family: var(--bs-font-monospace);
+    font-family: var(--wx-font-monospace);
     font-size: 11px;
     color: var(--wx-secondary-color, var(--wx-body-color));
     flex-shrink: 0;
@@ -769,7 +765,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 .wx-form-editor-quickadd-input {
     flex: 1 1 auto;
     border: 1px solid var(--wx-border-color);
-    border-radius: var(--bs-border-radius);
+    border-radius: var(--wx-border-radius);
     padding: 5px 9px;
     font-size: 13px;
     background: var(--wx-body-bg);
@@ -785,8 +781,8 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 .wx-form-editor-add-btn {
     border: 1px solid var(--wx-primary, #0d6efd);
     background: var(--wx-primary, #0d6efd);
-    color: var(--bs-primary-color, #fff);
-    border-radius: var(--bs-border-radius);
+    color: var(--wx-primary-color, #fff);
+    border-radius: var(--wx-border-radius);
     padding: 4px 10px;
     font-size: 12.5px;
     font-weight: 500;
@@ -804,7 +800,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     right: 0.75rem;
     background: var(--wx-body-bg);
     border: 1px solid var(--wx-border-color);
-    border-radius: var(--bs-border-radius);
+    border-radius: var(--wx-border-radius);
     box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
     max-height: 240px;
     overflow-y: auto;
@@ -847,7 +843,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 }
 
 .wx-form-editor-picker-meta {
-    font-family: var(--bs-font-monospace);
+    font-family: var(--wx-font-monospace);
     font-size: 11px;
     color: var(--wx-secondary-color, var(--wx-body-color));
     flex-shrink: 0;
@@ -898,7 +894,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     display: inline-block;
     padding: 1px 5px;
     font-size: 10.5px;
-    font-family: var(--bs-font-monospace);
+    font-family: var(--wx-font-monospace);
     color: var(--wx-body-color);
     background: var(--wx-secondary-bg, var(--wx-tertiary-bg));
     border: 1px solid var(--wx-border-color);
@@ -915,7 +911,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 .wx-form-editor-palette-search {
     width: 100%;
     border: 1px solid var(--wx-border-color);
-    border-radius: var(--bs-border-radius);
+    border-radius: var(--wx-border-radius);
     padding: 4px 8px;
     font-size: 12.5px;
     background: var(--wx-body-bg);
@@ -946,7 +942,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     border: 0;
     background: transparent;
     padding: 5px 8px;
-    border-radius: var(--bs-border-radius);
+    border-radius: var(--wx-border-radius);
     font-size: 12.5px;
     color: var(--wx-body-color);
     cursor: pointer;
@@ -966,7 +962,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 }
 
 .wx-form-editor-palette-type {
-    font-family: var(--bs-font-monospace);
+    font-family: var(--wx-font-monospace);
     font-size: 10.5px;
     color: var(--wx-secondary-color, var(--wx-body-color));
 }
@@ -987,7 +983,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 .wx-form-editor-preview-card {
     background: var(--wx-body-bg);
     border: 1px solid var(--wx-border-color);
-    border-radius: var(--bs-border-radius-lg, 0.5rem);
+    border-radius: var(--wx-border-radius-lg, 0.5rem);
     box-shadow: 0 4px 12px rgba(0, 0, 0, .04);
     padding: 1rem 1.125rem;
     max-width: 520px;
@@ -1020,7 +1016,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     text-align: center;
     color: var(--wx-secondary-color, var(--wx-body-color));
     border: 1px dashed var(--wx-border-color);
-    border-radius: var(--bs-border-radius);
+    border-radius: var(--wx-border-radius);
     font-size: 12.5px;
 }
 
@@ -1057,7 +1053,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 .wx-form-editor-preview-textarea {
     width: 100%;
     padding: 6px 10px;
-    border-radius: var(--bs-border-radius);
+    border-radius: var(--wx-border-radius);
     border: 1px solid var(--wx-border-color);
     background: var(--wx-body-bg);
     color: var(--wx-body-color);
@@ -1074,7 +1070,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 .wx-form-editor-preview-file {
     padding: 0.625rem;
     border: 1.5px dashed var(--wx-border-color);
-    border-radius: var(--bs-border-radius);
+    border-radius: var(--wx-border-radius);
     background: var(--wx-tertiary-bg, var(--wx-body-bg));
     text-align: center;
     color: var(--wx-secondary-color, var(--wx-body-color));
@@ -1087,7 +1083,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     flex-wrap: wrap;
     padding: 5px;
     border: 1px solid var(--wx-border-color);
-    border-radius: var(--bs-border-radius);
+    border-radius: var(--wx-border-radius);
     background: var(--wx-body-bg);
     min-height: 32px;
 }
@@ -1109,7 +1105,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     gap: 0.5rem;
     padding: 6px 10px;
     border: 1px solid var(--wx-border-color);
-    border-radius: var(--bs-border-radius);
+    border-radius: var(--wx-border-radius);
     background: var(--wx-body-bg);
     font-size: 12.5px;
 }
@@ -1156,7 +1152,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     gap: 0.875rem;
     padding: 0.75rem 0.875rem;
     border: 1px dashed var(--wx-border-color);
-    border-radius: var(--bs-border-radius);
+    border-radius: var(--wx-border-radius);
     background: var(--wx-body-bg);
     position: relative;
 }
@@ -1176,7 +1172,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
         font-size: 10.5px;
         font-weight: 500;
         color: var(--wx-secondary-color, var(--wx-body-color));
-        font-family: var(--bs-font-monospace);
+        font-family: var(--wx-font-monospace);
         text-transform: uppercase;
         letter-spacing: 0.04em;
     }
@@ -1224,7 +1220,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     padding: 1px 6px;
     background: var(--wx-secondary-bg, var(--wx-tertiary-bg));
     border-radius: 4px;
-    font-family: var(--bs-font-monospace);
+    font-family: var(--wx-font-monospace);
     font-size: 11px;
 }
 
@@ -1269,7 +1265,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     font: inherit;
     color: inherit;
     background: var(--wx-body-bg);
-    border-radius: var(--bs-border-radius);
+    border-radius: var(--wx-border-radius);
 }
 
 .wx-form-editor-description textarea.wx-form-editor-description-input {
@@ -1464,7 +1460,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     width: 3.5rem;
     height: 2rem;
     border: 1px solid var(--wx-border-color);
-    border-radius: var(--bs-border-radius, 0.375rem);
+    border-radius: var(--wx-border-radius, 0.375rem);
     background: var(--wx-secondary-bg, #e9ecef);
 }
 
@@ -1472,5 +1468,5 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     flex: 1 1 0;
     height: 2.5rem;
     border: 1px dashed var(--wx-border-color);
-    border-radius: var(--bs-border-radius, 0.375rem);
+    border-radius: var(--wx-border-radius, 0.375rem);
 }

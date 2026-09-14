@@ -255,13 +255,11 @@ webexpress.webapp.SearchSuggestionCtrl = class extends webexpress.webui.SearchCt
         const hasContent = box.children.length > 0 || this._suggestionMenu.querySelector("footer") !== null;
 
         if (hasContent) {
-            this._suggestionMenu.style.display = "flex";
-            // the menu is only measurable once it is visible and filled
-            this._repositionMenu(this._suggestionMenu);
-            this._triggerDropdownShow();
+            webexpress.webui.NativeMenu.show(this._suggestionMenu);
+
         } else {
-            this._suggestionMenu.style.display = "none";
-            this._triggerDropdownHidden();
+            webexpress.webui.NativeMenu.hide(this._suggestionMenu);
+
         }
     }
 
@@ -450,9 +448,9 @@ webexpress.webapp.SearchSuggestionCtrl = class extends webexpress.webui.SearchCt
      * Closes the suggestion menu and drops the highlight.
      */
     _hideSuggestions() {
-        this._suggestionMenu.style.display = "none";
+        webexpress.webui.NativeMenu.hide(this._suggestionMenu);
         this._setActive(-1);
-        this._triggerDropdownHidden();
+
     }
 
     /**

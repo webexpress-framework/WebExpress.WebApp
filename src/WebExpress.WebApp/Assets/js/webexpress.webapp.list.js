@@ -1,7 +1,7 @@
-﻿/**
+/**
  * A REST-backed list control extending the base flat ListCtrl.
  * - simple list view without toolbar or pagination controls
- * - shows bootstrap placeholders while loading
+ * - shows WebExpress placeholders while loading
  * - queries a REST endpoint
  * - dispatches a data-arrived event on successful retrieval
  * - supports per-item edit and delete actions bound from server-provided options
@@ -383,7 +383,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
     }
 
     /**
-     * Creates an element and assigns bootstrap classes.
+     * Creates an element and assigns WebExpress classes.
      * @param {string} tag The html tag name.
      * @param {Array<string>} classList The classes to add.
      * @returns {HTMLElement} The created element.

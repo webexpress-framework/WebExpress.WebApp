@@ -18,8 +18,8 @@ namespace WebExpress.WebApp.Test.WebControl
         /// controller, and derives its id from the dialog.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div class=""wx-webui-modal-login"" data-close-label=""Close""><div class=""wx-modal-header"">Login</div><div class=""wx-modal-content""><div class=""wx-webapp-login""></div></div><div class=""wx-modal-footer""></div></div>")]
-        [InlineData("signin", @"<div id=""signin"" class=""wx-webui-modal-login"" data-close-label=""Close""><div class=""wx-modal-header"">Login</div><div class=""wx-modal-content""><div id=""signin_login"" class=""wx-webapp-login""></div></div><div class=""wx-modal-footer""></div></div>")]
+        [InlineData(null, @"<dialog class=""wx-webui-modal-login"" data-close-label=""Close""><div class=""wx-modal-header"">Login</div><div class=""wx-modal-content""><div class=""wx-webapp-login""></div></div><div class=""wx-modal-footer""></div></dialog>")]
+        [InlineData("signin", @"<dialog id=""signin"" class=""wx-webui-modal-login"" data-close-label=""Close""><div class=""wx-modal-header"">Login</div><div class=""wx-modal-content""><div id=""signin_login"" class=""wx-webapp-login""></div></div><div class=""wx-modal-footer""></div></dialog>")]
         public void Id(string id, string expected)
         {
             // arrange
@@ -40,8 +40,8 @@ namespace WebExpress.WebApp.Test.WebControl
         /// login, where the REST login controller reads it.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div class=""wx-webui-modal-login"" *><div class=""wx-modal-content""><div class=""wx-webapp-login""></div></div>*</div>")]
-        [InlineData("https://example.com/api/session", @"<div class=""wx-webui-modal-login"" *><div class=""wx-modal-content""><div class=""wx-webapp-login""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/session"" method=""POST""></wx-service></div></div>*</div>")]
+        [InlineData(null, @"<dialog class=""wx-webui-modal-login"" *><div class=""wx-modal-content""><div class=""wx-webapp-login""></div></div>*</dialog>")]
+        [InlineData("https://example.com/api/session", @"<dialog class=""wx-webui-modal-login"" *><div class=""wx-modal-content""><div class=""wx-webapp-login""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/session"" method=""POST""></wx-service></div></div>*</dialog>")]
         public void Service(string uriString, string expected)
         {
             // arrange
@@ -81,7 +81,7 @@ namespace WebExpress.WebApp.Test.WebControl
 
             // validation
             AssertExtensions.EqualWithPlaceholders(
-                @"<div class=""wx-webui-modal-login"" *><div class=""wx-modal-content""><div class=""wx-webapp-login"" data-username=""guybrush"" data-redirect=""https://example.com/home""></div></div>*</div>",
+                @"<dialog class=""wx-webui-modal-login"" *><div class=""wx-modal-content""><div class=""wx-webapp-login"" data-username=""guybrush"" data-redirect=""https://example.com/home""></div></div>*</dialog>",
                 html);
         }
     }

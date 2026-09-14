@@ -614,7 +614,7 @@ webexpress.webapp.RelationEditorCtrl = class extends webexpress.webapp.Data {
      */
     _buildDialog() {
         const id = `${this._element.id || "wx-relation-editor"}_dialog`;
-        const host = document.createElement("div");
+        const host = document.createElement("dialog");
 
         host.id = id;
         host.setAttribute("aria-labelledby", `${id}-label`);

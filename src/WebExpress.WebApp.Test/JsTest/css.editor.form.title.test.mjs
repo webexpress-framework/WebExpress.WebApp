@@ -72,7 +72,7 @@ test("at rest the title has the type and the position of the heading it replaces
 });
 
 test("taking the field look back out-ranks the theme that paints it on", () => {
-    // the dark theme fills every form-control with black from [data-bs-theme="dark"] .form-control,
+    // the dark theme fills every form-control with black from [data-wx-theme="dark"] .form-control,
     // which weighs the same as a two-class selector and lives in a stylesheet that loads later.
     // A resting rule of equal weight loses that tie, and the title is a black box again.
     const theme = [0, 2, 0];
@@ -111,7 +111,7 @@ test("the writing surface goes edge to edge", () => {
 
     // the footer derives its own padding by subtracting half a gap from the dialog's padding
     // variable, so zeroing that variable instead would give the footer a negative padding
-    assert.doesNotMatch(rule(".wx-editor-form") || "", /--bs-modal-padding/);
+    assert.doesNotMatch(rule(".wx-editor-form") || "", /--wx-modal-padding/);
 });
 
 test("the field announces itself to the pointer and to the caret, and only then", () => {

@@ -23,7 +23,7 @@
     font-size: 12px;
     font-weight: 700;
     color: var(--wx-webapp-text-2, var(--wx-body-color, #212529));
-    font-family: var(--wx-webapp-font-mono, var(--bs-font-monospace, ui-monospace, SFMono-Regular, Menlo, monospace));
+    font-family: var(--wx-webapp-font-mono, var(--wx-font-monospace, ui-monospace, SFMono-Regular, Menlo, monospace));
 }
 
 .wx-scrum-velocity-plot {
@@ -75,7 +75,7 @@
     font-size: 10.5px;
     font-weight: 700;
     color: var(--wx-webapp-text-2, var(--wx-body-color, #212529));
-    font-family: var(--wx-webapp-font-mono, var(--bs-font-monospace, ui-monospace, SFMono-Regular, Menlo, monospace));
+    font-family: var(--wx-webapp-font-mono, var(--wx-font-monospace, ui-monospace, SFMono-Regular, Menlo, monospace));
 }
 
 .wx-scrum-velocity-avg-line {

@@ -73,7 +73,7 @@ function makeSearch(options = {}) {
             urls.push(url);
             return answer(url, urls.length);
         },
-        extraGlobals: options.popper ? { Popper: { createPopper: options.popper } } : {}
+
     });
 
     const host = rt.createElement("div");
@@ -128,7 +128,7 @@ test("the term and the entry cap travel in the query string", async () => {
     const entries = search.entries();
     assert.equal(entries.length, 1, "the answer is rendered");
     assert.equal(entries[0].querySelector("a").getAttribute("href"), "/crew/1", "a suggestion is a link to its target");
-    assert.equal(search.menu.style.display, "flex", "and the menu is open");
+    assert.equal(search.menu.matches(":popover-open"), true, "and the menu is open");
 });
 
 test("a custom query parameter is sent alongside the canonical one", async () => {
@@ -185,7 +185,7 @@ test("an answer without a single suggestion renders the empty state", async () =
     assert.equal(entries[0].getAttribute("aria-disabled"), "true", "and is not offered to the keyboard");
 
     // the menu still opens: the empty state is exactly what the user has to see
-    assert.equal(search.menu.style.display, "flex");
+    assert.equal(search.menu.matches(":popover-open"), true);
 });
 
 test("a stale answer never overwrites the suggestions of a newer term", async () => {
@@ -337,30 +337,15 @@ test("a suggestion without a target adopts the term instead of navigating", asyn
 
     assert.equal(search.rt.sandbox.window.location.href, before, "nothing is opened");
     assert.equal(search.ctrl.value, "is:open", "the label becomes the search term");
-    assert.equal(search.menu.style.display, "none", "and the menu closes");
+    assert.equal(search.menu.matches(":popover-open"), false, "and the menu closes");
 });
 
-test("the open menu is re-measured, so it lands on the control", async () => {
-    const updates = [];
-    const search = makeSearch({
-        popper: () => ({
-            update: () => updates.push(true),
-            forceUpdate: () => { },
-            setOptions: async () => { },
-            destroy: () => { },
-            state: { elements: {}, modifiersData: {}, rects: {} }
-        }),
-        answer: () => jsonResponse({ items: [{ id: "1", text: "Guybrush", uri: "/crew/1" }] })
-    });
-
-    // popper measures once, while the menu is still display:none and therefore
-    // has neither a box nor an offset parent; without a second measurement the
-    // menu keeps those coordinates and is drawn far from the search box
-    const before = updates.length;
+test("an asynchronous result keeps its menu anchored without measuring the control", async () => {
+    const search = makeSearch({ answer: () => jsonResponse({ items: [{ id: "1", text: "Guybrush", uri: "/crew/1" }] }) });
     await search.ctrl._fetch("guy");
-
-    assert.ok(updates.length > before, "the position is asked for once the menu is visible and filled");
-    assert.match(search.menu.style.width, /px$/, "and the menu is sized to the control it belongs to");
+    assert.equal(search.menu.matches(":popover-open"), true);
+    assert.match(search.menu.style.getPropertyValue("position-anchor"), /^--wx-menu-/);
+    assert.equal(search.menu.style.width, undefined);
 });
 
 test("escape closes the menu", async () => {
@@ -369,11 +354,11 @@ test("escape closes the menu", async () => {
     });
 
     await search.ctrl._fetch("guy");
-    assert.equal(search.menu.style.display, "flex");
+    assert.equal(search.menu.matches(":popover-open"), true);
 
     search.key("Escape");
 
-    assert.equal(search.menu.style.display, "none");
+    assert.equal(search.menu.matches(":popover-open"), false);
     assert.equal(search.ctrl._activeIndex, -1, "and the highlight is dropped");
 });
 

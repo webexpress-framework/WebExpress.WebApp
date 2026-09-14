@@ -184,7 +184,7 @@
 }
 
 .wx-relation-view-key {
-    font-family: var(--bs-font-monospace, monospace);
+    font-family: var(--wx-font-monospace, monospace);
     color: var(--wx-relation-accent);
     text-decoration: none;
     white-space: nowrap;
@@ -414,7 +414,7 @@
 
 .wx-relation-view-meta {
     color: var(--wx-secondary-color, #6c757d);
-    font-family: var(--bs-font-monospace, monospace);
+    font-family: var(--wx-font-monospace, monospace);
     font-size: 12px;
 }
 
@@ -489,7 +489,7 @@
 }
 
 .wx-relation-view-dialog-suggestion-key {
-    font-family: var(--bs-font-monospace, monospace);
+    font-family: var(--wx-font-monospace, monospace);
     color: var(--wx-primary, #0d6efd);
     white-space: nowrap;
 }
@@ -645,7 +645,7 @@
 }
 
 .wx-relation-editor-cardinality {
-    font-family: var(--bs-font-monospace, monospace);
+    font-family: var(--wx-font-monospace, monospace);
 }
 
 .wx-relation-editor-usage {
@@ -752,7 +752,7 @@
     border: 1px solid var(--wx-border-color, #dee2e6);
     border-radius: 5px;
     background: var(--wx-body-bg, #fff);
-    font-family: var(--bs-font-monospace, monospace);
+    font-family: var(--wx-font-monospace, monospace);
     font-size: 12.5px;
 }
 

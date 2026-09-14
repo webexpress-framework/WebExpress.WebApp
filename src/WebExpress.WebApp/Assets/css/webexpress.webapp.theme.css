@@ -1,11 +1,11 @@
-﻿/* =====================================================================
+/* =====================================================================
    Application theme palette
    ---------------------------------------------------------------------
    This theme loads after the framework, so redefining any --wx-* token
-   here re-skins every control through the Bootstrap bridge in
+   here re-skins every control through the WebExpress bridge in
    webexpress.webui.css. The values below mirror the framework defaults and
    mark the intended customization surface — change a hue here and it flows
-   app-wide, in both light and dark mode. Add a [data-bs-theme="dark"]
+   app-wide, in both light and dark mode. Add a [data-wx-theme="dark"]
    block to tune dark values independently.
    ===================================================================== */
 :root {
@@ -41,19 +41,21 @@
 #wx-header-apptitle {
     color: var(--wx-body-bg);
 }
-
-[data-bs-theme="dark"] #wx-header-apptitle {
+@scope ([data-wx-theme="dark"]) to ([data-wx-theme="light"]) {
+:scope #wx-header-apptitle {
     color: var(--wx-body-color);
+}
 }
 
 #wx-header-appnavigation {
     color: var(--wx-body-bg);
 }
-
-[data-bs-theme="dark"] #wx-header-appnavigation {
+@scope ([data-wx-theme="dark"]) to ([data-wx-theme="light"]) {
+:scope #wx-header-appnavigation {
     color: var(--wx-body-color);
 }
-    
+}
+
 #wx-header-appnavigation .active {
     color: var(--wx-info);
 }
@@ -97,9 +99,10 @@
     background: var(--wx-warning);
     color: var(--wx-body-color);
 }
-
-[data-bs-theme="dark"] #wx-toast {
+@scope ([data-wx-theme="dark"]) to ([data-wx-theme="light"]) {
+:scope #wx-toast {
     color: #000;
+}
 }
 
 #wx-breadcrumb {
@@ -129,17 +132,17 @@
 }
 
 #wx-split-p2 {
-    background: linear-gradient( 180deg, var(--wx-light) 0%, var(--wx-gray-200) 100% );
+    background: linear-gradient(180deg, var(--wx-tertiary-bg), var(--wx-secondary-bg));
 }
 
-html[data-bs-theme="dark"] #wx-split-p2 {
+html[data-wx-theme="dark"] #wx-split-p2 {
     background: linear-gradient(150deg, var(--wx-dark) 50%, var(--wx-app-splash) 100%)
 }
 
 #wx-content {
 }
 
-html[data-bs-theme="dark"] #wx-content {
+html[data-wx-theme="dark"] #wx-content {
 }
 
 #wx-content-toolbar {
@@ -174,9 +177,5 @@ html[data-bs-theme="dark"] #wx-content {
 }
 
 .wx-login {
-    background: linear-gradient( 180deg, var(--wx-light) 0%, var(--wx-gray-200) 100% );
-}
-
-html[data-bs-theme="dark"] .wx-login {
-    background: linear-gradient(150deg, var(--wx-dark) 50%, var(--wx-app-splash) 100%)
+    background: linear-gradient(180deg, var(--wx-tertiary-bg), var(--wx-secondary-bg));
 }

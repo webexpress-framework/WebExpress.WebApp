@@ -586,7 +586,7 @@ webexpress.webapp.FileViewCtrl = class extends webexpress.webui.Ctrl {
 
             const expanded = button.getAttribute("aria-expanded") === "true";
             button.setAttribute("aria-expanded", expanded ? "false" : "true");
-            icon.className = this._iconClass(expanded ? "chevron-right" : "chevron-down");
+            icon.className = this._iconClass(expanded ? "chevron-right" : "angle-down");
             list.style.display = expanded ? "none" : "";
         });
 

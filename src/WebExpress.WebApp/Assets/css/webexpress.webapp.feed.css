@@ -167,17 +167,19 @@
 .wx-feed .wx-feed-carousel .carousel-control-next-icon {
     width: 1.25rem;
     height: 1.25rem;
-    padding: 0.55rem;
+    padding: 0;
     border-radius: 50%;
     background-color: rgba(0, 0, 0, 0.55);
-    background-size: 0.75rem;
+    font-size: 0.9rem;
+    line-height: 1;
+    color: #fff;
 }
 
 .wx-feed .wx-feed-carousel .carousel-indicators {
     margin-bottom: 0.35rem;
 }
 
-.wx-feed .wx-feed-carousel .carousel-indicators [data-bs-target] {
+.wx-feed .wx-feed-carousel .carousel-indicators [data-wx-target] {
     width: 0.4rem;
     height: 0.4rem;
     margin: 0 0.15rem;

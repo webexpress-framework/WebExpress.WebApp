@@ -19,7 +19,7 @@ import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const formCss = path.resolve(here, "..", "..", "WebExpress.WebApp", "Assets", "css", "webexpress.webapp.form.css");
-const bootstrapCss = path.resolve(here, "..", "..", "..", "..", "WebExpress.WebUI", "src", "WebExpress.WebUI", "Assets", "css", "bootstrap.min.css");
+const nativeCss = path.resolve(here, "..", "..", "..", "..", "WebExpress.WebUI", "src", "WebExpress.WebUI", "Assets", "css", "webexpress.webui.native.css");
 
 /**
  * Computes the specificity of a selector as (ids, classes, elements). Attributes
@@ -28,6 +28,7 @@ const bootstrapCss = path.resolve(here, "..", "..", "..", "..", "WebExpress.WebU
  * @returns {number[]} The specificity triple.
  */
 function specificity(selector) {
+    selector = selector.replace(/:where\([^)]*\)/g, "");
     return [
         (selector.match(/#[\w-]+/g) || []).length,
         (selector.match(/\.[\w-]+/g) || []).length
@@ -39,7 +40,7 @@ function specificity(selector) {
 
 test("the wizard turns the scrolling of the dialog body off", () => {
     const own = fs.readFileSync(formCss, "utf8");
-    const bootstrap = fs.readFileSync(bootstrapCss, "utf8");
+    const native = fs.readFileSync(nativeCss, "utf8");
 
     assert.match(
         own,
@@ -49,7 +50,7 @@ test("the wizard turns the scrolling of the dialog body off", () => {
 
     const ours = specificity("form.wx-webapp-restwizard .modal-body");
 
-    for (const match of bootstrap.matchAll(/([^{}@]+)\{([^{}]*overflow[^{}]*)\}/g)) {
+    for (const match of native.matchAll(/([^{}@]+)\{([^{}]*overflow[^{}]*)\}/g)) {
         for (const selector of match[1].split(",")) {
             if (!selector.includes(".modal-body")) {
                 continue;

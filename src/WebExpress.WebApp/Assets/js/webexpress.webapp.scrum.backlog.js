@@ -2,7 +2,7 @@
  * Scrum backlog control.
  * Adds context menus, sprint editing/deletion, precise drag & drop ranking,
  * keyboard accessibility, sprint completion/start logic, smart duration selection,
- * configurable icons, bootstrap-based modals and item selection (single & multi).
+ * configurable icons, WebExpress-based modals and item selection (single & multi).
  */
 webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
 
@@ -1712,7 +1712,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
             .replace("{n}", count)
             .replace("{sprint}", activeName);
 
-        const host = document.createElement("div");
+        const host = document.createElement("dialog");
 
         const header = document.createElement("span");
         header.className = "wx-modal-header";
@@ -1766,7 +1766,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
             return;
         }
 
-        const host = document.createElement("div");
+        const host = document.createElement("dialog");
 
         const header = document.createElement("span");
         header.className = "wx-modal-header";
@@ -1840,8 +1840,8 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
             top: y + "px",
             zIndex: "1060",
             minWidth: "220px",
-            background: "var(--bs-body-bg, #fff)",
-            border: "1px solid var(--bs-border-color, #dee2e6)",
+            background: "var(--wx-body-bg, #fff)",
+            border: "1px solid var(--wx-border-color, #dee2e6)",
             borderRadius: "0.375rem",
             boxShadow: "0 12px 36px rgba(0, 0, 0, 0.18)",
             padding: "0.25rem"
@@ -1853,7 +1853,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
                 Object.assign(hr.style, {
                     height: "1px",
                     margin: "0.25rem 0",
-                    background: "var(--bs-border-color, #dee2e6)"
+                    background: "var(--wx-border-color, #dee2e6)"
                 });
                 menu.appendChild(hr);
                 continue;
@@ -1893,7 +1893,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
 
             btn.addEventListener("mouseenter", () => {
                 if (!btn.disabled) {
-                    btn.style.background = "var(--bs-tertiary-bg, #f8f9fa)";
+                    btn.style.background = "var(--wx-tertiary-bg, #f8f9fa)";
                 }
             });
             btn.addEventListener("mouseleave", () => {
@@ -2324,7 +2324,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
      * @returns {void}
      */
     _openSprintFormDialog(cfg) {
-        const host = document.createElement("div");
+        const host = document.createElement("dialog");
 
         const header = document.createElement("span");
         header.className = "wx-modal-header";
@@ -2381,7 +2381,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
             : null;
         let candidates = [];
 
-        const host = document.createElement("div");
+        const host = document.createElement("dialog");
 
         const header = document.createElement("span");
         header.className = "wx-modal-header";

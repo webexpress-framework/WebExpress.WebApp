@@ -1091,7 +1091,9 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
                     const caret = document.createElement("button");
                     caret.type = "button";
                     caret.className = "wx-gantt-caret";
-                    caret.textContent = task.collapsed ? "▸" : "▾";
+                    const drawing = webexpress.webui.Icon.create("angle-down");
+                    drawing.style.transform = task.collapsed ? "rotate(-90deg)" : "none";
+                    caret.appendChild(drawing);
                     caret.addEventListener("click", (e) => {
                         if (typeof e.stopPropagation === "function") {
                             e.stopPropagation();

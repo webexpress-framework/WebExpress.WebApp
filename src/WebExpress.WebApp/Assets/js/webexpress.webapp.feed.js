@@ -229,10 +229,8 @@ webexpress.webapp.FeedCtrl = class extends webexpress.webui.Ctrl {
     /**
      * Builds the picture column of an entry: nothing, a single picture, or a slideshow.
      *
-     * The slideshow is the framework's own carousel markup, driven by the bootstrap that is
-     * already on the page, so a feed slideshow and a carousel authored in C# behave and look the
-     * same. Where bootstrap is absent the controls still work: the buttons are wired to a
-     * fallback that moves the active slide itself.
+     * Native scroll snapping and the shared CarouselCtrl keep feed slideshows consistent
+     * with carousels authored in C#.
      *
      * @param {object} item The entry.
      * @returns {HTMLElement|null} The media element, or null when the entry has no picture.
@@ -256,8 +254,9 @@ webexpress.webapp.FeedCtrl = class extends webexpress.webui.Ctrl {
         const id = "wx-feed-carousel-" + (item.id || Math.random().toString(36).slice(2));
 
         const carousel = document.createElement("div");
-        carousel.className = "carousel slide wx-feed-carousel";
+        carousel.className = "wx-webui-carousel carousel wx-feed-carousel";
         carousel.id = id;
+        carousel.setAttribute("data-wx-interval", "6000");
 
         const indicators = document.createElement("div");
         indicators.className = "carousel-indicators";
@@ -274,8 +273,8 @@ webexpress.webapp.FeedCtrl = class extends webexpress.webui.Ctrl {
             const indicator = document.createElement("button");
             indicator.type = "button";
             indicator.className = index === 0 ? "active" : "";
-            indicator.dataset.bsTarget = "#" + id;
-            indicator.dataset.bsSlideTo = String(index);
+            indicator.dataset.wxTarget = "#" + id;
+            indicator.dataset.wxSlideTo = String(index);
             indicator.setAttribute("aria-label", String(index + 1));
             indicators.appendChild(indicator);
         });
@@ -286,12 +285,6 @@ webexpress.webapp.FeedCtrl = class extends webexpress.webui.Ctrl {
         carousel.appendChild(this._buildCarouselControl(carousel, id, "next"));
 
         media.appendChild(carousel);
-
-        if (window.bootstrap && typeof window.bootstrap.Carousel === "function") {
-            // the entries are built after the page was parsed, so bootstrap never sees them
-            // itself - it is handed the element rather than left to find it
-            new window.bootstrap.Carousel(carousel, { interval: 6000, ride: "carousel" });
-        }
 
         return media;
     }
@@ -334,51 +327,17 @@ webexpress.webapp.FeedCtrl = class extends webexpress.webui.Ctrl {
         const button = document.createElement("button");
         button.type = "button";
         button.className = "carousel-control-" + direction;
-        button.dataset.bsTarget = "#" + id;
-        button.dataset.bsSlide = direction;
+        button.dataset.wxTarget = "#" + id;
+        button.dataset.wxSlide = direction;
 
         const icon = document.createElement("span");
         icon.className = "carousel-control-" + direction + "-icon";
         icon.setAttribute("aria-hidden", "true");
         button.appendChild(icon);
 
-        button.addEventListener("click", () => {
-            if (window.bootstrap && typeof window.bootstrap.Carousel === "function") {
-                return;
-            }
-
-            this._slide(carousel, direction === "next" ? 1 : -1);
-        });
+        button.setAttribute("aria-label", this._i18n("webexpress.webui:carousel." + (direction === "next" ? "next" : "previous")));
 
         return button;
-    }
-
-    /**
-     * Moves a slideshow by hand, for a page without bootstrap.
-     * @param {HTMLElement} carousel The carousel to move.
-     * @param {number} step How far to move, in slides.
-     */
-    _slide(carousel, step) {
-        const slides = [...carousel.querySelectorAll(".carousel-item")];
-        const indicators = [...carousel.querySelectorAll(".carousel-indicators button")];
-        const current = slides.findIndex((x) => x.classList.contains("active"));
-
-        if (slides.length === 0 || current < 0) {
-            return;
-        }
-
-        const next = (current + step + slides.length) % slides.length;
-
-        slides[current].classList.remove("active");
-        slides[next].classList.add("active");
-
-        if (indicators[current]) {
-            indicators[current].classList.remove("active");
-        }
-
-        if (indicators[next]) {
-            indicators[next].classList.add("active");
-        }
     }
 
     /**

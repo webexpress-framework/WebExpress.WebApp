@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -81,7 +81,7 @@ namespace WebExpress.WebApp.WebPage
         public ControlPopupNotification NotificationPopup { get; protected set; } = new ControlPopupNotification("wx-notificationpopup");
 
         /// <summary>
-        /// Gets or sets a delegate that returns the collection of domain names associated with 
+        /// Gets or sets a delegate that returns the collection of domain names associated with
         /// the current context.
         /// </summary>
         public Func<IEnumerable<string>> Domains { get; set; }
@@ -138,7 +138,7 @@ namespace WebExpress.WebApp.WebPage
             Header.AppTitle.SetTitle(html.Head.Title);
             if (Theme?.ThemeMode == ThemeMode.Dark)
             {
-                html.Body.AddUserAttribute("data-bs-theme", "dark");
+                html.Body.AddUserAttribute("data-wx-theme", "dark");
             }
             html.Body.Add(MessageQueueUri);
             html.Body.Add(Header.Render(renderContext, this));

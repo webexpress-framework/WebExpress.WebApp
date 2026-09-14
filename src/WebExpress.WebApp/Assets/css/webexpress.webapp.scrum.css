@@ -1,6 +1,6 @@
 /*
  * Scrum styles for the backlog and active sprint controls.
- * Aligned with the bootstrap variables and the existing WebUI controls.
+ * Aligned with the WebExpress variables and the existing WebUI controls.
  */
 
 /* --------------------------------------------------------------- backlog */
@@ -219,7 +219,7 @@
 }
 
 .wx-scrum-row .wx-scrum-key {
-    font-family: var(--bs-font-monospace, monospace);
+    font-family: var(--wx-font-monospace, monospace);
     font-size: 0.75rem;
     color: var(--wx-secondary-color, #6c757d);
 }
@@ -233,7 +233,7 @@
 }
 
 .wx-scrum-row .wx-scrum-prio {
-    font-family: var(--bs-font-monospace, monospace);
+    font-family: var(--wx-font-monospace, monospace);
     font-size: 0.7rem;
     font-weight: 600;
     padding: 0 0.25rem;
@@ -261,7 +261,7 @@
 }
 
 .wx-scrum-row .wx-scrum-points {
-    font-family: var(--bs-font-monospace, monospace);
+    font-family: var(--wx-font-monospace, monospace);
     font-size: 0.75rem;
     font-weight: 600;
     background: var(--wx-tertiary-bg, #f8f9fa);
@@ -318,51 +318,59 @@
 }
 
 /* dark mode */
-[data-bs-theme="dark"] .wx-scrum-row:hover {
+[data-wx-theme="dark"] .wx-scrum-row:hover {
     background: rgba(255, 255, 255, 0.04);
 }
-
-[data-bs-theme="dark"] .wx-scrum-row.wx-scrum-row-active,
-[data-bs-theme="dark"] .wx-scrum-row.active {
+@scope ([data-wx-theme="dark"]) to ([data-wx-theme="light"]) {
+:scope .wx-scrum-row.wx-scrum-row-active,
+:scope .wx-scrum-row.active {
     background: rgba(13, 110, 253, 0.18);
 }
-
-[data-bs-theme="dark"] .wx-scrum-row.wx-scrum-row-active:hover,
-[data-bs-theme="dark"] .wx-scrum-row.active:hover {
+}
+@scope ([data-wx-theme="dark"]) to ([data-wx-theme="light"]) {
+:scope .wx-scrum-row.wx-scrum-row-active:hover,
+:scope .wx-scrum-row.active:hover {
     background: rgba(13, 110, 253, 0.24);
 }
-
-[data-bs-theme="dark"] .wx-scrum-section {
+}
+@scope ([data-wx-theme="dark"]) to ([data-wx-theme="light"]) {
+:scope .wx-scrum-section {
     background: var(--wx-body-bg, #1d1f23);
 }
-
-[data-bs-theme="dark"] .wx-scrum-sprint-menu {
+}
+@scope ([data-wx-theme="dark"]) to ([data-wx-theme="light"]) {
+:scope .wx-scrum-sprint-menu {
     background: var(--wx-tertiary-bg, #2b3035);
     color: var(--wx-body-color, #dee2e6);
     border-color: var(--wx-border-color, #495057);
 }
-
-[data-bs-theme="dark"] .wx-scrum-sprint-menu:hover,
-[data-bs-theme="dark"] .wx-scrum-sprint-menu:focus-visible {
+}
+@scope ([data-wx-theme="dark"]) to ([data-wx-theme="light"]) {
+:scope .wx-scrum-sprint-menu:hover,
+:scope .wx-scrum-sprint-menu:focus-visible {
     background: color-mix(in srgb, var(--wx-tertiary-bg, #2b3035) 80%, white 20%);
     color: var(--wx-body-color, #dee2e6);
     border-color: var(--wx-primary, #0d6efd);
 }
-
-[data-bs-theme="dark"] .wx-scrum-ctx-item {
+}
+@scope ([data-wx-theme="dark"]) to ([data-wx-theme="light"]) {
+:scope .wx-scrum-ctx-item {
     color: var(--wx-body-color, #dee2e6);
 }
-
-[data-bs-theme="dark"] .wx-scrum-ctx-item:hover,
-[data-bs-theme="dark"] .wx-scrum-ctx-item:focus-visible {
+}
+@scope ([data-wx-theme="dark"]) to ([data-wx-theme="light"]) {
+:scope .wx-scrum-ctx-item:hover,
+:scope .wx-scrum-ctx-item:focus-visible {
     background: color-mix(in srgb, var(--wx-tertiary-bg, #2b3035) 80%, white 20%);
     color: var(--wx-body-color, #dee2e6);
     border-color: var(--wx-primary, #0d6efd);
 }
-
-[data-bs-theme="dark"] .wx-scrum-ctx-item:disabled {
+}
+@scope ([data-wx-theme="dark"]) to ([data-wx-theme="light"]) {
+:scope .wx-scrum-ctx-item:disabled {
     color: var(--wx-secondary-color, #adb5bd);
     opacity: 0.6;
+}
 }
 
 /* --------------------------------------------------------------- assign & estimate dialog */
@@ -480,9 +488,10 @@
     font-size: 0.72rem;
     color: var(--wx-secondary-color, #6c757d);
 }
-
-[data-bs-theme="dark"] .wx-scrum-assignee-result {
+@scope ([data-wx-theme="dark"]) to ([data-wx-theme="light"]) {
+:scope .wx-scrum-assignee-result {
     background: var(--wx-body-bg, #1d1f23);
+}
 }
 
 /* --------------------------------------------------------------- sprint overview */
@@ -619,7 +628,7 @@
     border: 1px solid var(--wx-border-color, #dee2e6);
     padding: 0.05rem 0.35rem;
     border-radius: 0.2rem;
-    font-family: var(--bs-font-monospace, monospace);
+    font-family: var(--wx-font-monospace, monospace);
 }
 
 .wx-scrum-sprint-burndown {

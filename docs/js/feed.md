@@ -139,7 +139,7 @@ re-reports it with the metric.)
 
 An entry with several pictures gets a slideshow rather than only its first picture: an entry that has several has them for a reason, and showing one would be choosing on the author's behalf.
 
-The markup is the framework's own carousel — the same Bootstrap contract `ControlCarousel` emits server-side — so a feed slideshow and a carousel authored in C# look and behave alike. Because entries are built after the page was parsed, the element is **handed** to `bootstrap.Carousel` rather than left to be discovered. Where Bootstrap is absent the controls still work: they fall back to moving the active slide themselves.
+The markup is the framework's own native carousel, matching `ControlCarousel`. The shared `CarouselCtrl` is mounted by the component controller after entries are inserted. CSS Scroll Snap handles scrolling, touch and trackpad input; buttons select a scroll target. Feed slides advance every six seconds, pausing during hover, focus, hidden pages or reduced motion.
 
 The controls and the indicator dots appear on hover or focus only, so a column of teasers is not a column of blinking arrows.
 

@@ -29,28 +29,7 @@ const POLICIES = [
 
 // the assign dialog is the framework modal, which drives the bootstrap dialog;
 // headless it only has to open and close, which is what the surface observes
-const BOOTSTRAP_STUB = {
-    Modal: class {
-        static _instances = new Map();
 
-        static getInstance(element) {
-            return BOOTSTRAP_STUB.Modal._instances.get(element) || null;
-        }
-
-        constructor(element) {
-            this._element = element;
-            BOOTSTRAP_STUB.Modal._instances.set(element, this);
-        }
-
-        show() {
-            this._element.classList.add("show");
-        }
-
-        hide() {
-            this._element.classList.remove("show");
-        }
-    }
-};
 
 /**
  * Loads the runtime with the permission control on top of the REST table.
@@ -64,7 +43,7 @@ function load() {
             "webexpress.webapp.permission.model.js"
         ],
         file: "webexpress.webapp.permission.js",
-        extraGlobals: { bootstrap: BOOTSTRAP_STUB }
+
     });
 }
 
@@ -269,7 +248,7 @@ test("permission assigns the policy set to every picked group and closes the dia
     assert.deepEqual(events, ["g2", "g3"]);
 
     // the dialog is done once every assignment was written
-    assert.equal(ctrl._dialog._element.classList.contains("show"), false);
+    assert.equal(ctrl._dialog._element.open, false);
 });
 
 test("permission keeps the dialog open with the groups the endpoint rejected", async () => {
@@ -287,7 +266,7 @@ test("permission keeps the dialog open with the groups the endpoint rejected", a
     await settle();
 
     assert.equal(calls.filter((call) => call.method === "POST").length, 2, "a rejected group does not stop the batch");
-    assert.equal(ctrl._dialog._element.classList.contains("show"), true, "the dialog stays open for the retry");
+    assert.equal(ctrl._dialog._element.open, true, "the dialog stays open for the retry");
     assert.deepEqual(ctrl._groupPicker.value, ["g3"], "only what was rejected is still picked");
 });
 

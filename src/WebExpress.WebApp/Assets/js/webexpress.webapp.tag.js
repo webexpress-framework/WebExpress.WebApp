@@ -424,7 +424,7 @@ webexpress.webapp.TagCtrl = class extends webexpress.webui.TagCtrl {
      */
     _openEditor() {
         // build the modal host (see webexpress.webui.ModalCtrl)
-        const host = document.createElement("div");
+        const host = document.createElement("dialog");
 
         const header = document.createElement("span");
         header.className = "wx-modal-header";

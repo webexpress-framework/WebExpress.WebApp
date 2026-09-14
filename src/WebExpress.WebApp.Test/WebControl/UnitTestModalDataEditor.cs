@@ -91,7 +91,7 @@ namespace WebExpress.WebApp.Test.WebControl
             Assert.Contains(@"<form id=""editor_form"" class=""wx-webapp-restform""", html);
             Assert.Contains(@"<wx-service hidden name=""data"" kind=""rest"" base-uri=""http://localhost:8080/api/documents""", html);
             Assert.Contains(@"<wx-service hidden name=""draft"" kind=""rest"" base-uri=""http://localhost:8080/api/drafts"" method=""GET"" update-method=""PUT""", html);
-            Assert.Contains(@"<div id=""editor"" class=""wx-webui-modal wx-editor-form"" role=""dialog""", html);
+            Assert.Contains(@"<dialog id=""editor"" class=""wx-webui-modal wx-editor-form""", html);
         }
 
         /// <summary>

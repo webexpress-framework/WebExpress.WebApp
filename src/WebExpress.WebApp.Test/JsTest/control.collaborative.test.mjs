@@ -76,7 +76,7 @@ test("the teardown takes the docked bar off its foreign host", () => {
 
 test("a container in a dialog waits for it to open before announcing anyone", () => {
     const rt = loadControl({ file: FILE });
-    const dialog = rt.createElement("div");
+    const dialog = rt.createElement("dialog");
 
     dialog.classList.add("wx-webui-modal");
     rt.document.body.appendChild(dialog);

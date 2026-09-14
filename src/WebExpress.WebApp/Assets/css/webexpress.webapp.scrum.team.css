@@ -38,7 +38,7 @@
     font-weight: 700;
     line-height: 13px;
     text-align: center;
-    font-family: var(--wx-webapp-font-mono, var(--bs-font-monospace, ui-monospace, SFMono-Regular, Menlo, monospace));
+    font-family: var(--wx-webapp-font-mono, var(--wx-font-monospace, ui-monospace, SFMono-Regular, Menlo, monospace));
 }
 
 .wx-scrum-team-total {
@@ -60,7 +60,7 @@
     font-size: 11px;
     font-weight: 600;
     color: var(--wx-webapp-text-2, var(--wx-body-color, #495057));
-    font-family: var(--wx-webapp-font-mono, var(--bs-font-monospace, ui-monospace, SFMono-Regular, Menlo, monospace));
+    font-family: var(--wx-webapp-font-mono, var(--wx-font-monospace, ui-monospace, SFMono-Regular, Menlo, monospace));
 }
 
 .wx-scrum-team-total:hover .wx-scrum-team-total-pill {
@@ -111,7 +111,7 @@
     text-align: right;
     white-space: nowrap;
     width: 1%;
-    font-family: var(--wx-webapp-font-mono, var(--bs-font-monospace, ui-monospace, SFMono-Regular, Menlo, monospace));
+    font-family: var(--wx-webapp-font-mono, var(--wx-font-monospace, ui-monospace, SFMono-Regular, Menlo, monospace));
 }
 
 .wx-scrum-team-person {
