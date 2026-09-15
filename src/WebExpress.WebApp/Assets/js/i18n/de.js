@@ -354,6 +354,8 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "column.edit": "Spalte umbenennen",
     "column.move": "Spalte verschieben",
     "column.delete": "Spalte löschen",
+    "column.delete.title": "Spalte löschen?",
+    "column.delete.confirm": "Löschen",
     "column.add": "Neue Spalte",
     "column.new": "Neue Spalte",
     "column.menu": "Spaltenoptionen",
@@ -365,6 +367,7 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
 
     // dashboard board and widget menus
     "dashboard.menu": "Optionen",
+    "dashboard.column.delete.message": "Möchten Sie die Spalte „{name}“ mit allen Widgets löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
     "dashboard.widget.add": "Element hinzufügen",
     "dashboard.widget.menu": "Optionen",
     "dashboard.widget.settings": "Einstellungen",
@@ -373,6 +376,7 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
 
     // kanban board and swimlane menus
     "kanban.menu": "Optionen",
+    "kanban.column.delete.message": "Möchten Sie die Spalte „{name}“ mit allen Karten löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
     "board.settings": "Einstellungen",
     "swimlane.add": "Neue Swimlane",
     "swimlane.new": "Neue Swimlane",
@@ -381,6 +385,9 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "swimlane.color": "Farbe",
     "swimlane.color.none": "Keine",
     "swimlane.delete": "Swimlane löschen",
+    "swimlane.delete.title": "Swimlane löschen?",
+    "swimlane.delete.message": "Möchten Sie die Swimlane „{name}“ mit allen Karten löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "swimlane.delete.confirm": "Löschen",
     "swimlane.settings": "Einstellungen",
     "swimlane.moveup": "Nach oben verschieben",
     "swimlane.movedown": "Nach unten verschieben",

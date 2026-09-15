@@ -37,8 +37,8 @@ Each attribute is emitted only when its `ControlDataDashboard` flag is set, so a
 ## Menus
 
 - **Board "…" menu** — adds a **New column** (`data-addable-column`) and lists the **addable items** the server declares in `availableWidgets` (`data-addable-widget`). Only server-declared widget types can be placed on the board.
-- **Column "…" menu** — **Rename** (inline edit), **Size** (drill-down: Auto / 25 % / 33 % / 50 % / 66 % / 75 %), **Color** (drill-down palette + None), **Delete**.
-- **Widget "…" menu** — **Settings** (`data-configurable-widget`) and **Delete** (when the widget is removable).
+- **Column "…" menu** — **Rename** (inline edit), **Size** (drill-down: Auto / 25 % / 33 % / 50 % / 66 % / 75 %), **Color** (drill-down palette + None), **Delete**. Delete asks first through the framework confirmation dialog (`webexpress.webui.ModalConfirm`, the same one the tabs use), naming the column and its widgets; the column is only removed and persisted once confirmed.
+- **Widget "…" menu** — **Settings** (`data-configurable-widget`) and **Remove** (when the widget is removable). Remove asks first through the same confirmation dialog, naming the widget.
 
 Adding a column rebalances every column to an equal `1fr` fraction, so the existing columns make room for the new one.
 

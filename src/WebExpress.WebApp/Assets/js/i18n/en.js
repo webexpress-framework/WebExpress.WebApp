@@ -354,6 +354,8 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "column.edit": "Rename column",
     "column.move": "Reorder column",
     "column.delete": "Delete column",
+    "column.delete.title": "Delete column?",
+    "column.delete.confirm": "Delete",
     "column.add": "New column",
     "column.new": "New column",
     "column.menu": "Column options",
@@ -365,6 +367,7 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
 
     // dashboard board and widget menus
     "dashboard.menu": "Options",
+    "dashboard.column.delete.message": "Delete column “{name}” and all of its widgets? This action cannot be undone.",
     "dashboard.widget.add": "Add item",
     "dashboard.widget.menu": "Options",
     "dashboard.widget.settings": "Settings",
@@ -373,6 +376,7 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
 
     // kanban board and swimlane menus
     "kanban.menu": "Options",
+    "kanban.column.delete.message": "Delete column “{name}” and all of its cards? This action cannot be undone.",
     "board.settings": "Settings",
     "swimlane.add": "New swimlane",
     "swimlane.new": "New swimlane",
@@ -381,6 +385,9 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "swimlane.color": "Color",
     "swimlane.color.none": "None",
     "swimlane.delete": "Delete swimlane",
+    "swimlane.delete.title": "Delete swimlane?",
+    "swimlane.delete.message": "Delete swimlane “{name}” and all of its cards? This action cannot be undone.",
+    "swimlane.delete.confirm": "Delete",
     "swimlane.settings": "Settings",
     "swimlane.moveup": "Move up",
     "swimlane.movedown": "Move down",
