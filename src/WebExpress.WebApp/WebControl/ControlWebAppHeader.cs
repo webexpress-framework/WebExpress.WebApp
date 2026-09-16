@@ -122,7 +122,7 @@ namespace WebExpress.WebApp.WebControl
         {
             var role = Role?.Invoke(renderContext);
 
-            var content = new ControlPanelFlex()
+            var content = new ControlFlex()
             {
                 Layout = _ => TypeLayoutFlex.Default,
                 Align = _ => TypeAlignFlex.Center

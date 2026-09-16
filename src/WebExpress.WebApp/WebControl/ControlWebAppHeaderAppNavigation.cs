@@ -138,7 +138,7 @@ namespace WebExpress.WebApp.WebControl
                 renderContext?.PageContext
             );
 
-            return new ControlPanelOverflow(Id)
+            return new ControlOverflow(Id)
             {
                 Classes = [Css.Concatenate("wx-appnavigation", GetClasses(renderContext))],
                 Styles = [GetStyles(renderContext)]

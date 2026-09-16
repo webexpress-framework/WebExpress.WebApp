@@ -207,7 +207,7 @@ namespace WebExpress.WebApp.WebPage
                 .Where(x => x is not IFragmentControlViewState);
             html.Body.Add(primary.Select(x => x.Render(renderContext, this)));
 
-            var split = new ControlPanelSplit
+            var split = new ControlSplit
             (
                 "wx-split",
                 [Sidebar],

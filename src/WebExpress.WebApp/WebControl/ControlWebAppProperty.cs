@@ -144,7 +144,7 @@ namespace WebExpress.WebApp.WebControl
             }
 
             var propertyCtlr = (preferences.Any() || primary.Any() || secondary.Any())
-                ? new ControlPanelFlex(Id)
+                ? new ControlFlex(Id)
                 {
                     Classes = ["wx-proterty"]
                 }

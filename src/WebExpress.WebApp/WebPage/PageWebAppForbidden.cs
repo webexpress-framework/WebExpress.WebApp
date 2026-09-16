@@ -65,7 +65,7 @@ namespace WebExpress.WebApp.WebPage
                 .Add(title)
                 .Add(description);
 
-            var flex = new ControlPanelFlex()
+            var flex = new ControlFlex()
             {
                 Display = _ => TypeDisplay.Flex,
                 Direction = _ => TypeDirection.Horizontal,
@@ -77,7 +77,7 @@ namespace WebExpress.WebApp.WebPage
             flex.Add(left);
             flex.Add(right);
 
-            var card = new ControlPanelCard("wx-forbidden-card", flex)
+            var card = new ControlCard("wx-forbidden-card", flex)
             {
                 Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Three)
             };

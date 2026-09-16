@@ -63,7 +63,7 @@ namespace WebExpress.WebApp.WebStatusPage
                 Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
             };
 
-            var message = new ControlPanelCard()
+            var message = new ControlCard()
             {
                 BackgroundColor = _ => new PropertyColorBackground(TypeColorBackground.Light)
             }
@@ -79,7 +79,7 @@ namespace WebExpress.WebApp.WebStatusPage
             }
                 .Add(title, description, !string.IsNullOrWhiteSpace(StatusMessage) ? message : null);
 
-            var flex = new ControlPanelFlex()
+            var flex = new ControlFlex()
             {
                 Layout = _ => TypeLayoutFlex.Inline,
                 Justify = _ => TypeJustifiedFlex.Start,

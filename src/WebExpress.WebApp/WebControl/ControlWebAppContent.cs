@@ -46,7 +46,7 @@ namespace WebExpress.WebApp.WebControl
         {
 
             //if (Property)
-            var split = new ControlPanelSplit("wx-splitter-content")
+            var split = new ControlSplit("wx-splitter-content")
             {
                 Orientation = _ => TypeOrientationSplit.Horizontal,
                 SidePanelInitialSize = _ => 350,

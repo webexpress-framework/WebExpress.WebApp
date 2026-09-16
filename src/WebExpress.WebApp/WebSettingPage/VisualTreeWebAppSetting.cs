@@ -87,7 +87,7 @@ namespace WebExpress.WebApp.WebSettingPage
             );
             html.Body.Add(primary.Select(x => x.Render(renderContext, this)));
 
-            var split = new ControlPanelSplit
+            var split = new ControlSplit
             (
                 "wx-split",
                 [Sidebar],

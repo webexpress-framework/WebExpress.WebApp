@@ -137,7 +137,7 @@ namespace WebExpress.WebApp.WebControl
                 renderContext?.PageContext
             ));
 
-            var footerCtrl = (preferences.Any() || primary.Any() || secondary.Any()) ? new ControlPanelFooter
+            var footerCtrl = (preferences.Any() || primary.Any() || secondary.Any()) ? new ControlFooter
             (
                 Id,
                 new ControlPanel(null, [.. preferences]),

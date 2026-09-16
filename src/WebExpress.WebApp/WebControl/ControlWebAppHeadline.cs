@@ -223,10 +223,10 @@ namespace WebExpress.WebApp.WebControl
 
             return new HtmlElementSectionHeader
             (
-                new ControlPanelFlex
+                new ControlFlex
                 (
                     null,
-                    prologue.Any() ? new ControlPanelFlex(null, [.. prologue])
+                    prologue.Any() ? new ControlFlex(null, [.. prologue])
                     {
                         Layout = _ => TypeLayoutFlex.Default,
                         Align = _ => TypeAlignFlex.Center,
@@ -244,19 +244,19 @@ namespace WebExpress.WebApp.WebControl
                         Format = _ => TypeFormatText.H2,
                         Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.None, PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.Null)
                     },
-                    preferences.Any() ? new ControlPanelFlex(null, [.. preferences])
+                    preferences.Any() ? new ControlFlex(null, [.. preferences])
                     {
                         Layout = _ => TypeLayoutFlex.Default,
                         Align = _ => TypeAlignFlex.Center,
                         Justify = _ => TypeJustifiedFlex.Start
                     } : null,
-                    primary.Any() ? new ControlPanelFlex(null, [.. primary])
+                    primary.Any() ? new ControlFlex(null, [.. primary])
                     {
                         Layout = _ => TypeLayoutFlex.Default,
                         Align = _ => TypeAlignFlex.Center,
                         Justify = _ => TypeJustifiedFlex.Start
                     } : null,
-                    secondary.Any() ? new ControlPanelFlex(null, [.. secondary])
+                    secondary.Any() ? new ControlFlex(null, [.. secondary])
                     {
                         Layout = _ => TypeLayoutFlex.Default,
                         Align = _ => TypeAlignFlex.Center,
