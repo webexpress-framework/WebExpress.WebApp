@@ -31,8 +31,12 @@
     visibility: visible;
 }
 
+/* the close icon is centered on the header item, so the item must not stretch
+   to a taller neighbour in the flex row (a toolbar, for example), or the icon
+   ends up below the tab instead of on it */
 .wx-webapp-tab-closable {
     position: relative;
+    align-self: flex-start;
 }
 
 .wx-webapp-tab-closable > .nav-link {

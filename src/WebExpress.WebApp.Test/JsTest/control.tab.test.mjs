@@ -111,3 +111,41 @@ test("wx-webapp-tab takes the header layout from the server-rendered data-layout
     assert.ok(nav.classList.contains("nav-underline"), "the authored layout reaches the header list");
     assert.equal(nav.classList.contains("nav-tabs"), false, "the default layout no longer applies");
 });
+
+// the template menu used to be a list toggled through a .show class that the
+// framework stylesheet no longer hides, which left it standing open in the
+// header row and stretched every tab header to its height
+test("wx-webapp-tab offers its templates in a closed native popover under the add button", () => {
+    const rt = loadControl({
+        file: "webexpress.webapp.tab.js",
+        deps: ["webexpress.webapp.tab.model.js"]
+    });
+
+    const host = rt.createElement("div");
+    for (const id of ["dashboard", "backlog"]) {
+        const template = rt.createElement("template");
+        template.id = id;
+        host.appendChild(template);
+    }
+    rt.document.body.appendChild(host);
+
+    const ctrl = new rt.wxapp.TabCtrl(host);
+    const created = [];
+    ctrl._createNewTab = (templateId) => created.push(templateId);
+
+    const button = ctrl._addTabButton;
+    const menu = ctrl._addTemplateMenu;
+    assert.equal(menu.getAttribute("popover"), "auto");
+    assert.equal(menu.matches(":popover-open"), false, "the menu is closed after rendering");
+    assert.equal(menu.classList.contains("show"), false, "no leftover of the class-toggled dropdown");
+    assert.equal(button.getAttribute("popovertarget"), menu.id, "the browser toggles the menu on the add button");
+    assert.equal(menu.style.getPropertyValue("position-anchor"), button.style.getPropertyValue("anchor-name"));
+
+    rt.wx.NativeMenu.show(menu);
+    const entry = menu.querySelector(".dropdown-item");
+    entry.click();
+    // the stub does not bubble, so the click reaches the menu the way it does in the browser
+    menu.dispatchEvent({ type: "click", target: entry });
+    assert.equal(menu.matches(":popover-open"), false, "a picked template closes the menu");
+    assert.deepEqual(created, ["dashboard"], "and creates the tab from that template");
+});

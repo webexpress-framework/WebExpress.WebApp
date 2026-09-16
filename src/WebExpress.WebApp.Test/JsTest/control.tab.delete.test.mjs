@@ -257,7 +257,9 @@ test("authored readonly tabs do not gain deletion buttons during base constructi
     assert.equal(host.querySelector(".wx-webapp-tab-close"), null);
 });
 
-test("teardown releases the template menu listener and the detached empty-state controls", () => {
+// light dismiss of the template menu belongs to the browser, so the control
+// neither takes a document click listener nor has one to release on teardown
+test("the template menu takes no document listener and teardown releases the detached empty-state controls", () => {
     const rt = setup();
     const host = rt.createElement("div");
     for (const id of ["first", "second"]) {
@@ -284,7 +286,8 @@ test("teardown releases the template menu listener and the detached empty-state 
     };
     const ctrl = new rt.wxapp.TabCtrl(host);
     ctrl.updateData([{ id: "a" }]);
-    assert.equal(listeners.size, 1);
+    assert.equal(listeners.size, 0);
+    assert.equal(ctrl._addTemplateMenu.getAttribute("popover"), "auto", "the menu dismisses through the top layer instead");
     ctrl.destroy();
     assert.equal(listeners.size, 0);
     assert.equal(destroyed, 1);

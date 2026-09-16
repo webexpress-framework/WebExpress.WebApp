@@ -19,7 +19,6 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
     _confirm = null;
     _deletingTabId = null;
     _destroyed = false;
-    _onDocumentClick = null;
     _queryVersion = 0;
     _lastSliceData = null;
 
@@ -279,7 +278,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         }
 
         this._addLi = document.createElement("li");
-        this._addLi.className = "nav-item position-relative";
+        this._addLi.className = "nav-item";
 
         this._addTabButton = document.createElement("button");
         this._addTabButton.className = "nav-link text-primary";
@@ -319,11 +318,9 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
 
                 itemBtn.addEventListener("click", (e) => {
                     e.preventDefault();
-                    e.stopPropagation();
                     if (itemBtn.disabled) {
                         return;
                     }
-                    this._hideTemplateMenu();
                     this._createNewTab(templateId);
                 });
 
@@ -332,22 +329,10 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
                 this._addTemplateMenu.appendChild(li);
             }
 
-            this._addTabButton.addEventListener("click", (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                this._toggleTemplateMenu();
-            });
-
-            this._onDocumentClick = (e) => {
-                if (!this._addLi || !this._addTemplateMenu || !this._addTemplateMenu.classList.contains("show")) {
-                    return;
-                }
-
-                if (!this._addLi.contains(e.target)) {
-                    this._hideTemplateMenu();
-                }
-            };
-            document.addEventListener("click", this._onDocumentClick);
+            // the browser owns toggle, placement and light dismiss of the menu, and
+            // the top layer keeps the open menu out of the header row, which would
+            // otherwise stretch every tab header to the height of the menu
+            webexpress.webui.NativeMenu.bind(this._addTabButton, this._addTemplateMenu);
         } else {
             this._addTabButton.addEventListener("click", (e) => {
                 e.preventDefault();
@@ -398,28 +383,6 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
 
         return this._templates.get("default")
             || (this._templateOrder.length > 0 ? this._templates.get(this._templateOrder[0]) : null);
-    }
-
-    /**
-     * Toggles the template selection dropdown menu.
-     */
-    _toggleTemplateMenu() {
-        if (this._addTemplateMenu === null) {
-            return;
-        }
-
-        this._addTemplateMenu.classList.toggle("show");
-    }
-
-    /**
-     * Hides the template selection dropdown menu.
-     */
-    _hideTemplateMenu() {
-        if (this._addTemplateMenu === null) {
-            return;
-        }
-
-        this._addTemplateMenu.classList.remove("show");
     }
 
     /**
@@ -1389,16 +1352,12 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
     }
 
     /**
-     * Releases the detached placeholder, document listener and separately owned modal.
+     * Releases the detached placeholder and separately owned modal.
      */
     destroy() {
         this._destroyed = true;
         this._confirm?.destroy();
         this._confirm = null;
-        if (this._onDocumentClick) {
-            document.removeEventListener("click", this._onDocumentClick);
-            this._onDocumentClick = null;
-        }
         if (this._emptyStateElement) {
             this._emptyStateElement.remove();
             this._emptyStateElement._wxDetached = false;
