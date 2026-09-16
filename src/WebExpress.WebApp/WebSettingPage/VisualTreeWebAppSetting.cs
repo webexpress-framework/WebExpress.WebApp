@@ -64,9 +64,13 @@ namespace WebExpress.WebApp.WebSettingPage
 
             // body
             Header.AppTitle.SetTitle(html.Head.Title);
+
+            // the marker goes on the root, as on every other page: the client's dark mode
+            // switch only ever rewrites the root, and a marker on the body would outrank
+            // it and keep the page dark after the user has switched to light
             if (Theme?.ThemeMode == ThemeMode.Dark)
             {
-                html.Body.AddUserAttribute("data-wx-theme", "dark");
+                html.AddUserAttribute("data-wx-theme", "dark");
             }
 
             var preferences = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionBodyPreferences>

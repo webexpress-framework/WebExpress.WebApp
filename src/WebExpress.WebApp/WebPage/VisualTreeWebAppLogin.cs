@@ -136,9 +136,12 @@ namespace WebExpress.WebApp.WebPage
 
             // body
             Header.AppTitle.SetTitle(html.Head.Title);
+
+            // the marker goes on the root, as on every other page: the client's dark mode
+            // switch only ever rewrites the root, and a marker on the body would outrank it
             if (Theme?.ThemeMode == ThemeMode.Dark)
             {
-                html.Body.AddUserAttribute("data-wx-theme", "dark");
+                html.AddUserAttribute("data-wx-theme", "dark");
             }
             html.Body.Add(MessageQueueUri);
             html.Body.Add(Header.Render(renderContext, this));

@@ -10,7 +10,7 @@ webexpress.webapp = webexpress.webapp || {}
  * nine inline fetch calls (categories, comments, users, edit, delete, like,
  * pin, reaction, reply).
  *
- * See WebExpress.WebApp/docs/architecture/view-state-service.md.
+ * See WebExpress/docs/view-state-service.md.
  */
 webexpress.webapp.commentModel = {
     /**

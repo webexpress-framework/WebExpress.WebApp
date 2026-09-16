@@ -8,7 +8,7 @@ webexpress.webapp = webexpress.webapp || {}
  * Store and a RestService whose query loads the board and whose update persists
  * card moves and column changes.
  *
- * See WebExpress.WebApp/docs/architecture/view-state-service.md.
+ * See WebExpress/docs/view-state-service.md.
  */
 webexpress.webapp.kanbanModel = {
     /**

@@ -128,3 +128,25 @@ test("wx-webapp-like reports the new state as a change event", async () => {
     assert.equal(seen.length, 1, "the figure reports what it now shows");
     assert.deepEqual(seen[0], { value: "3", active: false });
 });
+
+test("wx-webapp-like reports a refused toggle on the error channel and on the host", async () => {
+    const rt = loadControl({
+        file: "webexpress.webapp.like.js",
+        fetch: async () => ({ ok: false, status: 409, headers: { get: () => "application/json" }, json: async () => ({ message: "closed" }) })
+    });
+
+    const reported = [];
+    rt.document.addEventListener("webexpress.webapp.service.error", (e) => reported.push(e.detail));
+
+    const host = figure(rt, "7");
+    const ctrl = new rt.wxapp.LikeCtrl(host);
+    const announced = [];
+    host.addEventListener(rt.wx.Event.DATA_ERROR_EVENT, (e) => announced.push(e.detail));
+
+    await ctrl.toggle();
+
+    assert.equal(reported.length, 1, "the service layer reports the refusal, nothing is swallowed");
+    assert.equal(reported[0].status, 409);
+    assert.equal(announced.length, 1, "the host announces it");
+    assert.equal(announced[0].error.kind, "http");
+});

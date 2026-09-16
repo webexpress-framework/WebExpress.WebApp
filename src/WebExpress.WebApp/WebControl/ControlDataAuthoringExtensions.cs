@@ -672,7 +672,7 @@ namespace WebExpress.WebApp.WebControl
         /// <param name="control">The document form control.</param>
         /// <param name="configure">An optional adjustment of the preset.</param>
         /// <returns>The control for chaining.</returns>
-        public static ModalDataEditor DataService<TEndpoint>(this ModalDataEditor control, Action<DataServiceDescriptor> configure = null)
+        public static ControlDataModalEditor DataService<TEndpoint>(this ControlDataModalEditor control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
             return AddPreset(control, DataServiceDescriptor.FormData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
@@ -690,7 +690,7 @@ namespace WebExpress.WebApp.WebControl
         /// <param name="control">The document form control.</param>
         /// <param name="configure">An optional adjustment of the preset.</param>
         /// <returns>The control for chaining.</returns>
-        public static ModalDataEditor DraftService<TEndpoint>(this ModalDataEditor control, Action<DataServiceDescriptor> configure = null)
+        public static ControlDataModalEditor DraftService<TEndpoint>(this ControlDataModalEditor control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
             var endpoint = Endpoint<TEndpoint>();
@@ -742,6 +742,44 @@ namespace WebExpress.WebApp.WebControl
             where TEndpoint : IEndpoint
         {
             return AddPreset(control, DataServiceDescriptor.FormData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
+        }
+
+        /// <summary>
+        /// Declares the draft service of the form editor, which stores the
+        /// unpublished structure with PUT, answers whether one exists with GET
+        /// and drops it with DELETE. With it declared, the data service is
+        /// reached only through publish: this one is what "do not lose what I
+        /// have built" means, while the data service declared with DataService is
+        /// what "let the forms out there use this" means.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The form editor control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataFormEditor DraftService<TEndpoint>(this ControlDataFormEditor control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            var endpoint = Endpoint<TEndpoint>();
+            var domains = Domains<TEndpoint>();
+
+            // the draft is declared apart from the ServiceFactories the presets add
+            // to, because assigning the single ServiceFactory replaces all of them -
+            // a data service declared after the draft would otherwise drop the
+            // autosave without a word
+            control.DraftServiceFactory = renderContext =>
+            {
+                var descriptor = DataServiceDescriptor.DraftData(endpoint(renderContext));
+
+                foreach (var domain in domains)
+                {
+                    descriptor.WithDomain(domain);
+                }
+
+                configure?.Invoke(descriptor);
+                return descriptor;
+            };
+
+            return control;
         }
 
         /// <summary>

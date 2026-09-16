@@ -7,8 +7,9 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// Represents a visual form-editor control. The editor is a self-contained
     /// designer that loads, mutates and persists a form definition (tabs, groups,
-    /// fields) via REST. All behaviour is driven client-side by the
-    /// <c>webexpress.webui.FormEditorCtrl</c> JavaScript controller.
+    /// fields) via REST, into an unpublished draft where one is declared. All
+    /// behaviour is driven client-side by the
+    /// <c>webexpress.webapp.RestFormEditorCtrl</c> JavaScript controller.
     /// </summary>
     public interface IControlDataFormEditor : IControl, IControlData
     {
@@ -16,6 +17,12 @@ namespace WebExpress.WebApp.WebControl
         /// Whether the live preview pane is shown initially.
         /// </summary>
         Func<IRenderControlContext, bool> Preview { get; }
+
+        /// <summary>
+        /// Whether mutations are written to the declared draft service rather
+        /// than to the form itself.
+        /// </summary>
+        Func<IRenderControlContext, bool> Draft { get; }
 
         /// <summary>
         /// Tree indent in pixels (clamped client-side to 8–32).

@@ -18,7 +18,7 @@ namespace WebExpress.WebApp.WebControl
     /// the unpublished text. Without a declared draft service the control degrades to an
     /// ordinary edit form, which is why every draft-bound member is optional.
     /// </remarks>
-    public interface IModalDataEditor : IControlForm, IDataIsland
+    public interface IControlDataModalEditor : IControlForm, IDataIsland
     {
         /// <summary>
         /// Gets the input for the document's name. It is rendered into the form's header, which

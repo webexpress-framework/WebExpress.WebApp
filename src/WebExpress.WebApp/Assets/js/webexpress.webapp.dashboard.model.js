@@ -9,7 +9,7 @@ webexpress.webapp = webexpress.webapp || {}
  * loading state), the columns are normalised through the model and the layout
  * state is persisted with the service update.
  *
- * See WebExpress.WebApp/docs/architecture/view-state-service.md.
+ * See WebExpress/docs/view-state-service.md.
  */
 webexpress.webapp.dashboardModel = {
     /**

@@ -9,7 +9,7 @@ webexpress.webapp = webexpress.webapp || {}
  * the response interpretation and the request shaping that carry no DOM or
  * network dependency, so they can be unit tested in isolation.
  *
- * See WebExpress.WebApp/docs/architecture/view-state-service.md.
+ * See WebExpress/docs/view-state-service.md.
  */
 webexpress.webapp.inputUniqueModel = {
     /**

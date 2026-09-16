@@ -9,7 +9,7 @@ webexpress.webapp = webexpress.webapp || {}
  * trim it to the most recent sprints and derive the rolling average and the
  * chart scale that the columns are drawn against.
  *
- * See WebExpress.WebApp/docs/architecture/view-state-service.md.
+ * See WebExpress/docs/view-state-service.md.
  */
 webexpress.webapp.scrumVelocityModel = {
     /**

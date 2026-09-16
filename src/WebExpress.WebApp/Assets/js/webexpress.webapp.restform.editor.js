@@ -1,12 +1,26 @@
 /**
  * Controller for the visual form editor (Designer).
  *
- * Translates the KleeneStar Forms Designer prototype into a single self-contained
- * web UI control. Renders a fixed two-pane layout with the structure tree on the
- * left (drag-and-drop, inline rename, keyboard navigation, QuickAdd picker, tab
- * bar) and a live preview on the right (with a tab switcher that mirrors the
- * structure). Persists every mutation to the REST endpoint pointed to by
- * data-rest-url; runs in offline-mock mode when no REST URL is configured.
+ * A single self-contained web UI control. Renders a fixed two-pane layout with
+ * the structure tree on the left (drag-and-drop, inline rename, keyboard
+ * navigation, QuickAdd picker, tab bar) and a live preview on the right (with a
+ * tab switcher that mirrors the structure). Runs in offline-mock mode when no
+ * service is declared.
+ *
+ * A form definition has the same two meanings of save a document has: "do not
+ * lose what I have built" and "let the forms out there use this". Where only the
+ * "data" service is declared the two coincide and every mutation is written to
+ * it, which is what an editor for a form nobody else fills in yet may do. Where a
+ * "draft" service is declared as well, every mutation goes to that one instead -
+ * no version, nothing the forms in use see - and the data service is reached
+ * only through publish, whose PUT applies the structure and ends the draft in
+ * its own transaction. The controller never deletes a draft as part of
+ * publishing: a delete racing a publish that failed would destroy the only copy
+ * of the work.
+ *
+ * Which structure the editor opens on is the data endpoint's decision; the draft
+ * endpoint is only asked whether an unpublished draft exists, so that the state
+ * line and the discard action can say so.
  *
  * Events:
  *  - webexpress.webapp.Event.FORM_EDITOR_LOADED_EVENT
@@ -17,6 +31,10 @@
  *  - webexpress.webapp.Event.FORM_EDITOR_TAB_ADDED_EVENT
  *  - webexpress.webapp.Event.FORM_EDITOR_TAB_RENAMED_EVENT
  *  - webexpress.webapp.Event.FORM_EDITOR_SAVED_EVENT
+ *  - webexpress.webapp.Event.FORM_EDITOR_DRAFT_SAVED_EVENT
+ *  - webexpress.webapp.Event.FORM_EDITOR_DRAFT_DISCARDED_EVENT
+ *  - webexpress.webapp.Event.FORM_EDITOR_PUBLISHED_EVENT
+ *  - webexpress.webapp.Event.FORM_EDITOR_STATE_EVENT
  *  - webexpress.webapp.Event.FORM_EDITOR_VALIDATION_FAILED_EVENT
  */
 webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
@@ -50,6 +68,10 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         "tile", "move", "file"
     ];
 
+    // the idle time after which a mutation is written; short, because a mutation
+    // here is a click rather than a keystroke and nothing is typed in between
+    static SAVE_DEBOUNCE = 400;
+
     _restUrl = null;
     _previewOn = true;
     _indent = 18;
@@ -67,15 +89,31 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
     _pickerHi = 0;
     _fieldCatalog = [];
 
+    // draft state: whether an unpublished draft exists on the server, when it was
+    // last written, the save state the footer shows, and whether saving is held
+    // off while a publish or discard is deciding the draft's fate
+    _draftService = null;
+    _draft = false;
+    _updated = null;
+    _state = "idle";
+    _sealed = false;
+    _inFlight = null;
+    _confirm = null;
+
     // dom hosts
     _headerHost = null;
     _bodyHost = null;
     _footerHost = null;
+    _publishButton = null;
+    _stateElement = null;
+    _discardButton = null;
 
     // persistence / global handlers
     _saveTimer = null;
     _keyboardHandler = null;
     _outsideClickHandler = null;
+    _leaveHandler = null;
+    _visibilityHandler = null;
 
     /**
      * Creates a form editor controller for the root element.
@@ -84,10 +122,12 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
     constructor(element) {
         super(element);
 
-        // the endpoint is authored in C# through the wx-service island
+        // the endpoints are authored in C# through the wx-service islands: "data"
+        // loads and publishes, the optional "draft" holds the unpublished work
         const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
         this._service = islandServices.data || null;
         this._restUrl = this._service ? this._service.baseUri : null;
+        this._draftService = islandServices.draft || null;
 
         // initialize properties from data attributes
         const ds = element.dataset;
@@ -103,7 +143,35 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         this._buildSkeleton();
         this._bindKeyboard();
         this._bindOutsideClick();
+        this._bindLeave();
         this._bootstrap();
+    }
+
+    /**
+     * Gets whether mutations are written to an unpublished draft rather than to
+     * the form itself. This is the one answer everything the draft brings with
+     * it hangs off - the publish button, the discard action, the state line.
+     * @returns {boolean}
+     */
+    get drafting() {
+        // a draft without a form to publish into is not a mode; it is a misdeclaration
+        return !!this._draftService && !!this._service && !this._readonly;
+    }
+
+    /**
+     * Gets whether an unpublished draft exists on the server.
+     * @returns {boolean}
+     */
+    get draft() {
+        return this._draft;
+    }
+
+    /**
+     * Gets the save state the footer shows.
+     * @returns {string} One of idle, draft, pending, saving, saved, error, publishing, discarding.
+     */
+    get state() {
+        return this._state;
     }
 
     /**
@@ -252,6 +320,118 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
+     * Writes the current structure now, without waiting for the debounce.
+     * @returns {Promise<void>} Resolves when the write is done or was skipped.
+     */
+    async save() {
+        if (!this._saveTimer) {
+            return;
+        }
+        clearTimeout(this._saveTimer);
+        this._saveTimer = null;
+        await this._save();
+    }
+
+    /**
+     * Publishes the structure on screen: the data endpoint applies it and ends
+     * the draft in its own transaction.
+     *
+     * A queued draft save is dropped rather than raced against the publication -
+     * it would otherwise land after it and re-open the draft - and one already in
+     * flight is waited for, for the same reason. The publication carries the
+     * structure itself, so nothing is lost by that. Where nothing drafts,
+     * publishing is what every save already is, so there is nothing to do.
+     * @returns {Promise<boolean>} True when the endpoint accepted the structure.
+     */
+    async publish() {
+        if (!this.drafting || !this._structure || this._sealed) {
+            return false;
+        }
+
+        const queued = !!this._saveTimer;
+
+        this._sealed = true;
+        this._cancelSave();
+        await this._inFlight;
+        this._setState("publishing");
+
+        const result = await this._service.update(this._structure);
+
+        this._sealed = false;
+
+        if (!result.ok) {
+            // the draft still stands, so the surface returns to it; a rejected
+            // structure is reported the way a rejected save is, and the change
+            // that was queued is only on screen, so it goes to the draft after all
+            this._setState(this._restingState());
+            this._dispatch(webexpress.webapp.Event.FORM_EDITOR_VALIDATION_FAILED_EVENT, result.data || { status: result.status });
+            if (queued) {
+                this._scheduleSave();
+            }
+            return false;
+        }
+
+        this._adoptVersion(result.data);
+        this._draft = false;
+        this._updated = null;
+        this._setState("idle");
+        this._dispatch(webexpress.webapp.Event.FORM_EDITOR_PUBLISHED_EVENT, {
+            structure: this.getStructure(),
+            response: result.data
+        });
+        return true;
+    }
+
+    /**
+     * Drops the unpublished draft and returns the editor to the published form.
+     *
+     * The discard goes through here rather than through a link, because this is
+     * what owns the endpoint: a pending save would otherwise land after the delete
+     * and open the draft again. Saving is stopped first, then the draft is dropped,
+     * then the structure is re-loaded so the editor shows what the forms in use
+     * see. The page is deliberately not reloaded - a control does not get to
+     * navigate its host.
+     * @returns {Promise<boolean>} True when the draft is gone and the structure was re-loaded.
+     */
+    async discard() {
+        if (!this.drafting || this._sealed) {
+            return false;
+        }
+
+        this._sealed = true;
+        this._cancelSave();
+        await this._inFlight;
+        this._setState("discarding");
+
+        const result = await this._draftService.remove();
+
+        if (!result.ok) {
+            this._sealed = false;
+            this._setState(this._restingState());
+            return false;
+        }
+
+        this._draft = false;
+        this._updated = null;
+        this._selectedId = null;
+        this._editingId = null;
+
+        // the draft is gone either way; a re-load that fails leaves what is on
+        // screen rather than an empty form the next click would draft again
+        const previous = this._structure;
+        this._structure = null;
+        await this._loadStructure();
+        this._structure = this._structure || previous;
+        this._sealed = false;
+        this._ensureStructure();
+        this._setState("idle");
+        this._dispatch(webexpress.webapp.Event.FORM_EDITOR_DRAFT_DISCARDED_EVENT, {});
+        this._dispatch(webexpress.webapp.Event.FORM_EDITOR_LOADED_EVENT, { structure: this.getStructure() });
+        this.render();
+        return true;
+    }
+
+    /**
      * Renders the editor.
      * Triggers a full re-render of header, body and footer. Used after configuration
      * changes that affect the whole UI.
@@ -274,10 +454,19 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
             document.removeEventListener("mousedown", this._outsideClickHandler);
             this._outsideClickHandler = null;
         }
-        if (this._saveTimer) {
-            clearTimeout(this._saveTimer);
-            this._saveTimer = null;
+        if (this._leaveHandler) {
+            window.removeEventListener("pagehide", this._leaveHandler);
+            this._leaveHandler = null;
         }
+        if (this._visibilityHandler) {
+            document.removeEventListener("visibilitychange", this._visibilityHandler);
+            this._visibilityHandler = null;
+        }
+        this._cancelSave();
+        this._confirm?.destroy();
+        this._confirm = null;
+        this._draftService?.abort?.();
+        this._service?.abort?.();
     }
 
     /**
@@ -309,7 +498,21 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
      */
     async _bootstrap() {
         await this._loadStructure();
+        this._ensureStructure();
 
+        if (this.drafting) {
+            await this._resume();
+        }
+
+        this._dispatch(webexpress.webapp.Event.FORM_EDITOR_LOADED_EVENT, { structure: this.getStructure() });
+        this.render();
+    }
+
+    /**
+     * Gives the editor something to edit when the endpoint answered nothing, and
+     * a first tab when the form has none, then makes the first tab the active one.
+     */
+    _ensureStructure() {
         if (!this._structure) {
             this._structure = {
                 formName: this._t("formeditor.form.default.name"),
@@ -328,41 +531,61 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         }
 
         this._activeTabId = (this._structure.tabs && this._structure.tabs[0]) ? this._structure.tabs[0].id : null;
-        this._dispatch(webexpress.webapp.Event.FORM_EDITOR_LOADED_EVENT, { structure: this.getStructure() });
-        this.render();
     }
 
     /**
-     * Loads the form structure for the current form id from data-rest-url, if configured
-     * and no inline structure was supplied at construction time.
+     * Asks the draft endpoint whether the editor is resuming an unpublished draft.
+     *
+     * Only the two reserved keys of the answer are read. Which structure the
+     * editor opens on is the data endpoint's decision, and it has already been
+     * loaded; merging a second copy in here would make the control the arbiter of
+     * something it deliberately is not.
+     * @returns {Promise<void>} Resolves when the draft state reflects the answer.
+     */
+    async _resume() {
+        const result = await this._draftService.load();
+
+        if (!result.ok) {
+            return;
+        }
+
+        const data = result.data || {};
+
+        this._draft = data.draft === true;
+        this._updated = data.updated ? new Date(data.updated) : null;
+        this._state = this._restingState();
+    }
+
+    /**
+     * Loads the form structure and the field catalog from the data service, if
+     * one is declared and nothing is loaded yet. What the endpoint answers is
+     * what the editor opens on - the draft where one exists, the published form
+     * otherwise - and that decision stays with the endpoint.
      * @returns {Promise<void>}
      */
     async _loadStructure() {
-        if (this._structure || !this._restUrl) {
+        if (this._structure || !this._service) {
             return;
         }
-        try {
-            const res = await webexpress.webapp.ServiceRegistry.request(this._restUrl, {
-                method: "GET",
-                headers: { "Accept": "application/json" }
-            });
-            if (!res.ok) {
-                return;
-            }
-            const json = res.data;
-            this._structure = json.structure || json.data || json;
-            this._fieldCatalog = json.catalog;
-        } catch (e) {
-            console.warn("FormEditor: failed to load form, falling back to placeholder.", e);
+
+        const result = await this._service.load();
+
+        if (!result.ok || !result.data) {
+            return;
         }
+
+        const json = result.data;
+        this._structure = json.structure || json.data || json;
+        this._fieldCatalog = json.catalog || [];
     }
 
     /**
-     * Renders the header (form name + description + version + preview toggle).
+     * Renders the header (form name + description + version + preview toggle,
+     * and the publish button while the editor drafts).
      *
      * Form name and description are wired up as SmartEditCtrl inline editors;
      * each inline save updates the in-memory structure and triggers the
-     * regular debounced REST save.
+     * regular debounced save.
      */
     _renderHeader() {
         this._headerHost.textContent = "";
@@ -387,8 +610,29 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         tools.className = "wx-form-editor-tools";
         tools.appendChild(this._renderPreviewToggle());
 
+        this._publishButton = this.drafting ? this._renderPublishButton() : null;
+        if (this._publishButton) {
+            tools.appendChild(this._publishButton);
+        }
+
         this._headerHost.appendChild(title);
         this._headerHost.appendChild(tools);
+        this._syncActions();
+    }
+
+    /**
+     * Renders the publish button. It is the publication decision, not the save -
+     * the save happened while the user was working - so it sits apart from the
+     * preview toggle and is the only filled button in the chrome.
+     * @returns {HTMLElement}
+     */
+    _renderPublishButton() {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "wx-form-editor-publish";
+        btn.textContent = this._t("formeditor.publish");
+        btn.addEventListener("click", () => { void this.publish(); });
+        return btn;
     }
 
     /**
@@ -737,7 +981,13 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Renders the footer (status hint).
+     * Renders the footer: the keyboard hint, the save state, and - while a draft
+     * exists - the way back to the published form.
+     *
+     * Discard sits down here beside the state it acts on rather than up in the
+     * tools next to publish: one of the two is destructive, and a user reaching
+     * for the publish button must not be able to throw away their work by being
+     * slightly off.
      */
     _renderFooter() {
         this._footerHost.textContent = "";
@@ -747,12 +997,124 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
         hint.textContent = this._t("formeditor.footer.hint");
         this._footerHost.appendChild(hint);
 
-        const status = document.createElement("span");
-        status.className = "wx-form-editor-foot-status";
-        status.textContent = this._restUrl
-            ? this._t("formeditor.footer.draft")
-            : this._t("formeditor.footer.offline");
-        this._footerHost.appendChild(status);
+        this._stateElement = document.createElement("span");
+        this._stateElement.className = "wx-form-editor-foot-status";
+        this._footerHost.appendChild(this._stateElement);
+
+        this._discardButton = null;
+        if (this.drafting) {
+            this._discardButton = document.createElement("button");
+            this._discardButton.type = "button";
+            this._discardButton.className = "wx-form-editor-discard";
+            this._discardButton.textContent = this._t("formeditor.discard");
+            this._discardButton.addEventListener("click", () => this._confirmDiscard());
+            this._footerHost.appendChild(this._discardButton);
+        }
+
+        this._syncActions();
+    }
+
+    /**
+     * Asks before discarding, because the draft is the only copy of the work.
+     */
+    _confirmDiscard() {
+        if (!this._draft || this._sealed) {
+            return;
+        }
+
+        this._confirm = this._confirm || new webexpress.webui.ModalConfirm();
+        const accepted = this._confirm.confirmation(
+            "webexpress.webapp:formeditor.discard.title",
+            this._t("formeditor.discard.message", (this._structure && this._structure.formName) || this._t("formeditor.form.fallback.name")),
+            () => this.discard(),
+            {
+                confirmLabel: this._t("formeditor.discard.confirm"),
+                errorMessage: this._t("formeditor.discard.error"),
+                fallbackFocus: () => this._publishButton
+            }
+        );
+        if (accepted) {
+            this._confirm.show();
+        }
+    }
+
+    /**
+     * Writes the save state into the footer and the actions it enables, without
+     * rebuilding either bar: the header carries the inline name editors, and a
+     * rebuild would tear one down mid-edit.
+     *
+     * The state is one attribute rather than a set of classes, so the stylesheet
+     * selects on a value and this method swaps one instead of juggling a set.
+     */
+    _syncActions() {
+        if (this._stateElement) {
+            this._stateElement.setAttribute("data-wx-state", this._state);
+            this._stateElement.textContent = this._stateText();
+        }
+
+        const busy = this._sealed;
+
+        if (this._publishButton) {
+            this._publishButton.disabled = busy || !this._draft;
+        }
+
+        if (this._discardButton) {
+            this._discardButton.disabled = busy;
+            this._discardButton.hidden = !this._draft;
+        }
+    }
+
+    /**
+     * Returns the text of the footer status for the current mode and state, with
+     * the {0} placeholder filled by the local time of the last draft write.
+     * @returns {string}
+     */
+    _stateText() {
+        if (!this._restUrl) {
+            return this._t("formeditor.footer.offline");
+        }
+        if (!this.drafting) {
+            return this._t("formeditor.footer.autosave");
+        }
+
+        const time = this._updated || new Date();
+
+        return this._t("formeditor.state." + this._state,
+            time.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }));
+    }
+
+    /**
+     * Moves the surface to a save state, paints it and announces it.
+     * @param {string} state - The new state.
+     */
+    _setState(state) {
+        this._state = state;
+        this._syncActions();
+        this._dispatch(webexpress.webapp.Event.FORM_EDITOR_STATE_EVENT, { state: state });
+    }
+
+    /**
+     * Returns the state the surface rests in when nothing is being written:
+     * on an unpublished draft, or on the published form.
+     * @returns {string}
+     */
+    _restingState() {
+        return this._draft ? (this._updated ? "saved" : "draft") : "idle";
+    }
+
+    /**
+     * Takes the version the data endpoint answered with, which is what the header
+     * shows next to the form name.
+     * @param {object} body - The response body.
+     */
+    _adoptVersion(body) {
+        if (body && body.data && typeof body.data.version === "number") {
+            this._structure.version = body.data.version;
+            const version = this._headerHost.querySelector(".wx-form-editor-version");
+            if (version) {
+                version.textContent = "v" + this._structure.version;
+            }
+        }
     }
 
     /**
@@ -1786,50 +2148,132 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Schedules a debounced PUT against the structure endpoint.
+     * Schedules a debounced write of the structure: to the draft where one is
+     * declared, to the form itself otherwise.
      */
     _scheduleSave() {
-        if (this._readonly || !this._restUrl || !this._structure) {
+        if (this._readonly || !this._restUrl || !this._structure || this._sealed) {
             return;
         }
         if (this._saveTimer) {
             clearTimeout(this._saveTimer);
         }
-        this._saveTimer = setTimeout(() => this._save(), 400);
+        if (this.drafting) {
+            this._setState("pending");
+        }
+        this._saveTimer = setTimeout(() => { void this._save(); }, webexpress.webapp.RestFormEditorCtrl.SAVE_DEBOUNCE);
     }
 
     /**
-     * Sends the current structure to the REST endpoint.
+     * Drops the queued write.
+     */
+    _cancelSave() {
+        if (this._saveTimer) {
+            clearTimeout(this._saveTimer);
+            this._saveTimer = null;
+        }
+    }
+
+    /**
+     * Writes the current structure to the endpoint the mode names.
+     *
+     * One write is in flight at a time and publish and discard wait for it, so
+     * the order the server sees is the order the user acted in. A change made
+     * while the request was open is written once it has returned.
      * @returns {Promise<void>}
      */
     async _save() {
         this._saveTimer = null;
-        if (this._readonly || !this._restUrl || !this._structure) {
+        if (this._readonly || !this._restUrl || !this._structure || this._sealed) {
             return;
         }
+        if (this._inFlight) {
+            await this._inFlight;
+            this._scheduleSave();
+            return;
+        }
+
+        this._inFlight = this.drafting ? this._saveDraft() : this._saveForm();
+
         try {
-            const res = await webexpress.webapp.ServiceRegistry.request(this._restUrl, {
-                method: "PUT",
-                headers: {
-                    "Accept": "application/json",
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(this._structure)
-            });
-            if (!res.ok) {
-                const body = res.data;
-                this._dispatch(webexpress.webapp.Event.FORM_EDITOR_VALIDATION_FAILED_EVENT, body || { status: res.status });
+            await this._inFlight;
+        } finally {
+            this._inFlight = null;
+        }
+    }
+
+    /**
+     * Writes the structure to the form itself. Without a draft this is what
+     * every save is: the endpoint applies the structure and answers the new version.
+     * @returns {Promise<void>}
+     */
+    async _saveForm() {
+        const result = await this._service.update(this._structure);
+
+        if (!result.ok) {
+            this._dispatch(webexpress.webapp.Event.FORM_EDITOR_VALIDATION_FAILED_EVENT, result.data || { status: result.status });
+            return;
+        }
+
+        this._adoptVersion(result.data);
+        this._dispatch(webexpress.webapp.Event.FORM_EDITOR_SAVED_EVENT, result.data);
+    }
+
+    /**
+     * Writes the structure as the unpublished draft.
+     * @returns {Promise<void>}
+     */
+    async _saveDraft() {
+        this._setState("saving");
+
+        const result = await this._draftService.update(this._structure);
+
+        if (!result.ok) {
+            // the structure is still on screen and the next change retries, so a
+            // failed save is reported rather than raised
+            this._setState("error");
+            return;
+        }
+
+        this._draft = true;
+        this._updated = new Date();
+        this._setState("saved");
+        this._dispatch(webexpress.webapp.Event.FORM_EDITOR_DRAFT_SAVED_EVENT, {
+            structure: this.getStructure(),
+            updated: this._updated
+        });
+    }
+
+    /**
+     * Flushes a queued write as the page goes away, with a request that outlives
+     * the document an ordinary one would be cancelled with. The answer cannot be
+     * read, so the state on screen is left as it is - the screen is going away too.
+     */
+    _bindLeave() {
+        const leave = () => {
+            if (!this._saveTimer || this._sealed || !this._structure) {
                 return;
             }
-            const body = res.data;
-            if (body && body.data && typeof body.data.version === "number") {
-                this._structure.version = body.data.version;
-                this._renderHeader();
+            this._cancelSave();
+
+            const service = this.drafting ? this._draftService : this._service;
+
+            service.request(service.baseUri, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(this._structure),
+                keepalive: true
+            });
+        };
+
+        this._leaveHandler = leave;
+        this._visibilityHandler = () => {
+            if (document.visibilityState === "hidden") {
+                leave();
             }
-            this._dispatch(webexpress.webapp.Event.FORM_EDITOR_SAVED_EVENT, body);
-        } catch (e) {
-            console.warn("FormEditor: save failed.", e);
-        }
+        };
+        window.addEventListener("pagehide", this._leaveHandler);
+        document.addEventListener("visibilitychange", this._visibilityHandler);
     }
 
     /**

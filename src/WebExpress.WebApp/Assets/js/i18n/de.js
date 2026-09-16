@@ -145,8 +145,22 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "formeditor.row.action.delete": "Löschen (Entf)",
     "formeditor.row.action.move": "Ziehen zum Verschieben",
     "formeditor.footer.hint": "Knoten ziehen zum Sortieren · Doppelklick zum Umbenennen · N zum Hinzufügen",
-    "formeditor.footer.draft": "Entwurf · automatisches Speichern bei jeder Änderung",
+    "formeditor.footer.autosave": "Automatisches Speichern bei jeder Änderung",
     "formeditor.footer.offline": "Offline-Vorschau · Änderungen werden nicht gespeichert",
+    "formeditor.publish": "Veröffentlichen",
+    "formeditor.discard": "Entwurf verwerfen",
+    "formeditor.discard.title": "Entwurf verwerfen?",
+    "formeditor.discard.message": "Die unveröffentlichten Änderungen an „{0}“ gehen verloren und der Editor kehrt zum veröffentlichten Formular zurück. Dies kann nicht rückgängig gemacht werden.",
+    "formeditor.discard.confirm": "Verwerfen",
+    "formeditor.discard.error": "Der Entwurf konnte nicht verworfen werden. Bitte erneut versuchen.",
+    "formeditor.state.idle": "Veröffentlicht · keine ungespeicherten Änderungen",
+    "formeditor.state.draft": "Unveröffentlichter Entwurf",
+    "formeditor.state.pending": "Änderung noch nicht gespeichert…",
+    "formeditor.state.saving": "Entwurf wird gespeichert…",
+    "formeditor.state.saved": "Entwurf gespeichert · {0}",
+    "formeditor.state.error": "Entwurf konnte nicht gespeichert werden – nächste Änderung versucht es erneut",
+    "formeditor.state.publishing": "Wird veröffentlicht…",
+    "formeditor.state.discarding": "Entwurf wird verworfen…",
     "formeditor.hints.navigate": "Navigieren",
     "formeditor.hints.collapse": "Ein-/ausklappen",
     "formeditor.hints.rename": "Umbenennen",
@@ -274,6 +288,10 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "scrum.velocity.empty": "Noch keine abgeschlossenen Sprints.",
     "scrum.velocity.filter": "Sprints",
 
+    // table layout persistence
+    "table.heading": "Tabelle",
+    "table.update.rejected": "Die Layoutänderung wurde nicht gespeichert und zurückgenommen.",
+
     // paging (the info line the paged data controls render below their content)
     "paging.info": "Seite {0} von {1} / {2} von {3} Einträgen",
     "paging.info.loading": "Seite {0} von {1} – wird geladen…",
@@ -377,6 +395,8 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     // kanban board and swimlane menus
     "kanban.menu": "Optionen",
     "kanban.column.delete.message": "Möchten Sie die Spalte „{name}“ mit allen Karten löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "kanban.heading": "Board",
+    "kanban.update.rejected": "Die Änderung wurde nicht gespeichert und zurückgenommen.",
     "board.settings": "Einstellungen",
     "swimlane.add": "Neue Swimlane",
     "swimlane.new": "Neue Swimlane",

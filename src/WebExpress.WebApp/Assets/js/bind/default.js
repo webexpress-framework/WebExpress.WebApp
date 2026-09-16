@@ -184,6 +184,23 @@
         (element._wxCleanup = element._wxCleanup || []).push(cleanup);
     }
 
+    /**
+     * Resolves the WebUI control a bound element hosts, when that control
+     * answers for the element's value.
+     * @remarks
+     * A native field is read and written through the element itself. A WebUI
+     * control - the rich-text editor, a tag or selection input - keeps its
+     * value in its instance and exposes it through one accessor, so the binds
+     * reach every control through that accessor instead of knowing any of them
+     * by name; it is the same door the rest form populates a control through.
+     * @param {HTMLElement} element - The bound element.
+     * @returns {object|null} The control instance, or null for a native field.
+     */
+    function controlOf(element) {
+        const instance = webexpress.webui.Controller.getInstanceByElement(element);
+        return instance && "value" in instance ? instance : null;
+    }
+
     // state bind - subscribes an element to a store path and reflects it as
     // text, as a value, as visibility or as a class (the read direction of a
     // controlled component)
@@ -202,9 +219,11 @@
 
                 const apply = (value) => {
                     if (as === "value") {
-                        const editor = webexpress.webui.Controller.getInstanceByElement(element);
-                        if (editor instanceof webexpress.webui.EditorCtrl) {
-                            if (value != null) editor.setState(value, { emit: false });
+                        const control = controlOf(element);
+                        if (control) {
+                            // the control keeps the value in its own shape and decides
+                            // itself whether anything changed
+                            if (value != null) control.value = value;
                             return;
                         }
                         const next = value == null ? "" : String(value);
@@ -248,14 +267,20 @@
             const queryResource = element.getAttribute("data-wx-model-query");
 
             withStore(element, (store) => {
-                const instance = webexpress.webui.Controller.getInstanceByElement(element);
-                const editor = webexpress.webui.EditorCtrl && instance instanceof webexpress.webui.EditorCtrl ? instance : null;
+                // a control announces a change on its host the way every WebUI control
+                // does, a native field through the input or change event of its kind
+                const control = controlOf(element);
                 const isCheckbox = element.type === "checkbox";
-                const eventName = editor ? webexpress.webui.Event.CHANGE_VALUE_EVENT : isCheckbox || element.tagName === "SELECT" ? "change" : "input";
+                const eventName = control ? webexpress.webui.Event.CHANGE_VALUE_EVENT : isCheckbox || element.tagName === "SELECT" ? "change" : "input";
 
                 const write = (value) => {
-                    if (editor) {
-                        if (value != null) editor.setState(value, { emit: false });
+                    if (control) {
+                        // a write must not pull the caret out from under whoever is typing;
+                        // in a control the focus sits in a descendant of the host, so the
+                        // guard looks inside the element rather than at it
+                        const active = document.activeElement;
+                        if (active && active !== element && element.contains(active)) return;
+                        if (value != null) control.value = value;
                         return;
                     }
                     if (isCheckbox) {
@@ -269,8 +294,10 @@
                 };
 
                 const onInput = (event) => {
-                    if (editor && (editor.disabled || event.target !== element)) return;
-                    const value = editor ? editor.getState() : isCheckbox ? !!element.checked : element.value;
+                    // a nested control's announcement bubbles through the host and is not
+                    // this control's value
+                    if (control && (control.disabled || event.target !== element)) return;
+                    const value = control ? control.value : isCheckbox ? !!element.checked : element.value;
                     const patch = buildPatch(store.getState(), path, value);
                     if (queryResource && typeof store.dispatch === "function") {
                         store.dispatch("viewstate/query", { resource: queryResource, patch: patch });

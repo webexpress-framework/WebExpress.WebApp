@@ -12,7 +12,7 @@
  * that returns a patch, and an optional effect, which performs input or output.
  */
 
-// wx/patch - applies the payload as a shallow patch to the store. This is the
+// wx/patch - applies the payload as a shallow patch to the ViewState. This is the
 // generic state setter used by the model bind and by simple actions.
 webexpress.webapp.Intents.register("wx/patch", {
     reduce(state, payload) {

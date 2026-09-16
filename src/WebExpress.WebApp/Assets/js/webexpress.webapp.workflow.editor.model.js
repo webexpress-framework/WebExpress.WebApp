@@ -10,7 +10,7 @@ webexpress.webapp = webexpress.webapp || {}
  * through the model and the debounced autosave is persisted with the service
  * update from a wire payload the model builds.
  *
- * See WebExpress.WebApp/docs/architecture/view-state-service.md.
+ * See WebExpress/docs/view-state-service.md.
  */
 webexpress.webapp.workflowEditorModel = {
     /**

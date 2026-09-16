@@ -150,3 +150,74 @@ test("a state bind reflects a slice of the bound ViewState", async () => {
 
     assert.equal(label.textContent, "closed", "a state change updates the reflection");
 });
+
+/**
+ * Stands in for any WebUI control hosted on a bound element: a value accessor
+ * in the control's own shape and a change announced on the host, which is all
+ * the binds may rely on - the rich-text editor is one such control, not a case
+ * of its own.
+ */
+function hostControl(engine, element) {
+    engine.wx.Event.CHANGE_VALUE_EVENT = "wx-change-value";
+    const control = {
+        disabled: false,
+        writes: [],
+        _value: '{"doc":"one"}',
+        get value() { return this._value; },
+        set value(value) { this._value = value; this.writes.push(value); }
+    };
+    engine.wx.Controller.getInstanceByElement = (candidate) => candidate === element ? control : null;
+    return control;
+}
+
+test("a model bind reaches a hosted control through its value accessor and change event, not by name", () => {
+    const engine = loadEngine();
+    const host = buildViewState(engine, {
+        viewStateId: "orders",
+        state: { body: '{"doc":"one"}' },
+        resources: [{ name: "orders", service: "data", target: "orders", auto: false, params: [] }]
+    });
+    const vs = new engine.wxapp.ViewState(host);
+
+    const editor = engine.document.createElement("div");
+    editor.setAttribute("data-wx-model", "body");
+    editor.setAttribute("data-wx-resource", "orders");
+    editor.dataset.wxResource = "orders";
+    host.appendChild(editor);
+    const control = hostControl(engine, editor);
+    engine.wx.Binds.get("model").bind(editor);
+
+    control._value = '{"doc":"two"}';
+    editor.dispatchEvent({ type: "wx-change-value", target: editor });
+    assert.equal(vs.getState().body, '{"doc":"two"}', "the control's value is what the store receives");
+
+    vs.setState({ body: '{"doc":"three"}' });
+    vs.flush();
+    assert.equal(control.value, '{"doc":"three"}', "a store change is written through the accessor");
+
+    control.disabled = true;
+    control._value = '{"doc":"four"}';
+    editor.dispatchEvent({ type: "wx-change-value", target: editor });
+    assert.equal(vs.getState().body, '{"doc":"three"}', "a disabled control writes nothing");
+});
+
+test("a state bind as value hands the slice to a hosted control in its own shape", () => {
+    const engine = loadEngine();
+    const host = buildViewState(engine, {
+        viewStateId: "orders",
+        state: { body: { doc: "seed" } },
+        resources: [{ name: "orders", service: "data", target: "orders", auto: false, params: [] }]
+    });
+    new engine.wxapp.ViewState(host);
+
+    const preview = engine.document.createElement("div");
+    preview.setAttribute("data-wx-bind-path", "body");
+    preview.setAttribute("data-wx-bind-as", "value");
+    preview.setAttribute("data-wx-resource", "orders");
+    preview.dataset.wxResource = "orders";
+    host.appendChild(preview);
+    const control = hostControl(engine, preview);
+    engine.wx.Binds.get("state").bind(preview);
+
+    assert.deepEqual(control.writes, [{ doc: "seed" }], "an object slice arrives untouched, not stringified");
+});

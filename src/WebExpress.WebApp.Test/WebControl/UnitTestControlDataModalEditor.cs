@@ -18,7 +18,7 @@ namespace WebExpress.WebApp.Test.WebControl
     /// debugging cycle when it moves.
     /// </remarks>
     [Collection("NonParallelTests")]
-    public class UnitTestModalDataEditor
+    public class UnitTestControlDataModalEditor
     {
         /// <summary>
         /// Builds an editor with both services declared, which is the shape the control is
@@ -26,9 +26,9 @@ namespace WebExpress.WebApp.Test.WebControl
         /// </summary>
         /// <param name="id">The control id.</param>
         /// <returns>The control.</returns>
-        private static ModalDataEditor CreateControl(string id = "editor")
+        private static ControlDataModalEditor CreateControl(string id = "editor")
         {
-            var control = new ModalDataEditor(id)
+            var control = new ControlDataModalEditor(id)
             {
                 ServiceFactory = _ => DataServiceDescriptor.FormData("http://localhost:8080/api/documents"),
                 DraftServiceFactory = _ => DataServiceDescriptor.DraftData("http://localhost:8080/api/drafts")
@@ -45,7 +45,7 @@ namespace WebExpress.WebApp.Test.WebControl
         /// </summary>
         /// <param name="control">The control to render.</param>
         /// <returns>The rendered markup.</returns>
-        private static string Render(ModalDataEditor control)
+        private static string Render(ControlDataModalEditor control)
         {
             var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var context = UnitTestControlFixture.CreateRenderContextMock();
@@ -274,7 +274,7 @@ namespace WebExpress.WebApp.Test.WebControl
         public void WithoutADraftServiceTheDialogIsAnOrdinaryEditForm()
         {
             // arrange
-            var control = new ModalDataEditor("editor")
+            var control = new ControlDataModalEditor("editor")
             {
                 ServiceFactory = _ => DataServiceDescriptor.FormData("http://localhost:8080/api/documents")
             };

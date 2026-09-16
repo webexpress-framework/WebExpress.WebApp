@@ -9,7 +9,7 @@ webexpress.webapp = webexpress.webapp || {}
  * the categories payload is normalised through the model, the labels are parsed
  * through the model and the new comment is posted with the service create.
  *
- * See WebExpress.WebApp/docs/architecture/view-state-service.md.
+ * See WebExpress/docs/view-state-service.md.
  */
 webexpress.webapp.commentComposerModel = {
     /**

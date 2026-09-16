@@ -11,7 +11,7 @@ webexpress.webapp = webexpress.webapp || {}
  * SidebarCtrl), so hierarchy and badges authored on the server flow straight
  * into the client rendering.
  *
- * See WebExpress.WebApp/docs/architecture/view-state-service.md.
+ * See WebExpress/docs/view-state-service.md.
  */
 webexpress.webapp.sidebarModel = {
     /**

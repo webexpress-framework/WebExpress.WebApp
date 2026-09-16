@@ -367,6 +367,28 @@ form.wx-webapp-restwizard > .wx-wizard-page {
         border-color: var(--wx-fe-primary-border);
     }
 
+/* publish: the one filled button in the chrome, because it is the one decision
+   the editor asks for - the save happened while the user was working */
+.wx-form-editor-publish {
+    border: 1px solid var(--wx-primary, #0d6efd);
+    background: var(--wx-primary, #0d6efd);
+    color: var(--wx-primary-color, #fff);
+    border-radius: var(--wx-border-radius);
+    padding: 3px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+    .wx-form-editor-publish:hover:not(:disabled) {
+        filter: brightness(1.05);
+    }
+
+    .wx-form-editor-publish:disabled {
+        opacity: .55;
+        cursor: default;
+    }
+
 /* tab bar */
 .wx-form-editor-tabs {
     display: flex;
@@ -1223,6 +1245,48 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     font-family: var(--wx-font-monospace);
     font-size: 11px;
 }
+
+/* the state is carried on the element rather than in a class, so the controller
+   writes one attribute instead of juggling a set; quiet while it says nothing,
+   legible the moment it does */
+.wx-form-editor-foot-status[data-wx-state="saved"] {
+    color: var(--wx-success);
+}
+
+.wx-form-editor-foot-status[data-wx-state="draft"],
+.wx-form-editor-foot-status[data-wx-state="pending"] {
+    color: var(--wx-warning-text-emphasis, var(--wx-secondary-color));
+}
+
+.wx-form-editor-foot-status[data-wx-state="error"] {
+    color: var(--wx-danger);
+}
+
+/* discard reads as a link beside the state it acts on, far from the publish
+   button: one of the two is destructive */
+.wx-form-editor-discard {
+    border: 0;
+    background: transparent;
+    color: var(--wx-secondary-color, var(--wx-body-color));
+    padding: 1px 4px;
+    font-size: 11.5px;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+}
+
+    .wx-form-editor-discard:hover:not(:disabled) {
+        color: var(--wx-danger);
+    }
+
+    .wx-form-editor-discard:disabled {
+        opacity: .55;
+        cursor: default;
+    }
+
+    .wx-form-editor-discard[hidden] {
+        display: none;
+    }
 
 /* title block: name + version row above the description */
 .wx-form-editor-title {

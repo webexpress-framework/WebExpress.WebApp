@@ -352,6 +352,7 @@ login.password.label=Password
 login.password.placeholder=Enter your password
 login.submit.label=Sign in
 login.error.empty=Username and password are required.
+login.error.format=The login request could not be read.
 login.error.invalid=Invalid username or password.
 login.error.session=Login failed because the session could not be created.
 login.error.locked=Too many failed attempts. Please try again in {0} seconds.

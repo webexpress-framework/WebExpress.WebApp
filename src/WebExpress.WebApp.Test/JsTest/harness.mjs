@@ -84,6 +84,16 @@ const BOOTSTRAP = `
         getInstanceByElement() { return null; },
         getClosestInstance() { return null; }
     };
+    // a minimal transport so the service defaults, which install the service layer
+    // as the adapter of the WebUI transport, can be loaded; the adapter itself is
+    // covered by the WebUI transport tests
+    webexpress.webui.Transport = {
+        adapter: null,
+        builtIn: { request: async () => ({ ok: true, status: 200, data: null, error: null }), upload: async () => ({ ok: true, status: 200, data: null, error: null }) },
+        use(adapter) { this.adapter = adapter; },
+        request(url, init) { return (this.adapter || this.builtIn).request(url, init); },
+        upload(url, body, options) { return (this.adapter && this.adapter.upload ? this.adapter : this.builtIn).upload(url, body, options); }
+    };
     // a minimal Binds registry so the webapp bind defaults, which register the
     // state and model binds, can be loaded and exercised in the harness
     webexpress.webui.Binds = {

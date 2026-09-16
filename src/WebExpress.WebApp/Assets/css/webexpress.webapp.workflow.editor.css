@@ -6,10 +6,8 @@
  * properties panel (side pane). All design tokens (palette, spacing, radii,
  * shadows) are declared as CSS custom properties on `.wx-workflow-editor`
  * so a host application can override them per theme without touching this
- * file. The class names mirror the KleeneStar Workflows.html prototype
- * (props / prop-row / prop-section / rule-list) translated to the
- * `wx-workflow-editor-` namespace, so visual hierarchy and behaviour stay
- * consistent with the design handoff.
+ * file. The class names (props / prop-row / prop-section / rule-list) live
+ * under the `wx-workflow-editor-` namespace.
  */
 
 /* ───────── Design tokens ───────── */

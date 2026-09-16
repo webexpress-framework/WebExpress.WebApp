@@ -21,6 +21,7 @@
  *
  * Dispatched events (CustomEvent on the host element, bubbles):
  * - webexpress.webui.Event.CHANGE_VALUE_EVENT with { value, active }
+ * - webexpress.webui.Event.DATA_ERROR_EVENT with { error } when the toggle was refused or lost
  */
 webexpress.webapp.LikeCtrl = class extends webexpress.webui.Ctrl {
     /**
@@ -37,11 +38,14 @@ webexpress.webapp.LikeCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Posts the toggle and repaints the figure from the answer.
+     * Posts the toggle through the service layer and repaints the figure from the answer.
      *
      * The figure is disabled for the duration of the request, so a reader clicking twice in
      * quick succession cannot send a second toggle that undoes the first before its answer has
-     * arrived.
+     * arrived. A refused or lost toggle leaves the figure as it was - a count that moved
+     * without the server agreeing would be worse than one that did not move at all - but it
+     * is not kept quiet: the service layer reports it on the error channel and the host
+     * announces it, so the page can say what the figure cannot.
      *
      * @returns {Promise<void>}
      */
@@ -55,24 +59,21 @@ webexpress.webapp.LikeCtrl = class extends webexpress.webui.Ctrl {
 
         element.disabled = true;
 
-        try {
-            const response = await fetch(uri, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: element.dataset.payload || "{}"
-            });
+        const result = await webexpress.webapp.ServiceRegistry.request(uri, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: element.dataset.payload || "{}"
+        });
 
-            if (!response.ok) {
-                return;
-            }
+        element.disabled = false;
 
-            this.apply(await response.json());
-        } catch {
-            // a failed request leaves the figure as it was: the next page load shows the truth,
-            // and a count that moved without the server agreeing would be worse than one that
-            // did not move at all
-        } finally {
-            element.disabled = false;
+        if (result.ok) {
+            this.apply(result.data);
+            return;
+        }
+
+        if (result.error.kind !== "abort") {
+            this._dispatch(webexpress.webui.Event.DATA_ERROR_EVENT, { error: result.error });
         }
     }
 

@@ -9,7 +9,7 @@ webexpress.webapp = webexpress.webapp || {}
  * the file shape the file list and the tile board both render, and a description
  * change is turned into the update payload.
  *
- * See WebExpress.WebApp/docs/architecture/view-state-service.md.
+ * See WebExpress/docs/view-state-service.md.
  */
 webexpress.webapp.fileViewModel = {
     /**

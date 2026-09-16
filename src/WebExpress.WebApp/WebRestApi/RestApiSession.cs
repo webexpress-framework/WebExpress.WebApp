@@ -77,24 +77,21 @@ namespace WebExpress.WebApp.WebRestApi
                     using var doc = JsonDocument.Parse(bytes);
                     var root = doc.RootElement;
 
-                    if (root.TryGetProperty("username", out var u))
+                    // a document that parses but has the wrong shape - an array at the root,
+                    // a number where the name belongs - is as much a format error as one that
+                    // does not parse; the readers would throw on it, and only the parse is
+                    // covered by the catch below
+                    if (root.ValueKind != JsonValueKind.Object
+                        || !TryReadString(root, "username", out username)
+                        || !TryReadString(root, "password", out password))
                     {
-                        username = u.GetString();
-                    }
-
-                    if (root.TryGetProperty("password", out var p))
-                    {
-                        password = p.GetString();
+                        return FormatError();
                     }
                 }
             }
             catch (JsonException)
             {
-                return new RestApiSessionResult
-                {
-                    Success = false,
-                    Message = I18N.Translate("webexpress.webapp:login.error.format")
-                }.ToResponse();
+                return FormatError();
             }
 
             if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
@@ -190,6 +187,51 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 Success = false,
                 Message = I18N.Translate("webexpress.webapp:login.error.invalid")
+            }.ToResponse();
+        }
+
+        /// <summary>
+        /// Reads one credential from the login document.
+        /// </summary>
+        /// <remarks>
+        /// A missing or null property is not an error here: the caller reports empty
+        /// credentials, which is the message a user who left a field blank should get. A
+        /// property of another type is, because it cannot be what the client sends and
+        /// reading it as a string would throw.
+        /// </remarks>
+        /// <param name="root">The document's root object.</param>
+        /// <param name="name">The property name.</param>
+        /// <param name="value">The credential, or null when the property is absent or null.</param>
+        /// <returns><see langword="true"/> when the property is absent, null or a string.</returns>
+        private static bool TryReadString(JsonElement root, string name, out string value)
+        {
+            value = null;
+
+            if (!root.TryGetProperty(name, out var property) || property.ValueKind == JsonValueKind.Null)
+            {
+                return true;
+            }
+
+            if (property.ValueKind != JsonValueKind.String)
+            {
+                return false;
+            }
+
+            value = property.GetString();
+
+            return true;
+        }
+
+        /// <summary>
+        /// Builds the response for a login document the endpoint cannot read.
+        /// </summary>
+        /// <returns>The failure response.</returns>
+        private static IResponse FormatError()
+        {
+            return new RestApiSessionResult
+            {
+                Success = false,
+                Message = I18N.Translate("webexpress.webapp:login.error.format")
             }.ToResponse();
         }
 

@@ -8,7 +8,7 @@ webexpress.webapp = webexpress.webapp || {}
  * owns the request shaping (url and init) and the response mapping, which carry
  * no DOM or network dependency and can be unit tested in isolation.
  *
- * See WebExpress.WebApp/docs/architecture/view-state-service.md.
+ * See WebExpress/docs/view-state-service.md.
  */
 webexpress.webapp.inputSelectionModel = {
     /**

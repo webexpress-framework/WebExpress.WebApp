@@ -8,7 +8,7 @@ webexpress.webapp = webexpress.webapp || {}
  * whose query loads the watchers, whose create adds one and whose remove
  * deletes one, plus a second users service for the candidate search.
  *
- * See WebExpress.WebApp/docs/architecture/view-state-service.md.
+ * See WebExpress/docs/view-state-service.md.
  */
 webexpress.webapp.watcherModel = {
     /**

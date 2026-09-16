@@ -1,13 +1,16 @@
 # Headless tests for the View, State and Service engine
 
-This folder contains the headless unit tests for the phase zero engine of the
-View, State and Service architecture. The engine modules live in
-`src/WebExpress.WebUI/Assets/js` (store, service, renderer, intent and
-component) and are described in
-`WebExpress.WebApp/docs/architecture/view-state-service.md`.
+This folder holds the headless unit tests of the JavaScript control model of
+WebExpress.WebApp. The engine modules live in
+`WebExpress.WebApp/src/WebExpress.WebApp/Assets/js` - the service layer, the
+renderer, the template registry, the intents, the `Data` base and the
+`ViewState` - and are described in
+`WebExpress/docs/view-state-service.md`, whose section 0 is
+the entry point: the modules, the vocabulary and the migration state of the
+controls.
 
-The tests load the real, shipped engine modules through a Node `vm` context with
-a minimal DOM stub, so they exercise the same files that the framework embeds,
+The tests load the real, shipped modules through a Node `vm` context with a
+minimal DOM stub, so they exercise the same files that the framework embeds,
 not a copy.
 
 ## Requirements
@@ -26,7 +29,8 @@ node --test
 ```
 
 Node discovers and runs every `*.test.mjs` file. The expected output ends with a
-pass summary and an exit code of zero.
+pass summary and an exit code of zero. A single file runs with
+`node --test <file>`, a single case with `--test-name-pattern="<part of its name>"`.
 
 When node is not on the PATH, for example when it ships only with Visual Studio,
 use the helper script, which locates node automatically:
@@ -37,47 +41,37 @@ use the helper script, which locates node automatically:
 
 ## Layout
 
-| File                  | Purpose
-|-----------------------|-----------------------------------------------------------------
-| `harness.mjs`         | Loads the engine modules (and optional application modules) into an isolated context with host stubs.
-| `dom-stub.mjs`        | A minimal DOM used by the renderer and the component tests.
-| `engine.test.mjs`      | Unit tests for the store, the service, the renderer, the intents and the component.
-| `list.model.test.mjs`  | Unit tests for the REST list model helpers (phase one), including an end to end path through a service.
-| `table.model.test.mjs` | Unit tests for the REST table model helpers (phase two), including the query and the put update through a service.
-| `restform.model.test.mjs` | Unit tests for the REST form model helpers (phase two): request shaping, response classification and error normalisation.
-| `restwizard.model.test.mjs` | Unit tests for the REST wizard model helpers (phase two): step request shaping, cache decision and last step detection.
-| `control.restwizard.footer.test.mjs` | Layout tests for the wizard footer: the primary action is placed ahead of the dialog's dismiss button, the step navigation leads the footer, and a footer without a dismiss button still receives the buttons.
-| `tab.model.test.mjs`   | Unit tests for the REST tab model helpers (phase two): the list, create, reorder and close operations through a service.
-| `comment.model.test.mjs` | Unit tests for the REST comment model helpers (phase two): endpoint url and path building and category normalisation.
-| `kanban.model.test.mjs` | Unit tests for the REST kanban model helpers (phase two): board normalisation and the load and persist operations through a service.
-| `watcher.model.test.mjs` | Unit tests for the watcher model helpers: list normalisation, user search url, candidate filtering, removal helpers and the load, add and remove operations through a service.
-| `scrum.backlog.model.test.mjs` | Unit tests for the scrum backlog model helpers: board and sprint normalisation, sprint and item paths, rank bodies, the group filter and sort, the rank rewrite, the active sprint crossing and the persist operations through a service.
-| `tile.model.test.mjs`  | Unit tests for the REST tile model helpers: the page slice, the total reduction, the item to tile mapping and the load and persist operations through a service.
-| `dashboard.model.test.mjs` | Unit tests for the REST dashboard model helpers: the column and widget normalisation and the load and persist operations through a service.
-| `workflow.editor.model.test.mjs` | Unit tests for the workflow editor model helpers: the meta and catalog normalisation, the wire format read with its aliases and the wire payload build, plus the load and persist operations through a service.
-| `graph.viewer.model.test.mjs` | Unit tests for the REST graph viewer model helpers: the wire format read with its nodes/items and edges/links aliases, the node, edge and waypoint normalisation and the removal of dangling edges, plus a graph load through a service.
-| `control.graph-viewer.behavior.test.mjs` | End-to-end tests for the REST graph viewer: the standalone load through the service island, the seed through the state island, the ViewState-bound resource slice and the failed load.
-| `schedule.model.test.mjs` | Unit tests for the REST schedule model helpers: the period read with its aliases, the item and holiday normalisation, the cache keys, the years a range touches, the range merge and the write payload, plus a period load and a move through a service.
-| `control.schedule.behavior.test.mjs` | End-to-end tests for the REST schedule: the range query, the reload on navigation and view switch, the range and holiday caches, the separate holidays endpoint, the persisted mutations, the failure fallback and the ViewState binding.
-| `comment.composer.model.test.mjs` | Unit tests for the comment composer model helpers: the categories url, the categories normalisation and the label parsing, plus the categories load and the comment post through a service.
-| `input.unique.model.test.mjs` | Unit tests for the unique input model helpers: the header parsing, the request body shaping and the availability extraction with its field and status and code heuristics, plus a uniqueness check through the shared request.
-| `control.input-unique.test.mjs` | Contract and required tests for the unique input: the requirement declared on the host survives the hand-over to the input the controller builds, and the real form validator rejects that input while it is empty.
-| `selection.model.test.mjs` | Unit tests for the REST selection model helpers: the request url and init shaping and the response item mapping, plus a search through the shared request.
-| `input.selection.model.test.mjs` | Unit tests for the REST input selection model helpers: the request url and init shaping and the item mapping with its data and aria tuples, plus a search through the shared request.
-| `dropdown.theme.model.test.mjs` | Unit tests for the theme dropdown model helpers: the theme item mapping and the theme list normalisation, plus a themes load through the shared request.
-| `link.model.test.mjs`  | Unit tests for the link model helpers: the result and system normalisation, the perspective that picks the opposite end of a link, the create bodies of both link categories, the sidebar sections, the graph projection and the reading of a rejection.
-| `link.type.model.test.mjs` | Unit tests for the relation type model helpers: the definition normalisation, what a symmetric relation implies for its counterpart, the request body, the completeness rules, the two readings of the preview and the reordering.
-| `control.link.test.mjs` | End-to-end tests for the link surface: the grouping, the perspective, the category tabs that re-query the endpoint, the lifecycle actions and the add dialog with its registered systems and its two native panels.
-| `control.link-type.test.mjs` | End-to-end tests for the relation type administration: the table, the guard that keeps a used relation from being dropped, the activation toggle, the reordering and the editor with its two readings.
+Two harnesses load the code; every test file imports one of them.
+
+| File                    | Purpose
+|-------------------------|-----------------------------------------------------------------
+| `harness.mjs`           | `loadEngine()`: the engine modules and, through `extraFiles`, a control and its model, in an isolated context with a minimal `Ctrl` base, an empty event map and a fetch the test supplies. `appendStateIsland`, `appendServiceIsland` and `appendResourceIsland` build the islands the C# `ControlViewState` emits. For a control whose base class lives in WebUI, a `bootstrap` stubs that base.
+| `controls.harness.mjs`  | `loadControl()`: the real WebUI runtime (`webexpress.webui.js` and the base controls), the engine and one control with its `deps`, for a test that needs the real events, binds and actions rather than stubs.
+| `dom-stub.mjs`, `controls.dom-stub.mjs`, `controls.dom-stub.svg.mjs` | The DOM stubs the two harnesses use. They report every layout dimension as zero and keep `dataset` and attributes apart; a behavioural hook is set with `setAttribute` and read with `getAttribute` (see the JavaScript testing section of `CLAUDE.md`).
+| `controls.contract.mjs` | The shared contract every control test starts with: the control registers its selector and survives a construct / teardown cycle without a swallowed error.
+
+The tests fall into three groups, told apart by their file names.
+
+| Group                    | Files                        | What they pin
+|--------------------------|------------------------------|-----------------------------------------------------------
+| Engine                   | `engine.test.mjs`, `viewstate.test.mjs`, `viewstate.resources.test.mjs`, `viewstate.datachanged.test.mjs`, `bind.viewstate.test.mjs`, `bind.source.test.mjs`, `service.result.test.mjs` | The service result contract, retry, cancellation per channel and abort; the `ViewState` (patches, batching, slices, resources with their targets and tickets, the registry and its teardown); the intents; the `state` and `model` binds; the live update channel.
+| Model helpers            | `<control>.model.test.mjs`   | The pure logic beside a control - normalisation, request shaping, response classification - and one end to end path through a service.
+| Controls                 | `control.<name>.test.mjs`    | The control on the DOM stub: the contract above, and its behaviour where it is worth pinning - a ViewState-bound load, a re-query through the shared state, a refused change taken back and reported (`control.rejected-changes.test.mjs`).
+
+A test that changes an `Assets/js` file's behaviour on purpose updates the
+assertion and proves the assertion means something by running it against the
+previous file once (`git show HEAD:<path> > <path>` keeps a copy first).
 
 ## Relationship to the .NET test suite
 
-The .NET test `WebExpress.WebUI.Test/WebInclude/UnitTestEngineAssets` verifies
+The .NET test `WebExpress.WebApp.Test/WebInclude/UnitTestEngineAssets` verifies
 that the engine modules are embedded as resources and registered in the correct
-load order through the `IncludeJavaScript` Asset attributes. That test runs in
-the normal xUnit suite and guards the build pipeline. The headless tests in this
-folder guard the runtime behaviour of the engine and are intended to run wherever
-Node is available, for example on a developer machine or in continuous
+load order through the `IncludeJavaScript` Asset attributes; the
+`UnitTest<Control>ModelAsset` tests beside it do the same for the model files.
+Those tests run in the normal xUnit suite and guard the build pipeline, and
+`JsTest/UnitTestJavaScript` surfaces every `*.test.mjs` file of this folder as an
+xUnit case, so the headless tests run with the suite as well. On their own they run
+wherever Node is available, for example on a developer machine or in continuous
 integration.
 
 ## AI transparency notice

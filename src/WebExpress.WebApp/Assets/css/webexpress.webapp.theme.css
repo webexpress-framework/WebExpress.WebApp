@@ -60,39 +60,34 @@
     color: var(--wx-info);
 }
 
-#wx-header-appnavigation > *:hover:not(.wx-overflow-menu:hover):not(.dropdown-menu) {
-    background: var(--wx-gray-800);
-}
-
-#wx-header-appnavigation > *:focus {
+/* one hover surface for every entry of the bar, plain link and dropdown toggle alike. A
+   toggle is a button, so its surface is painted on the button itself: painted on the
+   wrapper it sat underneath the framework's own button hover - a lighter, bordered box
+   that only matched the bar in dark mode by coincidence of the palette */
+#wx-header-appnavigation > *:hover:not(.wx-overflow-menu):not(.dropdown-menu):not(.wx-dropdown),
+#wx-header-appnavigation > *:focus:not(.wx-dropdown),
+#wx-header-appnavigation > .btn:active,
+#wx-header-appnavigation > .wx-dropdown > .btn:is(:hover, :focus, :active),
+#wx-header-notifications > .btn:is(:hover, :focus, :active),
+#wx-header-help > .btn:is(:hover, :focus, :active),
+#wx-header-settings > .btn:is(:hover, :focus, :active) {
     background: var(--wx-gray-800);
 }
 
 #wx-header-quickcreate {
 }
 
-#wx-header-notifications {
-    color: var(--wx-body-bg);
-}
-
-#wx-header-notifications:hover {
-    background: var(--wx-gray-800);
-}
-
-#wx-header-help {
-    color: var(--wx-body-bg);
-}
-
-#wx-header-help:hover {
-    background: var(--wx-gray-800);
-}
-
+#wx-header-notifications,
+#wx-header-help,
 #wx-header-settings {
     color: var(--wx-body-bg);
 }
-
-#wx-header-settings:hover {
-    background: var(--wx-gray-800);
+@scope ([data-wx-theme="dark"]) to ([data-wx-theme="light"]) {
+:scope #wx-header-notifications,
+:scope #wx-header-help,
+:scope #wx-header-settings {
+    color: var(--wx-body-color);
+}
 }
 
 #wx-toast {

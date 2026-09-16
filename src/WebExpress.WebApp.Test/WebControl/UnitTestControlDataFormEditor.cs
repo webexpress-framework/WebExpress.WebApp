@@ -58,6 +58,61 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
+        /// Tests that a declared draft service is rendered as a second wx-service
+        /// island beside the data one, so the client finds the two meanings of
+        /// save side by side.
+        /// </summary>
+        [Fact]
+        public void DraftService()
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlDataFormEditor()
+            {
+                ServiceFactory = _ => DataServiceDescriptor.FormData("/api/1/FormStructure"),
+                DraftServiceFactory = _ => DataServiceDescriptor.DraftData("/api/1/FormDraft")
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(
+                @"<div class=""wx-webapp-restform-editor""><wx-service hidden name=""data"" kind=""rest"" base-uri=""/api/1/FormStructure""></wx-service><wx-service hidden name=""draft"" kind=""rest"" base-uri=""/api/1/FormDraft"" method=""GET"" update-method=""PUT""></wx-service></div>",
+                html);
+        }
+
+        /// <summary>
+        /// Tests that a request not allowed to hold a draft withdraws the draft
+        /// island without withdrawing the declared endpoint.
+        /// </summary>
+        [Fact]
+        public void DraftServiceOff()
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlDataFormEditor()
+            {
+                ServiceFactory = _ => DataServiceDescriptor.FormData("/api/1/FormStructure"),
+                DraftServiceFactory = _ => DataServiceDescriptor.DraftData("/api/1/FormDraft"),
+                Draft = _ => false
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(
+                @"<div class=""wx-webapp-restform-editor""><wx-service hidden name=""data"" kind=""rest"" base-uri=""/api/1/FormStructure""></wx-service></div>",
+                html);
+            Assert.NotNull(control.DraftServiceFactory);
+        }
+
+        /// <summary>
         /// Tests the preview property toggles the data-preview attribute.
         /// </summary>
         [Theory]
@@ -171,6 +226,8 @@ namespace WebExpress.WebApp.Test.WebControl
             Assert.True(control.Preview?.Invoke(null));
             Assert.False(control.Readonly?.Invoke(null) ?? false);
             Assert.Null(control.ServiceFactory);
+            Assert.Null(control.DraftServiceFactory);
+            Assert.True(control.Draft?.Invoke(null));
         }
     }
 }

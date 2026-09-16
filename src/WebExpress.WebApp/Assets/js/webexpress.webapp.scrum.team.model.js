@@ -8,7 +8,7 @@ webexpress.webapp = webexpress.webapp || {}
  * RestService whose query loads the people working in the current sprint and
  * the story points assigned to each of them.
  *
- * See WebExpress.WebApp/docs/architecture/view-state-service.md.
+ * See WebExpress/docs/view-state-service.md.
  */
 webexpress.webapp.scrumTeamModel = {
     /**

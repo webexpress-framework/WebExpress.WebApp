@@ -2,26 +2,28 @@ var webexpress = webexpress || {}
 webexpress.webapp = webexpress.webapp || {}
 
 /**
- * Component base, part of the View, State and Service architecture.
+ * The Data base, part of the View, State and Service architecture: the base class of a
+ * control that owns state and services of its own.
  *
- * A Component extends the existing Ctrl base and ties together a Store, a set
- * of services, a render function and the lifecycle. It seeds its store from the
- * wx-state island element, resolves its services from the wx-service island
- * elements, exposes a dispatch method for intents and runs the onMount,
- * onUpdate and onUnmount hooks. Existing controls migrate to extend Component,
- * while Ctrl stays available for trivial controls that hold no state and
- * perform no network access.
+ * It extends the Ctrl base and ties together a standalone ViewState (the observable state
+ * container of the control), a set of services, a render function and the lifecycle. It
+ * seeds its state from the wx-state island element, resolves its services from the
+ * wx-service island elements, exposes a dispatch method for intents and runs the onMount,
+ * onUpdate and onUnmount hooks. A control that keeps its state imperatively and only
+ * reaches the network stays on Ctrl. Older comments call this base the Component and its
+ * ViewState the Store; the vocabulary is recorded in section 0.2 of
+ * WebExpress/docs/view-state-service.md.
  *
- * A subclass implements render(state) to return a virtual node tree, which the
- * renderer patches into the render root. A subclass that prefers imperative
- * updates may instead implement onUpdate(state) and omit render, which is the
- * first level of adoption described in the design.
+ * A subclass implements render(state) to return a virtual node tree, which the renderer
+ * patches into the render root. A subclass that prefers imperative updates may instead
+ * implement onUpdate(state) and omit render, which is the form most controls use today.
  */
 webexpress.webapp.Data = class extends webexpress.webui.Ctrl {
     /**
-     * Creates a component for a host element.
+     * Creates a control for a host element.
      * @param {HTMLElement} element - The host element.
-     * @param {object} [options={}] - Optional overrides: state, store, services, shared, renderRoot.
+     * @param {object} [options={}] - Optional overrides: state, store (a ViewState to use as
+     *     the state), services, shared, renderRoot.
      */
     constructor(element, options = {}) {
         super(element);
@@ -33,9 +35,9 @@ webexpress.webapp.Data = class extends webexpress.webui.Ctrl {
 
         const initialState = options.state || webexpress.webapp.Data.readState(element);
 
-        // the store is a standalone ViewState: the observable state container
-        // without the ViewState machinery, so the Data base owns one source of truth
-        // and depends on no separate store type.
+        // the state is a standalone ViewState: the observable state container without
+        // the resource and registry machinery of a hosted one, so the Data base owns one
+        // source of truth and depends on no second container type
         this._store = options.store
             || new webexpress.webapp.ViewState(element, { state: initialState, standalone: true });
 
@@ -53,8 +55,8 @@ webexpress.webapp.Data = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Returns the store.
-     * @returns {webexpress.webapp.ViewState} The store.
+     * Returns the ViewState that holds the state of this control.
+     * @returns {webexpress.webapp.ViewState} The standalone ViewState.
      */
     get store() {
         return this._store;
@@ -79,7 +81,7 @@ webexpress.webapp.Data = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Dispatches an intent against this component's store and services.
+     * Dispatches an intent against this control's ViewState and services.
      * @param {string} name - The intent name.
      * @param {*} payload - The intent payload.
      * @returns {*} The return value of the intent effect, when present.
@@ -95,10 +97,10 @@ webexpress.webapp.Data = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Subscribes to the store, performs the first render and runs onMount. A
+     * Subscribes to the ViewState, performs the first render and runs onMount. A
      * subclass calls this at the end of its constructor once it has finished
      * its own setup.
-     * @returns {this} The component for chaining.
+     * @returns {this} The control for chaining.
      */
     mount() {
         if (this._mounted) {
@@ -110,9 +112,9 @@ webexpress.webapp.Data = class extends webexpress.webui.Ctrl {
         this._mounted = true;
 
         // when a service declares the domains its endpoint serves, a server
-        // side data change of those domains reloads the component and plays
+        // side data change of those domains reloads the control and plays
         // the change flash on the host, so the user sees changes made by
-        // other users; components without a load or without domain-declaring
+        // other users; controls without a load or without domain-declaring
         // services stay detached from the queue
         if (typeof this.load === "function") {
             this._dataChanges = webexpress.webapp.DataChangeSubscription.attachReload(
@@ -123,8 +125,8 @@ webexpress.webapp.Data = class extends webexpress.webui.Ctrl {
             this.onMount(this._store.getState());
         }
 
-        // announce the mount, so binds that target this component can resolve
-        // its store even when they were bound before the component existed
+        // announce the mount, so binds that target this control can resolve
+        // its ViewState even when they were bound before the control existed
         if (this._element && typeof this._element.dispatchEvent === "function") {
             this._element.dispatchEvent(new CustomEvent("webexpress.webapp.data.mount", {
                 bubbles: true,
@@ -172,8 +174,8 @@ webexpress.webapp.Data = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Tears the component down. It unsubscribes from the store, aborts in
-     * flight services, releases a shared store and runs onUnmount.
+     * Tears the control down. It unsubscribes from the ViewState, aborts in
+     * flight services, releases a shared ViewState and runs onUnmount.
      */
     destroy() {
         if (this._unsubscribe) {

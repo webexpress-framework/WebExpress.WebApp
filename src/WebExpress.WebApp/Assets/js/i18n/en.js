@@ -145,8 +145,22 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "formeditor.row.action.delete": "Delete (Del)",
     "formeditor.row.action.move": "Drag to move",
     "formeditor.footer.hint": "Drag nodes to reorder · double-click to rename · press N to add",
-    "formeditor.footer.draft": "Draft · autosaves on every change",
+    "formeditor.footer.autosave": "Autosaves on every change",
     "formeditor.footer.offline": "Offline preview · changes are not persisted",
+    "formeditor.publish": "Publish",
+    "formeditor.discard": "Discard draft",
+    "formeditor.discard.title": "Discard draft?",
+    "formeditor.discard.message": "The unpublished changes to “{0}” are lost and the editor returns to the published form. This cannot be undone.",
+    "formeditor.discard.confirm": "Discard",
+    "formeditor.discard.error": "The draft could not be discarded. Please try again.",
+    "formeditor.state.idle": "Published · no unsaved changes",
+    "formeditor.state.draft": "Unpublished draft",
+    "formeditor.state.pending": "Change not saved yet…",
+    "formeditor.state.saving": "Saving draft…",
+    "formeditor.state.saved": "Draft saved · {0}",
+    "formeditor.state.error": "Draft could not be saved - the next change retries",
+    "formeditor.state.publishing": "Publishing…",
+    "formeditor.state.discarding": "Discarding draft…",
     "formeditor.hints.navigate": "Navigate",
     "formeditor.hints.collapse": "Collapse / expand",
     "formeditor.hints.rename": "Rename",
@@ -274,6 +288,10 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "scrum.velocity.empty": "No completed sprints yet.",
     "scrum.velocity.filter": "Sprints",
 
+    // table layout persistence
+    "table.heading": "Table",
+    "table.update.rejected": "The layout change was not saved and has been taken back.",
+
     // paging (the info line the paged data controls render below their content)
     "paging.info": "Page {0} of {1} / {2} of {3} items",
     "paging.info.loading": "Page {0} of {1} - loading…",
@@ -377,6 +395,8 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     // kanban board and swimlane menus
     "kanban.menu": "Options",
     "kanban.column.delete.message": "Delete column “{name}” and all of its cards? This action cannot be undone.",
+    "kanban.heading": "Board",
+    "kanban.update.rejected": "The change was not saved and has been taken back.",
     "board.settings": "Settings",
     "swimlane.add": "New swimlane",
     "swimlane.new": "New swimlane",

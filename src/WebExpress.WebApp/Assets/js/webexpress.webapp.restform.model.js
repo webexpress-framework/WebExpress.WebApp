@@ -8,7 +8,7 @@ webexpress.webapp = webexpress.webapp || {}
  * classification and the server error normalisation. The control composes them
  * with a Store and a RestService.
  *
- * See WebExpress.WebApp/docs/architecture/view-state-service.md.
+ * See WebExpress/docs/view-state-service.md.
  */
 webexpress.webapp.restFormModel = {
     /**

@@ -49,7 +49,7 @@ namespace WebExpress.WebApp.WebControl
     /// the page is the editor.
     /// </para>
     /// </remarks>
-    public class ModalDataEditor : ControlDataFormEdit, IModalDataEditor
+    public class ControlDataModalEditor : ControlDataFormEdit, IControlDataModalEditor
     {
         /// <summary>
         /// The css class the client controller is registered for. The controller registry strips
@@ -194,7 +194,7 @@ namespace WebExpress.WebApp.WebControl
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The control id.</param>
-        public ModalDataEditor(string id = null)
+        public ControlDataModalEditor(string id = null)
             : base(id)
         {
             // the button is the publication decision, not the save - the save happened while the

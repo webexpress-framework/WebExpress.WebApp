@@ -78,7 +78,10 @@ webexpress.webapp.Intents = new class {
      * Dispatches an intent. The reducer, when present, produces a patch that is
      * applied to the store. The effect, when present, runs afterwards and may
      * perform input or output. The context carries the store, the payload, the
-     * services and a reference to the dispatching component.
+     * services and a reference to the dispatching component. A reducer that
+     * throws ends the dispatch: the effect acts on the state the reducer was to
+     * establish, and a write sent on behalf of a transition that never happened
+     * would persist what the page does not show.
      * @param {string} name - The intent name.
      * @param {object} context - { store, payload, services, component, element, dispatch }.
      * @returns {*} The return value of the effect, when present.
@@ -105,6 +108,7 @@ webexpress.webapp.Intents = new class {
                 }
             } catch (error) {
                 console.error(`Intent "${name}" reducer failed`, error);
+                return undefined;
             }
         }
 

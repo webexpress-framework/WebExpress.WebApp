@@ -9,7 +9,7 @@ webexpress.webapp = webexpress.webapp || {}
  * normalisation, which carry no DOM or network dependency and can be unit
  * tested in isolation.
  *
- * See WebExpress.WebApp/docs/architecture/view-state-service.md.
+ * See WebExpress/docs/view-state-service.md.
  */
 webexpress.webapp.dropdownThemeModel = {
     /**

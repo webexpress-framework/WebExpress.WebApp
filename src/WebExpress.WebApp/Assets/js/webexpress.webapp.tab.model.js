@@ -8,7 +8,7 @@ webexpress.webapp = webexpress.webapp || {}
  * and a RestService whose query, create, update and remove operations replace
  * the four inline fetch calls (list, create, reorder, close).
  *
- * See WebExpress.WebApp/docs/architecture/view-state-service.md.
+ * See WebExpress/docs/view-state-service.md.
  */
 webexpress.webapp.tabModel = {
     /**

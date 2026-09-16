@@ -10,7 +10,7 @@ webexpress.webapp = webexpress.webapp || {}
  * The remaining helpers are the pure ranking, sorting and move classification
  * logic that the control delegates to.
  *
- * See WebExpress.WebApp/docs/architecture/view-state-service.md.
+ * See WebExpress/docs/view-state-service.md.
  */
 webexpress.webapp.scrumBacklogModel = {
     /**

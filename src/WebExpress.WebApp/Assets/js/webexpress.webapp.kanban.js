@@ -77,10 +77,10 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
                 this._restUri = service.baseUri;
             }
 
-            const unsubscribe = viewState.watch((state) => state[this._resource], (slice) => this._applySlice(slice));
+            const unsubscribe = viewState.watch((state) => viewState.slice(this._resource, state), (slice) => this._applySlice(slice));
             (element._wxCleanup = element._wxCleanup || []).push(unsubscribe);
 
-            this._applySlice(viewState.getState()[this._resource]);
+            this._applySlice(viewState.slice(this._resource));
         });
     }
 
@@ -96,8 +96,17 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
             this.updateData(slice.data);
         }
 
-        this._element.classList.remove("placeholder-glow");
-        this._loading = false;
+        // the slice is the record of the central load: it says whether a query is in
+        // flight and whether the last one failed, and the board shows exactly that
+        // rather than declaring the load over on every notification
+        const loading = !!slice.loading;
+
+        this._element.classList.toggle("placeholder-glow", loading);
+        this._loading = loading;
+
+        if (slice.error) {
+            console.error("kanban load failed:", webexpress.webapp.ServiceResult.describe({ error: slice.error }, { resource: this._resource }));
+        }
     }
 
     // loading flag accessor backed by the store, so the single source of truth
@@ -221,10 +230,34 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
 
         this._service.update(payload).then((result) => {
             if (!result.ok && result.error.kind !== "abort") {
-                // log failed update request
-                console.error("kanban update state failed", webexpress.webapp.ServiceResult.describe(result));
+                this._reject(payload.action || "move", result);
             }
         });
+    }
+
+    /**
+     * Takes back a change the server refused.
+     *
+     * The board applies a change the moment it is made - the card sits in its new column
+     * before the request is out - so a refusal leaves the screen showing what is not
+     * stored. The stored board is loaded back over it, which is the one state both sides
+     * agree on, and the refusal is put in front of the user: a card that snaps back with
+     * no word about why reads as a bug of the board rather than as a decision of the
+     * server.
+     * @param {string} action - The change that was refused.
+     * @param {object} result - The failed service result.
+     */
+    _reject(action, result) {
+        console.error(`kanban ${action} failed:`, webexpress.webapp.ServiceResult.describe(result, { action: action }));
+
+        webexpress.webapp.ErrorChannel.present(result, {
+            service: this._service.name,
+            heading: this._i18n("webexpress.webapp:kanban.heading", "Board"),
+            message: this._i18n("webexpress.webapp:kanban.update.rejected", "The change was not saved and has been taken back.")
+        });
+
+        this._dispatch(webexpress.webui.Event.DATA_ERROR_EVENT, { action: action, error: result.error });
+        this.update();
     }
 
     /**

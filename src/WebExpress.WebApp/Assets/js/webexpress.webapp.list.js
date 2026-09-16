@@ -124,11 +124,11 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
                 this._restUri = service.baseUri;
             }
 
-            const unsubscribe = viewState.watch((state) => state[this._resource], (slice) => this._applySlice(slice));
+            const unsubscribe = viewState.watch((state) => viewState.slice(this._resource, state), (slice) => this._applySlice(slice));
             (element._wxCleanup = element._wxCleanup || []).push(unsubscribe);
 
             // render whatever the ViewState has already loaded for this resource
-            this._applySlice(viewState.getState()[this._resource]);
+            this._applySlice(viewState.slice(this._resource));
         });
     }
 

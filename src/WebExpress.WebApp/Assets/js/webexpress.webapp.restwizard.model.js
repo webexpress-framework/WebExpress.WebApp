@@ -7,7 +7,7 @@ webexpress.webapp = webexpress.webapp || {}
  * so they can be unit tested in isolation. The control composes them with the
  * RestService inherited from the form control and a Store for the step state.
  *
- * See WebExpress.WebApp/docs/architecture/view-state-service.md.
+ * See WebExpress/docs/view-state-service.md.
  */
 webexpress.webapp.restWizardModel = {
     /**

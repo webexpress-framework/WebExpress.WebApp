@@ -12,20 +12,67 @@ namespace WebExpress.WebApp.WebControl
     /// <summary>
     /// Visual form-editor control. Renders a <c>&lt;div class="wx-webapp-restform-editor"&gt;</c>
     /// host element with declarative <c>data-*</c> attributes. The associated
-    /// <c>webexpress.webui.FormEditorCtrl</c> JavaScript controller hydrates the
+    /// <c>webexpress.webapp.RestFormEditorCtrl</c> JavaScript controller hydrates the
     /// host element with the full Designer UI (tab bar, structure tree, live
-    /// preview, palette, QuickAdd picker, drag-and-drop, keyboard shortcuts).
+    /// preview, QuickAdd picker, drag-and-drop, keyboard shortcuts).
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A form definition has the two meanings of save a document has: <i>do not
+    /// lose what I have built</i> and <i>let the forms out there use this</i>.
+    /// With only the data service declared the two coincide: every mutation is
+    /// written to it, which is right for a form nobody fills in yet. With a draft
+    /// service declared as well, every mutation goes to the draft instead - no
+    /// version, nothing the forms in use see - and the data service is reached
+    /// only through the publish button, whose <c>PUT</c> <b>is</b> the
+    /// publication and ends the draft inside its own transaction. The draft
+    /// service stores, answers and drops the unpublished structure. The control
+    /// never deletes a draft as part of publishing: a delete racing a publish that
+    /// failed would destroy the only copy of the work.
+    /// </para>
+    /// <para>
+    /// Drafting is optional. Without a declared draft service - or with
+    /// <see cref="Draft"/> resolving to false - there is no publish button, no
+    /// discard action and no draft state: the editor then autosaves into the form
+    /// itself.
+    /// </para>
+    /// </remarks>
     public class ControlDataFormEditor : Control, IControlDataFormEditor, IDataIsland
     {
         public const int _defaultIndent = 18;
 
         /// <summary>
         /// Gets the data service descriptors of the control, emitted as
-        /// wx-service island elements. The data service loads and persists the
-        /// form definition.
+        /// wx-service island elements. The data service loads the form definition
+        /// and, with no draft declared, persists it; with a draft declared its
+        /// <c>PUT</c> is the publication.
         /// </summary>
         public IList<Func<IRenderControlContext, DataServiceDescriptor>> ServiceFactories { get; } = [];
+
+        /// <summary>
+        /// Gets or sets the resolver of the draft service descriptor.
+        /// </summary>
+        /// <remarks>
+        /// The draft is deliberately not one of the <see cref="ServiceFactories"/>:
+        /// assigning <see cref="ServiceFactory"/> replaces every declared service,
+        /// and a data service declared after the draft would silently drop the
+        /// autosave. Kept apart, the two meanings of save cannot overwrite each
+        /// other in either order.
+        /// </remarks>
+        public Func<IRenderControlContext, DataServiceDescriptor> DraftServiceFactory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the resolver deciding whether the editor drafts at all.
+        /// </summary>
+        /// <remarks>
+        /// Turned off, the editor autosaves into the form itself, as it does with
+        /// no draft service declared. It is a resolver rather than a fixed value
+        /// because whether a draft may exist is often a question about the
+        /// request - a user allowed to edit but not to hold an unpublished
+        /// version. It is kept apart from <see cref="DraftServiceFactory"/> so
+        /// that turning drafting off does not mean withdrawing the endpoint.
+        /// </remarks>
+        public Func<IRenderControlContext, bool> Draft { get; set; } = _ => true;
 
         /// <summary>
         /// Gets or sets the single data service descriptor, as a convenience for
@@ -124,13 +171,36 @@ namespace WebExpress.WebApp.WebControl
                 Class = Css.Concatenate("wx-webapp-restform-editor", [fill ? "wx-fill" : null, .. classes]),
                 Style = GetStyles(renderContext),
                 Role = role
-            }
-                .EmitDataIslands(this, renderContext)
+            };
+
+            html.EmitDataIslands(this, renderContext)
                 .AddUserAttribute("data-preview", !preview ? "false" : null)
                 .AddUserAttribute("data-indent", indent != 18 ? indent.ToString(CultureInfo.InvariantCulture) : null)
                 .AddUserAttribute("data-readonly", @readonly ? "true" : null);
 
+            // the draft island follows the data islands, so the client finds the
+            // two services side by side and the mode is one lookup away
+            var draft = IsDrafting(renderContext)
+                ? DraftServiceFactory(renderContext)?.BindPathVariables(renderContext?.Request)
+                : null;
+
+            if (draft != null)
+            {
+                html.Add(draft.ToIslandElement());
+            }
+
             return html;
+        }
+
+        /// <summary>
+        /// Reports whether the editor drafts, which takes both a declared endpoint
+        /// and a request that is allowed to hold an unpublished version.
+        /// </summary>
+        /// <param name="renderContext">The context in which the control is rendered.</param>
+        /// <returns><see langword="true"/> when mutations are written to a draft.</returns>
+        private bool IsDrafting(IRenderControlContext renderContext)
+        {
+            return DraftServiceFactory != null && (Draft?.Invoke(renderContext) ?? true);
         }
     }
 }

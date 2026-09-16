@@ -4,8 +4,8 @@ webexpress.webapp = webexpress.webapp || {}
 /**
  * Registry of view templates, part of the View, State and Service
  * architecture. A template is a render function that receives the current
- * state and the owning component and returns a virtual node tree for the
- * keyed reconciler or a DOM node. Components reference a template through the
+ * state and the owning control and returns a virtual node tree for the
+ * keyed reconciler or a DOM node. Controls reference a template through the
  * data-wx-template attribute that the C# layer emits, so a view can be
  * authored in C# and reused on the client.
  *
@@ -25,7 +25,7 @@ webexpress.webapp.Templates = new class {
     /**
      * Registers a template render function.
      * @param {string} id - The template id.
-     * @param {Function} render - Receives (state, component) and returns a
+     * @param {Function} render - Receives (state, control) and returns a
      * virtual node tree or a DOM node.
      * @returns {this} The registry for chaining.
      */

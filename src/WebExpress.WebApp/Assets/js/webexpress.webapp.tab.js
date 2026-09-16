@@ -145,10 +145,10 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
                 this._restUri = service.baseUri;
             }
 
-            const unsubscribe = viewState.watch((state) => state[this._resource], (slice) => this._applySlice(slice));
+            const unsubscribe = viewState.watch((state) => viewState.slice(this._resource, state), (slice) => this._applySlice(slice));
             (element._wxCleanup = element._wxCleanup || []).push(unsubscribe);
 
-            this._applySlice(viewState.getState()[this._resource]);
+            this._applySlice(viewState.slice(this._resource));
         });
     }
 
@@ -1335,13 +1335,14 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
      */
     _syncDeletedTab(tabId) {
         this._viewState.setState(state => {
-            const slice = state[this._resource];
+            const key = this._viewState.sliceKey(this._resource);
+            const slice = state[key];
             if (!slice?.data) {
                 return null;
             }
             const previous = webexpress.webapp.tabModel.mapTabs(slice.data);
             const items = previous.filter(tab => String(tab.id) !== tabId);
-            return { [this._resource]: {
+            return { [key]: {
                 ...slice,
                 data: { ...slice.data, items: items },
                 items: Array.isArray(slice.items) ? slice.items.filter(tab => String(tab.id) !== tabId) : slice.items,

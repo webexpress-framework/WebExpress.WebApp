@@ -350,6 +350,7 @@ login.password.label=Passwort
 login.password.placeholder=Passwort eingeben
 login.submit.label=Anmelden
 login.error.empty=Benutzername und Passwort sind erforderlich.
+login.error.format=Die Anmeldeanfrage konnte nicht gelesen werden.
 login.error.invalid=Ungültiger Benutzername oder falsches Passwort.
 login.error.session=Die Anmeldung ist fehlgeschlagen, da die Sitzung nicht erstellt werden konnte.
 login.error.locked=Zu viele fehlgeschlagene Versuche. Bitte versuchen Sie es in {0} Sekunden erneut.

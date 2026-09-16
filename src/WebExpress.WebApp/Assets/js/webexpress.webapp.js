@@ -369,9 +369,17 @@ webexpress.webapp.Event = class {
     static FORM_EDITOR_TAB_RENAMED_EVENT = "webexpress.webapp.formeditor.tab.renamed";
     // Event triggered when the form editor's layout (two-pane / tree-table / three-pane) changes.
     static FORM_EDITOR_LAYOUT_CHANGED_EVENT = "webexpress.webapp.formeditor.layout.changed";
-    // Event triggered after a successful structure save.
+    // Event triggered after a successful structure save to the form itself (no draft declared).
     static FORM_EDITOR_SAVED_EVENT = "webexpress.webapp.formeditor.saved";
-    // Event triggered when a structure save fails validation.
+    // Event triggered after the structure was stored as the unpublished draft.
+    static FORM_EDITOR_DRAFT_SAVED_EVENT = "webexpress.webapp.formeditor.draft.saved";
+    // Event triggered after the unpublished draft was dropped and the published structure re-loaded.
+    static FORM_EDITOR_DRAFT_DISCARDED_EVENT = "webexpress.webapp.formeditor.draft.discarded";
+    // Event triggered after the structure was published, which ends the draft.
+    static FORM_EDITOR_PUBLISHED_EVENT = "webexpress.webapp.formeditor.published";
+    // Event triggered whenever the form editor's save state changes.
+    static FORM_EDITOR_STATE_EVENT = "webexpress.webapp.formeditor.state";
+    // Event triggered when a structure save or publication fails validation.
     static FORM_EDITOR_VALIDATION_FAILED_EVENT = "webexpress.webapp.formeditor.validation.failed";
     // Event triggered when a remote user joins a CollaborativeCtrl container.
     static COLLABORATIVE_USER_JOIN = "webexpress.webapp.collaborative.user.join";

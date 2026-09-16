@@ -138,6 +138,58 @@ namespace WebExpress.WebApp.Test.WebRestApi
         }
 
         /// <summary>
+        /// A document that parses but carries the credentials in the wrong shape is answered
+        /// as a format error, the same as a document that does not parse - it must not escape
+        /// as an exception from the reader.
+        /// </summary>
+        [Theory]
+        [InlineData("{\"username\": 42, \"password\": \"password123\"}")]
+        [InlineData("{\"username\": \"admin\", \"password\": [\"password123\"]}")]
+        [InlineData("{\"username\": {\"name\": \"admin\"}, \"password\": \"password123\"}")]
+        [InlineData("[\"admin\", \"password123\"]")]
+        [InlineData("\"admin\"")]
+        public void AuthenticateWrongShape_IsAFormatError(string payload)
+        {
+            // arrange
+            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var api = new TestRestApiLogin("admin", "password123");
+            var request = CreateRawLoginRequest(payload);
+
+            // act
+            var result = api.Authenticate(request);
+
+            // assert
+            Assert.NotNull(result);
+            Assert.Equal(401, result.Status);
+
+            var json = ParseResponseJson(result);
+            Assert.False(json.GetProperty("success").GetBoolean());
+            Assert.Equal("The login request could not be read.", json.GetProperty("message").GetString());
+        }
+
+        /// <summary>
+        /// A credential that is null or missing is an empty credential, not a format error.
+        /// </summary>
+        [Theory]
+        [InlineData("{\"username\": null, \"password\": \"password123\"}")]
+        [InlineData("{\"password\": \"password123\"}")]
+        public void AuthenticateNullOrMissingCredential_IsEmpty(string payload)
+        {
+            // arrange
+            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var api = new TestRestApiLogin("admin", "password123");
+            var request = CreateRawLoginRequest(payload);
+
+            // act
+            var result = api.Authenticate(request);
+
+            // assert
+            var json = ParseResponseJson(result);
+            Assert.False(json.GetProperty("success").GetBoolean());
+            Assert.Equal("Username and password are required.", json.GetProperty("message").GetString());
+        }
+
+        /// <summary>
         /// Tests the login result for a successful response.
         /// </summary>
         [Fact]
@@ -358,15 +410,23 @@ namespace WebExpress.WebApp.Test.WebRestApi
         }
 
         /// <summary>
+        /// Creates a mock login request carrying the given body verbatim, so a test can send a
+        /// document the endpoint has to reject rather than one the serializer would shape.
+        /// </summary>
+        private static IRequest CreateRawLoginRequest(string payload)
+        {
+            var content = "POST /api/login HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\n\r\n" + payload;
+
+            return UnitTestControlFixture.CreateRequestMock(content, "/api/login");
+        }
+
+        /// <summary>
         /// Creates a mock login request with the specified credentials, optionally scoped to a
         /// named application so a test can prove lockouts are confined to one application.
         /// </summary>
         private static IRequest CreateLoginRequest(string username, string password, string applicationId = null)
         {
-            var payload = JsonSerializer.Serialize(new { username, password });
-            var content = "POST /api/login HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\n\r\n" + payload;
-
-            var request = UnitTestControlFixture.CreateRequestMock(content, "/api/login");
+            var request = CreateRawLoginRequest(JsonSerializer.Serialize(new { username, password }));
 
             if (applicationId is not null)
             {

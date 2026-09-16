@@ -9,7 +9,7 @@ webexpress.webapp = webexpress.webapp || {}
  * complete the node and edge records the viewer renders and drop the edges whose
  * endpoints the payload does not carry.
  *
- * See WebExpress.WebApp/docs/architecture/view-state-service.md.
+ * See WebExpress/docs/view-state-service.md.
  */
 webexpress.webapp.graphViewerModel = {
     /**

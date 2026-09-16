@@ -91,6 +91,8 @@ public ControlDataList List { get; } = new ControlDataList(ListId)
 | `data-wx-resource`          | Binds the enclosing ViewState as the store.
 | `data-wx-bind-store`        | Id of the owning component; defaults to the nearest ancestor.
 
+A store bind reads and writes a native field through the element and listens to its `input` or `change` event. An element that hosts a WebUI control - the rich-text editor, a tag or selection input, a content view - is reached through that control's instance instead: its `value` accessor carries the value in the control's own shape, and `CHANGE_VALUE_EVENT` on the host announces a change. No control is known to the binds by name; a control takes part by exposing `value`, which is also how the rest form populates it.
+
 ## Registering a bind
 
 The registry is open, so an application may add binds of its own:

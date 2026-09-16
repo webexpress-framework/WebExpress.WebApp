@@ -184,6 +184,16 @@ main {
 
 .wx-app-dropdown > .btn {
     color: inherit;
+    border-radius: 0.2em;
+}
+
+/* the buttons of the bar - the dropdown toggles and the overflow trigger - take the hover
+   surface the theme paints on every entry, so the border the framework's button hover
+   draws would frame that surface where a link beside it has none */
+.wx-appnavigation > .btn:is(:hover, :focus, :active),
+.wx-appnavigation > .wx-dropdown > .btn:is(:hover, :focus, :active),
+.wx-app-dropdown > .btn:is(:hover, :focus, :active) {
+    border-color: transparent;
 }
 
 

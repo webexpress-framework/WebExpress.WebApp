@@ -12,7 +12,7 @@ webexpress.webapp = webexpress.webapp || {}
  * IIdentityGroup.Policies in the identity model, so the group id is the row
  * identity and the policy set is the edited value.
  *
- * See WebExpress.WebApp/docs/architecture/view-state-service.md.
+ * See WebExpress/docs/view-state-service.md.
  */
 webexpress.webapp.permissionModel = {
     /**

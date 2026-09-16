@@ -98,6 +98,26 @@ webexpress.webapp.ErrorChannel = new class {
     }
 
     /**
+     * Puts a failed result in front of the user as a popup, whether or not the
+     * channel toasts every failure. The service already reported the failure
+     * when it happened; this is for the control that has to say what it meant
+     * for what is on screen - a write the server refused after the gesture was
+     * applied, say - in words of its own, because "request failed with status
+     * 409" explains nothing about a card that snapped back.
+     * @param {object} result - The normalised failure result.
+     * @param {object} [context={}] - The presentation: heading, message, service.
+     */
+    present(result, context = {}) {
+        const error = (result && result.error) || {};
+
+        this._notify({
+            service: context.service || null,
+            heading: context.heading || null,
+            message: context.message || error.message || ""
+        });
+    }
+
+    /**
      * Shows the failure as a popup notification through the local message
      * queue, reusing the PopupNotificationCtrl pipeline.
      * @param {object} detail - The reported error detail.
@@ -113,7 +133,7 @@ webexpress.webapp.ErrorChannel = new class {
             type: "webexpress.webapp.popup.show",
             notification: {
                 id: "service-error-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8),
-                heading: detail.service ? "Service \"" + detail.service + "\"" : "Service",
+                heading: detail.heading || (detail.service ? "Service \"" + detail.service + "\"" : "Service"),
                 message: detail.message || "request failed",
                 type: "alert-danger",
                 icon: null,
@@ -202,21 +222,47 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
      */
     constructor(descriptor) {
         super(descriptor);
-        this._abort = null;
-        this._generation = 0;
+        // a query supersedes the previous one on the same channel only: the resources
+        // of a ViewState each query on a channel of their own, so two resources loading
+        // through one service in parallel do not cancel each other
+        this._channels = new Map();
+        // bumped by abort, so a retry that was waiting out its delay does not send
+        this._epoch = 0;
     }
 
     /**
-     * Aborts the query that is currently in flight, if any.
+     * Aborts every query that is in flight and every retry that is still waiting,
+     * on all channels.
      */
     abort() {
-        if (this._abort) {
-            // aborted without a reason on purpose: a reason replaces the AbortError the
-            // fetch would otherwise reject with, and the outcome would then be classified
-            // as a network failure rather than as the cancellation it is
-            this._abort.abort();
-            this._abort = null;
+        for (const channel of this._channels.values()) {
+            if (channel.abort) {
+                // aborted without a reason on purpose: a reason replaces the AbortError the
+                // fetch would otherwise reject with, and the outcome would then be classified
+                // as a network failure rather than as the cancellation it is
+                channel.abort.abort();
+                channel.abort = null;
+            }
+            // a retry that resumes after the delay must not find its generation current
+            channel.generation += 1;
         }
+
+        this._epoch += 1;
+    }
+
+    /**
+     * Returns the cancellation channel of a name, creating it on first use.
+     * @param {string} [name=""] - The channel name; the empty name is the shared default.
+     * @returns {object} The channel with its controller and generation.
+     */
+    _channel(name = "") {
+        const key = String(name || "");
+
+        if (!this._channels.has(key)) {
+            this._channels.set(key, { abort: null, generation: 0 });
+        }
+
+        return this._channels.get(key);
     }
 
     /**
@@ -230,16 +276,18 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
     }
 
     /**
-     * Queries data with a GET request. A new query aborts the previous one.
+     * Queries data with a GET request. A new query aborts the previous one on the
+     * same channel; queries on different channels run side by side.
      * @param {object} [params={}] - Logical query parameters.
-     * @param {object} [options={}] - Request options such as path.
+     * @param {object} [options={}] - Request options such as path and channel.
      * @returns {Promise<object>} A normalised result.
      */
     query(params = {}, options = {}) {
         return this._send(this._descriptor.method || "GET", {
             params: params,
             path: options.path,
-            abortable: true
+            abortable: true,
+            channel: options.channel
         });
     }
 
@@ -308,10 +356,17 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
 
             let data = null;
             if (response.status !== 204) {
-                if (contentType.includes("application/json")) {
-                    try { data = await response.json(); } catch (parseError) { data = null; }
-                } else {
-                    try { data = { text: await response.text() }; } catch (parseError) { data = null; }
+                // a body that cannot be read is a failure of its own, the same one query
+                // reports: a caller told "ok" with no data would take an unreadable
+                // answer for an empty one
+                try {
+                    data = contentType.includes("application/json") ? await response.json() : { text: await response.text() };
+                } catch (parseError) {
+                    const result = webexpress.webapp.ServiceResult.fail("parse", response.status, "response was not valid json", false);
+                    result.response = response;
+                    result.contentType = contentType;
+                    webexpress.webapp.ErrorChannel.report(result, { service: this._name, operation: (init && init.method) || "GET" });
+                    return result;
                 }
             }
 
@@ -451,7 +506,9 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
         const retry = this._descriptor.retry || {};
         const attempts = 1 + Math.max(0, Number(retry.count) || 0);
         const delay = Math.max(0, Number(retry.delayMs) || 0);
-        const generation = request.abortable ? ++this._generation : null;
+        const channel = request.abortable ? this._channel(request.channel) : null;
+        const generation = channel ? ++channel.generation : null;
+        const epoch = this._epoch;
 
         let result = null;
 
@@ -460,12 +517,20 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
                 await new Promise((resolve) => setTimeout(resolve, delay));
             }
 
-            if (generation !== null && generation !== this._generation) {
+            // an abort while the retry waited out its delay ends the request here: the
+            // control that owned it may be gone, and a request on its behalf would be
+            // traffic nobody reads
+            if (epoch !== this._epoch) {
+                result = webexpress.webapp.ServiceResult.fail("abort", 0, "request was aborted", false);
+                break;
+            }
+
+            if (channel && generation !== channel.generation) {
                 result = webexpress.webapp.ServiceResult.fail("abort", 0, "request was superseded", false);
                 break;
             }
 
-            result = await this._sendOnce(method, request);
+            result = await this._sendOnce(method, request, channel);
 
             if (result.ok || !result.error || !result.error.retriable || result.error.kind === "abort") {
                 break;
@@ -481,22 +546,23 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
 
     /**
      * Performs a single request and normalises the outcome. A superseded
-     * abortable request is cancelled, and the abort channel is only cleared
-     * when the request that owns it completes, so that a newer request is not
-     * affected.
+     * abortable request is cancelled, and the channel's controller is only
+     * cleared when the request that owns it completes, so that a newer request
+     * is not affected.
      * @param {string} method - The http method.
      * @param {object} request - The request descriptor.
+     * @param {object|null} channel - The cancellation channel of an abortable request.
      * @returns {Promise<object>} A normalised result.
      */
-    async _sendOnce(method, request) {
+    async _sendOnce(method, request, channel) {
         let abort = null;
 
-        if (request.abortable) {
-            if (this._abort) {
-                this._abort.abort();
+        if (channel) {
+            if (channel.abort) {
+                channel.abort.abort();
             }
             abort = new AbortController();
-            this._abort = abort;
+            channel.abort = abort;
         }
 
         const url = this._buildUrl(request.params, request.path);
@@ -549,8 +615,8 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
             }
             return webexpress.webapp.ServiceResult.fail("network", 0, networkError ? networkError.message : "network error", true);
         } finally {
-            if (abort && this._abort === abort) {
-                this._abort = null;
+            if (abort && channel.abort === abort) {
+                channel.abort = null;
             }
         }
     }

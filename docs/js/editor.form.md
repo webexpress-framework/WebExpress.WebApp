@@ -2,7 +2,7 @@
 
 # EditorFormCtrl
 
-The `EditorFormCtrl` keeps a document form saved as an unpublished draft while it is being written, and reports that on the footer bar the publish button sits on. It is the client half of `ModalDataEditor`.
+The `EditorFormCtrl` keeps a document form saved as an unpublished draft while it is being written, and reports that on the footer bar the publish button sits on. It is the client half of `ControlDataModalEditor`.
 
 A rest form is a single transaction: it loads once, it submits once, and everything typed in between exists only in the DOM. For an issue that is right — the form is short and the save is one click away. For a document it is not: the text is the work, a lost tab is a lost afternoon, and the save that matters ("publish") is a decision about readers rather than about storage. A form that only saves on submit therefore loses an afternoon to a closed tab, while a form that saves continuously publishes every unfinished sentence to whoever is reading the page.
 
@@ -182,7 +182,7 @@ Three placements are load-bearing, and each costs a debugging cycle when it move
 ## Authoring in C\#
 
 ```csharp
-new ModalDataEditor("editor")
+new ControlDataModalEditor("editor")
     .DataService<DocumentRestApi>()
     .DraftService<DocumentDraftRestApi>();
 ```
@@ -203,11 +203,11 @@ Drafting is optional in two ways, and both lead to the same surface: an ordinary
 
 ```csharp
 // no draft endpoint declared at all
-new ModalDataEditor("editor")
+new ControlDataModalEditor("editor")
     .DataService<DocumentRestApi>();
 
 // both endpoints declared, but this request may not hold an unpublished version
-new ModalDataEditor("editor")
+new ControlDataModalEditor("editor")
     {
         // whatever the host's own authorisation says about holding an unpublished version
         Draft = renderContext => permissionManager.MayDraft(renderContext.Request)

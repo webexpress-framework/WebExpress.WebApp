@@ -151,10 +151,10 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
                 this._users = usersService;
             }
 
-            const unsubscribe = viewState.watch((state) => state[this._resource], (slice) => this._applySlice(slice));
+            const unsubscribe = viewState.watch((state) => viewState.slice(this._resource, state), (slice) => this._applySlice(slice));
             (element._wxCleanup = element._wxCleanup || []).push(unsubscribe);
 
-            this._applySlice(viewState.getState()[this._resource]);
+            this._applySlice(viewState.slice(this._resource));
         });
     }
 

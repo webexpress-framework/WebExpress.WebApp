@@ -63,10 +63,12 @@ webexpress.webapp._microtask = function (callback) {
  * outermost ViewState; ViewStates nest, and a control resolves the nearest enclosing
  * ViewState (or an explicit one by id).
  *
- * The ViewState is the observable state primitive of WebExpress.WebApp. It
- * absorbs the responsibilities of the former Store, so a component never owns a
- * separate store: a patch is a shallow merge, notifications batch on a
- * microtask, and a subscriber can watch a derived slice with shallow equality.
+ * The ViewState is the observable state primitive of WebExpress.WebApp - there is no
+ * separate store type, and what older comments call the Store is a ViewState. A control
+ * of the Data base keeps a standalone one ({ standalone: true }) as its own state, and a
+ * hosted one adds the resources and the registry on top. A patch is a shallow merge,
+ * notifications batch on a microtask, and a subscriber can watch a derived slice with
+ * shallow equality.
  *
  * A ViewState is hosted by a wx-webapp-viewstate element that the controller
  * instantiates. It seeds its state from the host's wx-state island, resolves
@@ -87,6 +89,9 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
         this._notifyScheduled = false;
         this._listeners = new Set();
         this._dataChanges = null;
+        // the ticket of the latest load per resource; a load whose ticket has been
+        // overtaken leaves the slice to the newer one
+        this._loads = new Map();
 
         // a standalone ViewState is a plain observable state container a control
         // creates as its own store, with no ViewState machinery: it does not register
@@ -269,6 +274,30 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
     }
 
     /**
+     * Returns the state key a resource loads into: the target it declares, or its own
+     * name. A control follows a resource through this key rather than through the
+     * resource name, because the load writes where the target says - a resource
+     * declared with a target of its own would otherwise be watched where nothing is
+     * ever written and the control would never see its data.
+     * @param {string} name - The resource name.
+     * @returns {string} The state key.
+     */
+    sliceKey(name) {
+        const resource = this.resource(name);
+        return (resource && resource.target) || name;
+    }
+
+    /**
+     * Returns the slice a resource loaded, from a given state or from the current one.
+     * @param {string} name - The resource name.
+     * @param {object} [state] - The state to read; defaults to the current state.
+     * @returns {object|undefined} The slice { items, total, data, loading, error } or undefined.
+     */
+    slice(name, state = this._state) {
+        return state ? state[this.sliceKey(name)] : undefined;
+    }
+
+    /**
      * Returns the names of the resources this ViewState declares, so the registry
      * can index a control to the ViewState that owns the resource it binds to. This
      * is what lets a control resolve its ViewState by its resource rather than by
@@ -319,10 +348,14 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
      * state[target] = { items, total, loading, error }, and the values the
      * response echoes for inbound parameters are written back to state, which
      * is the inbound half of the bidirectional parameter binding (for example a
-     * server that clamps the page index). A superseded query is cancelled by
-     * the service, so a stale response arrives as an abort result and is
-     * ignored. The historical data arrived event is re-dispatched on the host,
-     * so existing listeners keep working.
+     * server that clamps the page index). Each resource queries on a channel
+     * of its own, so two resources of one service load side by side, and a
+     * newer load of the same resource supersedes the older one: the older
+     * arrives as an abort result and leaves the slice to the newer load, while
+     * an abort that no newer load explains - the ViewState being torn down -
+     * ends the loading state, so a slice never stays loading for good. The
+     * historical data arrived event is re-dispatched on the host, so existing
+     * listeners keep working.
      * @param {string} name - The resource name.
      * @returns {Promise<object>|undefined} The normalised result, or undefined when the resource is unknown.
      */
@@ -353,14 +386,22 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
             }
         }
 
+        const ticket = (this._loads.get(name) || 0) + 1;
+        this._loads.set(name, ticket);
+
         this.setState({ [target]: Object.assign({}, state[target], { loading: true, error: null }) });
 
-        const result = await service.query(params);
+        const result = await service.query(params, { channel: name });
+
+        // a newer load of this resource owns the slice now; whatever this one brought
+        // back - data, a failure or the abort the newer one caused - is stale
+        if (this._loads.get(name) !== ticket) {
+            return result;
+        }
 
         if (!result.ok) {
-            if (result.error && result.error.kind !== "abort") {
-                this.setState({ [target]: Object.assign({}, this.getState()[target], { loading: false, error: result.error }) });
-            }
+            const error = result.error && result.error.kind !== "abort" ? result.error : null;
+            this.setState({ [target]: Object.assign({}, this.getState()[target], { loading: false, error: error }) });
             return result;
         }
 
@@ -693,6 +734,8 @@ webexpress.webapp.ViewStateRegistry = new class {
      */
     constructor() {
         this._states = new Map();
+        // every ViewState that declares a resource of a name, in registration order:
+        // a name is not unique across ViewStates, so the index cannot hold one owner
         this._byResource = new Map();
         this._pending = [];
     }
@@ -710,7 +753,11 @@ webexpress.webapp.ViewStateRegistry = new class {
         if (typeof id === "string" && viewState) {
             this._states.set(id, viewState);
             for (const name of viewState.resourceNames) {
-                this._byResource.set(name, viewState);
+                const owners = this._byResource.get(name) || [];
+                if (!owners.includes(viewState)) {
+                    owners.push(viewState);
+                }
+                this._byResource.set(name, owners);
             }
             this._flushPending();
         }
@@ -719,12 +766,17 @@ webexpress.webapp.ViewStateRegistry = new class {
 
     /**
      * Returns the ViewState that declares a resource, so a control resolves its
-     * ViewState by the resource it binds to rather than by DOM ancestry.
+     * ViewState by the resource it binds to rather than by DOM ancestry. When
+     * several ViewStates declare the name, the one registered last answers, the
+     * same way a later ViewState with a known id replaces the earlier one; a
+     * control inside one of them is matched to its own by resolve before this
+     * is consulted.
      * @param {string} name - The resource name.
      * @returns {webexpress.webapp.ViewState|null} The ViewState or null.
      */
     resolveByResource(name) {
-        return this._byResource.get(name) || null;
+        const owners = this._byResource.get(name);
+        return owners && owners.length > 0 ? owners[owners.length - 1] : null;
     }
 
     /**
@@ -744,10 +796,37 @@ webexpress.webapp.ViewStateRegistry = new class {
      * @param {webexpress.webapp.ViewState} [viewState] - The expected instance.
      */
     unregister(id, viewState) {
-        if (viewState && this._states.get(id) !== viewState) {
+        // the instance leaves the resource index whether or not it still holds its id:
+        // a ViewState replaced under its id would otherwise stay reachable through its
+        // resources and a control could be handed a destroyed one
+        const current = this._states.get(id);
+        const leaving = viewState || current;
+
+        if (leaving) {
+            this._forgetResources(leaving);
+        }
+
+        if (viewState && current !== viewState) {
             return;
         }
+
         this._states.delete(id);
+    }
+
+    /**
+     * Removes a ViewState from the resource index.
+     * @param {webexpress.webapp.ViewState} viewState - The ViewState leaving the registry.
+     */
+    _forgetResources(viewState) {
+        for (const [name, owners] of Array.from(this._byResource)) {
+            const remaining = owners.filter((owner) => owner !== viewState);
+
+            if (remaining.length === 0) {
+                this._byResource.delete(name);
+            } else if (remaining.length !== owners.length) {
+                this._byResource.set(name, remaining);
+            }
+        }
     }
 
     /**
@@ -763,10 +842,26 @@ webexpress.webapp.ViewStateRegistry = new class {
             return this.get(id);
         }
 
-        // a control that binds a resource resolves the ViewState that declares it,
-        // which is how a control finds its ViewState when the ViewState host no longer
-        // wraps it
+        // a control that binds a resource belongs to the nearest enclosing ViewState
+        // that declares it: two ViewStates on one page may declare a resource of the
+        // same name, and a control inside one of them must not be bound to the other
         const resourceName = element && element.dataset && element.dataset.wxResource;
+        let enclosing = null;
+
+        let current = element;
+        while (current) {
+            const viewState = current._wxViewState;
+            if (viewState) {
+                if (!resourceName || viewState.resource(resourceName)) {
+                    return viewState;
+                }
+                enclosing = enclosing || viewState;
+            }
+            current = current.parentElement;
+        }
+
+        // no ancestor declares it: the ViewState that does, which is how a control
+        // finds its ViewState when the ViewState host no longer wraps it
         if (resourceName) {
             const byResource = this.resolveByResource(resourceName);
             if (byResource) {
@@ -774,15 +869,7 @@ webexpress.webapp.ViewStateRegistry = new class {
             }
         }
 
-        let current = element;
-        while (current) {
-            if (current._wxViewState) {
-                return current._wxViewState;
-            }
-            current = current.parentElement;
-        }
-
-        return null;
+        return enclosing;
     }
 
     /**

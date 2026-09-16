@@ -7,7 +7,7 @@ webexpress.webapp = webexpress.webapp || {}
  * so they can be unit tested in isolation. The control composes them with a
  * Store and a RestService.
  *
- * See WebExpress.WebApp/docs/architecture/view-state-service.md.
+ * See WebExpress/docs/view-state-service.md.
  */
 webexpress.webapp.listModel = {
     /**

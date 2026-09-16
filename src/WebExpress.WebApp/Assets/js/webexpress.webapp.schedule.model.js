@@ -10,7 +10,7 @@ webexpress.webapp = webexpress.webapp || {}
  * key the range and holiday caches, merge a freshly loaded range into the model
  * and build the payload of a write.
  *
- * See WebExpress.WebApp/docs/architecture/view-state-service.md.
+ * See WebExpress/docs/view-state-service.md.
  */
 webexpress.webapp.scheduleModel = {
     /**
