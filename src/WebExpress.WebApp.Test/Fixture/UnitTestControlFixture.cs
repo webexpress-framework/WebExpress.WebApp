@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Extensions.Configuration;
 using System.Globalization;
 using System.Net;
 using System.Reflection;
@@ -46,6 +47,7 @@ namespace WebExpress.WebApp.Test.Fixture
                 Environment.CurrentDirectory,
                 Environment.CurrentDirectory,
                 Environment.CurrentDirectory,
+                new ConfigurationBuilder().Build(),
                 CultureInfo.GetCultureInfo("en"),
                 new Log() { LogMode = LogMode.Off },
                 null
