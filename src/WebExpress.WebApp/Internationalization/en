@@ -15,20 +15,12 @@ delete.label=Delete
 feed.more=Show more
 feed.empty=Nothing here yet.
 
-# the document form: its submit publishes, and its footer says whether what has been
-# written is safe. The state texts are also carried in Assets/js/i18n, because the
-# indicator is repainted by the client controller after the server painted the first one.
+# the document form: its submit publishes. What its footer bar says - the save state, the
+# view switch, the empty reading view - is painted by the dialog controller alone and is
+# carried in Assets/js/i18n.
 editorform.publish.label=Publish
 editorform.discard.label=Discard
 editorform.menu.tooltip=More actions
-editorform.state.idle=No unsaved changes
-editorform.state.draft=Resuming an unpublished draft
-editorform.state.pending=Change not saved yet...
-editorform.state.saving=Saving draft...
-editorform.state.saved=Draft saved · {0}
-editorform.state.error=Draft could not be saved - the next change retries
-editorform.state.publishing=Publishing...
-editorform.state.discarding=Discarding draft...
 
 confirmation.title=Confirmation
 confirmation.description=Are you sure you want to perform this action?

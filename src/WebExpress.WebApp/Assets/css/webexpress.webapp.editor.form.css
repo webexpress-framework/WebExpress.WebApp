@@ -96,6 +96,20 @@
     text-align: start;
 }
 
+/* ---------------------------------------------------------- view switch */
+
+/* The switch between the writing surface and the reading view, at the left end of the bar
+   ahead of who is here: it is the mode of the whole surface, so it reads before anything that
+   comments on the text. The shared switch collects the free space of a toolbar to sit at its
+   right end; here the save state does that, so the margin is taken back. */
+.wx-editor-form-switch {
+    flex: 0 0 auto;
+}
+
+.wx-editor-form-switch .wx-view-switcher {
+    margin-left: 0;
+}
+
 /* ---------------------------------------------------------- save state */
 
 /* The one line that says whether what has been written is safe. Quiet enough to be ignored
@@ -167,3 +181,14 @@
 /* The content box and the collaborative container the control inserts need no rule of their
    own: the modal's fill contract grows every ancestor of the filling element through :has(), so
    a shared document fills its dialog exactly as an unshared one does. */
+
+/* ------------------------------------------------------------- preview */
+
+/* The reading view stands in for the writing surface and takes its place in the dialog's fill
+   contract, so it ends where the dialog does and scrolls inside itself. The padding gives the
+   text the margin a page gives it; the surface draws its own. Which of the two is on screen is
+   said by the hidden attribute the controller swaps, not by a rule here. */
+.wx-editor-form-preview {
+    overflow: auto;
+    padding: 1rem 1.25rem;
+}

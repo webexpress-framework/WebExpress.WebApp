@@ -1,32 +1,42 @@
 /**
- * Keeps a document form saved as an unpublished draft while it is being written, and reports
- * that on the footer bar the publish button sits on.
+ * The dialog a document is written in: the writing surface as the whole of its content, the
+ * document's name on its title bar, and on the footer bar - beside the publish button - the
+ * switch to the reading view, who else is here, the save state and the overflow menu.
  *
- * The rest form is a single transaction: it loads once, it submits once, and everything typed
- * in between exists only in the DOM. For an issue that is right - the form is short and the
- * save is one click away. For a document it is not: the text is the work, a lost tab is a lost
- * afternoon, and the save that matters ("publish") is a decision about readers rather than
- * about storage.
+ * It is the dialog's controller rather than a guest on the form, because everything it does is
+ * about the dialog: the save state sits on the dialog's bar, the reading view stands in for the
+ * dialog's content, publishing and discarding end with the dialog closing, and abandoning means
+ * closing it. The rest form controller stays on the form and keeps what is the form's - loading,
+ * validating, publishing - and the editor keeps the text; this class reaches both through the
+ * registry rather than owning them.
  *
- * So the two are split across the two services the form declares. Every change is written to
- * the "draft" service - no commit, no revision, nothing the readers see - while the submit
- * goes to the "data" service, whose PUT applies the text and ends the draft in its own
- * transaction. This controller never deletes a draft as part of publishing: a delete racing a
- * publish that failed would destroy the only copy of the text.
+ * Two of its concerns are optional, and independent of each other.
  *
- * The host is the save indicator in the footer, not the form. The controller registry keeps one
- * instance per element and the form already carries the RestFormCtrl that loads and publishes,
- * so a second class registered on it would replace the first in the registry and never be torn
- * down. The indicator carries the whole configuration instead, and reaches the form and the
- * services by walking up to it.
+ * Draft. The rest form is a single transaction: it loads once, it submits once, and everything
+ * typed in between exists only in the DOM. For an issue that is right - the form is short and
+ * the save is one click away. For a document it is not: the text is the work, a lost tab is a
+ * lost afternoon, and the save that matters ("publish") is a decision about readers rather than
+ * about storage. So every change is written to the "draft" service the form declares - no
+ * commit, no revision, nothing the readers see - while the submit goes to the "data" service,
+ * whose PUT applies the text and ends the draft in its own transaction. The dialog never deletes
+ * a draft as part of publishing: a delete racing a publish that failed would destroy the only
+ * copy of the text. Without a declared draft service the dialog is an ordinary edit form.
  *
- * Events dispatched on the host element, all bubbling:
+ * Preview. The editor shows its working surface, not the document: add-ons sit in the frame
+ * that names and configures them, tables keep their column resizers, and what cannot be typed
+ * into is fenced by the empty paragraphs the caret needs. The switch on the bar puts the reading
+ * view the content control builds from the same value in the place of the surface, filled at
+ * the moment of the switch, so an author sees what publishing would show without publishing to
+ * find out.
+ *
+ * Events dispatched on the dialog, all bubbling, beside the modal's own show and hide:
  *   webexpress.webapp.Event.EDITOR_DRAFT_SAVED      detail: { values, updated }
  *   webexpress.webapp.Event.EDITOR_DRAFT_DISCARDED  detail: { }
  *   webexpress.webapp.Event.EDITOR_PUBLISHED        detail: { response }
  *   webexpress.webapp.Event.EDITOR_STATE            detail: { state }
+ *   webexpress.webui.Event.CHANGE_VISIBILITY_EVENT  detail: { view }
  */
-webexpress.webapp.EditorFormCtrl = class extends webexpress.webui.Ctrl {
+webexpress.webapp.ModalEditorCtrl = class extends webexpress.webui.ModalCtrl {
 
     /**
      * The user events that count as "the author is working in here". Hydrating the form from
@@ -48,16 +58,24 @@ webexpress.webapp.EditorFormCtrl = class extends webexpress.webui.Ctrl {
      */
     static DRAFT_TYPE = "webexpress.webapp.collaborative.draft";
 
+    /** The presentation the dialog opens on: the writing surface. */
+    static WRITE = "write";
+
+    /** The presentation showing what publishing would show. */
+    static PREVIEW = "preview";
+
     /**
-     * Create a new EditorFormCtrl instance.
-     * @param {HTMLElement} element - The save indicator, which carries the configuration.
+     * Create a new ModalEditorCtrl instance.
+     * @param {HTMLElement} element - The dialog, carrying the configuration.
      */
     constructor(element) {
         super(element);
 
         this._form = element.closest("form");
-        this._service = null;
         this._listeners = [];
+        this._destroyed = false;
+
+        this._service = null;
         this._timer = null;
         this._deadline = null;
         this._inFlight = false;
@@ -67,38 +85,50 @@ webexpress.webapp.EditorFormCtrl = class extends webexpress.webui.Ctrl {
         this._draft = false;
         this._updated = null;
         this._state = "idle";
+        this._indicator = null;
         this._menu = null;
-        this._destroyed = false;
+        this._queue = null;
+        this._onAnnouncement = null;
 
-        // an indicator outside a form, or a form that declared no draft service, carries no
-        // autosave; the surface then behaves like an ordinary edit form, which is a supported
-        // way to author the control rather than an error
-        if (!this._form) {
-            return;
-        }
+        this._surface = null;
+        this._preview = null;
+        this._switcher = null;
+        this._view = webexpress.webapp.ModalEditorCtrl.WRITE;
 
-        const ds = element.dataset;
+        this._debounce = this._duration(element.getAttribute("data-wx-debounce"), 900);
+        this._maxDelay = this._duration(element.getAttribute("data-wx-max-delay"), 5000);
+        this._channel = element.getAttribute("data-wx-channel") || null;
+        this._showState = element.getAttribute("data-wx-show-state") !== "false";
 
-        this._debounce = this._duration(ds.wxDebounce, 900);
-        this._maxDelay = this._duration(ds.wxMaxDelay, 5000);
-        this._menuId = ds.wxMenu || null;
-        this._discardId = ds.wxDiscard || null;
-        this._channel = ds.wxChannel || null;
+        const preview = element.getAttribute("data-wx-preview") === "true";
+
+        element.removeAttribute("data-wx-debounce");
+        element.removeAttribute("data-wx-max-delay");
+        element.removeAttribute("data-wx-channel");
+        element.removeAttribute("data-wx-show-state");
+        element.removeAttribute("data-wx-preview");
 
         // the announcements carry who sent them, because the queue hands a message to every
         // listener including the one that sent it
         this._author = "a-" + Math.random().toString(36).slice(2, 10);
 
-        this._service = webexpress.webapp.ServiceRegistry.fromElement(this._form).draft || null;
+        // the bar the form contributed to the dialog's footer, lifted there by the base, with
+        // the presence slot, the menu and the publish button already on it in that order; and
+        // the box holding the writing surface, lifted into the body
+        this._bar = this._footerDiv.querySelector(".wx-editor-form-footer");
+        this._box = this._bodyDiv.querySelector(".wx-editor-form-content");
 
-        if (!this._service) {
-            return;
+        if (preview && this._bar && this._box) {
+            this._initPreview();
         }
 
-        this._bind();
-        this._share();
-        this.render();
-        void this._resume();
+        // a form that declared no draft service carries no autosave; the dialog is then an
+        // ordinary edit form, which is a supported way to author the control rather than an error
+        this._service = this._form ? (webexpress.webapp.ServiceRegistry.fromElement(this._form).draft || null) : null;
+
+        if (this._service && this._bar) {
+            this._initDraft();
+        }
     }
 
     /**
@@ -110,16 +140,57 @@ webexpress.webapp.EditorFormCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Writes the current state into the indicator and announces it.
-     *
-     * The state is one attribute rather than a set of classes, so a stylesheet selects on a
-     * value and this method swaps one instead of juggling a set.
+     * Returns the presentation the dialog is showing.
+     * @returns {string} One of write, preview.
      */
-    render() {
-        this._element.setAttribute("data-wx-state", this._state);
-        this._element.textContent = this._text(this._state);
+    get view() {
+        return this._view;
+    }
 
-        this._dispatch(webexpress.webapp.Event.EDITOR_STATE, { state: this._state });
+    /**
+     * Shows one presentation in the place of the other.
+     *
+     * The reading view is revealed before it is filled, because the add-ons it brings to life
+     * measure themselves, and a chart laid out at zero width stays that way. The hidden
+     * attribute rather than an inline display, so what the two are laid out as stays the
+     * stylesheet's decision - an inline value outranks every rule that could say otherwise,
+     * including the dialog's fill contract.
+     * @param {string} name - The presentation, one of write, preview.
+     */
+    set view(name) {
+        const previewing = name === webexpress.webapp.ModalEditorCtrl.PREVIEW;
+
+        if (!this._preview || name === this._view) {
+            return;
+        }
+
+        this._view = name;
+
+        this._reveal(this._surface, !previewing);
+        this._reveal(this._preview, previewing);
+
+        if (previewing) {
+            this.refresh();
+        }
+
+        this._switcher.active = name;
+        this._dispatch(webexpress.webui.Event.CHANGE_VISIBILITY_EVENT, { view: name });
+    }
+
+    /**
+     * Rebuilds the reading view from what the editor holds now. Nothing happens while the
+     * surface is showing; the view is filled at the moment it is asked for.
+     */
+    refresh() {
+        if (this._view !== webexpress.webapp.ModalEditorCtrl.PREVIEW) {
+            return;
+        }
+
+        const content = webexpress.webui.Controller.getInstanceByElement(this._preview);
+
+        if (content) {
+            content.value = this._value();
+        }
     }
 
     /**
@@ -140,14 +211,14 @@ webexpress.webapp.EditorFormCtrl = class extends webexpress.webui.Ctrl {
 
         this._sealed = true;
         this._cancel();
-        this._render("discarding");
+        this._setState("discarding");
 
         const result = await this._service.remove();
 
         this._sealed = false;
 
         if (!result.ok) {
-            this._render("error");
+            this._setState("error");
             return;
         }
 
@@ -159,14 +230,14 @@ webexpress.webapp.EditorFormCtrl = class extends webexpress.webui.Ctrl {
         this._updated = null;
 
         this._revealMenu(false);
-        this._render("idle");
+        this._setState("idle");
         this._dispatch(webexpress.webapp.Event.EDITOR_DRAFT_DISCARDED, {});
 
         // the form is re-loaded even though the dialog is about to close, because the dialog is
         // not rebuilt when it is opened again: without this the next open would show the text
         // that was just thrown away
         this._formCtrl()?.load?.();
-        this._closeDialog();
+        this.hide();
     }
 
     /**
@@ -193,13 +264,101 @@ webexpress.webapp.EditorFormCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
+     * Builds the reading view beside the writing surface and the switch between the two onto
+     * the bar.
+     *
+     * The box holds one thing - the main section, or the collaborative container around it -
+     * and the reading view is placed beside it rather than inside it, so the two can stand in
+     * for each other. The view goes through the registry rather than being constructed here, so
+     * it is the same content control a page renders, tracked and torn down like one. The switch
+     * is the shared one every surface with several views of one subject uses.
+     */
+    _initPreview() {
+        this._surface = this._box.firstElementChild;
+
+        this._preview = document.createElement("div");
+        this._preview.className = "wx-webui-content wx-editor-form-preview";
+        this._preview.setAttribute("data-fill", "true");
+        this._preview.setAttribute("data-placeholder", this._i18n("webexpress.webapp:editorform.preview.empty", ""));
+        this._preview.setAttribute("hidden", "");
+        this._box.appendChild(this._preview);
+
+        webexpress.webui.Controller.createInstances(this._preview);
+
+        this._switcher = new webexpress.webui.ViewSwitcher({
+            views: [
+                {
+                    name: webexpress.webapp.ModalEditorCtrl.WRITE,
+                    label: this._i18n("webexpress.webapp:editorform.view.write", "Write"),
+                    icon: "pen"
+                },
+                {
+                    name: webexpress.webapp.ModalEditorCtrl.PREVIEW,
+                    label: this._i18n("webexpress.webapp:editorform.view.preview", "Preview"),
+                    icon: "eye"
+                }
+            ],
+            active: this._view,
+            onSelect: (name) => { this.view = name; }
+        });
+
+        // at the left end of the bar, ahead of who is here: it is the mode of the whole
+        // surface, so it reads before anything that comments on the text
+        const slot = document.createElement("div");
+        slot.className = "wx-editor-form-switch";
+        slot.appendChild(this._switcher.element);
+        this._bar.prepend(slot);
+
+        if (this._form) {
+            // a shared document keeps changing under a reading view - the peers type on - and
+            // a form that re-loads after a discard replaces the text; both reach the form as the
+            // editor's change event, which bubbles, so one listener covers the editor however
+            // deeply it nests
+            this._listen(this._form, webexpress.webui.Event.CHANGE_VALUE_EVENT, () => this.refresh());
+        }
+
+        // whoever comes back to a document comes to write, and a reading view left open would
+        // greet them with a text they cannot type into
+        this._listen(this._element, webexpress.webui.Event.MODAL_HIDE_EVENT, () => { this.view = webexpress.webapp.ModalEditorCtrl.WRITE; });
+    }
+
+    /**
+     * Builds the save indicator onto the bar and starts the autosave.
+     *
+     * The indicator goes between who is here and the overflow menu, so what it says reads as a
+     * comment on the publish button the menu is the alternative to. It is built hidden rather
+     * than left out when the host wants a quiet bar: the state is still tracked and announced,
+     * it just says nothing. The menu and its discard entry are found by the ids derived from the
+     * dialog's own, which is how the control renders them.
+     */
+    _initDraft() {
+        this._indicator = document.createElement("div");
+        this._indicator.className = "wx-editor-form-state";
+
+        if (!this._showState) {
+            this._indicator.setAttribute("hidden", "");
+        }
+
+        // looked up on the bar rather than on the document: a page that renders the same
+        // control twice - a tutorial stage does - carries the id twice, and the document would
+        // answer with the other dialog's menu
+        this._menu = this._bar.querySelector("#" + CSS.escape(this._element.id + "_menu"));
+        this._bar.insertBefore(this._indicator, this._menu);
+
+        this._bindDraft();
+        this._share();
+        this._paintState();
+        void this._resume();
+    }
+
+    /**
      * Subscribes to what the author does in the form, to the publication the form performs, and
      * to the page going away.
      */
-    _bind() {
+    _bindDraft() {
         const touch = () => { this._touched = true; };
 
-        for (const type of webexpress.webapp.EditorFormCtrl.TOUCH_EVENTS) {
+        for (const type of webexpress.webapp.ModalEditorCtrl.TOUCH_EVENTS) {
             this._listen(this._form, type, touch, true);
         }
 
@@ -215,7 +374,7 @@ webexpress.webapp.EditorFormCtrl = class extends webexpress.webui.Ctrl {
         this._listen(this._form, "submit", () => {
             this._sealed = true;
             this._cancel();
-            this._render("publishing");
+            this._setState("publishing");
         });
 
         this._listen(this._form, webexpress.webui.Event.UPLOAD_SUCCESS_EVENT, (event) => this._published(event));
@@ -225,11 +384,11 @@ webexpress.webapp.EditorFormCtrl = class extends webexpress.webui.Ctrl {
         this._listen(this._form, webexpress.webui.Event.DATA_ERROR_EVENT, () => {
             if (this._sealed) {
                 this._sealed = false;
-                this._render(this._draft ? "draft" : "idle");
+                this._setState(this._draft ? "draft" : "idle");
             }
         });
 
-        this._listen(this._form, "click", (event) => this._onClick(event));
+        this._listen(this._element, "click", (event) => this._onClick(event));
 
         // a tab closed mid-sentence still lands, because a keepalive request outlives the
         // document an ordinary one would be cancelled with
@@ -258,7 +417,7 @@ webexpress.webapp.EditorFormCtrl = class extends webexpress.webui.Ctrl {
         }
 
         this._onAnnouncement = (message) => {
-            if (!message || message.type !== webexpress.webapp.EditorFormCtrl.DRAFT_TYPE) {
+            if (!message || message.type !== webexpress.webapp.ModalEditorCtrl.DRAFT_TYPE) {
                 return;
             }
 
@@ -281,7 +440,7 @@ webexpress.webapp.EditorFormCtrl = class extends webexpress.webui.Ctrl {
         }
 
         this._queue.send({
-            type: webexpress.webapp.EditorFormCtrl.DRAFT_TYPE,
+            type: webexpress.webapp.ModalEditorCtrl.DRAFT_TYPE,
             containerId: this._channel,
             author: this._author,
             ts: Date.now()
@@ -307,7 +466,7 @@ webexpress.webapp.EditorFormCtrl = class extends webexpress.webui.Ctrl {
         this._draft = true;
 
         this._revealMenu(true);
-        this._render("draft");
+        this._setState("draft");
         this._formCtrl()?.load?.();
     }
 
@@ -335,17 +494,10 @@ webexpress.webapp.EditorFormCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Flushes a pending save as the page goes away, and takes the page level listeners off when
-     * the surface is gone.
-     *
-     * The modal marks the footer it lifts onto the dialog bar as intentionally detached, and the
-     * controller registry skips a detached subtree when it tears an element down - so a
-     * controller living on that bar can outlive its dialog without ever being destroyed. The
-     * listeners that are not on the form check for that themselves.
+     * Flushes a pending save as the page goes away.
      */
     _leave() {
-        if (this._destroyed || this._element.isConnected === false) {
-            this._unbind();
+        if (this._destroyed) {
             return;
         }
 
@@ -365,33 +517,17 @@ webexpress.webapp.EditorFormCtrl = class extends webexpress.webui.Ctrl {
         this._updated = null;
 
         this._revealMenu(false);
-        this._render("idle");
+        this._setState("idle");
         this._dispatch(webexpress.webapp.Event.EDITOR_PUBLISHED, { response: event?.detail?.response ?? null });
 
         // the decision the dialog was opened for has been taken, so it has nothing left to ask.
         // Closing is done here rather than left to the form controller, which only closes when
         // the endpoint's answer happens to say so - publishing always ends the editing.
-        this._closeDialog();
+        this.hide();
     }
 
     /**
-     * Closes the dialog the editor is rendered as.
-     *
-     * The close goes through the dialog's own controller rather than through the underlying
-     * dialog library, so the framework's hide event is dispatched and a host that listens for it
-     * is told. A surface rendered outside a dialog has nothing to close.
-     */
-    _closeDialog() {
-        const dialog = this._element.closest(".modal, .wx-webui-modal");
-        const ctrl = dialog ? webexpress.webui.Controller.getInstanceByElement(dialog) : null;
-
-        if (ctrl && typeof ctrl.hide === "function") {
-            ctrl.hide();
-        }
-    }
-
-    /**
-     * Handles a click anywhere in the form, looking for the discard entry.
+     * Handles a click anywhere in the dialog, looking for the discard entry.
      *
      * The entry is found by walking up from the target rather than by a selector, because a
      * dropdown rebuilds its entries into fresh anchors: only the id and the data attributes of
@@ -399,12 +535,10 @@ webexpress.webapp.EditorFormCtrl = class extends webexpress.webui.Ctrl {
      * @param {MouseEvent} event - The click.
      */
     _onClick(event) {
-        if (!this._discardId) {
-            return;
-        }
+        const discardId = this._element.id + "_discard";
 
-        for (let node = event.target; node && node !== this._form; node = node.parentElement) {
-            if (node.id === this._discardId) {
+        for (let node = event.target; node && node !== this._element; node = node.parentElement) {
+            if (node.id === discardId) {
                 event.preventDefault();
                 void this.discard();
                 return;
@@ -433,7 +567,7 @@ webexpress.webapp.EditorFormCtrl = class extends webexpress.webui.Ctrl {
         this._updated = data.updated ? new Date(data.updated) : null;
 
         this._revealMenu(this._draft);
-        this._render(this._draft ? "draft" : "idle");
+        this._setState(this._draft ? "draft" : "idle");
     }
 
     /**
@@ -448,7 +582,7 @@ webexpress.webapp.EditorFormCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
 
-        this._render("pending");
+        this._setState("pending");
 
         const now = Date.now();
         this._deadline = this._deadline || (now + this._maxDelay);
@@ -516,7 +650,7 @@ webexpress.webapp.EditorFormCtrl = class extends webexpress.webui.Ctrl {
         }
 
         this._inFlight = true;
-        this._render("saving");
+        this._setState("saving");
 
         const result = await this._service.update(values);
 
@@ -525,7 +659,7 @@ webexpress.webapp.EditorFormCtrl = class extends webexpress.webui.Ctrl {
         if (!result.ok) {
             // the text is still in the dom and the next change retries, so a failed save is
             // reported rather than raised
-            this._render("error");
+            this._setState("error");
             return;
         }
 
@@ -534,7 +668,7 @@ webexpress.webapp.EditorFormCtrl = class extends webexpress.webui.Ctrl {
         this._updated = new Date();
 
         this._revealMenu(true);
-        this._render("saved");
+        this._setState("saved");
         this._announce();
         this._dispatch(webexpress.webapp.Event.EDITOR_DRAFT_SAVED, { values: values, updated: this._updated });
 
@@ -562,12 +696,27 @@ webexpress.webapp.EditorFormCtrl = class extends webexpress.webui.Ctrl {
      * Resolves the form controller.
      *
      * It is looked up on each use rather than cached at construction, because the controller
-     * registry initializes children before their parents: this controller exists before the one
-     * on the form does.
+     * registry initializes children before their parents: the dialog is inside the form, so this
+     * controller exists before the one on the form does.
      * @returns {Object|null} The form controller, or null.
      */
     _formCtrl() {
-        return webexpress.webui.Controller.getInstanceByElement(this._form);
+        return this._form ? webexpress.webui.Controller.getInstanceByElement(this._form) : null;
+    }
+
+    /**
+     * Returns what the editor holds, in the format it stores.
+     *
+     * The editor is looked up on each use rather than cached, because the registry initializes
+     * children before their parents and the surface is only marked as one once its own
+     * controller has run.
+     * @returns {string} The raw editor value, or an empty string without an editor.
+     */
+    _value() {
+        const editor = this._element.querySelector(".wx-editor");
+        const ctrl = editor ? webexpress.webui.Controller.getInstanceByElement(editor) : null;
+
+        return ctrl?.value ?? "";
     }
 
     /**
@@ -578,20 +727,42 @@ webexpress.webapp.EditorFormCtrl = class extends webexpress.webui.Ctrl {
      * @param {boolean} show - Whether there is a draft to act on.
      */
     _revealMenu(show) {
-        if (!this._menu && this._menuId) {
-            this._menu = document.getElementById(this._menuId);
-        }
+        this._menu?.classList.toggle(webexpress.webapp.ModalEditorCtrl.MENU_EMPTY_CLASS, !show);
+    }
 
-        this._menu?.classList.toggle(webexpress.webapp.EditorFormCtrl.MENU_EMPTY_CLASS, !show);
+    /**
+     * Shows or hides one of the two presentations.
+     * @param {HTMLElement} element - The presentation.
+     * @param {boolean} shown - Whether it is the one on screen.
+     */
+    _reveal(element, shown) {
+        if (shown) {
+            element.removeAttribute("hidden");
+        } else {
+            element.setAttribute("hidden", "");
+        }
     }
 
     /**
      * Moves the indicator to a state and paints it.
      * @param {string} state - The new state.
      */
-    _render(state) {
+    _setState(state) {
         this._state = state;
-        this.render();
+        this._paintState();
+    }
+
+    /**
+     * Writes the current state into the indicator and announces it.
+     *
+     * The state is one attribute rather than a set of classes, so a stylesheet selects on a
+     * value and this method swaps one instead of juggling a set.
+     */
+    _paintState() {
+        this._indicator.setAttribute("data-wx-state", this._state);
+        this._indicator.textContent = this._text(this._state);
+
+        this._dispatch(webexpress.webapp.Event.EDITOR_STATE, { state: this._state });
     }
 
     /**
@@ -621,4 +792,4 @@ webexpress.webapp.EditorFormCtrl = class extends webexpress.webui.Ctrl {
 };
 
 // register for declarative auto-init
-webexpress.webui.Controller.registerClass("wx-webapp-editor-form", webexpress.webapp.EditorFormCtrl);
+webexpress.webui.Controller.registerClass("wx-webapp-modal-editor", webexpress.webapp.ModalEditorCtrl);

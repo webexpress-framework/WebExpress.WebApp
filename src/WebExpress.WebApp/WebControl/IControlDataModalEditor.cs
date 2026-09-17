@@ -22,7 +22,7 @@ namespace WebExpress.WebApp.WebControl
     {
         /// <summary>
         /// Gets the input for the document's name. It is rendered into the form's header, which
-        /// the modal controller lifts onto the dialog's title bar, so the document is titled
+        /// the dialog controller lifts onto the dialog's title bar, so the document is titled
         /// where the dialog needs a title anyway.
         /// </summary>
         ControlFormItemInputText Title { get; }
@@ -62,9 +62,16 @@ namespace WebExpress.WebApp.WebControl
 
         /// <summary>
         /// Gets or sets the resolver deciding whether the save state is legible. Turned off, the
-        /// indicator still carries the autosave, it just says nothing.
+        /// state is still tracked and announced, it just says nothing on the bar.
         /// </summary>
         Func<IRenderControlContext, bool> ShowState { get; set; }
+
+        /// <summary>
+        /// Gets or sets the resolver deciding whether the footer offers the reading view of the
+        /// body - what publishing would show, built from the editor's value by the content
+        /// control - in the place of the writing surface. Turned off, the bar carries no switch.
+        /// </summary>
+        Func<IRenderControlContext, bool> Preview { get; set; }
 
         /// <summary>
         /// Gets or sets the resolver of the dialog size. A document defaults to fullscreen,

@@ -11,11 +11,11 @@ namespace WebExpress.WebApp.Test.WebControl
     /// </summary>
     /// <remarks>
     /// What the tests carry is the render contract, because that is the whole of the agreement
-    /// between the control and the two controllers that pick it up: the modal controller lifts the
-    /// three sections onto the dialog it builds, and the editor controller finds the form by
-    /// walking up from the indicator, reads its configuration off it and hydrates from the islands
-    /// beside it. Every one of those is a placement or an attribute, and every one of them costs a
-    /// debugging cycle when it moves.
+    /// between the control and the dialog controller that picks it up: it lifts the three sections
+    /// onto the dialog it builds, reads its configuration off the dialog, finds the form by walking
+    /// up from it and hydrates from the islands beside it, and builds the rest of the bar itself
+    /// around the two things rendered here. Every one of those is a placement or an attribute, and
+    /// every one of them costs a debugging cycle when it moves.
     /// </remarks>
     [Collection("NonParallelTests")]
     public class UnitTestControlDataModalEditor
@@ -91,7 +91,7 @@ namespace WebExpress.WebApp.Test.WebControl
             Assert.Contains(@"<form id=""editor_form"" class=""wx-webapp-restform""", html);
             Assert.Contains(@"<wx-service hidden name=""data"" kind=""rest"" base-uri=""http://localhost:8080/api/documents""", html);
             Assert.Contains(@"<wx-service hidden name=""draft"" kind=""rest"" base-uri=""http://localhost:8080/api/drafts"" method=""GET"" update-method=""PUT""", html);
-            Assert.Contains(@"<dialog id=""editor"" class=""wx-webui-modal wx-editor-form""", html);
+            Assert.Contains(@"<dialog id=""editor"" class=""wx-webapp-modal-editor wx-editor-form""", html);
         }
 
         /// <summary>
@@ -179,6 +179,67 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
+        /// Tests that the reading view is offered as one attribute on the dialog and nothing else:
+        /// the dialog controller builds the switch and the view itself, so the content box holds
+        /// the surface alone - which is what lets the controller take the box's only child as the
+        /// thing the view stands in for.
+        /// </summary>
+        [Fact]
+        public void ThePreviewIsOfferedOnTheDialogAndBuiltByIt()
+        {
+            // arrange
+            var control = CreateControl();
+
+            // act
+            var html = Render(control);
+            var content = Section(html, "wx-modal-content", "wx-modal-footer");
+
+            // validation
+            Assert.Contains(@"data-wx-preview=""true""", html);
+            Assert.DoesNotContain("wx-webui-content", html);
+            Assert.DoesNotContain("wx-editor-form-switch", html);
+            Assert.Matches(@"</main>\s*</div>\s*<div class=""$", content);
+        }
+
+        /// <summary>
+        /// Tests that turning the preview off withdraws the offer, so the controller builds neither
+        /// the switch nor the view.
+        /// </summary>
+        [Fact]
+        public void PreviewOffLeavesTheDialogWithoutTheOffer()
+        {
+            // arrange
+            var control = CreateControl();
+            control.Preview = _ => false;
+
+            // act
+            var html = Render(control);
+
+            // validation
+            Assert.DoesNotContain("data-wx-preview", html);
+        }
+
+        /// <summary>
+        /// Tests that a document without a draft still previews. Whether the readers get to see
+        /// the text and whether the author gets to see what they would get are two different
+        /// questions.
+        /// </summary>
+        [Fact]
+        public void PreviewSurvivesTurningTheDraftOff()
+        {
+            // arrange
+            var control = CreateControl();
+            control.Draft = _ => false;
+
+            // act
+            var html = Render(control);
+
+            // validation
+            Assert.Contains(@"data-wx-preview=""true""", html);
+            Assert.DoesNotContain("data-wx-debounce", html);
+        }
+
+        /// <summary>
         /// Tests that the title is the dialog's header, so the framework puts it on the title bar
         /// while it stays a field of the form.
         /// </summary>
@@ -198,12 +259,13 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
-        /// Tests that the indicator carries every attribute the client controller reads. The
-        /// controller is mounted on this element and configures itself from it alone, so a missing
-        /// attribute is a silently disabled autosave.
+        /// Tests that the dialog carries every attribute the autosave reads, and nothing about the
+        /// state itself. The controller configures itself from the dialog alone, so a missing
+        /// attribute is a silently defaulted autosave; and the server cannot know whether a draft
+        /// exists, so it must not pretend to.
         /// </summary>
         [Fact]
-        public void TheStateElementCarriesTheControllerConfiguration()
+        public void TheDialogCarriesTheAutosaveConfiguration()
         {
             // arrange
             var control = CreateControl();
@@ -212,24 +274,46 @@ namespace WebExpress.WebApp.Test.WebControl
 
             // act
             var html = Render(control);
-            var footer = Section(html, "wx-modal-footer");
+            var dialog = Section(html, "<dialog", ">");
 
             // validation
-            Assert.Contains("wx-webapp-editor-form", footer);
-            Assert.Contains(@"data-wx-state=""idle""", footer);
-            Assert.Contains(@"data-wx-debounce=""250""", footer);
-            Assert.Contains(@"data-wx-max-delay=""2500""", footer);
-            Assert.Contains(@"data-wx-menu=""editor_menu""", footer);
-            Assert.Contains(@"data-wx-discard=""editor_discard""", footer);
+            Assert.Contains(@"data-wx-debounce=""250""", dialog);
+            Assert.Contains(@"data-wx-max-delay=""2500""", dialog);
+            Assert.DoesNotContain("data-wx-channel", dialog);
+            Assert.DoesNotContain("data-wx-show-state", dialog);
+            Assert.DoesNotContain("data-wx-state", html);
+            Assert.DoesNotContain("wx-editor-form-state", html);
         }
 
         /// <summary>
-        /// Tests that the indicator stays in place when the state is turned off. It is the host of
-        /// the controller, so dropping it would drop the autosave with it - what "no state" means
-        /// is a quiet bar, not a form that loses what was written.
+        /// Tests that a shared document names the channel its saves are announced on, and that it
+        /// is the same one the collaborative container joins - a mismatch fails silently as "nobody
+        /// else is here".
         /// </summary>
         [Fact]
-        public void TheStateElementIsHiddenRatherThanDroppedWhenTheStateIsOff()
+        public void TheDialogNamesTheChannelOfASharedDocument()
+        {
+            // arrange
+            var control = CreateControl();
+            control.Collaborative = _ => true;
+            control.CollaborationId = _ => "channel";
+
+            // act
+            var html = Render(control);
+            var dialog = Section(html, "<dialog", ">");
+
+            // validation
+            Assert.Contains(@"data-wx-channel=""channel""", dialog);
+            Assert.Contains(@"<div id=""channel"" class=""wx-webapp-collaborative", html);
+        }
+
+        /// <summary>
+        /// Tests that a quiet bar is asked for as one attribute, so the controller builds its
+        /// indicator hidden rather than leaving it out - what "no state" means is a quiet bar, not
+        /// a form that stops tracking what was written.
+        /// </summary>
+        [Fact]
+        public void ShowStateOffTravelsOnTheDialog()
         {
             // arrange
             var control = CreateControl();
@@ -237,10 +321,10 @@ namespace WebExpress.WebApp.Test.WebControl
 
             // act
             var html = Render(control);
+            var dialog = Section(html, "<dialog", ">");
 
             // validation
-            Assert.Contains(@"class=""wx-webapp-editor-form wx-editor-form-state"" data-wx-state=""idle""", html);
-            Assert.Contains(@"data-wx-discard=""editor_discard"" hidden>", html);
+            Assert.Contains(@"data-wx-show-state=""false""", dialog);
         }
 
         /// <summary>
@@ -285,8 +369,8 @@ namespace WebExpress.WebApp.Test.WebControl
             var html = Render(control);
 
             // validation
-            Assert.DoesNotContain("wx-webapp-editor-form", html);
-            Assert.DoesNotContain("wx-editor-form-state", html);
+            Assert.DoesNotContain("data-wx-debounce", html);
+            Assert.DoesNotContain("data-wx-max-delay", html);
             Assert.DoesNotContain("wx-editor-form-menu", html);
             Assert.DoesNotContain(@"name=""draft""", html);
             Assert.Contains("wx-icon-light-floppy-disk", html);
@@ -310,8 +394,8 @@ namespace WebExpress.WebApp.Test.WebControl
             var html = Render(control);
 
             // validation
-            Assert.DoesNotContain("wx-webapp-editor-form", html);
-            Assert.DoesNotContain("wx-editor-form-state", html);
+            Assert.DoesNotContain("data-wx-debounce", html);
+            Assert.DoesNotContain("data-wx-max-delay", html);
             Assert.DoesNotContain("wx-editor-form-menu", html);
             Assert.DoesNotContain(@"name=""draft""", html);
             Assert.Contains("wx-icon-light-floppy-disk", html);
@@ -385,12 +469,12 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
-        /// Tests that the footer bar reads from the left: who is here, then whether what has been
-        /// written is safe, then what else can be done with it. The presence comes first because
-        /// it is about the document rather than about the draft.
+        /// Tests that the bar holds the presence slot ahead of the menu and nothing else of its
+        /// own: the dialog controller puts the switch ahead of the slot and the save state between
+        /// the two, so the bar reads switch · presence · state · menu once it has run.
         /// </summary>
         [Fact]
-        public void TheBarReadsPresenceThenStateThenMenu()
+        public void TheBarReadsPresenceThenMenu()
         {
             // arrange
             var control = CreateControl();
@@ -401,12 +485,12 @@ namespace WebExpress.WebApp.Test.WebControl
             var footer = Section(html, "wx-modal-footer");
 
             var presence = footer.IndexOf("wx-editor-form-presence", StringComparison.Ordinal);
-            var state = footer.IndexOf("wx-editor-form-state", StringComparison.Ordinal);
             var menu = footer.IndexOf("wx-editor-form-menu", StringComparison.Ordinal);
 
             // validation
-            Assert.True(presence >= 0 && presence < state, "who is here comes first");
-            Assert.True(state < menu, "and the save state before the overflow menu");
+            Assert.True(presence >= 0 && presence < menu, "who is here comes before the overflow menu");
+            Assert.DoesNotContain("wx-editor-form-state", footer);
+            Assert.DoesNotContain("wx-editor-form-switch", footer);
         }
 
         /// <summary>
@@ -426,7 +510,8 @@ namespace WebExpress.WebApp.Test.WebControl
 
             // validation
             Assert.Contains(@"id=""editor_presence""", html);
-            Assert.DoesNotContain("wx-editor-form-state", html);
+            Assert.DoesNotContain("data-wx-debounce", html);
+            Assert.DoesNotContain("data-wx-channel", html);
         }
     }
 }

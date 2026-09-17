@@ -30,6 +30,11 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "editorform.state.error": "Draft could not be saved - the next change retries",
     "editorform.state.publishing": "Publishing…",
     "editorform.state.discarding": "Discarding draft…",
+    // the two presentations of a document form: the writing surface and the reading view,
+    // and what the reading view says while there is nothing written
+    "editorform.view.write": "Write",
+    "editorform.view.preview": "Preview",
+    "editorform.preview.empty": "Nothing to show yet.",
 
     "fileview.list": "List",
     "fileview.tile": "Tiles",

@@ -138,10 +138,12 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
         // everybody who happens to have loaded the page it can be opened from. Everywhere else
         // the container is the surface, and joining is immediate.
         //
-        // The ancestor is matched on both names because the controller registry initializes
-        // children before their parents: at this moment the dialog still carries the class it
-        // was authored with, and only becomes ".modal" when its own controller runs.
-        this._dialog = element.closest(".modal, .wx-webui-modal");
+        // The ancestor is matched on the element as well as on both class names, because the
+        // controller registry initializes children before their parents: at this moment the
+        // dialog still carries the class it was authored with - the framework's modal class, or
+        // that of a controller derived from it, as the document editor's is - and only becomes
+        // ".modal" when its own controller runs.
+        this._dialog = element.closest("dialog, .modal, .wx-webui-modal");
 
         if (this._dialog) {
             this._onDialogShow = () => this._activate();

@@ -30,6 +30,11 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "editorform.state.error": "Entwurf konnte nicht gespeichert werden – nächste Änderung versucht es erneut",
     "editorform.state.publishing": "Wird veröffentlicht…",
     "editorform.state.discarding": "Entwurf wird verworfen…",
+    // die beiden Ansichten eines Dokumentformulars: die Schreibfläche und die Leseansicht,
+    // und was die Leseansicht sagt, solange nichts geschrieben ist
+    "editorform.view.write": "Schreiben",
+    "editorform.view.preview": "Vorschau",
+    "editorform.preview.empty": "Noch nichts zu zeigen.",
 
     "fileview.list": "Liste",
     "fileview.tile": "Kacheln",

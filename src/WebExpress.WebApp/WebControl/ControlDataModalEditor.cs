@@ -52,10 +52,13 @@ namespace WebExpress.WebApp.WebControl
     public class ControlDataModalEditor : ControlDataFormEdit, IControlDataModalEditor
     {
         /// <summary>
-        /// The css class the client controller is registered for. The controller registry strips
-        /// the class from the element at mount, so nothing may be styled through it.
+        /// The css class the client controller is registered for. It stands on the dialog in the
+        /// place of the framework's modal class, because the controller is derived from the
+        /// modal's and the registry keeps one instance per element: the editor dialog <b>is</b> a
+        /// modal that also drafts and previews. The registry strips the class at mount, so nothing
+        /// may be styled through it.
         /// </summary>
-        private const string ControllerClass = "wx-webapp-editor-form";
+        private const string ControllerClass = "wx-webapp-modal-editor";
 
         private readonly List<IControlDropdownItem> _moreItems = [];
 
@@ -139,11 +142,23 @@ namespace WebExpress.WebApp.WebControl
         /// Gets or sets the resolver deciding whether the save state is legible.
         /// </summary>
         /// <remarks>
-        /// Turned off the indicator is hidden rather than dropped, because it is also the host of
-        /// the client controller: a document without an indicator would be a document without an
-        /// autosave.
+        /// Turned off, the dialog controller builds its indicator hidden rather than leaving it
+        /// out: the state is still tracked and announced, it just says nothing on the bar.
         /// </remarks>
         public Func<IRenderControlContext, bool> ShowState { get; set; } = _ => true;
+
+        /// <summary>
+        /// Gets or sets the resolver deciding whether the footer offers the reading view.
+        /// </summary>
+        /// <remarks>
+        /// The editor shows its working surface - add-on frames, column resizers, the guard
+        /// paragraphs around what cannot be typed into - and not the document the readers get.
+        /// The switch puts the reading view the content control (the client half of
+        /// <see cref="ControlContent"/>) builds from the same value in the place of the surface,
+        /// so an author sees what publishing would show without publishing to find out. Turned
+        /// off, the bar carries no switch and the dialog holds no reading view.
+        /// </remarks>
+        public Func<IRenderControlContext, bool> Preview { get; set; } = _ => true;
 
         /// <summary>
         /// Gets or sets the resolver of the dialog size.
@@ -212,13 +227,15 @@ namespace WebExpress.WebApp.WebControl
 
         /// <summary>
         /// Renders the editor as a dialog: the document's name on the title bar, the writing
-        /// surface as the whole of the dialog's content, and the save state, who else is here and
-        /// the overflow menu on the footer bar the publish button sits on.
+        /// surface as the whole of the dialog's content, and who else is here and the overflow
+        /// menu on the footer bar the publish button sits on. The dialog carries the rest of the
+        /// configuration as attributes; its controller builds the save state, the view switch and
+        /// the reading view from them.
         /// </summary>
         /// <remarks>
         /// <para>
         /// The base control renders the form in one piece and it is recomposed here into the three
-        /// sections the modal controller lifts onto the dialog it builds. The dialog is placed
+        /// sections the dialog controller lifts onto the dialog it builds. The dialog is placed
         /// <i>inside</i> the form rather than around it, which is what makes the surface one
         /// control: the form still owns the submit, the fields and the hidden islands it hydrates
         /// from, while the dialog is only how they are presented.
@@ -226,8 +243,14 @@ namespace WebExpress.WebApp.WebControl
         /// <para>
         /// The islands stay direct children of the form, ahead of the dialog, because the client
         /// resolves them from the form's own children rather than from its descendants - and
-        /// because the modal controller moves everything it recognizes out of where it was
+        /// because the dialog controller moves everything it recognizes out of where it was
         /// authored.
+        /// </para>
+        /// <para>
+        /// Only what a child controller has to find before the dialog's own controller runs is
+        /// rendered here - the presence slot, which the collaborative container docks into at
+        /// mount, and the menu, whose entries the host authored. Everything else on the bar is the
+        /// dialog's own and is built by it.
         /// </para>
         /// </remarks>
         /// <param name="renderContext">The context in which the control is rendered.</param>
@@ -247,6 +270,10 @@ namespace WebExpress.WebApp.WebControl
                 ? DraftServiceFactory(renderContext)?.BindPathVariables(renderContext?.Request)
                 : null;
             var collaborative = Collaborative?.Invoke(renderContext) ?? false;
+            var preview = Preview?.Invoke(renderContext) ?? true;
+            var showState = ShowState?.Invoke(renderContext) ?? true;
+            var debounce = Debounce?.Invoke(renderContext) ?? 900;
+            var maxDelay = MaxDelay?.Invoke(renderContext) ?? 5000;
             var size = Size?.Invoke(renderContext) ?? TypeModalSize.Fullscreen;
             var children = form.Elements.ToList();
             var islands = children.Where(IsIsland).ToList();
@@ -278,14 +305,14 @@ namespace WebExpress.WebApp.WebControl
             {
                 Class = "wx-modal-footer wx-editor-form-footer"
             }
-                .Add(RenderBar(renderContext, visualTree, draft, collaborative))
+                .Add(RenderBar(renderContext, visualTree, draft != null, collaborative))
                 .Add(footer?.Elements ?? [])
                 .Add(loose);
 
             var modal = new HtmlElementInteractiveDialog(title, content, bar)
             {
                 Id = Id,
-                Class = "wx-webui-modal wx-editor-form"
+                Class = Css.Concatenate(ControllerClass, "wx-editor-form")
             }
                 .AddUserAttribute("data-size", size.ToClass())
                 .AddUserAttribute("data-close-label", I18N.Translate(renderContext, CloseLabel?.Invoke(renderContext)))
@@ -293,7 +320,24 @@ namespace WebExpress.WebApp.WebControl
                 // the writing surface is the height of the dialog and scrolls inside itself, so a
                 // scrolling body would put a second scrollbar around the first one
                 .AddUserAttribute("data-scrollable", "false")
-                .AddUserAttribute("data-auto-show", (Show?.Invoke(renderContext) ?? false) ? "true" : null);
+                .AddUserAttribute("data-auto-show", (Show?.Invoke(renderContext) ?? false) ? "true" : null)
+                .AddUserAttribute("data-wx-preview", preview ? "true" : null);
+
+            if (draft != null)
+            {
+                // the autosave configuration travels on the dialog, whose controller runs it.
+                // The server cannot know whether an unpublished draft exists - only the draft
+                // endpoint can - so nothing about the state is rendered; the controller opens on
+                // "nothing unsaved" and corrects it from the answer of its first request
+                modal
+                    .AddUserAttribute("data-wx-debounce", debounce.ToString(CultureInfo.InvariantCulture))
+                    .AddUserAttribute("data-wx-max-delay", maxDelay.ToString(CultureInfo.InvariantCulture))
+                    .AddUserAttribute("data-wx-show-state", showState ? null : "false")
+
+                    // only a shared document announces its saves, and only to the people on its
+                    // own channel; without one the controller keeps its writes to itself
+                    .AddUserAttribute("data-wx-channel", collaborative ? Channel(renderContext) : null);
+            }
 
             // the dialog is what carries the control id, so a trigger opens it with
             // ActionModal(id); the form keeps an id derived from it, the way the framework's own
@@ -314,22 +358,24 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
-        /// Renders what the control puts on the footer bar, ahead of the publish button: the save
-        /// state, who else is in the document, and the overflow menu.
+        /// Renders what the control itself puts on the footer bar, ahead of the publish button:
+        /// who else is in the document, and the overflow menu.
         /// </summary>
         /// <remarks>
-        /// Who is here comes first, at the left end of the bar: it is a fact about the document
-        /// rather than about the draft, and it is there whether or not anything is being saved.
-        /// The save state follows and takes the free width, which pushes the overflow menu to the
-        /// right edge of the form's own box - directly left of the publish button, the dialog
-        /// having appended its close button last.
+        /// The bar reads <i>switch · presence · state · menu · publish · close</i>, and only the
+        /// two in the middle are rendered here. The presence slot has to exist before the
+        /// collaborative container mounts, which happens before the dialog's own controller runs;
+        /// the menu carries entries the host authored. The dialog controller puts the switch ahead
+        /// of them and the save state between them, so the state takes the free width and pushes
+        /// the menu to the right edge of the form's own box - directly left of the publish button,
+        /// the dialog having appended its close button last.
         /// </remarks>
         /// <param name="renderContext">The context in which the control is rendered.</param>
         /// <param name="visualTree">The visual tree.</param>
-        /// <param name="draft">The resolved draft service descriptor, or null when nothing drafts.</param>
+        /// <param name="drafting">Whether the surface saves into a draft.</param>
         /// <param name="collaborative">Whether the document is shared.</param>
         /// <returns>The bar contents, in reading order.</returns>
-        private IEnumerable<IHtmlNode> RenderBar(IRenderControlContext renderContext, IVisualTreeControl visualTree, DataServiceDescriptor draft, bool collaborative)
+        private IEnumerable<IHtmlNode> RenderBar(IRenderControlContext renderContext, IVisualTreeControl visualTree, bool drafting, bool collaborative)
         {
             if (collaborative)
             {
@@ -342,9 +388,8 @@ namespace WebExpress.WebApp.WebControl
                 };
             }
 
-            if (draft != null)
+            if (drafting)
             {
-                yield return RenderState(renderContext, draft, collaborative ? Channel(renderContext) : null);
                 yield return RenderMenu(renderContext, visualTree);
             }
         }
@@ -355,9 +400,10 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <remarks>
         /// Only the content is wrapped. The header and the footer stay direct children of the
-        /// form, because the modal controller reads them from there - moving them into the
+        /// form, because the dialog controller reads them from there - moving them into the
         /// container would leave the document without a title bar and its save state without a
-        /// bar to sit on.
+        /// bar to sit on. The container is the only thing in the content box: the dialog
+        /// controller places the reading view beside it, and hides the one to show the other.
         /// </remarks>
         /// <param name="renderContext">The context in which the control is rendered.</param>
         /// <param name="visualTree">The visual tree.</param>
@@ -393,52 +439,6 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
-        /// Renders the save indicator, which is also the host of the client controller and
-        /// therefore carries the whole autosave configuration.
-        /// </summary>
-        /// <remarks>
-        /// The controller is mounted here rather than on the form, because the controller
-        /// registry keeps one instance per element and the form already carries the rest form
-        /// controller that loads and publishes. The state is written as one attribute rather than
-        /// as a set of classes, so the controller swaps a value instead of juggling a set.
-        /// </remarks>
-        /// <param name="renderContext">The context in which the control is rendered.</param>
-        /// <param name="draft">The resolved draft service descriptor.</param>
-        /// <param name="channel">The channel the document is shared on, or null when it is not.</param>
-        /// <returns>The indicator element.</returns>
-        private IHtmlNode RenderState(IRenderControlContext renderContext, DataServiceDescriptor draft, string channel)
-        {
-            var show = ShowState?.Invoke(renderContext) ?? true;
-            var debounce = Debounce?.Invoke(renderContext) ?? 900;
-            var maxDelay = MaxDelay?.Invoke(renderContext) ?? 5000;
-
-            // the server cannot know whether an unpublished draft exists - only the draft
-            // endpoint can - so the surface opens on "nothing unsaved" and the controller
-            // corrects it from the answer of its first request
-            var element = new HtmlElementTextContentDiv(new HtmlText(Translate(renderContext, "idle")))
-            {
-                Id = Id + "_state",
-                Class = Css.Concatenate(ControllerClass, "wx-editor-form-state")
-            }
-                .AddUserAttribute("data-wx-state", "idle")
-                .AddUserAttribute("data-wx-debounce", debounce.ToString(CultureInfo.InvariantCulture))
-                .AddUserAttribute("data-wx-max-delay", maxDelay.ToString(CultureInfo.InvariantCulture))
-                .AddUserAttribute("data-wx-menu", Id + "_menu")
-                .AddUserAttribute("data-wx-discard", Id + "_discard")
-
-                // only a shared document announces its saves, and only to the people on its own
-                // channel; without one the controller keeps its writes to itself
-                .AddUserAttribute("data-wx-channel", channel);
-
-            if (!show)
-            {
-                element.AddUserAttribute("hidden");
-            }
-
-            return element;
-        }
-
-        /// <summary>
         /// Renders the overflow menu of the footer bar.
         /// </summary>
         /// <remarks>
@@ -451,7 +451,8 @@ namespace WebExpress.WebApp.WebControl
         /// <para>
         /// The menu is rendered whether or not a draft exists, because the server cannot tell;
         /// the controller reveals it once the draft endpoint has answered that there is something
-        /// to discard.
+        /// to discard. It finds the menu and the entry by the ids derived from the dialog's own,
+        /// which is the one thing about them a dropdown rebuild leaves standing.
         /// </para>
         /// </remarks>
         /// <param name="renderContext">The context in which the control is rendered.</param>
@@ -477,9 +478,8 @@ namespace WebExpress.WebApp.WebControl
 
             // the discard is driven by the client controller, which owns the draft endpoint and
             // has to stop saving before the row is dropped - a link would race its own pending
-            // write. The controller finds the entry by the id the indicator names, because a
-            // dropdown rebuilds its entries into fresh anchors and only the id and the data
-            // attributes survive that.
+            // write. The controller finds the entry by its id, because a dropdown rebuilds its
+            // entries into fresh anchors and only the id and the data attributes survive that.
             menu.Add(new ControlDropdownItemLink(Id + "_discard")
             {
                 Text = _ => "webexpress.webapp:editorform.discard.label",
@@ -491,23 +491,12 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
-        /// Translates one save state.
-        /// </summary>
-        /// <param name="renderContext">The render context carrying the culture.</param>
-        /// <param name="state">The state token, matching the suffix of the i18n key.</param>
-        /// <returns>The translated text.</returns>
-        private static string Translate(IRenderControlContext renderContext, string state)
-        {
-            return I18N.Translate(renderContext, "webexpress.webapp:editorform.state." + state);
-        }
-
-        /// <summary>
         /// The channel the document is shared on, which is the collaboration id where one was
         /// declared and the control id otherwise.
         /// </summary>
         /// <remarks>
-        /// The same answer serves the collaborative container and the save indicator, so the
-        /// shared surface and the draft announcements about it cannot end up on two different
+        /// The same answer serves the collaborative container and the dialog's draft channel, so
+        /// the shared surface and the draft announcements about it cannot end up on two different
         /// channels - a mismatch that fails silently as "nobody else is here".
         /// </remarks>
         /// <param name="renderContext">The context in which the control is rendered.</param>
@@ -522,8 +511,8 @@ namespace WebExpress.WebApp.WebControl
         /// <summary>
         /// Reports whether the surface drafts, which takes both a declared endpoint and a request
         /// that is allowed to hold an unpublished version. Everything the draft brings with it -
-        /// the indicator, the menu, the island and the publish label - hangs off this one answer,
-        /// so that a surface can never be half-drafting.
+        /// the autosave configuration, the menu, the island and the publish label - hangs off this
+        /// one answer, so that a surface can never be half-drafting.
         /// </summary>
         /// <param name="renderContext">The context in which the control is rendered.</param>
         /// <returns><see langword="true"/> when the surface saves into a draft.</returns>
