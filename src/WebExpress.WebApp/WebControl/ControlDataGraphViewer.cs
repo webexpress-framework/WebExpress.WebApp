@@ -141,7 +141,8 @@ namespace WebExpress.WebApp.WebControl
                 Id = Id,
                 Class = Css.Concatenate("wx-webapp-graph-viewer", GetClasses(renderContext)),
                 Style = GetStyles(renderContext),
-                Role = "region"
+                // a group rather than a region: a region is a landmark and would need a name of its own
+                Role = "group"
             }
                 .AddUserAttribute("data-node-style", nodeStyle != TypeStyleGraphNode.Default ? nodeStyle.ToValue() : null)
                 .AddUserAttribute("data-edge-style", edgeStyle != TypeStyleGraphEdge.Default ? edgeStyle.ToValue() : null)

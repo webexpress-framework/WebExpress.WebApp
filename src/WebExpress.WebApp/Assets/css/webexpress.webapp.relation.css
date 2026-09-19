@@ -14,6 +14,8 @@
     --wx-relation-text: var(--wx-webapp-text, var(--wx-body-color, #212529));
     --wx-relation-muted: var(--wx-webapp-text-3, var(--wx-secondary-color, #6c757d));
     --wx-relation-accent: var(--wx-webapp-primary, var(--wx-primary, #0d6efd));
+    /* the accent as text on the body background, which the surface accent falls short of */
+    --wx-relation-accent-text: var(--wx-primary-text-emphasis, #052c65);
     --wx-relation-radius: var(--wx-webapp-r-md, 8px);
     --wx-relation-radius-sm: var(--wx-webapp-r-sm, 5px);
     /* the step a row takes against the head of its group. one icon plus its gap, so
@@ -72,8 +74,10 @@
 
 /* the presentation switch is the shared one; the surface only hands it its own
    palette, so its layout stays stated in one place */
+/* the track is the raised surface, not the border: the muted caption of an inactive
+   entry drops below 4.5:1 on the border color of the dark theme */
 .wx-relation-view .wx-view-switcher {
-    --wx-view-switcher-track: var(--wx-relation-border);
+    --wx-view-switcher-track: var(--wx-relation-surface-2);
     --wx-view-switcher-surface: var(--wx-relation-surface);
     --wx-view-switcher-text: var(--wx-relation-text);
     --wx-view-switcher-muted: var(--wx-relation-muted);
@@ -137,8 +141,11 @@
 
 .wx-relation-view-group-counterpart {
     padding: 1px 7px;
+    border: 1px solid var(--wx-relation-border);
     border-radius: var(--wx-relation-radius-sm);
-    background: var(--wx-relation-border);
+    /* a drawn frame instead of a filled one: muted text on the border color of the dark
+       theme drops below 4.5:1 */
+    background: transparent;
     color: var(--wx-relation-muted);
 }
 
@@ -170,9 +177,20 @@
     flex: 0 0 auto;
 }
 
+/* the chevron is the button that opens the detail from the keyboard; it looks like the
+   glyph it was and keeps the 24px a pointer target needs */
 .wx-relation-view-row-more {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    min-height: 24px;
+    padding: 0;
+    border: 0;
+    background: transparent;
     color: var(--wx-relation-muted);
     flex: 0 0 auto;
+    cursor: pointer;
 }
 
 .wx-relation-view-obsolete {
@@ -184,8 +202,11 @@
 }
 
 .wx-relation-view-key {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
     font-family: var(--wx-font-monospace, monospace);
-    color: var(--wx-relation-accent);
+    color: var(--wx-relation-accent-text);
     text-decoration: none;
     white-space: nowrap;
 }
@@ -230,10 +251,11 @@
     background: currentColor;
 }
 
-.wx-relation-view-status-success { color: var(--wx-success, #198754); }
-.wx-relation-view-status-info { color: var(--wx-info, #0dcaf0); }
-.wx-relation-view-status-warning { color: var(--wx-warning, #ffc107); }
-.wx-relation-view-status-danger { color: var(--wx-danger, #dc3545); }
+/* status text sits on the body background: the emphasis variants are the readable ones */
+.wx-relation-view-status-success { color: var(--wx-success-text-emphasis, #0a3622); }
+.wx-relation-view-status-info { color: var(--wx-info-text-emphasis, #055160); }
+.wx-relation-view-status-warning { color: var(--wx-warning-text-emphasis, #664d03); }
+.wx-relation-view-status-danger { color: var(--wx-danger-text-emphasis, #58151c); }
 .wx-relation-view-status-secondary { color: var(--wx-relation-muted); }
 
 .wx-relation-view-since {

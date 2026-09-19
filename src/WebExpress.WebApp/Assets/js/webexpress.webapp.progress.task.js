@@ -25,6 +25,11 @@ webexpress.webapp.ProgressTaskCtrl = class extends webexpress.webui.Ctrl {
     static STATE_FINISH = 3;
 
     /**
+     * Counts the bars on the page, so each message gets an id the bar can be named by.
+     */
+    static _nextId = 0;
+
+    /**
      * Constructor.
      * @param {HTMLElement} element - The DOM element associated with the control.
      */
@@ -54,9 +59,12 @@ webexpress.webapp.ProgressTaskCtrl = class extends webexpress.webui.Ctrl {
         }
         this._progressBar.appendChild(this._progressInner);
 
-        // create message element
+        // create message element; it is what the bar reports on, so it also names the bar,
+        // and a generic name stands in until the first message arrives
         this._message = document.createElement("div");
         this._message.className = "text-secondary";
+        this._message.id = (element.id || "wx-taskprogress") + "-message-" + (++webexpress.webapp.ProgressTaskCtrl._nextId);
+        this._progressInner.setAttribute("aria-label", this._i18n("webexpress.webapp:statustask.running", "In progress"));
 
         // cleanup and setup DOM
         element.innerHTML = "";
@@ -132,6 +140,12 @@ webexpress.webapp.ProgressTaskCtrl = class extends webexpress.webui.Ctrl {
         this._progressInner.style.width = progress + "%";
         this._progressInner.setAttribute("aria-valuenow", String(progress));
         this._message.innerHTML = message;
+        // an empty message would name the bar with nothing; the generic name takes over then
+        if (message.replace(/<[^>]*>/g, "").trim()) {
+            this._progressInner.setAttribute("aria-labelledby", this._message.id);
+        } else {
+            this._progressInner.removeAttribute("aria-labelledby");
+        }
 
         // show element on first signal of activity
         if (progress > 0 && this._showOnStart) {

@@ -1091,6 +1091,8 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
                     const caret = document.createElement("button");
                     caret.type = "button";
                     caret.className = "wx-gantt-caret";
+                    caret.setAttribute("aria-expanded", task.collapsed ? "false" : "true");
+                    caret.setAttribute("aria-label", this._i18n("webexpress.webui:list.tree.toggle", "Expand or collapse"));
                     const drawing = webexpress.webui.Icon.create("angle-down");
                     drawing.style.transform = task.collapsed ? "rotate(-90deg)" : "none";
                     caret.appendChild(drawing);
@@ -1290,6 +1292,8 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
 
         const chart = document.createElement("div");
         chart.className = "wx-gantt-chart";
+        // the timeline scrolls sideways; it has to take the focus for the keyboard to scroll it
+        chart.setAttribute("tabindex", "0");
         this._chartScroll = chart;
         chart.addEventListener("scroll", () => this._syncVerticalScroll());
         chart.addEventListener("wheel", (e) => {

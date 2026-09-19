@@ -197,9 +197,9 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the item layout property of the rest form control.
         /// </summary>
         [Theory]
-        [InlineData(TypeLayoutFormItem.Horizontal, @"<form id=""*"" class=""wx-webapp-restform"" *><main><div class=""wx-form-group-horizontal"">*</div></main><div></div></form>")]
+        [InlineData(TypeLayoutFormItem.Horizontal, @"<form id=""*"" class=""wx-webapp-restform"" *><div class=""wx-form-main""><div class=""wx-form-group-horizontal"">*</div></div><div></div></form>")]
         [InlineData(TypeLayoutFormItem.Vertical, @"<form id=""*"" class=""wx-webapp-restform"" *>*</form>")]
-        [InlineData(TypeLayoutFormItem.Mix, @"<form id=""*"" class=""wx-webapp-restform"" *><main><div class=""wx-form-group-mix"">*</div></main><div></div></form>")]
+        [InlineData(TypeLayoutFormItem.Mix, @"<form id=""*"" class=""wx-webapp-restform"" *><div class=""wx-form-main""><div class=""wx-form-group-mix"">*</div></div><div></div></form>")]
         public void ItemLayout(TypeLayoutFormItem itemLayout, string expected)
         {
             // arrange

@@ -298,8 +298,8 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the value method of the REST unique control.
         /// </summary>
         [Theory]
-        [InlineData(null, @"*<div class=""wx-webapp-input-unique""></div>*")]
-        [InlineData("abc", @"*<div class=""wx-webapp-input-unique"" data-value=""abc"">*")]
+        [InlineData(null, @"*<div id=""*"" class=""wx-webapp-input-unique""></div>*")]
+        [InlineData("abc", @"*<div id=""*"" class=""wx-webapp-input-unique"" data-value=""abc"">*")]
         public void ValueForm(string value, string expected)
         {
             // arrange
@@ -327,8 +327,8 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the value method of the REST unique control.
         /// </summary>
         [Theory]
-        [InlineData(null, @"*<div class=""wx-webapp-input-unique""></div>*")]
-        [InlineData("abc", @"*<div class=""wx-webapp-input-unique"" data-value=""abc"">*")]
+        [InlineData(null, @"*<div id=""*"" class=""wx-webapp-input-unique""></div>*")]
+        [InlineData("abc", @"*<div id=""*"" class=""wx-webapp-input-unique"" data-value=""abc"">*")]
         public void ValueItem(string value, string expected)
         {
             // arrange

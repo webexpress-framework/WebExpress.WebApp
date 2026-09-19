@@ -146,7 +146,7 @@ namespace WebExpress.WebApp.Test.WebControl
         [InlineData(null, @"<div class=""wx-webapp-tag""></div>")]
         [InlineData("", @"<div class=""wx-webapp-tag""></div>")]
         [InlineData(" ", @"<div class=""wx-webapp-tag""></div>")]
-        [InlineData("gold", @"<div class=""wx-webapp-tag"" data-color-style=""background: gold;""></div>")]
+        [InlineData("gold", @"<div class=""wx-webapp-tag"" data-color-style=""background: gold;color: #000;""></div>")]
         public void UserColor(string color, string expected)
         {
             // arrange

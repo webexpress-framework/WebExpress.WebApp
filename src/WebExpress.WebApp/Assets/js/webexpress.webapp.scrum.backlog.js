@@ -1117,6 +1117,9 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
             const menuBtn = document.createElement("button");
             menuBtn.type = "button";
             menuBtn.className = "btn btn-sm btn-light wx-scrum-sprint-menu";
+            menuBtn.title = this._i18n("webexpress.webui:table.options.label", "Options");
+            menuBtn.setAttribute("aria-label", menuBtn.title);
+            menuBtn.setAttribute("aria-haspopup", "menu");
             menuBtn.appendChild(webexpress.webui.Icon.create(this._icons.sprintMenu || this._iconClass("more")));
             menuBtn.addEventListener("click", (e) => {
                 e.stopPropagation();

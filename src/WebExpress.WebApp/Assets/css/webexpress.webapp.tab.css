@@ -65,8 +65,7 @@
     pointer-events: auto;
 }
 
-.wx-webapp-tab-close:hover,
-.wx-webapp-tab-close:focus-visible {
+.wx-webapp-tab-close:hover {
     color: var(--wx-danger, var(--wx-danger));
 }
 

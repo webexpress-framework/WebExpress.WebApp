@@ -161,6 +161,8 @@ namespace WebExpress.WebApp.WebPage
             var renderContext = new RenderControlContext(context.RenderContext);
 
             // head
+            // assistive technology picks pronunciation rules from the document language
+            html.AddUserAttribute("lang", context.Request?.Culture?.Name);
             html.Head.Title = I18N.Translate(context.Request, Title);
             html.Head.Favicons = Favicons;
             html.Head.Base = Base?.ToString();

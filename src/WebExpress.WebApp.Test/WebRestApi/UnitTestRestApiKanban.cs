@@ -87,7 +87,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
 
             using var userDoc = JsonDocument.Parse(userJson);
             Assert.Equal(JsonValueKind.Null, userDoc.RootElement.GetProperty("colorCss").ValueKind);
-            Assert.Equal("background:#ff8800;", userDoc.RootElement.GetProperty("colorStyle").GetString());
+            Assert.Equal("background:#ff8800;color:#000;", userDoc.RootElement.GetProperty("colorStyle").GetString());
         }
 
         /// <summary>

@@ -166,13 +166,20 @@ test("destroying the tab control removes its confirmation and ignores a late DEL
     assert.deepEqual(rt.closed, []);
 });
 
-test("the deletion control is a keyboard-accessible button outside the tab selection button", () => {
+test("the close glyph is no control of its own: the tab list holds tabs only, and the delete key removes the focused tab", () => {
     const rt = setup();
     const close = rt.host.querySelector(".wx-webapp-tab-close");
-    assert.equal(close.tagName, "BUTTON");
-    assert.equal(close.type, "button");
+    assert.notEqual(close.tagName, "BUTTON", "a second control in the tab list is not allowed there");
+    assert.equal(close.getAttribute("aria-hidden"), "true");
     assert.equal(close.closest('[role="tab"]'), null);
-    assert.ok(close.getAttribute("aria-label").includes("Alpha"));
+    assert.ok(close.title.includes("Alpha"), "the pointer still learns what the glyph does");
+
+    const tab = rt.ctrl._navElement.querySelector(".nav-link");
+    assert.equal(tab.getAttribute("aria-keyshortcuts"), "Delete", "the tab announces the shortcut that replaces the button");
+    let prevented = false;
+    tab.dispatchEvent({ type: "keydown", key: "Delete", target: tab, preventDefault: () => { prevented = true; } });
+    assert.ok(prevented);
+    assert.ok(rt.ctrl._confirm, "the delete key opens the same confirmation the glyph does");
 });
 
 test("a query started before deletion cannot resurrect the deleted tab", async () => {

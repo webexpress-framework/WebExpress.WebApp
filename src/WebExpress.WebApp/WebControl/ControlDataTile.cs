@@ -59,6 +59,13 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, bool> Fill { get; set; } = _ => false;
 
         /// <summary>
+        /// Gets or sets the outline level of the card titles. A card title is a fifth-level
+        /// heading by default; a page that places the tiles right under a shallower heading
+        /// sets the level that keeps its outline without a gap.
+        /// </summary>
+        public Func<IRenderControlContext, int?> HeadingLevel { get; set; }
+
+        /// <summary>
         /// Gets the data service descriptors of the control, emitted together as
         /// the data-wx-service island that the JavaScript engine consumes in
         /// preference to the legacy data-uri fallback, which keeps the endpoint
@@ -119,6 +126,7 @@ namespace WebExpress.WebApp.WebControl
             var pageSize = PageSize?.Invoke(renderContext) ?? 0;
             var bind = Bind?.Invoke(renderContext);
             var fill = Fill?.Invoke(renderContext) ?? false;
+            var headingLevel = HeadingLevel?.Invoke(renderContext);
 
             var html = new HtmlElementTextContentDiv()
             {
@@ -127,6 +135,7 @@ namespace WebExpress.WebApp.WebControl
                 Style = GetStyles(renderContext)
             }
                 .AddUserAttribute("data-page-size", pageSize > 0 ? pageSize.ToString() : null)
+                .AddUserAttribute("data-heading-level", headingLevel?.ToString())
                 .EmitDataIslands(this, renderContext);
 
             bind?.ApplyUserAttributes(html);

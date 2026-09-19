@@ -23,6 +23,8 @@
     --wx-we-text-3:        color-mix(in oklab, var(--wx-body-color, #1f2328) 60%, var(--wx-body-bg, #fff));
     --wx-we-text-muted:    color-mix(in oklab, var(--wx-body-color, #1f2328) 45%, var(--wx-body-bg, #fff));
     --wx-we-primary:       var(--wx-primary, #0d6efd);
+    /* the accent as text on the body background, which the surface accent falls short of */
+    --wx-we-primary-text:  var(--wx-primary-text-emphasis, #052c65);
     --wx-we-primary-soft:  color-mix(in oklab, var(--wx-we-primary) 12%, var(--wx-we-bg));
     --wx-we-primary-strong:color-mix(in oklab, var(--wx-we-primary) 35%, var(--wx-we-bg));
     --wx-we-success:       var(--wx-success, #198754);
@@ -261,7 +263,8 @@
 .wx-workflow-editor-preflight--ok {
     background: color-mix(in oklab, var(--wx-we-success) 10%, var(--wx-we-bg));
     border-color: color-mix(in oklab, var(--wx-we-success) 35%, var(--wx-we-border));
-    color: color-mix(in oklab, var(--wx-we-success) 75%, var(--wx-we-text-1));
+    /* more body text than green in the mix: three quarters green reads under 4.5:1 on the dark theme */
+    color: color-mix(in oklab, var(--wx-we-success) 50%, var(--wx-we-text-1));
 }
 
 .wx-workflow-editor-preflight--ok > .fas {
@@ -760,7 +763,7 @@
 .wx-workflow-editor-btn--ghost {
     background: transparent;
     border-color: transparent;
-    color: var(--wx-we-primary);
+    color: var(--wx-we-primary-text);
 }
 
 .wx-workflow-editor-btn--ghost:hover,

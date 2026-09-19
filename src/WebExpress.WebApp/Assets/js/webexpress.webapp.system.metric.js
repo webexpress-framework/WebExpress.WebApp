@@ -164,6 +164,7 @@ webexpress.webapp.SystemMetricCtrl = class extends webexpress.webui.Ctrl {
         this._track = document.createElement("div");
         this._track.className = "wx-system-metric-track";
         this._track.setAttribute("role", "progressbar");
+        this._track.setAttribute("aria-label", this._label);
         this._track.setAttribute("aria-valuemin", "0");
         this._track.setAttribute("aria-valuemax", "100");
         this._track.appendChild(this._bar);
@@ -186,6 +187,8 @@ webexpress.webapp.SystemMetricCtrl = class extends webexpress.webui.Ctrl {
         this._svg.setAttribute("viewBox", "0 0 100 100");
         this._svg.setAttribute("preserveAspectRatio", "none");
         this._svg.setAttribute("role", "img");
+        // the label is rewritten with every reading; the first one names the chart
+        this._svg.setAttribute("aria-label", this._label);
 
         this._area = document.createElementNS(ns, "polygon");
         this._area.setAttribute("class", "wx-system-metric-chart-area");

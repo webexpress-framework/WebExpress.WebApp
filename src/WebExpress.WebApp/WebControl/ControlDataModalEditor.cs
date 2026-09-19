@@ -278,7 +278,7 @@ namespace WebExpress.WebApp.WebControl
             var children = form.Elements.ToList();
             var islands = children.Where(IsIsland).ToList();
             var header = children.OfType<HtmlElementSectionHeader>().FirstOrDefault();
-            var main = children.OfType<HtmlElementSectionMain>().FirstOrDefault();
+            var main = children.OfType<HtmlElementTextContentDiv>().FirstOrDefault(x => x.Class == "wx-form-main");
             var footer = children.OfType<HtmlElementSectionFooter>().FirstOrDefault();
 
             // whatever the base put beside the three sections and the islands is the button panel,
@@ -409,9 +409,9 @@ namespace WebExpress.WebApp.WebControl
         /// <param name="visualTree">The visual tree.</param>
         /// <param name="main">The content section the base rendered.</param>
         /// <returns>The content node.</returns>
-        private IHtmlNode RenderContent(IRenderControlFormContext renderContext, IVisualTreeControl visualTree, HtmlElementSectionMain main, bool collaborative)
+        private IHtmlNode RenderContent(IRenderControlFormContext renderContext, IVisualTreeControl visualTree, HtmlElementTextContentDiv main, bool collaborative)
         {
-            main ??= new HtmlElementSectionMain();
+            main ??= new HtmlElementTextContentDiv() { Class = "wx-form-main" };
 
             if (!collaborative)
             {

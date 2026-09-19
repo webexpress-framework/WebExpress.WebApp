@@ -89,7 +89,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
 
             // a user-defined badge color collapses into the inline style and
             // leaves the css class out of the payload
-            Assert.Equal("background:#7c3aed;", children[0].GetProperty("badgeStyle").GetString());
+            Assert.Equal("background:#7c3aed;color:#fff;", children[0].GetProperty("badgeStyle").GetString());
             Assert.False(children[0].TryGetProperty("badgeColor", out _));
 
             // divider carries its type

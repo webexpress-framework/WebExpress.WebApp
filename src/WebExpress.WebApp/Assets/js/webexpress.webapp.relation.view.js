@@ -464,9 +464,10 @@ webexpress.webapp.RelationViewCtrl = class extends webexpress.webapp.Data {
         const row = document.createElement("div");
         row.className = "wx-relation-view-row";
         row.dataset.link = item.id;
+        // the whole row opens the detail for the pointer; the keyboard reaches the detail
+        // through the button at its end, because a row that is itself a button could not
+        // hold the link to the object without nesting one control in another
         row.setAttribute("data-command", "detail");
-        row.setAttribute("role", "button");
-        row.setAttribute("tabindex", "0");
 
         if (item.status === "obsolete") {
             row.classList.add("wx-relation-view-obsolete");
@@ -512,7 +513,12 @@ webexpress.webapp.RelationViewCtrl = class extends webexpress.webapp.Data {
         since.textContent = this._since(item.created);
         row.appendChild(since);
 
-        row.appendChild(webexpress.webui.Icon.create(this._iconClass("chevron-right"), "wx-relation-view-row-more"));
+        const more = document.createElement("button");
+        more.type = "button";
+        more.className = "wx-relation-view-row-more";
+        more.setAttribute("aria-label", this._i18n("webexpress.webapp:relation.detail", "Details") + ": " + (other.title || other.key || other.uri || ""));
+        more.appendChild(webexpress.webui.Icon.create(this._iconClass("chevron-right")));
+        row.appendChild(more);
 
         return row;
     }

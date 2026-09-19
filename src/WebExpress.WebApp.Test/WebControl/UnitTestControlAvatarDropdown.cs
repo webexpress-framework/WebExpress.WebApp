@@ -17,8 +17,8 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the id property of the avatar dropdown control.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div class=""wx-webapp-avatar-dropdown"" role=""button""></div>")]
-        [InlineData("id", @"<div id=""id"" class=""wx-webapp-avatar-dropdown"" role=""button""></div>")]
+        [InlineData(null, @"<div class=""wx-webapp-avatar-dropdown""></div>")]
+        [InlineData("id", @"<div id=""id"" class=""wx-webapp-avatar-dropdown""></div>")]
         public void Id(string id, string expected)
         {
             // arrange
@@ -41,8 +41,8 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the rest uri property of the avatar dropdown control.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div class=""wx-webapp-avatar-dropdown"" role=""button""></div>")]
-        [InlineData("https://example.com/api/avatar", @"<div class=""wx-webapp-avatar-dropdown"" role=""button""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/avatar"" method=""GET""></wx-service></div>")]
+        [InlineData(null, @"<div class=""wx-webapp-avatar-dropdown""></div>")]
+        [InlineData("https://example.com/api/avatar", @"<div class=""wx-webapp-avatar-dropdown""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/avatar"" method=""GET""></wx-service></div>")]
         public void Service(string uriString, string expected)
         {
             // arrange
@@ -86,7 +86,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var html = control.Render(context, visualTree);
 
             // validation
-            AssertExtensions.EqualWithPlaceholders(@"<div class=""wx-webapp-avatar-dropdown"" role=""button"" data-wx-resource=""avatar""></div>", html);
+            AssertExtensions.EqualWithPlaceholders(@"<div class=""wx-webapp-avatar-dropdown"" data-wx-resource=""avatar""></div>", html);
         }
 
         /// <summary>

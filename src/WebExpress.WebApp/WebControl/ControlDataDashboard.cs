@@ -91,6 +91,13 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, bool> Fill { get; set; } = _ => false;
 
         /// <summary>
+        /// Gets or sets the outline level of the column titles; the widget titles sit one level
+        /// below them. Fifth by default, so a page that places the dashboard right under a
+        /// shallower heading sets the level that keeps its outline without a gap.
+        /// </summary>
+        public Func<IRenderControlContext, int?> HeadingLevel { get; set; }
+
+        /// <summary>
         /// Gets the data service descriptors of the control, emitted together as
         /// the data-wx-service island that the JavaScript engine consumes in
         /// preference to the legacy data-uri fallback, which keeps the endpoint
@@ -168,6 +175,7 @@ namespace WebExpress.WebApp.WebControl
                 .AddUserAttribute("data-addable-column", addableColumn ? "true" : null)
                 .AddUserAttribute("data-addable-widget", addableWidget ? "true" : null)
                 .AddUserAttribute("data-configurable-widget", configurableWidget ? "true" : null)
+                .AddUserAttribute("data-heading-level", HeadingLevel?.Invoke(renderContext)?.ToString())
                 .EmitDataIslands(this, renderContext);
 
             return html;

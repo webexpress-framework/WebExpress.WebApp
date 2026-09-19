@@ -133,6 +133,8 @@ namespace WebExpress.WebApp.WebControl
                 {
                     Classes = ["wx-app-dropdown"],
                     Icon = _ => new IconCog(),
+                    // the button shows the icon alone, so the label of the menu is its name
+                    Tooltip = _ => I18N.Translate(renderContext, "webexpress.webapp:header.setting.label"),
                     AlignmentMenu = _ => TypeAlignmentDropdownMenu.Right,
                     Margin = _ => new PropertySpacingMargin
                     (

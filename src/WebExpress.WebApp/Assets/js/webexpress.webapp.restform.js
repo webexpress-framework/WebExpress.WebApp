@@ -152,7 +152,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
         this._ensureContainer("wx-restform-prolog-container", "_formPrologContainer", [], this._confirmContainer);
 
         const headerEl = this._element.querySelector(".modal-body");
-        const main = headerEl ? headerEl.querySelector("main") : null;
+        const main = headerEl ? headerEl.querySelector(".wx-form-main") : null;
         if (main) {
             if (this.mode === "delete") {
                 main.style.display = "none";

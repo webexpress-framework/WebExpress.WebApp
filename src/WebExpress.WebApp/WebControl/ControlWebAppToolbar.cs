@@ -59,6 +59,9 @@ namespace WebExpress.WebApp.WebControl
             : base(id)
         {
             Padding = _ => new PropertySpacingPadding(PropertySpacing.Space.Null);
+            // the toolbar of the page sits above the main landmark rather than in it; as a
+            // named region it is a landmark of its own, so no page content is left outside
+            Role = _ => "region";
         }
 
         /// <summary>

@@ -241,7 +241,9 @@ namespace WebExpress.WebApp.WebControl
                                 ? Title
                                 : renderContext.PageContext?.PageTitle
                         ),
-                        Format = _ => TypeFormatText.H2,
+                        // a page without a title has nothing to head: an empty heading is an empty
+                        // entry in the outline, so the slot stays a plain block
+                        Format = _ => string.IsNullOrWhiteSpace(Title ?? renderContext.PageContext?.PageTitle) ? TypeFormatText.Default : TypeFormatText.H2,
                         Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.None, PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.Null)
                     },
                     preferences.Any() ? new ControlFlex(null, [.. preferences])

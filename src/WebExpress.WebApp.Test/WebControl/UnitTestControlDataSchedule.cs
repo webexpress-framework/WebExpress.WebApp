@@ -16,8 +16,8 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the id property of the api schedule control.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div id=""*"" class=""wx-webapp-schedule"" role=""region""></div>")]
-        [InlineData("id", @"<div id=""id"" class=""wx-webapp-schedule"" role=""region""></div>")]
+        [InlineData(null, @"<div id=""*"" class=""wx-webapp-schedule"" role=""group""></div>")]
+        [InlineData("id", @"<div id=""id"" class=""wx-webapp-schedule"" role=""group""></div>")]
         public void Id(string id, string expected)
         {
             // arrange
@@ -41,8 +41,8 @@ namespace WebExpress.WebApp.Test.WebControl
         /// host as well, which is the one that usually carries a whole view.
         /// </summary>
         [Theory]
-        [InlineData(false, @"<div id=""*"" class=""wx-webapp-schedule"" role=""region""></div>")]
-        [InlineData(true, @"<div id=""*"" class=""wx-webapp-schedule wx-fill"" role=""region""></div>")]
+        [InlineData(false, @"<div id=""*"" class=""wx-webapp-schedule"" role=""group""></div>")]
+        [InlineData(true, @"<div id=""*"" class=""wx-webapp-schedule wx-fill"" role=""group""></div>")]
         public void Fill(bool fill, string expected)
         {
             // arrange
@@ -92,7 +92,7 @@ namespace WebExpress.WebApp.Test.WebControl
 
             // validation
             AssertExtensions.EqualWithPlaceholders(
-                @"<div id=""s"" class=""wx-webapp-schedule"" role=""region"" data-view=""week"" data-culture=""de-DE"" data-week-start=""1"" data-iso-week=""true"" data-week-numbers=""true"" data-hour-start=""8"" data-hour-end=""20"" data-editable=""true""></div>", html);
+                @"<div id=""s"" class=""wx-webapp-schedule"" role=""group"" data-view=""week"" data-culture=""de-DE"" data-week-start=""1"" data-iso-week=""true"" data-week-numbers=""true"" data-hour-start=""8"" data-hour-end=""20"" data-editable=""true""></div>", html);
         }
 
         /// <summary>
@@ -101,12 +101,12 @@ namespace WebExpress.WebApp.Test.WebControl
         /// explicit "false".
         /// </summary>
         [Theory]
-        [InlineData(null, null, null, @"<div id=""*"" class=""wx-webapp-schedule"" role=""region""></div>")]
-        [InlineData(true, true, true, @"<div id=""*"" class=""wx-webapp-schedule"" role=""region""></div>")]
-        [InlineData(false, null, null, @"<div id=""*"" class=""wx-webapp-schedule"" role=""region"" data-auto-load=""false""></div>")]
-        [InlineData(null, false, null, @"<div id=""*"" class=""wx-webapp-schedule"" role=""region"" data-reload-on-navigate=""false""></div>")]
-        [InlineData(null, null, false, @"<div id=""*"" class=""wx-webapp-schedule"" role=""region"" data-cache=""false""></div>")]
-        [InlineData(false, false, false, @"<div id=""*"" class=""wx-webapp-schedule"" role=""region"" data-auto-load=""false"" data-reload-on-navigate=""false"" data-cache=""false""></div>")]
+        [InlineData(null, null, null, @"<div id=""*"" class=""wx-webapp-schedule"" role=""group""></div>")]
+        [InlineData(true, true, true, @"<div id=""*"" class=""wx-webapp-schedule"" role=""group""></div>")]
+        [InlineData(false, null, null, @"<div id=""*"" class=""wx-webapp-schedule"" role=""group"" data-auto-load=""false""></div>")]
+        [InlineData(null, false, null, @"<div id=""*"" class=""wx-webapp-schedule"" role=""group"" data-reload-on-navigate=""false""></div>")]
+        [InlineData(null, null, false, @"<div id=""*"" class=""wx-webapp-schedule"" role=""group"" data-cache=""false""></div>")]
+        [InlineData(false, false, false, @"<div id=""*"" class=""wx-webapp-schedule"" role=""group"" data-auto-load=""false"" data-reload-on-navigate=""false"" data-cache=""false""></div>")]
         public void LoadingBehaviour(bool? autoLoad, bool? reloadOnNavigate, bool? cache, string expected)
         {
             // arrange
@@ -133,10 +133,10 @@ namespace WebExpress.WebApp.Test.WebControl
         /// or negative one carries no schedule the client could poll on.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div id=""*"" class=""wx-webapp-schedule"" role=""region""></div>")]
-        [InlineData(0, @"<div id=""*"" class=""wx-webapp-schedule"" role=""region""></div>")]
-        [InlineData(-5, @"<div id=""*"" class=""wx-webapp-schedule"" role=""region""></div>")]
-        [InlineData(60, @"<div id=""*"" class=""wx-webapp-schedule"" role=""region"" data-refresh-interval=""60""></div>")]
+        [InlineData(null, @"<div id=""*"" class=""wx-webapp-schedule"" role=""group""></div>")]
+        [InlineData(0, @"<div id=""*"" class=""wx-webapp-schedule"" role=""group""></div>")]
+        [InlineData(-5, @"<div id=""*"" class=""wx-webapp-schedule"" role=""group""></div>")]
+        [InlineData(60, @"<div id=""*"" class=""wx-webapp-schedule"" role=""group"" data-refresh-interval=""60""></div>")]
         public void RefreshInterval(int? interval, string expected)
         {
             // arrange
@@ -160,9 +160,9 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the holiday region and the CRUD affordances.
         /// </summary>
         [Theory]
-        [InlineData(null, false, false, @"<div id=""*"" class=""wx-webapp-schedule"" role=""region""></div>")]
-        [InlineData("BY", false, false, @"<div id=""*"" class=""wx-webapp-schedule"" role=""region"" data-holiday-region=""BY""></div>")]
-        [InlineData("BY", true, true, @"<div id=""*"" class=""wx-webapp-schedule"" role=""region"" data-holiday-region=""BY"" data-creatable=""true"" data-deletable=""true""></div>")]
+        [InlineData(null, false, false, @"<div id=""*"" class=""wx-webapp-schedule"" role=""group""></div>")]
+        [InlineData("BY", false, false, @"<div id=""*"" class=""wx-webapp-schedule"" role=""group"" data-holiday-region=""BY""></div>")]
+        [InlineData("BY", true, true, @"<div id=""*"" class=""wx-webapp-schedule"" role=""group"" data-holiday-region=""BY"" data-creatable=""true"" data-deletable=""true""></div>")]
         public void Crud(string region, bool creatable, bool deletable, string expected)
         {
             // arrange
@@ -210,7 +210,7 @@ namespace WebExpress.WebApp.Test.WebControl
 
             // validation
             AssertExtensions.EqualWithPlaceholders(
-                @"<div id=""s"" class=""wx-webapp-schedule"" role=""region"">"
+                @"<div id=""s"" class=""wx-webapp-schedule"" role=""group"">"
                 + @"<div id=""a"" class=""wx-schedule-item"" data-title=""Quest"" data-start=""2026-08-12T10:00:00""></div>"
                 + @"</div>", html);
         }

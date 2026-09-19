@@ -277,13 +277,16 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
             return;
         }
 
-        this._addLi = document.createElement("li");
-        this._addLi.className = "nav-item";
+        // the add button is a command beside the tab list, not a tab in it
+        this._addLi = document.createElement("div");
+        this._addLi.className = "wx-tab-tools-item nav-item";
 
         this._addTabButton = document.createElement("button");
         this._addTabButton.className = "nav-link text-primary";
         this._addTabButton.type = "button";
-        this._addTabButton.setAttribute("role", "tab");
+        // a command in the tab list, not a tab: the arrow keys skip it and it keeps its own name
+        this._addTabButton.title = this._i18n("webexpress.webapp:tab.add", "Add tab");
+        this._addTabButton.setAttribute("aria-label", this._addTabButton.title);
         this._addTabButton.innerHTML = `<i class="${this._iconClass("plus")}"></i>`;
 
         const hasMultipleTemplates = this._templateOrder.length > 1;
@@ -345,11 +348,8 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
             this._addLi.appendChild(this._addTemplateMenu);
         }
 
-        if (this._toolbarLi) {
-            this._navElement.insertBefore(this._addLi, this._toolbarLi);
-        } else {
-            this._navElement.appendChild(this._addLi);
-        }
+        // the add button leads the tools, ahead of a toolbar the host may render
+        this._toolsElement.insertBefore(this._addLi, this._toolsElement.firstChild);
     }
 
     /**
@@ -922,6 +922,8 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         pane.id = item.id || "wx-tab-rest-" + Date.now();
         pane.className = "tab-pane fade";
         pane.setAttribute("role", "tabpanel");
+        pane.setAttribute("aria-labelledby", pane.id + "-tab");
+        pane.setAttribute("tabindex", "0");
 
         // apply template and bindings via dom
         this._buildPaneContent(pane, item);
@@ -951,13 +953,8 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         // build header using the overridden method
         const navItem = this._buildTabHeader(tabData);
 
-        if (this._navElement !== null && this._addLi !== null) {
-            // insert before the add button wrapper
-            this._navElement.insertBefore(navItem, this._addLi);
-        } else if (this._navElement !== null && this._toolbarLi !== null) {
-            // insert before the toolbar if no add button exists
-            this._navElement.insertBefore(navItem, this._toolbarLi);
-        } else if (this._navElement !== null) {
+        // the list holds tabs only, so a new one goes at its end
+        if (this._navElement !== null) {
             this._navElement.appendChild(navItem);
         }
 
@@ -992,11 +989,12 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         const a = li.querySelector(".nav-link");
 
         if (a !== null) {
-            const closeBtn = document.createElement("button");
-            closeBtn.type = "button";
+            // a tab list may hold nothing but tabs, so the close glyph is no control of its own:
+            // the pointer clicks it, the keyboard deletes the focused tab with the delete key
+            const closeBtn = document.createElement("span");
             closeBtn.className = "wx-webapp-tab-close";
             closeBtn.title = this._i18n("webexpress.webapp:tab.delete.label", "Delete tab “{name}”").replace("{name}", () => tab.label);
-            closeBtn.setAttribute("aria-label", closeBtn.title);
+            closeBtn.setAttribute("aria-hidden", "true");
             closeBtn.innerHTML = `<i class="${this._iconClass("xmark")}"></i>`;
 
             // attach event listener to remove the tab
@@ -1004,6 +1002,14 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
                 e.preventDefault();
                 e.stopPropagation();
                 this._closeTab(tab.id);
+            });
+
+            a.setAttribute("aria-keyshortcuts", "Delete");
+            a.addEventListener("keydown", (e) => {
+                if (e.key === "Delete") {
+                    e.preventDefault();
+                    this._closeTab(tab.id);
+                }
             });
 
             li.classList.add("wx-webapp-tab-closable");

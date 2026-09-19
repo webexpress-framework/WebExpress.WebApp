@@ -152,7 +152,10 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         // contenteditable input field
         this._input = document.createElement("div");
         this._input.className = "form-control wx-wql-input wx-code-line";
-        this._input.setAttribute("aria-label", "WQL Input");
+        // an editable box is a text field to the reader, and a label is only allowed on a role
+        this._input.setAttribute("role", "textbox");
+        this._input.setAttribute("aria-multiline", "false");
+        this._input.setAttribute("aria-label", this._i18n("webexpress.webapp:wql.input.label", "WQL query"));
         this._input.setAttribute("contenteditable", "true");
         this._input.setAttribute("spellcheck", "false");
         this._input.style.minHeight = "2em";

@@ -198,7 +198,7 @@ namespace WebExpress.WebApp.Test.WebControl
             Assert.Contains(@"data-wx-preview=""true""", html);
             Assert.DoesNotContain("wx-webui-content", html);
             Assert.DoesNotContain("wx-editor-form-switch", html);
-            Assert.Matches(@"</main>\s*</div>\s*<div class=""$", content);
+            Assert.Matches(@"</div>\s*</div>\s*<div class=""$", content);
         }
 
         /// <summary>
@@ -441,7 +441,7 @@ namespace WebExpress.WebApp.Test.WebControl
 
             // validation
             Assert.Contains("wx-webapp-collaborative", host);
-            Assert.Contains("<main", host);
+            Assert.Contains(@"<div class=""wx-form-main""", host);
             Assert.Contains(@"data-fill=""true""", host);
             Assert.DoesNotContain("wx-modal-header", host);
             Assert.DoesNotContain("<wx-service", host);

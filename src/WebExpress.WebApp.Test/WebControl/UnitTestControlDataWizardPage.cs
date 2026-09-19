@@ -14,8 +14,8 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the id property of the api wizard page control.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div class=""wx-wizard-page""><main></main></div>")]
-        [InlineData("id", @"<div id=""id"" class=""wx-wizard-page""><main></main></div>")]
+        [InlineData(null, @"<div class=""wx-wizard-page""><div class=""wx-form-main""></div></div>")]
+        [InlineData("id", @"<div id=""id"" class=""wx-wizard-page""><div class=""wx-form-main""></div></div>")]
         public void Id(string id, string expected)
         {
             // arrange

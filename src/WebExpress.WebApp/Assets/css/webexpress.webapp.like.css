@@ -39,6 +39,7 @@
 }
 
 .wx-webapp-like-active {
-    color: var(--wx-primary, #0d6efd);
+    /* the emphasis variant of the hue reads on the body background in either theme */
+    color: var(--wx-primary-text-emphasis, #052c65);
     font-weight: 600;
 }

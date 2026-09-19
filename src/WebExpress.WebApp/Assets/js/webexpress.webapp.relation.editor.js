@@ -114,22 +114,30 @@ webexpress.webapp.RelationEditorCtrl = class extends webexpress.webapp.Data {
         head.className = "wx-relation-editor-head";
         head.setAttribute("role", "row");
 
+        // the grip and the menu columns are named too, though the name need not be seen
         const columns = [
-            ["grip", ""],
+            ["grip", this._i18n("webexpress.webapp:relation.type.column.move", "Move"), true],
             ["pair", this._i18n("webexpress.webapp:relation.type.column.relation", "Relation")],
             ["classes", this._i18n("webexpress.webapp:relation.type.column.target", "Target type")],
             ["cardinality", this._i18n("webexpress.webapp:relation.type.column.cardinality", "Cardinality")],
             ["effect", this._i18n("webexpress.webapp:relation.type.column.effect", "Effect")],
             ["usage", this._i18n("webexpress.webapp:relation.type.column.usage", "Usage")],
             ["active", this._i18n("webexpress.webapp:relation.type.column.active", "Active")],
-            ["menu", ""]
+            ["menu", this._i18n("webexpress.webapp:relation.type.column.actions", "Actions"), true]
         ];
 
-        for (const [name, label] of columns) {
+        for (const [name, label, hidden] of columns) {
             const cell = document.createElement("span");
             cell.className = `wx-relation-editor-cell wx-relation-editor-${name}`;
             cell.setAttribute("role", "columnheader");
-            cell.textContent = label;
+            if (hidden) {
+                const caption = document.createElement("span");
+                caption.className = "visually-hidden";
+                caption.textContent = label;
+                cell.appendChild(caption);
+            } else {
+                cell.textContent = label;
+            }
             head.appendChild(cell);
         }
 

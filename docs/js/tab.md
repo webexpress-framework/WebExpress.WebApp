@@ -108,7 +108,7 @@ The response must contain `newTab`:
 
 ### DELETE (delete tab)
 
-The delete button opens the shared `webexpress.webui.ModalConfirm` with the tab's name.
+The close glyph on a tab header, or the `Delete` key on the focused tab, opens the shared `webexpress.webui.ModalConfirm` with the tab's name. The glyph is deliberately no button of its own: a tab list may hold nothing but tabs, so the keyboard path is the shortcut, which the tab announces through `aria-keyshortcuts`.
 Only confirmation sends a `DELETE` request through the configured data service to:
 
 `<data-uri>?id=<tabId>`

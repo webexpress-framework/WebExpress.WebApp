@@ -92,6 +92,7 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "status.offline": "Offline",
     
     // wql
+    "wql.input.label": "WQL query",
     "wql.placeholder": "wql",
     "wql.status.initializing": "Initializing...",
     "wql.status.ready": "Ready.",
@@ -366,6 +367,7 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "comment.cat.solution": "Solution",
 
     // tabs
+    "tab.add": "Add tab",
     "tab.move": "Reorder tab",
     "tab.delete.label": "Delete tab “{name}”",
     "tab.delete.title": "Delete tab?",
@@ -480,6 +482,8 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "relation.type.column.cardinality": "Cardinality",
     "relation.type.column.effect": "Effect",
     "relation.type.column.usage": "Usage",
+    "relation.type.column.move": "Move",
+    "relation.type.column.actions": "Actions",
     "relation.type.column.active": "Active",
     "relation.type.error.save": "The link type could not be stored.",
     "relation.effect.blocks": "Blocks completion",

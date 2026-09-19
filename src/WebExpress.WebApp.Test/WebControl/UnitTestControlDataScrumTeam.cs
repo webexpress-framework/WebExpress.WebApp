@@ -132,7 +132,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var html = control.Render(context, visualTree);
 
             // validation
-            AssertExtensions.EqualWithPlaceholders(@"<div class=""wx-webapp-scrum-team"" data-color-points-css=""bg-primary"" data-color-completed-style=""background:#00aa88;""></div>", html);
+            AssertExtensions.EqualWithPlaceholders(@"<div class=""wx-webapp-scrum-team"" data-color-points-css=""bg-primary"" data-color-completed-style=""background:#00aa88;color:#000;""></div>", html);
         }
 
         /// <summary>

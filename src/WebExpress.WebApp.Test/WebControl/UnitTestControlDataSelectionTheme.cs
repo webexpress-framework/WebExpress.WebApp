@@ -34,7 +34,7 @@ namespace WebExpress.WebApp.Test.WebControl
 
             // validation
             AssertExtensions.EqualWithPlaceholders(
-                @"<div class=""wx-webapp-dropdown-theme"" role=""button""></div>",
+                @"<div class=""wx-webapp-dropdown-theme""></div>",
                 html);
         }
 
@@ -55,7 +55,7 @@ namespace WebExpress.WebApp.Test.WebControl
 
             // validation
             AssertExtensions.EqualWithPlaceholders(
-                @"<div id=""themePicker"" class=""wx-webapp-dropdown-theme"" role=""button""></div>",
+                @"<div id=""themePicker"" class=""wx-webapp-dropdown-theme""></div>",
                 html);
         }
 
@@ -63,8 +63,8 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests that the service factory of the theme selection control emits the wx-service island.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div id=""themePicker"" class=""wx-webapp-dropdown-theme"" role=""button""></div>")]
-        [InlineData("https://example.com/api/themes", @"<div id=""themePicker"" class=""wx-webapp-dropdown-theme"" role=""button""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/themes"" method=""GET"" update-method=""PUT""></wx-service></div>")]
+        [InlineData(null, @"<div id=""themePicker"" class=""wx-webapp-dropdown-theme""></div>")]
+        [InlineData("https://example.com/api/themes", @"<div id=""themePicker"" class=""wx-webapp-dropdown-theme""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/themes"" method=""GET"" update-method=""PUT""></wx-service></div>")]
         public void Service(string uri, string expected)
         {
             // arrange

@@ -174,7 +174,8 @@ namespace WebExpress.WebApp.WebControl
                 form.Add(item.Render(renderContext, visualTree));
             }
 
-            var main = new HtmlElementSectionMain();
+            // the page owns the main landmark; the form body is a plain section of it
+            var main = new HtmlElementTextContentDiv() { Class = "wx-form-main" };
             var group = default(ControlFormItemGroup);
 
             group = itemLayout switch
