@@ -142,6 +142,18 @@ test("the switcher offers one button per presentation and shows the first", () =
     assert.equal(panes[1].style.display, "none");
 });
 
+test("file presentations restore the local preference and persist subsequent choices", () => {
+    const rt = loadRuntime();
+    rt.sandbox.localStorage.setItem("wx_file_view_files", "tile");
+    const ctrl = construct(rt, host(rt));
+    assert.equal(ctrl._activePane, "tile");
+    ctrl._activate("list");
+    assert.equal(rt.sandbox.localStorage.getItem("wx_file_view_files"), "list");
+    assert.equal(rt.document.cookie, "");
+    rt.sandbox.localStorage.setItem("wx_file_view_files", "removed");
+    assert.equal(construct(rt, host(rt))._activePane, "list");
+});
+
 test("a view that offers the tile board alone still shows the files the server rendered", () => {
     const rt = loadRuntime();
     const element = host(rt, {

@@ -9,9 +9,8 @@
  *   server-side) is mirrored as the dropdown's button label so exactly one
  *   theme is always visible to the user.
  * - Clicking a menu item PUTs v=<themeId> to the same REST endpoint and
- *   reloads the page once the server has updated the wx-theme cookie. The
- *   reload lets VisualTreeWebApp.UseThemeFromRequest pick the new cookie
- *   up server-side and re-render with the chosen theme.
+ *   reloads the page once the application has persisted the selection.
+ *   The host application resolves the selected theme on the next render.
  *
  * Registered under the class selector wx-webapp-dropdown-theme.
  */
@@ -32,7 +31,7 @@ webexpress.webapp.DropdownThemeCtrl = class extends webexpress.webui.DropdownCtr
         this._apiEndpoint = this._service ? this._service.baseUri : null;
         this._reloadOnChange = element.dataset.reloadOnChange !== "false";
 
-        // currently active theme id (mirrors the wx-theme cookie); used both
+        // currently active theme id (mirrors the server selection); used both
         // for the dropdown label and to suppress no-op PUTs when the user
         // re-selects the already active theme.
         this._activeId = null;
@@ -60,7 +59,7 @@ webexpress.webapp.DropdownThemeCtrl = class extends webexpress.webui.DropdownCtr
 
     /**
      * Fetches the theme list from the configured endpoint and populates the
-     * dropdown menu. Marks the cookie-selected theme as the dropdown label
+     * dropdown menu. Marks the server-selected theme as the dropdown label
      * so the user can always see which theme is active.
      * @returns {Promise<void>}
      */
@@ -78,7 +77,7 @@ webexpress.webapp.DropdownThemeCtrl = class extends webexpress.webui.DropdownCtr
         const themes = webexpress.webapp.dropdownThemeModel.normalizeThemes(json);
         const items = themes.items;
 
-        // pick the active theme: cookie selection wins, otherwise the first
+        // pick the active theme: server selection wins, otherwise the first
         // item is chosen so the dropdown is never blank.
         const fallback = items.length > 0 ? items[0].id : null;
         this._activeId = themes.selected || fallback;
@@ -104,7 +103,7 @@ webexpress.webapp.DropdownThemeCtrl = class extends webexpress.webui.DropdownCtr
 
     /**
      * Sends the chosen theme id to the REST endpoint via PUT and reloads
-     * the page once the server has updated the cookie.
+     * the page once the server has persisted the selection.
      * @param {string} themeId - id chosen by the user.
      * @param {string} themeLabel - label to surface as the dropdown text while waiting.
      * @returns {void}

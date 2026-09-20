@@ -245,7 +245,7 @@ webexpress.webapp.QuickFilterCtrl = class extends webexpress.webui.QuickFilterCt
         const viewStateId = element.getAttribute("data-wx-viewstate") || null;
         webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
             this._viewState = viewState;
-            // a cookie-restored selection feeds the initial query, so the first
+            // a localStorage-restored selection feeds the initial query, so the first
             // paint already reflects the persisted filter
             if (this._registry.getActiveFilters().length > 0) {
                 this._writeFilterToViewState();
@@ -323,7 +323,7 @@ webexpress.webapp.QuickFilterCtrl = class extends webexpress.webui.QuickFilterCt
                     // css class or an image uri, both handled by the icon factory
                     this._staticButtonConfigs = response.filters.map((flt) => this._toButtonConfig(flt));
 
-                    // initialize registry state using saved cookie
+                    // initialize registry state using saved preference
                     this._registry.init();
                 }
 

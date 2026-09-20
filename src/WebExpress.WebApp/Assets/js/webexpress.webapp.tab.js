@@ -884,7 +884,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         }
 
         this._dataApplied = true;
-        const activeTabId = this._activeTabId;
+        const activeTabId = this._activeTabId || webexpress.webui.LocalStorage.getItem(this._storageKey);
 
         // the placeholder leaves through the flagged detach, so wiping the pane
         // host cannot tear down the instances of its call-to-action controls

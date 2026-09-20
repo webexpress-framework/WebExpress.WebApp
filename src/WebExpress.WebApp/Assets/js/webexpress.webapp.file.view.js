@@ -82,7 +82,7 @@ webexpress.webapp.FileViewCtrl = class extends webexpress.webui.Ctrl {
 
         this._service = services.data || null;
         this._editable = element.dataset.editableDescription === "true";
-        this._storageKey = `wx_file_view_${element.id || "wx-file-view"}`;
+        this._storageKey = element.dataset.persistKey || (element.id ? `wx_file_view_${element.id}` : null);
 
         // the presentations of a file view are few and equal, so the switch
         // stands alone by default; the view control names its active view beside
@@ -432,7 +432,7 @@ webexpress.webapp.FileViewCtrl = class extends webexpress.webui.Ctrl {
      * @returns {string} The pane name.
      */
     _restorePane() {
-        const stored = this._readCookie(this._storageKey);
+        const stored = webexpress.webui.LocalStorage.getItem(this._storageKey);
 
         return this._panes.some((pane) => pane.name === stored)
             ? stored
@@ -445,21 +445,7 @@ webexpress.webapp.FileViewCtrl = class extends webexpress.webui.Ctrl {
      * @param {string} name - The pane name.
      */
     _persistPane(name) {
-        const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString();
-        document.cookie = `${this._storageKey}=${encodeURIComponent(name)}; expires=${expires}; path=/; SameSite=Lax`;
-    }
-
-    /**
-     * Reads a cookie by name.
-     * @param {string} name - The cookie name.
-     * @returns {string|null} The value, or null when the cookie is not set.
-     */
-    _readCookie(name) {
-        const match = (document.cookie || "").split(";")
-            .map((part) => part.trim())
-            .find((part) => part.indexOf(`${name}=`) === 0);
-
-        return match ? decodeURIComponent(match.substring(name.length + 1)) : null;
+        webexpress.webui.LocalStorage.setItem(this._storageKey, name);
     }
 
     /**

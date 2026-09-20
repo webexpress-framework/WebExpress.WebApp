@@ -168,3 +168,7 @@ A thread with a domain-specific category set (e.g. for change requests):
         {"id":"signoff","i18n":"my.app:comment.cat.signoff","color":"var(--wx-webapp-cat-solution)","bg":"var(--wx-webapp-cat-solution-bg)"}
      ]'></div>
 ```
+
+## UI persistence
+
+The sort direction is remembered across visits in localStorage under `wx_comment_sort_dir`. A missing or invalid value defaults to descending; a state island can explicitly override this preference.

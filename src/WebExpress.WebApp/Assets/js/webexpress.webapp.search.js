@@ -16,10 +16,11 @@ webexpress.webapp.SearchCtrl = class extends webexpress.webui.Ctrl {
         this._isInitializing = true;
         
         // configuration
-        const cookieMode = this._getCookie("wx_search_mode");
+        this._storageKey = element.dataset.persistKey || (element.id ? `wx_search_mode_${element.id}` : null);
+        const storedMode = webexpress.webui.LocalStorage.getItem(this._storageKey);
         this._initialMode = "basic";
-        if (cookieMode === "wql" || cookieMode === "basic") {
-            this._initialMode = cookieMode;
+        if (storedMode === "wql" || storedMode === "basic") {
+            this._initialMode = storedMode;
         } else if (element.dataset.initial && (element.dataset.initial === "wql" || element.dataset.initial === "basic")) {
             this._initialMode = element.dataset.initial;
         }
@@ -229,12 +230,12 @@ webexpress.webapp.SearchCtrl = class extends webexpress.webui.Ctrl {
             this._applyMode(newMode);
             // focus the newly visible control
             if (this._initialMode === "basic") {
-                if (this._wqlCtrl && this._wqlCtrl._input) {
-                    this._wqlCtrl._input.focus();
+                if (this._basicCtrl && this._basicCtrl._searchInput) {
+                    this._basicCtrl._searchInput.focus({ preventScroll: true });
                 }
             } else {
-                if (this._basicCtrl && this._basicCtrl._searchInput) {
-                    this._basicCtrl._searchInput.focus();
+                if (this._wqlCtrl && this._wqlCtrl._input) {
+                    this._wqlCtrl._input.focus({ preventScroll: true });
                 }
             }
         });
@@ -334,31 +335,9 @@ webexpress.webapp.SearchCtrl = class extends webexpress.webui.Ctrl {
         // remember active mode
         this._initialMode = mode;
         
-        this._setCookie("wx_search_mode", mode, 30);
+        webexpress.webui.LocalStorage.setItem(this._storageKey, mode);
     }
 
-    /**
-     * Sets a cookie with the specified name, value, and optional expiration period in days.
-     * @param {string} name - The name of the cookie.
-     * @param {string} value - The value to store in the cookie.
-     * @param {number} [days] - The number of days until the cookie expires. If omitted, the cookie becomes a session cookie.
-     */
-    _setCookie(name, value, days) {
-        const expires = days
-            ? "; expires=" + new Date(Date.now() + days * 864e5).toUTCString()
-            : "";
-        document.cookie = name + "=" + encodeURIComponent(value) + expires + "; path=/";
-    }
-
-    /**
-     * Retrieves the value of a cookie by its name.
-     * @param {string} name - The name of the cookie to retrieve.
-     * @returns {string|null} The decoded cookie value, or null if the cookie does not exist.
-     */
-    _getCookie(name) {
-        const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]*)"));
-        return match ? decodeURIComponent(match[2]) : null;
-    }
 };
 
 // register the class in the controller

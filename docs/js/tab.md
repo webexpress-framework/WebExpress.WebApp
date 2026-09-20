@@ -321,3 +321,8 @@ The component dispatches events for tab interactions:
     </template>
 </div>
 ```
+
+
+## UI persistence
+
+The active tab is remembered in localStorage through the WebUI base (`wx-tab:{id}`, or `data-persist-key`). The selection is restored once the REST tab data is available. Use stable ids for both the host and its tabs.

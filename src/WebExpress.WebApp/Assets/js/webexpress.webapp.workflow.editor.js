@@ -7,7 +7,7 @@
  * a designer canvas pane (left) and a properties panel pane (right). The
  * splitter handle lets the user drag the divider; double-clicking it
  * collapses / expands the properties pane. The split state persists across
- * reloads via a cookie keyed by the editor id.
+ * reloads via localStorage keyed by the editor id.
  *
  * Properties panel
  * ----------------

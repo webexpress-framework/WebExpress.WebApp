@@ -922,7 +922,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
      *
      * When the preview is visible the two panes are wrapped in a SplitCtrl so
      * the user can resize the divider; the split keeps a stable id, so the
-     * cookie-backed size persists across re-renders. When the preview is
+     * localStorage-backed size persists across re-renders. When the preview is
      * hidden the structure pane fills the available space directly.
      */
     _renderBody() {
@@ -950,7 +950,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webui.Ctrl {
      * The host is tagged with `wx-webui-split` so the framework's controller
      * registry auto-instantiates `webexpress.webui.SplitCtrl` once the node
      * is appended to the DOM. The host id stays stable across re-renders so
-     * the cookie-backed splitter size is preserved.
+     * the localStorage-backed splitter size is preserved.
      * @param {object} tab
      * @returns {HTMLElement}
      */

@@ -259,6 +259,7 @@ test("the table shows the progress while its slice is loading and hides it when 
                     this._hasOptions = false;
                 }
                 render() { }
+                _loadState() { }
             };
         `,
         extraFiles: [webappAsset("webexpress.webapp.table.model.js"), webappAsset("webexpress.webapp.table.js")]

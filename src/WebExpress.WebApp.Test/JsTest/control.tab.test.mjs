@@ -16,6 +16,20 @@ contract({
     deps: ["webexpress.webapp.tab.model.js"]
 });
 
+test("REST tabs restore the chosen tab when their data arrives after construction", () => {
+    const rt = loadControl({ file: "webexpress.webapp.tab.js", deps: ["webexpress.webapp.tab.model.js"] });
+    rt.sandbox.localStorage.setItem("wx-tab:documents", "two");
+    const host = rt.createElement("div");
+    host.id = "documents";
+    rt.document.body.appendChild(host);
+    const ctrl = new rt.wxapp.TabCtrl(host);
+    ctrl.updateData([{ id: "one", label: "One" }, { id: "two", label: "Two" }]);
+    assert.equal(ctrl._activeTabId, "two");
+    ctrl.selectTab("one");
+    assert.equal(rt.sandbox.localStorage.getItem("wx-tab:documents"), "one");
+    assert.equal(rt.document.cookie, "");
+});
+
 test("wx-webapp-tab renders REST-loaded tabs with badge and badge color", () => {
     const rt = loadControl({
         file: "webexpress.webapp.tab.js",

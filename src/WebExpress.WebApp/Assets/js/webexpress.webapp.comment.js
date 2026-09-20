@@ -85,14 +85,13 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
      * @param {HTMLElement} element - host element.
      */
     constructor(element) {
-        // the toolbar ui state is seeded from the persisted sort cookie and the
+        // the toolbar ui state is seeded from the persisted sort preference and the
         // optional wx-state island; the services come from the wx-service
         // islands. both are resolved before super so the component owns the
         // store and the service map. The wx-state island may also carry the
         // comments themselves, in which case the first paint needs no round
         // trip.
-        const cookieMatch = document.cookie.match(new RegExp("(^| )wx_comment_sort_dir=([^;]*)"));
-        const persistedSortDir = cookieMatch ? decodeURIComponent(cookieMatch[2]) : null;
+        const persistedSortDir = webexpress.webui.LocalStorage.getItem("wx_comment_sort_dir");
         const initialState = Object.assign({
             sortBy: "date",          // "date" | "likes"
             sortDir: (persistedSortDir === "asc" || persistedSortDir === "desc") ? persistedSortDir : "desc",
@@ -415,7 +414,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
         });
         this._sortDirBtn.addEventListener("click", () => {
             this._sortDir = this._sortDir === "asc" ? "desc" : "asc";
-            this._setCookie("wx_comment_sort_dir", this._sortDir, 365);
+            webexpress.webui.LocalStorage.setItem("wx_comment_sort_dir", this._sortDir);
             this._updateSortDirBtn();
             this._renderList();
         });
@@ -1142,29 +1141,6 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
      */
     _esc(s) {
         return String(s ?? "").replace(/[<>"&]/g, c => ({ "<": "&lt;", ">": "&gt;", '"': "&quot;", "&": "&amp;" }[c]));
-    }
-
-    /**
-     * Writes a cookie with the specified name and value.
-     * @param {string} name - The cookie name.
-     * @param {string} value - The cookie value (will be URI-encoded).
-     * @param {number} [days] - Lifetime in days; omit for a session cookie.
-     */
-    _setCookie(name, value, days) {
-        const expires = days
-            ? "; expires=" + new Date(Date.now() + days * 864e5).toUTCString()
-            : "";
-        document.cookie = name + "=" + encodeURIComponent(value) + expires + "; path=/; SameSite=Strict";
-    }
-
-    /**
-     * Reads a cookie by name.
-     * @param {string} name - The cookie name.
-     * @returns {string|null} The decoded value, or null when not set.
-     */
-    _getCookie(name) {
-        const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]*)"));
-        return match ? decodeURIComponent(match[2]) : null;
     }
 
     /**

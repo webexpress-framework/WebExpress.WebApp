@@ -29,6 +29,7 @@ const TABLE_BASE_STUB = `
             this._hasOptions = false;
         }
         render() { }
+        _loadState() { }
     };
 `;
 

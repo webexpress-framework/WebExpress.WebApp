@@ -12,15 +12,14 @@
 
 import { test } from "node:test";
 import assert from "node:assert";
-import { loadEngine, webappAsset, appendServiceIsland, appendStateIsland, appendResourceIsland } from "./harness.mjs";
+import { appendServiceIsland, appendStateIsland, appendResourceIsland } from "./harness.mjs";
+import { loadControl } from "./controls.harness.mjs";
 
 function load(options) {
-    return loadEngine(Object.assign(
+    return loadControl(Object.assign(
         {
-            extraFiles: [
-                webappAsset("webexpress.webapp.comment.model.js"),
-                webappAsset("webexpress.webapp.comment.js")
-            ]
+            deps: ["webexpress.webapp.comment.model.js"],
+            file: "webexpress.webapp.comment.js"
         },
         options
     ));
@@ -54,6 +53,16 @@ test("comment extends the component base", () => {
 
     assert.ok(ctrl instanceof wxapp.Data);
     assert.equal(typeof ctrl.store, "object");
+});
+
+test("comment sorting reads and writes localStorage without cookies", () => {
+    const rt = load();
+    rt.sandbox.localStorage.setItem("wx_comment_sort_dir", "asc");
+    const ctrl = new rt.wxapp.CommentCtrl(rt.createElement("div"));
+    assert.equal(ctrl._sortDir, "asc");
+    ctrl._sortDirBtn.dispatchEvent({ type: "click" });
+    assert.equal(rt.sandbox.localStorage.getItem("wx_comment_sort_dir"), "desc");
+    assert.equal(rt.document.cookie, "");
 });
 
 test("comment in a ViewState renders the central comments resource the ViewState loads", async () => {

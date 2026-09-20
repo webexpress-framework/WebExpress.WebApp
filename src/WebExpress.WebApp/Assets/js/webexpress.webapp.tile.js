@@ -396,6 +396,7 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
         }
 
         this._tiles = webexpress.webapp.tileModel.mapTiles(response);
+        this._loadState();
 
         if (response.meta) {
             if (response.meta.sort) {

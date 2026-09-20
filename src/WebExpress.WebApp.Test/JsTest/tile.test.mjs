@@ -22,6 +22,7 @@ const TILE_BASE_STUB = `
         render() { }
         searchTiles() { return []; }
         _markSearchDirty() { }
+        _loadState() { }
         _dispatchSortEvent() { }
     };
 `;

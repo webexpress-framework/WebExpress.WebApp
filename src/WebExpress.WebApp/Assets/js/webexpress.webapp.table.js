@@ -493,12 +493,36 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
             return;
         }
 
-        if (!this._columns || this._columns === this._previewColumns) {
-            this._columns = webexpress.webapp.tableModel.normalizeColumns(response, this._orderBy, this._orderDir);
+        const sourceColumns = Array.isArray(response.columns)
+            ? webexpress.webapp.tableModel.normalizeColumns(response, this._orderBy, this._orderDir) : null;
+        if (sourceColumns) {
+            this._sourceColumnIds = sourceColumns.map(column => column.id);
+        }
+        const initialColumns = !this._columns?.length || this._columns === this._previewColumns;
+        if (initialColumns) {
+            this._columns = sourceColumns || [];
         }
 
         // normalize incoming rows (recursing into children and slicing)
         this._rows = webexpress.webapp.tableModel.normalizeRows(response, this._pageSize);
+
+        if (!initialColumns) {
+            // response cells follow server order even after the reader reorders columns
+            const sourceIndex = new Map((this._sourceColumnIds || []).map((id, index) => [id, index]));
+            const rows = [...this._rows];
+            while (rows.length) {
+                const row = rows.pop();
+                row.cells = this._columns.map(column => row.cells[sourceIndex.get(column.id)] || { content: "" });
+                if (row.children) rows.push(...row.children);
+            }
+        }
+
+        this._loadState();
+
+        // the query owns REST sorting; a local layout preference cannot change its result
+        this._columns.forEach(column => {
+            column.sort = column.id === this._orderBy ? this._orderDir : null;
+        });
 
         let optionsExist = false;
         if (this._options) {

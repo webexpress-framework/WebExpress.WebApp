@@ -124,3 +124,8 @@ fileView.uploaded(file);
 | `webexpress.webui.Event.DATA_ARRIVED_EVENT`         | A load returned; the detail carries the raw response and the page.
 | `webexpress.webui.Event.CHANGE_VISIBILITY_EVENT`    | The presentation changed; the detail carries the pane name.
 | `webexpress.webui.Event.CHANGE_VALUE_EVENT`         | A description was edited; the detail carries the file id and the new text.
+
+
+## UI persistence
+
+The chosen presentation is remembered in localStorage under `wx_file_view_{id}`, or `data-persist-key` when supplied. Use a stable id across page loads. A presentation removed from the page falls back to the first available one.
