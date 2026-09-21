@@ -60,7 +60,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
 
             var json = ParseResponseJson(result);
             Assert.True(json.GetProperty("success").GetBoolean());
-            Assert.Equal("webexpress.webapp:login.success", json.GetProperty("message").GetString());
+            Assert.Equal("You have signed in successfully.", json.GetProperty("message").GetString());
         }
 
         /// <summary>
@@ -435,14 +435,99 @@ namespace WebExpress.WebApp.Test.WebRestApi
         }
 
         /// <summary>
+        /// Keeps both the first rate-limit response and subsequent countdown in the request's language.
+        /// </summary>
+        /// <param name="language">The browser language, independent of the server's English default.</param>
+        /// <param name="rateLimitMessage">The expected message when the penalty first starts.</param>
+        /// <param name="retryMessage">The expected countdown template containing the remaining seconds.</param>
+        [Theory]
+        [InlineData("en", "Too many failed attempts. Please wait before trying to sign in again.",
+            "Please wait {0} seconds before trying to sign in again.")]
+        [InlineData("de", "Zu viele fehlgeschlagene Versuche. Bitte warten Sie, bevor Sie sich erneut anmelden.",
+            "Bitte warten Sie {0} Sekunden, bevor Sie sich erneut anmelden.")]
+        public void Authenticate_RateLimited_ReturnsLocalizedCountdown(string language, string rateLimitMessage, string retryMessage)
+        {
+            // arrange
+            _ = CreateAuthenticationHub();
+            var user = UniqueUser();
+            var api = new TestRestApiLogin(user, "password123") { PenaltyStart = 1 };
+
+            // act
+            var first = ParseResponseJson(api.Authenticate(CreateLoginRequest(user, "wrong", language: language)));
+            var retry = ParseResponseJson(api.Authenticate(CreateLoginRequest(user, "password123", language: language)));
+
+            // validation
+            Assert.Equal(rateLimitMessage, first.GetProperty("message").GetString());
+            var seconds = retry.GetProperty("retryAfter").GetInt32();
+            Assert.InRange(seconds, 1, 30);
+            Assert.Equal(string.Format(retryMessage, seconds), retry.GetProperty("message").GetString());
+            Assert.False(retry.GetProperty("success").GetBoolean());
+        }
+
+        /// <summary>
+        /// Prevents hard-lock messages from exposing a translation key or an unfilled countdown placeholder.
+        /// </summary>
+        /// <param name="language">The browser language to use for both lockout responses.</param>
+        /// <param name="message">The expected translated message without a countdown placeholder.</param>
+        [Theory]
+        [InlineData("en", "Too many failed attempts. Your account is temporarily locked. Please try again later.")]
+        [InlineData("de", "Zu viele fehlgeschlagene Versuche. Ihr Konto ist vorübergehend gesperrt. Bitte versuchen Sie es später erneut.")]
+        public void Authenticate_HardLocked_ReturnsLocalizedMessage(string language, string message)
+        {
+            // arrange
+            _ = CreateAuthenticationHub();
+            var user = UniqueUser();
+            var api = new TestRestApiLogin(user, "password123") { PermanentAttempts = 1 };
+
+            // act
+            var first = ParseResponseJson(api.Authenticate(CreateLoginRequest(user, "wrong", language: language)));
+            var retry = ParseResponseJson(api.Authenticate(CreateLoginRequest(user, "password123", language: language)));
+
+            // validation
+            Assert.Equal(message, first.GetProperty("message").GetString());
+            Assert.Equal(message, retry.GetProperty("message").GetString());
+            Assert.False(retry.GetProperty("success").GetBoolean());
+        }
+
+        /// <summary>
+        /// Uses the browser language for successful login and logout feedback as well as failures.
+        /// </summary>
+        /// <param name="language">The browser language to use for the authentication feedback.</param>
+        /// <param name="loginMessage">The expected translated login confirmation.</param>
+        /// <param name="logoutMessage">The expected translated logout confirmation.</param>
+        [Theory]
+        [InlineData("en", "You have signed in successfully.", "You have signed out successfully.")]
+        [InlineData("de", "Sie wurden erfolgreich angemeldet.", "Sie wurden erfolgreich abgemeldet.")]
+        public void AuthenticateAndLogout_ReturnLocalizedConfirmation(string language, string loginMessage, string logoutMessage)
+        {
+            // arrange
+            _ = CreateAuthenticationHub();
+            var user = UniqueUser();
+            var api = new TestRestApiLogin(user, "password123");
+            var request = CreateLoginRequest(user, "password123", language: language);
+
+            // act
+            var login = ParseResponseJson(api.Authenticate(request));
+            var logout = ParseResponseJson(api.Logout(request));
+
+            // validation
+            Assert.True(login.GetProperty("success").GetBoolean());
+            Assert.Equal(loginMessage, login.GetProperty("message").GetString());
+            Assert.True(logout.GetProperty("success").GetBoolean());
+            Assert.Equal(logoutMessage, logout.GetProperty("message").GetString());
+        }
+
+        /// <summary>
         /// Creates a mock login request carrying the given body verbatim, so a test can send a
         /// document the endpoint has to reject rather than one the serializer would shape.
         /// </summary>
         /// <param name="payload">The exact JSON body used to exercise credential input validation.</param>
+        /// <param name="language">The browser language used to select response messages.</param>
         /// <returns>The request carrying the supplied raw JSON body.</returns>
-        private static IRequest CreateRawLoginRequest(string payload)
+        private static IRequest CreateRawLoginRequest(string payload, string language = "en")
         {
-            var content = "POST /api/login HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\n\r\n" + payload;
+            var content = "POST /api/login HTTP/1.1\r\nHost: localhost\r\nAccept-Language: " + language
+                + "\r\nContent-Type: application/json\r\n\r\n" + payload;
 
             return UnitTestControlFixture.CreateRequestMock(content, "/api/login");
         }
@@ -454,10 +539,11 @@ namespace WebExpress.WebApp.Test.WebRestApi
         /// <param name="username">The submitted account name to resolve through the local directory.</param>
         /// <param name="password">The password to verify before returning an authenticated identity.</param>
         /// <param name="applicationId">The application identifier that scopes token audiences and authentication.</param>
+        /// <param name="language">The browser language used to select response messages.</param>
         /// <returns>The request carrying credentials for the selected application.</returns>
-        private static IRequest CreateLoginRequest(string username, string password, string applicationId = "login-tests")
+        private static IRequest CreateLoginRequest(string username, string password, string applicationId = "login-tests", string language = "en")
         {
-            var request = CreateRawLoginRequest(JsonSerializer.Serialize(new { username, password }));
+            var request = CreateRawLoginRequest(JsonSerializer.Serialize(new { username, password }), language);
 
             if (applicationId is not null)
             {

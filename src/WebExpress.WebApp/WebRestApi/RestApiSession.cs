@@ -84,13 +84,13 @@ namespace WebExpress.WebApp.WebRestApi
                         || !TryReadString(root, "username", out username)
                         || !TryReadString(root, "password", out password))
                     {
-                        return FormatError();
+                        return FormatError(request);
                     }
                 }
             }
             catch (JsonException)
             {
-                return FormatError();
+                return FormatError(request);
             }
 
             if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
@@ -98,7 +98,7 @@ namespace WebExpress.WebApp.WebRestApi
                 return new RestApiSessionResult
                 {
                     Success = false,
-                    Message = I18N.Translate("webexpress.webapp:login.error.empty")
+                    Message = I18N.Translate(request, "webexpress.webapp:login.error.empty")
                 }.ToResponse();
             }
 
@@ -112,7 +112,7 @@ namespace WebExpress.WebApp.WebRestApi
                     return new RestApiSessionResult
                     {
                         Success = false,
-                        Message = I18N.Translate("webexpress.webapp:login.error.locked")
+                        Message = I18N.Translate(request, "webexpress.webapp:login.error.locked")
                     }.ToResponse();
                 }
                 else
@@ -121,7 +121,7 @@ namespace WebExpress.WebApp.WebRestApi
                     return new RestApiSessionResult
                     {
                         Success = false,
-                        Message = string.Format(I18N.Translate("webexpress.webapp:login.error.retryafter"), remainingSeconds),
+                        Message = I18N.Translate(request, "webexpress.webapp:login.error.retryafter", remainingSeconds),
                         RetryAfter = remainingSeconds
                     }.ToResponse();
                 }
@@ -145,7 +145,7 @@ namespace WebExpress.WebApp.WebRestApi
                     return new RestApiSessionResult
                     {
                         Success = false,
-                        Message = I18N.Translate("webexpress.webapp:login.error.session")
+                        Message = I18N.Translate(request, "webexpress.webapp:login.error.session")
                     }.ToResponse();
                 }
 
@@ -153,7 +153,7 @@ namespace WebExpress.WebApp.WebRestApi
                 {
                     Success = true,
                     SessionId = null,
-                    Message = I18N.Translate("webexpress.webapp:login.success")
+                    Message = I18N.Translate(request, "webexpress.webapp:login.success")
                 }.ToResponse();
             }
 
@@ -168,7 +168,7 @@ namespace WebExpress.WebApp.WebRestApi
                     return new RestApiSessionResult
                     {
                         Success = false,
-                        Message = I18N.Translate("webexpress.webapp:login.error.locked")
+                        Message = I18N.Translate(request, "webexpress.webapp:login.error.locked")
                     }.ToResponse();
                 }
                 else
@@ -176,7 +176,7 @@ namespace WebExpress.WebApp.WebRestApi
                     return new RestApiSessionResult
                     {
                         Success = false,
-                        Message = I18N.Translate("webexpress.webapp:login.error.ratelimit"),
+                        Message = I18N.Translate(request, "webexpress.webapp:login.error.ratelimit"),
                         RetryAfter = retryAfter
                     }.ToResponse();
                 }
@@ -185,7 +185,7 @@ namespace WebExpress.WebApp.WebRestApi
             return new RestApiSessionResult
             {
                 Success = false,
-                Message = I18N.Translate("webexpress.webapp:login.error.invalid")
+                Message = I18N.Translate(request, "webexpress.webapp:login.error.invalid")
             }.ToResponse();
         }
 
@@ -224,13 +224,14 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Builds the response for a login document the endpoint cannot read.
         /// </summary>
+        /// <param name="request">The request whose language determines the error message.</param>
         /// <returns>The failure response.</returns>
-        private static IResponse FormatError()
+        private static IResponse FormatError(IRequest request)
         {
             return new RestApiSessionResult
             {
                 Success = false,
-                Message = I18N.Translate("webexpress.webapp:login.error.format")
+                Message = I18N.Translate(request, "webexpress.webapp:login.error.format")
             }.ToResponse();
         }
 
@@ -248,7 +249,7 @@ namespace WebExpress.WebApp.WebRestApi
             return new RestApiSessionResult
             {
                 Success = true,
-                Message = I18N.Translate("webexpress.webapp:logout.success")
+                Message = I18N.Translate(request, "webexpress.webapp:logout.success")
             }.ToResponse();
         }
 
