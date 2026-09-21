@@ -14,7 +14,7 @@ namespace WebExpress.WebApp.WebIdentity
     /// Represents an external identity provider that supplies identities and groups
     /// to the WebExpress identity system.
     /// </summary>
-    public abstract class IdentityProvider : IIdentityProvider
+    public abstract class IdentityProvider : LocalIdentityProvider
     {
         /// <summary>
         /// Gets or sets the REST session endpoint URI used for HTTP requests.
@@ -24,12 +24,14 @@ namespace WebExpress.WebApp.WebIdentity
         /// <summary>
         /// Returns all identities provided by this source.
         /// </summary>
-        public abstract IEnumerable<IIdentity> GetIdentities();
+        /// <returns>The local identities whose credentials can be verified by this provider.</returns>
+        public abstract override IEnumerable<IIdentity> GetIdentities();
 
         /// <summary>
         /// Returns all groups provided by this source.
         /// </summary>
-        public abstract IEnumerable<IIdentityGroup> GetGroups();
+        /// <returns>The local groups that associate identities with authorization policies.</returns>
+        public abstract override IEnumerable<IIdentityGroup> GetGroups();
 
         /// <summary>
         /// Displays a login dialog using the specified request and identity information.
@@ -48,7 +50,7 @@ namespace WebExpress.WebApp.WebIdentity
         /// An object that represents the response to the login dialog, including authentication results and any
         /// relevant status information.
         /// </returns>
-        public virtual IResponse CreateAuthenticationPrompt(IRequest request, IPageContext initiator, IIdentity identity)
+        public override IResponse CreateAuthenticationPrompt(IRequest request, IPageContext initiator, IIdentity identity)
         {
             return CreateAuthenticationPrompt(request, initiator, identity, RestEndpoint);
         }
@@ -110,7 +112,7 @@ namespace WebExpress.WebApp.WebIdentity
         /// A response representing the forbidden page if this provider can handle the forbidden
         /// scenario; otherwise, <c>null</c>.
         /// </returns>
-        public IResponse CreateForbiddenResponse(IRequest request, IPageContext initiator, IIdentity identity)
+        public override IResponse CreateForbiddenResponse(IRequest request, IPageContext initiator, IIdentity identity)
         {
             var loginPage = new PageForbidden();
             var pageContext = new PageContext(initiator, scopes: [typeof(IScopeLogin)]);

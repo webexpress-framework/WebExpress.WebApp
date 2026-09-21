@@ -7,7 +7,6 @@ using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebIdentity;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
-using WebExpress.WebCore.WebSession.Model;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -136,12 +135,12 @@ namespace WebExpress.WebApp.WebRestApi
                 // clear failed attempts on successful login
                 ResetFailedAttempts(request, normalizedUser);
 
-                var session = EstablishSession(identity, request);
+                var tokens = EstablishIdentity(identity, request);
 
-                // valid credentials are not enough: if the session could not be established the
+                // valid credentials are not enough: if credentials could not be issued the
                 // client has nothing to authenticate later requests with, so this is a login
-                // failure, not a success with a missing session
-                if (session is null)
+                // failure, not a success with missing credentials
+                if (tokens is null)
                 {
                     return new RestApiSessionResult
                     {
@@ -153,7 +152,7 @@ namespace WebExpress.WebApp.WebRestApi
                 return new RestApiSessionResult
                 {
                     Success = true,
-                    SessionId = GetSessionToken(session, request),
+                    SessionId = null,
                     Message = I18N.Translate("webexpress.webapp:login.success")
                 }.ToResponse();
             }
@@ -262,40 +261,22 @@ namespace WebExpress.WebApp.WebRestApi
         protected abstract IIdentity ValidateCredentials(string username, string password);
 
         /// <summary>
-        /// Establishes the server-side session for a freshly authenticated identity.
+        /// Issues the common token pair after a provider has verified the user credentials.
         /// </summary>
         /// <remarks>
-        /// The default signs the identity into the request's session and returns it, or null when
-        /// the sign-in fails - the caller turns that null into a login error rather than reporting
-        /// a success the client cannot act on.
+        /// The identity manager queues protected cookies for the outgoing response. A failed issuance
+        /// remains a login failure, and neither token is returned in the JSON response.
         /// </remarks>
         /// <param name="identity">The authenticated identity.</param>
         /// <param name="request">The original request.</param>
-        /// <returns>The established session, or null if it could not be created.</returns>
-        protected virtual Session EstablishSession(IIdentity identity, IRequest request)
+        /// <returns>The issued credentials, or null if authentication could not be established.</returns>
+        protected virtual IdentityTokenPair EstablishIdentity(IIdentity identity, IRequest request)
         {
             return WebEx.ComponentHub.IdentityManager.Login(identity, request);
         }
 
         /// <summary>
-        /// Returns the token the login response hands the client, if any.
-        /// </summary>
-        /// <remarks>
-        /// For a cookie session there is none: the id travels only in the http-only cookie the
-        /// server set on this response, and putting it in the body as well would hand an injected
-        /// script the one thing the cookie keeps from it. A bearer-token derivation overrides this
-        /// to return its token.
-        /// </remarks>
-        /// <param name="session">The session that was just established.</param>
-        /// <param name="request">The original request.</param>
-        /// <returns>The token to return to the client, or null when the cookie carries the session.</returns>
-        protected virtual string GetSessionToken(Session session, IRequest request)
-        {
-            return null;
-        }
-
-        /// <summary>
-        /// Invalidates the authentication token or session for the given request.
+        /// Revokes renewal and clears the authentication cookies for the given request.
         /// </summary>
         /// <param name="request">The original request.</param>
         protected virtual void InvalidateSession(IRequest request)

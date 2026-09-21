@@ -1,11 +1,11 @@
-﻿using System.Reflection;
+﻿using Microsoft.Extensions.Configuration;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebRestApi;
 using WebExpress.WebCore.WebIdentity;
 using WebExpress.WebCore.WebMessage;
-using WebExpress.WebCore.WebSession.Model;
 
 namespace WebExpress.WebApp.Test.WebRestApi
 {
@@ -13,8 +13,33 @@ namespace WebExpress.WebApp.Test.WebRestApi
     /// Tests the login REST API endpoint.
     /// </summary>
     [Collection("NonParallelTests")]
-    public class UnitTestRestApiLogin
+    public class UnitTestRestApiLogin : IDisposable
     {
+        private readonly string _tokenDirectory = Path.Combine(Path.GetTempPath(), "webexpress-login-" + Guid.NewGuid().ToString("N"));
+
+        /// <summary>
+        /// Supplies isolated deployment credentials for the WebApp login integration tests.
+        /// </summary>
+        /// <returns>The registered component hub with isolated authentication configuration.</returns>
+        private WebExpress.WebCore.WebComponent.ComponentHub CreateAuthenticationHub()
+        {
+            var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string>
+            {
+                ["WebExpress:Authentication:Issuer"] = "https://webapp.test",
+                ["WebExpress:Authentication:Audience"] = "webapp-tests",
+                ["WebExpress:Authentication:SigningKey"] = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)),
+                ["WebExpress:Authentication:TokenStorePath"] = _tokenDirectory
+            }).Build();
+            return UnitTestControlFixture.CreateAndRegisterComponentHubMock(configuration);
+        }
+
+        /// <summary>
+        /// Removes the isolated credential markers used by this test instance.
+        /// </summary>
+        public void Dispose()
+        {
+            if (Directory.Exists(_tokenDirectory)) { Directory.Delete(_tokenDirectory, true); }
+        }
         /// <summary>
         /// Tests successful authentication.
         /// </summary>
@@ -22,7 +47,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
         public void AuthenticateSuccess()
         {
             // arrange
-            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            _ = CreateAuthenticationHub();
             var api = new TestRestApiLogin("admin", "password123");
             var request = CreateLoginRequest("admin", "password123");
 
@@ -39,15 +64,13 @@ namespace WebExpress.WebApp.Test.WebRestApi
         }
 
         /// <summary>
-        /// A successful login signs the identity into the request's session but keeps the
-        /// session id out of the body: it travels in the http-only cookie only, so a script
-        /// reading the response learns nothing it could replay.
+        /// A successful login queues signed credentials while keeping them out of the response body.
         /// </summary>
         [Fact]
         public void AuthenticateSuccess_SignsInWithoutExposingSessionId()
         {
             // arrange
-            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var componentHub = CreateAuthenticationHub();
             var api = new TestRestApiLogin("admin", "password123");
             var request = CreateLoginRequest("admin", "password123");
 
@@ -69,7 +92,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
         public void AuthenticateInvalidPassword()
         {
             // arrange
-            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            _ = CreateAuthenticationHub();
             var api = new TestRestApiLogin("admin", "password123");
             var request = CreateLoginRequest("admin", "wrongpassword");
 
@@ -92,7 +115,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
         public void AuthenticateEmptyCredentials()
         {
             // arrange
-            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            _ = CreateAuthenticationHub();
             var api = new TestRestApiLogin("admin", "password123");
             var request = CreateLoginRequest("", "");
 
@@ -114,7 +137,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
         public void AuthenticateLockout()
         {
             // arrange
-            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            _ = CreateAuthenticationHub();
             var api = new TestRestApiLogin("lockout_user", "correct_password");
 
             // simulate 4 failed attempts (exceeds default max of 3)
@@ -142,6 +165,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
         /// as a format error, the same as a document that does not parse - it must not escape
         /// as an exception from the reader.
         /// </summary>
+        /// <param name="payload">The exact JSON body used to exercise credential input validation.</param>
         [Theory]
         [InlineData("{\"username\": 42, \"password\": \"password123\"}")]
         [InlineData("{\"username\": \"admin\", \"password\": [\"password123\"]}")]
@@ -151,7 +175,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
         public void AuthenticateWrongShape_IsAFormatError(string payload)
         {
             // arrange
-            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            _ = CreateAuthenticationHub();
             var api = new TestRestApiLogin("admin", "password123");
             var request = CreateRawLoginRequest(payload);
 
@@ -170,13 +194,14 @@ namespace WebExpress.WebApp.Test.WebRestApi
         /// <summary>
         /// A credential that is null or missing is an empty credential, not a format error.
         /// </summary>
+        /// <param name="payload">The exact JSON body used to exercise credential input validation.</param>
         [Theory]
         [InlineData("{\"username\": null, \"password\": \"password123\"}")]
         [InlineData("{\"password\": \"password123\"}")]
         public void AuthenticateNullOrMissingCredential_IsEmpty(string payload)
         {
             // arrange
-            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            _ = CreateAuthenticationHub();
             var api = new TestRestApiLogin("admin", "password123");
             var request = CreateRawLoginRequest(payload);
 
@@ -263,7 +288,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
         public void Authenticate_SessionCreationFails_ReturnsLoginError()
         {
             // arrange
-            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            _ = CreateAuthenticationHub();
             var user = UniqueUser();
             var api = new TestRestApiLogin(user, "password123") { FailSessionCreation = true };
             var request = CreateLoginRequest(user, "password123");
@@ -284,7 +309,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
         public void Lockout_IsScopedPerApplication()
         {
             // arrange
-            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            _ = CreateAuthenticationHub();
             var user = UniqueUser();
             var api = new TestRestApiLogin(user, "password123")
             {
@@ -314,7 +339,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
         public void Lockout_HardLocked_RefusesEvenCorrectCredentials()
         {
             // arrange
-            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            _ = CreateAuthenticationHub();
             var user = UniqueUser();
             var api = new TestRestApiLogin(user, "password123")
             {
@@ -344,7 +369,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
         public void Lockout_ExpiresAfterDuration()
         {
             // arrange
-            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            _ = CreateAuthenticationHub();
             var user = UniqueUser();
             var locking = new TestRestApiLogin(user, "password123")
             {
@@ -384,7 +409,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
         public void Lockout_Reset_UnlocksImmediately()
         {
             // arrange
-            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            _ = CreateAuthenticationHub();
             var user = UniqueUser();
             var api = new TestRestApiLogin(user, "password123")
             {
@@ -413,6 +438,8 @@ namespace WebExpress.WebApp.Test.WebRestApi
         /// Creates a mock login request carrying the given body verbatim, so a test can send a
         /// document the endpoint has to reject rather than one the serializer would shape.
         /// </summary>
+        /// <param name="payload">The exact JSON body used to exercise credential input validation.</param>
+        /// <returns>The request carrying the supplied raw JSON body.</returns>
         private static IRequest CreateRawLoginRequest(string payload)
         {
             var content = "POST /api/login HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\n\r\n" + payload;
@@ -424,7 +451,11 @@ namespace WebExpress.WebApp.Test.WebRestApi
         /// Creates a mock login request with the specified credentials, optionally scoped to a
         /// named application so a test can prove lockouts are confined to one application.
         /// </summary>
-        private static IRequest CreateLoginRequest(string username, string password, string applicationId = null)
+        /// <param name="username">The submitted account name to resolve through the local directory.</param>
+        /// <param name="password">The password to verify before returning an authenticated identity.</param>
+        /// <param name="applicationId">The application identifier that scopes token audiences and authentication.</param>
+        /// <returns>The request carrying credentials for the selected application.</returns>
+        private static IRequest CreateLoginRequest(string username, string password, string applicationId = "login-tests")
         {
             var request = CreateRawLoginRequest(JsonSerializer.Serialize(new { username, password }));
 
@@ -445,6 +476,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
         /// A username unique to a test run, so the process-wide lockout store never carries state
         /// from one test into another.
         /// </summary>
+        /// <returns>A username unique to the current test scenario.</returns>
         private static string UniqueUser()
         {
             return "user_" + Guid.NewGuid().ToString("N");
@@ -453,6 +485,8 @@ namespace WebExpress.WebApp.Test.WebRestApi
         /// <summary>
         /// Parses a JSON response from the given response object.
         /// </summary>
+        /// <param name="response">The outgoing response governed by the authentication transport contract.</param>
+        /// <returns>The response payload detached from its owning JSON document.</returns>
         private static JsonElement ParseResponseJson(IResponse response)
         {
             var json = response.Content is byte[] bytes
@@ -472,6 +506,11 @@ namespace WebExpress.WebApp.Test.WebRestApi
             private readonly string _validUsername;
             private readonly string _validPassword;
 
+            /// <summary>
+            /// Keeps credential acceptance deterministic while exercising the real login pipeline.
+            /// </summary>
+            /// <param name="validUsername">The account name accepted by this test provider.</param>
+            /// <param name="validPassword">The password accepted by this test provider.</param>
             public TestRestApiLogin(string validUsername, string validPassword)
             {
                 _validUsername = validUsername;
@@ -479,7 +518,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             }
 
             /// <summary>
-            /// When set, <see cref="EstablishSession"/> returns null, simulating a failed sign-in
+            /// When set, <see cref="EstablishIdentity"/> returns null, simulating a failed sign-in
             /// on otherwise valid credentials.
             /// </summary>
             public bool FailSessionCreation { get; set; }
@@ -492,6 +531,12 @@ namespace WebExpress.WebApp.Test.WebRestApi
             protected override int PermanentLockoutAttempts => PermanentAttempts ?? base.PermanentLockoutAttempts;
             protected override int PermanentLockoutDurationSeconds => PermanentDurationSeconds ?? base.PermanentLockoutDurationSeconds;
 
+            /// <summary>
+            /// Returns an identity only for credentials accepted by this test provider.
+            /// </summary>
+            /// <param name="username">The submitted account name to resolve through the local directory.</param>
+            /// <param name="password">The password to verify before returning an authenticated identity.</param>
+            /// <returns>The configured identity, or null when the test rejects the credentials.</returns>
             protected override IIdentity ValidateCredentials(string username, string password)
             {
                 if (string.Equals(username, _validUsername, System.StringComparison.OrdinalIgnoreCase) &&
@@ -503,14 +548,22 @@ namespace WebExpress.WebApp.Test.WebRestApi
                 return null;
             }
 
-            protected override Session EstablishSession(IIdentity identity, IRequest request)
+            /// <summary>
+            /// Allows tests to distinguish credential validation from successful token issuance.
+            /// </summary>
+            /// <param name="identity">The verified identity whose authorization snapshot is being processed.</param>
+            /// <param name="request">The HTTP request whose authentication context is being evaluated.</param>
+            /// <returns>The issued token pair, or null when the test simulates issuance failure.</returns>
+            protected override IdentityTokenPair EstablishIdentity(IIdentity identity, IRequest request)
             {
-                return FailSessionCreation ? null : base.EstablishSession(identity, request);
+                return FailSessionCreation ? null : base.EstablishIdentity(identity, request);
             }
 
             /// <summary>
             /// Exposes the protected reset so a test can stand in for an administrative unlock.
             /// </summary>
+            /// <param name="request">The HTTP request whose authentication context is being evaluated.</param>
+            /// <param name="username">The submitted account name to resolve through the local directory.</param>
             public void Unlock(IRequest request, string username)
             {
                 ResetFailedAttempts(request, username);
@@ -530,6 +583,10 @@ namespace WebExpress.WebApp.Test.WebRestApi
 
             public string Login { get; }
 
+            /// <summary>
+            /// Supplies an authenticated test subject independently of application session state.
+            /// </summary>
+            /// <param name="login">The account name used for the test identity.</param>
             public TestIdentity(string login)
             {
                 Login = login;
