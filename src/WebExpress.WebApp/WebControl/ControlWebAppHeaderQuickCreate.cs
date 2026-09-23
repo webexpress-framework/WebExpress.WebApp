@@ -128,17 +128,20 @@ namespace WebExpress.WebApp.WebControl
 
             var preferences = Preferences.Union(fragmentManager.GetFragments<FragmentControlSplitButtonItemLink, SectionAppQuickcreatePreferences>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ));
 
             var primary = Primary.Union(fragmentManager.GetFragments<FragmentControlSplitButtonItemLink, SectionAppQuickcreatePrimary>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ));
 
             var secondary = Secondary.Union(fragmentManager.GetFragments<FragmentControlSplitButtonItemLink, SectionAppQuickcreateSecondary>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ));
 
             var quickcreateList = preferences

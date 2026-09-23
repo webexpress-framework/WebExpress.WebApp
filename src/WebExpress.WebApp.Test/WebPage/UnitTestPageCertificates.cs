@@ -166,7 +166,8 @@ namespace WebExpress.WebApp.Test.WebPage
         }
 
         /// <summary>
-        /// Keeps the settings entry discoverable while requiring system access at the registered endpoint.
+        /// Offers the settings entries only to identities holding system access, both in the settings
+        /// sidebar and in the settings menu of the app header, matching the check at the endpoint.
         /// </summary>
         /// <param name="authenticated">Whether a real signed login supplies the request identity.</param>
         /// <param name="administrator">Whether the login grants the existing system access policy.</param>
@@ -174,7 +175,7 @@ namespace WebExpress.WebApp.Test.WebPage
         [InlineData(false, false)]
         [InlineData(true, false)]
         [InlineData(true, true)]
-        public void MenuRemainsVisibleWhileEndpointRequiresSystemAccess(bool authenticated, bool administrator)
+        public void MenuShowsEntryOnlyWithSystemAccess(bool authenticated, bool administrator)
         {
             // arrange
             using var fixture = new CertificatePageFixture();
@@ -188,14 +189,34 @@ namespace WebExpress.WebApp.Test.WebPage
             var tree = new VisualTreeWebAppSetting(fixture.Hub, fixture.PageContext);
 
             // act
-            var menu = new ControlWebAppSettingMenu().Render(context, tree).ToString();
+            var menu = new ControlWebAppSettingMenu().Render(context, tree)?.ToString() ?? "";
+            var header = new ControlWebAppHeaderSettings().Render(context, tree)?.ToString() ?? "";
 
             // validation
             Assert.IsType<SystemAccessPolicy>(Assert.Single(fixture.PageContext.Policies));
             Assert.False(fixture.PageContext.Cache);
             Assert.Equal(administrator, fixture.Hub.IdentityManager.CheckAccess(identity, fixture.PageContext));
-            Assert.Contains("data-label=\"Certificates\"", menu);
-            Assert.Contains("data-uri=\"" + fixture.PageContext.Route.ToUri() + "\"", menu);
+            Assert.Equal(administrator, menu.Contains("data-label=\"Certificates\""));
+            Assert.Equal(administrator, menu.Contains("data-uri=\"" + fixture.PageContext.Route.ToUri() + "\""));
+            Assert.Equal(administrator, header.Contains(">System</div>"));
+        }
+
+        /// <summary>
+        /// Guards every shipped settings page, so no system diagnostic stays reachable for accounts
+        /// without system access after the menu entries are hidden from them.
+        /// </summary>
+        [Fact]
+        public void EverySettingPageRequiresSystemAccess()
+        {
+            // arrange
+            using var fixture = new CertificatePageFixture();
+            var pages = fixture.Hub.SettingPageManager
+                .GetSettingPages(fixture.PageContext.ApplicationContext, fixture.PageContext.SettingCategory)
+                .ToList();
+
+            // validation
+            Assert.NotEmpty(pages);
+            Assert.All(pages, page => Assert.Contains(page.Policies, policy => policy is SystemAccessPolicy));
         }
 
         /// <summary>

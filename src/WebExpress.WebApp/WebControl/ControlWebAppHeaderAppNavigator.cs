@@ -159,17 +159,20 @@ namespace WebExpress.WebApp.WebControl
 
             var preferences = Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppPreferences>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ));
 
             var primary = Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppPrimary>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ));
 
             var secondary = Secondary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppSecondary>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ));
 
             if (preferences.Any() || primary.Any() || secondary.Any())

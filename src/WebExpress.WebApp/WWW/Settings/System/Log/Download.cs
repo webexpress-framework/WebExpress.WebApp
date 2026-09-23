@@ -3,6 +3,7 @@ using WebExpress.WebApp.WebScope;
 using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebLog;
 using WebExpress.WebCore.WebMessage;
+using WebExpress.WebCore.WebPolicies;
 using WebExpress.WebCore.WebResource;
 
 namespace WebExpress.WebApp.WWW.Settings.System.Log
@@ -11,6 +12,7 @@ namespace WebExpress.WebApp.WWW.Settings.System.Log
     /// Download the log file.
     /// </summary>
     [Scope<IScopeAdmin>]
+    [Policy<SystemAccessPolicy>]
     public sealed class Download : ResourceBinary
     {
         private readonly ILogManager _logManager;

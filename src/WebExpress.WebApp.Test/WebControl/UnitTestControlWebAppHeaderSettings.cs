@@ -12,12 +12,14 @@ namespace WebExpress.WebApp.Test.WebControl
     public class UnitTestControlWebAppHeaderSettings
     {
         /// <summary>
-        /// Tests the id property of the web app header settings control.
+        /// Tests the id property of the web app header settings control. The request carries no
+        /// identity, so the system category, whose pages all require system access, is not offered
+        /// and the menu disappears once nothing else is left in it.
         /// </summary>
         [Theory]
-        [InlineData(null, false, "<div class=\"wx-webui-dropdown wx-app-dropdown ms-2\" title=\"Settings\" data-icon=\"wx-icon-light wx-icon-light-cog\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">Settings</div><div class=\"wx-dropdown-item\"></div><div class=\"wx-dropdown-item\" data-icon=\"wx-icon-light wx-icon-light-gears\" data-uri=\"/server/app/webexpress.webapp/settings/*\">System</div></div>")]
-        [InlineData("id", false, "<div id=\"id\" class=\"wx-webui-dropdown wx-app-dropdown ms-2\" title=\"Settings\" data-icon=\"wx-icon-light wx-icon-light-cog\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">Settings</div><div class=\"wx-dropdown-item\"></div><div class=\"wx-dropdown-item\" data-icon=\"wx-icon-light wx-icon-light-gears\" data-uri=\"/server/app/webexpress.webapp/settings/*\">System</div></div>")]
-        [InlineData("id", true, "<div id=\"id\" class=\"wx-webui-dropdown wx-app-dropdown ms-2\" title=\"Settings\" data-icon=\"wx-icon-light wx-icon-light-cog\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-item\" data-icon=\"wx-icon-light wx-icon-light-gears\" data-uri=\"/server/app/webexpress.webapp/settings/*\">System</div></div>")]
+        [InlineData(null, false, "<div class=\"wx-webui-dropdown wx-app-dropdown ms-2\" title=\"Settings\" data-icon=\"wx-icon-light wx-icon-light-cog\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">Settings</div><div class=\"wx-dropdown-item\"></div></div>")]
+        [InlineData("id", false, "<div id=\"id\" class=\"wx-webui-dropdown wx-app-dropdown ms-2\" title=\"Settings\" data-icon=\"wx-icon-light wx-icon-light-cog\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">Settings</div><div class=\"wx-dropdown-item\"></div></div>")]
+        [InlineData("id", true, null)]
         public void Id(string id, bool empty, string expected)
         {
             // arrange
@@ -36,6 +38,12 @@ namespace WebExpress.WebApp.Test.WebControl
 
             // act
             var html = control.Render(context, visualTree);
+
+            if (expected is null)
+            {
+                Assert.Null(html);
+                return;
+            }
 
             AssertExtensions.EqualWithPlaceholders(expected, html);
         }

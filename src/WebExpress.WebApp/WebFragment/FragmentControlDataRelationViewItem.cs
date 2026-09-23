@@ -58,7 +58,7 @@ namespace WebExpress.WebApp.WebFragment
         /// <returns>The rendered HTML node, or <see langword="null"/>.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            if (!FragmentContext.Conditions.Check(renderContext?.Request))
+            if (!FragmentContext.Check(renderContext?.Request))
             {
                 return null;
             }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using WebExpress.WebApp.WebSection;
+using WebExpress.WebApp.WebSettingPage;
 using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebHtml;
@@ -143,13 +144,13 @@ namespace WebExpress.WebApp.WebControl
             var appicationContext = renderContext.PageContext?.ApplicationContext;
             var settingPageContext = renderContext.PageContext as ISettingPageContext;
             var categories = settingPageManager?.GetSettingCategories(appicationContext)
-                .Where(x => settingPageManager.GetFirstSettingPage(appicationContext, x) is not null)
+                .Where(x => SettingPageAccess.GetFirstSettingPage(renderContext.Request, appicationContext, x) is not null)
                 .Select
                 (
                     x => new ControlNavigationItemLink()
                     {
                         Text = _ => I18N.Translate(renderContext, x?.Name),
-                        Uri = _ => settingPageManager.GetFirstSettingPage(appicationContext, x)?
+                        Uri = _ => SettingPageAccess.GetFirstSettingPage(renderContext.Request, appicationContext, x)?
                             .Route?
                             .ToUri(),
                         Active = _ => settingPageContext.SettingCategory == x ? TypeActive.Active : TypeActive.None

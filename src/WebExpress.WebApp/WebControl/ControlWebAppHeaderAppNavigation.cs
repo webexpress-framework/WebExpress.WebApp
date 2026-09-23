@@ -125,17 +125,20 @@ namespace WebExpress.WebApp.WebControl
         {
             var preferences = Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControlNavigationItem, SectionAppNavigationPreferences>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ));
 
             var primary = Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControlNavigationItem, SectionAppNavigationPrimary>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ));
 
             var secondary = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControlNavigationItem, SectionAppNavigationSecondary>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             );
 
             return new ControlOverflow(Id)

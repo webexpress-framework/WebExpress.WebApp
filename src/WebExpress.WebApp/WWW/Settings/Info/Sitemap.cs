@@ -9,6 +9,7 @@ using WebExpress.WebCore.WebEndpoint;
 using WebExpress.WebCore.WebHtml;
 using WebExpress.WebCore.WebIcon;
 using WebExpress.WebCore.WebPage;
+using WebExpress.WebCore.WebPolicies;
 using WebExpress.WebCore.WebResource;
 using WebExpress.WebCore.WebRestApi;
 using WebExpress.WebCore.WebSettingPage;
@@ -32,6 +33,7 @@ namespace WebExpress.WebApp.WWW.Settings.Info
     [SettingGroup<SettingGroupSystemGeneral>()]
     [SettingSection(SettingSection.Secondary)]
     [Scope<IScopeAdmin>]
+    [Policy<SystemAccessPolicy>]
     public sealed class Sitemap : ISettingPage<VisualTreeWebAppSetting>, IScopeAdmin
     {
         /// <summary>

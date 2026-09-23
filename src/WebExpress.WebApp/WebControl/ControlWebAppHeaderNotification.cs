@@ -158,17 +158,20 @@ namespace WebExpress.WebApp.WebControl
         {
             var preferences = Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppNotificationPreferences>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ));
 
             var primary = Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppNotificationPrimary>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ));
 
             var secondary = Secondary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppNotificationSecondary>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ));
 
             if (preferences.Any() || primary.Any() || secondary.Any())

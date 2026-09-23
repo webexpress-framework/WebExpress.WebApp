@@ -153,7 +153,8 @@ namespace WebExpress.WebApp.WebControl
         {
             var avatar = WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlAvatar, SectionAppAvatar>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ).FirstOrDefault();
 
             username = avatar?.GetUsername(renderContext) ?? username;
@@ -190,17 +191,20 @@ namespace WebExpress.WebApp.WebControl
         {
             var preferences = Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppAvatarPreferences>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ));
 
             var primary = Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppAvatarPrimary>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ));
 
             var secondary = Secondary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppAvatarSecondary>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ));
 
             if (preferences.Any() || primary.Any() || secondary.Any())

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using WebExpress.WebApp.WebSection;
+using WebExpress.WebApp.WebSettingPage;
 using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebHtml;
@@ -159,56 +160,60 @@ namespace WebExpress.WebApp.WebControl
         {
             var settinPageManager = WebEx.ComponentHub.SettingPageManager;
             var appicationContext = renderContext.PageContext?.ApplicationContext;
+            var request = renderContext.Request;
             var preferenceCategories = settinPageManager?.GetSettingCategories(appicationContext)
                 .Where(x => x.Section == SettingSection.Preferences)
-                .Where(x => settinPageManager.GetSettingPages(appicationContext, x).Any())
+                .Where(x => SettingPageAccess.GetSettingPages(request, appicationContext, x).Any())
                 .Select
                 (
                     x => new ControlDropdownItemLink()
                     {
                         Text = _ => I18N.Translate(renderContext, x?.Name),
-                        Uri = _ => settinPageManager.GetFirstSettingPage(appicationContext, x)?.Route.ToUri(),
+                        Uri = _ => SettingPageAccess.GetFirstSettingPage(request, appicationContext, x)?.Route.ToUri(),
                         Icon = _ => x.Icon
                     }
                 );
             var primaryCategories = settinPageManager?.GetSettingCategories(appicationContext)
                 .Where(x => x.Section == SettingSection.Primary)
-                .Where(x => settinPageManager.GetSettingPages(appicationContext, x).Any())
+                .Where(x => SettingPageAccess.GetSettingPages(request, appicationContext, x).Any())
                 .Select
                 (
                     x => new ControlDropdownItemLink()
                     {
                         Text = _ => I18N.Translate(renderContext, x?.Name),
-                        Uri = _ => settinPageManager.GetFirstSettingPage(appicationContext, x)?.Route.ToUri(),
+                        Uri = _ => SettingPageAccess.GetFirstSettingPage(request, appicationContext, x)?.Route.ToUri(),
                         Icon = _ => x.Icon
                     }
                 );
             var secondaryCategories = settinPageManager?.GetSettingCategories(appicationContext)
                 .Where(x => x.Section == SettingSection.Secondary)
-                .Where(x => settinPageManager.GetSettingPages(appicationContext, x).Any())
+                .Where(x => SettingPageAccess.GetSettingPages(request, appicationContext, x).Any())
                 .Select
                 (
                     x => new ControlDropdownItemLink()
                     {
                         Text = _ => I18N.Translate(renderContext, x?.Name),
-                        Uri = _ => settinPageManager.GetFirstSettingPage(appicationContext, x)?.Route.ToUri(),
+                        Uri = _ => SettingPageAccess.GetFirstSettingPage(request, appicationContext, x)?.Route.ToUri(),
                         Icon = _ => x.Icon
                     }
                 );
 
             var preferences = Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppSettingsPreferences>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ));
 
             var primary = Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppSettingsPrimary>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ));
 
             var secondary = Secondary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppSettingsSecondary>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ));
 
             if (preferences.Any() || primary.Any() || secondary.Any() || preferenceCategories.Any())

@@ -78,7 +78,8 @@ namespace WebExpress.WebApp.WebControl
             // lands in the same slot
             var searches = Searches.Cast<IControl>().Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControlSearch, SectionAppSearch>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ));
 
             // the header slot stays collapsed until an application contributes a search box, so an empty

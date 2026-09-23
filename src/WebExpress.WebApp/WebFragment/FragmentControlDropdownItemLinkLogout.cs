@@ -52,7 +52,7 @@ namespace WebExpress.WebApp.WebFragment
         /// <returns>An HTML node representing the rendered control.</returns>
         public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IUri restEndpoint)
         {
-            if (!FragmentContext.Conditions.Check(renderContext?.Request))
+            if (!FragmentContext.Check(renderContext?.Request))
             {
                 return null;
             }

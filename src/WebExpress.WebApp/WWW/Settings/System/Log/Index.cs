@@ -7,6 +7,7 @@ using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebLog;
 using WebExpress.WebCore.WebPage;
+using WebExpress.WebCore.WebPolicies;
 using WebExpress.WebCore.WebSettingPage;
 using WebExpress.WebUI.Internationalization;
 using WebExpress.WebUI.WebControl;
@@ -22,6 +23,7 @@ namespace WebExpress.WebApp.WWW.Settings.System.Log
     [SettingGroup<SettingGroupSystemGeneral>()]
     [SettingSection(SettingSection.Secondary)]
     [Scope<IScopeAdmin>]
+    [Policy<SystemAccessPolicy>]
     public sealed class Index : ISettingPage<VisualTreeWebAppSetting>, IScopeAdmin
     {
         private readonly ILogManager _logManager;

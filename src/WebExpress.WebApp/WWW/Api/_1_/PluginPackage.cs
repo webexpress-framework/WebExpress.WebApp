@@ -7,6 +7,7 @@ using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebComponent;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebParameter;
+using WebExpress.WebCore.WebPolicies;
 using WebExpress.WebCore.WebRestApi;
 using WebExpress.WebCore.WebStatusPage;
 
@@ -17,6 +18,7 @@ namespace WebExpress.WebApp.WWW.Api.V1
     /// </summary>
     [IncludeSubPaths(true)]
     [Scope<IScopeAdmin>]
+    [Policy<SystemAccessPolicy>]
     public sealed class PluginPackage : IRestApi
     {
         private readonly IComponentHub _componentHub;

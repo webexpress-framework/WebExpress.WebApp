@@ -5,6 +5,7 @@ using WebExpress.WebApp.WebApiControl;
 using WebExpress.WebApp.WebScope;
 using WebExpress.WebApp.WebSettingPage;
 using WebExpress.WebApp.WWW.Api.V1;
+using WebExpress.WebCore.WebPolicies;
 using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebAttribute;
@@ -29,6 +30,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
     [SettingGroup<SettingGroupSystemGeneral>()]
     [SettingSection(SettingSection.Secondary)]
     [Scope<IScopeAdmin>]
+    [Policy<SystemAccessPolicy>]
     public sealed class Plugin : ISettingPage<VisualTreeWebAppSetting>, IScopeAdmin
     {
         private readonly IComponentHub _componentHub;

@@ -36,7 +36,7 @@ namespace WebExpress.WebApp.WebFragment
         /// <returns>An HTML node representing the rendered fragments. Can be null if no nodes are present.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            if (!FragmentContext.Conditions.Check(renderContext?.Request))
+            if (!FragmentContext.Check(renderContext?.Request))
             {
                 return null;
             }

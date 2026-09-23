@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using WebExpress.WebApp.WebSection;
+using WebExpress.WebApp.WebSettingPage;
 using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebSettingPage;
@@ -43,11 +44,11 @@ namespace WebExpress.WebApp.WebControl
             var controls = new List<IControlSidebarItem>();
 
             foreach (var group in groups
-                .Where(x => settinPageManager.GetSettingPages(appicationContext, x).Any())
+                .Where(x => SettingPageAccess.GetSettingPages(renderContext.Request, appicationContext, x).Any())
                 .OrderBy(x => x.Name)
             )
             {
-                var settingPages = settinPageManager.GetSettingPages(appicationContext, group);
+                var settingPages = SettingPageAccess.GetSettingPages(renderContext.Request, appicationContext, group);
 
                 controls.Add(new ControlSidebarItemHeader() { Text = _ => group?.Name });
 

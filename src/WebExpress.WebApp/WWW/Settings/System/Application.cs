@@ -8,6 +8,7 @@ using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebComponent;
 using WebExpress.WebCore.WebIcon;
 using WebExpress.WebCore.WebPage;
+using WebExpress.WebCore.WebPolicies;
 using WebExpress.WebCore.WebSettingPage;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebIcon;
@@ -27,6 +28,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
     [SettingGroup<SettingGroupSystemGeneral>()]
     [SettingSection(SettingSection.Secondary)]
     [Scope<IScopeAdmin>]
+    [Policy<SystemAccessPolicy>]
     public sealed class Application : ISettingPage<VisualTreeWebAppSetting>, IScopeAdmin
     {
         private readonly IComponentHub _componentHub;
