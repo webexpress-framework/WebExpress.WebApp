@@ -60,6 +60,7 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
         this._currentDynamicNodes = [];
         this._staticNodes = [];
         this._dynamicStaticDivider = null;
+        this._dynamicList = null; // list inside the scroll region that holds the dynamic items
         this._dynamicAnchor = null; // marker li before dynamic region
         this._searchInput = null;
 
@@ -310,11 +311,23 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
         liAfterSearchDivider.className = "dropdown-divider";
         fragment.appendChild(liAfterSearchDivider);
 
+        // the loaded items are the part of the menu that grows; they get a scroll region of
+        // their own, so the search field above and the static entries below stay in place
+        // instead of scrolling out of sight with a long list
+        const liScroll = document.createElement("li");
+        liScroll.className = "wx-dropdown-scroll";
+        liScroll.setAttribute("role", "none");
+        const dynamicList = document.createElement("ul");
+        dynamicList.setAttribute("role", "group");
+        liScroll.appendChild(dynamicList);
+        fragment.appendChild(liScroll);
+        this._dynamicList = dynamicList;
+
         // dynamic region anchor (invisible marker)
         const anchor = document.createElement("li");
         anchor.className = "wx-dynamic-anchor d-none";
         anchor.setAttribute("aria-hidden", "true");
-        fragment.appendChild(anchor);
+        dynamicList.appendChild(anchor);
         this._dynamicAnchor = anchor;
 
         // divider between dynamic and static (created now, toggled later)
@@ -559,12 +572,12 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
     }
 
     /**
-     * Replaces the dynamic items between the dynamic anchor and the dynamic-static divider
-     * without re-rendering the entire dropdown structure.
+     * Replaces the dynamic items inside the scroll region without re-rendering the entire
+     * dropdown structure.
      * @param {Array<any>} items - The dynamic items to render.
      */
     _updateDynamicItems(items) {
-        const ul = this._element.querySelector("ul.dropdown-menu");
+        const ul = this._dynamicList;
         if (!ul || !this._dynamicAnchor || !this._dynamicStaticDivider) {
             return;
         }
@@ -587,8 +600,8 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
             fragment.appendChild(li);
             this._currentDynamicNodes.push(li);
         }
-        
-        ul.insertBefore(fragment, this._dynamicStaticDivider);
+
+        ul.appendChild(fragment);
 
         // toggle divider visibility depending on presence of dynamic and static
         const hasDynamic = this._currentDynamicNodes.length > 0;
