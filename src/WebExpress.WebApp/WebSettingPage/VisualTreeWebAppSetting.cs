@@ -22,7 +22,10 @@ namespace WebExpress.WebApp.WebSettingPage
         /// <summary>
         /// Gets the area for setting tab.
         /// </summary>
-        public ControlWebAppSettingTab SettingTab { get; protected set; } = new ControlWebAppSettingTab("wx-settingtab");
+        public ControlWebAppSettingTab SettingTab { get; protected set; } = new ControlWebAppSettingTab("wx-settingtab")
+        {
+            Layout = _ => TypeLayoutTab.Underline
+        };
 
         /// <summary>
         /// Gets the sidebar control.
