@@ -380,7 +380,8 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
             if (param.dir === "in") {
                 continue;
             }
-            const value = state[param.state];
+            const value = String(param.state || "").split(".").filter((key) => key.length > 0)
+                .reduce((current, key) => current == null ? undefined : current[key], state);
             if (value !== undefined && value !== null) {
                 params[param.name] = value;
             }
@@ -421,7 +422,16 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
                 continue;
             }
             if (data && data[param.name] !== undefined) {
-                patch[param.state] = data[param.name];
+                // copy the latest state so response mappings preserve unrelated nested edits
+                const keys = String(param.state || "").split(".").filter((key) => key.length > 0);
+                let source = Object.assign({}, this.getState(), patch);
+                let cursor = patch;
+                for (const key of keys.slice(0, -1)) {
+                    source = source?.[key];
+                    cursor[key] = Object.assign({}, source);
+                    cursor = cursor[key];
+                }
+                cursor[keys[keys.length - 1]] = data[param.name];
             }
         }
 
@@ -881,15 +891,20 @@ webexpress.webapp.ViewStateRegistry = new class {
      * @param {HTMLElement} element - The control element.
      * @param {string} [id] - An explicit ViewState id.
      * @param {Function} callback - Receives the resolved ViewState.
+     * @returns {Function} Cancels a pending resolution when the caller is removed.
      */
     whenReady(element, id, callback) {
         const found = this.resolve(element, id);
         if (found) {
             callback(found);
-            return;
+            return () => { };
         }
 
-        this._pending.push({ element: element, id: id, callback: callback });
+        const waiter = { element: element, id: id, callback: callback };
+        this._pending.push(waiter);
+        return () => {
+            this._pending = this._pending.filter((pending) => pending !== waiter);
+        };
     }
 
     /**

@@ -344,10 +344,15 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
      * through the service layer. The result also carries the raw response and
      * the content type.
      * @param {string} url - The request url.
-     * @param {object} [init={}] - The fetch init, used as provided.
+     * @param {object} [init={}] - The fetch init, overriding declared headers when provided.
      * @returns {Promise<object>} A normalised result with response and contentType.
      */
     async request(url, init = {}) {
+        if (this._descriptor.headers) {
+            const headers = new Headers(this._descriptor.headers);
+            new Headers(init.headers).forEach((value, name) => headers.set(name, value));
+            init = Object.assign({}, init, { headers: headers });
+        }
         try {
             const response = await fetch(url, init);
             const contentType = (response.headers && typeof response.headers.get === "function"

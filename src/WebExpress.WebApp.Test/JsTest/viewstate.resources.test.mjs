@@ -14,6 +14,33 @@ import { test } from "node:test";
 import assert from "node:assert";
 import { loadEngine, webappAsset, appendServiceIsland, appendStateIsland, appendResourceIsland } from "./harness.mjs";
 
+test("resource parameters follow nested state paths in both directions without mutating sibling values", async () => {
+    const engine = loadEngine();
+    const original = { wql: "initial", page: 2, scope: "mine" };
+    let received;
+    const state = new engine.wxapp.ViewState(engine.document.createElement("div"), {
+        state: { query: original },
+        services: { data: { query: async (params) => {
+            received = params;
+            return { ok: true, data: { wql: "normalized", page: 3, items: [] } };
+        } } },
+        resources: { items: { name: "items", service: "data", target: "items", auto: false, params: [
+            { name: "wql", state: "query.wql", dir: "inout" },
+            { name: "page", state: "query.page", dir: "inout" }
+        ] } }
+    });
+
+    await state.load("items");
+
+    assert.equal(received.wql, "initial");
+    assert.equal(received.page, 2);
+    assert.equal(state.getState().query.wql, "normalized");
+    assert.equal(state.getState().query.page, 3);
+    assert.equal(state.getState().query.scope, "mine");
+    assert.equal(state.getState()["query.wql"], undefined);
+    assert.deepEqual(original, { wql: "initial", page: 2, scope: "mine" });
+});
+
 /**
  * Builds a ViewState host with the given islands, mirroring the markup the C#
  * ControlViewState emits.

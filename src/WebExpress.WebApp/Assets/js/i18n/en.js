@@ -97,6 +97,8 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "wql.status.initializing": "Initializing...",
     "wql.status.ready": "Ready.",
     "wql.status.sent": "Valid query sent.",
+    "wql.status.unchecked": "Query sent without validation.",
+    "wql.status.cleared": "Filter cleared.",
     "wql.error.history.unavailable": "History unavailable.",
     "wql.error.unknown": "Unknown error",
     "wql.error.network": "Network error during validation.",

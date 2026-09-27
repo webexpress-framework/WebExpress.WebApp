@@ -20,17 +20,17 @@ The `webexpress.webapp.SearchCtrl` component combines a basic search field and a
 
 The host element carries the `wx-webapp-search` class. The controller creates the basic search field, the WQL prompt and the mode switch inside this element.
 
-| Attribute | Description | Example |
-|-----------|-------------|---------|
-| `class` | The marker used for automatic initialization. | `class="wx-webapp-search"` |
-| `id` | Identifies the control and supplies its default persistence key. Use a stable, unique id across page loads. | `id="issue-search"` |
-| `data-initial` | Initial presentation when no valid preference is stored. Accepts `basic` or `wql`; defaults to `basic`. | `data-initial="wql"` |
-| `data-value` | Initial text of the embedded basic search field. | `data-value="release"` |
-| `data-persist-key` | Explicit localStorage key for the search mode. Overrides the key derived from the host id. | `data-persist-key="issue-search-mode"` |
-| `data-wx-resource` | Optional ViewState resource to query when the search changes. | `data-wx-resource="issues"` |
-| `data-wx-model-query` | Alternative resource binding; takes precedence over `data-wx-resource`. | `data-wx-model-query="issues"` |
-| `data-wx-model` | State key for the basic search text when bound to a ViewState. Defaults to `search`; WQL always uses `wql`. | `data-wx-model="search"` |
-| `data-wx-viewstate` | Optional identifier of the ViewState to bind to. Without it, the resource binding determines the ViewState. | `data-wx-viewstate="issue-browser"` |
+|Attribute             |Description                                                                                                 |Example
+|----------------------|------------------------------------------------------------------------------------------------------------|--------------------------
+|`class`               |The marker used for automatic initialization.                                                               |`class="wx-webapp-search"` 
+|`id`                  |Identifies the control and supplies its default persistence key. Use a stable, unique id across page loads. |`id="issue-search"` 
+|`data-initial`        |Initial presentation when no valid preference is stored. Accepts `basic` or `wql`; defaults to `basic`.     |`data-initial="wql"`
+|`data-value`          |Initial text of the embedded basic search field.                                                            |`data-value="release"`
+|`data-persist-key`    |Explicit localStorage key for the search mode. Overrides the key derived from the host id.                  |`data-persist-key="issue-search-mode"`
+|`data-wx-resource`    |Optional ViewState resource to query when the search changes.                                               |`data-wx-resource="issues"`
+|`data-wx-model-query` |Alternative resource binding; takes precedence over `data-wx-resource`.                                     |`data-wx-model-query="issues"`
+|`data-wx-model`       |State key for the basic search text when bound to a ViewState. Defaults to `search`; WQL always uses `wql`. |`data-wx-model="search"`
+|`data-wx-viewstate`   |Optional identifier of the ViewState to bind to. Without it, the resource binding determines the ViewState. |`data-wx-viewstate="issue-browser"`
 
 ### WQL Service
 
@@ -40,6 +40,14 @@ A child `wx-service` island named `data` supplies the WQL service endpoint. The 
 <wx-service hidden name="data" kind="rest"
             base-uri="/api/issues/wql" method="GET"></wx-service>
 ```
+
+The standalone `WqlPromptCtrl` reads its initial query from the ViewState path declared by `data-wx-model`, including nested paths such as `query.wql`, and follows external changes to that path. Submitting writes the query back, resets `page` to `0`, clears `search` and reloads the declared resource. The clear button and an empty submission apply an empty filter. Ordinary editing keeps the draft local until submission.
+
+The WQL completion behavior preserves Unicode prefixes, existing quotes and multiline selections. Tab accepts an available suggestion; otherwise it follows normal focus navigation. Shift+Tab always moves focus backward. Ctrl+Enter inserts a newline, replacing the current selection when necessary.
+
+The WQL service behavior uses the declared service instance for analysis, validation and history, including its headers and error mappings. Endpoint paths preserve existing base URL parameters. New input invalidates pending analysis and validation, and only the latest submission can apply its result. Loaded history merges with local submissions. Removing the control cancels pending work and releases its listeners and state subscription.
+
+The validation feedback distinguishes valid, invalid and unchecked submissions. Invalid queries remain in the editor. An unavailable validation service allows submission with an explicit unchecked message, while a confirmed valid query receives the success message. Clearing a filter has its own confirmation message.
 
 ### Mode Persistence
 
@@ -83,12 +91,12 @@ const dynamicSearchCtrl = new webexpress.webapp.SearchCtrl(searchElement);
 
 The component dispatches **`webexpress.webui.Event.CHANGE_FILTER_EVENT`** when the basic search changes, when the WQL prompt submits a query, and when the user switches modes. A mode switch reports the current text of the newly visible input. Initial mode restoration does not submit a search.
 
-| Detail Property | Description |
-|-----------------|-------------|
-| `sender` | The combined search host element. |
-| `id` | The id of the combined search host. |
-| `value` | The search text or WQL expression. |
-| `searchType` | The originating presentation: `basic` or `wql`. |
+|Detail Property |Description
+|----------------|-------------
+|`sender`        |The combined search host element.
+|`id`            |The id of the combined search host.
+|`value`         |The search text or WQL expression.
+|`searchType`    |The originating presentation: `basic` or `wql`.
 
 ```javascript
 const searchElement = document.getElementById("issue-search");
