@@ -51,6 +51,7 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/js/webexpress.webapp.input.unique.model.js")]
     [Asset("/assets/js/webexpress.webapp.input.unique.js")]
     [Asset("/assets/js/webexpress.webapp.kanban.model.js")]
+    [Asset("/assets/js/webexpress.webapp.kanban.status.js")]
     [Asset("/assets/js/webexpress.webapp.kanban.js")]
     // the link panels read the registry key off the model at load time, so the
     // model is declared before them

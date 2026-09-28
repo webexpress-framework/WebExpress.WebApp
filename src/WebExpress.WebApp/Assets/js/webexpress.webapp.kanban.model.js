@@ -29,11 +29,19 @@ webexpress.webapp.kanbanModel = {
             out.filter = data.filter || "";
         }
 
+        if (Object.prototype.hasOwnProperty.call(data, "statuses")) {
+            out.statuses = data.statuses == null ? null : (Array.isArray(data.statuses) ? data.statuses : [])
+                .filter((status) => status && typeof status.id === "string" && status.id.length > 0)
+                .filter((status, index, all) => all.findIndex((item) => item.id === status.id) === index)
+                .map((status) => ({ id: status.id, label: status.label || status.id }));
+        }
+
         if (data.columns) {
             out.columns = data.columns.map((col) => ({
                 id: col.id,
                 label: col.label,
                 size: col.size || "1fr",
+                statusIds: this._normalizeStatusIds(col.statusIds),
                 // the column "…" menu persists a hex accent color; older boards
                 // that only carry the legacy colorCss class leave it null
                 color: col.color || null,
@@ -67,6 +75,8 @@ webexpress.webapp.kanbanModel = {
             out.cards = data.items.map((item) => ({
                 id: item.id,
                 columnId: item.columnId,
+                statusId: item.statusId || null,
+                allowedStatusIds: this._normalizeStatusIds(item.allowedStatusIds),
                 swimlaneId: item.swimlaneId,
                 label: item.label || "",
                 html: item.html || "",
@@ -88,6 +98,16 @@ webexpress.webapp.kanbanModel = {
         }
 
         return out;
+    },
+
+    /**
+     * Preserves the distinction between unrestricted and explicitly empty status lists.
+     * @param {*} value - The identifiers supplied by the service.
+     * @returns {Array<string>|null} Unique identifiers, or null when no restriction was supplied.
+     */
+    _normalizeStatusIds(value) {
+        return value == null ? null : [...new Set((Array.isArray(value) ? value : [])
+            .filter((id) => typeof id === "string" && id.length > 0))];
     },
 
     /**

@@ -73,6 +73,7 @@ namespace WebExpress.WebApp.WebRestApi
                 {
                     Title = I18N.Translate(request, Title),
                     Filter = wql,
+                    Statuses = RetrieveStatuses(request),
                     Columns = columns,
                     Swimlanes = swimlanes,
                     Cards = cards
@@ -106,11 +107,11 @@ namespace WebExpress.WebApp.WebRestApi
                     var bodyString = Encoding.UTF8.GetString(requestData.Content);
                     var payload = JsonSerializer.Deserialize<RestApiDashboardLayout>(bodyString, _jsonOptions);
 
-                    // the client tags every structural change with an action; a
-                    // card move carries none and is intentionally ignored here
+                    // structural changes and card transitions have separate persistence hooks
                     switch (payload?.Action)
                     {
                         case "columns":
+                            ValidateColumnStatuses(payload, request);
                             UpdtaeColumns(payload, request);
                             break;
                         case "swimlanes":
@@ -118,6 +119,12 @@ namespace WebExpress.WebApp.WebRestApi
                             break;
                         case "settings":
                             UpdateSettings(payload, request);
+                            break;
+                        case null:
+                        case "move":
+                            var move = JsonSerializer.Deserialize<RestApiKanbanMove>(bodyString, _jsonOptions);
+                            ValidateMove(move, request);
+                            MoveCard(move, request);
                             break;
                     }
                 }
@@ -133,6 +140,82 @@ namespace WebExpress.WebApp.WebRestApi
             catch (Exception ex)
             {
                 return RestApiFault.BadRequest(request, ex, "error processing put request.");
+            }
+        }
+
+        /// <summary>
+        /// Supplies the workflow statuses offered by the board to the current request.
+        /// </summary>
+        /// <param name="request">The request used to scope the status catalog.</param>
+        /// <returns>The available statuses, or null for a board without workflow statuses.</returns>
+        protected virtual IEnumerable<RestApiKanbanStatus> RetrieveStatuses(IRequest request)
+        {
+            return null;
+        }
+
+        /// <summary>
+        /// Persists a validated card transition in the application's workflow store.
+        /// Implementations must enforce application authorization and atomically recheck mutable workflow rules.
+        /// </summary>
+        /// <param name="move">The confirmed card destination and status.</param>
+        /// <param name="request">The request used to authorize and persist the transition.</param>
+        protected virtual void MoveCard(RestApiKanbanMove move, IRequest request)
+        {
+        }
+
+        /// <summary>
+        /// Rejects column assignments that reference statuses outside the current catalog.
+        /// </summary>
+        /// <param name="layout">The submitted column assignments.</param>
+        /// <param name="request">The request used to resolve available statuses.</param>
+        private void ValidateColumnStatuses(RestApiDashboardLayout layout, IRequest request)
+        {
+            var statuses = RetrieveStatuses(request)?.Select(status => status.Id).ToHashSet();
+            if (statuses != null && (layout.Columns == null || layout.Columns.Any(column =>
+                column == null || (column.StatusIds ?? []).Any(id => !statuses.Contains(id)))))
+            {
+                throw new ArgumentException("The column contains an unavailable status.");
+            }
+        }
+
+        /// <summary>
+        /// Checks destinations against current server data before invoking application persistence.
+        /// </summary>
+        /// <param name="move">The untrusted card move received from the client.</param>
+        /// <param name="request">The request used to resolve cards, columns, and allowed statuses.</param>
+        private void ValidateMove(RestApiKanbanMove move, IRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(move?.CardId) || string.IsNullOrWhiteSpace(move.ColumnId))
+            {
+                throw new ArgumentException("A card and destination column are required.");
+            }
+
+            var statuses = RetrieveStatuses(request)?.Select(status => status.Id).ToHashSet();
+            if (statuses == null)
+            {
+                return;
+            }
+
+            using var context = CreateContext();
+            var card = RetrieveCards(new Query<TIndexItem>(), context, request).FirstOrDefault(item => item.Id == move.CardId);
+            var column = RetrieveColumns(request).FirstOrDefault(item => item.Id == move.ColumnId);
+            if (card == null || column == null || (move.SwimlaneId != null
+                && !RetrieveSwimlanes(request).Any(lane => lane.Id == move.SwimlaneId)))
+            {
+                throw new ArgumentException("The card or its destination is unavailable.");
+            }
+
+            // reordering within the same column does not require a workflow transition
+            if (card.ColumnId == move.ColumnId && card.StatusId == move.StatusId)
+            {
+                return;
+            }
+
+            if (move.StatusId == null || !statuses.Contains(move.StatusId)
+                || !(column.StatusIds?.Contains(move.StatusId) ?? false)
+                || (card.AllowedStatusIds != null && !card.AllowedStatusIds.Contains(move.StatusId)))
+            {
+                throw new ArgumentException("The destination status is not allowed for this card.");
             }
         }
 

@@ -402,6 +402,13 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "dashboard.widget.scrum_velocity.max_sprints": "Anzahl Sprints",
 
     // kanban board and swimlane menus
+    "kanban.status.column": "Status der Spalte",
+    "kanban.status.help": "Wählen Sie die Status aus, die dieser Spalte zugeordnet sind.",
+    "kanban.status.choose": "Zielstatus auswählen",
+    "kanban.status.choose.help": "Wählen Sie den Zielstatus für diese Karte aus.",
+    "kanban.status.empty": "Für diese Karte ist kein gültiger Zielstatus verfügbar.",
+    "kanban.status.move": "Karte verschieben",
+    "kanban.status.cancel": "Abbrechen",
     "kanban.menu": "Optionen",
     "kanban.column.delete.message": "Möchten Sie die Spalte „{name}“ mit allen Karten löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
     "kanban.heading": "Board",

@@ -10,6 +10,18 @@ namespace WebExpress.WebApp.WebRestApi
     public class RestApiKanbanCard
     {
         /// <summary>
+        /// Gets or sets the current workflow status independently of the visual column.
+        /// </summary>
+        [JsonPropertyName("statusId")]
+        public string StatusId { get; set; }
+
+        /// <summary>
+        /// Gets or sets permitted destination statuses. Null is unrestricted; an empty list permits no status transition.
+        /// </summary>
+        [JsonPropertyName("allowedStatusIds")]
+        public IEnumerable<string> AllowedStatusIds { get; set; }
+
+        /// <summary>
         /// Gets or sets the unique identifier for the card.
         /// </summary>
         [JsonPropertyName("id")]

@@ -402,6 +402,13 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "dashboard.widget.scrum_velocity.max_sprints": "Number of sprints",
 
     // kanban board and swimlane menus
+    "kanban.status.column": "Column statuses",
+    "kanban.status.help": "Select the statuses assigned to this column.",
+    "kanban.status.choose": "Choose destination status",
+    "kanban.status.choose.help": "Select the destination status for this card.",
+    "kanban.status.empty": "No valid destination status is available.",
+    "kanban.status.move": "Move card",
+    "kanban.status.cancel": "Cancel",
     "kanban.menu": "Options",
     "kanban.column.delete.message": "Delete column “{name}” and all of its cards? This action cannot be undone.",
     "kanban.heading": "Board",

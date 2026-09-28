@@ -42,6 +42,46 @@ namespace WebExpress.WebApp.Test
         public string LastFilter { get; private set; }
 
         /// <summary>
+        /// Gets or sets the status catalog used by transition validation.
+        /// </summary>
+        public IEnumerable<RestApiKanbanStatus> Statuses { get; set; }
+
+        /// <summary>
+        /// Gets or sets the columns exposed to transition validation.
+        /// </summary>
+        public IEnumerable<RestApiKanbanColumn> Columns { get; set; } = [];
+
+        /// <summary>
+        /// Gets or sets the cards exposed to transition validation.
+        /// </summary>
+        public IEnumerable<RestApiKanbanCard> Cards { get; set; } = [];
+
+        /// <summary>
+        /// Gets the last accepted move to distinguish validation from persistence.
+        /// </summary>
+        public RestApiKanbanMove LastMove { get; private set; }
+
+        /// <summary>
+        /// Supplies the configured workflow catalog for a test request.
+        /// </summary>
+        /// <param name="request">The incoming request.</param>
+        /// <returns>The test status catalog.</returns>
+        protected override IEnumerable<RestApiKanbanStatus> RetrieveStatuses(IRequest request)
+        {
+            return Statuses;
+        }
+
+        /// <summary>
+        /// Records only moves accepted by the server validation boundary.
+        /// </summary>
+        /// <param name="move">The accepted destination.</param>
+        /// <param name="request">The incoming request.</param>
+        protected override void MoveCard(RestApiKanbanMove move, IRequest request)
+        {
+            LastMove = move;
+        }
+
+        /// <summary>
         /// Captures the column-layout update for verification.
         /// </summary>
         /// <param name="layout">The layout payload.</param>
@@ -86,8 +126,7 @@ namespace WebExpress.WebApp.Test
         /// </returns>
         protected override IEnumerable<RestApiKanbanColumn> RetrieveColumns(IRequest request)
         {
-            // return empty by default
-            return [];
+            return Columns;
         }
 
         /// <summary>
@@ -126,8 +165,7 @@ namespace WebExpress.WebApp.Test
         /// </returns>
         protected override IEnumerable<RestApiKanbanCard> RetrieveCards(IQuery<TestIndexItem> query, IQueryContext context, IRequest request)
         {
-            // return empty by default
-            return [];
+            return Cards;
         }
     }
 }

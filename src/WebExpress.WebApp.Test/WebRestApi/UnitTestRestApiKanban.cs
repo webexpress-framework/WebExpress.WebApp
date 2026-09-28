@@ -239,5 +239,129 @@ namespace WebExpress.WebApp.Test.WebRestApi
             Assert.Equal("settings", api.LastAction);
             Assert.Equal("priority = 'high'", api.LastFilter);
         }
+        /// <summary>
+        /// Rejects unavailable, unassigned, missing, and card-restricted destination statuses.
+        /// </summary>
+        /// <param name="statusId">The submitted status identifier.</param>
+        /// <param name="expectedStatus">The expected HTTP status.</param>
+        [Theory]
+        [InlineData("active", 200)]
+        [InlineData("review", 400)]
+        [InlineData("open", 400)]
+        [InlineData("missing", 400)]
+        [InlineData(null, 400)]
+        public void ValidateDestinationStatus(string statusId, int expectedStatus)
+        {
+            // arrange
+            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var api = CreateStatusBoard();
+            var request = CreateMoveRequest("work", statusId);
+
+            // act
+            var result = api.Update(request);
+
+            // validation
+            Assert.Equal(expectedStatus, result.Status);
+            Assert.Equal(expectedStatus == 200, api.LastMove != null);
+            if (expectedStatus == 200)
+            {
+                Assert.Equal(statusId, api.LastMove.StatusId);
+            }
+        }
+
+        /// <summary>
+        /// Allows local reordering of a terminal card without permitting a new status.
+        /// </summary>
+        [Fact]
+        public void ReorderPreservesTerminalStatus()
+        {
+            // arrange
+            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var api = CreateStatusBoard();
+            api.Cards.First().AllowedStatusIds = [];
+
+            // act
+            var reordered = api.Update(CreateMoveRequest("todo", "open"));
+            var blocked = api.Update(CreateMoveRequest("work", "active"));
+
+            // validation
+            Assert.Equal(200, reordered.Status);
+            Assert.Equal(400, blocked.Status);
+            Assert.Equal("todo", api.LastMove.ColumnId);
+        }
+
+        /// <summary>
+        /// Preserves assignments in both directions and rejects forged catalog references.
+        /// </summary>
+        [Fact]
+        public void StatusAssignmentsRoundTrip()
+        {
+            // arrange
+            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var api = CreateStatusBoard();
+            var request = UnitTestControlFixture.CreateRequestMock();
+
+            // act
+            var result = api.Retrieve(request);
+            var json = Encoding.UTF8.GetString((byte[])result.Content);
+            using var doc = JsonDocument.Parse(json);
+            var layout = new RestApiDashboardLayout
+            {
+                Action = "columns",
+                Columns = [new RestApiLayoutColumn { Id = "work", StatusIds = ["active", "review"] }]
+            };
+            var accepted = api.Update(CreateJsonRequest(JsonSerializer.Serialize(layout)));
+            layout.Columns[0].StatusIds = ["unknown"];
+            var rejected = api.Update(CreateJsonRequest(JsonSerializer.Serialize(layout)));
+
+            // validation
+            Assert.Equal(3, doc.RootElement.GetProperty("statuses").GetArrayLength());
+            Assert.Equal("open", doc.RootElement.GetProperty("items")[0].GetProperty("statusId").GetString());
+            Assert.Equal(1, doc.RootElement.GetProperty("items")[0].GetProperty("allowedStatusIds").GetArrayLength());
+            Assert.Equal(2, doc.RootElement.GetProperty("columns")[1].GetProperty("statusIds").GetArrayLength());
+            Assert.Equal(200, accepted.Status);
+            Assert.Equal(new[] { "active", "review" }, api.LastColumns[0].StatusIds);
+            Assert.Equal(400, rejected.Status);
+        }
+
+        /// <summary>
+        /// Creates a catalog where one assigned destination is denied by the card.
+        /// </summary>
+        /// <returns>The configured API fixture.</returns>
+        private static TestRestApiKanban CreateStatusBoard()
+        {
+            return new TestRestApiKanban
+            {
+                Statuses = [new() { Id = "open", Label = "Open" }, new() { Id = "active", Label = "Active" }, new() { Id = "review", Label = "Review" }],
+                Columns = [new() { Id = "todo", StatusIds = ["open"] }, new() { Id = "work", StatusIds = ["active", "review"] }],
+                Cards = [new() { Id = "card", ColumnId = "todo", StatusId = "open", AllowedStatusIds = ["active"] }]
+            };
+        }
+
+        /// <summary>
+        /// Encodes a transition exactly as submitted by the data kanban control.
+        /// </summary>
+        /// <param name="columnId">The target column.</param>
+        /// <param name="statusId">The selected status.</param>
+        /// <returns>The parsed request.</returns>
+        private static WebExpress.WebCore.WebMessage.IRequest CreateMoveRequest(string columnId, string statusId)
+        {
+            return CreateJsonRequest(JsonSerializer.Serialize(new RestApiKanbanMove
+            {
+                CardId = "card", ColumnId = columnId, StatusId = statusId
+            }));
+        }
+
+        /// <summary>
+        /// Builds an HTTP request through the same parser used by existing endpoint tests.
+        /// </summary>
+        /// <param name="json">The JSON body.</param>
+        /// <returns>The parsed request.</returns>
+        private static WebExpress.WebCore.WebMessage.IRequest CreateJsonRequest(string json)
+        {
+            return UnitTestControlFixture.CreateRequestMock(
+                "PUT / HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\n\r\n" + json,
+                "https://example.com/");
+        }
     }
 }

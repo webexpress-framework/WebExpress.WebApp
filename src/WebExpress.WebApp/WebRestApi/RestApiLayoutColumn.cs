@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace WebExpress.WebApp.WebRestApi
@@ -9,6 +10,12 @@ namespace WebExpress.WebApp.WebRestApi
     /// </summary>
     public class RestApiLayoutColumn
     {
+        /// <summary>
+        /// Gets or sets the statuses assigned to this column. An empty list prevents status transitions into it.
+        /// </summary>
+        [JsonPropertyName("statusIds")]
+        public IEnumerable<string> StatusIds { get; set; }
+
         /// <summary>
         /// Gets or sets the column id.
         /// </summary>

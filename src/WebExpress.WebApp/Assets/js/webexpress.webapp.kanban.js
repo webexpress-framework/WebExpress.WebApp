@@ -8,6 +8,8 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
     // configuration
     _restUri = "";
     _viewState = null;
+    _statuses = null;
+    _statusDialog = null;
 
     /**
      * Initializes the REST Kanban control.
@@ -152,7 +154,11 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
      * @param {Object} data - The json payload containing columns, swimlanes, and items.
      */
     updateData(data) {
+        this._statusDialog?.hide();
         const board = webexpress.webapp.kanbanModel.normalizeBoard(data);
+        if (Object.prototype.hasOwnProperty.call(board, "statuses")) {
+            this._statuses = board.statuses;
+        }
 
         // the board echoes the persisted wql filter so the settings dialog seeds
         // its field with the current value
@@ -174,6 +180,101 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
     }
 
     /**
+     * Adds status assignments to the editable column menu.
+     * @param {HTMLElement} menu - The menu receiving the status command.
+     * @param {HTMLElement} headerEl - The corresponding column header.
+     * @param {number} index - The current column index.
+     */
+    _populateColumnMenuRoot(menu, headerEl, index) {
+        super._populateColumnMenuRoot(menu, headerEl, index);
+        if (this._editableColumn && this._statuses != null) {
+            const entry = this._buildMenuEntry(this._iconClass("gear"),
+                this._i18n("webexpress.webapp:kanban.status.column", "Column statuses"), null,
+                () => this._openColumnStatuses(this._columns[index]));
+            const divider = menu.querySelector(".dropdown-divider")?.parentElement;
+            menu.insertBefore(entry, divider || null);
+        }
+    }
+
+    /**
+     * Edits a detached selection so closing the dialog never mutates the column.
+     * @param {object} column - The column being configured.
+     */
+    _openColumnStatuses(column) {
+        if (!column || !this._editableColumn || this._statuses == null) {
+            return;
+        }
+        this._statusDialog ||= new webexpress.webapp.KanbanStatusDialog();
+        this._statusDialog.open(this._i18n("webexpress.webapp:kanban.status.column", "Column statuses")
+            + ": " + column.label, this._statuses, column.statusIds || [], true, (selected) => {
+            if (!this._columns.includes(column)) {
+                return;
+            }
+            column.statusIds = selected;
+            this.render();
+            this._dispatchColumnChange();
+        });
+    }
+
+    /**
+     * Resolves only statuses that both the column and the card currently allow.
+     * @param {object} card - The card whose transitions restrict the selection.
+     * @param {object} column - The destination column.
+     * @returns {Array<object>} The available destination statuses.
+     */
+    _availableStatuses(card, column) {
+        return (this._statuses || []).filter((status) => column.statusIds?.includes(status.id)
+            && (card.allowedStatusIds == null || card.allowedStatusIds.includes(status.id)));
+    }
+
+    /**
+     * Defers cross-column moves until a valid destination status has been chosen.
+     * @param {object} card - The current card instance.
+     * @param {string} colId - The destination column identifier.
+     * @param {string|null} swimlaneId - The destination swimlane identifier.
+     * @param {object|null} [targetCard=null] - The insertion anchor, or null to append.
+     * @param {boolean} [before=true] - Whether to insert before the anchor.
+     */
+    _moveCard(card, colId, swimlaneId, targetCard = null, before = true) {
+        this._statusDialog?.hide();
+        if (card.columnId === colId || this._statuses == null) {
+            super._moveCard(card, colId, swimlaneId, targetCard, before);
+            return;
+        }
+        const column = this._columns.find((item) => item.id === colId);
+        if (!column || !this._cards.includes(card)) {
+            return;
+        }
+        const statuses = this._availableStatuses(card, column);
+        const commit = (selected) => {
+            // a reload or a changed transition invalidates a pending selection
+            if (!this._cards.includes(card) || !this._columns.includes(column)
+                || (targetCard && !this._cards.includes(targetCard))
+                || !this._availableStatuses(card, column).some((status) => status.id === selected[0])) {
+                return;
+            }
+            card.statusId = selected[0];
+            super._moveCard(card, colId, swimlaneId, targetCard, before);
+        };
+        if (statuses.length === 1) {
+            commit([statuses[0].id]);
+            return;
+        }
+        this._statusDialog ||= new webexpress.webapp.KanbanStatusDialog();
+        this._statusDialog.open(this._i18n("webexpress.webapp:kanban.status.choose", "Choose destination status"),
+            statuses, [], false, commit);
+    }
+
+    /**
+     * Releases the separately owned status dialog when the board is removed.
+     */
+    destroy() {
+        this._statusDialog?.destroy();
+        this._statusDialog = null;
+        super.destroy();
+    }
+
+    /**
      * Initializes listeners for internal state changes to sync with the server.
      * @param {HTMLElement} element The host element.
      */
@@ -188,6 +289,9 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
                     columnId: e.detail.columnId,
                     swimlaneId: e.detail.swimlaneId || null
                 };
+                if (e.detail.statusId != null) {
+                    payload.statusId = e.detail.statusId;
+                }
                 this._sendStateToServer(payload);
             }
         });
@@ -204,7 +308,10 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
 
             switch (e.detail.action) {
                 case "columns":
-                    this._sendStateToServer({ action: "columns", columns: e.detail.columns });
+                    this._sendStateToServer({ action: "columns", columns: e.detail.columns.map((column) => {
+                        const model = this._columns.find((item) => item.id === column.id);
+                        return Object.assign({}, column, { statusIds: model?.statusIds ?? (this._statuses ? [] : null) });
+                    }) });
                     break;
                 case "swimlanes":
                     this._sendStateToServer({ action: "swimlanes", swimlanes: e.detail.swimlanes });
@@ -231,6 +338,8 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
         this._service.update(payload).then((result) => {
             if (!result.ok && result.error.kind !== "abort") {
                 this._reject(payload.action || "move", result);
+            } else if (result.ok && this._statuses != null && (!payload.action || payload.action === "columns")) {
+                this.update();
             }
         });
     }
