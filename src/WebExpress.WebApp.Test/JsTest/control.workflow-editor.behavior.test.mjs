@@ -67,6 +67,151 @@ const WORKFLOW = {
     ]
 };
 
+/**
+ * Keeps each save unresolved until a test explicitly acknowledges its version.
+ * @param {object} ctrl - The editor under test.
+ * @returns {{calls: object[], replies: Function[]}} Recorded payloads and response callbacks.
+ */
+function deferSaves(ctrl) {
+    const replies = [];
+    const calls = stubService(ctrl, () => new Promise(resolve => replies.push(resolve)));
+    ctrl.model = WORKFLOW;
+    ctrl._meta.version = "6";
+    return { calls, replies };
+}
+
+/**
+ * Lets the service and editor promise callbacks finish without advancing debounce timers.
+ * @returns {Promise<void>} Resolves after the pending promise chain.
+ */
+async function settleSave() {
+    for (let i = 0; i < 8; i++) {
+        await Promise.resolve();
+    }
+}
+
+test("overlapping saves coalesce edits and use each acknowledged version", async () => {
+    const { ctrl } = createEditor();
+    const { calls, replies } = deferSaves(ctrl);
+    ctrl._flushSave();
+    ctrl._model.nodes[0].label = "First edit";
+    ctrl._scheduleSave();
+    ctrl._flushSave();
+    ctrl._model.nodes[0].label = "Latest edit";
+    ctrl._scheduleSave();
+    ctrl._flushSave();
+
+    assert.equal(calls.length, 1, "only one request may own the loaded version");
+    assert.equal(calls[0].payload.states[0].label, "Draft", "the in-flight payload stays unchanged");
+    replies[0]({ ok: true, status: 200, data: { version: "7" } });
+    await settleSave();
+
+    assert.equal(calls.length, 2, "the latest edits are combined into one follow-up");
+    assert.equal(calls[1].payload.version, "7");
+    assert.equal(calls[1].payload.states[0].label, "Latest edit");
+    assert.equal(ctrl._saveState, "saving", "an older acknowledgement cannot report all edits saved");
+    replies[1]({ ok: true, status: 200, data: { version: "8" } });
+    await settleSave();
+    assert.equal(ctrl._meta.version, "8");
+    assert.equal(ctrl._hasUnsavedChanges(), false);
+    assert.equal(ctrl._saveState, "saved");
+});
+
+test("a server slice cannot replace an in-flight or queued edit", async () => {
+    const { ctrl } = createEditor();
+    const { replies } = deferSaves(ctrl);
+    ctrl._flushSave();
+    ctrl._applySlice({ data: { ...WORKFLOW, version: "old" } });
+    assert.equal(ctrl._meta.version, "6", "a refresh cannot roll back the save version");
+    ctrl._model.nodes[0].label = "Local edit";
+    ctrl._scheduleSave();
+    ctrl._applySlice({ data: WORKFLOW });
+    assert.equal(ctrl._model.nodes[0].label, "Local edit");
+    replies[0]({ ok: true, status: 200, data: { version: "7" } });
+    await settleSave();
+    replies[1]({ ok: true, status: 200, data: { version: "8" } });
+    await settleSave();
+});
+
+test("a failed save retains the latest changes until the explicit retry", async () => {
+    const { ctrl } = createEditor();
+    const { calls, replies } = deferSaves(ctrl);
+    ctrl._flushSave();
+    ctrl._model.nodes[0].label = "Queued edit";
+    ctrl._scheduleSave();
+    replies[0]({ ok: false, status: 500 });
+    await settleSave();
+    ctrl._model.nodes[0].label = "Retry this edit";
+    ctrl._scheduleSave();
+
+    assert.equal(calls.length, 1, "failure must not start an automatic retry loop");
+    assert.equal(ctrl._saveDebounce, null, "no timer can bypass error recovery");
+    assert.equal(ctrl._saveState, "error");
+    ctrl._statusRetry.dispatchEvent({ type: "click", stopPropagation() { } });
+    assert.equal(calls[1].payload.states[0].label, "Retry this edit");
+    replies[1]({ ok: true, status: 200, data: { version: "7" } });
+    await settleSave();
+    assert.equal(ctrl._hasUnsavedChanges(), false);
+});
+
+test("conflict recovery reloads the bound resource and discards the queued overwrite", async () => {
+    const { ctrl } = createEditor();
+    const { calls, replies } = deferSaves(ctrl);
+    const reloads = [];
+    ctrl._resource = "workflowDefinition";
+    ctrl._viewState = { reload: name => reloads.push(name) };
+    ctrl._flushSave();
+    ctrl._model.nodes[0].label = "Rejected edit";
+    ctrl._scheduleSave();
+    replies[0]({ ok: false, status: 409 });
+    await settleSave();
+    ctrl._flushSave();
+    assert.equal(calls.length, 1, "Ctrl+S cannot overwrite a conflict");
+    ctrl._statusRetry.dispatchEvent({ type: "click", stopPropagation() { } });
+    assert.deepEqual(reloads, ["workflowDefinition"]);
+    assert.equal(ctrl._saveDebounce, null);
+    ctrl._applySlice({ data: { ...WORKFLOW, version: "9" } });
+    assert.equal(ctrl._model.nodes[0].label, "Draft");
+    assert.equal(ctrl._meta.version, "9");
+    assert.equal(ctrl._hasUnsavedChanges(), false);
+    assert.equal(ctrl._statusRetry.style.display, "none");
+});
+
+test("retrying a failed ViewState load names the resource and clears the error on success", () => {
+    const { ctrl } = createEditor();
+    const reloads = [];
+    ctrl._resource = "workflowDefinition";
+    ctrl._viewState = { reload: name => reloads.push(name) };
+    ctrl._applySlice({ error: { status: 500 } });
+    ctrl._statusRetry.dispatchEvent({ type: "click", stopPropagation() { } });
+    assert.deepEqual(reloads, ["workflowDefinition"]);
+    ctrl._applySlice({ loading: true, error: null, data: WORKFLOW });
+    assert.equal(ctrl._isLoading, true, "cached data cannot complete a pending reload");
+    ctrl._applySlice({ loading: false, error: null, data: WORKFLOW });
+    assert.equal(ctrl._saveState, "idle");
+    assert.equal(ctrl._statusRetry.style.display, "none");
+});
+
+test("teardown drains queued edits after the active save without repainting detached controls", async () => {
+    const { ctrl } = createEditor();
+    const { calls, replies } = deferSaves(ctrl);
+    ctrl._flushSave();
+    ctrl._model.nodes[0].label = "Last edit";
+    ctrl._scheduleSave();
+    ctrl.destroy();
+    ctrl._renderSaveState = () => assert.fail("a detached editor must not be repainted");
+    assert.equal(calls.length, 1);
+    replies[0]({ ok: true, status: 200, data: { version: "7" } });
+    await settleSave();
+    assert.equal(calls.length, 2);
+    assert.equal(calls[1].payload.version, "7");
+    assert.equal(calls[1].payload.states[0].label, "Last edit");
+    replies[1]({ ok: true, status: 200, data: { version: "8" } });
+    await settleSave();
+    assert.equal(ctrl._saveInFlight, false);
+    assert.equal(ctrl._savePending, false);
+});
+
 test("a teardown inside the debounce window still saves the pending change", async () => {
     const { ctrl } = createEditor();
     const calls = stubService(ctrl);

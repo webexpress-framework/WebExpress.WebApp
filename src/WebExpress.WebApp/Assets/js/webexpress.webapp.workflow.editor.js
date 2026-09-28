@@ -48,6 +48,9 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
     _destroyed = false;
     _saveDebounce = null;
     _saveInFlight = false;
+    _savePending = false;
+    _savePaused = false;
+    _saveConflict = false;
 
     // the persistence state the status indicator reflects: "idle" before the
     // first change, "dirty" while edits are queued, "saving", "saved" and
@@ -142,14 +145,22 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
 
     /**
      * Renders a resource slice the ViewState loaded centrally. A slice arriving
-     * while an autosave is pending is skipped, because re-applying the server
-     * model would clobber the edits the debounce has not persisted yet; the
+     * while an autosave is queued, running or awaiting recovery is skipped,
+     * because re-applying the server model would clobber local edits; the
      * next ViewState re-query delivers the saved state.
      * @param {object} slice - The resource slice { items, total, data, loading, error }.
      */
     _applySlice(slice) {
         slice = slice || {};
         if (this._destroyed) {
+            return;
+        }
+
+        this._isLoading = !!slice.loading;
+        this._element.classList.toggle("placeholder-glow", this._isLoading);
+
+        // a server refresh must not replace changes awaiting acknowledgement
+        if (this._saveInFlight || this._savePending || this._savePaused || slice.loading) {
             return;
         }
 
@@ -161,7 +172,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
             this._statusMessage = this._i18n("webexpress.webui:workflow.editor.status.load.error");
             this._setSaveState("error", () => {
                 if (this._viewState && typeof this._viewState.reload === "function") {
-                    this._viewState.reload();
+                    this._viewState.reload(this._resource);
                 } else {
                     this._receiveData();
                 }
@@ -179,6 +190,8 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
         this.model = this._fromWireFormat(response);
         this._element.classList.remove("placeholder-glow");
         this._isLoading = false;
+        this._statusMessage = null;
+        this._setSaveState("idle");
         this._renderPropsPanel();
     }
 
@@ -366,7 +379,9 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
         if (state === "saved") {
             this._lastSavedAt = new Date();
         }
-        this._renderSaveState();
+        if (!this._destroyed) {
+            this._renderSaveState();
+        }
     }
 
     /**
@@ -409,7 +424,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
      * @returns {boolean} True while a save is queued, running or has failed.
      */
     _hasUnsavedChanges() {
-        return this._saveDebounce !== null || this._saveInFlight || this._saveState === "error";
+        return this._saveDebounce !== null || this._saveInFlight || this._savePending || this._saveState === "error";
     }
 
     /**
@@ -524,6 +539,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
                 this.model = this._fromWireFormat(response);
                 this._element.classList.remove("placeholder-glow");
                 this._isLoading = false;
+                this._setSaveState("idle");
                 this._renderPropsPanel();
             });
     }
@@ -636,31 +652,51 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
      * Debounces the autosave so a burst of edits collapses into a single PUT.
      */
     _scheduleSave() {
-        if (this._saveDebounce !== null) {
-            clearTimeout(this._saveDebounce);
+        if (this._destroyed) {
+            return;
+        }
+        this._savePending = true;
+        this._clearSaveDebounce();
+        if (this._saveInFlight || this._savePaused) {
+            return;
         }
         this._setSaveState("dirty");
         this._saveDebounce = setTimeout(() => this._saveToServer(), 500);
     }
 
     /**
-     * Forces a pending save to flush immediately (Ctrl+S).
+     * Cancels the debounce when a queued save is consumed or must await recovery.
      */
-    _flushSave() {
+    _clearSaveDebounce() {
         if (this._saveDebounce !== null) {
             clearTimeout(this._saveDebounce);
             this._saveDebounce = null;
         }
+    }
+
+    /**
+     * Forces a pending save to flush immediately (Ctrl+S).
+     */
+    _flushSave() {
+        if (this._destroyed || this._saveConflict) {
+            return;
+        }
+        this._savePaused = false;
         this._saveToServer();
     }
 
     /**
-     * Persists the current model state. Visual node positions are merged back
-     * into the model first so a pure drag also gets persisted.
+     * Serializes updates so each payload presents the last acknowledged version.
+     * Changes made during a request are combined into the next payload. Visual
+     * node positions are merged back before serialization so a pure drag persists.
      */
     _saveToServer() {
-        this._saveDebounce = null;
+        this._clearSaveDebounce();
         if (this._restUri === "") {
+            return;
+        }
+        this._savePending = true;
+        if (this._saveInFlight || this._savePaused) {
             return;
         }
 
@@ -670,23 +706,26 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
         const options = this._workflowId !== "" ? { params: { id: this._workflowId } } : {};
 
         this._saveInFlight = true;
+        this._savePending = false;
         this._setSaveState("saving");
 
         this._service.update(payload, options)
             .then(res => {
                 this._saveInFlight = false;
-                if (this._destroyed) {
-                    return;
-                }
                 if (res.status === 409) {
                     // someone else saved a newer revision; retrying the same
                     // payload would only lose their work, so the only offer is
                     // to reload and re-apply the edits on top
+                    this._savePending = true;
+                    this._savePaused = true;
+                    this._saveConflict = true;
                     this._statusMessage = this._i18n("webexpress.webui:workflow.editor.status.conflict");
                     this._setSaveState("error", () => this._reloadAfterConflict());
                     return;
                 }
                 if (!res.ok) {
+                    this._savePending = true;
+                    this._savePaused = true;
                     this._statusMessage = String(res.status);
                     this._setSaveState("error", () => this._flushSave());
                     return;
@@ -698,13 +737,16 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
                     this._meta.version = res.data.version;
                 }
                 this._statusMessage = null;
+                if (this._savePending) {
+                    this._saveToServer();
+                    return;
+                }
                 this._setSaveState("saved");
             })
             .catch(() => {
                 this._saveInFlight = false;
-                if (this._destroyed) {
-                    return;
-                }
+                this._savePending = true;
+                this._savePaused = true;
                 this._statusMessage = this._i18n("webexpress.webui:workflow.editor.status.offline");
                 this._setSaveState("error", () => this._flushSave());
             });
@@ -717,11 +759,15 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
      * back and decides what to re-apply.
      */
     _reloadAfterConflict() {
+        this._clearSaveDebounce();
+        this._savePending = false;
+        this._savePaused = false;
+        this._saveConflict = false;
         this._statusMessage = null;
         this._setSaveState("idle");
 
         if (this._viewState && typeof this._viewState.reload === "function") {
-            this._viewState.reload();
+            this._viewState.reload(this._resource);
             return;
         }
         this._receiveData();
@@ -1786,9 +1832,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
      * course - the user would lose work without ever being told.
      */
     destroy() {
-        if (this._saveDebounce !== null) {
-            clearTimeout(this._saveDebounce);
-            this._saveDebounce = null;
+        if (this._saveDebounce !== null || this._savePending) {
             this._saveToServer();
         }
 

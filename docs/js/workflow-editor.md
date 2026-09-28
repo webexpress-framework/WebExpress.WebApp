@@ -292,3 +292,14 @@ event is dispatched.
 
 The editor loads `GET /api/1/workflow?id=approval`, renders the definition, and autosaves
 every change with `PUT /api/1/workflow?id=approval`.
+
+During autosave, only one update request is active at a time. Edits made while that request
+is pending are combined into the next payload after the response supplies the new version.
+The save indicator reports success only after all queued changes are acknowledged. Resource
+refreshes cannot replace local changes while an update is pending or requires recovery.
+
+After a failed update, queued changes remain available for the explicit retry action.
+A version conflict instead offers a reload of the bound ViewState resource, discarding the
+rejected local changes and adopting the current server revision. Both load retries and
+conflict recovery pass the configured resource name to ViewState. Teardown drains queued
+changes after an active update completes without repainting the detached editor.
