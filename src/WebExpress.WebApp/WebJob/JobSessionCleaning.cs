@@ -60,5 +60,13 @@ namespace WebExpress.WebApp.WebJob
                 message: I18N.Translate("webexpress.webapp:job.sessioncleaning.process", _jobContext.JobId)
             );
         }
+
+        /// <summary>
+        /// Disposes of the resources used by the job. This method is called when the job is
+        /// no longer needed and should release any unmanaged resources.
+        /// </summary>
+        public void Dispose()
+        {
+        }
     }
 }
