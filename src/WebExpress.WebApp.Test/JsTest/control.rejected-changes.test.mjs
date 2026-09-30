@@ -15,14 +15,17 @@ import { loadControl } from "./controls.harness.mjs";
 /**
  * A fetch that answers reads and refuses writes, counting both.
  */
-function refusingFetch(body) {
+function refusingFetch(body, fault = { message: "stale" }) {
     const calls = { reads: 0, writes: 0 };
     return {
         calls,
         fetch: async (url, init) => {
             if (init && init.method && init.method !== "GET") {
                 calls.writes += 1;
-                return { ok: false, status: 409, headers: { get: () => "application/json" }, json: async () => ({ message: "stale" }) };
+                if (fault === null) {
+                    return { ok: false, status: 400, headers: { get: () => "text/html" }, text: async () => "error processing put request." };
+                }
+                return { ok: false, status: 409, headers: { get: () => "application/json" }, json: async () => fault };
             }
             calls.reads += 1;
             return { ok: true, status: 200, headers: { get: () => "application/json" }, json: async () => body };
@@ -98,6 +101,64 @@ test("a table layout change the server refuses is taken back and reported", asyn
     assert.equal(popups[0].notification.type, "alert-danger");
     assert.equal(errors.length, 1, "the host announces the refusal");
     assert.equal(errors[0].action, "columns");
+});
+
+/**
+ * Mounts a kanban board in a ViewState whose writes the given fetch refuses.
+ */
+async function refusedBoard(net) {
+    const rt = loadControl({
+        file: "webexpress.webapp.kanban.js",
+        deps: ["webexpress.webapp.kanban.model.js"],
+        fetch: net.fetch
+    });
+    const popups = capturePopups(rt.wxapp);
+
+    const host = rt.createElement("div");
+    host.dataset.wxViewstate = "board";
+    appendServiceIsland(rt.document, host, { name: "data", baseUri: "/api/board", method: "GET", updateMethod: "PUT" });
+    appendResourceIsland(rt.document, host, { name: "board", service: "data", target: "board", auto: false, params: [] });
+    rt.document.body.appendChild(host);
+    const vs = new rt.wxapp.ViewState(host);
+
+    const boardHost = rt.createElement("div");
+    boardHost.setAttribute("data-wx-resource", "board");
+    boardHost.dataset.wxResource = "board";
+    host.appendChild(boardHost);
+    const board = new rt.wxapp.KanbanCtrl(boardHost);
+
+    await vs.load("board");
+    await settle();
+
+    return { board, popups };
+}
+
+test("a card move the application refuses tells the user the reason, as text", async () => {
+    const empty = { columns: [{ id: "todo", name: "Todo" }], swimlanes: [], cards: [] };
+    const { board, popups } = await refusedBoard(refusingFetch(empty, { message: "<b>Review</b> needs an approver" }));
+
+    // act
+    board._sendStateToServer({ cardId: "c1", columnId: "done", swimlaneId: null });
+    await settle();
+
+    // assert
+    assert.equal(popups.length, 1);
+    assert.equal(popups[0].notification.message, "&lt;b&gt;Review&lt;/b&gt; needs an approver",
+        "the reason is shown, and the popup's html rendering cannot turn it into markup");
+});
+
+test("a card move refused without a reason falls back to the board's own words", async () => {
+    const empty = { columns: [{ id: "todo", name: "Todo" }], swimlanes: [], cards: [] };
+    const { board, popups } = await refusedBoard(refusingFetch(empty, null));
+
+    // act
+    board._sendStateToServer({ cardId: "c1", columnId: "done", swimlaneId: null });
+    await settle();
+
+    // assert
+    assert.equal(popups.length, 1);
+    // the harness translation answers with the key, the page with the bundle text
+    assert.match(popups[0].notification.message, /kanban\.update\.rejected|taken back/);
 });
 
 test("a card move the server refuses is taken back and reported", async () => {

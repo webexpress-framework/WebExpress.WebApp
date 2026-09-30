@@ -157,6 +157,11 @@ namespace WebExpress.WebApp.WebRestApi
         /// Persists a validated card transition in the application's workflow store.
         /// Implementations must enforce application authorization and atomically recheck mutable workflow rules.
         /// </summary>
+        /// <remarks>
+        /// A move the application declines is refused with a <see cref="RestApiRefusal"/>; its
+        /// message reaches the user when the board takes the card back. Any other exception is
+        /// answered with a generic message.
+        /// </remarks>
         /// <param name="move">The confirmed card destination and status.</param>
         /// <param name="request">The request used to authorize and persist the transition.</param>
         protected virtual void MoveCard(RestApiKanbanMove move, IRequest request)
@@ -245,6 +250,10 @@ namespace WebExpress.WebApp.WebRestApi
         /// <param name="request">
         /// The request containing the details for updating the columns.
         /// </param>
+        /// <remarks>
+        /// A change the application declines is refused with a <see cref="RestApiRefusal"/>,
+        /// whose message reaches the user.
+        /// </remarks>
         protected virtual void UpdtaeColumns(RestApiDashboardLayout layout, IRequest request)
         {
         }

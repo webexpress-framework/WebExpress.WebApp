@@ -325,6 +325,48 @@ namespace WebExpress.WebApp.Test.WebRestApi
         }
 
         /// <summary>
+        /// Verifies that a move the application refuses is answered with its reason, so the
+        /// board can tell the user why the card went back.
+        /// </summary>
+        [Fact]
+        public void RefusedMoveCarriesReason()
+        {
+            // arrange
+            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var api = CreateStatusBoard();
+            api.MoveFailure = new RestApiRefusal("x");
+
+            // act
+            var result = api.Update(CreateMoveRequest("work", "active"));
+
+            // validation
+            Assert.Equal(400, result.Status);
+            Assert.Equal("application/json", result.Header.ContentType);
+            using var doc = JsonDocument.Parse(Encoding.UTF8.GetString((byte[])result.Content));
+            Assert.Equal("x", doc.RootElement.GetProperty("message").GetString());
+        }
+
+        /// <summary>
+        /// Verifies that any other failure of the persistence hook keeps its message on the
+        /// server and answers with the fixed text.
+        /// </summary>
+        [Fact]
+        public void FailedMoveHidesException()
+        {
+            // arrange
+            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var api = CreateStatusBoard();
+            api.MoveFailure = new InvalidOperationException("secret");
+
+            // act
+            var result = api.Update(CreateMoveRequest("work", "active"));
+
+            // validation
+            Assert.Equal(400, result.Status);
+            Assert.Equal("error processing put request.", result.Content);
+        }
+
+        /// <summary>
         /// Creates a catalog where one assigned destination is denied by the card.
         /// </summary>
         /// <returns>The configured API fixture.</returns>

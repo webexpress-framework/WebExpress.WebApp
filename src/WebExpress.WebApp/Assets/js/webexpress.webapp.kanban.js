@@ -352,7 +352,8 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
      * stored. The stored board is loaded back over it, which is the one state both sides
      * agree on, and the refusal is put in front of the user: a card that snaps back with
      * no word about why reads as a bug of the board rather than as a decision of the
-     * server.
+     * server. When the application refused the change with a reason of its own, that
+     * reason is what the user reads.
      * @param {string} action - The change that was refused.
      * @param {object} result - The failed service result.
      */
@@ -362,11 +363,28 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
         webexpress.webapp.ErrorChannel.present(result, {
             service: this._service.name,
             heading: this._i18n("webexpress.webapp:kanban.heading", "Board"),
-            message: this._i18n("webexpress.webapp:kanban.update.rejected", "The change was not saved and has been taken back.")
+            message: this._refusalReason(result)
+                || this._i18n("webexpress.webapp:kanban.update.rejected", "The change was not saved and has been taken back.")
         });
 
         this._dispatch(webexpress.webui.Event.DATA_ERROR_EVENT, { action: action, error: result.error });
         this.update();
+    }
+
+    /**
+     * Reads the reason a RestApiRefusal put into the body of a refused write.
+     * @param {object} result - The failed service result.
+     * @returns {string|null} The reason, escaped for the popup, or null when the server gave none.
+     */
+    _refusalReason(result) {
+        const reason = result && result.data && result.data.message;
+
+        if (typeof reason !== "string" || !reason.trim()) {
+            return null;
+        }
+
+        // the popup renders its message as html, and a reason may quote a card title the user typed
+        return reason.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" })[c]);
     }
 
     /**

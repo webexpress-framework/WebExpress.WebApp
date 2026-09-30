@@ -62,6 +62,12 @@ namespace WebExpress.WebApp.Test
         public RestApiKanbanMove LastMove { get; private set; }
 
         /// <summary>
+        /// Gets or sets the exception the persistence hook raises, to observe how the endpoint
+        /// answers a refused or failed move.
+        /// </summary>
+        public Exception MoveFailure { get; set; }
+
+        /// <summary>
         /// Supplies the configured workflow catalog for a test request.
         /// </summary>
         /// <param name="request">The incoming request.</param>
@@ -78,6 +84,11 @@ namespace WebExpress.WebApp.Test
         /// <param name="request">The incoming request.</param>
         protected override void MoveCard(RestApiKanbanMove move, IRequest request)
         {
+            if (MoveFailure != null)
+            {
+                throw MoveFailure;
+            }
+
             LastMove = move;
         }
 
