@@ -171,21 +171,41 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Rejects column assignments that reference statuses outside the current catalog.
         /// </summary>
+        /// <remarks>
+        /// A layout without columns cannot come from the board and stays a programming error. An
+        /// unknown status, however, is what a board loaded before the catalog changed submits, so
+        /// the user learns why the board fell back instead of seeing a generic failure.
+        /// </remarks>
         /// <param name="layout">The submitted column assignments.</param>
         /// <param name="request">The request used to resolve available statuses.</param>
         private void ValidateColumnStatuses(RestApiDashboardLayout layout, IRequest request)
         {
             var statuses = RetrieveStatuses(request)?.Select(status => status.Id).ToHashSet();
-            if (statuses != null && (layout.Columns == null || layout.Columns.Any(column =>
-                column == null || (column.StatusIds ?? []).Any(id => !statuses.Contains(id)))))
+            if (statuses == null)
             {
-                throw new ArgumentException("The column contains an unavailable status.");
+                return;
+            }
+
+            if (layout.Columns == null || layout.Columns.Any(column => column == null))
+            {
+                throw new ArgumentException("The layout requires its columns.");
+            }
+
+            if (layout.Columns.Any(column => (column.StatusIds ?? []).Any(id => !statuses.Contains(id))))
+            {
+                throw new RestApiRefusal(I18N.Translate(request, "webexpress.webapp:kanban.refused.column"));
             }
         }
 
         /// <summary>
         /// Checks destinations against current server data before invoking application persistence.
         /// </summary>
+        /// <remarks>
+        /// A move the board validated on load can still fail here when the workflow, the card or
+        /// the user's permissions changed in the meantime. Those cases are refused with a
+        /// translated reason the board shows when it takes the card back; only a request that
+        /// lacks its identifiers, which the board never sends, is treated as a programming error.
+        /// </remarks>
         /// <param name="move">The untrusted card move received from the client.</param>
         /// <param name="request">The request used to resolve cards, columns, and allowed statuses.</param>
         private void ValidateMove(RestApiKanbanMove move, IRequest request)
@@ -207,7 +227,7 @@ namespace WebExpress.WebApp.WebRestApi
             if (card == null || column == null || (move.SwimlaneId != null
                 && !RetrieveSwimlanes(request).Any(lane => lane.Id == move.SwimlaneId)))
             {
-                throw new ArgumentException("The card or its destination is unavailable.");
+                throw new RestApiRefusal(I18N.Translate(request, "webexpress.webapp:kanban.refused.card"));
             }
 
             // reordering within the same column does not require a workflow transition
@@ -220,7 +240,7 @@ namespace WebExpress.WebApp.WebRestApi
                 || !(column.StatusIds?.Contains(move.StatusId) ?? false)
                 || (card.AllowedStatusIds != null && !card.AllowedStatusIds.Contains(move.StatusId)))
             {
-                throw new ArgumentException("The destination status is not allowed for this card.");
+                throw new RestApiRefusal(I18N.Translate(request, "webexpress.webapp:kanban.refused.status"));
             }
         }
 

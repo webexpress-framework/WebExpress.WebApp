@@ -322,6 +322,76 @@ namespace WebExpress.WebApp.Test.WebRestApi
             Assert.Equal(200, accepted.Status);
             Assert.Equal(new[] { "active", "review" }, api.LastColumns[0].StatusIds);
             Assert.Equal(400, rejected.Status);
+            using var reason = JsonDocument.Parse(Encoding.UTF8.GetString((byte[])rejected.Content));
+            Assert.Equal("The column contains a status that is no longer available.", reason.RootElement.GetProperty("message").GetString());
+        }
+
+        /// <summary>
+        /// Verifies that a move the board offered on load, but the workflow no longer allows, is
+        /// refused with a reason in the language of the request rather than the generic failure.
+        /// </summary>
+        /// <param name="language">The Accept-Language of the request.</param>
+        /// <param name="expected">The reason the user is expected to read.</param>
+        [Theory]
+        [InlineData("de", "Die Karte darf nicht in diesen Status wechseln. Der Workflow oder Ihre Berechtigungen haben sich geändert.")]
+        [InlineData("en", "The card may not move to this status. The workflow or your permissions have changed.")]
+        public void StaleAllowedStatusIsRefusedWithReason(string language, string expected)
+        {
+            // arrange
+            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var api = CreateStatusBoard();
+            api.Cards.First().AllowedStatusIds = ["review"];
+
+            // act
+            var result = api.Update(CreateMoveRequest("work", "active", language));
+
+            // validation
+            Assert.Equal(400, result.Status);
+            Assert.Equal("application/json", result.Header.ContentType);
+            using var doc = JsonDocument.Parse(Encoding.UTF8.GetString((byte[])result.Content));
+            Assert.Equal(expected, doc.RootElement.GetProperty("message").GetString());
+            Assert.Null(api.LastMove);
+        }
+
+        /// <summary>
+        /// Verifies that a card removed or hidden since the board was loaded is refused with a
+        /// reason instead of the generic failure.
+        /// </summary>
+        [Fact]
+        public void VanishedCardIsRefusedWithReason()
+        {
+            // arrange
+            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var api = CreateStatusBoard();
+            api.Cards = [];
+
+            // act
+            var result = api.Update(CreateMoveRequest("work", "active", "de"));
+
+            // validation
+            Assert.Equal(400, result.Status);
+            using var doc = JsonDocument.Parse(Encoding.UTF8.GetString((byte[])result.Content));
+            Assert.Equal("Die Karte oder ihr Ziel ist nicht mehr verfügbar.", doc.RootElement.GetProperty("message").GetString());
+        }
+
+        /// <summary>
+        /// Verifies that a move without its identifiers, which the board never sends, stays a
+        /// programming error whose detail does not reach the caller.
+        /// </summary>
+        [Fact]
+        public void MoveWithoutIdentifiersHidesException()
+        {
+            // arrange
+            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var api = CreateStatusBoard();
+            var move = new RestApiKanbanMove { ColumnId = "work", StatusId = "active" };
+
+            // act
+            var result = api.Update(CreateJsonRequest(JsonSerializer.Serialize(move)));
+
+            // validation
+            Assert.Equal(400, result.Status);
+            Assert.Equal("error processing put request.", result.Content);
         }
 
         /// <summary>
@@ -385,24 +455,28 @@ namespace WebExpress.WebApp.Test.WebRestApi
         /// </summary>
         /// <param name="columnId">The target column.</param>
         /// <param name="statusId">The selected status.</param>
+        /// <param name="language">The Accept-Language of the request, or null for the server culture.</param>
         /// <returns>The parsed request.</returns>
-        private static WebExpress.WebCore.WebMessage.IRequest CreateMoveRequest(string columnId, string statusId)
+        private static WebExpress.WebCore.WebMessage.IRequest CreateMoveRequest(string columnId, string statusId, string language = null)
         {
             return CreateJsonRequest(JsonSerializer.Serialize(new RestApiKanbanMove
             {
                 CardId = "card", ColumnId = columnId, StatusId = statusId
-            }));
+            }), language);
         }
 
         /// <summary>
         /// Builds an HTTP request through the same parser used by existing endpoint tests.
         /// </summary>
         /// <param name="json">The JSON body.</param>
+        /// <param name="language">The Accept-Language of the request, or null for the server culture.</param>
         /// <returns>The parsed request.</returns>
-        private static WebExpress.WebCore.WebMessage.IRequest CreateJsonRequest(string json)
+        private static WebExpress.WebCore.WebMessage.IRequest CreateJsonRequest(string json, string language = null)
         {
+            var acceptLanguage = language == null ? "" : $"Accept-Language: {language}\r\n";
+
             return UnitTestControlFixture.CreateRequestMock(
-                "PUT / HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\n\r\n" + json,
+                "PUT / HTTP/1.1\r\nHost: localhost\r\n" + acceptLanguage + "Content-Type: application/json\r\n\r\n" + json,
                 "https://example.com/");
         }
     }
