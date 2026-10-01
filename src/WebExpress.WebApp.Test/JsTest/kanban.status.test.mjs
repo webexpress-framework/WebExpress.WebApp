@@ -150,3 +150,84 @@ test("unknown status assignments cannot become a destination and absent catalogs
     board._moveCard(card, "work", null);
     assert.equal(updates.length, 1);
 });
+
+/**
+ * Finds the status chip of a rendered card.
+ * @param {HTMLElement} host - The board host.
+ * @param {string} id - The card identifier.
+ * @returns {HTMLElement|null} The chip, or null when the card shows no status.
+ */
+function statusChip(host, id) {
+    const card = Array.from(host.querySelectorAll(".wx-kanban-card")).find((item) => item.dataset.cardId === id);
+    return card.querySelector(".wx-kanban-card-status");
+}
+
+test("a card shows its status as a chip in the status color, in front of the application chips", () => {
+    const { board, host } = setup();
+    board.updateData({
+        statuses: [
+            { id: "open", label: "Open", colorCss: "text-bg-secondary" },
+            { id: "active", label: "In progress", colorStyle: "background:#7c3aed;color:#fff;" },
+            { id: "review", label: "Review" }
+        ],
+        items: [
+            { id: "a", columnId: "todo", statusId: "open", footer: [{ label: "P1" }] },
+            { id: "b", columnId: "work", statusId: "active" },
+            { id: "c", columnId: "work", statusId: "review" },
+            { id: "d", columnId: "work" },
+            { id: "e", columnId: "work", statusId: "missing" }
+        ]
+    });
+
+    const open = statusChip(host, "a");
+    assert.equal(open.textContent, "Open");
+    assert.ok(open.classList.contains("card-footer-chip"), "the chip shares the footer chip look");
+    assert.ok(open.classList.contains("text-bg-secondary"), "a system color arrives as a class");
+    assert.equal(open.parentElement.firstElementChild, open, "the status leads the footer");
+    assert.equal(open.parentElement.children.length, 2, "the application chip stays");
+
+    const active = statusChip(host, "b");
+    assert.equal(active.style.cssText, "background:#7c3aed;color:#fff;", "a user-defined color arrives as a style");
+    assert.ok(active.parentElement.classList.contains("card-footer"), "a card without footer chips gains a footer");
+
+    const review = statusChip(host, "c");
+    assert.equal(review.className, "card-footer-chip wx-kanban-card-status", "an uncolored status keeps the neutral chip");
+
+    assert.equal(statusChip(host, "d"), null, "a card without status shows none");
+    assert.equal(statusChip(host, "e"), null, "an unknown status shows none");
+});
+
+test("a moved card shows its new status, and a board without catalog shows none", () => {
+    const { board, card, host } = setup();
+    board._moveCard(card, "work", null);
+    choose(board, "review");
+    assert.equal(statusChip(host, "a").textContent, "Review");
+    board.updateData({ statuses: null });
+    assert.equal(statusChip(host, "a"), null);
+});
+
+test("the status dialogs carry the status colors", () => {
+    const { board, card } = setup();
+    board.updateData({ statuses: [
+        { id: "open", label: "Open" },
+        { id: "active", label: "In progress", colorCss: "text-bg-primary" },
+        { id: "review", label: "Review", colorStyle: "background:#7c3aed;color:#fff;" }
+    ] });
+
+    board._moveCard(card, "work", null);
+    const labels = Array.from(board._statusDialog._bodyDiv.querySelectorAll("label"));
+    assert.equal(labels.length, 2);
+    assert.ok(labels[0].querySelector(".badge").classList.contains("text-bg-primary"));
+    assert.equal(labels[1].querySelector(".badge").style.cssText, "background:#7c3aed;color:#fff;");
+    board._statusDialog.hide();
+
+    board._openColumnStatuses(board._columns[1]);
+    const selection = board._statusDialog._statusSelection;
+    selection.value = ["open", "active", "review"];
+    const chips = Array.from(selection._selection.querySelectorAll(".wx-chip"));
+    assert.ok(chips[0].classList.contains("wx-selection-primary"), "an uncolored status keeps the selection color");
+    assert.ok(chips[1].classList.contains("text-bg-primary"));
+    assert.ok(!chips[1].classList.contains("wx-selection-primary"));
+    assert.equal(chips[2].style.cssText, "background:#7c3aed;color:#fff;");
+    assert.ok(!chips[2].classList.contains("wx-selection-primary"));
+});

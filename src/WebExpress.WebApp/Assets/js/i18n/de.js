@@ -409,6 +409,7 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "kanban.status.empty": "Für diese Karte ist kein gültiger Zielstatus verfügbar.",
     "kanban.status.move": "Karte verschieben",
     "kanban.status.cancel": "Abbrechen",
+    "kanban.status.label": "Status",
     "kanban.menu": "Optionen",
     "kanban.column.delete.message": "Möchten Sie die Spalte „{name}“ mit allen Karten löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
     "kanban.heading": "Board",

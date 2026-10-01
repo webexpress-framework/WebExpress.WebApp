@@ -409,6 +409,7 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "kanban.status.empty": "No valid destination status is available.",
     "kanban.status.move": "Move card",
     "kanban.status.cancel": "Cancel",
+    "kanban.status.label": "Status",
     "kanban.menu": "Options",
     "kanban.column.delete.message": "Delete column “{name}” and all of its cards? This action cannot be undone.",
     "kanban.heading": "Board",

@@ -217,6 +217,34 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
     }
 
     /**
+     * Shows the workflow status of a card as the leading footer chip. A column may hold
+     * several statuses, so its position alone does not tell which one the card is in.
+     * @param {object} card - The card data object.
+     * @param {string} colId - The column id.
+     * @param {string} swimlaneId - The swimlane id.
+     * @returns {HTMLElement} The card element.
+     */
+    _buildCardElement(card, colId, swimlaneId) {
+        const cardEl = super._buildCardElement(card, colId, swimlaneId);
+        const status = card.statusId != null ? this._statuses?.find((item) => item.id === card.statusId) : null;
+        if (!status) {
+            return cardEl;
+        }
+
+        // the base renders the footer last and only when the card has footer chips
+        let footer = cardEl.lastElementChild;
+        if (!footer || !footer.classList.contains("card-footer")) {
+            footer = document.createElement("div");
+            footer.className = "card-footer";
+            cardEl.appendChild(footer);
+        }
+        const chip = webexpress.webapp.KanbanStatusChip.create(status, "card-footer-chip wx-kanban-card-status");
+        chip.title = this._i18n("webexpress.webapp:kanban.status.label", "Status");
+        footer.prepend(chip);
+        return cardEl;
+    }
+
+    /**
      * Resolves only statuses that both the column and the card currently allow.
      * @param {object} card - The card whose transitions restrict the selection.
      * @param {object} column - The destination column.

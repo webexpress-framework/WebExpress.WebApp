@@ -8,6 +8,8 @@ The control `webexpress.webapp.KanbanCtrl` extends the WebUI board with REST per
 
 The board response defines available statuses in `statuses` as objects with stable `id` and localized `label` values. Each column assigns zero or more identifiers through `statusIds`. Each card carries its current `statusId` and can restrict transitions through `allowedStatusIds`.
 
+A status may carry a chip color as `colorCss`, a system color class, or as `colorStyle`, an inline style for a user-defined color. The server authors it through the typed `RestApiKanbanStatus.Color`, which collapses into one of the two fields. A card whose `statusId` names a status of the catalog shows that status as the leading chip of its footer, so a column with several statuses still tells which one a card is in. The chip uses the status color, or the neutral footer chip look when the status has none. The destination dialog and the column status chips use the same colors. A card without a status, with an unknown status, or on a board without catalog shows no status chip.
+
 The permission list distinguishes absence from an empty list. An omitted or null `allowedStatusIds` permits every status assigned to the target column. An empty list permits no status transition. Unknown identifiers never become selectable destinations. A null or omitted board catalog retains position-only behavior for boards without workflow statuses.
 
 The following response illustrates a column with two statuses and a card that can enter only one of them.
@@ -15,9 +17,9 @@ The following response illustrates a column with two statuses and a card that ca
 ```json
 {
   "statuses": [
-    { "id": "open", "label": "Open" },
-    { "id": "active", "label": "In progress" },
-    { "id": "review", "label": "In review" }
+    { "id": "open", "label": "Open", "colorCss": "text-bg-secondary" },
+    { "id": "active", "label": "In progress", "colorCss": "text-bg-primary" },
+    { "id": "review", "label": "In review", "colorStyle": "background:#7c3aed;color:#fff;" }
   ],
   "columns": [
     { "id": "todo", "label": "To do", "statusIds": ["open"] },

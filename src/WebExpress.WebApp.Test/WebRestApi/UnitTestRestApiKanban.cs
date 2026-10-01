@@ -91,6 +91,35 @@ namespace WebExpress.WebApp.Test.WebRestApi
         }
 
         /// <summary>
+        /// Verifies that a workflow status serializes its typed chip color into the css
+        /// class (system color) or the inline style (user-defined color), while the typed
+        /// color itself stays off the wire and an uncolored status sends neither.
+        /// </summary>
+        [Fact]
+        public void SerializeStatusColor()
+        {
+            // arrange
+            var system = new RestApiKanbanStatus { Id = "done", Label = "Done", Color = new PropertyColorBackgroundBadge(TypeColorBackgroundBadge.Success) };
+            var user = new RestApiKanbanStatus { Id = "review", Label = "Review", Color = new PropertyColorBackgroundBadge("#ff8800") };
+            var plain = new RestApiKanbanStatus { Id = "open", Label = "Open" };
+
+            // act
+            using var systemDoc = JsonDocument.Parse(JsonSerializer.Serialize(system));
+            using var userDoc = JsonDocument.Parse(JsonSerializer.Serialize(user));
+            using var plainDoc = JsonDocument.Parse(JsonSerializer.Serialize(plain));
+
+            // validation
+            Assert.Equal("text-bg-success", systemDoc.RootElement.GetProperty("colorCss").GetString());
+            Assert.Equal(JsonValueKind.Null, systemDoc.RootElement.GetProperty("colorStyle").ValueKind);
+            Assert.False(systemDoc.RootElement.TryGetProperty("color", out _));
+            Assert.False(systemDoc.RootElement.TryGetProperty("Color", out _));
+            Assert.Equal(JsonValueKind.Null, userDoc.RootElement.GetProperty("colorCss").ValueKind);
+            Assert.Equal("background:#ff8800;color:#000;", userDoc.RootElement.GetProperty("colorStyle").GetString());
+            Assert.Equal(JsonValueKind.Null, plainDoc.RootElement.GetProperty("colorCss").ValueKind);
+            Assert.Equal(JsonValueKind.Null, plainDoc.RootElement.GetProperty("colorStyle").ValueKind);
+        }
+
+        /// <summary>
         /// Verifies that a column badge serializes its typed color into the css
         /// class (system color), while the typed color itself stays off the wire.
         /// </summary>

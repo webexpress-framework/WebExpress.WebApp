@@ -33,7 +33,14 @@ webexpress.webapp.kanbanModel = {
             out.statuses = data.statuses == null ? null : (Array.isArray(data.statuses) ? data.statuses : [])
                 .filter((status) => status && typeof status.id === "string" && status.id.length > 0)
                 .filter((status, index, all) => all.findIndex((item) => item.id === status.id) === index)
-                .map((status) => ({ id: status.id, label: status.label || status.id }));
+                .map((status) => ({
+                    id: status.id,
+                    label: status.label || status.id,
+                    // a chip color arrives either as a css class (system color) or an
+                    // inline style (user-defined color), mirroring the footer chips
+                    colorCss: status.colorCss || "",
+                    colorStyle: status.colorStyle || ""
+                }));
         }
 
         if (data.columns) {

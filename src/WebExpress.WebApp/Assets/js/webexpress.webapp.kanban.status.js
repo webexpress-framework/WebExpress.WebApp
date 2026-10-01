@@ -1,4 +1,40 @@
 /**
+ * Renders a workflow status as a colored chip, so the cards and the status dialogs show a
+ * state in the same color the application assigned to it.
+ */
+webexpress.webapp.KanbanStatusChip = class {
+    /**
+     * Creates the chip of a status. A status without a color receives no fill class, which
+     * leaves its look to the container.
+     * @param {object} status - The normalized status with label, colorCss, and colorStyle.
+     * @param {string} className - The class distinguishing the place the chip is shown in.
+     * @returns {HTMLElement} The chip element.
+     */
+    static create(status, className) {
+        const chip = document.createElement("span");
+        chip.className = className;
+        if (status.colorCss) {
+            chip.classList.add(...status.colorCss.split(/\s+/).filter(Boolean));
+        } else if (status.colorStyle) {
+            // assigned through the cssom, which the content security policy permits where a
+            // style attribute in markup would be blocked
+            chip.style.cssText = status.colorStyle;
+        }
+        chip.textContent = status.label;
+        return chip;
+    }
+
+    /**
+     * Tells whether the application assigned a color to the status.
+     * @param {object} status - The normalized status.
+     * @returns {boolean} True when the status carries a system or user-defined color.
+     */
+    static hasColor(status) {
+        return !!(status && (status.colorCss || status.colorStyle));
+    }
+};
+
+/**
  * Uses the data selection control with the status catalog already loaded by the board.
  * The catalog belongs to the current board response, so opening this picker does not issue another request.
  */
@@ -11,7 +47,15 @@ webexpress.webapp.KanbanStatusSelectionCtrl = class extends webexpress.webapp.In
             // selection options accept markup, but workflow labels are plain text
             const text = document.createElement("span");
             text.textContent = status.label;
-            return { id: status.id, label: status.label, content: text.innerHTML, color: "wx-selection-primary", type: "option" };
+            return {
+                id: status.id,
+                label: status.label,
+                content: text.innerHTML,
+                // a status without a color keeps the chip color of every other selection
+                color: status.colorCss || (status.colorStyle ? "" : "wx-selection-primary"),
+                style: status.colorStyle,
+                type: "option"
+            };
         });
     }
 };
@@ -92,7 +136,9 @@ webexpress.webapp.KanbanStatusDialog = class extends webexpress.webui.ModalCtrl 
                 input.className = "form-check-input m-0";
                 input.checked = selected.includes(status.id);
                 label.appendChild(input);
-                label.appendChild(document.createTextNode(status.label));
+                label.appendChild(webexpress.webapp.KanbanStatusChip.hasColor(status)
+                    ? webexpress.webapp.KanbanStatusChip.create(status, "badge")
+                    : document.createTextNode(status.label));
                 group.appendChild(label);
                 inputs.push(input);
             }
