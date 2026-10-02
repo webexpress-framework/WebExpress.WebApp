@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using WebExpress.WebApp.WebScope;
 using WebExpress.WebApp.WebSettingPage;
+using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebLog;
@@ -16,7 +17,8 @@ using WebExpress.WebUI.WebIcon;
 namespace WebExpress.WebApp.WWW.Settings.System.Log
 {
     /// <summary>
-    /// Logging settings page.
+    /// Logging settings page. Inside a container the log file cannot be switched on, because
+    /// the console is the log there and a file would vanish with the container.
     /// </summary>
     [WebIcon<IconFileMedicalAlt>]
     [Title("webexpress.webapp:setting.title.log.label")]
@@ -44,6 +46,7 @@ namespace WebExpress.WebApp.WWW.Settings.System.Log
         /// <param name="visualTree">The visual tree of the web application.</param>
         public void Process(IRenderContext renderContext, VisualTreeWebAppSetting visualTree)
         {
+            var isContainer = ContainerEnvironment.IsContainer;
             var downloadUri = renderContext.Request.Uri.Concat("download");
             var log = _logManager?.DefaultLog.Filename;
             var file = new FileInfo(log);
@@ -69,7 +72,7 @@ namespace WebExpress.WebApp.WWW.Settings.System.Log
                     Text = _ => I18N.Translate
                     (
                         renderContext,
-                        "setting.logfile.delete.description"
+                        "webexpress.webapp:setting.logfile.delete.description"
                     )
                 }
             };
@@ -105,6 +108,12 @@ namespace WebExpress.WebApp.WWW.Settings.System.Log
 
             switchOnModal.Confirm += (s, e) =>
             {
+                // the button is disabled, but a forged submit must not switch it on either
+                if (isContainer)
+                {
+                    return;
+                }
+
                 _logManager.DefaultLog.LogMode = LogMode.Override;
                 _logManager.DefaultLog.Info(I18N.Translate
                 (
@@ -203,12 +212,29 @@ namespace WebExpress.WebApp.WWW.Settings.System.Log
                                     renderContext,
                                     "webexpress.webapp:setting.logfile.switchon.label"
                                 ),
-                                PrimaryAction = _ => new ActionModal(switchOnModal?.Id),
+                                PrimaryAction = _ => isContainer ? null : new ActionModal(switchOnModal?.Id),
+                                Active = _ => isContainer ? TypeActive.Disabled : TypeActive.None,
                                 Icon = _ => new IconPowerOff(),
                                 BackgroundColor = _ => new PropertyColorButton(TypeColorButton.Success)
                             })
                         : new ControlTableCell()
                 );
+
+            if (isContainer)
+            {
+                visualTree.Content.MainPanel.AddPrimary(new ControlCallout(null, new ControlText()
+                {
+                    Text = _ => I18N.Translate
+                    (
+                        renderContext,
+                        "webexpress.webapp:setting.logfile.container"
+                    )
+                })
+                {
+                    Color = _ => new PropertyColorCallout(TypeColorCallout.Info),
+                    Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.None, PropertySpacing.Space.Two)
+                });
+            }
 
             visualTree.Content.MainPanel
                 .AddPrimary(new ControlText()

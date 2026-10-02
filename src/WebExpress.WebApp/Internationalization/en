@@ -122,6 +122,7 @@ setting.logfile.switchon.label=Activate
 setting.logfile.switchon.header=Enable logging
 setting.logfile.switchon.description=Activation is only valid until the next restart. To enable it permanently, change the settings in the configuration file. 
 setting.logfile.switchon.success=Logging has been enabled.
+setting.logfile.container=The application runs in a container. The log is written to the console and collected by the container runtime; retrieve it there, e.g. with 'docker logs' or 'kubectl logs'. A log file therefore cannot be switched on – it would be lost with the container.
 
 setting.category.general.name=General settings
 setting.category.general.description=General settings for the web application.

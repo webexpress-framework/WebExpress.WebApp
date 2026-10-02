@@ -180,6 +180,7 @@ setting.logfile.switchon.label=Aktivieren
 setting.logfile.switchon.header=Logging aktivieren
 setting.logfile.switchon.description=Das Aktivieren ist nur bis zum nächsten Neustart gültig. Für ein dauerhaftes Aktivieren ändern Sie die Einstellungen in der Konfigurationsdatei.
 setting.logfile.switchon.success=Das Logging wurde aktiviert.
+setting.logfile.container=Die Anwendung läuft in einem Container. Das Log wird auf der Konsole ausgegeben und von der Container-Laufzeit gesammelt; es ist dort abrufbar, z. B. mit 'docker logs' oder 'kubectl logs'. Eine Logdatei lässt sich daher nicht einschalten – sie ginge mit dem Container verloren.
 
 setting.plugin.label=Installierte Anwendungen
 setting.plugin.description=
