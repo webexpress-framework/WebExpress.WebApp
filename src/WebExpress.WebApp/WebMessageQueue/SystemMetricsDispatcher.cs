@@ -26,6 +26,8 @@ namespace WebExpress.WebApp.WebMessageQueue
         private readonly IMessageQueueManager _messageQueueManager;
         private readonly SystemMetricsSampler _sampler = new();
         private readonly Timer _timer;
+        private int _ticking;
+        private volatile bool _disposed;
 
         /// <summary>
         /// Initializes a new instance and starts the sampling timer.
@@ -67,17 +69,38 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// </summary>
         private async void OnTick(object state)
         {
+            // the timer fires regardless of whether the previous tick is still sending to a slow
+            // client; a second tick would sample concurrently and write to the same connections
+            // at once, so it is skipped - the next one brings a fresher reading anyway
+            if (_disposed || Interlocked.Exchange(ref _ticking, 1) != 0)
+            {
+                return;
+            }
+
             try
             {
-                var (cpu, ram) = CreateMessages(_sampler.Sample());
-
-                await SendAsync(SystemMetricMessageTypes.Cpu, cpu);
-                await SendAsync(SystemMetricMessageTypes.Ram, ram);
+                await DispatchAsync();
             }
             catch
             {
                 // a failed tick must not stop the metrics stream
             }
+            finally
+            {
+                Volatile.Write(ref _ticking, 0);
+            }
+        }
+
+        /// <summary>
+        /// Takes one sample and sends its readings one after the other.
+        /// </summary>
+        /// <returns>A task that completes when both readings were handed to the message queue.</returns>
+        internal async Task DispatchAsync()
+        {
+            var (cpu, ram) = CreateMessages(_sampler.Sample());
+
+            await SendAsync(SystemMetricMessageTypes.Cpu, cpu);
+            await SendAsync(SystemMetricMessageTypes.Ram, ram);
         }
 
         /// <summary>
@@ -97,6 +120,7 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// </summary>
         public void Dispose()
         {
+            _disposed = true;
             _timer.Dispose();
         }
     }

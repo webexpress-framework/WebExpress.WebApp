@@ -11,9 +11,9 @@
  *   pager, sorting and persistence logic keeps working against a single source
  *   of truth
  * - the data load and the layout state update go through a
- *   webexpress.webapp.RestService, configured from a data-wx-service island when
- *   present and otherwise from a legacy descriptor that reproduces the
- *   historical query parameter names and the PUT update
+ *   webexpress.webapp.RestService, configured from the data-wx-service island or,
+ *   inside a ViewState, from the service of the bound resource; a host without
+ *   either loads nothing
  * - the pure column and row normalisation lives in webexpress.webapp.tableModel
  *   and is unit tested in isolation
  * The emitted events and the rendered DOM are unchanged.

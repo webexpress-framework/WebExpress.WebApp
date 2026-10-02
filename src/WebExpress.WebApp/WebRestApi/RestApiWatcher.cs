@@ -14,7 +14,7 @@ using WebExpress.WebIndex.Wql;
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Abstract base class for an watcher REST endpoint.
+    /// Abstract base class for a watcher REST endpoint.
     /// </summary>
     /// <typeparam name="TIndexItem">Type of the index item.</typeparam>
     public abstract class RestApiWatcher<TIndexItem> : IRestApi
@@ -74,7 +74,7 @@ namespace WebExpress.WebApp.WebRestApi
         }
 
         /// <summary>
-        /// Handles <c>POST {base}</c>: adds an watcher.
+        /// Handles <c>POST {base}</c>: adds a watcher.
         /// </summary>
         /// <param name="request">The incoming request.</param>
         /// <returns>The HTTP response.</returns>
@@ -108,7 +108,7 @@ namespace WebExpress.WebApp.WebRestApi
         }
 
         /// <summary>
-        /// Handles <c>DELETE {base}/{userId}</c>: removes an watcher.
+        /// Handles <c>DELETE {base}/{userId}</c>: removes a watcher.
         /// </summary>
         /// <param name="request">The incoming request.</param>
         /// <returns>The HTTP response.</returns>
@@ -180,7 +180,7 @@ namespace WebExpress.WebApp.WebRestApi
         protected abstract RestApiWatcherItem AddWatcher(string userId, IQueryContext context, IRequest request);
 
         /// <summary>
-        /// Removes an watcher.
+        /// Removes a watcher.
         /// </summary>
         /// <param name="userId">The id of the user to be removed.</param>
         /// <param name="context">

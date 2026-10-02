@@ -63,6 +63,7 @@ header.setting.label=Einstellungen
 header.setting.systeminformation.label=System Informationen
 
 headline.more.title=Weitere Optionen
+toolbar.label=Seitenaktionen
 toolbar.more.title=Weitere Optionen
 
 tab.empty.title=Keine Registerkarten

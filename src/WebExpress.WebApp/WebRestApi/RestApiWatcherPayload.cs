@@ -9,7 +9,7 @@ namespace WebExpress.WebApp.WebRestApi
     public class RestApiWatcherPayload
     {
         /// <summary>
-        /// Gets or sets the id of the user to be added as an watcher.
+        /// Gets or sets the id of the user to be added as a watcher.
         /// </summary>
         [JsonPropertyName("userId")]
         public string UserId { get; set; }

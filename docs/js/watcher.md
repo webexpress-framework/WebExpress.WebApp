@@ -20,25 +20,32 @@ The `WatcherCtrl` component renders the list of users watching (following) a dom
 
 ## Declarative Configuration
 
-The control is bootstrapped from a single host element carrying the `wx-webapp-watcher` CSS class. The control reads its configuration from `data-` attributes on that element, then rewrites the element's contents to render the avatar row.
+The control is bootstrapped from a single host element carrying the `wx-webapp-watcher` CSS class. The control reads its configuration from `data-` attributes on that element and its endpoints from `wx-service` islands inside it, then rewrites the element's contents to render the avatar row.
 
 ### Container Element Attributes
 
 | Attribute            | Description                                                                                                                       | Example
 |----------------------|-----------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------
-| `data-uri`           | REST endpoint for the watcher collection of the current object. Required.                                                          | `data-uri="/api/watchers/INC-00123"`
-| `data-users-uri`     | REST endpoint used to populate the live-search dropdown when adding a new watcher. Required for adding; omit for read-only views. | `data-users-uri="/api/users"`
 | `data-max-visible`   | Maximum number of avatars rendered inline before the overflow chip (`+N`) appears. Defaults to `6`.                                | `data-max-visible="4"`
 | `data-readonly`      | When `"true"`, hides the `+` button and the per-avatar remove affordance.                                                          | `data-readonly="true"`
+
+### Services
+
+The endpoints are named `wx-service` islands, hidden child elements of the host that the control consumes on startup. Rendered from C#, `ControlDataWatcher` emits the islands through `.DataService<TEndpoint>()` and `.UsersService<TEndpoint>()`.
+
+| Service | Description                                                                                                       | Island
+|---------|-------------------------------------------------------------------------------------------------------------------|----------------------------------------------
+| `data`  | REST endpoint for the watcher collection of the current object. Required.                                         | `<wx-service hidden name="data" base-uri="/api/watchers/INC-00123"></wx-service>`
+| `users` | REST endpoint used to populate the live-search dropdown when adding a new watcher. Required for adding; omit for read-only views. | `<wx-service hidden name="users" base-uri="/api/users"></wx-service>`
 
 ### REST Contract
 
 | Method   | URL                            | Body                | Response               | Purpose
 |----------|--------------------------------|---------------------|------------------------|-------------------------------------------
-| `GET`    | `{data-uri}`                   | —                   | `User[]`               | Initial load and refresh.
-| `POST`   | `{data-uri}`                   | `{ "userId": "u3" }`| `User`                 | Attach a watcher; returns the persisted user.
-| `DELETE` | `{data-uri}/{userId}`          | —                   | `204 No Content`       | Detach a watcher.
-| `GET`    | `{data-users-uri}?q={search}`  | —                   | `User[]`               | Search candidates for the add dropdown.
+| `GET`    | `{data}`                   | —                   | `User[]`               | Initial load and refresh.
+| `POST`   | `{data}`                   | `{ "userId": "u3" }`| `User`                 | Attach a watcher; returns the persisted user.
+| `DELETE` | `{data}/{userId}`          | —                   | `204 No Content`       | Detach a watcher.
+| `GET`    | `{users}?q={search}`  | —                   | `User[]`               | Search candidates for the add dropdown.
 
 `User` objects are expected to carry at least `id`, `name`, `initials`, `team`, and `color` (a CSS color used as the avatar background). An optional `image` carries the uri of an avatar picture; when present, it replaces the initials badge in the avatar row and in the search results.
 
@@ -82,11 +89,12 @@ The following example wires an `WatcherCtrl` to an object detail page. The watch
     <div class="wx-webapp-side-row">
         <span class="wx-webapp-side-label">Beobachter</span>
         <span class="wx-webapp-side-value">
-            <!-- The watcher control: bootstraps itself from data-* -->
+            <!-- The watcher control: bootstraps itself from data-* and its service islands -->
             <div class="wx-webapp-watcher"
-                 data-uri="/api/watchers/INC-00123"
-                 data-users-uri="/api/users"
-                 data-max-visible="6"></div>
+                 data-max-visible="6">
+                <wx-service hidden name="data" base-uri="/api/watchers/INC-00123"></wx-service>
+                <wx-service hidden name="users" base-uri="/api/users"></wx-service>
+            </div>
         </span>
     </div>
 </div>
@@ -96,8 +104,9 @@ A read-only variant for users without edit rights:
 
 ```html
 <div class="wx-webapp-watcher"
-     data-uri="/api/watchers/INC-00123"
-     data-readonly="true"></div>
+     data-readonly="true">
+    <wx-service hidden name="data" base-uri="/api/watchers/INC-00123"></wx-service>
+</div>
 ```
 
 ## ViewState Binding

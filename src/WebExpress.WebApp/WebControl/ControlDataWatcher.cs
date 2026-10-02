@@ -8,7 +8,7 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Renders the host element for an watcher avatar row. The
+    /// Renders the host element for a watcher avatar row. The
     /// control only emits the placeholder div; the actual avatar row, the
     /// "+" affordance and the search dropdown are built by the client-side
     /// <c>webexpress.webapp.WatcherCtrl</c>, which talks to the configured

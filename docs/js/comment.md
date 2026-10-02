@@ -34,33 +34,42 @@ The `CommentCtrl` component renders a fully-featured discussion thread for a dom
 
 ## Declarative Configuration
 
-The control is bootstrapped from a single host element carrying the `wx-webapp-comment` CSS class. The control reads its configuration from `data-` attributes on that element, then rewrites the element's contents to render the toolbar, list, and composer.
+The control is bootstrapped from a single host element carrying the `wx-webapp-comment` CSS class. The control reads its configuration from `data-` attributes on that element and its endpoints from `wx-service` island elements inside it, then rewrites the element's contents to render the toolbar, list, and composer.
 
 ### Container Element Attributes
 
 | Attribute                | Description                                                                                                                                                                       | Example
 |--------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------
-| `data-uri`               | REST endpoint for the comment collection of the current object. Required.                                                                                                          | `data-uri="/api/comments/INC-00123"`
-| `data-users-uri`         | REST endpoint used to resolve author IDs to display names and to power the `@`-mention picker inside the composer. Required for author resolution and mentions.                    | `data-users-uri="/api/users"`
 | `data-current-user`      | ID of the currently authenticated user. Drives the "this is mine" visual treatment and gates the edit / delete affordances.                                                       | `data-current-user="u1"`
-| `data-image-upload-uri`  | Optional. When set, the composer's WYSIWYG editor enables image uploads via this endpoint.                                                                                          | `data-image-upload-uri="/api/upload"`
 | `data-readonly`          | When `"true"`, the composer is hidden and per-item actions (like, pin, reactions, replies, edit, delete) are disabled. The list is rendered for reading only.                       | `data-readonly="true"`
 | `data-categories`        | Optional JSON string overriding the default category set. Each entry needs `id`, `i18n` (i18n key for the label), `color` (CSS color), and `bg` (CSS background).                   | see [Categories](#categories) below
+
+### Services
+
+Each endpoint is a named `wx-service` island, a hidden child element of the host that the control consumes on startup.
+
+| Service  | Description                                                                                                                         | Island
+|----------|-------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------
+| `data`   | REST endpoint for the comment collection of the current object. Required.                                                           | `<wx-service hidden name="data" base-uri="/api/comments/INC-00123"></wx-service>`
+| `users`  | REST endpoint used to resolve author IDs to display names and to power the `@`-mention picker. Required for author resolution and mentions. | `<wx-service hidden name="users" base-uri="/api/users"></wx-service>`
+| `upload` | Optional. When present, the composer's WYSIWYG editor enables image uploads via this endpoint.                                      | `<wx-service hidden name="upload" base-uri="/api/upload"></wx-service>`
+
+Rendered from C#, `ControlDataComment` emits the islands itself: `.DataService<TEndpoint>()`, `.UsersService<TEndpoint>()` and `.UploadService<TEndpoint>()` resolve the endpoint types through the sitemap.
 
 ### REST Contract
 
 | Method   | URL                                              | Body                                                          | Response          | Purpose
 |----------|--------------------------------------------------|---------------------------------------------------------------|-------------------|-----------------------------------------
-| `GET`    | `{data-uri}`                                     | —                                                             | `Comment[]`       | Initial load and refresh.
-| `POST`   | `{data-uri}`                                     | `{ body, category, labels }`                                  | `Comment`         | Add a new top-level comment.
-| `PUT`    | `{data-uri}/{id}`                                | `{ body, category, labels }`                                  | `Comment`         | Edit an existing comment (author only).
-| `DELETE` | `{data-uri}/{id}`                                | —                                                             | `204 No Content`  | Delete a comment (author only).
-| `POST`   | `{data-uri}/{id}/likes`                          | `{ on: true \| false }`                                       | `Comment`         | Toggle the current user's like.
-| `POST`   | `{data-uri}/{id}/pin`                            | `{ on: true \| false }`                                       | `Comment`         | Toggle pin state.
-| `POST`   | `{data-uri}/{id}/reactions`                      | `{ emoji: "👍" }`                                              | `Comment`         | Toggle the current user's reaction for that emoji.
-| `POST`   | `{data-uri}/{id}/replies`                        | `{ body }`                                                    | `Reply`           | Add a reply to a comment.
-| `GET`    | `{data-users-uri}?ids=u1,u2,u3`                  | —                                                             | `User[]`          | Batch-resolve author IDs for rendering.
-| `GET`    | `{data-users-uri}?q={search}`                    | —                                                             | `User[]`          | Search candidates for the `@`-mention picker inside the composer.
+| `GET`    | `{data}`                                     | —                                                             | `Comment[]`       | Initial load and refresh.
+| `POST`   | `{data}`                                     | `{ body, category, labels }`                                  | `Comment`         | Add a new top-level comment.
+| `PUT`    | `{data}/{id}`                                | `{ body, category, labels }`                                  | `Comment`         | Edit an existing comment (author only).
+| `DELETE` | `{data}/{id}`                                | —                                                             | `204 No Content`  | Delete a comment (author only).
+| `POST`   | `{data}/{id}/likes`                          | `{ on: true \| false }`                                       | `Comment`         | Toggle the current user's like.
+| `POST`   | `{data}/{id}/pin`                            | `{ on: true \| false }`                                       | `Comment`         | Toggle pin state.
+| `POST`   | `{data}/{id}/reactions`                      | `{ emoji: "👍" }`                                              | `Comment`         | Toggle the current user's reaction for that emoji.
+| `POST`   | `{data}/{id}/replies`                        | `{ body }`                                                    | `Reply`           | Add a reply to a comment.
+| `GET`    | `{users}?ids=u1,u2,u3`                  | —                                                             | `User[]`          | Batch-resolve author IDs for rendering.
+| `GET`    | `{users}?q={search}`                    | —                                                             | `User[]`          | Search candidates for the `@`-mention picker inside the composer.
 
 `Comment` objects are expected to carry `id`, `author`, `when`, `category`, `labels`, `body` (HTML), `pinned`, `likes` (array of user IDs), `reactions` (`{ "👍": ["u1","u2"], … }`), `edited` (`{ by, when }` or `null`), `collapsed`, and `replies` (`Reply[]`). `Reply` objects need `id`, `author`, `when`, and `body`. `User` objects need at least `id`, `name`, `initials`, `team`, and `color`.
 
@@ -72,14 +81,15 @@ To use a custom category set, pass a JSON array via `data-categories`:
 
 ```html
 <div class="wx-webapp-comment"
-     data-uri="/api/comments/CHG-00045"
-     data-users-uri="/api/users"
      data-current-user="u1"
      data-categories='[
         {"id":"impl","i18n":"my.app:comment.cat.impl","color":"#1e40af","bg":"#dbeafe"},
         {"id":"risk","i18n":"my.app:comment.cat.risk","color":"#b45309","bg":"#fef3c7"},
         {"id":"signoff","i18n":"my.app:comment.cat.signoff","color":"#047857","bg":"#d1fae5"}
-     ]'></div>
+     ]'>
+    <wx-service hidden name="data" base-uri="/api/comments/CHG-00045"></wx-service>
+    <wx-service hidden name="users" base-uri="/api/users"></wx-service>
+</div>
 ```
 
 ## Programmatic Control
@@ -120,7 +130,7 @@ cmtElement.addEventListener(webexpress.webapp.Event.COMMENT_ADDED_EVENT, (e) => 
 The composer is built around the WebExpress `EditorCtrl`. That means authors get every feature the editor offers out of the box:
 
 - **Slash commands (`/`)** — insert headings, lists, code blocks, dates, horizontal rules, links, images, and addons.
-- **Mentions (`@`)** — pick a user from the live picker fed by `data-users-uri`.
+- **Mentions (`@`)** — pick a user from the live picker fed by the `users` service.
 - **Markdown shortcuts** — `**bold**`, `` `code` ``, `# Heading`, `- item`, `1. item`, `> quote`, `---`.
 - **Bubble menu** — appears on selection for quick formatting.
 - **Placeholder text** — sourced from the i18n key `webexpress.webapp:comment.compose.placeholder`.
@@ -137,12 +147,13 @@ A typical setup at the bottom of an object detail page:
         <h3>Kommentare</h3>
     </div>
 
-    <!-- The comment control: bootstraps itself from data-* -->
+    <!-- The comment control: bootstraps itself from data-* and its service islands -->
     <div class="wx-webapp-comment"
-         data-uri="/api/comments/INC-00123"
-         data-users-uri="/api/users"
-         data-current-user="u1"
-         data-image-upload-uri="/api/upload"></div>
+         data-current-user="u1">
+        <wx-service hidden name="data" base-uri="/api/comments/INC-00123"></wx-service>
+        <wx-service hidden name="users" base-uri="/api/users"></wx-service>
+        <wx-service hidden name="upload" base-uri="/api/upload"></wx-service>
+    </div>
 </section>
 ```
 
@@ -150,23 +161,25 @@ A read-only thread embedded in a historical / archived view:
 
 ```html
 <div class="wx-webapp-comment"
-     data-uri="/api/comments/INC-00123"
-     data-users-uri="/api/users"
-     data-readonly="true"></div>
+     data-readonly="true">
+    <wx-service hidden name="data" base-uri="/api/comments/INC-00123"></wx-service>
+    <wx-service hidden name="users" base-uri="/api/users"></wx-service>
+</div>
 ```
 
 A thread with a domain-specific category set (e.g. for change requests):
 
 ```html
 <div class="wx-webapp-comment"
-     data-uri="/api/comments/CHG-00045"
-     data-users-uri="/api/users"
      data-current-user="u1"
      data-categories='[
         {"id":"impl","i18n":"my.app:comment.cat.impl","color":"var(--wx-webapp-cat-hint)","bg":"var(--wx-webapp-cat-hint-bg)"},
         {"id":"risk","i18n":"my.app:comment.cat.risk","color":"var(--wx-webapp-cat-question)","bg":"var(--wx-webapp-cat-question-bg)"},
         {"id":"signoff","i18n":"my.app:comment.cat.signoff","color":"var(--wx-webapp-cat-solution)","bg":"var(--wx-webapp-cat-solution-bg)"}
-     ]'></div>
+     ]'>
+    <wx-service hidden name="data" base-uri="/api/comments/CHG-00045"></wx-service>
+    <wx-service hidden name="users" base-uri="/api/users"></wx-service>
+</div>
 ```
 
 ## UI persistence

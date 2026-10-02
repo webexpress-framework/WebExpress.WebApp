@@ -3,7 +3,7 @@
 namespace WebExpress.WebApp.WebSection
 {
     /// <summary>
-    /// Names the 'more.preferences' slot of the WebApp page layout: a placeholder section into which fragments can be inserted to place content at that position.
+    /// Names the 'toolbar.more.preferences' slot of the WebApp page layout: a placeholder section into which fragments can be inserted to place content at that position.
     /// </summary>
     public class SectionToolbarMorePreferences : ISection
     {

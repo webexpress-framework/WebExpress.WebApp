@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json;
 using System.Threading;
 using WebExpress.WebApp.WebMessageQueue;
@@ -108,6 +109,85 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
         public void ChannelNamesAreStable(string metric, string expected)
         {
             Assert.Equal(expected, SystemMetricMessageTypes.Channel(metric));
+        }
+
+        /// <summary>
+        /// Tests that a tick arriving while the previous one is still sending is skipped, so
+        /// two ticks never sample and write to the same connections at once; once the
+        /// previous tick has finished, the next one sends again.
+        /// </summary>
+        [Fact]
+        public async Task OverlappingTickIsSkipped()
+        {
+            // arrange
+            var manager = new BlockingMessageQueueManager();
+            using var dispatcher = new SystemMetricsDispatcher(manager);
+            var onTick = typeof(SystemMetricsDispatcher).GetMethod("OnTick", BindingFlags.NonPublic | BindingFlags.Instance);
+
+            // act
+            onTick.Invoke(dispatcher, [null]);
+            onTick.Invoke(dispatcher, [null]);
+            var sendsWhileBlocked = manager.SendCount;
+
+            manager.Release();
+            await manager.WaitForSendsAsync(2);
+            onTick.Invoke(dispatcher, [null]);
+            await manager.WaitForSendsAsync(4);
+
+            // validation
+            Assert.Equal(1, sendsWhileBlocked);
+            Assert.Equal(4, manager.SendCount);
+        }
+
+        /// <summary>
+        /// Message queue fake whose sends stay pending until the test releases them, which
+        /// keeps a tick busy for as long as the test needs.
+        /// </summary>
+        private sealed class BlockingMessageQueueManager : IMessageQueueManager
+        {
+            private readonly TaskCompletionSource _gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            private int _sendCount;
+
+            public int SendCount => Volatile.Read(ref _sendCount);
+
+            public void Release() => _gate.TrySetResult();
+
+            public async Task WaitForSendsAsync(int count)
+            {
+                var deadline = DateTime.UtcNow.AddSeconds(5);
+
+                while (SendCount < count && DateTime.UtcNow < deadline)
+                {
+                    await Task.Delay(10);
+                }
+            }
+
+            public IMessageQueueManager Register(Guid connectionId, IMessageQueueSocket socket) => this;
+            public IMessageQueueManager Register(string messageType, Action<IMessage> handler) => this;
+            public IMessageQueueManager Unregister(Guid connectionId) => this;
+            public IMessageQueueManager Unregister(string messageType, Action<IMessage> handler) => this;
+
+            public async Task<IMessageQueueManager> SendAsync(IAddress address, IMessage message, CancellationToken cancellationToken = default)
+            {
+                Interlocked.Increment(ref _sendCount);
+                await _gate.Task;
+
+                return this;
+            }
+
+            public Task ReplayPopupNotificationsAsync(IMessageQueueSocket socket, CancellationToken cancellationToken = default)
+                => Task.CompletedTask;
+
+            public Task ReplayProgressTasksAsync(IMessageQueueSocket socket, CancellationToken cancellationToken = default)
+                => Task.CompletedTask;
+
+            public IPopupNotificationHandler PopupNotificationHandler => null;
+
+            public IChatMessageHandler ChatMessageHandler => null;
+
+            public void Dispose()
+            {
+            }
         }
     }
 }

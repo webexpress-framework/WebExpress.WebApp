@@ -364,7 +364,7 @@ webexpress.webapp.WatcherCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Adds an watcher through POST and updates the UI.
+     * Adds a watcher through POST and updates the UI.
      * @param {Object} user
      */
     async _add(user) {
@@ -389,7 +389,7 @@ webexpress.webapp.WatcherCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Removes an watcher through DELETE and updates the UI.
+     * Removes a watcher through DELETE and updates the UI.
      * @param {Object} user
      */
     async _remove(user) {

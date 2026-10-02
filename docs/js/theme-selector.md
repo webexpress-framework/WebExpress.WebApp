@@ -21,14 +21,16 @@ The control is rendered server-side by `ControlDataSelectionTheme`. Manual HTML 
 |Attribute                |Description
 |-------------------------|-----------------------------------------------------------------
 |`class`                  |Must contain `wx-webapp-dropdown-theme`.
-|`data-uri`               |REST endpoint returning the theme list (see contract below).
 |`data-reload-on-change`  |Set to `"false"` to keep the page after a selection (default reloads).
 
 ```html
 <div class="wx-webapp-dropdown-theme"
-     id="themeSelector"
-     data-uri="/app/api/1/themeapi"></div>
+     id="themeSelector">
+    <wx-service hidden name="data" base-uri="/app/api/1/themeapi"></wx-service>
+</div>
 ```
+
+The REST endpoint returning the theme list (see contract below) is the `data` service, a hidden `wx-service` island inside the host. Rendered from C#, `ControlDataSelectionTheme` emits the island through `.DataService<TEndpoint>()`.
 
 ## REST Data Contract
 

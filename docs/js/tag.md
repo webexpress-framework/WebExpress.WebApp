@@ -23,18 +23,25 @@ The read-only surface extends the WebUI read-only `webexpress.webui.TagCtrl`; th
 
 ## Declarative Configuration
 
-The control is bootstrapped from a single host element carrying the `wx-webapp-tag` CSS class. The control reads its configuration from `data-` attributes on that element, then rewrites the element's contents to render the read-only chips and the "+" button. The editable surface (input field, removable chips and suggestion dropdown) is built on demand inside a modal when the "+" button is clicked.
+The control is bootstrapped from a single host element carrying the `wx-webapp-tag` CSS class. The control reads its configuration from `data-` attributes on that element and its endpoint from the `data` service island inside it, then rewrites the element's contents to render the read-only chips and the "+" button. The editable surface (input field, removable chips and suggestion dropdown) is built on demand inside a modal when the "+" button is clicked.
 
 ### Container Element Attributes
 
 | Attribute            | Description                                                                                                                               | Example
 |----------------------|-------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------
-| `data-uri`           | REST endpoint backing the tag surface. Required for loading, adding, deleting and suggesting.                                              | `data-uri="/api/tags/INC-00123"`
 | `data-value`         | Optional. Semicolon-separated set of tags rendered server-side to avoid a flash before the REST endpoint responds.                         | `data-value="pirate;grog"`
 | `data-readonly`      | When `"true"`, the input field and the per-chip remove buttons are suppressed; the chips are rendered for reading only.                    | `data-readonly="true"`
 | `placeholder`        | Placeholder shown in the input field while no tags are present.                                                                            | `placeholder="add tag…"`
 | `data-color-css`     | Optional CSS class applied to the chips (e.g. one of the `wx-tag-*` system colors).                                                        | `data-color-css="wx-tag-primary"`
 | `data-color-style`   | Optional inline style applied to the chips when a custom color is used.                                                                    | `data-color-style="background: gold;"`
+
+### Data Service
+
+The endpoint is the `data` service, a hidden `wx-service` island inside the host, and is required for loading, adding, deleting and suggesting. Rendered from C#, `ControlDataTag` emits the island through `.DataService<TEndpoint>()`.
+
+```html
+<wx-service hidden name="data" base-uri="/api/tags/INC-00123"></wx-service>
+```
 
 ### REST Contract
 
@@ -42,10 +49,10 @@ A **single endpoint** serves all operations. The `GET` route distinguishes loadi
 
 | Method   | URL                          | Body          | Response     | Purpose
 |----------|------------------------------|---------------|--------------|-------------------------------------------------
-| `GET`    | `{data-uri}`                 | —             | `Tag[]`      | Load the tags currently attached to the object.
-| `GET`    | `{data-uri}?q={term}`        | —             | `Tag[]`      | Autocomplete suggestions from the tag vocabulary.
-| `POST`   | `{data-uri}`                 | `{ value }`   | `Tag`        | Add a tag.
-| `DELETE` | `{data-uri}/{value}`         | —             | `204`        | Remove a tag.
+| `GET`    | `{data}`                 | —             | `Tag[]`      | Load the tags currently attached to the object.
+| `GET`    | `{data}?q={term}`        | —             | `Tag[]`      | Autocomplete suggestions from the tag vocabulary.
+| `POST`   | `{data}`                 | `{ value }`   | `Tag`        | Add a tag.
+| `DELETE` | `{data}/{value}`         | —             | `204`        | Remove a tag.
 
 `Tag` objects carry `value` (the display text and identity) and an optional `color` (a CSS class or color value). The client also accepts plain strings in any of the arrays.
 

@@ -73,8 +73,8 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
             element.removeAttribute("data-movable-tab");
         }
 
-        // data service: a configured island when present, otherwise a legacy
-        // descriptor. its query, create, update and remove operations back the
+        // data service from the wx-service island; a host without it loads
+        // nothing. its query, create, update and remove operations back the
         // list, create, reorder and close requests.
         const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
         this._service = islandServices.data;

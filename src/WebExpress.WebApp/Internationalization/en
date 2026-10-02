@@ -63,6 +63,7 @@ header.setting.label=Settings
 header.setting.systeminformation.label=System information
 
 headline.more.title=More options
+toolbar.label=Page actions
 toolbar.more.title=More options
 
 tab.empty.title=No tabs

@@ -23,7 +23,6 @@ The initial structure is defined in HTML. The root element is the tab host (`.wx
 |Attribute     |Description                                                                           | Example 
 |---------------|---------------------------------------------------------------------------------------|----------------------------
 |`data-layout` |Visual style of tabs. Supported values: `tab`, `pill`, `underline`. Omitted for the default layout. On the server side it is the `Layout` property of `ControlDataTab`; its `HighlightColor` colors the marker of the `underline` layout. | `data-layout="underline"`
-|`data-uri`    |The uri is used to determine the tabs.   | `/api/1/tab`
 |`data-readonly`|Disables add/close interactions when set to `true`. | `data-readonly="true"`
 |`data-movable-tab`|Enables drag-and-drop reordering of the tabs when set to `true`. Each tab header gets a ⠿ grip handle; dropping persists the new order via `PUT`. | `data-movable-tab="true"`
 
@@ -42,6 +41,14 @@ The server renders it hidden (`d-none`), because only the client knows whether t
 </div>
 ```
 
+### Data Service
+
+The endpoint is the `data` service, a hidden `wx-service` island inside the host that the controller consumes on startup; a host without the island loads nothing and keeps its tabs local. Rendered from C#, `ControlDataTab` emits the island itself through `.DataService<TEndpoint>()`.
+
+```html
+<wx-service hidden name="data" base-uri="/api/1/tab"></wx-service>
+```
+
 ### Tab Template Element Attributes
 
 | Attribute                | Description                                                        | Example                         |
@@ -54,7 +61,7 @@ The server renders it hidden (`d-none`), because only the client knows whether t
 
 ## REST Data Contract
 
-### GET (`data-uri`)
+### GET (`data` service)
 
 The controller expects JSON with an `items` array:
 
@@ -111,7 +118,7 @@ The response must contain `newTab`:
 The close glyph on a tab header, or the `Delete` key on the focused tab, opens the shared `webexpress.webui.ModalConfirm` with the tab's name. The glyph is deliberately no button of its own: a tab list may hold nothing but tabs, so the keyboard path is the shortcut, which the tab announces through `aria-keyshortcuts`.
 Only confirmation sends a `DELETE` request through the configured data service to:
 
-`<data-uri>?id=<tabId>`
+`<base-uri>?id=<tabId>`
 
 The tab, selection and template capacity remain unchanged until the service succeeds.
 While the request is pending, confirmation and dismissal are locked to prevent duplicate
@@ -127,7 +134,7 @@ refresh preserves the selected id when it still exists and reapplies its visible
 
 ### PUT (reorder tabs)
 
-When `data-movable-tab="true"` and the user drags a tab to a new position, the controller sends a `PUT` to `<data-uri>` with the full ordered list of tab ids:
+When `data-movable-tab="true"` and the user drags a tab to a new position, the controller sends a `PUT` to the `base-uri` of the `data` service with the full ordered list of tab ids:
 
 ```json
 {
@@ -182,7 +189,7 @@ If an option is not defined for a key, defaults apply:
 Example for key `uri`:
 - `data-wx-bind-uri-mode="attr"`
 - `data-wx-bind-uri-name="data-uri"`
-- `data-wx-bind-uri-target=".wx-webapp-dashboard"`
+- `data-wx-bind-uri-target=".wx-webapp-like-mount"`
 
 ### Supported Modes
 
@@ -238,7 +245,7 @@ This ensures the resulting DOM contains only effective runtime attributes.
   data-wx-bind="uri, title, isActive"
   data-wx-bind-uri-mode="attr"
   data-wx-bind-uri-name="data-uri"
-  data-wx-bind-uri-target=".wx-webapp-dashboard"
+  data-wx-bind-uri-target=".wx-webapp-like-mount"
   data-wx-bind-title-mode="text"
   data-wx-bind-title-target=".title"
   data-wx-bind-isActive-mode="toggle"
@@ -308,7 +315,9 @@ The component dispatches events for tab interactions:
 ## Use Case Example
 
 ```html
-<div id="myTabs" class="wx-webapp-tab" data-layout="underline" data-uri="/api/1/tab">
+<div id="myTabs" class="wx-webapp-tab" data-layout="underline">
+    <wx-service hidden name="data" base-uri="/api/1/tab"></wx-service>
+
     <div class="wx-tab-toolbar">
         <div class="btn-group">
             <button class="btn btn-outline-secondary btn-sm">Action</button>

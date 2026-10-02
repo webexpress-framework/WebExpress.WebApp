@@ -78,7 +78,7 @@ namespace WebExpress.WebApp.Test
         }
 
         /// <summary>
-        /// Removes an watcher.
+        /// Removes a watcher.
         /// </summary>
         /// <param name="userId">The id of the user to be removed.</param>
         /// <param name="context">
