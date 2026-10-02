@@ -64,6 +64,9 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
 
         super(element);
 
+        // a data table has no switch for it and has always let its columns be hidden
+        this._allowColumnRemove = true;
+
         // the resource a ViewState renders. when present, the table is a pure view
         // of a central resource the enclosing ViewState owns; when absent it owns
         // its state and loads itself (standalone).

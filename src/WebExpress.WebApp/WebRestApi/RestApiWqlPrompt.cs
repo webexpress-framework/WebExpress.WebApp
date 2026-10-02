@@ -330,6 +330,16 @@ namespace WebExpress.WebApp.WebRestApi
                         )
                     );
                     break;
+                // punctuation cannot be typed partially, so it is offered without a prefix
+                case WqlExpressionType.OpenParenthesis:
+                    items.Add("(");
+                    break;
+                case WqlExpressionType.CloseParenthesis:
+                    items.Add(")");
+                    break;
+                case WqlExpressionType.Separator:
+                    items.Add(",");
+                    break;
                 default:
                     break;
             }

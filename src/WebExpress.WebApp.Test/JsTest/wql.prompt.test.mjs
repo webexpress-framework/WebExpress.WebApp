@@ -229,10 +229,56 @@ test("an open parenthesis suggestion starts a quoted set", () => {
 test("a separator suggestion inserts a comma with a space", () => {
     const { ctrl } = loadPrompt();
     const calls = armApply(ctrl, "separator", false);
+    ctrl._getInputText = () => "Text = ";
+    ctrl._getCursorOffset = () => 6;
+    ctrl._currentContext = { type: "separator", prefix: "", tokenStart: 6, tokenEnd: 6, quoted: false };
 
     ctrl._applySuggestion(",");
 
-    assert.deepEqual(calls, [[7, 7, ", "]]);
+    assert.deepEqual(calls, [[6, 6, ", "]]);
+});
+
+/**
+ * Prepares the control for applying a suggestion after the given text.
+ * @param {object} ctrl - The prompt control.
+ * @param {string} text - The text before the cursor.
+ * @param {string} type - The lower-cased expression type.
+ * @returns {Array} The captured replacement calls [start, end, text].
+ */
+function armAfter(ctrl, text, type) {
+    const calls = [];
+    ctrl._getInputText = () => text;
+    ctrl._getCursorOffset = () => text.length;
+    ctrl._insertReplacementAt = (start, end, insertion) => calls.push([start, end, insertion]);
+    ctrl._currentContext = { type, prefix: "", tokenStart: text.length, tokenEnd: text.length, quoted: false, text, cursorPos: text.length };
+    return calls;
+}
+
+test("the open parenthesis after in is inserted bare, ready for the first value", () => {
+    const { ctrl } = loadPrompt();
+    const calls = armAfter(ctrl, "Text in ", "openparenthesis");
+
+    ctrl._applySuggestion("(");
+
+    assert.deepEqual(calls, [[8, 8, "("]]);
+});
+
+test("a separator after a chosen value takes back the blank the value left", () => {
+    const { ctrl } = loadPrompt();
+    const calls = armAfter(ctrl, 'Text in ("A" ', "separator");
+
+    ctrl._applySuggestion(",");
+
+    assert.deepEqual(calls, [[12, 13, ", "]], 'the list reads ("A", ');
+});
+
+test("a closing parenthesis after a chosen value closes the set and leaves room for what follows", () => {
+    const { ctrl } = loadPrompt();
+    const calls = armAfter(ctrl, 'Text in ("A" ', "separator");
+
+    ctrl._applySuggestion(")");
+
+    assert.deepEqual(calls, [[12, 13, ") "]], 'the set reads ("A") ');
 });
 
 test("an operator suggestion is inserted as-is with a trailing space", () => {

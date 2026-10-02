@@ -787,8 +787,18 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         let insertion = value;
 
         // smart formatting logic per wql type; the type names are the
-        // lower-cased WqlExpressionType enum names of the analyze endpoint
-        if (type === "openparenthesis") {
+        // lower-cased WqlExpressionType enum names of the analyze endpoint.
+        // punctuation is recognised by its value, as it is offered alongside
+        // other types (a closing parenthesis next to a separator, an opening
+        // one next to attributes)
+        if (value === "(" || value === ")" || value === ",") {
+            // the blank a chosen value leaves behind is taken back, so a list
+            // reads ("a", "b") rather than ("a" , "b" )
+            const blank = value === "(" ? "" : text.slice(0, cursorPos).match(/[ \t]*$/)[0];
+            insertion = value === "," ? ", " : value;
+            tokenStart = cursorPos - blank.length;
+            tokenEnd = cursorPos;
+        } else if (type === "openparenthesis") {
             insertion = `("${value}"`;
             tokenStart = cursorPos;
             tokenEnd = cursorPos;
@@ -796,10 +806,6 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
             if (!this._currentContext.quoted) {
                 insertion = `"${value}"`;
             }
-        } else if (type === "separator" && value === ",") {
-            insertion = ", ";
-            tokenStart = cursorPos;
-            tokenEnd = cursorPos;
         }
 
         if (!this._currentContext.quoted && !insertion.endsWith(" ") && value !== "("
