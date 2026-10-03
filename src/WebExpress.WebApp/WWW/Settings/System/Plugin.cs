@@ -216,8 +216,8 @@ namespace WebExpress.WebApp.WWW.Settings.System
         {
             var (label, color) = package.State switch
             {
-                PackageCatalogeItemState.Active => ("webexpress.webapp:setting.plugin.state.active", TypeColorBackgroundBadge.Success),
-                PackageCatalogeItemState.Disable => ("webexpress.webapp:setting.plugin.state.disabled", TypeColorBackgroundBadge.Secondary),
+                PackageCatalogItemState.Active => ("webexpress.webapp:setting.plugin.state.active", TypeColorBackgroundBadge.Success),
+                PackageCatalogItemState.Disable => ("webexpress.webapp:setting.plugin.state.disabled", TypeColorBackgroundBadge.Secondary),
                 _ => ("webexpress.webapp:setting.plugin.state.available", TypeColorBackgroundBadge.Info)
             };
 
@@ -249,7 +249,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
         private static IEnumerable<IControlDropdownItem> CreateActions(IRenderContext renderContext, PackageCatalogItem package, IUri apiUri)
         {
             var packageIdEscaped = Uri.EscapeDataString(package.Id ?? string.Empty);
-            var isActive = package.State == PackageCatalogeItemState.Active;
+            var isActive = package.State == PackageCatalogItemState.Active;
 
             yield return new ControlDropdownItemLink()
             {

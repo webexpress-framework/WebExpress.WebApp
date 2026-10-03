@@ -152,7 +152,7 @@ namespace WebExpress.WebApp.WebPackage
                     return builtIn;
                 }
 
-                if (package.State == PackageCatalogeItemState.Active)
+                if (package.State == PackageCatalogItemState.Active)
                 {
                     return PluginPackageOperationResult.Ok
                     (
@@ -172,7 +172,7 @@ namespace WebExpress.WebApp.WebPackage
 
                     package.Id = metadata?.Id ?? package.Id;
                     package.Metadata = metadata?.Metadata ?? package.Metadata;
-                    package.State = PackageCatalogeItemState.Active;
+                    package.State = PackageCatalogItemState.Active;
 
                     Invoke(packageManager, "ExtractPackage", package);
                     Invoke(packageManager, "RegisterPackage", package);
@@ -223,7 +223,7 @@ namespace WebExpress.WebApp.WebPackage
                     return builtIn;
                 }
 
-                if (package.State == PackageCatalogeItemState.Disable)
+                if (package.State == PackageCatalogItemState.Disable)
                 {
                     return PluginPackageOperationResult.Ok
                     (
@@ -238,7 +238,7 @@ namespace WebExpress.WebApp.WebPackage
                     Invoke(packageManager, "DeactivateAndUnregisterPackage", package);
                     Invoke(packageManager, "RemoveExtractedDirectory", package);
 
-                    package.State = PackageCatalogeItemState.Disable;
+                    package.State = PackageCatalogItemState.Disable;
 
                     Invoke(packageManager, "SaveCatalog");
                     _componentHub?.SitemapManager.Refresh();
@@ -287,7 +287,7 @@ namespace WebExpress.WebApp.WebPackage
                 {
                     var packageManager = _componentHub?.PackageManager;
 
-                    if (package.State == PackageCatalogeItemState.Active)
+                    if (package.State == PackageCatalogItemState.Active)
                     {
                         Invoke(packageManager, "DeactivateAndUnregisterPackage", package);
                     }
