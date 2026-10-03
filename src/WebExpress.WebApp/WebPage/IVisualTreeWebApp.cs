@@ -8,10 +8,7 @@ namespace WebExpress.WebApp.WebPage
 {
     /// <summary>
     /// Represents the visual tree of the web application. The active
-    /// <c>Theme</c> and <c>IconTheme</c> are inherited from
-    /// <see cref="IVisualTreeControl"/>; the icon-theme value is emitted on
-    /// the root <c>&lt;html data-icon-theme&gt;</c> attribute so the JS side
-    /// can read it via <c>webexpress.webui.IconTheme.current()</c>.
+    /// <c>Theme</c> is inherited from <see cref="IVisualTreeControl"/>.
     /// </summary>
     public interface IVisualTreeWebApp : IVisualTreeControl
     {

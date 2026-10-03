@@ -11,7 +11,7 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Quick create control element for a WebApp.
+    /// Renders the quick-create control in the WebApp header, a shortcut menu for creating new items.
     /// </summary>
     public class ControlWebAppHeaderQuickCreate : Control, IControlWebAppHeaderQuickCreate
     {
@@ -128,17 +128,20 @@ namespace WebExpress.WebApp.WebControl
 
             var preferences = Preferences.Union(fragmentManager.GetFragments<FragmentControlSplitButtonItemLink, SectionAppQuickcreatePreferences>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ));
 
             var primary = Primary.Union(fragmentManager.GetFragments<FragmentControlSplitButtonItemLink, SectionAppQuickcreatePrimary>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ));
 
             var secondary = Secondary.Union(fragmentManager.GetFragments<FragmentControlSplitButtonItemLink, SectionAppQuickcreateSecondary>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ));
 
             var quickcreateList = preferences

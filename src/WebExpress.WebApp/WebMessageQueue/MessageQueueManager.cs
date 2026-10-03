@@ -25,6 +25,7 @@ namespace WebExpress.WebApp.WebMessageQueue
         private readonly PopupNotificationDispatcher _popupNotificationDispatcher;
         private readonly IPopupNotificationHandler _popupNotificationHandler;
         private readonly ProgressTaskDispatcher _progressTaskDispatcher;
+        private readonly SystemMetricsDispatcher _systemMetricsDispatcher;
         private readonly ChatChannelStore _chatChannelStore;
         private readonly IChatMessageHandler _chatMessageHandler;
 
@@ -67,6 +68,7 @@ namespace WebExpress.WebApp.WebMessageQueue
             _popupNotificationDispatcher = new PopupNotificationDispatcher(this, _componentHub);
             _popupNotificationHandler = new PopupNotificationHandler(_componentHub);
             _progressTaskDispatcher = new ProgressTaskDispatcher(this, _componentHub);
+            _systemMetricsDispatcher = new SystemMetricsDispatcher(this);
             _chatChannelStore = new ChatChannelStore();
             _chatMessageHandler = new ChatMessageHandler(this, _chatChannelStore);
         }
@@ -251,6 +253,8 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// </summary>
         public void Dispose()
         {
+            _systemMetricsDispatcher?.Dispose();
+
             GC.SuppressFinalize(this);
         }
     }

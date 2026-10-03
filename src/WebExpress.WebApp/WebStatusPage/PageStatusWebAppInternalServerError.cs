@@ -5,7 +5,7 @@ using WebExpress.WebCore.WebStatusPage;
 namespace WebExpress.WebApp.WebStatusPage
 {
     /// <summary>
-    /// The status page 500.
+    /// The WebApp status page shown for HTTP 500 (Internal Server Error).
     /// </summary>
     [Title("webexpress.webapp:status.500.title")]
     [Description("webexpress.webapp:status.500.description")]

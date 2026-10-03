@@ -7,22 +7,86 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
 
     _restUri = "";
     _abortController = null;
+    _viewState = null;
 
     /**
      * Initializes the REST Dashboard control.
      * @param {HTMLElement} element - The root element.
      */
     constructor(element) {
+        // consume the islands before the base constructor reshapes the
+        // children; the read caches on the element
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+
         super(element);
 
-        this._restUri = element.dataset.uri || "";
-        element.removeAttribute("data-uri");
+        // the resource a ViewState renders. when present, the dashboard is a pure
+        // view of a central resource the enclosing ViewState owns; when absent it
+        // loads itself (standalone).
+        this._resource = (element.dataset && element.dataset.wxResource) || null;
+
+        // the load keeps its own abort and loading state through the shared
+        // request; the layout state save flows through this rest service
+        this._service = islandServices.data;
+        this._restUri = this._service ? this._service.baseUri : "";
 
         this._initRestPersistence(element);
 
-        if (this._restUri) {
+        if (this._resource) {
+            // ViewState mode: the enclosing ViewState loads the resource centrally
+            this._attachToViewState(element);
+        } else if (this._restUri) {
             this._receiveData();
+
+            // an external change of the service's domains re-queries and
+            // flashes, so changes made by other users re-render standalone too
+            const dataChanges = webexpress.webapp.DataChangeSubscription.attachReload(
+                [this._service], () => this._receiveData(), element);
+            if (dataChanges) {
+                (element._wxCleanup = element._wxCleanup || []).push(() => dataChanges.detach());
+            }
         }
+    }
+
+    /**
+     * Attaches the dashboard to the enclosing ViewState and renders its
+     * resource slice. The ViewState owns the service and the central load, so the
+     * dashboard re-renders whenever the ViewState re-queries the resource, while
+     * layout changes still persist through the ViewState's update service.
+     * @param {HTMLElement} element The host element.
+     */
+    _attachToViewState(element) {
+        const viewStateId = (element.dataset && element.dataset.wxViewstate) || null;
+
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
+            this._viewState = viewState;
+
+            const service = viewState.serviceForResource(this._resource);
+            if (service) {
+                this._service = service;
+                this._restUri = service.baseUri;
+            }
+
+            const unsubscribe = viewState.watch((state) => viewState.slice(this._resource, state), (slice) => this._applySlice(slice));
+            (element._wxCleanup = element._wxCleanup || []).push(unsubscribe);
+
+            this._applySlice(viewState.slice(this._resource));
+        });
+    }
+
+    /**
+     * Renders a resource slice the ViewState loaded centrally, normalising the raw
+     * dashboard payload exactly as the standalone load does.
+     * @param {object} slice The resource slice { items, total, data, loading, error }.
+     */
+    _applySlice(slice) {
+        slice = slice || {};
+
+        if (slice.data) {
+            this.updateData(slice.data);
+        }
+
+        this._element.classList.remove("placeholder-glow");
     }
 
     /**
@@ -51,12 +115,17 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
 
         const fetchUrl = this._restUri.startsWith("http") ? urlObj.href : (urlObj.pathname + urlObj.search);
 
-        fetch(fetchUrl, { signal: this._abortController.signal })
+        webexpress.webapp.ServiceRegistry.request(fetchUrl, { signal: this._abortController.signal })
             .then((res) => {
+                if (res.error && res.error.kind === "abort") {
+                    const abort = new Error("aborted");
+                    abort.name = "AbortError";
+                    throw abort;
+                }
                 if (!res.ok) {
                     throw new Error("request failed");
                 }
-                return res.json();
+                return res.data;
             })
             .then((response) => {
                 this.updateData(response);
@@ -78,28 +147,12 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
      * @param {Object} data - The json payload containing columns and layout.
      */
     updateData(data) {
-        if (data.columns) {
-            this._columns = data.columns.map((col) => {
-                return {
-                    id: col.id,
-                    label: col.label || "",
-                    size: col.size || "1fr",
-                    widgets: (col.widgets || []).map((w, i) => {
-                        return {
-                            instanceId: "wx_inst_" + col.id + "_" + i + "_" + Date.now(),
-                            id: w.id,
-                            label: w.label || null,
-                            icon: w.icon || null,
-                            image: w.image || null,
-                            color: w.color || null,
-                            removable: w.removable !== false,
-                            movable: w.movable !== false,
-                            html: w.html || "",
-                            params: w.params || {}
-                        };
-                    })
-                };
-            });
+        // the server owns which widget types the board may add
+        this._availableWidgets = webexpress.webapp.dashboardModel.normalizeAvailableWidgets(data);
+
+        const columns = webexpress.webapp.dashboardModel.normalizeColumns(data);
+        if (columns) {
+            this._columns = columns;
         }
         this.render();
     }
@@ -116,7 +169,12 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
             if (e.detail && e.detail.id === this._element.id) {
                 const payload = {
                     action: e.detail.action,
-                    layout: e.detail.layout
+                    layout: e.detail.layout,
+                    // column rename / reorder / delete / add carries the full column list
+                    columns: e.detail.columns,
+                    // widget add / delete / settings carries the full board, so the
+                    // per-widget name, color and params round-trip to the server
+                    board: e.detail.board
                 };
                 this._sendStateToServer(payload);
             }
@@ -132,12 +190,10 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
             return;
         }
 
-        fetch(this._restUri, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        }).catch((err) => {
-            console.error("dashboard update state failed", err);
+        this._service.update(payload).then((r) => {
+            if (!r.ok) {
+                console.error("dashboard update state failed", r.error);
+            }
         });
     }
 
@@ -145,6 +201,10 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
      * Forces an update of the control data from the server.
      */
     update() {
+        if (this._viewState) {
+            this._viewState.reload(this._resource);
+            return;
+        }
         if (this._restUri) {
             if (this._isVisible && this._isVisible()) {
                 this._receiveData();

@@ -1,5 +1,37 @@
-﻿#wx-header {
-    background: var(--bs-dark);
+/* =====================================================================
+   Application theme palette
+   ---------------------------------------------------------------------
+   This theme loads after the framework, so redefining any --wx-* token
+   here re-skins every control through the WebExpress bridge in
+   webexpress.webui.css. The values below mirror the framework defaults and
+   mark the intended customization surface — change a hue here and it flows
+   app-wide, in both light and dark mode. Add a [data-wx-theme="dark"]
+   block to tune dark values independently.
+   ===================================================================== */
+:root {
+    --wx-primary: #0d6efd;
+    --wx-primary-rgb: 13, 110, 253;
+    --wx-secondary: #6c757d;
+    --wx-secondary-rgb: 108, 117, 125;
+    --wx-success: #198754;
+    --wx-success-rgb: 25, 135, 84;
+    --wx-info: #0dcaf0;
+    --wx-info-rgb: 13, 202, 240;
+    --wx-warning: #ffc107;
+    --wx-warning-rgb: 255, 193, 7;
+    --wx-danger: #dc3545;
+    --wx-danger-rgb: 220, 53, 69;
+
+    --wx-highlight: #ff8c00;
+    --wx-highlight-rgb: 255, 140, 0;
+    --wx-highlight-contrast: #212529;
+
+    /* app-specific accent for the split/login backdrop gradient */
+    --wx-app-splash: #120348;
+}
+
+#wx-header {
+    background: var(--wx-dark);
 }
 
 #wx-header-appnavigator {
@@ -7,67 +39,65 @@
 }
 
 #wx-header-apptitle {
-    color: var(--bs-body-bg);
+    color: var(--wx-body-bg);
 }
-
-[data-bs-theme="dark"] #wx-header-apptitle {
-    color: var(--bs-body-color);
+@scope ([data-wx-theme="dark"]) to ([data-wx-theme="light"]) {
+:scope #wx-header-apptitle {
+    color: var(--wx-body-color);
+}
 }
 
 #wx-header-appnavigation {
-    color: var(--bs-body-bg);
+    color: var(--wx-body-bg);
+}
+@scope ([data-wx-theme="dark"]) to ([data-wx-theme="light"]) {
+:scope #wx-header-appnavigation {
+    color: var(--wx-body-color);
+}
 }
 
-[data-bs-theme="dark"] #wx-header-appnavigation {
-    color: var(--bs-body-color);
-}
-    
 #wx-header-appnavigation .active {
-    color: var(--bs-info);
+    color: var(--wx-info);
 }
 
-#wx-header-appnavigation > *:hover:not(.wx-overflow-menu:hover):not(.dropdown-menu) {
-    background: var(--bs-gray-800);
-}
-
-#wx-header-appnavigation > *:focus {
-    background: var(--bs-gray-800);
+/* one hover surface for every entry of the bar, plain link and dropdown toggle alike. A
+   toggle is a button, so its surface is painted on the button itself: painted on the
+   wrapper it sat underneath the framework's own button hover - a lighter, bordered box
+   that only matched the bar in dark mode by coincidence of the palette */
+#wx-header-appnavigation > *:hover:not(.wx-overflow-menu):not(.dropdown-menu):not(.wx-dropdown),
+#wx-header-appnavigation > *:focus:not(.wx-dropdown),
+#wx-header-appnavigation > .btn:active,
+#wx-header-appnavigation > .wx-dropdown > .btn:is(:hover, :focus, :active),
+#wx-header-notifications > .btn:is(:hover, :focus, :active),
+#wx-header-help > .btn:is(:hover, :focus, :active),
+#wx-header-settings > .btn:is(:hover, :focus, :active) {
+    background: var(--wx-gray-800);
 }
 
 #wx-header-quickcreate {
 }
 
-#wx-header-notifications {
-    color: var(--bs-body-bg);
-}
-
-#wx-header-notifications:hover {
-    background: var(--bs-gray-800);
-}
-
-#wx-header-help {
-    color: var(--bs-body-bg);
-}
-
-#wx-header-help:hover {
-    background: var(--bs-gray-800);
-}
-
+#wx-header-notifications,
+#wx-header-help,
 #wx-header-settings {
-    color: var(--bs-body-bg);
+    color: var(--wx-body-bg);
 }
-
-#wx-header-settings:hover {
-    background: var(--bs-gray-800);
+@scope ([data-wx-theme="dark"]) to ([data-wx-theme="light"]) {
+:scope #wx-header-notifications,
+:scope #wx-header-help,
+:scope #wx-header-settings {
+    color: var(--wx-body-color);
+}
 }
 
 #wx-toast {
-    background: var(--bs-warning);
-    color: var(--bs-body-color);
+    background: var(--wx-warning);
+    color: var(--wx-body-color);
 }
-
-[data-bs-theme="dark"] #wx-toast {
+@scope ([data-wx-theme="dark"]) to ([data-wx-theme="light"]) {
+:scope #wx-toast {
     color: #000;
+}
 }
 
 #wx-breadcrumb {
@@ -93,21 +123,21 @@
 }
 
 #wx-split-gutter {
-    background-color: var(--bs-border-color) !important;
+    background-color: var(--wx-border-color) !important;
 }
 
 #wx-split-p2 {
-    background: linear-gradient( 180deg, var(--bs-light) 0%, var(--bs-gray-200) 100% );
+    background: linear-gradient(180deg, var(--wx-tertiary-bg), var(--wx-secondary-bg));
 }
 
-html[data-bs-theme="dark"] #wx-split-p2 {
-    background: linear-gradient(150deg, var(--bs-dark) 50%, #120348 100%)
+html[data-wx-theme="dark"] #wx-split-p2 {
+    background: linear-gradient(150deg, var(--wx-dark) 50%, var(--wx-app-splash) 100%)
 }
 
 #wx-content {
 }
 
-html[data-bs-theme="dark"] #wx-content {
+html[data-wx-theme="dark"] #wx-content {
 }
 
 #wx-content-toolbar {
@@ -125,23 +155,22 @@ html[data-bs-theme="dark"] #wx-content {
 #wx-content-main-headline h2 {
     flex: 1;
     text-align: left;
+    /* the prose rule for a heading inside running text does not apply to the page
+       title: it opens the region and has nothing above it to be separated from */
+    margin-top: 0;
 }
 
 #wx-content-main-headline-more {
-    background: var(--bs-body-bg);
+    background: var(--wx-body-bg);
 }
 
 #wx-content-property {
-    background: var(--bs-tertiary-bg);
+    background: var(--wx-tertiary-bg);
 }
 
 #wx-footer {
 }
 
 .wx-login {
-    background: linear-gradient( 180deg, var(--bs-light) 0%, var(--bs-gray-200) 100% );
-}
-
-html[data-bs-theme="dark"] .wx-login {
-    background: linear-gradient(150deg, var(--bs-dark) 50%, #120348 100%)
+    background: linear-gradient(180deg, var(--wx-tertiary-bg), var(--wx-secondary-bg));
 }

@@ -19,9 +19,22 @@ namespace WebExpress.WebApp.WebRestApi
         };
 
         /// <summary>
+        /// Gets or sets the available status catalog. Null disables status selection for this board.
+        /// </summary>
+        [JsonPropertyName("statuses")]
+        public IEnumerable<RestApiKanbanStatus> Statuses { get; set; }
+
+        /// <summary>
         /// Gets or sets the title associated with the Kanban board.
         /// </summary>
         public string Title { get; set; }
+
+        /// <summary>
+        /// Gets or sets the active WQL filter of the board, echoed back so the
+        /// settings dialog can seed its filter field with the current value.
+        /// </summary>
+        [JsonPropertyName("filter")]
+        public string Filter { get; set; }
 
         /// <summary>
         /// Gets or sets the collection of columns defined for the Kanban board.
@@ -52,6 +65,8 @@ namespace WebExpress.WebApp.WebRestApi
             var data = new
             {
                 title = Title,
+                filter = Filter,
+                statuses = Statuses,
                 columns = Columns,
                 swimlanes = Swimlanes,
                 items = Cards

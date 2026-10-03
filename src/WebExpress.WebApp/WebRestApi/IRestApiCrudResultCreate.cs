@@ -3,7 +3,7 @@
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Represents the create result of a REST API CRUD operation.
+    /// Contract for the result returned after a REST API create (CRUD) operation.
     /// </summary>
     public interface IRestApiCrudResultCreate : IRestApiResult
     {

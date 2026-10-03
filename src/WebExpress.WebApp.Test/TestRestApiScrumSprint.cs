@@ -50,7 +50,7 @@ namespace WebExpress.WebApp.Test
             {
                 Id = Guid.Parse("20000000-0000-0000-0000-000000000001"),
                 Type = "story",
-                Icon = "fas fa-bookmark",
+                Icon = "wx-icon-light wx-icon-light-bookmark",
                 Key = "MVP-1",
                 Title = "Finalize multi-tenant authentication",
                 Priority = "P1",
@@ -63,7 +63,7 @@ namespace WebExpress.WebApp.Test
             {
                 Id = Guid.Parse("20000000-0000-0000-0000-000000000002"),
                 Type = "task",
-                Icon = "fas fa-check",
+                Icon = "wx-icon-light wx-icon-light-check",
                 Key = "MVP-2",
                 Title = "Add smoke tests for the customer portal",
                 Priority = "P1",
@@ -76,7 +76,7 @@ namespace WebExpress.WebApp.Test
             {
                 Id = Guid.Parse("20000000-0000-0000-0000-000000000003"),
                 Type = "bug",
-                Icon = "fas fa-bug",
+                Icon = "wx-icon-light wx-icon-light-bug",
                 Key = "MVP-3",
                 Title = "Fix invoice export failure",
                 Priority = "P2",
@@ -89,7 +89,7 @@ namespace WebExpress.WebApp.Test
             {
                 Id = Guid.Parse("20000000-0000-0000-0000-000000000004"),
                 Type = "spike",
-                Icon = "fas fa-bolt",
+                Icon = "wx-icon-light wx-icon-light-bolt",
                 Key = "MVP-4",
                 Title = "Evaluate approach for role-based dashboards",
                 Priority = "P3",

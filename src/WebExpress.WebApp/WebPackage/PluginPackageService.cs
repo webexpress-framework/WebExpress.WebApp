@@ -93,6 +93,12 @@ namespace WebExpress.WebApp.WebPackage
                     );
                 }
 
+                var builtIn = RejectBuiltIn(package);
+                if (builtIn is not null)
+                {
+                    return builtIn;
+                }
+
                 var validation = ValidateUpload(package.File, data);
                 if (!validation.Success)
                 {
@@ -140,7 +146,13 @@ namespace WebExpress.WebApp.WebPackage
                     );
                 }
 
-                if (package.State == PackageCatalogeItemState.Active)
+                var builtIn = RejectBuiltIn(package);
+                if (builtIn is not null)
+                {
+                    return builtIn;
+                }
+
+                if (package.State == PackageCatalogItemState.Active)
                 {
                     return PluginPackageOperationResult.Ok
                     (
@@ -160,7 +172,7 @@ namespace WebExpress.WebApp.WebPackage
 
                     package.Id = metadata?.Id ?? package.Id;
                     package.Metadata = metadata?.Metadata ?? package.Metadata;
-                    package.State = PackageCatalogeItemState.Active;
+                    package.State = PackageCatalogItemState.Active;
 
                     Invoke(packageManager, "ExtractPackage", package);
                     Invoke(packageManager, "RegisterPackage", package);
@@ -205,7 +217,13 @@ namespace WebExpress.WebApp.WebPackage
                     );
                 }
 
-                if (package.State == PackageCatalogeItemState.Disable)
+                var builtIn = RejectBuiltIn(package);
+                if (builtIn is not null)
+                {
+                    return builtIn;
+                }
+
+                if (package.State == PackageCatalogItemState.Disable)
                 {
                     return PluginPackageOperationResult.Ok
                     (
@@ -220,7 +238,7 @@ namespace WebExpress.WebApp.WebPackage
                     Invoke(packageManager, "DeactivateAndUnregisterPackage", package);
                     Invoke(packageManager, "RemoveExtractedDirectory", package);
 
-                    package.State = PackageCatalogeItemState.Disable;
+                    package.State = PackageCatalogItemState.Disable;
 
                     Invoke(packageManager, "SaveCatalog");
                     _componentHub?.SitemapManager.Refresh();
@@ -259,11 +277,17 @@ namespace WebExpress.WebApp.WebPackage
                     );
                 }
 
+                var builtIn = RejectBuiltIn(package);
+                if (builtIn is not null)
+                {
+                    return builtIn;
+                }
+
                 try
                 {
                     var packageManager = _componentHub?.PackageManager;
 
-                    if (package.State == PackageCatalogeItemState.Active)
+                    if (package.State == PackageCatalogItemState.Active)
                     {
                         Invoke(packageManager, "DeactivateAndUnregisterPackage", package);
                     }
@@ -299,17 +323,39 @@ namespace WebExpress.WebApp.WebPackage
         }
 
         /// <summary>
-        /// Finds a package by id.
+        /// Finds a package by id, the installed ones as well as the plugins that ship with the
+        /// application.
         /// </summary>
+        /// <remarks>
+        /// Resolving through the package manager rather than through the catalog is what lets a
+        /// request that addresses a built-in plugin be answered with the reason it cannot be
+        /// carried out instead of with "not found".
+        /// </remarks>
         /// <param name="packageId">The package id.</param>
         /// <returns>The package catalog item or null.</returns>
         public PackageCatalogItem FindPackage(string packageId)
         {
-            return _componentHub
-                .PackageManager
-                .Catalog
-                .Packages
-                .FirstOrDefault(x => x is not null && string.Equals(x.Id, packageId, StringComparison.OrdinalIgnoreCase));
+            return _componentHub?.PackageManager?.GetPackage(packageId);
+        }
+
+        /// <summary>
+        /// Rejects an operation that was addressed to a plugin shipping with the application.
+        /// </summary>
+        /// <remarks>
+        /// Such a plugin lives in the application directory and is loaded into the default context;
+        /// it can neither be replaced nor removed while the process runs. The refusal is issued
+        /// before the first step so the request cannot leave the plugin half unregistered.
+        /// </remarks>
+        /// <param name="package">The addressed package.</param>
+        /// <returns>The failure result, or null when the package may be operated on.</returns>
+        private static PluginPackageOperationResult RejectBuiltIn(PackageCatalogItem package)
+        {
+            return package is not null && package.BuiltIn
+                ? PluginPackageOperationResult.Failed
+                (
+                    I18N.Translate("webexpress.webapp:setting.plugin.operation.error.builtin", package.Id)
+                )
+                : null;
         }
 
         /// <summary>

@@ -3,31 +3,35 @@
  * webexpress.webui.DropdownCtrl with the persistence semantics required by
  * webexpress.webapp.WebRestApi.RestApiTheme:
  *
- * - On initialisation fetches the theme list via GET <data-uri>; the
+ * - On initialisation fetches the theme list via GET on the data service; the
  *   response is the same { items, selected } envelope RestApiTheme emits.
  * - The selected theme (or the first item when nothing is selected
  *   server-side) is mirrored as the dropdown's button label so exactly one
  *   theme is always visible to the user.
  * - Clicking a menu item PUTs v=<themeId> to the same REST endpoint and
- *   reloads the page once the server has updated the wx-theme cookie. The
- *   reload lets VisualTreeWebApp.UseThemeFromRequest pick the new cookie
- *   up server-side and re-render with the chosen theme.
+ *   reloads the page once the application has persisted the selection.
+ *   The host application resolves the selected theme on the next render.
  *
  * Registered under the class selector wx-webapp-dropdown-theme.
  */
-webexpress.webapp.DropdownTheme = class extends webexpress.webui.DropdownCtrl {
+webexpress.webapp.DropdownThemeCtrl = class extends webexpress.webui.DropdownCtrl {
     /**
      * Construct the controller and trigger the initial theme fetch.
      * @param {HTMLElement} element - the host DOM element.
      */
     constructor(element) {
+        // consume the island before the base constructor parses the children
+        // as menu items; the read caches on the element
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+
         super(element);
 
-        // configuration
-        this._apiEndpoint = element.dataset.uri || null;
+        // configuration: the endpoint is authored in C# through the wx-service island
+        this._service = islandServices.data || null;
+        this._apiEndpoint = this._service ? this._service.baseUri : null;
         this._reloadOnChange = element.dataset.reloadOnChange !== "false";
 
-        // currently active theme id (mirrors the wx-theme cookie); used both
+        // currently active theme id (mirrors the server selection); used both
         // for the dropdown label and to suppress no-op PUTs when the user
         // re-selects the already active theme.
         this._activeId = null;
@@ -55,12 +59,12 @@ webexpress.webapp.DropdownTheme = class extends webexpress.webui.DropdownCtrl {
 
     /**
      * Fetches the theme list from the configured endpoint and populates the
-     * dropdown menu. Marks the cookie-selected theme as the dropdown label
+     * dropdown menu. Marks the server-selected theme as the dropdown label
      * so the user can always see which theme is active.
      * @returns {Promise<void>}
      */
     async _fetchThemes() {
-        const res = await fetch(this._apiEndpoint, {
+        const res = await webexpress.webapp.ServiceRegistry.request(this._apiEndpoint, {
             method: "GET",
             headers: { "Accept": "application/json" },
             credentials: "same-origin"
@@ -69,20 +73,14 @@ webexpress.webapp.DropdownTheme = class extends webexpress.webui.DropdownCtrl {
             throw new Error("http error " + res.status);
         }
 
-        const json = await res.json();
-        const rawItems = Array.isArray(json && json.items) ? json.items : [];
-        const selected = (json && typeof json.selected === "string" && json.selected.length > 0)
-            ? json.selected
-            : null;
+        const json = res.data;
+        const themes = webexpress.webapp.dropdownThemeModel.normalizeThemes(json);
+        const items = themes.items;
 
-        // map each raw item to the structure the base DropdownCtrl renderer
-        // expects (see _createMenuItem in webexpress.webui.dropdown.js).
-        const items = rawItems.map((it) => this._mapItem(it));
-
-        // pick the active theme: cookie selection wins, otherwise the first
+        // pick the active theme: server selection wins, otherwise the first
         // item is chosen so the dropdown is never blank.
         const fallback = items.length > 0 ? items[0].id : null;
-        this._activeId = selected || fallback;
+        this._activeId = themes.selected || fallback;
 
         // re-render with the live items and the active theme as the label.
         const activeItem = items.find((it) => it.id === this._activeId) || null;
@@ -100,22 +98,12 @@ webexpress.webapp.DropdownTheme = class extends webexpress.webui.DropdownCtrl {
      * @returns {Object} normalised menu item.
      */
     _mapItem(apiItem) {
-        const id = apiItem && apiItem.id ? String(apiItem.id) : null;
-        const text = (apiItem && (apiItem.content || apiItem.name || apiItem.label || apiItem.title)) || id || "";
-        return {
-            id: id,
-            uri: "javascript:void(0);",
-            text: text,
-            icon: apiItem && apiItem.icon ? apiItem.icon : null,
-            image: apiItem && apiItem.image ? apiItem.image : null,
-            data: [],
-            aria: []
-        };
+        return webexpress.webapp.dropdownThemeModel.mapItem(apiItem);
     }
 
     /**
      * Sends the chosen theme id to the REST endpoint via PUT and reloads
-     * the page once the server has updated the cookie.
+     * the page once the server has persisted the selection.
      * @param {string} themeId - id chosen by the user.
      * @param {string} themeLabel - label to surface as the dropdown text while waiting.
      * @returns {void}
@@ -133,7 +121,7 @@ webexpress.webapp.DropdownTheme = class extends webexpress.webui.DropdownCtrl {
         const body = new URLSearchParams();
         body.set("v", themeId);
 
-        fetch(this._apiEndpoint, {
+        webexpress.webapp.ServiceRegistry.request(this._apiEndpoint, {
             method: "PUT",
             headers: {
                 "Accept": "application/json",
@@ -156,4 +144,4 @@ webexpress.webapp.DropdownTheme = class extends webexpress.webui.DropdownCtrl {
 };
 
 // register the class in the controller
-webexpress.webui.Controller.registerClass("wx-webapp-dropdown-theme", webexpress.webapp.DropdownTheme);
+webexpress.webui.Controller.registerClass("wx-webapp-dropdown-theme", webexpress.webapp.DropdownThemeCtrl);

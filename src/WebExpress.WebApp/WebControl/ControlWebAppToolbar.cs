@@ -10,7 +10,7 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Represents a toolbar control for a web application.
+    /// Renders a toolbar of a WebApp page, holding action buttons and controls.
     /// </summary>
     public class ControlWebAppToolbar : ControlToolbar, IControlWebAppToolbar
     {
@@ -59,6 +59,12 @@ namespace WebExpress.WebApp.WebControl
             : base(id)
         {
             Padding = _ => new PropertySpacingPadding(PropertySpacing.Space.Null);
+            // the toolbar of the page sits above the main landmark rather than in it; as a
+            // named region it is a landmark of its own, so no page content is left outside.
+            // a region without a name is no landmark at all, and the generic toolbar name
+            // would not tell it apart from the toolbars inside the content
+            Role = _ => "region";
+            Label = _ => "webexpress.webapp:toolbar.label";
         }
 
         /// <summary>

@@ -1,16 +1,54 @@
-- name: JavaScript Components
+﻿- name: JavaScript Components
   href: index.md
+- name: Binds
+  href: bind.md
 - name: CollaborativeCtrl
   href: collaborative.md
 - name: CommentCtrl
   href: comment.md
+- name: DashboardCtrl
+  href: dashboard.md
+- name: DnfCtrl / InputDnfCtrl
+  href: dnf.md
+- name: EditorFormCtrl
+  href: editor.form.md
+- name: FeedCtrl
+  href: feed.md
+- name: FileViewCtrl
+  href: file.view.md
+- name: GanttCtrl
+  href: gantt.md
+- name: GraphViewerCtrl
+  href: graph.viewer.md
+- name: InputCascadingCtrl
+  href: cascading.md
+- name: RelationViewCtrl
+  href: relation.view.md
+- name: RelationEditorCtrl
+  href: relation.editor.md
 - name: RestFormCtrl
   href: form.md
 - name: RestFormEditorCtrl
   href: form-editor.md
-- name: InputSelectionTheme
+- name: DropdownThemeCtrl
   href: theme-selector.md
-- name: ObserverCtrl
-  href: observer.md
+- name: PermissionCtrl
+  href: permission.md
+- name: ScheduleCtrl
+  href: schedule.md
+- name: SearchSuggestionCtrl
+  href: search.suggestion.md
+- name: WatcherCtrl
+  href: watcher.md
 - name: TabCtrl
   href: tab.md
+- name: TagCtrl
+  href: tag.md
+- name: TrafficLightCtrl
+  href: traffic-light.md
+- name: StatusTaskCtrl
+  href: status-task.md
+- name: ScrumTeamCtrl
+  href: scrum.team.md
+- name: ScrumVelocityCtrl
+  href: scrum.velocity.md

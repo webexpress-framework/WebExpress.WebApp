@@ -34,3 +34,71 @@
     justify-content: center;
     padding: 0.5em;
 }
+
+/* The search box with endpoint backed suggestions. It is sized for the application header,
+   where it sits as a real input rather than behind a dropdown button. */
+.wx-search.wx-webapp-search-suggestion {
+    width: 22em;
+    max-width: 100%;
+}
+
+/* the box keeps the page background, so it reads as an input on a coloured navbar */
+.wx-search.wx-webapp-search-suggestion > div:nth-child(1) {
+    background-color: var(--wx-body-bg);
+}
+
+/* the menu grows with its suggestions instead of standing open at a fixed height */
+.wx-search.wx-webapp-search-suggestion > div:nth-child(2) {
+    height: auto;
+    max-height: 26em;
+    min-width: 22em;
+    max-width: 90vw;
+    resize: none;
+}
+
+.wx-search.wx-webapp-search-suggestion > div:nth-child(2) > ul {
+    height: auto;
+    max-height: 22em;
+    overflow-y: auto;
+}
+
+/* the whole row is the target, and a long summary is cut rather than wrapped */
+.wx-search.wx-webapp-search-suggestion > div:nth-child(2) > ul > li > a {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wx-search.wx-webapp-search-suggestion > div:nth-child(2) > ul > li.active,
+.wx-search.wx-webapp-search-suggestion > div:nth-child(2) > ul > li:hover {
+    background-color: var(--wx-tertiary-bg);
+}
+
+/* group captions and the empty state are read, not chosen */
+.wx-search.wx-webapp-search-suggestion > div:nth-child(2) > ul > li.dropdown-header,
+.wx-search.wx-webapp-search-suggestion > div:nth-child(2) > ul > li.wx-search-empty {
+    color: var(--wx-secondary-color);
+    cursor: default;
+}
+
+.wx-search.wx-webapp-search-suggestion > div:nth-child(2) > ul > li.dropdown-header:hover,
+.wx-search.wx-webapp-search-suggestion > div:nth-child(2) > ul > li.wx-search-empty:hover {
+    background-color: transparent;
+}
+
+.wx-search.wx-webapp-search-suggestion > div:nth-child(2) > ul > li.wx-search-empty {
+    padding: 0.7em;
+}
+
+.wx-search.wx-webapp-search-suggestion > div:nth-child(2) > footer {
+    padding: 0.5em 0.7em;
+}
+
+/* the header has to hold the navigation as well, so the box gives way on narrow viewports */
+@media (max-width: 1200px) {
+    .wx-search.wx-webapp-search-suggestion {
+        width: 14em;
+    }
+}

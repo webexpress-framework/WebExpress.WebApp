@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebRestApi;
+using WebExpress.WebUI.WebControl;
 
 namespace WebExpress.WebApp.Test.WebRestApi
 {
@@ -39,10 +40,12 @@ namespace WebExpress.WebApp.Test.WebRestApi
                         Id = "tab-1",
                         Title = "Tab 1",
                         Name = "Name 1",
-                        Icon = "fas fa-ship",
+                        Icon = "wx-icon-light wx-icon-light-ship",
                         TemplateId = "template-1",
                         Uri = "/api/tab/1",
                         Color = "text-primary",
+                        Badge = "12",
+                        BadgeColor = new PropertyColorBackgroundBadge(TypeColorBackgroundBadge.Danger),
                         PrimaryAction = "open",
                         PrimaryTarget = "self",
                         Binding = new
@@ -73,10 +76,15 @@ namespace WebExpress.WebApp.Test.WebRestApi
             Assert.Equal("tab-1", first.GetProperty("id").GetString());
             Assert.Equal("Tab 1", first.GetProperty("label").GetString());
             Assert.Equal("Name 1", first.GetProperty("name").GetString());
-            Assert.Equal("fas fa-ship", first.GetProperty("icon").GetString());
+            Assert.Equal("wx-icon-light wx-icon-light-ship", first.GetProperty("icon").GetString());
             Assert.Equal("template-1", first.GetProperty("templateId").GetString());
             Assert.Equal("/api/tab/1", first.GetProperty("uri").GetString());
             Assert.Equal("text-primary", first.GetProperty("color").GetString());
+
+            // the badge carries the count; the typed badge color collapses into
+            // its css class
+            Assert.Equal("12", first.GetProperty("badge").GetString());
+            Assert.Equal("text-bg-danger", first.GetProperty("badgeColor").GetString());
             Assert.Equal("open", first.GetProperty("primaryAction").GetString());
             Assert.Equal("self", first.GetProperty("primaryTarget").GetString());
             Assert.Equal("Tab 1", first.GetProperty("binding").GetProperty("title").GetString());
@@ -120,6 +128,10 @@ namespace WebExpress.WebApp.Test.WebRestApi
                 : newTab.GetProperty("title").GetString();
             Assert.Equal("New Tab", newTabTitle);
             Assert.Equal("monkeyTemplate", newTab.GetProperty("templateId").GetString());
+
+            // the badge survives the create path, where the interface is
+            // serialized instead of the concrete view
+            Assert.Equal("1", newTab.GetProperty("badge").GetString());
         }
     }
 }

@@ -1,7 +1,7 @@
 ﻿namespace WebExpress.WebApp.WebTheme
 {
     /// <summary>
-    /// Represents the theme web application.
+    /// The default theme of the WebApp, defining its overall look and feel.
     /// </summary>
     public class ThemeWebApp : IThemeWebApp
     {

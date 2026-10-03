@@ -7,7 +7,7 @@
  * a designer canvas pane (left) and a properties panel pane (right). The
  * splitter handle lets the user drag the divider; double-clicking it
  * collapses / expands the properties pane. The split state persists across
- * reloads via a cookie keyed by the editor id.
+ * reloads via localStorage keyed by the editor id.
  *
  * Properties panel
  * ----------------
@@ -20,10 +20,17 @@
  *
  * REST integration
  * ----------------
- * A single `data-uri` returns the workflow definition as a
- * `RestApiWorkflowResult` payload. The same response carries the catalogs of
- * available guards, validations and post functions consumed by the rule
- * pickers, so no additional endpoints are needed.
+ * A single GET on the data service, keyed by the workflow id from the state
+ * island, returns the workflow definition as a `RestApiWorkflowResult`
+ * payload. The same response carries the catalogs of available guards,
+ * validations and post functions consumed by the rule pickers, so no
+ * additional endpoints are needed.
+ *
+ * It is ViewState-capable: when the host carries a data-wx-resource binding the
+ * workflow is a slice of an enclosing ViewState, so the editor
+ * subscribes to that slice and the ViewState owns the central load; the debounced
+ * autosave still persists through the ViewState's data service. Without a binding
+ * the editor owns its own wx-service island and loads itself (standalone).
  *
  * Mutations are debounced and persisted automatically.
  */
@@ -31,14 +38,31 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
 
     // configuration
     _restUri = "";
+    _workflowId = "";
 
     // cached catalogs sourced from the same REST response
     _catalog = { guards: [], validations: [], postfunctions: [] };
 
     // request state
     _isLoading = false;
-    _abortController = null;
+    _destroyed = false;
     _saveDebounce = null;
+    _saveInFlight = false;
+    _savePending = false;
+    _savePaused = false;
+    _saveConflict = false;
+
+    // the persistence state the status indicator reflects: "idle" before the
+    // first change, "dirty" while edits are queued, "saving", "saved" and
+    // "error" (a failed save or a failed load, both offering a retry)
+    _saveState = "idle";
+    _lastSavedAt = null;
+    _statusMessage = null;
+    _statusEl = null;
+    _statusIcon = null;
+    _statusText = null;
+    _statusRetry = null;
+    _retryAction = null;
 
     // workflow header metadata kept for round-tripping
     _meta = { id: "", name: "", state: "", version: "", description: "" };
@@ -59,21 +83,115 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
      * @param {HTMLElement} element - host element with the wx-webapp-workflow-editor class.
      */
     constructor(element) {
+        // consume the islands before the base constructor clears the host;
+        // the reads cache on the element, so they survive the dom rebuild
+        const state = webexpress.webapp.Data.readState(element);
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+
         super(element);
 
-        const ds = element.dataset;
-        this._restUri = ds.uri || "";
+        // the workflow id is authored in C# through the state island and rides
+        // along as the logical id query parameter on load and save; the wire
+        // name stays with the service descriptor
+        this._workflowId = typeof state.id === "string" ? state.id : "";
 
-        element.removeAttribute("data-uri");
+        // the debounced autosave PUT flows through this rest service
+        this._service = islandServices.data;
+        this._restUri = this._service ? this._service.baseUri : "";
+
+        // the resource a ViewState renders; when present the workflow is loaded
+        // centrally by the enclosing ViewState, when absent the control loads
+        // itself (standalone)
+        this._resource = (element.dataset && element.dataset.wxResource) || null;
+
         element.classList.add("wx-workflow-editor");
 
         this._buildLayout();
         this._setupShortcuts();
 
-        if (this._restUri !== "") {
+        if (this._resource) {
+            this._attachToViewState(element);
+        } else if (this._restUri !== "") {
             this._receiveData();
         }
 
+        this._renderPropsPanel();
+    }
+
+    /**
+     * Attaches the editor to the enclosing ViewState and renders its
+     * resource slice. The ViewState owns the central load and the service, while
+     * the debounced autosave still persists through the ViewState's data service.
+     * @param {HTMLElement} element - The host element.
+     */
+    _attachToViewState(element) {
+        const viewStateId = (element.dataset && element.dataset.wxViewstate) || null;
+
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
+            this._viewState = viewState;
+
+            const service = viewState.serviceForResource(this._resource);
+            if (service) {
+                this._service = service;
+                this._restUri = service.baseUri;
+            }
+
+            const unsubscribe = viewState.watch((state) => viewState.slice(this._resource, state), (slice) => this._applySlice(slice));
+            (element._wxCleanup = element._wxCleanup || []).push(unsubscribe);
+
+            this._applySlice(viewState.slice(this._resource));
+        });
+    }
+
+    /**
+     * Renders a resource slice the ViewState loaded centrally. A slice arriving
+     * while an autosave is queued, running or awaiting recovery is skipped,
+     * because re-applying the server model would clobber local edits; the
+     * next ViewState re-query delivers the saved state.
+     * @param {object} slice - The resource slice { items, total, data, loading, error }.
+     */
+    _applySlice(slice) {
+        slice = slice || {};
+        if (this._destroyed) {
+            return;
+        }
+
+        this._isLoading = !!slice.loading;
+        this._element.classList.toggle("placeholder-glow", this._isLoading);
+
+        // a server refresh must not replace changes awaiting acknowledgement
+        if (this._saveInFlight || this._savePending || this._savePaused || slice.loading) {
+            return;
+        }
+
+        // a ViewState that failed to load its slice would otherwise leave the
+        // canvas empty and silent
+        if (slice.error) {
+            this._element.classList.remove("placeholder-glow");
+            this._isLoading = false;
+            this._statusMessage = this._i18n("webexpress.webui:workflow.editor.status.load.error");
+            this._setSaveState("error", () => {
+                if (this._viewState && typeof this._viewState.reload === "function") {
+                    this._viewState.reload(this._resource);
+                } else {
+                    this._receiveData();
+                }
+            });
+            return;
+        }
+
+        if (!slice.data || this._saveDebounce !== null) {
+            return;
+        }
+
+        const response = slice.data;
+        this._meta = webexpress.webapp.workflowEditorModel.normalizeMeta(response);
+        this._catalog = webexpress.webapp.workflowEditorModel.normalizeCatalog(response);
+        this.model = this._fromWireFormat(response);
+        this._element.classList.remove("placeholder-glow");
+        this._isLoading = false;
+        this._statusMessage = null;
+        this._setSaveState("idle");
         this._renderPropsPanel();
     }
 
@@ -109,13 +227,15 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
             toggle.id = "btn-toggle-props";
             toggle.className = "wx-simple-btn wx-workflow-editor-toggle";
             toggle.title = this._i18n("webexpress.webui:workflow.editor.props.toggle");
-            toggle.innerHTML = `<i class="fas fa-columns" aria-hidden="true"></i>`;
+            this._appendIcon(toggle, this._iconClass("columns"));
             toggle.onclick = (e) => {
                 e.stopPropagation();
                 this._togglePropsPane();
             };
             this._toolbarContainer.appendChild(toggle);
             this._toggleBtn = toggle;
+
+            this._buildStatusIndicator();
         }
 
         // properties pane (right side)
@@ -125,6 +245,8 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
         this._propsHost = document.createElement("div");
         this._propsHost.className = "wx-workflow-editor-props-host";
         this._propsPane.appendChild(this._propsHost);
+
+        this._buildPropsActions();
 
         // split host - registered class name `wx-webui-split` is auto-replaced by
         // the controller registry once appended to the DOM.
@@ -141,6 +263,168 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
         this._splitHost.appendChild(this._propsPane);
 
         host.appendChild(this._splitHost);
+    }
+
+    /**
+     * Narrows the inherited toolbar: creating, editing and deleting all move
+     * into the properties panel.
+     *
+     * The panel is where those actions belong here - it already shows the
+     * properties of whatever is selected, so a toolbar button that "opens" them
+     * has nothing left to do; a new state is created next to the fields that
+     * will describe it, and deleting sits at the bottom of the very element it
+     * removes rather than behind an icon that acts on an invisible selection.
+     * The Delete key keeps working throughout.
+     * @returns {string[]} the action keys the toolbar keeps
+     */
+    _toolbarActions() {
+        return ["undo", "redo", "|", "export"];
+    }
+
+    /**
+     * Builds the action bar at the top of the properties pane, carrying the
+     * creation actions the toolbar no longer shows. It sits outside the panel
+     * body so a selection change does not rebuild it.
+     */
+    _buildPropsActions() {
+        const bar = document.createElement("div");
+        bar.className = "wx-workflow-editor-props-actions";
+
+        this._btnNewState = this._buildIconButton(
+            "wx-workflow-editor-btn wx-workflow-editor-btn--ghost",
+            this._iconClass("circle-plus"),
+            this._i18n("webexpress.webui:workflow.editor.actions.state"));
+        this._btnNewState.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (this._isAddEdgeMode) {
+                this._resetAddEdgeMode();
+            }
+            this._addNode();
+        });
+        bar.appendChild(this._btnNewState);
+
+        this._btnNewTransition = this._buildIconButton(
+            "wx-workflow-editor-btn wx-workflow-editor-btn--ghost",
+            this._iconClass("share-nodes"),
+            this._i18n("webexpress.webui:workflow.editor.actions.transition"));
+        this._btnNewTransition.addEventListener("click", (e) => {
+            e.stopPropagation();
+            this._toggleAddEdgeMode(!this._isAddEdgeMode);
+        });
+        bar.appendChild(this._btnNewTransition);
+
+        this._propsActions = bar;
+        this._propsPane.insertBefore(bar, this._propsHost);
+    }
+
+    /**
+     * Reflects the add-transition mode on its panel button, which is the only
+     * place that mode is now visible.
+     */
+    _updatePropsActions() {
+        if (!this._btnNewTransition) {
+            return;
+        }
+        const active = !!this._isAddEdgeMode;
+        this._btnNewTransition.classList.toggle("is-active", active);
+        this._btnNewTransition.setAttribute("aria-pressed", active ? "true" : "false");
+    }
+
+    /**
+     * Builds the persistence status indicator that lives at the end of the
+     * toolbar. Autosave is silent by nature, so without it a failed save is
+     * indistinguishable from a successful one and the user keeps editing work
+     * that never reaches the server.
+     */
+    _buildStatusIndicator() {
+        const status = document.createElement("div");
+        status.className = "wx-workflow-editor-status";
+        status.setAttribute("role", "status");
+        status.setAttribute("aria-live", "polite");
+
+        this._statusIcon = document.createElement("i");
+        this._statusIcon.setAttribute("aria-hidden", "true");
+        status.appendChild(this._statusIcon);
+
+        this._statusText = document.createElement("span");
+        this._statusText.className = "wx-workflow-editor-status__text";
+        status.appendChild(this._statusText);
+
+        this._statusRetry = document.createElement("button");
+        this._statusRetry.type = "button";
+        this._statusRetry.className = "wx-workflow-editor-status__retry";
+        this._statusRetry.textContent = this._i18n("webexpress.webui:workflow.editor.status.retry");
+        this._statusRetry.style.display = "none";
+        this._statusRetry.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (this._retryAction) {
+                this._retryAction();
+            }
+        });
+        status.appendChild(this._statusRetry);
+
+        this._statusEl = status;
+        this._toolbarContainer.appendChild(status);
+        this._renderSaveState();
+    }
+
+    /**
+     * Records the current persistence state and repaints the indicator.
+     * @param {"idle"|"dirty"|"saving"|"saved"|"error"} state - The new state.
+     * @param {Function} [retry] - The action the retry button should run.
+     */
+    _setSaveState(state, retry) {
+        this._saveState = state;
+        this._retryAction = retry || null;
+        if (state === "saved") {
+            this._lastSavedAt = new Date();
+        }
+        if (!this._destroyed) {
+            this._renderSaveState();
+        }
+    }
+
+    /**
+     * Paints the indicator for the current state. A saved state carries the
+     * time of the last successful write, so the user can tell a stale success
+     * from a fresh one.
+     */
+    _renderSaveState() {
+        if (!this._statusEl) {
+            return;
+        }
+
+        const states = {
+            idle: { key: "", icon: "circle-check", modifier: "" },
+            dirty: { key: "workflow.editor.status.dirty", icon: "pen", modifier: "--dirty" },
+            saving: { key: "workflow.editor.status.saving", icon: "arrows-rotate", modifier: "--saving" },
+            saved: { key: "workflow.editor.status.saved", icon: "circle-check", modifier: "--saved" },
+            error: { key: "workflow.editor.status.error", icon: "triangle-exclamation", modifier: "--error" }
+        };
+        const current = states[this._saveState] || states.idle;
+
+        this._statusEl.className = "wx-workflow-editor-status"
+            + (current.modifier ? " wx-workflow-editor-status" + current.modifier : "");
+        this._statusIcon.className = this._iconClass(current.icon);
+
+        let text = current.key ? this._i18n("webexpress.webui:" + current.key) : "";
+        if (this._saveState === "saved" && this._lastSavedAt) {
+            text += " " + this._lastSavedAt.toLocaleTimeString();
+        }
+        if (this._saveState === "error" && this._statusMessage) {
+            text += " (" + this._statusMessage + ")";
+        }
+        this._statusText.textContent = text;
+
+        this._statusRetry.style.display = this._saveState === "error" && this._retryAction ? "" : "none";
+    }
+
+    /**
+     * Whether edits exist that the server has not acknowledged yet.
+     * @returns {boolean} True while a save is queued, running or has failed.
+     */
+    _hasUnsavedChanges() {
+        return this._saveDebounce !== null || this._saveInFlight || this._savePending || this._saveState === "error";
     }
 
     /**
@@ -169,14 +453,24 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
      */
     _setupShortcuts() {
         this._kbHandler = (e) => {
-            if (!this._element.isConnected) {
+            if (this._destroyed || !this._element.isConnected) {
                 return;
             }
-            const tag = e.target.tagName;
-            if (["INPUT", "TEXTAREA", "SELECT"].includes(tag)) {
+
+            // Ctrl+S has to work while a property field has the focus, which is
+            // exactly where the base ownership test refuses; it is therefore
+            // scoped to the host rather than to the canvas
+            if ((e.ctrlKey || e.metaKey) && (e.key === "s" || e.key === "S")) {
+                if (e.target && e.target.nodeType === 1 && this._element.contains(e.target)) {
+                    e.preventDefault();
+                    this._flushSave();
+                }
                 return;
             }
-            if (e.target.isContentEditable) {
+
+            // everything else follows the same ownership rule as the graph
+            // shortcuts, so a second editor or a foreign form is never affected
+            if (!this._ownsKeyEvent(e)) {
                 return;
             }
 
@@ -187,21 +481,22 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
                     input.focus();
                     input.select();
                 }
-            } else if (e.key === "Escape") {
-                if (this._selectedNodeId || this._selectedEdgeId) {
-                    e.preventDefault();
-                    this._deselectAll();
-                    this._updateToolbarState();
-                    this.render();
-                }
-            } else if ((e.ctrlKey || e.metaKey) && (e.key === "s" || e.key === "S")) {
-                if (this._element.contains(e.target) || e.target === document.body) {
-                    e.preventDefault();
-                    this._flushSave();
-                }
             }
         };
-        window.addEventListener("keydown", this._kbHandler);
+        this._addWindowListener("keydown", this._kbHandler);
+
+        // a teardown flushes, but a browser navigation cannot be delayed; the
+        // user is warned instead so the pending edits are not lost silently
+        this._beforeUnloadHandler = (e) => {
+            if (!this._hasUnsavedChanges()) {
+                return undefined;
+            }
+            this._flushSave();
+            e.preventDefault();
+            e.returnValue = "";
+            return "";
+        };
+        this._addWindowListener("beforeunload", this._beforeUnloadHandler);
     }
 
     /**
@@ -215,57 +510,37 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
             return;
         }
 
-        if (this._abortController !== null) {
-            this._abortController.abort("workflow editor: request replaced");
-        }
-
-        this._abortController = new AbortController();
         this._isLoading = true;
         this._element.classList.add("placeholder-glow");
 
-        const base = window.location.origin;
-        let urlObj;
-        try {
-            urlObj = new URL(this._restUri, base);
-        } catch (e) {
-            urlObj = new URL(this._restUri, document.baseURI);
-        }
-        const fetchUrl = this._restUri.startsWith("http") ? urlObj.href : (urlObj.pathname + urlObj.search);
+        // the rest service maps the logical id to its wire name and aborts a
+        // previous in-flight load when a newer one replaces it
+        const params = this._workflowId !== "" ? { id: this._workflowId } : {};
 
-        fetch(fetchUrl, { signal: this._abortController.signal })
+        this._service.query(params)
             .then(res => {
-                if (!res.ok) {
-                    throw new Error("workflow editor: load request failed (" + res.status + ")");
+                if (this._destroyed || (res.error && res.error.kind === "abort")) {
+                    return;
                 }
-                return res.json();
-            })
-            .then(response => {
-                this._meta = {
-                    id: response.id || "",
-                    name: response.name || "",
-                    state: response.state || "",
-                    version: response.version || "",
-                    description: response.description || ""
-                };
-                this._catalog = {
-                    guards: Array.isArray(response.guards) ? response.guards : [],
-                    validations: Array.isArray(response.validations) ? response.validations : [],
-                    postfunctions: Array.isArray(response.postfunctions) ? response.postfunctions : []
-                };
+                if (!res.ok) {
+                    // a failed load leaves an empty canvas that looks like an
+                    // empty workflow; the state has to be visible and retryable
+                    this._element.classList.remove("placeholder-glow");
+                    this._isLoading = false;
+                    this._statusMessage = this._i18n("webexpress.webui:workflow.editor.status.load.error")
+                        + " " + res.status;
+                    this._setSaveState("error", () => this._receiveData());
+                    return;
+                }
+                this._statusMessage = null;
+                const response = res.data;
+                this._meta = webexpress.webapp.workflowEditorModel.normalizeMeta(response);
+                this._catalog = webexpress.webapp.workflowEditorModel.normalizeCatalog(response);
                 this.model = this._fromWireFormat(response);
                 this._element.classList.remove("placeholder-glow");
                 this._isLoading = false;
-                this._abortController = null;
+                this._setSaveState("idle");
                 this._renderPropsPanel();
-            })
-            .catch(error => {
-                if (error.name === "AbortError") {
-                    return;
-                }
-                console.error("workflow editor: load failed", error);
-                this._element.classList.remove("placeholder-glow");
-                this._isLoading = false;
-                this._abortController = null;
             });
     }
 
@@ -276,23 +551,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
      * @returns {{nodes: Array, edges: Array}}
      */
     _fromWireFormat(response) {
-        const nodesIn = Array.isArray(response.nodes)
-            ? response.nodes
-            : (Array.isArray(response.states) ? response.states : []);
-        const edgesIn = Array.isArray(response.edges)
-            ? response.edges
-            : (Array.isArray(response.transitions) ? response.transitions : []);
-
-        const nodes = nodesIn.map(n => Object.assign({}, n));
-        const edges = edgesIn.map(e => {
-            const out = Object.assign({}, e);
-            // accept the prototype's source/target alias for compatibility
-            if (out.from === undefined && out.source !== undefined) { out.from = out.source; }
-            if (out.to === undefined && out.target !== undefined) { out.to = out.target; }
-            return out;
-        });
-
-        return { nodes, edges };
+        return webexpress.webapp.workflowEditorModel.fromWireFormat(response);
     }
 
     /**
@@ -315,6 +574,8 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
      */
     _updateToolbarState() {
         super._updateToolbarState();
+        this._updatePropsActions();
+
         const sel = (this._selectedNodeId || "") + "::" + (this._selectedEdgeId || "");
         if (sel !== this._lastRenderedSelection) {
             this._lastRenderedSelection = sel;
@@ -323,9 +584,10 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
     }
 
     /**
-     * Preserves workflow-specific edge fields (description, form, guards,
-     * validators, postfunctions) which the base graph normalizer would
-     * otherwise drop because it only knows about the visual edge schema.
+     * Preserves the workflow-specific fields the base graph normalizer would
+     * otherwise drop, because it only knows about the visual schema: the state
+     * markers (isStart / isEnd) on nodes and the rule fields (description,
+     * form, guards, validators, postfunctions) on edges.
      * @param {object} model
      * @returns {{nodes: Array, edges: Array}}
      */
@@ -333,6 +595,27 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
         const normalized = super._normalizeModel(model);
         if (!model || !normalized) {
             return normalized;
+        }
+
+        const sourceNodes = Array.isArray(model.nodes)
+            ? model.nodes
+            : (Array.isArray(model.states) ? model.states : []);
+
+        if (sourceNodes.length > 0) {
+            const nodesById = new Map();
+            for (const n of sourceNodes) {
+                if (n && n.id !== undefined) {
+                    nodesById.set(n.id, n);
+                }
+            }
+            for (const n of normalized.nodes) {
+                const orig = nodesById.get(n.id);
+                if (!orig) {
+                    continue;
+                }
+                if (orig.isStart !== undefined) { n.isStart = !!orig.isStart; }
+                if (orig.isEnd !== undefined) { n.isEnd = !!orig.isEnd; }
+            }
         }
 
         const sourceEdges = Array.isArray(model.edges)
@@ -369,66 +652,125 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
      * Debounces the autosave so a burst of edits collapses into a single PUT.
      */
     _scheduleSave() {
+        if (this._destroyed) {
+            return;
+        }
+        this._savePending = true;
+        this._clearSaveDebounce();
+        if (this._saveInFlight || this._savePaused) {
+            return;
+        }
+        this._setSaveState("dirty");
+        this._saveDebounce = setTimeout(() => this._saveToServer(), 500);
+    }
+
+    /**
+     * Cancels the debounce when a queued save is consumed or must await recovery.
+     */
+    _clearSaveDebounce() {
         if (this._saveDebounce !== null) {
             clearTimeout(this._saveDebounce);
+            this._saveDebounce = null;
         }
-        this._saveDebounce = setTimeout(() => this._saveToServer(), 500);
     }
 
     /**
      * Forces a pending save to flush immediately (Ctrl+S).
      */
     _flushSave() {
-        if (this._saveDebounce !== null) {
-            clearTimeout(this._saveDebounce);
-            this._saveDebounce = null;
+        if (this._destroyed || this._saveConflict) {
+            return;
         }
+        this._savePaused = false;
         this._saveToServer();
     }
 
     /**
-     * Persists the current model state. Visual node positions are merged back
-     * into the model first so a pure drag also gets persisted.
+     * Serializes updates so each payload presents the last acknowledged version.
+     * Changes made during a request are combined into the next payload. Visual
+     * node positions are merged back before serialization so a pure drag persists.
      */
     _saveToServer() {
-        this._saveDebounce = null;
+        this._clearSaveDebounce();
         if (this._restUri === "") {
             return;
         }
-
-        for (const visualNode of (this._nodes || [])) {
-            const modelNode = this._model.nodes.find(n => n.id === visualNode.id);
-            if (modelNode) {
-                modelNode.x = visualNode.x;
-                modelNode.y = visualNode.y;
-            }
+        this._savePending = true;
+        if (this._saveInFlight || this._savePaused) {
+            return;
         }
 
-        const payload = {
-            id: this._meta.id,
-            name: this._meta.name,
-            state: this._meta.state,
-            version: this._meta.version,
-            description: this._meta.description,
-            nodes: this._model.nodes,
-            edges: this._model.edges,
-            // mirror payload using the REST wire names so backends that prefer
-            // states / transitions can read either field.
-            states: this._model.nodes,
-            transitions: this._model.edges
-        };
+        this._syncModelPositions();
 
-        fetch(this._restUri, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        })
+        const payload = webexpress.webapp.workflowEditorModel.toWirePayload(this._meta, this._model);
+        const options = this._workflowId !== "" ? { params: { id: this._workflowId } } : {};
+
+        this._saveInFlight = true;
+        this._savePending = false;
+        this._setSaveState("saving");
+
+        this._service.update(payload, options)
             .then(res => {
-                if (!res.ok) {
-                    console.warn("workflow editor: save returned " + res.status);
+                this._saveInFlight = false;
+                if (res.status === 409) {
+                    // someone else saved a newer revision; retrying the same
+                    // payload would only lose their work, so the only offer is
+                    // to reload and re-apply the edits on top
+                    this._savePending = true;
+                    this._savePaused = true;
+                    this._saveConflict = true;
+                    this._statusMessage = this._i18n("webexpress.webui:workflow.editor.status.conflict");
+                    this._setSaveState("error", () => this._reloadAfterConflict());
+                    return;
                 }
+                if (!res.ok) {
+                    this._savePending = true;
+                    this._savePaused = true;
+                    this._statusMessage = String(res.status);
+                    this._setSaveState("error", () => this._flushSave());
+                    return;
+                }
+
+                // the server hands back the version the next save has to
+                // present; without adopting it every following save conflicts
+                if (res.data && typeof res.data.version === "string") {
+                    this._meta.version = res.data.version;
+                }
+                this._statusMessage = null;
+                if (this._savePending) {
+                    this._saveToServer();
+                    return;
+                }
+                this._setSaveState("saved");
             })
-            .catch(err => console.error("workflow editor: save failed", err));
+            .catch(() => {
+                this._saveInFlight = false;
+                this._savePending = true;
+                this._savePaused = true;
+                this._statusMessage = this._i18n("webexpress.webui:workflow.editor.status.offline");
+                this._setSaveState("error", () => this._flushSave());
+            });
+    }
+
+    /**
+     * Discards the local edits and reloads the server revision after a save was
+     * rejected as conflicting. Merging two graph revisions automatically is not
+     * something the editor can do safely, so the user gets the current state
+     * back and decides what to re-apply.
+     */
+    _reloadAfterConflict() {
+        this._clearSaveDebounce();
+        this._savePending = false;
+        this._savePaused = false;
+        this._saveConflict = false;
+        this._statusMessage = null;
+        this._setSaveState("idle");
+
+        if (this._viewState && typeof this._viewState.reload === "function") {
+            this._viewState.reload(this._resource);
+            return;
+        }
+        this._receiveData();
     }
 
     /**
@@ -498,19 +840,8 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
 
         body.appendChild(this._renderPreflightStatus());
 
-        const addRow = document.createElement("div");
-        addRow.className = "wx-workflow-editor-props__add-action";
-
-        const addBtn = document.createElement("button");
-        addBtn.type = "button";
-        addBtn.className = "wx-workflow-editor-btn wx-workflow-editor-btn--ghost";
-        addBtn.innerHTML = `<i class="fas fa-plus" aria-hidden="true"></i> <span></span>`;
-        addBtn.querySelector("span").textContent =
-            this._i18n("webexpress.webui:workflow.editor.props.add.transition");
-        addBtn.addEventListener("click", () => this._beginAddTransition());
-        addRow.appendChild(addBtn);
-        body.appendChild(addRow);
-
+        // the creation actions used to be repeated here; they now sit in the
+        // panel's action bar, which is visible whatever is selected
         return props;
     }
 
@@ -532,11 +863,11 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
 
         if (issues.length === 0) {
             box.classList.add("wx-workflow-editor-preflight--ok");
-            icon.className = "fas fa-check";
+            icon.className = this._iconClass("check");
             text.textContent = this._i18n("webexpress.webui:workflow.editor.preflight.ok");
         } else {
             box.classList.add("wx-workflow-editor-preflight--warn");
-            icon.className = "fas fa-triangle-exclamation";
+            icon.className = this._iconClass("triangle-exclamation");
             text.textContent = issues[0];
         }
         icon.setAttribute("aria-hidden", "true");
@@ -549,6 +880,13 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
     /**
      * Collects model-level issues used by the preflight indicator. A non-empty
      * list disables the OK badge in the empty-state panel.
+     *
+     * Reachability is computed from the states the model marks as entry points.
+     * Starting from an arbitrary state instead - the first one in the array, as
+     * an earlier version did - makes the verdict depend on the order the server
+     * happened to serialize the states in, so the same workflow reports green
+     * or red on alternating loads. When no state is marked, that missing marker
+     * is itself the finding and reachability is not guessed at.
      * @returns {string[]}
      */
     _collectPreflightIssues() {
@@ -567,56 +905,42 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
             }
         }
 
-        if (nodes.length > 0) {
-            const reachable = new Set();
-            const queue = [nodes[0].id];
-            while (queue.length > 0) {
-                const id = queue.shift();
-                if (reachable.has(id)) {
-                    continue;
-                }
-                reachable.add(id);
-                for (const e of edges) {
-                    if (e.from === id) { queue.push(e.to); }
-                }
+        if (nodes.length === 0) {
+            return issues;
+        }
+
+        const starts = nodes.filter(n => n.isStart);
+        if (starts.length === 0) {
+            issues.push(this._i18n("webexpress.webui:workflow.editor.preflight.no.start"));
+            return issues;
+        }
+
+        const reachable = new Set();
+        const queue = starts.map(n => n.id);
+        while (queue.length > 0) {
+            const id = queue.shift();
+            if (reachable.has(id)) {
+                continue;
             }
-            if (reachable.size < nodes.length) {
-                issues.push(this._i18n("webexpress.webui:workflow.editor.preflight.unreachable"));
+            reachable.add(id);
+            for (const e of edges) {
+                if (e.from === id) { queue.push(e.to); }
             }
+        }
+        if (reachable.size < nodes.length) {
+            issues.push(this._i18n("webexpress.webui:workflow.editor.preflight.unreachable"));
+        }
+
+        // a state with no way out traps the workflow unless it is declared to
+        // be an end state
+        const withOutgoing = new Set(edges.map(e => e.from));
+        const deadEnd = nodes.find(n => !n.isEnd && !withOutgoing.has(n.id));
+        if (deadEnd) {
+            issues.push(this._i18n("webexpress.webui:workflow.editor.preflight.dead.end")
+                + ": " + (deadEnd.label || deadEnd.id));
         }
 
         return issues;
-    }
-
-    /**
-     * Inserts a brand-new transition between the first two states and selects
-     * it for editing. Used by the empty-state quick action.
-     */
-    _beginAddTransition() {
-        if (!this._model || (this._model.nodes || []).length < 2) {
-            return;
-        }
-        this._saveStateToHistory();
-
-        const [a, b] = this._model.nodes;
-        const newEdge = {
-            id: "tr_" + Date.now(),
-            from: a.id,
-            to: b.id,
-            label: this._i18n("webexpress.webui:workflow.editor.transition.new"),
-            guards: [],
-            validators: [],
-            postfunctions: []
-        };
-        this._model.edges.push(newEdge);
-
-        this._deselectAll();
-        this._selectedEdgeId = newEdge.id;
-
-        this._buildPhysics();
-        this.render();
-        this._updateToolbarState();
-        this._emitChangeSafe();
     }
 
     /**
@@ -649,6 +973,18 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
             this._i18n("webexpress.webui:workflow.editor.state.foreground"),
             node.foregroundColor || "#000000",
             (val) => this._mutateNode(node, { foregroundColor: val })));
+
+        // the markers drive the preflight, so they have to be editable here
+        // rather than only settable by the backing store
+        body.appendChild(this._renderToggleRow(
+            this._i18n("webexpress.webui:workflow.editor.state.start"),
+            !!node.isStart,
+            (val) => this._mutateNode(node, { isStart: val })));
+
+        body.appendChild(this._renderToggleRow(
+            this._i18n("webexpress.webui:workflow.editor.state.end"),
+            !!node.isEnd,
+            (val) => this._mutateNode(node, { isEnd: val })));
 
         // incoming / outgoing transitions sections
         const incoming = this._model.edges.filter(t => t.to === node.id);
@@ -728,9 +1064,9 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
             edge.color || "#000000",
             (val) => this._mutateEdge(edge, { color: val })));
 
-        body.appendChild(this._renderInputRow(
+        body.appendChild(this._renderDashRow(
             this._i18n("webexpress.webui:workflow.editor.transition.dasharray"),
-            "dasharray", edge.dasharray || "",
+            edge.dasharray || "", edge.color || "#000000",
             (val) => this._mutateEdge(edge, { dasharray: val })));
 
         body.appendChild(this._renderRuleTabs(edge));
@@ -759,7 +1095,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
             {
                 id: "validations",
                 label: this._i18n("webexpress.webui:workflow.editor.transition.validations"),
-                icon: "fas fa-check-double",
+                icon: "wx-icon-light wx-icon-light-check-double",
                 build: () => this._renderRulePanel(edge, "validators",
                     this._catalog.validations,
                     this._i18n("webexpress.webui:workflow.editor.transition.validations.add"),
@@ -769,7 +1105,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
             {
                 id: "guards",
                 label: this._i18n("webexpress.webui:workflow.editor.transition.guards"),
-                icon: "fas fa-shield-alt",
+                icon: this._iconClass("shield"),
                 build: () => this._renderRulePanel(edge, "guards",
                     this._catalog.guards,
                     this._i18n("webexpress.webui:workflow.editor.transition.guards.add"),
@@ -779,7 +1115,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
             {
                 id: "postfunctions",
                 label: this._i18n("webexpress.webui:workflow.editor.transition.postfunctions"),
-                icon: "fas fa-bolt",
+                icon: this._iconClass("bolt"),
                 build: () => this._renderRulePanel(edge, "postfunctions",
                     this._catalog.postfunctions,
                     this._i18n("webexpress.webui:workflow.editor.transition.postfunctions.add"),
@@ -867,6 +1203,53 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
         renderActivePanel();
 
         return wrapper;
+    }
+
+    /**
+     * Appends an icon element to a container.
+     * @param {HTMLElement} container - The parent element.
+     * @param {string} iconClass - The resolved icon class.
+     * @returns {HTMLElement} The icon element.
+     */
+    _appendIcon(container, iconClass) {
+        const icon = document.createElement("i");
+        icon.className = iconClass;
+        icon.setAttribute("aria-hidden", "true");
+        container.appendChild(icon);
+        return icon;
+    }
+
+    /**
+     * Appends a span carrying text to a container.
+     * @param {HTMLElement} container - The parent element.
+     * @param {string} className - The span class, or an empty string.
+     * @param {string} text - The text content.
+     * @returns {HTMLElement} The span element.
+     */
+    _appendSpan(container, className, text) {
+        const span = document.createElement("span");
+        if (className) {
+            span.className = className;
+        }
+        span.textContent = text === undefined || text === null ? "" : String(text);
+        container.appendChild(span);
+        return span;
+    }
+
+    /**
+     * Builds a button carrying an icon and a label.
+     * @param {string} className - The button class.
+     * @param {string} iconClass - The resolved icon class.
+     * @param {string} label - The button label.
+     * @returns {HTMLButtonElement} The button.
+     */
+    _buildIconButton(className, iconClass, label) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = className;
+        this._appendIcon(btn, iconClass);
+        this._appendSpan(btn, "", label);
+        return btn;
     }
 
     /**
@@ -1006,8 +1389,13 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
     }
 
     /**
-     * Renders a label / colour-picker row. The native colour input is paired
-     * with a swatch so the picker has more visual weight than a stock control.
+     * Renders a label / colour-picker row.
+     *
+     * The picker is the framework colour control (ControlFormItemInputColor and
+     * its InputColorCtrl counterpart), so the panel offers the same curated
+     * palette and the same look as every other colour field in the application
+     * instead of a bare native swatch. Where that control is not part of the
+     * bundle the row degrades to the native input rather than rendering nothing.
      * @param {string} label
      * @param {string} value
      * @param {Function} onChange
@@ -1024,6 +1412,27 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
 
         const wrap = document.createElement("span");
         wrap.className = "wx-workflow-editor-prop-row__color";
+        row.appendChild(wrap);
+
+        if (this._colorControlAvailable()) {
+            const host = document.createElement("div");
+            host.className = "wx-webui-input-color wx-workflow-editor-prop-row__color-control";
+            host.dataset.value = value;
+            wrap.appendChild(host);
+
+            // the control replaces the host content in place; going through the
+            // controller keeps its teardown wired to the controller as well
+            webexpress.webui.Controller.createInstances(host);
+
+            // subscribing only after construction: the control announces its
+            // initial value while it is being built, and treating that as an
+            // edit would dirty the model and re-enter this very render
+            host.addEventListener(webexpress.webui.Event.CHANGE_VALUE_EVENT, (e) => {
+                this._saveStateToHistory();
+                onChange(e.detail.value);
+            });
+            return row;
+        }
 
         const swatch = document.createElement("span");
         swatch.className = "wx-workflow-editor-prop-row__swatch";
@@ -1048,8 +1457,74 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
         });
         input.addEventListener("change", () => { snapshotTaken = false; });
         wrap.appendChild(input);
-        row.appendChild(wrap);
 
+        return row;
+    }
+
+    /**
+     * Renders a label / stroke-pattern row. The pattern is picked from drawn
+     * samples rather than typed as a dasharray, because the numbers say nothing
+     * about what the line will look like.
+     * @param {string} label
+     * @param {string} value - the current dasharray
+     * @param {string} color - the colour the samples are drawn in
+     * @param {Function} onChange
+     * @returns {HTMLElement}
+     */
+    _renderDashRow(label, value, color, onChange) {
+        const row = document.createElement("div");
+        row.className = "wx-workflow-editor-prop-row";
+
+        const lbl = document.createElement("span");
+        lbl.className = "wx-workflow-editor-prop-row__label";
+        lbl.textContent = label;
+        row.appendChild(lbl);
+
+        row.appendChild(this._buildDashPicker(value, color, (next) => {
+            this._saveStateToHistory();
+            onChange(next);
+        }));
+
+        return row;
+    }
+
+    /**
+     * Whether the framework colour control is present in the loaded bundle.
+     * @returns {boolean} True when the control can be instantiated.
+     */
+    _colorControlAvailable() {
+        return !!(webexpress.webui.Controller
+            && webexpress.webui.Controller.classRegistry
+            && webexpress.webui.Controller.classRegistry.has("wx-webui-input-color"));
+    }
+
+    /**
+     * Renders a label / checkbox row for a boolean state flag.
+     * @param {string} label
+     * @param {boolean} value
+     * @param {Function} onChange - (boolean) => void
+     * @returns {HTMLElement}
+     */
+    _renderToggleRow(label, value, onChange) {
+        const row = document.createElement("div");
+        row.className = "wx-workflow-editor-prop-row";
+
+        const lbl = document.createElement("span");
+        lbl.className = "wx-workflow-editor-prop-row__label";
+        lbl.textContent = label;
+        row.appendChild(lbl);
+
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.className = "wx-workflow-editor-prop-row__toggle";
+        input.checked = value;
+        input.addEventListener("change", () => {
+            this._saveStateToHistory();
+            onChange(input.checked);
+            this._renderPropsPanel();
+        });
+
+        row.appendChild(input);
         return row;
     }
 
@@ -1063,11 +1538,10 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
         const wrap = document.createElement("div");
         wrap.className = "wx-workflow-editor-props__danger";
 
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "wx-workflow-editor-btn wx-workflow-editor-btn--danger";
-        btn.innerHTML = `<i class="fas fa-trash" aria-hidden="true"></i> <span></span>`;
-        btn.querySelector("span").textContent = label;
+        const btn = this._buildIconButton(
+            "wx-workflow-editor-btn wx-workflow-editor-btn--danger",
+            this._iconClass("trash"),
+            label);
         btn.addEventListener("click", onClick);
 
         wrap.appendChild(btn);
@@ -1114,9 +1588,9 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
                 item.className = "wx-workflow-editor-prop-section__item";
                 const otherNode = this._model.nodes.find(n => n.id === e[otherSide]);
                 const otherLabel = otherNode ? (otherNode.label || otherNode.id) : "?";
-                item.innerHTML = `<i class="fas fa-arrow-right" aria-hidden="true"></i><span class="wx-workflow-editor-prop-section__item-label"></span><span class="wx-workflow-editor-prop-section__item-side"></span>`;
-                item.querySelector(".wx-workflow-editor-prop-section__item-label").textContent = e.label || e.id || "";
-                item.querySelector(".wx-workflow-editor-prop-section__item-side").textContent = otherLabel;
+                this._appendIcon(item, this._iconClass("arrow-right"));
+                this._appendSpan(item, "wx-workflow-editor-prop-section__item-label", e.label || e.id || "");
+                this._appendSpan(item, "wx-workflow-editor-prop-section__item-side", otherLabel);
                 item.addEventListener("click", () => {
                     this._deselectAll();
                     this._selectedEdgeId = e.id || "";
@@ -1155,11 +1629,10 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
         const addWrap = document.createElement("div");
         addWrap.className = "wx-workflow-editor-rule-add";
 
-        const addBtn = document.createElement("button");
-        addBtn.type = "button";
-        addBtn.className = "wx-workflow-editor-btn wx-workflow-editor-btn--ghost";
-        addBtn.innerHTML = `<i class="fas fa-plus" aria-hidden="true"></i> <span></span>`;
-        addBtn.querySelector("span").textContent = addLabel;
+        const addBtn = this._buildIconButton(
+            "wx-workflow-editor-btn wx-workflow-editor-btn--ghost",
+            this._iconClass("plus"),
+            addLabel);
         addWrap.appendChild(addBtn);
 
         const picker = document.createElement("div");
@@ -1180,9 +1653,8 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
                 const opt = document.createElement("button");
                 opt.type = "button";
                 opt.className = "wx-workflow-editor-rule-picker__item";
-                opt.innerHTML = `<span class="wx-workflow-editor-rule-picker__kind"></span><span class="wx-workflow-editor-rule-picker__text"></span>`;
-                opt.querySelector(".wx-workflow-editor-rule-picker__kind").textContent = tpl.type || tpl.kind || "rule";
-                opt.querySelector(".wx-workflow-editor-rule-picker__text").textContent = tpl.label || tpl.text || tpl.id;
+                this._appendSpan(opt, "wx-workflow-editor-rule-picker__kind", tpl.type || tpl.kind || "rule");
+                this._appendSpan(opt, "wx-workflow-editor-rule-picker__text", tpl.label || tpl.text || tpl.id);
                 opt.addEventListener("click", () => {
                     this._saveStateToHistory();
                     const next = items.slice();
@@ -1353,19 +1825,24 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
 
     /**
      * Tears down handlers so reloading the editor does not leak listeners.
+     *
+     * The pending autosave is pushed through first. Discarding the debounce
+     * timer without firing it would drop every edit made in the last 500 ms,
+     * and a single-page navigation lands inside that window as a matter of
+     * course - the user would lose work without ever being told.
      */
     destroy() {
-        if (this._kbHandler) {
-            window.removeEventListener("keydown", this._kbHandler);
-            this._kbHandler = null;
+        if (this._saveDebounce !== null || this._savePending) {
+            this._saveToServer();
         }
-        if (this._saveDebounce) {
-            clearTimeout(this._saveDebounce);
-            this._saveDebounce = null;
-        }
-        if (this._abortController) {
-            this._abortController.abort("workflow editor: destroyed");
-        }
+
+        // a load or save resolving after teardown must not touch the detached DOM
+        this._destroyed = true;
+        this._kbHandler = null;
+        this._beforeUnloadHandler = null;
+
+        // the base teardown releases every recorded listener and the frame loop
+        super.destroy();
     }
 };
 

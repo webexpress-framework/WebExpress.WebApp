@@ -4,7 +4,7 @@ using WebExpress.WebUI.WebControl;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Represents the header navigation control for the web application.
+    /// Contract for the main navigation within the WebApp header.
     /// </summary>
     public interface IControlWebAppHeaderAppNavigation : IControlPanel
     {

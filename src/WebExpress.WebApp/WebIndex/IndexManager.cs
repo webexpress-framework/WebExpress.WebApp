@@ -26,6 +26,12 @@ namespace WebExpress.WebApp.WebIndex
             _httpServerContext = httpServerContext;
             _componentHub = componentHub;
 
+            // webindex is a library rather than a plugin, so the plugin scan never reaches its
+            // language files and the wql parser's messages would surface as raw keys
+            var webIndex = typeof(WebExpress.WebIndex.IndexManager).Assembly;
+            (_componentHub?.InternationalizationManager as InternationalizationManager)?
+                .Register(webIndex, webIndex.GetName().Name.ToLower());
+
             _componentHub?.PluginManager?.AddPlugin += (s, pluginContext) =>
             {
                 Register(pluginContext);

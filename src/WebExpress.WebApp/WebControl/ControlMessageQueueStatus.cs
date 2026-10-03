@@ -30,8 +30,8 @@ namespace WebExpress.WebApp.WebControl
             return new HtmlElementTextContentDiv()
             {
                 Id = Id,
-                Class = Css.Concatenate("wx-webapp-message-queue-status", GetClasses()),
-                Style = GetStyles(),
+                Class = Css.Concatenate("wx-webapp-message-queue-status", GetClasses(renderContext)),
+                Style = GetStyles(renderContext),
                 Role = "status"
             };
         }

@@ -11,6 +11,17 @@ clone.label=Klonen
 delete.title=Löschen
 delete.label=Löschen
 
+# der Feed: Einträge untereinander, neueste zuerst, mit einer Schaltfläche, die die nächste Seite anhängt
+feed.more=Mehr anzeigen
+feed.empty=Hier ist noch nichts.
+
+# the document form: its submit publishes. What its footer bar says - the save state, the
+# view switch, the empty reading view - is painted by the dialog controller alone and is
+# carried in Assets/js/i18n.
+editorform.publish.label=Veröffentlichen
+editorform.discard.label=Verwerfen
+editorform.menu.tooltip=Weitere Aktionen
+
 confirmation.title=Bestätigung
 confirmation.description=Möchten Sie diese Aktion wirklich durchführen?
 confirmation.delete.label=Löschen
@@ -52,7 +63,11 @@ header.setting.label=Einstellungen
 header.setting.systeminformation.label=System Informationen
 
 headline.more.title=Weitere Optionen
+toolbar.label=Seitenaktionen
 toolbar.more.title=Weitere Optionen
+
+tab.empty.title=Keine Registerkarten
+tab.empty.message=Es ist noch keine Registerkarte vorhanden.
 
 status.400.title=Fehlerhafte Anfrage
 status.400.description=Der HTTP-Statuscode 400 bedeutet, dass die Anfrage des Clients fehlerhaft war und vom Server nicht verarbeitet werden konnte. Dies kann verschiedene Ursachen haben, wie z.B. ungültige Syntax, fehlende Parameter oder ungültige Datenformate. Der Server konnte die Anfrage nicht verstehen und hat daher diesen Fehlercode zurückgegeben. Bitte überprüfen Sie die Anfrage und versuchen Sie es erneut.
@@ -70,6 +85,8 @@ pagesettingmanager.resourceless=Zu der Einstellungsseite '{0}' aus dem Plugin '{
 search.label=Suche
 search.placeholder=Geben Sie hier Ihre Suchbegriffe ein.
 
+job.sessioncleaning.name=Sitzungsbereinigung
+job.sessioncleaning.description=Entfernt Sitzungen, die nicht mehr verwendet werden.
 job.sessioncleaning.process=Der Job zur Sitzungsbereinigung mit der Id '{0}'wurde ausgeführt.
 
 setting.label=Einstellungen:
@@ -107,6 +124,48 @@ setting.group.system.label=System
 setting.title.plugin.label=Plugins
 setting.title.systeminformation.label=Systeminformationen
 setting.title.log.label=Log
+setting.title.application.label=Anwendungen
+setting.title.job.label=Zeitpläne
+setting.title.restapi.label=REST-Schnittstellen
+
+setting.title.theme.label=Designs
+
+setting.theme.description=Ein Design wird von der Anwendung festgelegt, nicht vom Betreiber. Diese Seite zeigt, welche Designs eine Anwendung mitbringt und welches davon wirkt.
+setting.theme.name.label=Design
+setting.theme.mode.label=Farbschema
+setting.theme.mode.light=Hell
+setting.theme.mode.dark=Dunkel
+setting.theme.application.label=Anwendung
+setting.theme.state.label=Status
+setting.theme.state.default=Standard
+setting.theme.state.fallback=Wirksam
+setting.theme.state.stylesheet=Eigenes CSS
+setting.theme.empty.title=Keine Designs
+setting.theme.empty.message=Es ist kein Design registriert. Die Anwendungen verwenden das Erscheinungsbild des Frameworks.
+setting.application.description=Jede Anwendung ist unter einem eigenen Pfad eingebunden. Welche Seiten und Schnittstellen dort erreichbar sind, ergibt sich aus den Plugins, die für die Anwendung registriert sind.
+setting.application.name.label=Name
+setting.application.route.label=Pfad
+setting.application.plugin.label=Plugin
+setting.application.theme.label=Design
+setting.application.theme.none=Standard
+setting.application.empty.title=Keine Anwendungen
+setting.application.empty.message=Es ist keine Anwendung eingebunden. Ohne Anwendung liefert der Server keine Seiten aus.
+
+setting.job.description=Zeitpläne laufen unbeaufsichtigt im Hintergrund. Die Ausführungszeiten sind in Cron-Notation angegeben: Minute, Stunde, Tag, Monat und Wochentag.
+setting.job.name.label=Auftrag
+setting.job.plugin.label=Plugin
+setting.job.schedule.label=Ausführung
+setting.job.application.label=Anwendung
+setting.job.empty.title=Keine Zeitpläne
+setting.job.empty.message=Es ist kein Auftrag registriert. Ein Plugin meldet Aufträge über das Job-Attribut an.
+
+setting.restapi.description=Die aufgeführten Adressen sind über HTTP erreichbar. Die Version ist Teil des Pfades, sodass mehrere Fassungen einer Schnittstelle nebeneinander bestehen können.
+setting.restapi.route.label=Adresse
+setting.restapi.method.label=Methoden
+setting.restapi.version.label=Version
+setting.restapi.application.label=Anwendung
+setting.restapi.empty.title=Keine Schnittstellen
+setting.restapi.empty.message=Es ist keine REST-Schnittstelle registriert.
 
 setting.logfile.label=Logdatei:
 setting.logfile.path=Speicherort:
@@ -122,6 +181,7 @@ setting.logfile.switchon.label=Aktivieren
 setting.logfile.switchon.header=Logging aktivieren
 setting.logfile.switchon.description=Das Aktivieren ist nur bis zum nächsten Neustart gültig. Für ein dauerhaftes Aktivieren ändern Sie die Einstellungen in der Konfigurationsdatei.
 setting.logfile.switchon.success=Das Logging wurde aktiviert.
+setting.logfile.container=Die Anwendung läuft in einem Container. Das Log wird auf der Konsole ausgegeben und von der Container-Laufzeit gesammelt; es ist dort abrufbar, z. B. mit 'docker logs' oder 'kubectl logs'. Eine Logdatei lässt sich daher nicht einschalten – sie ginge mit dem Container verloren.
 
 setting.plugin.label=Installierte Anwendungen
 setting.plugin.description=
@@ -137,12 +197,15 @@ setting.plugin.upload.header=Plugin installieren
 setting.plugin.upload.help=Laden Sie hier ein Plugin in Form einer dll-Datei hoch.
 setting.plugin.upload.description=Bitte wählen Sie ein Plugin von Ihrem lokalen Gerät aus, welches Sie installieren möchten.
 setting.plugin.state.label=Status
-setting.plugin.actions.label=Aktionen
 setting.plugin.state.active=Aktiv
 setting.plugin.state.disabled=Deaktiviert
 setting.plugin.state.available=Verfügbar
 setting.plugin.package.author.label=Autor: {0}
 setting.plugin.package.file.label=Datei: {0}
+setting.plugin.builtin.label=Integriert
+setting.plugin.builtin.hint=Fester Bestandteil der Anwendung.
+setting.plugin.empty.title=Keine Plugins
+setting.plugin.empty.message=Es wurde weder ein fest integriertes Plugin noch ein installiertes Paket gefunden.
 setting.plugin.action.activate.label=Aktivieren
 setting.plugin.action.deactivate.label=Deaktivieren
 setting.plugin.action.update.label=Aktualisieren
@@ -157,6 +220,7 @@ setting.plugin.operation.activate.success=Paket '{0}' wurde aktiviert.
 setting.plugin.operation.deactivate.success=Paket '{0}' wurde deaktiviert.
 setting.plugin.operation.delete.success=Paket '{0}' wurde entfernt.
 setting.plugin.operation.error.notfound=Paket '{0}' wurde nicht gefunden.
+setting.plugin.operation.error.builtin=Plugin '{0}' ist fester Bestandteil der Anwendung und kann zur Laufzeit nicht geändert werden.
 setting.plugin.operation.error.invalidfile=Es sind nur *.wxp-Paketdateien erlaubt.
 setting.plugin.operation.error.empty=Es wurden keine Paketdaten hochgeladen.
 setting.plugin.operation.error.toobig=Das hochgeladene Paket überschreitet die zulässige Dateigröße.
@@ -231,6 +295,18 @@ setting.usermanager.user.edit.groups.selected=Ausgewählte Gruppen
 
 setting.sitemap.title=Sitemap
 setting.sitemap.label=Sitemap
+setting.sitemap.stat.page=Seiten
+setting.sitemap.stat.restapi=Schnittstellen
+setting.sitemap.stat.socket=Sockets
+setting.sitemap.stat.resource=Ressourcen
+setting.sitemap.stat.asset=Dateien
+setting.sitemap.kind.page=Seite
+setting.sitemap.kind.restapi=Schnittstelle
+setting.sitemap.kind.socket=Socket
+setting.sitemap.kind.resource=Ressource
+setting.sitemap.kind.asset=Datei
+setting.sitemap.empty.title=Keine Routen
+setting.sitemap.empty.message=Es ist keine Seite und keine Schnittstelle eingebunden.
 setting.sitemap.description=Hier können Sie die Sitemap der Webanwendung einsehen. Die Sitemap stellt die Struktur der Webseite dar und zeigt alle verfügbaren Seiten und deren Hierarchie an. Sie können die Sitemap verwenden, um schnell zu bestimmten Seiten zu navigieren oder um einen Überblick über die gesamte Webseite zu erhalten.
 
 setting.monitor.title.label=Monitor
@@ -241,16 +317,25 @@ setting.monitor.group.chart.traffic.label=Datenverkehr
 setting.monitor.dataset.requests=Anfragen
 setting.monitor.dataset.errors=Fehler
 setting.monitor.group.chart.performance.label=Leistung
-setting.monitor.dataset.avg_duration=Ø Dauer (ms)
-setting.monitor.dataset.max_duration=Max. Dauer (ms)
-setting.monitor.dataset.min_duration=Min. Dauer (ms)
+setting.monitor.dataset.avg_duration=Ø Dauer
+setting.monitor.dataset.max_duration=Max. Dauer
+setting.monitor.dataset.min_duration=Min. Dauer
 setting.monitor.chart.title=System Monitor
 setting.monitor.chart.axis.x=Zeit
 setting.monitor.chart.axis.y=Anzahl
+setting.monitor.axis.duration=Millisekunden
+setting.monitor.axis.percent=Prozent
+setting.monitor.axis.megabyte=Megabyte
 setting.monitor.currenttime=Aktuelle Systemzeit
+setting.monitor.avgresponse=Ø Antwortzeit
+setting.monitor.errorrate={0} % Fehlerquote
+setting.monitor.millisecond={0} ms
+setting.monitor.group.load.label=Aktuelle Auslastung
 setting.monitor.group.chart.resources.label=Systemressourcen
-setting.monitor.dataset.cpu=CPU Auslastung (%)
-setting.monitor.dataset.memory=Speichernutzung (MB)
+setting.monitor.dataset.cpu=CPU-Auslastung
+setting.monitor.dataset.memory=Speichernutzung
+setting.monitor.empty.title=Keine Messwerte
+setting.monitor.empty.message=Es wurden noch keine Anfragen aufgezeichnet. Die Diagramme erscheinen, sobald der Server Anfragen verarbeitet hat.
 login.title=Anmelden
 login.label=Anmelden
 login.username.label=Benutzername
@@ -259,8 +344,14 @@ login.password.label=Passwort
 login.password.placeholder=Passwort eingeben
 login.submit.label=Anmelden
 login.error.empty=Benutzername und Passwort sind erforderlich.
+login.error.format=Die Anmeldeanfrage konnte nicht gelesen werden.
 login.error.invalid=Ungültiger Benutzername oder falsches Passwort.
-login.error.locked=Zu viele fehlgeschlagene Versuche. Bitte versuchen Sie es in {0} Sekunden erneut.
+login.error.session=Die Anmeldung ist fehlgeschlagen, da die Sitzung nicht erstellt werden konnte.
+login.error.locked=Zu viele fehlgeschlagene Versuche. Ihr Konto ist vorübergehend gesperrt. Bitte versuchen Sie es später erneut.
+login.error.retryafter=Bitte warten Sie {0} Sekunden, bevor Sie sich erneut anmelden.
+login.error.ratelimit=Zu viele fehlgeschlagene Versuche. Bitte warten Sie, bevor Sie sich erneut anmelden.
+login.success=Sie wurden erfolgreich angemeldet.
+logout.success=Sie wurden erfolgreich abgemeldet.
 
 logout.title=Abgemeldet
 logout.label=Abmelden
@@ -275,3 +366,109 @@ status.401.title=Nicht autorisiert
 status.401.description=Der HTTP-Statuscode 401 bedeutet, dass die Anfrage nicht bearbeitet wurde, da gültige Authentifizierungsdaten für die Zielressource fehlen. <ul><li>Der Benutzer hat sich nicht authentifiziert.</li><li>Die angegebenen Anmeldedaten sind ungültig oder abgelaufen.</li><li>Die Authentifizierungsmethode wird nicht unterstützt.</li></ul>
 status.403.title=Verboten
 status.403.description=Der HTTP-Statuscode 403 bedeutet, dass der Server die Anfrage verstanden hat, aber die Autorisierung verweigert. Im Gegensatz zu 401 macht eine erneute Authentifizierung keinen Unterschied. <ul><li>Der authentifizierte Benutzer verfügt nicht über die erforderlichen Berechtigungen.</li><li>Der Zugriff auf die angeforderte Ressource ist eingeschränkt.</li><li>Das Benutzerkonto könnte gesperrt oder deaktiviert sein.</li></ul>
+
+# link entity: the relation types and link systems WebExpress ships natively.
+# The labels are keys rather than prose in the registry, so the same catalog
+# reads in the language of the request.
+relation.system.object.label=Objekt
+relation.system.object.description=Verknüpfung mit einem anderen Vorgang, Projekt oder Dokument der Anwendung.
+relation.system.web.label=Webseite
+relation.system.web.description=Verknüpfung mit einer Adresse außerhalb der Anwendung.
+
+relation.type.blocks.label=blockiert
+relation.type.blocks.inverse=wird blockiert von
+relation.type.blocks.description=Der Zielvorgang kann nicht abgeschlossen werden, solange dieser Vorgang offen ist.
+relation.type.causes.label=verursacht
+relation.type.causes.inverse=wird verursacht von
+relation.type.causes.description=Dieser Vorgang ist die Ursache des Zielvorgangs.
+relation.type.references.label=referenziert
+relation.type.references.inverse=wird referenziert von
+relation.type.references.description=Ein sachlicher Verweis ohne Auswirkung auf den Ablauf.
+relation.type.similar.label=ähnlich zu
+relation.type.similar.description=Beide Vorgänge beschreiben einen vergleichbaren Sachverhalt.
+relation.type.duplicate.label=Duplikat von
+relation.type.duplicate.inverse=hat Duplikat
+relation.type.duplicate.description=Dieser Vorgang beschreibt denselben Sachverhalt wie das Ziel und wird mit ihm geschlossen.
+relation.type.parent.label=übergeordnet zu
+relation.type.parent.inverse=untergeordnet zu
+relation.type.parent.description=Der Fortschritt der untergeordneten Vorgänge wird in diesem Vorgang zusammengefasst.
+relation.type.replaces.label=ersetzt
+relation.type.replaces.inverse=wird ersetzt durch
+relation.type.replaces.description=Dieses Dokument löst sein Vorgängerdokument ab.
+relation.type.weblink.label=Weblink
+relation.type.weblink.description=Verweis auf eine externe Adresse.
+
+# link validation: the codes the link endpoints answer a rejected link with.
+relation.unknown.source=Der Ausgangsvorgang der Verknüpfung existiert nicht.
+relation.unknown.target=Der Zielvorgang der Verknüpfung existiert nicht.
+relation.unknown.system=Das angegebene Linksystem ist nicht registriert.
+relation.unknown.type=Der angegebene Verknüpfungstyp ist nicht registriert.
+relation.disabled.system=Das angegebene Linksystem ist deaktiviert.
+relation.inactive.type=Der angegebene Verknüpfungstyp ist deaktiviert.
+relation.type.system.mismatch=Der Verknüpfungstyp wird von diesem Linksystem nicht angeboten.
+relation.target.class=Der Verknüpfungstyp lässt diese Zielklasse nicht zu.
+relation.self=Ein Vorgang kann nicht mit sich selbst verknüpft werden.
+relation.duplicate=Diese Verknüpfung besteht bereits.
+relation.cardinality=Die Kardinalität des Verknüpfungstyps ist bereits ausgeschöpft.
+relation.invalid.address=Bitte geben Sie eine Adresse an, die mit http:// oder https:// beginnt.
+relation.type.label.required=Bitte benennen Sie die Beziehung.
+relation.type.inverse.required=Bitte benennen Sie das Gegenstück oder markieren Sie die Beziehung als symmetrisch.
+relation.type.duplicate=Ein Verknüpfungstyp mit dieser Kennung existiert bereits.
+relation.type.in.use=Der Verknüpfungstyp wird noch verwendet und kann nur deaktiviert werden.
+
+# kanban: why the board refuses a change that was valid when the board was loaded
+kanban.refused.card=Die Karte oder ihr Ziel ist nicht mehr verfügbar.
+kanban.refused.status=Die Karte darf nicht in diesen Status wechseln. Der Workflow oder Ihre Berechtigungen haben sich geändert.
+kanban.refused.column=Die Spalte enthält einen Status, der nicht mehr verfügbar ist.
+
+setting.title.certificate.label=Zertifikate
+setting.certificate.description=Prüfen Sie die konfigurierten Zertifikate und ihren aktuellen Gültigkeitsstatus. Ändern Sie Zertifikatsreferenzen und Warnschwellen in der Serverkonfiguration und starten Sie anschließend den Server neu.
+setting.certificate.empty.title=Keine Zertifikate geladen
+setting.certificate.empty.message=Im aktuellen Bestand sind keine Zertifikate konfiguriert. Für die Entwicklung mit HTTP ist kein Zertifikat erforderlich.
+setting.certificate.summary.total=Konfiguriert: {0}
+setting.certificate.summary.usable=Verwendbar: {0}
+setting.certificate.summary.expiring=Bald ablaufend: {0}
+setting.certificate.summary.unusable=Nicht verwendbar: {0}
+setting.certificate.column.certificate=Zertifikat
+setting.certificate.column.hosts=Hostnamen
+setting.certificate.column.issuer=Aussteller
+setting.certificate.column.validfrom=Gültig ab (UTC)
+setting.certificate.column.expires=Ablaufdatum (UTC)
+setting.certificate.column.status=Status
+setting.certificate.detail.store=Speicher: {0}
+setting.certificate.detail.subject=Inhaber: {0}
+setting.certificate.detail.thumbprint=Fingerabdruck: {0}
+setting.certificate.status.valid=Gültig
+setting.certificate.status.expiringsoon=Läuft bald ab
+setting.certificate.status.expired=Abgelaufen
+setting.certificate.status.notyetvalid=Noch nicht gültig
+setting.certificate.status.missingprivatekey=Privater Schlüssel fehlt
+setting.certificate.status.invalidusage=Nicht für Serverauthentifizierung geeignet
+setting.certificate.status.hostnamemismatch=Hostname nicht abgedeckt
+setting.certificate.status.loadfailed=Laden fehlgeschlagen
+setting.certificate.unavailable=Nicht verfügbar
+setting.certificate.validation.message=Der Status beschreibt die lokale Eignung des Zertifikats. Clientvertrauen und Sperrstatus werden nicht geprüft. Nach einem expliziten Neuladen des Bestands können bestehende Listener noch andere Zertifikate verwenden. Starten Sie den Server neu, um Bereitstellungsänderungen anzuwenden.
+setting.title.security.label=Sicherheit
+setting.security.description=Übersicht der Schutzmechanismen, die der Server gerade anwendet. Die Werte stammen aus dem laufenden Server, nicht aus der Konfigurationsdatei.
+setting.security.configuration.message=Geändert werden die Einstellungen in der Serverkonfiguration (webexpress.settings.json) im Abschnitt WebExpress:Security bzw. WebExpress:Kestrel:Protocols; sie werden nach einem Neustart des Servers wirksam.
+setting.security.group.headers.label=Antwort-Header
+setting.security.group.cookies.label=Cookies
+setting.security.group.csrf.label=Schutz vor Cross-Site-Anfragen (CSRF)
+setting.security.group.protocols.label=Protokolle
+setting.security.item.csp=Content Security Policy
+setting.security.item.csp.policy=Richtlinie
+setting.security.item.hsts=HSTS (Strict-Transport-Security)
+setting.security.item.samesite=SameSite-Standard
+setting.security.item.samesite.refresh=SameSite des Refresh-Cookies (fest)
+setting.security.item.samesite.oidc=SameSite des OpenID-Connect-Cookies (fest)
+setting.security.item.csrf.status=Status
+setting.security.item.csrf.trustedorigins=Vertrauenswürdige Ursprünge
+setting.security.item.quic=QUIC (Voraussetzung für HTTP/3)
+setting.security.hsts.httpsonly=(nur über HTTPS)
+setting.security.none=Keine
+setting.security.state.enforced=Erzwungen
+setting.security.state.reportonly=Nur Bericht
+setting.security.state.active=Aktiv
+setting.security.state.off=Aus
+setting.security.state.available=Verfügbar
+setting.security.state.unavailable=Nicht verfügbar

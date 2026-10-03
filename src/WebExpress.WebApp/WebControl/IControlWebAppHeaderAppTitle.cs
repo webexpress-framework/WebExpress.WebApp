@@ -3,7 +3,7 @@
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// App title for a web app.
+    /// Contract for the application title shown in the WebApp header.
     /// </summary>
     public interface IControlWebAppHeaderAppTitle : IControlLink
     {

@@ -23,7 +23,13 @@ namespace WebExpress.WebApp.WebRestApi
     {
         private static readonly JsonSerializerOptions _jsonOptions = new()
         {
-            PropertyNameCaseInsensitive = true
+            PropertyNameCaseInsensitive = true,
+
+            // a node the editor builds itself is written as { id, kind, ... } - the
+            // discriminator is not its first property - and System.Text.Json refuses a
+            // polymorphic payload whose discriminator does not lead unless told otherwise.
+            // Without this every save that carries a new field or group answers 400
+            AllowOutOfOrderMetadataProperties = true
         };
 
         /// <summary>
@@ -70,7 +76,7 @@ namespace WebExpress.WebApp.WebRestApi
             }
             catch (Exception ex)
             {
-                return new ResponseBadRequest(new StatusMessage($"Error processing request. {ex}"));
+                return RestApiFault.BadRequest(request, ex, "Error processing request.");
             }
         }
 
@@ -117,7 +123,7 @@ namespace WebExpress.WebApp.WebRestApi
             }
             catch (Exception ex)
             {
-                return new ResponseBadRequest(new StatusMessage($"Error processing request. {ex}"));
+                return RestApiFault.BadRequest(request, ex, "Error processing request.");
             }
         }
 

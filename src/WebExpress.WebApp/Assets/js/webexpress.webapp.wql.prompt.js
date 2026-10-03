@@ -17,20 +17,34 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
      */
     constructor(element) {
         super(element);
-        // api uri for back-end operations
-        this._apiUri = this._element.dataset.uri || null;
+        // api endpoint for back-end operations, authored through the wx-service island
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+        this._service = islandServices.data || null;
+        this._apiUri = this._service ? this._service.baseUri : null;
+
+        // the form field of a named prompt, created in _initUi
+        this._field = null;
 
         // internal history state
         this._history = [];
         this._historyIndex = 0;
         this._unsentInput = "";
 
-        // suggestion cache and timing
-        this._suggestionCache = new Map();
-        this._cacheTtl = 5 * 60 * 1000;
+        // asynchronous work owned by this control
         this._debounceMs = 200;
         this._debounceTimer = null;
         this._abortController = null;
+        this._historyTimer = null;
+        this._historyAbortController = null;
+        this._validationAbortController = null;
+        this._analysisVersion = 0;
+        this._submissionVersion = 0;
+        this._historyVersion = 0;
+        this._destroyed = false;
+        this._listeners = [];
+        this._validationStatus = "unchecked";
+        this._statusMessage = null;
+        this._historyError = null;
 
         // suggestion and parsing context
         this._suggestions = [];
@@ -41,11 +55,121 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         // ui initialization
         this._initUi();
         this._attachListeners();
+        this._attachViewState(element);
 
-        // load history asynchronously after initialization
-        setTimeout(() => {
-            this._loadHistoryFromApi();
-        }, 200);
+        if (this._apiUri) {
+            // load history asynchronously after initialization
+            this._historyTimer = setTimeout(() => {
+                this._historyTimer = null;
+                this._loadHistoryFromApi();
+            }, 200);
+        } else {
+            // standalone (no wx-service): the prompt is a syntax-highlighting WQL
+            // editor only, with no server suggestions, history or validation. it
+            // is used this way inside dialogs (e.g. the kanban filter settings).
+            this._setHintHtml(this._i18n("webexpress.webapp:wql.status.ready") || "Ready.");
+        }
+    }
+
+    /**
+     * Gets the current WQL text. Public accessor so hosts (e.g. a settings
+     * dialog) can read the value without reaching into the internals.
+     * @returns {string} The WQL text.
+     */
+    get value() {
+        return this._getInputText();
+    }
+
+    /**
+     * Sets the WQL text and re-applies syntax highlighting.
+     * @param {string} text - The WQL text.
+     */
+    set value(text) {
+        this._setInputText(text != null ? String(text) : "");
+    }
+
+    /**
+     * Mirrors the current text into the form field of a named prompt.
+     *
+     * The prompt writes in a content-editable surface, and no form collects one of those.
+     * A prompt that was given a name therefore carries a hidden field of that name beside
+     * it and keeps it in step, so an enclosing form treats the prompt like any other
+     * input: on submit it reads the expression out of the field, and on load it finds the
+     * field by name and assigns through to this controller, which owns the visible text.
+     */
+    _syncField() {
+        if (this._field) {
+            this._field.value = this._getInputText();
+        }
+    }
+
+    /**
+     * Wires the prompt to an enclosing ViewState when it was authored standalone
+     * with Resource<T>().Model(path). A submitted query then writes into the
+     * shared state and re-queries the bound resource instead of coordinating
+     * through the BindSearch wire. A prompt embedded in the advanced search
+     * carries no resource binding of its own, so its changes flow through the
+     * search host instead and this stays inert.
+     * @param {HTMLElement} element - the host element carrying the binding.
+     */
+    _attachViewState(element) {
+        this._viewState = null;
+        this._viewStateResource = element.getAttribute("data-wx-model-query")
+            || element.getAttribute("data-wx-resource")
+            || null;
+
+        if (!this._viewStateResource) {
+            return;
+        }
+
+        this._wqlStateKey = element.getAttribute("data-wx-model") || "wql";
+
+        const viewStateId = element.getAttribute("data-wx-viewstate") || null;
+        this._cancelViewStateReady = webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
+            if (this._destroyed) {
+                return;
+            }
+            this._viewState = viewState;
+            const selector = (state) => this._wqlStateKey.split(".")
+                .filter((key) => key.length > 0)
+                .reduce((current, key) => current == null ? undefined : current[key], state);
+            const apply = (value) => {
+                if (this._destroyed || Object.is(value, this._lastStateValue)) {
+                    return;
+                }
+                this._lastStateValue = value;
+                this.value = value;
+                this._historyIndex = this._history.length;
+                this._unsentInput = this.value;
+            };
+            apply(selector(viewState.getState()));
+            this._unsubscribeViewState = viewState.watch(selector, apply);
+        });
+    }
+
+    /**
+     * Writes a submitted WQL query into the bound ViewState and re-queries the
+     * resource, resetting the page and clearing the basic search key so the two
+     * search modes stay mutually exclusive in the shared state.
+     * @param {string} text - the submitted WQL query.
+     */
+    _writeWqlToViewState(text) {
+        if (!this._viewState) {
+            return;
+        }
+
+        const keys = this._wqlStateKey.split(".").filter((key) => key.length > 0);
+        const patch = { page: 0, search: null };
+        let target = patch;
+        let source = this._viewState.getState();
+        for (const key of keys.slice(0, -1)) {
+            source = source?.[key];
+            target[key] = Object.assign({}, source);
+            target = target[key];
+        }
+        target[keys[keys.length - 1]] = text;
+        this._lastStateValue = text;
+        this._viewState.dispatch("viewstate/query", { resource: this._viewStateResource, patch: patch });
     }
 
     /**
@@ -64,23 +188,36 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         // contenteditable input field
         this._input = document.createElement("div");
         this._input.className = "form-control wx-wql-input wx-code-line";
-        this._input.setAttribute("aria-label", "WQL Input");
+        // an editable box is a text field to the reader, and a label is only allowed on a role
+        this._input.setAttribute("role", "textbox");
+        this._input.setAttribute("aria-multiline", "true");
+        this._input.setAttribute("aria-label", this._i18n("webexpress.webapp:wql.input.label", "WQL query"));
         this._input.setAttribute("contenteditable", "true");
         this._input.setAttribute("spellcheck", "false");
         this._input.style.minHeight = "2em";
         this._input.style.fontFamily = "monospace";
         this._input.dataset.language = "wql";
-        // prevents adding divs on enter in some browsers, ensures br
-        this._input.addEventListener("keypress", (e) => {
-            if (e.key === "Enter") {
-                // let custom handler manage it
-            }
-        });
 
         const placeholder = this._i18n("webexpress.webapp:wql.placeholder");
         this._input.dataset.placeholder = placeholder;
 
         inputGroup.appendChild(this._input);
+
+        // clear button resets the prompt to a fresh input line; a themed xmark
+        // icon blends with the field instead of a raw glyph in an outline box
+        this._clearBtn = document.createElement("button");
+        this._clearBtn.type = "button";
+        this._clearBtn.className = "btn wx-wql-clear";
+        this._clearBtn.title = this._i18n("webexpress.webapp:wql.clear") || "Clear";
+        this._clearBtn.setAttribute("aria-label", this._clearBtn.title);
+        // resolve through the icon set when available; a lean runtime without the
+        // helper falls back to the class pair the set would have produced
+        const clearIcon = (typeof this._iconClass === "function")
+            ? this._iconClass("xmark")
+            : "wx-icon-light wx-icon-light-xmark";
+        this._clearBtn.innerHTML = `<i class="${clearIcon}"></i>`;
+        inputGroup.appendChild(this._clearBtn);
+
         formGroup.appendChild(inputGroup);
 
         // unified hint/error area
@@ -92,20 +229,52 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
 
         formGroup.appendChild(this._hint);
         this._element.appendChild(formGroup);
+
+        // a named prompt is a form field: the hidden input carries the expression into
+        // the form data, and the name is taken off the host so it is not collected twice
+        const name = this._element.getAttribute("name");
+
+        if (name) {
+            this._element.removeAttribute("name");
+            this._field = document.createElement("input");
+            this._field.type = "hidden";
+            this._field.name = name;
+            this._element.appendChild(this._field);
+        }
     }
 
     /**
      * Attaches necessary event listeners to contenteditable input and buttons.
      */
     _attachListeners() {
-        this._input.addEventListener("input", this._onInput.bind(this));
-        this._input.addEventListener("keydown", this._onKeyDown.bind(this));
-        this._input.addEventListener("click", this._onCursorMove.bind(this));
-        this._input.addEventListener("keyup", (e) => {
+        this._listen(this._clearBtn, "click", () => this._onClearInput());
+        this._listen(this._input, "input", () => this._onInput());
+        this._listen(this._input, "keydown", (e) => this._onKeyDown(e));
+        this._listen(this._input, "click", () => this._onCursorMove());
+        this._listen(this._input, "keyup", (e) => {
             if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
                 this._onCursorMove();
             }
         });
+        this._listen(document, "selectionchange", () => {
+            const selection = this._getSelectionOffsets();
+            if (selection && (selection.anchor !== this._lastSelection?.anchor
+                || selection.focus !== this._lastSelection?.focus)) {
+                this._lastSelection = selection;
+                this._onCursorMove();
+            }
+        });
+    }
+
+    /**
+     * Tracks event handlers so removing the control also releases their closures.
+     * @param {EventTarget} target - The event source.
+     * @param {string} type - The event name.
+     * @param {Function} handler - The callback owned by this control.
+     */
+    _listen(target, type, handler) {
+        target.addEventListener(type, handler);
+        this._listeners.push(() => target.removeEventListener(type, handler));
     }
 
     /**
@@ -113,203 +282,266 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
      */
     _onClearInput() {
         this._setInputText("");
-        this._input.focus();
+        this._input.focus({ preventScroll: true });
         this._historyIndex = this._history.length;
         this._unsentInput = "";
         this._suggestions = [];
         this._currentContext = null;
-        this._setValidState();
-        this._refreshContextAndSuggestions();
+        this._submitInput();
     }
 
     /**
-     * Gets plain text from the contenteditable input field.
-     * @returns {string} The text content.
+     * Maps visible WQL text and DOM boundaries through the same newline rules.
+     * Inline syntax spans do not separate lines, while line wrappers and breaks do.
+     * @returns {object} The text, DOM positions and normalized offsets per node.
+     */
+    _getTextMap() {
+        let text = "";
+        const positions = [{ node: this._input, offset: 0 }];
+        const offsets = new Map();
+        const isLine = (node) => node.nodeType === Node.ELEMENT_NODE
+            && (node.classList.contains("wx-code-line") || ["DIV", "P"].includes(node.nodeName));
+
+        /**
+         * Records every DOM boundary, including invisible placeholder characters.
+         * @param {Node} node - The subtree whose text contributes to the editor.
+         */
+        const visit = (node) => {
+            const boundaries = [];
+            offsets.set(node, boundaries);
+            if (node.nodeType === Node.TEXT_NODE) {
+                for (let i = 0; i <= node.data.length; i++) {
+                    boundaries[i] = text.length;
+                    positions[text.length] = { node: node, offset: i };
+                    if (i < node.data.length && node.data[i] !== "\u200B") {
+                        text += node.data[i];
+                    }
+                }
+                return;
+            }
+            boundaries[0] = text.length;
+            if (node.nodeName === "BR") {
+                text += "\n";
+                return;
+            }
+            const children = Array.from(node.childNodes);
+            if (children.length === 0) {
+                positions[text.length] = { node: node, offset: 0 };
+            }
+            children.forEach((child, index) => {
+                const previous = children[index - 1];
+                if (previous && previous.nodeName !== "BR" && (isLine(child) || isLine(previous))
+                    && (!text.endsWith("\n") || isLine(previous))) {
+                    text += "\n";
+                    positions[text.length] = { node: node, offset: index };
+                }
+                boundaries[index] = text.length;
+                visit(child);
+                boundaries[index + 1] = text.length;
+                if (!positions[text.length]) {
+                    positions[text.length] = { node: node, offset: index + 1 };
+                }
+            });
+        };
+        visit(this._input);
+        return { text: text, positions: positions, offsets: offsets };
+    }
+
+    /**
+     * Reads the same normalized text used by selection and completion offsets.
+     * @returns {string} The WQL text without editor placeholders.
      */
     _getInputText() {
-        let result = "";
-        const nodes = this._input.childNodes;
-
-        for (let i = 0; i < nodes.length; i++) {
-            const node = nodes[i];
-
-            if (node.nodeType === Node.TEXT_NODE) {
-                result += node.data.replace(/\u200B/g, "");
-            } else if (node.nodeName === "BR") {
-                result += "\n";
-            } else if (node.nodeType === Node.ELEMENT_NODE) {
-                result += node.innerText.replace(/\u200B/g, "") + "\n";
-            }
-        }
-
-        return result;
+        return this._getTextMap().text;
     }
 
     /**
-     * Sets the input field's content and applies syntax highlighting.
+     * Replaces the draft and invalidates work started for the previous text.
      * @param {string} value - The new value.
      */
     _setInputText(value) {
-        this._input.innerText = value;
+        if (this._destroyed) {
+            return;
+        }
+        this._invalidateInput();
+        this._input.textContent = value;
         this._highlightSyntax();
+        this._syncField();
     }
 
     /**
-     * Handles input events (typing into the prompt).
+     * Prevents analysis responses from repopulating suggestions during debounce.
+     */
+    _invalidateAnalysis() {
+        this._analysisVersion++;
+        clearTimeout(this._debounceTimer);
+        this._debounceTimer = null;
+        this._abortController?.abort();
+        this._abortController = null;
+        this._suggestions = [];
+        this._currentContext = null;
+        this._tabCycleIndex = 0;
+    }
+
+    /**
+     * Invalidates pending submissions whenever the user replaces their draft.
+     */
+    _invalidateInput() {
+        this._submissionVersion++;
+        this._validationAbortController?.abort();
+        this._validationAbortController = null;
+        this._invalidateAnalysis();
+        this._validationStatus = "unchecked";
+        this._statusMessage = null;
+        this._setValidState();
+    }
+
+    /**
+     * Keeps the form field current while delaying highlighting and analysis.
      */
     _onInput() {
-        this._setValidState();
-
+        if (this._destroyed) {
+            return;
+        }
+        this._invalidateInput();
+        this._syncField();
         if (this._historyIndex === this._history.length) {
             this._unsentInput = this._getInputText();
         }
-
-        if (this._debounceTimer) {
-            clearTimeout(this._debounceTimer);
-        }
-
         this._debounceTimer = setTimeout(() => {
+            this._debounceTimer = null;
             this._highlightSyntax();
             this._refreshContextAndSuggestions();
         }, this._debounceMs);
     }
 
     /**
-     * Applies syntax highlighting for WQL using a language-specific function if available.
-     * Preserves the cursor after re-highlighting contenteditable.
+     * Applies highlighting without losing either selection endpoint or direction.
      * @param {string} [code] - Optional code to highlight.
      */
     _highlightSyntax(code) {
         code = code !== undefined ? code : this._getInputText();
         const syntaxFunction = webexpress.webui.Syntax?.get?.("wql");
-
-        // preserve cursor position
-        const selection = window.getSelection();
-        let cursorOffset = 0;
-
-        if (selection && selection.rangeCount > 0 && this._input.contains(selection.anchorNode)) {
-            const range = selection.getRangeAt(0);
-            const preCaretRange = range.cloneRange();
-            preCaretRange.selectNodeContents(this._input);
-            preCaretRange.setEnd(range.endContainer, range.endOffset);
-            cursorOffset = preCaretRange.toString().replace(/\u200B/g, "").length;
-        }
-
-        // clear current content
-        this._input.innerHTML = "";
-
+        const selection = this._getSelectionOffsets();
         if (typeof syntaxFunction === "function") {
-            // render highlighted html
             this._input.innerHTML = syntaxFunction(code);
+            this._input.querySelectorAll(".wx-code-line").forEach((line) => {
+                if (!line.firstChild) {
+                    // empty lines need a caret target without contributing query text
+                    line.textContent = "\u200B";
+                }
+            });
         } else {
-            // fallback to plain text
             this._input.textContent = code;
         }
-
-        this._restoreCursor(cursorOffset);
+        if (selection) {
+            this._restoreSelection(selection.anchor, selection.focus);
+        }
     }
 
     /**
-     * Restores caret/cursor position in the input field after syntactic changes.
+     * Captures selection direction in the normalized text coordinate system.
+     * @returns {object|null} Anchor and focus offsets when both belong to this editor.
+     */
+    _getSelectionOffsets() {
+        const selection = window.getSelection();
+        if (!selection || !selection.rangeCount || !this._input.contains(selection.anchorNode)
+            || !this._input.contains(selection.focusNode)) {
+            return null;
+        }
+        const map = this._getTextMap();
+        return {
+            anchor: map.offsets.get(selection.anchorNode)[selection.anchorOffset],
+            focus: map.offsets.get(selection.focusNode)[selection.focusOffset]
+        };
+    }
+
+    /**
+     * Restores both selection endpoints through the same map used for extraction.
+     * @param {number} anchor - The normalized anchor offset.
+     * @param {number} focus - The normalized focus offset.
+     */
+    _restoreSelection(anchor, focus) {
+        const selection = window.getSelection();
+        if (!selection) {
+            return;
+        }
+        const map = this._getTextMap();
+        const start = Math.max(0, Math.min(anchor, map.text.length));
+        const end = Math.max(0, Math.min(focus, map.text.length));
+        const a = map.positions[start];
+        const f = map.positions[end];
+        this._lastSelection = { anchor: start, focus: end };
+        selection.setBaseAndExtent(a.node, a.offset, f.node, f.offset);
+    }
+
+    /**
+     * Places a caret at a normalized character offset after a deliberate insertion.
      * @param {number} offset - The desired character offset.
      */
     _restoreCursor(offset) {
-        const node = this._input;
-        let charsLeft = offset;
-        const range = document.createRange();
-        const sel = window.getSelection();
-
-        /**
-         * Recursively traverses nodes to find the correct text node and offset.
-         * @param {Node} currentNode - The node to traverse.
-         * @returns {boolean} True if cursor set, false otherwise.
-         */
-        const setCursor = (currentNode) => {
-            for (const child of currentNode.childNodes) {
-                if (child.nodeType === Node.TEXT_NODE) {
-                    const normalizedText = child.data.replace(/\u200B/g, "");
-                    const normalizedLength = normalizedText.length;
-
-                    if (normalizedLength >= charsLeft) {
-                        let realOffset = 0;
-                        let visibleChars = 0;
-
-                        while (realOffset < child.data.length && visibleChars < charsLeft) {
-                            if (child.data.charAt(realOffset) !== "\u200B") {
-                                visibleChars++;
-                            }
-                            realOffset++;
-                        }
-
-                        range.setStart(child, realOffset);
-                        range.collapse(true);
-                        sel.removeAllRanges();
-                        sel.addRange(range);
-                        return true;
-                    } else {
-                        charsLeft -= normalizedLength;
-                    }
-                } else {
-                    if (setCursor(child)) {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        };
-
-        // if exact position not found, place at end
-        if (!setCursor(node)) {
-            range.selectNodeContents(this._input);
-            range.collapse(false);
-            sel.removeAllRanges();
-            sel.addRange(range);
-        }
+        this._restoreSelection(offset, offset);
     }
 
     /**
-     * Loads query history from the backend with retry.
-     * @param {number} retryCount - The current retry attempt.
+     * Merges server history with local submissions without changing a browsed draft.
+     * @param {number} [retryCount=0] - The current retry attempt.
+     * @returns {Promise<void>} Completion of this load attempt.
      */
     async _loadHistoryFromApi(retryCount = 0) {
-        try {
-            const resp = await fetch(this._apiUri + "/history");
-
-            if (resp.ok) {
-                const data = await resp.json();
-                this._history = Array.isArray(data.history) ? data.history : [];
-                this._historyIndex = this._history.length;
-
-                const readyMsg = this._i18n("webexpress.webapp:wql.status.ready") || "Ready.";
-                this._setHintHtml(readyMsg);
-                return;
-            }
-        } catch (e) {
-            console.warn(`[WQL] History load failed (Attempt ${retryCount + 1})`);
+        if (this._destroyed || !this._service) {
+            return;
         }
-
+        clearTimeout(this._historyTimer);
+        this._historyTimer = null;
+        this._historyAbortController?.abort();
+        const controller = new AbortController();
+        this._historyAbortController = controller;
+        const version = ++this._historyVersion;
+        let response;
+        try {
+            response = await this._service.request(this._endpointUrl("history"), { signal: controller.signal });
+        } catch (error) {
+            // local history remains usable when the service cannot be reached
+        }
+        if (this._destroyed || version !== this._historyVersion || controller.signal.aborted) {
+            return;
+        }
+        this._historyAbortController = null;
+        if (response?.ok && Array.isArray(response.data?.history)) {
+            const atDraft = this._historyIndex === this._history.length;
+            const selected = this._history[this._historyIndex];
+            const local = this._history;
+            const server = response.data.history.filter((entry) => typeof entry === "string" && entry.trim());
+            this._history = Array.from(new Set([...server.filter((entry) => !local.includes(entry)), ...local]));
+            this._historyIndex = atDraft ? this._history.length : this._history.indexOf(selected);
+            this._historyError = null;
+            this._updateHint();
+            return;
+        }
         if (retryCount < 10) {
-            setTimeout(() => {
+            this._historyTimer = setTimeout(() => {
+                this._historyTimer = null;
                 this._loadHistoryFromApi(retryCount + 1);
             }, 500);
         } else {
-            const errorMsg = this._i18n("webexpress.webapp:wql.error.history.unavailable") || "History unavailable.";
-            this._setHintHtml(errorMsg);
-            this._history = [];
-            this._historyIndex = 0;
+            this._historyError = this._i18n("webexpress.webapp:wql.error.history.unavailable") || "History unavailable.";
+            this._updateHint();
         }
     }
 
     /**
-     * Handles cursor movement and triggers context refresh.
+     * Invalidates suggestions immediately when the completion position changes.
      */
     _onCursorMove() {
-        if (this._debounceTimer) {
-            clearTimeout(this._debounceTimer);
+        if (this._destroyed) {
+            return;
         }
-
+        this._invalidateAnalysis();
+        this._updateHint();
         this._debounceTimer = setTimeout(() => {
+            this._debounceTimer = null;
+            this._highlightSyntax();
             this._refreshContextAndSuggestions();
         }, 100);
     }
@@ -319,35 +551,36 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
      * Uses AbortController to cancel stale requests.
      */
     async _refreshContextAndSuggestions() {
+        // standalone prompts (no service) offer no server-driven suggestions
+        if (this._destroyed || !this._service) {
+            return;
+        }
+
         // cancel previous pending request
         if (this._abortController) {
             this._abortController.abort();
         }
 
         this._abortController = new AbortController();
+        const controller = this._abortController;
+        const version = ++this._analysisVersion;
 
         const text = this._getInputText();
         const cursorPos = this._getCursorOffset();
-        const base = window.location.origin;
-        let urlObj;
+        const fetchUrl = this._analyzeUrl(text, cursorPos);
 
         try {
-            urlObj = new URL(this._apiUri + "/analyze", base);
-        } catch (e) {
-            urlObj = new URL(this._apiUri + "/analyze", document.baseURI);
-        }
+            const analyzeResp = await this._service.request(fetchUrl, { signal: controller.signal });
+            if (this._destroyed || controller.signal.aborted || version !== this._analysisVersion
+                || text !== this._getInputText() || cursorPos !== this._getCursorOffset()) {
+                return;
+            }
 
-        urlObj.searchParams.set("wql", text);
-        urlObj.searchParams.set("c", cursorPos.toString());
+            if (analyzeResp.ok && analyzeResp.data) {
+                const analyzeData = analyzeResp.data;
 
-        const fetchUrl = this._apiUri.startsWith("http") ? urlObj.href : (urlObj.pathname + urlObj.search);
-
-        try {
-            const analyzeResp = await fetch(fetchUrl, { signal: this._abortController.signal });
-
-            if (analyzeResp.ok) {
-                const analyzeData = await analyzeResp.json();
-
+                // while typing the prompt only offers the next tokens; the
+                // syntax check itself runs when the query is submitted
                 if (analyzeData.isValidSoFar) {
                     this._setValidState();
                 }
@@ -364,13 +597,25 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
                     }
                 }
 
+                let tokenEnd = this._getTokenBoundaries(text, cursorPos).end;
+                const quote = text[tokenStart - 1];
+                if (analyzeData.quoted && (quote === '"' || quote === "'")) {
+                    // retain the existing quotes while replacing the entire literal suffix
+                    tokenEnd = cursorPos;
+                    while (tokenEnd < text.length && text[tokenEnd] !== quote) {
+                        tokenEnd += text[tokenEnd] === "\\" && tokenEnd + 1 < text.length ? 2 : 1;
+                    }
+                }
+
                 this._currentContext = {
                     type: (analyzeData.currentExpressionType || "").toLowerCase(),
                     prefix: prefix,
                     tokenStart: tokenStart,
-                    tokenEnd: cursorPos,
+                    tokenEnd: tokenEnd,
                     attribute: analyzeData.attribute,
-                    quoted: analyzeData.quoted || false
+                    quoted: analyzeData.quoted || false,
+                    text: text,
+                    cursorPos: cursorPos
                 };
 
                 this._suggestions = Array.isArray(analyzeData.suggestions) ? analyzeData.suggestions : [];
@@ -378,29 +623,47 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
                 this._updateHint();
             }
         } catch (e) {
-            if (e.name !== "AbortError") {
+            if (!this._destroyed && !controller.signal.aborted && version === this._analysisVersion && e.name !== "AbortError") {
                 console.error("[WQL] Context refresh error:", e);
+            }
+        } finally {
+            if (this._abortController === controller) {
+                this._abortController = null;
             }
         }
     }
 
     /**
-     * Gets the cursor offset (character position) in the input field.
-     * @returns {number} Cursor position.
+     * Appends an endpoint to the URL path while preserving its query parameters.
+     * @param {string} endpoint - The service operation path segment.
+     * @returns {string} The endpoint URL.
+     */
+    _endpointUrl(endpoint) {
+        const url = new URL(this._apiUri, document.baseURI || window.location.origin);
+        url.pathname = url.pathname.replace(/\/+$/, "") + "/" + endpoint;
+        url.hash = "";
+        return url.href;
+    }
+
+    /**
+     * Builds an analysis request without appending path segments to query values.
+     * @param {string} text - The WQL text.
+     * @param {number} cursorPos - The normalized cursor position.
+     * @returns {string} The analysis URL.
+     */
+    _analyzeUrl(text, cursorPos) {
+        const url = new URL(this._endpointUrl("analyze"));
+        url.searchParams.set("wql", text);
+        url.searchParams.set("c", String(cursorPos));
+        return url.href;
+    }
+
+    /**
+     * Reads the active selection endpoint in normalized text coordinates.
+     * @returns {number} The cursor position or the end of an unfocused editor.
      */
     _getCursorOffset() {
-        const selection = window.getSelection();
-
-        if (!selection || selection.rangeCount === 0 || !this._input.contains(selection.anchorNode)) {
-            return this._getInputText().length;
-        }
-
-        const range = selection.getRangeAt(0);
-        const preCaretRange = range.cloneRange();
-        preCaretRange.selectNodeContents(this._input);
-        preCaretRange.setEnd(range.endContainer, range.endOffset);
-
-        return preCaretRange.toString().replace(/\u200B/g, "").length;
+        return this._getSelectionOffsets()?.focus ?? this._getInputText().length;
     }
 
     /**
@@ -409,8 +672,10 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
      */
     _onKeyDown(e) {
         if (e.key === "Tab") {
-            e.preventDefault();
-            this._handleTab();
+            if (!e.shiftKey && this._suggestions.length > 0 && this._currentContext) {
+                e.preventDefault();
+                this._handleTab();
+            }
             return;
         }
 
@@ -444,44 +709,21 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Inserts a newline character at the current cursor position.
-     * Manually manipulates DOM nodes to ensure correct behavior in contenteditable.
+     * Replaces the selection with one newline without retaining split line wrappers.
      */
     _insertLineBreakAtCursor() {
-        const selection = window.getSelection();
-
-        if (!selection.rangeCount) {
+        const selection = this._getSelectionOffsets();
+        if (!selection) {
             return;
         }
-
-        const range = selection.getRangeAt(0);
-        const br = document.createElement("br");
-
-        // delete current selection if any
-        range.deleteContents();
-
-        // insert br tag
-        range.insertNode(br);
-
-        // create a text node after br to ensure cursor can go there
-        // (needed for some browsers like chrome/safari to recognize the new line immediately)
-        const textNode = document.createTextNode("\u200B");
-        range.setStartAfter(br);
-        range.insertNode(textNode);
-
-        // move cursor after the zero-width space
-        range.setStartAfter(textNode);
-        range.collapse(true);
-
-        selection.removeAllRanges();
-        selection.addRange(range);
-
-        // scroll into view
+        const text = this._getInputText();
+        const start = Math.min(selection.anchor, selection.focus);
+        const end = Math.max(selection.anchor, selection.focus);
+        this._setInputText(text.slice(0, start) + "\n" + text.slice(end));
+        this._restoreCursor(start + 1);
         if (this._input.scrollHeight > this._input.clientHeight) {
             this._input.scrollTop = this._input.scrollHeight;
         }
-
-        // trigger input event so state updates
         this._onInput();
     }
 
@@ -517,30 +759,9 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
      * @returns {{start: number, end: number}} The token boundaries.
      */
     _getTokenBoundaries(text, cursorPos) {
-        let start = cursorPos;
-        let end = cursorPos;
-
-        while (start > 0) {
-            const char = text.charAt(start - 1);
-
-            if (/[a-zA-Z0-9_.-]/.test(char)) {
-                start--;
-            } else {
-                break;
-            }
-        }
-
-        while (end < text.length) {
-            const char = text.charAt(end);
-
-            if (/[a-zA-Z0-9_.-]/.test(char)) {
-                end++;
-            } else {
-                break;
-            }
-        }
-
-        return { start: start, end: end };
+        const before = text.slice(0, cursorPos).match(/[\p{L}\p{M}\p{N}_.-]+$/u)?.[0] || "";
+        const after = text.slice(cursorPos).match(/^[\p{L}\p{M}\p{N}_.-]+/u)?.[0] || "";
+        return { start: cursorPos - before.length, end: cursorPos + after.length };
     }
 
     /**
@@ -554,29 +775,41 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
 
         const text = this._getInputText();
         const cursorPos = this._getCursorOffset();
+        if (this._currentContext.text !== undefined && (this._currentContext.text !== text
+            || this._currentContext.cursorPos !== cursorPos)) {
+            this._invalidateAnalysis();
+            this._updateHint();
+            return;
+        }
         const type = this._currentContext.type;
-        const boundaries = this._getTokenBoundaries(text, cursorPos);
-
-        let tokenStart = boundaries.start;
-        let tokenEnd = boundaries.end;
+        let tokenStart = this._currentContext.tokenStart;
+        let tokenEnd = this._currentContext.tokenEnd;
         let insertion = value;
 
-        // smart formatting logic per wql type
-        if (type === "parenthesis_open") {
+        // smart formatting logic per wql type; the type names are the
+        // lower-cased WqlExpressionType enum names of the analyze endpoint.
+        // punctuation is recognised by its value, as it is offered alongside
+        // other types (a closing parenthesis next to a separator, an opening
+        // one next to attributes)
+        if (value === "(" || value === ")" || value === ",") {
+            // the blank a chosen value leaves behind is taken back, so a list
+            // reads ("a", "b") rather than ("a" , "b" )
+            const blank = value === "(" ? "" : text.slice(0, cursorPos).match(/[ \t]*$/)[0];
+            insertion = value === "," ? ", " : value;
+            tokenStart = cursorPos - blank.length;
+            tokenEnd = cursorPos;
+        } else if (type === "openparenthesis") {
             insertion = `("${value}"`;
             tokenStart = cursorPos;
             tokenEnd = cursorPos;
-        } else if (type === "set_parameter" || type === "parameter") {
+        } else if (type === "parameter" || type === "quotation") {
             if (!this._currentContext.quoted) {
                 insertion = `"${value}"`;
             }
-        } else if (type === "set_next" && value === ",") {
-            insertion = ", ";
-            tokenStart = cursorPos;
-            tokenEnd = cursorPos;
         }
 
-        if (!insertion.endsWith(" ") && value !== "(") {
+        if (!this._currentContext.quoted && !insertion.endsWith(" ") && value !== "("
+            && !/^\s/.test(text.slice(tokenEnd))) {
             insertion += " ";
         }
 
@@ -623,17 +856,26 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
 
         this._hint.classList.remove("text-danger");
         this._hint.classList.add("text-muted");
+        this._input.dataset.validation = this._validationStatus;
+        this._input.setAttribute("aria-invalid", "false");
+        if (this._statusMessage) {
+            this._setHintHtml(this._statusMessage);
+            return;
+        }
 
+        // keys are the lower-cased WqlExpressionType enum names as serialized
+        // by the analyze endpoint
         const typeKeys = {
             attribute: "webexpress.webapp:wql.type.attribute",
             operator: "webexpress.webapp:wql.type.operator",
             parameter: "webexpress.webapp:wql.type.parameter",
-            set_parameter: "webexpress.webapp:wql.type.set.parameter",
-            parenthesis_open: "webexpress.webapp:wql.type.parenthesis.open",
-            set_next: "webexpress.webapp:wql.type.set.next",
-            after_parameter: "webexpress.webapp:wql.type.after.parameter",
-            logical_operator: "webexpress.webapp:wql.type.logical.operator",
-            number: "webexpress.webapp:wql.type.number"
+            quotation: "webexpress.webapp:wql.type.parameter",
+            openparenthesis: "webexpress.webapp:wql.type.parenthesis.open",
+            separator: "webexpress.webapp:wql.type.set.next",
+            closeparenthesis: "webexpress.webapp:wql.type.after.parameter",
+            logicaloperator: "webexpress.webapp:wql.type.logical.operator",
+            partitioning: "webexpress.webapp:wql.type.number",
+            partitioningoperator: "webexpress.webapp:wql.type.logical.operator"
         };
 
         const type = this._currentContext?.type;
@@ -663,6 +905,8 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
             }
 
             this._setHintHtml(html);
+        } else {
+            this._setHintHtml(this._historyError || this._i18n("webexpress.webapp:wql.status.ready"));
         }
     }
 
@@ -693,29 +937,71 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Submits the input for validation and history management.
+     * Distinguishes a syntax verdict from an unavailable validation service.
+     * @param {string} text - The submitted WQL text.
+     * @param {AbortSignal} signal - Cancellation owned by this submission.
+     * @returns {Promise<object>} The validation status and optional error message.
+     */
+    async _validateInput(text, signal) {
+        if (!this._service) {
+            return { status: "unchecked" };
+        }
+        try {
+            const response = await this._service.request(this._analyzeUrl(text, text.length), { signal: signal });
+            if (response.ok && response.data?.isValidSoFar === false) {
+                return {
+                    status: "invalid",
+                    error: response.data.errorMessage || this._i18n("webexpress.webapp:wql.error.label")
+                };
+            }
+            if (response.ok && response.data?.isValidSoFar === true) {
+                return { status: "valid" };
+            }
+        } catch (error) {
+            // a validation outage must not block execution by the search service
+        }
+        return { status: "unchecked" };
+    }
+
+    /**
+     * Applies only the latest submission and treats empty input as a filter reset.
+     * @returns {Promise<void>} Completion of validation and application.
      */
     async _submitInput() {
-        const text = this._getInputText().trim();
-
-        if (!text) {
+        if (this._destroyed) {
             return;
         }
-
-        // update history only if it differs from last entry
-        if (this._history.length === 0 || this._history[this._history.length - 1] !== text) {
+        const draft = this._getInputText();
+        const text = draft.trim();
+        const version = ++this._submissionVersion;
+        this._validationAbortController?.abort();
+        this._invalidateAnalysis();
+        this._validationStatus = "unchecked";
+        this._statusMessage = null;
+        this._setValidState();
+        const controller = new AbortController();
+        this._validationAbortController = controller;
+        const result = text ? await this._validateInput(text, controller.signal) : { status: "unchecked" };
+        if (this._destroyed || version !== this._submissionVersion || controller.signal.aborted
+            || this._getInputText() !== draft) {
+            return;
+        }
+        this._validationAbortController = null;
+        this._invalidateAnalysis();
+        this._validationStatus = result.status;
+        if (result.status === "invalid") {
+            this._setInvalidState(result.error);
+            return;
+        }
+        if (text && this._history[this._history.length - 1] !== text) {
             this._history.push(text);
         }
-
         this._historyIndex = this._history.length;
         this._unsentInput = "";
-        this._suggestions = [];
-        this._currentContext = null;
-
-        const sentMsg = this._i18n("webexpress.webapp:wql.status.sent") || "Valid query sent.";
-        this._setHintHtml(sentMsg);
-
+        const key = !text ? "cleared" : result.status === "valid" ? "sent" : "unchecked";
+        this._statusMessage = this._i18n("webexpress.webapp:wql.status." + key);
         this._setValidState();
+        this._writeWqlToViewState(text);
         this._dispatch(webexpress.webui.Event.CHANGE_FILTER_EVENT, { value: text });
     }
 
@@ -763,6 +1049,9 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
      */
     _setValidState() {
         this._lastError = null;
+        if (this._validationStatus === "invalid") {
+            this._validationStatus = "unchecked";
+        }
         this._input.classList.remove("is-invalid");
         this._updateHint();
     }
@@ -772,9 +1061,39 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
      * @param {string} msg - Error message.
      */
     _setInvalidState(msg) {
+        this._validationStatus = "invalid";
         this._lastError = msg;
+        this._input.dataset.validation = "invalid";
+        this._input.setAttribute("aria-invalid", "true");
         this._input.classList.add("is-invalid");
         this._updateHint();
+    }
+
+    /**
+     * Releases timers, requests, event handlers and pending state subscriptions.
+     */
+    destroy() {
+        if (this._destroyed) {
+            return;
+        }
+        this._destroyed = true;
+        this._submissionVersion++;
+        this._historyVersion++;
+        this._invalidateAnalysis();
+        clearTimeout(this._historyTimer);
+        this._historyTimer = null;
+        this._historyAbortController?.abort();
+        this._validationAbortController?.abort();
+        this._historyAbortController = null;
+        this._validationAbortController = null;
+        this._cancelViewStateReady?.();
+        this._unsubscribeViewState?.();
+        this._cancelViewStateReady = null;
+        this._unsubscribeViewState = null;
+        this._viewState = null;
+        this._listeners.forEach((remove) => remove());
+        this._listeners = [];
+        super.destroy();
     }
 };
 

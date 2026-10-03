@@ -85,8 +85,8 @@ namespace WebExpress.WebApp.WebControl
             return new HtmlElementTextContentDiv()
             {
                 Id = Id,
-                Class = Css.Concatenate("wx-webapp-chat", GetClasses()),
-                Style = GetStyles(),
+                Class = Css.Concatenate("wx-webapp-chat", GetClasses(renderContext)),
+                Style = GetStyles(renderContext),
                 Role = Role?.Invoke(renderContext)
             }
                 .AddUserAttribute("data-chat-channel-id", ChannelId?.Invoke(renderContext))

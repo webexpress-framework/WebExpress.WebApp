@@ -23,6 +23,11 @@
  *   }
  * }
  *
+ * It is ViewState-capable: when the host carries a data-wx-resource binding the
+ * sprint is a slice of an enclosing ViewState, so the control subscribes
+ * to that slice and the ViewState owns the central load; without a binding it owns
+ * its own wx-service island and loads itself (standalone).
+ *
  * The following events are dispatched on the host element:
  * - webexpress.webui.Event.DATA_REQUESTED_EVENT
  * - webexpress.webui.Event.DATA_ARRIVED_EVENT
@@ -30,7 +35,7 @@
  * - webexpress.webui.Event.SELECT_EVENT (or "wx:select-sprint" fallback)
  *   when the sprint card is clicked
  */
-webexpress.webapp.ScrumSprintCtrl = class extends webexpress.webui.Ctrl {
+webexpress.webapp.ScrumSprintCtrl = class extends webexpress.webapp.Data {
 
     static SVG_NS = "http://www.w3.org/2000/svg";
     static CHART_W = 160;
@@ -38,31 +43,100 @@ webexpress.webapp.ScrumSprintCtrl = class extends webexpress.webui.Ctrl {
     static OVERBOOK_THRESHOLD = 0.10; // 10% delta vs ideal counts as ahead/behind
 
     _restUri = null;
-    _sprint = null;
-    _state = "idle"; // "idle" | "loading" | "error"
-    _error = null;
 
     /**
      * Initializes the sprint overview control.
      * @param {HTMLElement} element - The host element.
      */
     constructor(element) {
-        super(element);
+        // seed the sprint state from the optional wx-state island before super,
+        // so the component store owns the sprint, the load status and the error
+        const initialState = Object.assign(
+            { sprint: null, status: "idle", error: null },
+            webexpress.webapp.Data.readState(element)
+        );
 
-        this._restUri = element.dataset.restUri || element.getAttribute("data-rest-uri") || null;
-        element.removeAttribute("data-rest-uri");
+        super(element, { state: initialState });
+
+        // the endpoint is authored in C# through the wx-service island
+        this._service = this.useService("data");
+        this._restUri = this._service ? this._service.baseUri : null;
+        // the resource a ViewState renders; when present the sprint is a pure view
+        // of a central resource the enclosing ViewState owns, when absent the
+        // control loads itself (standalone)
+        this._resource = (element.dataset && element.dataset.wxResource) || null;
         element.classList.add("wx-scrum-sprint");
 
         // dispatch a select event when the card is clicked (ignoring inner controls)
         element.addEventListener("click", (e) => this._onCardClick(e));
 
-        if (this._restUri) {
-            this._load();
-        } else {
+        // without an endpoint and without a seed, fall back to the inline
+        // config; a ViewState-bound card renders its slice instead
+        if (!this._resource && !this._restUri && !this._sprint) {
             this._parseStaticConfig();
-            this.render();
+        }
+
+        // subscribe and perform the first render from the seeded, parsed or empty
+        // state; Component._apply calls the existing imperative render method
+        this.mount();
+
+        // load from the endpoint only when the server did not seed the sprint
+        if (this._resource) {
+            this._attachToViewState(element);
+        } else if (this._restUri && !this._sprint) {
+            this._load();
         }
     }
+
+    /**
+     * Attaches the control to the enclosing ViewState and renders its
+     * resource slice. The ViewState owns the central load and the service; this
+     * control becomes a pure view that re-renders whenever the ViewState re-queries
+     * the resource.
+     * @param {HTMLElement} element - The host element.
+     */
+    _attachToViewState(element) {
+        const viewStateId = (element.dataset && element.dataset.wxViewstate) || null;
+
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
+            this._viewState = viewState;
+
+            const service = viewState.serviceForResource(this._resource);
+            if (service) {
+                this._service = service;
+                this._restUri = service.baseUri;
+            }
+
+            const unsubscribe = viewState.watch((state) => viewState.slice(this._resource, state), (slice) => this._applySlice(slice));
+            (element._wxCleanup = element._wxCleanup || []).push(unsubscribe);
+
+            this._applySlice(viewState.slice(this._resource));
+        });
+    }
+
+    /**
+     * Renders a resource slice the ViewState loaded centrally.
+     * @param {object} slice - The resource slice { items, total, data, loading, error }.
+     */
+    _applySlice(slice) {
+        slice = slice || {};
+        if (slice.data) {
+            this.sprint = slice.data;
+        }
+    }
+
+    // the sprint, the load status and the error are backed by the component store,
+    // so the store is the single source of truth and a change re-renders through
+    // the subscription that mount established
+
+    get _sprint() { return this.state.sprint; }
+    set _sprint(value) { this.setState({ sprint: value || null }); }
+
+    get _state() { return this.state.status; }
+    set _state(value) { this.setState({ status: value }); }
+
+    get _error() { return this.state.error; }
+    set _error(value) { this.setState({ error: value }); }
 
     /**
      * Returns the currently displayed sprint.
@@ -77,18 +151,18 @@ webexpress.webapp.ScrumSprintCtrl = class extends webexpress.webui.Ctrl {
      * @param {Object} sprint - The sprint payload.
      */
     set sprint(sprint) {
-        this._sprint = sprint || null;
-        this._state = "idle";
-        this._error = null;
-        this.render();
+        this.setState({ sprint: sprint || null, status: "idle", error: null });
     }
 
     /**
-     * Reloads the sprint payload from the configured REST endpoint.
+     * Reloads the sprint payload, in ViewState mode through the ViewState's central
+     * re-query and standalone from the configured REST endpoint.
      * @returns {void}
      */
     refresh() {
-        if (this._restUri) {
+        if (this._viewState && this._resource) {
+            this._viewState.reload(this._resource);
+        } else if (this._restUri) {
             this._load();
         }
     }
@@ -98,7 +172,7 @@ webexpress.webapp.ScrumSprintCtrl = class extends webexpress.webui.Ctrl {
      * @returns {void}
      */
     _parseStaticConfig() {
-        const cfgEl = this._element.querySelector(":scope > script[type='application/json']");
+        const cfgEl = this._element.querySelector(":ViewState > script[type='application/json']");
         if (!cfgEl) {
             return;
         }
@@ -119,26 +193,23 @@ webexpress.webapp.ScrumSprintCtrl = class extends webexpress.webui.Ctrl {
         this._state = "loading";
         this._error = null;
         this._dispatch(webexpress.webui.Event.DATA_REQUESTED_EVENT, { uri: this._restUri });
-        this.render();
 
-        fetch(this._restUri, { headers: { "Accept": "application/json" } })
+        webexpress.webapp.ServiceRegistry.request(this._restUri, { headers: { "Accept": "application/json" } })
             .then((r) => {
                 if (!r.ok) {
                     throw new Error("HTTP " + r.status);
                 }
-                return r.json();
+                return r.data;
             })
             .then((data) => {
                 this._sprint = data || null;
                 this._state = "idle";
                 this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, { uri: this._restUri });
-                this.render();
             })
             .catch((err) => {
                 console.error("ScrumSprintCtrl: failed to load data", err);
                 this._state = "error";
                 this._error = err;
-                this.render();
             });
     }
 
@@ -273,9 +344,7 @@ webexpress.webapp.ScrumSprintCtrl = class extends webexpress.webui.Ctrl {
         const wrap = document.createElement("div");
         wrap.className = "wx-scrum-sprint-state wx-scrum-sprint-error";
 
-        const icon = document.createElement("i");
-        icon.className = "fas fa-exclamation-triangle";
-        wrap.appendChild(icon);
+        wrap.appendChild(webexpress.webui.Icon.create("wx-icon-light wx-icon-light-triangle-exclamation"));
 
         const msg = document.createElement("span");
         const errText = this._error && this._error.message ? this._error.message : "";

@@ -10,14 +10,14 @@
 
 .wx-restform-field-marker {
     flex: 0 0 4px;
-    background: var(--bs-danger);
+    background: var(--wx-danger);
     align-self: stretch;
 }
 
 .wx-restform-prolog-container {
     margin-bottom: 1em;
     padding: 0.5em;
-    background: var(--bs-light);
+    background: var(--wx-light);
     border-radius: 0.25em;
 }
 
@@ -28,17 +28,13 @@
     gap: 0.2em;
 }
 
-.wx-restform .modal-content {
-    background-color: var(--bs-light);
+.wx-restform dialog.modal {
+    background-color: var(--wx-body-bg);
 }
 
-[data-bs-theme="dark"] .wx-restform .modal-content {
-    background-color: var(--bs-body-bg);
-}
 
-[data-bs-theme="dark"] .form-control {
-    background-color: black;
-}
+
+
 
 /* Main form wrapper */
 form.wx-webapp-restwizard {
@@ -54,54 +50,86 @@ form.wx-webapp-restwizard {
     min-height: 250px; /* Prevent UI jumping on empty pages */
 }
 
+/* Only the pages scroll. The progress indicator and the dialog footer stay put, so
+   the user keeps the step he is on and the way forward in view no matter how long
+   the step is. This requires the chain from the dialog body down to the pages to be
+   a flex column that may shrink (min-height: 0), and the body itself to stop
+   scrolling — WebExpress's dialog.modal-scrollable would otherwise scroll the whole
+   wizard including its header. The selector outranks that rule on specificity. */
+form.wx-webapp-restwizard .modal-body {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+}
+
+form.wx-webapp-restwizard .modal-body > .wx-restwizard-root {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* the error, confirmation and prologue banners the form control keeps as direct
+   children of the body stay above the scrolling pages at their natural height */
+form.wx-webapp-restwizard .modal-body > .wx-restform-error-container,
+form.wx-webapp-restwizard .modal-body > .wx-restform-confirm,
+form.wx-webapp-restwizard .modal-body > .wx-restform-prolog-container {
+    flex: 0 0 auto;
+}
+
+.wx-restwizard-root > .wx-restwizard-static-container,
+.wx-restwizard-root > .wx-restwizard-progress,
+.wx-restwizard-root > .wx-restwizard-actions {
+    flex: 0 0 auto;
+}
+
+/* an empty static container must not add its bottom margin as a gap */
+.wx-restwizard-static-container:empty {
+    display: none;
+}
+
 /* Hide original wizard pages until the JS initializes them */
 form.wx-webapp-restwizard > .wx-wizard-page {
     display: none;
 }
 
-/* Progress indicator wrapper */
+/* Progress indicator wrapper. The steps themselves are the shared step indicator
+   (.wx-steps, see webexpress.webui.steps.css), so a wizard header looks like every
+   other stepper; only its placement is defined here. */
 .wx-restwizard-progress {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 0.5rem;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--wx-border-color, #dee2e6);
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: thin;
 }
 
-/* Individual progress steps */
-.wx-restwizard-progress .wx-restwizard-step {
-    flex: 1 1 0;
-    min-width: 0;
-    text-align: center;
-    padding: 0.75rem 0.5rem;
-    font-size: 0.9rem;
-    border-bottom: 3px solid var(--bs-border-color, #dee2e6);
-    color: var(--bs-secondary-color, #6c757d);
-    transition: all 0.3s ease;
+/* A step already passed can be clicked to return to it */
+.wx-restwizard-progress .wx-steps-item-clickable {
+    cursor: pointer;
+}
+
+.wx-restwizard-progress .wx-steps-item-clickable:hover .wx-steps-label {
+    text-decoration: underline;
+}
+
+/* Step counter beside the back button */
+.wx-restwizard-counter {
+    color: var(--wx-secondary-color, #6c757d);
+    font-size: 0.875rem;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
-/* Active progress step */
-.wx-restwizard-progress .wx-restwizard-step.active {
-    border-bottom-color: var(--bs-primary, #0d6efd);
-    color: var(--bs-primary, #0d6efd);
-    font-weight: 600;
-}
-
-/* Completed progress steps */
-.wx-restwizard-progress .wx-restwizard-step.completed {
-    border-bottom-color: var(--bs-success, #198754);
-    color: var(--bs-success, #198754);
-}
-
-/* Page container and animation */
+/* Page container and animation. This is the one part of the wizard that scrolls;
+   min-height: 0 lets it shrink below its content so the overflow lands here rather
+   than pushing the footer out of the dialog. */
 .wx-restwizard-pages-container {
     position: relative;
-    flex-grow: 1;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
 }
 
 /* Subtle fade-in for wizard pages when they are displayed */
@@ -109,6 +137,11 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     animation: fadeInPage 0.3s ease-in-out forwards;
 }
 
+/* The end state must resolve to transform:none, not translateY(0): with
+   animation-fill-mode:forwards the page would otherwise permanently retain a
+   transform, which establishes a containing block and stacking context that
+   traps fixed-positioned dropdown/overlay menus inside the page (clipped by
+   the page's overflow and covered by later siblings). */
 @keyframes fadeInPage {
     from {
         opacity: 0;
@@ -116,7 +149,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     }
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: none;
     }
 }
 
@@ -124,7 +157,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 .wx-restwizard-actions {
     margin-top: 1.5rem;
     padding-top: 1rem;
-    border-top: 1px solid var(--bs-border-color, #dee2e6);
+    border-top: 1px solid var(--wx-border-color, #dee2e6);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -169,22 +202,72 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     --wx-fe-type-tags: oklch(62% 0.14 155);
     --wx-fe-type-number: oklch(58% 0.14 25);
     --wx-fe-type-file: oklch(55% 0.05 250);
-    --wx-fe-primary-soft: color-mix(in oklab, var(--bs-primary, #0d6efd) 12%, var(--bs-body-bg, #fff));
-    --wx-fe-primary-border: color-mix(in oklab, var(--bs-primary, #0d6efd) 35%, var(--bs-body-bg, #fff));
+    --wx-fe-type-richtext: oklch(58% 0.13 200);
+    --wx-fe-type-password: oklch(52% 0.10 300);
+    --wx-fe-type-daterange: oklch(56% 0.12 170);
+    --wx-fe-type-choice: oklch(66% 0.15 60);
+    --wx-fe-type-range: oklch(60% 0.13 40);
+    --wx-fe-type-rating: oklch(72% 0.15 90);
+    --wx-fe-type-estimate: oklch(56% 0.13 15);
+    --wx-fe-type-color: oklch(64% 0.16 330);
+    --wx-fe-type-avatar: oklch(58% 0.14 270);
+    --wx-fe-type-tile: oklch(60% 0.12 140);
+    --wx-fe-type-move: oklch(54% 0.09 230);
+    --wx-fe-primary-soft: color-mix(in oklab, var(--wx-primary, #0d6efd) 12%, var(--wx-body-bg, #fff));
+    --wx-fe-primary-border: color-mix(in oklab, var(--wx-primary, #0d6efd) 35%, var(--wx-body-bg, #fff));
 }
 
-/* root host */
-.wx-webui-form-editor.wx-form-editor {
+/* root host. The class is the one the controller sets on whatever element it is
+   mounted on, so the rule reaches every host - it used to name a second class
+   that no control emits any more, and the editor was left without its own
+   column, its border and its background. */
+.wx-form-editor {
     display: flex;
     flex-direction: column;
     min-height: 0;
-    background: var(--bs-body-bg);
-    color: var(--bs-body-color);
-    font-family: var(--bs-body-font-family);
-    font-size: var(--bs-body-font-size);
-    line-height: var(--bs-body-line-height);
-    border: 1px solid var(--bs-border-color);
-    border-radius: var(--bs-border-radius);
+    background: var(--wx-body-bg);
+    color: var(--wx-body-color);
+    font-family: var(--wx-body-font-family);
+    font-size: var(--wx-body-font-size);
+    line-height: var(--wx-body-line-height);
+    border: 1px solid var(--wx-border-color);
+    border-radius: var(--wx-border-radius);
+}
+
+/* Fill mode: the editor takes the height its host offers instead of growing with
+   the form it edits, which is what an application shell asks of the content of a
+   pane. What it buys is the head and the foot staying put - the name of the form
+   above, the save state below - while the structure and the preview scroll on
+   their own, rather than the whole editor riding the pane's scrollbar.
+
+   Both the basis and the height are stated: a flex column host drives the basis,
+   and where a host hands nothing down the height still has to come from the
+   environment rather than from the content. 100% would resolve to auto against
+   an auto-height host, which is the content - the one answer this mode must not
+   give. The floor keeps a pane too short for the chrome scrolling rather than
+   crushing it. */
+.wx-form-editor.wx-fill {
+    flex: 1 1 var(--wx-form-editor-height, 70vh);
+    height: var(--wx-form-editor-height, 70vh);
+    max-height: 100%;
+    min-height: 12rem;
+    overflow: hidden;
+}
+
+.wx-form-editor.wx-fill > .wx-form-editor-head,
+.wx-form-editor.wx-fill > .wx-form-editor-foot {
+    flex: 0 0 auto;
+}
+
+.wx-form-editor.wx-fill > .wx-form-editor-body {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* the panes are where the overflow lands: the structure tree and the preview
+   each scroll on their own, so a long form never moves the other side */
+.wx-form-editor.wx-fill .wx-form-editor-pane-body {
+    overflow: auto;
 }
 
 /* header */
@@ -193,8 +276,8 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     align-items: center;
     gap: 0.75rem;
     padding: 0.625rem 0.875rem;
-    border-bottom: 1px solid var(--bs-border-color);
-    background: var(--bs-tertiary-bg, var(--bs-body-bg));
+    border-bottom: 1px solid var(--wx-border-color);
+    background: var(--wx-tertiary-bg, var(--wx-body-bg));
 }
 
 .wx-form-editor-title {
@@ -216,9 +299,9 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     align-items: center;
     padding: 1px 6px;
     font-size: 11px;
-    font-family: var(--bs-font-monospace);
-    color: var(--bs-secondary-color, var(--bs-body-color));
-    background: var(--bs-secondary-bg, var(--bs-tertiary-bg));
+    font-family: var(--wx-font-monospace);
+    color: var(--wx-secondary-color, var(--wx-body-color));
+    background: var(--wx-secondary-bg, var(--wx-tertiary-bg));
     border-radius: 4px;
 }
 
@@ -233,15 +316,15 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 .wx-form-editor-mode {
     display: inline-flex;
     align-items: stretch;
-    border: 1px solid var(--bs-border-color);
-    border-radius: var(--bs-border-radius);
+    border: 1px solid var(--wx-border-color);
+    border-radius: var(--wx-border-radius);
     overflow: hidden;
 }
 
 .wx-form-editor-mode > button {
     border: 0;
     background: transparent;
-    color: var(--bs-secondary-color, var(--bs-body-color));
+    color: var(--wx-secondary-color, var(--wx-body-color));
     padding: 4px 10px;
     font-size: 12px;
     font-weight: 500;
@@ -249,24 +332,24 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 }
 
 .wx-form-editor-mode > button + button {
-    border-left: 1px solid var(--bs-border-color);
+    border-left: 1px solid var(--wx-border-color);
 }
 
 .wx-form-editor-mode > button:hover {
-    background: var(--bs-secondary-bg, var(--bs-tertiary-bg));
-    color: var(--bs-body-color);
+    background: var(--wx-secondary-bg, var(--wx-tertiary-bg));
+    color: var(--wx-body-color);
 }
 
 .wx-form-editor-mode > button.active {
     background: var(--wx-fe-primary-soft);
-    color: var(--bs-primary, #0d6efd);
+    color: var(--wx-primary, #0d6efd);
 }
 
 .wx-form-editor-preview-toggle {
-    border: 1px solid var(--bs-border-color);
+    border: 1px solid var(--wx-border-color);
     background: transparent;
-    color: var(--bs-secondary-color, var(--bs-body-color));
-    border-radius: var(--bs-border-radius);
+    color: var(--wx-secondary-color, var(--wx-body-color));
+    border-radius: var(--wx-border-radius);
     padding: 3px 10px;
     font-size: 12px;
     font-weight: 500;
@@ -274,14 +357,37 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 }
 
     .wx-form-editor-preview-toggle:hover {
-        background: var(--bs-secondary-bg, var(--bs-tertiary-bg));
-        color: var(--bs-body-color);
+        background: var(--wx-secondary-bg, var(--wx-tertiary-bg));
+        color: var(--wx-body-color);
     }
 
     .wx-form-editor-preview-toggle.active {
         background: var(--wx-fe-primary-soft);
-        color: var(--bs-primary, #0d6efd);
+        /* the emphasis variant of the hue reads on the soft surface in either theme */
+        color: var(--wx-primary-text-emphasis, #052c65);
         border-color: var(--wx-fe-primary-border);
+    }
+
+/* publish: the one filled button in the chrome, because it is the one decision
+   the editor asks for - the save happened while the user was working */
+.wx-form-editor-publish {
+    border: 1px solid var(--wx-primary, #0d6efd);
+    background: var(--wx-primary, #0d6efd);
+    color: var(--wx-primary-color, #fff);
+    border-radius: var(--wx-border-radius);
+    padding: 3px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+    .wx-form-editor-publish:hover:not(:disabled) {
+        filter: brightness(1.05);
+    }
+
+    .wx-form-editor-publish:disabled {
+        opacity: .55;
+        cursor: default;
     }
 
 /* tab bar */
@@ -290,7 +396,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     align-items: stretch;
     gap: 2px;
     padding: 0.5rem 0.875rem 0;
-    border-bottom: 1px solid var(--bs-border-color);
+    border-bottom: 1px solid var(--wx-border-color);
 }
 
 .wx-form-editor-tab {
@@ -300,7 +406,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     margin-bottom: -1px;
     font-size: 13px;
     font-weight: 500;
-    color: var(--bs-secondary-color, var(--bs-body-color));
+    color: var(--wx-secondary-color, var(--wx-body-color));
     border-bottom: 2px solid transparent;
     cursor: pointer;
     display: inline-flex;
@@ -310,14 +416,14 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 }
 
     .wx-form-editor-tab:hover {
-        color: var(--bs-body-color);
-        background: var(--bs-secondary-bg, var(--bs-tertiary-bg));
-        border-radius: var(--bs-border-radius) var(--bs-border-radius) 0 0;
+        color: var(--wx-body-color);
+        background: var(--wx-secondary-bg, var(--wx-tertiary-bg));
+        border-radius: var(--wx-border-radius) var(--wx-border-radius) 0 0;
     }
 
     .wx-form-editor-tab.active {
-        color: var(--bs-primary, #0d6efd);
-        border-bottom-color: var(--bs-primary, #0d6efd);
+        color: var(--wx-primary, #0d6efd);
+        border-bottom-color: var(--wx-primary, #0d6efd);
         background: transparent;
     }
 
@@ -326,28 +432,28 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     align-items: center;
     padding: 0 6px;
     font-size: 11px;
-    color: var(--bs-secondary-color);
-    background: var(--bs-tertiary-bg, var(--bs-body-bg));
+    color: var(--wx-secondary-color);
+    background: var(--wx-tertiary-bg, var(--wx-body-bg));
     border-radius: 999px;
     min-width: 18px;
     justify-content: center;
 }
 
 .wx-form-editor-tab-input {
-    border: 1px solid var(--bs-primary, #0d6efd);
+    border: 1px solid var(--wx-primary, #0d6efd);
     border-radius: 3px;
     padding: 1px 4px;
     font: inherit;
     font-weight: 500;
-    background: var(--bs-body-bg);
-    color: var(--bs-body-color);
+    background: var(--wx-body-bg);
+    color: var(--wx-body-color);
     min-width: 80px;
 }
 
 .wx-form-editor-tab-add {
     border: 0;
     background: transparent;
-    color: var(--bs-secondary-color, var(--bs-body-color));
+    color: var(--wx-secondary-color, var(--wx-body-color));
     padding: 6px 10px 8px;
     font-size: 12.5px;
     font-weight: 500;
@@ -357,7 +463,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 }
 
     .wx-form-editor-tab-add:hover {
-        color: var(--bs-primary, #0d6efd);
+        color: var(--wx-primary, #0d6efd);
     }
 
 /* body grid*/
@@ -375,9 +481,9 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     display: flex;
     flex-direction: column;
     min-height: 0;
-    background: var(--bs-body-bg);
-    border: 1px solid var(--bs-border-color);
-    border-radius: var(--bs-border-radius);
+    background: var(--wx-body-bg);
+    border: 1px solid var(--wx-border-color);
+    border-radius: var(--wx-border-radius);
 }
 
 .wx-form-editor-pane-head {
@@ -385,11 +491,11 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid var(--bs-border-color);
-    background: var(--bs-tertiary-bg, var(--bs-body-bg));
+    border-bottom: 1px solid var(--wx-border-color);
+    background: var(--wx-tertiary-bg, var(--wx-body-bg));
     font-size: 12px;
     font-weight: 600;
-    color: var(--bs-secondary-color, var(--bs-body-color));
+    color: var(--wx-secondary-color, var(--wx-body-color));
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
@@ -400,8 +506,8 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     align-items: center;
     padding: 1px 6px;
     font-size: 11px;
-    color: var(--bs-secondary-color, var(--bs-body-color));
-    background: var(--bs-secondary-bg, var(--bs-tertiary-bg));
+    color: var(--wx-secondary-color, var(--wx-body-color));
+    background: var(--wx-secondary-bg, var(--wx-tertiary-bg));
     border-radius: 4px;
     text-transform: none;
     letter-spacing: 0;
@@ -435,12 +541,12 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 }
 
     .wx-form-editor-tree-row:hover {
-        background: var(--bs-secondary-bg, var(--bs-tertiary-bg));
+        background: var(--wx-secondary-bg, var(--wx-tertiary-bg));
     }
 
     .wx-form-editor-tree-row.selected {
         background: var(--wx-fe-primary-soft);
-        border-left-color: var(--bs-primary, #0d6efd);
+        border-left-color: var(--wx-primary, #0d6efd);
     }
 
     .wx-form-editor-tree-row.drop-before::before,
@@ -450,7 +556,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
         left: 0;
         right: 0;
         height: 2px;
-        background: var(--bs-primary, #0d6efd);
+        background: var(--wx-primary, #0d6efd);
         z-index: 1;
     }
 
@@ -463,7 +569,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     }
 
     .wx-form-editor-tree-row.drop-into {
-        outline: 2px solid var(--bs-primary, #0d6efd);
+        outline: 2px solid var(--wx-primary, #0d6efd);
         outline-offset: -2px;
         background: var(--wx-fe-primary-soft);
     }
@@ -471,7 +577,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 .wx-form-editor-chev {
     border: 0;
     background: transparent;
-    color: var(--bs-secondary-color, var(--bs-body-color));
+    color: var(--wx-secondary-color, var(--wx-body-color));
     width: 16px;
     height: 16px;
     border-radius: 3px;
@@ -484,8 +590,8 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 }
 
     .wx-form-editor-chev:hover {
-        background: var(--bs-tertiary-bg, var(--bs-body-bg));
-        color: var(--bs-body-color);
+        background: var(--wx-tertiary-bg, var(--wx-body-bg));
+        color: var(--wx-body-color);
     }
 
 .wx-form-editor-chev--empty {
@@ -502,7 +608,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 
 .wx-form-editor-icon--group::before {
     content: "▦";
-    color: var(--bs-primary, #0d6efd);
+    color: var(--wx-primary, #0d6efd);
     font-size: 12px;
 }
 
@@ -548,6 +654,50 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     background: var(--wx-fe-type-file);
 }
 
+.wx-form-editor-type-richtext {
+    background: var(--wx-fe-type-richtext);
+}
+
+.wx-form-editor-type-password {
+    background: var(--wx-fe-type-password);
+}
+
+.wx-form-editor-type-daterange {
+    background: var(--wx-fe-type-daterange);
+}
+
+.wx-form-editor-type-choice {
+    background: var(--wx-fe-type-choice);
+}
+
+.wx-form-editor-type-range {
+    background: var(--wx-fe-type-range);
+}
+
+.wx-form-editor-type-rating {
+    background: var(--wx-fe-type-rating);
+}
+
+.wx-form-editor-type-estimate {
+    background: var(--wx-fe-type-estimate);
+}
+
+.wx-form-editor-type-color {
+    background: var(--wx-fe-type-color);
+}
+
+.wx-form-editor-type-avatar {
+    background: var(--wx-fe-type-avatar);
+}
+
+.wx-form-editor-type-tile {
+    background: var(--wx-fe-type-tile);
+}
+
+.wx-form-editor-type-move {
+    background: var(--wx-fe-type-move);
+}
+
 .wx-form-editor-tree-label {
     flex: 1 1 auto;
     text-overflow: ellipsis;
@@ -557,32 +707,32 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 
 .wx-form-editor-tree-required {
     font-size: 10px;
-    color: var(--bs-danger, #dc3545);
+    color: var(--wx-danger, #dc3545);
     font-weight: 600;
     margin-left: 0.25rem;
 }
 
 .wx-form-editor-tree-input {
     flex: 1 1 auto;
-    border: 1px solid var(--bs-primary, #0d6efd);
+    border: 1px solid var(--wx-primary, #0d6efd);
     border-radius: 3px;
     padding: 1px 4px;
     font: inherit;
     font-weight: 500;
-    background: var(--bs-body-bg);
-    color: var(--bs-body-color);
+    background: var(--wx-body-bg);
+    color: var(--wx-body-color);
     max-width: 240px;
 }
 
 .wx-form-editor-tree-meta {
-    font-family: var(--bs-font-monospace);
+    font-family: var(--wx-font-monospace);
     font-size: 11px;
-    color: var(--bs-secondary-color, var(--bs-body-color));
+    color: var(--wx-secondary-color, var(--wx-body-color));
     flex-shrink: 0;
 }
 
 .wx-form-editor-tree-row[data-kind="group"] .wx-form-editor-tree-meta {
-    color: var(--bs-primary, #0d6efd);
+    color: var(--wx-primary, #0d6efd);
     background: var(--wx-fe-primary-soft);
     padding: 1px 6px;
     border-radius: 4px;
@@ -603,7 +753,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 .wx-form-editor-icon-btn {
     border: 0;
     background: transparent;
-    color: var(--bs-secondary-color, var(--bs-body-color));
+    color: var(--wx-secondary-color, var(--wx-body-color));
     width: 22px;
     height: 22px;
     border-radius: 3px;
@@ -613,14 +763,14 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 }
 
     .wx-form-editor-icon-btn:hover {
-        background: var(--bs-tertiary-bg, var(--bs-body-bg));
-        color: var(--bs-body-color);
+        background: var(--wx-tertiary-bg, var(--wx-body-bg));
+        color: var(--wx-body-color);
     }
 
 .wx-form-editor-tree-empty {
     padding: 2.5rem 1rem;
     text-align: center;
-    color: var(--bs-secondary-color, var(--bs-body-color));
+    color: var(--wx-secondary-color, var(--wx-body-color));
     font-size: 12.5px;
 }
 
@@ -630,32 +780,32 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
-    border-top: 1px solid var(--bs-border-color);
-    background: var(--bs-tertiary-bg, var(--bs-body-bg));
+    border-top: 1px solid var(--wx-border-color);
+    background: var(--wx-tertiary-bg, var(--wx-body-bg));
     position: relative;
 }
 
 .wx-form-editor-quickadd-input {
     flex: 1 1 auto;
-    border: 1px solid var(--bs-border-color);
-    border-radius: var(--bs-border-radius);
+    border: 1px solid var(--wx-border-color);
+    border-radius: var(--wx-border-radius);
     padding: 5px 9px;
     font-size: 13px;
-    background: var(--bs-body-bg);
-    color: var(--bs-body-color);
+    background: var(--wx-body-bg);
+    color: var(--wx-body-color);
 }
 
     .wx-form-editor-quickadd-input:focus {
         outline: none;
-        border-color: var(--bs-primary, #0d6efd);
+        border-color: var(--wx-primary, #0d6efd);
         box-shadow: 0 0 0 2px var(--wx-fe-primary-border);
     }
 
 .wx-form-editor-add-btn {
-    border: 1px solid var(--bs-primary, #0d6efd);
-    background: var(--bs-primary, #0d6efd);
-    color: var(--bs-primary-color, #fff);
-    border-radius: var(--bs-border-radius);
+    border: 1px solid var(--wx-primary, #0d6efd);
+    background: var(--wx-primary, #0d6efd);
+    color: var(--wx-primary-color, #fff);
+    border-radius: var(--wx-border-radius);
     padding: 4px 10px;
     font-size: 12.5px;
     font-weight: 500;
@@ -671,9 +821,9 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     bottom: calc(100% + 4px);
     left: 0.75rem;
     right: 0.75rem;
-    background: var(--bs-body-bg);
-    border: 1px solid var(--bs-border-color);
-    border-radius: var(--bs-border-radius);
+    background: var(--wx-body-bg);
+    border: 1px solid var(--wx-border-color);
+    border-radius: var(--wx-border-radius);
     box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
     max-height: 240px;
     overflow-y: auto;
@@ -691,7 +841,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     padding: 5px 10px;
     border-radius: 3px;
     font-size: 12.5px;
-    color: var(--bs-body-color);
+    color: var(--wx-body-color);
     cursor: pointer;
     text-align: left;
 }
@@ -699,7 +849,8 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     .wx-form-editor-picker-item:hover,
     .wx-form-editor-picker-item.highlighted {
         background: var(--wx-fe-primary-soft);
-        color: var(--bs-primary, #0d6efd);
+        /* the emphasis variant of the hue reads on the soft surface in either theme */
+        color: var(--wx-primary-text-emphasis, #052c65);
     }
 
     .wx-form-editor-picker-item.disabled {
@@ -716,14 +867,14 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 }
 
 .wx-form-editor-picker-meta {
-    font-family: var(--bs-font-monospace);
+    font-family: var(--wx-font-monospace);
     font-size: 11px;
-    color: var(--bs-secondary-color, var(--bs-body-color));
+    color: var(--wx-secondary-color, var(--wx-body-color));
     flex-shrink: 0;
 }
 
 .wx-form-editor-picker-glyph {
-    color: var(--bs-primary, #0d6efd);
+    color: var(--wx-primary, #0d6efd);
     font-size: 12px;
     width: 14px;
     text-align: center;
@@ -732,7 +883,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 .wx-form-editor-picker-sep {
     padding: 6px 10px 2px;
     font-size: 10.5px;
-    color: var(--bs-secondary-color, var(--bs-body-color));
+    color: var(--wx-secondary-color, var(--wx-body-color));
     text-transform: uppercase;
     letter-spacing: 0.05em;
     font-weight: 600;
@@ -741,7 +892,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 .wx-form-editor-picker-empty {
     padding: 12px;
     text-align: center;
-    color: var(--bs-secondary-color, var(--bs-body-color));
+    color: var(--wx-secondary-color, var(--wx-body-color));
     font-size: 12.5px;
 }
 
@@ -752,9 +903,9 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     gap: 0.75rem;
     padding: 0.5rem 0.75rem;
     font-size: 11.5px;
-    color: var(--bs-secondary-color, var(--bs-body-color));
-    border-top: 1px solid var(--bs-border-color);
-    background: var(--bs-tertiary-bg, var(--bs-body-bg));
+    color: var(--wx-secondary-color, var(--wx-body-color));
+    border-top: 1px solid var(--wx-border-color);
+    background: var(--wx-tertiary-bg, var(--wx-body-bg));
 }
 
 .wx-form-editor-hint {
@@ -767,10 +918,10 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     display: inline-block;
     padding: 1px 5px;
     font-size: 10.5px;
-    font-family: var(--bs-font-monospace);
-    color: var(--bs-body-color);
-    background: var(--bs-secondary-bg, var(--bs-tertiary-bg));
-    border: 1px solid var(--bs-border-color);
+    font-family: var(--wx-font-monospace);
+    color: var(--wx-body-color);
+    background: var(--wx-secondary-bg, var(--wx-tertiary-bg));
+    border: 1px solid var(--wx-border-color);
     border-bottom-width: 2px;
     border-radius: 4px;
     line-height: 1.3;
@@ -783,19 +934,19 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 
 .wx-form-editor-palette-search {
     width: 100%;
-    border: 1px solid var(--bs-border-color);
-    border-radius: var(--bs-border-radius);
+    border: 1px solid var(--wx-border-color);
+    border-radius: var(--wx-border-radius);
     padding: 4px 8px;
     font-size: 12.5px;
-    background: var(--bs-body-bg);
-    color: var(--bs-body-color);
+    background: var(--wx-body-bg);
+    color: var(--wx-body-color);
     margin-bottom: 0.5rem;
 }
 
 .wx-form-editor-palette-header {
     font-size: 10.5px;
     font-weight: 600;
-    color: var(--bs-secondary-color, var(--bs-body-color));
+    color: var(--wx-secondary-color, var(--wx-body-color));
     text-transform: uppercase;
     letter-spacing: 0.05em;
     padding: 8px 4px 4px;
@@ -815,15 +966,15 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     border: 0;
     background: transparent;
     padding: 5px 8px;
-    border-radius: var(--bs-border-radius);
+    border-radius: var(--wx-border-radius);
     font-size: 12.5px;
-    color: var(--bs-body-color);
+    color: var(--wx-body-color);
     cursor: pointer;
     text-align: left;
 }
 
     .wx-form-editor-palette-item:hover {
-        background: var(--bs-secondary-bg, var(--bs-tertiary-bg));
+        background: var(--wx-secondary-bg, var(--wx-tertiary-bg));
     }
 
 .wx-form-editor-palette-label {
@@ -835,13 +986,13 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 }
 
 .wx-form-editor-palette-type {
-    font-family: var(--bs-font-monospace);
+    font-family: var(--wx-font-monospace);
     font-size: 10.5px;
-    color: var(--bs-secondary-color, var(--bs-body-color));
+    color: var(--wx-secondary-color, var(--wx-body-color));
 }
 
 .wx-form-editor-palette-glyph {
-    color: var(--bs-primary, #0d6efd);
+    color: var(--wx-primary, #0d6efd);
     font-size: 12px;
     width: 14px;
     text-align: center;
@@ -850,13 +1001,13 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 /* live preview pane */
 .wx-form-editor-pane--preview .wx-form-editor-pane-body {
     padding: 1rem;
-    background: var(--bs-tertiary-bg, var(--bs-body-bg));
+    background: var(--wx-tertiary-bg, var(--wx-body-bg));
 }
 
 .wx-form-editor-preview-card {
-    background: var(--bs-body-bg);
-    border: 1px solid var(--bs-border-color);
-    border-radius: var(--bs-border-radius-lg, 0.5rem);
+    background: var(--wx-body-bg);
+    border: 1px solid var(--wx-border-color);
+    border-radius: var(--wx-border-radius-lg, 0.5rem);
     box-shadow: 0 4px 12px rgba(0, 0, 0, .04);
     padding: 1rem 1.125rem;
     max-width: 520px;
@@ -872,10 +1023,10 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 
 .wx-form-editor-preview-sub {
     font-size: 12.5px;
-    color: var(--bs-secondary-color, var(--bs-body-color));
+    color: var(--wx-secondary-color, var(--wx-body-color));
     margin-bottom: 1rem;
     padding-bottom: 0.75rem;
-    border-bottom: 1px solid var(--bs-border-color);
+    border-bottom: 1px solid var(--wx-border-color);
 }
 
 .wx-form-editor-preview-list {
@@ -887,9 +1038,9 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 .wx-form-editor-preview-empty {
     padding: 1.875rem;
     text-align: center;
-    color: var(--bs-secondary-color, var(--bs-body-color));
-    border: 1px dashed var(--bs-border-color);
-    border-radius: var(--bs-border-radius);
+    color: var(--wx-secondary-color, var(--wx-body-color));
+    border: 1px dashed var(--wx-border-color);
+    border-radius: var(--wx-border-radius);
     font-size: 12.5px;
 }
 
@@ -899,25 +1050,25 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 
     .wx-form-editor-preview-field.selected .wx-form-editor-preview-input,
     .wx-form-editor-preview-field.selected .wx-form-editor-preview-textarea {
-        border-color: var(--bs-primary, #0d6efd);
+        border-color: var(--wx-primary, #0d6efd);
         box-shadow: 0 0 0 2px var(--wx-fe-primary-border);
     }
 
 .wx-form-editor-preview-label {
     font-size: 12.5px;
     font-weight: 500;
-    color: var(--bs-secondary-color, var(--bs-body-color));
+    color: var(--wx-secondary-color, var(--wx-body-color));
     margin-bottom: 4px;
 }
 
     .wx-form-editor-preview-label.required::after {
         content: " *";
-        color: var(--bs-danger, #dc3545);
+        color: var(--wx-danger, #dc3545);
     }
 
 .wx-form-editor-preview-help {
     font-size: 11.5px;
-    color: var(--bs-secondary-color, var(--bs-body-color));
+    color: var(--wx-secondary-color, var(--wx-body-color));
     margin-top: 4px;
     line-height: 1.4;
 }
@@ -926,10 +1077,10 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 .wx-form-editor-preview-textarea {
     width: 100%;
     padding: 6px 10px;
-    border-radius: var(--bs-border-radius);
-    border: 1px solid var(--bs-border-color);
-    background: var(--bs-body-bg);
-    color: var(--bs-body-color);
+    border-radius: var(--wx-border-radius);
+    border: 1px solid var(--wx-border-color);
+    background: var(--wx-body-bg);
+    color: var(--wx-body-color);
     font-size: 13px;
     font-family: inherit;
     outline: none;
@@ -942,11 +1093,11 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 
 .wx-form-editor-preview-file {
     padding: 0.625rem;
-    border: 1.5px dashed var(--bs-border-color);
-    border-radius: var(--bs-border-radius);
-    background: var(--bs-tertiary-bg, var(--bs-body-bg));
+    border: 1.5px dashed var(--wx-border-color);
+    border-radius: var(--wx-border-radius);
+    background: var(--wx-tertiary-bg, var(--wx-body-bg));
     text-align: center;
-    color: var(--bs-secondary-color, var(--bs-body-color));
+    color: var(--wx-secondary-color, var(--wx-body-color));
     font-size: 12.5px;
 }
 
@@ -955,9 +1106,9 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     gap: 4px;
     flex-wrap: wrap;
     padding: 5px;
-    border: 1px solid var(--bs-border-color);
-    border-radius: var(--bs-border-radius);
-    background: var(--bs-body-bg);
+    border: 1px solid var(--wx-border-color);
+    border-radius: var(--wx-border-radius);
+    background: var(--wx-body-bg);
     min-height: 32px;
 }
 
@@ -967,7 +1118,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     padding: 2px 8px;
     border-radius: 4px;
     background: var(--wx-fe-primary-soft);
-    color: var(--bs-primary, #0d6efd);
+    color: var(--wx-primary, #0d6efd);
     font-size: 11.5px;
     font-weight: 500;
 }
@@ -977,9 +1128,9 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     align-items: center;
     gap: 0.5rem;
     padding: 6px 10px;
-    border: 1px solid var(--bs-border-color);
-    border-radius: var(--bs-border-radius);
-    background: var(--bs-body-bg);
+    border: 1px solid var(--wx-border-color);
+    border-radius: var(--wx-border-radius);
+    background: var(--wx-body-bg);
     font-size: 12.5px;
 }
 
@@ -987,8 +1138,8 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: var(--bs-secondary-bg, var(--bs-tertiary-bg));
-    color: var(--bs-secondary-color, var(--bs-body-color));
+    background: var(--wx-secondary-bg, var(--wx-tertiary-bg));
+    color: var(--wx-secondary-color, var(--wx-body-color));
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1007,15 +1158,16 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     align-items: center;
     padding: 3px 10px;
     border-radius: 999px;
-    border: 1px solid var(--bs-border-color);
-    background: var(--bs-body-bg);
+    border: 1px solid var(--wx-border-color);
+    background: var(--wx-body-bg);
     font-size: 12px;
-    color: var(--bs-secondary-color, var(--bs-body-color));
+    color: var(--wx-secondary-color, var(--wx-body-color));
 }
 
     .wx-form-editor-preview-pill.active {
         background: var(--wx-fe-primary-soft);
-        color: var(--bs-primary, #0d6efd);
+        /* the emphasis variant of the hue reads on the soft surface in either theme */
+        color: var(--wx-primary-text-emphasis, #052c65);
         border-color: var(--wx-fe-primary-border);
     }
 
@@ -1024,14 +1176,14 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     display: flex;
     gap: 0.875rem;
     padding: 0.75rem 0.875rem;
-    border: 1px dashed var(--bs-border-color);
-    border-radius: var(--bs-border-radius);
-    background: var(--bs-body-bg);
+    border: 1px dashed var(--wx-border-color);
+    border-radius: var(--wx-border-radius);
+    background: var(--wx-body-bg);
     position: relative;
 }
 
     .wx-form-editor-preview-group.selected {
-        outline: 2px solid var(--bs-primary, #0d6efd);
+        outline: 2px solid var(--wx-primary, #0d6efd);
         outline-offset: -2px;
     }
 
@@ -1040,12 +1192,12 @@ form.wx-webapp-restwizard > .wx-wizard-page {
         position: absolute;
         top: -8px;
         left: 10px;
-        background: var(--bs-body-bg);
+        background: var(--wx-body-bg);
         padding: 0 6px;
         font-size: 10.5px;
         font-weight: 500;
-        color: var(--bs-secondary-color, var(--bs-body-color));
-        font-family: var(--bs-font-monospace);
+        color: var(--wx-secondary-color, var(--wx-body-color));
+        font-family: var(--wx-font-monospace);
         text-transform: uppercase;
         letter-spacing: 0.04em;
     }
@@ -1080,10 +1232,10 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     align-items: center;
     gap: 0.75rem;
     padding: 0.5rem 0.875rem;
-    border-top: 1px solid var(--bs-border-color);
-    background: var(--bs-tertiary-bg, var(--bs-body-bg));
+    border-top: 1px solid var(--wx-border-color);
+    background: var(--wx-tertiary-bg, var(--wx-body-bg));
     font-size: 11.5px;
-    color: var(--bs-secondary-color, var(--bs-body-color));
+    color: var(--wx-secondary-color, var(--wx-body-color));
 }
 
 .wx-form-editor-foot-status {
@@ -1091,11 +1243,53 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     display: inline-flex;
     align-items: center;
     padding: 1px 6px;
-    background: var(--bs-secondary-bg, var(--bs-tertiary-bg));
+    background: var(--wx-secondary-bg, var(--wx-tertiary-bg));
     border-radius: 4px;
-    font-family: var(--bs-font-monospace);
+    font-family: var(--wx-font-monospace);
     font-size: 11px;
 }
+
+/* the state is carried on the element rather than in a class, so the controller
+   writes one attribute instead of juggling a set; quiet while it says nothing,
+   legible the moment it does */
+.wx-form-editor-foot-status[data-wx-state="saved"] {
+    color: var(--wx-success);
+}
+
+.wx-form-editor-foot-status[data-wx-state="draft"],
+.wx-form-editor-foot-status[data-wx-state="pending"] {
+    color: var(--wx-warning-text-emphasis, var(--wx-secondary-color));
+}
+
+.wx-form-editor-foot-status[data-wx-state="error"] {
+    color: var(--wx-danger);
+}
+
+/* discard reads as a link beside the state it acts on, far from the publish
+   button: one of the two is destructive */
+.wx-form-editor-discard {
+    border: 0;
+    background: transparent;
+    color: var(--wx-secondary-color, var(--wx-body-color));
+    padding: 1px 4px;
+    font-size: 11.5px;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+}
+
+    .wx-form-editor-discard:hover:not(:disabled) {
+        color: var(--wx-danger);
+    }
+
+    .wx-form-editor-discard:disabled {
+        opacity: .55;
+        cursor: default;
+    }
+
+    .wx-form-editor-discard[hidden] {
+        display: none;
+    }
 
 /* title block: name + version row above the description */
 .wx-form-editor-title {
@@ -1129,7 +1323,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 
 .wx-form-editor-description {
     font-size: 12.5px;
-    color: var(--bs-secondary-color, var(--bs-body-color));
+    color: var(--wx-secondary-color, var(--wx-body-color));
     min-height: 1.2em;
 }
 
@@ -1137,8 +1331,8 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 .wx-form-editor-description textarea.wx-form-editor-description-input {
     font: inherit;
     color: inherit;
-    background: var(--bs-body-bg);
-    border-radius: var(--bs-border-radius);
+    background: var(--wx-body-bg);
+    border-radius: var(--wx-border-radius);
 }
 
 .wx-form-editor-description textarea.wx-form-editor-description-input {
@@ -1202,7 +1396,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     justify-content: center;
     width: 14px;
     height: 16px;
-    color: var(--bs-secondary-color, var(--bs-body-color));
+    color: var(--wx-secondary-color, var(--wx-body-color));
     cursor: grab;
     font-size: 14px;
     line-height: 1;
@@ -1234,7 +1428,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 .wx-form-editor-preview-tabs {
     padding: 0;
     margin: -0.25rem 0 0.875rem;
-    border-bottom: 1px solid var(--bs-border-color);
+    border-bottom: 1px solid var(--wx-border-color);
     background: transparent;
 }
 
@@ -1263,16 +1457,83 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     padding: 1px 4px;
     min-width: 80px;
     max-width: 200px;
-    background: var(--bs-body-bg);
-    color: var(--bs-body-color);
-    border: 1px solid var(--bs-primary, #0d6efd);
+    background: var(--wx-body-bg);
+    color: var(--wx-body-color);
+    border: 1px solid var(--wx-primary, #0d6efd);
     border-radius: 3px;
 }
 
 /* form description shown above the sub block in the preview card */
 .wx-form-editor-preview-description {
     font-size: 12.5px;
-    color: var(--bs-secondary-color, var(--bs-body-color));
+    color: var(--wx-secondary-color, var(--wx-body-color));
     margin-bottom: 0.5rem;
     white-space: pre-wrap;
+}
+
+/* preview shapes of the field types the editor knows beyond text and lists */
+
+.wx-form-editor-preview-richtext {
+    border-top: 3px double var(--wx-border-color);
+}
+
+.wx-form-editor-preview-range {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 1.25rem;
+}
+
+.wx-form-editor-preview-range-bar {
+    flex: 1 1 auto;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--wx-secondary-bg, #e9ecef);
+}
+
+.wx-form-editor-preview-range-knob {
+    position: absolute;
+    left: 40%;
+    width: 0.85rem;
+    height: 0.85rem;
+    border-radius: 9999px;
+    background: var(--wx-primary, #0d6efd);
+}
+
+.wx-form-editor-preview-rating {
+    color: var(--wx-fe-type-rating);
+    letter-spacing: 0.15em;
+}
+
+.wx-form-editor-preview-color {
+    display: flex;
+    gap: 0.35rem;
+}
+
+.wx-form-editor-preview-color-dot {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 9999px;
+    border: 1px solid var(--wx-border-color);
+}
+
+.wx-form-editor-preview-tiles,
+.wx-form-editor-preview-move {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.wx-form-editor-preview-tile {
+    width: 3.5rem;
+    height: 2rem;
+    border: 1px solid var(--wx-border-color);
+    border-radius: var(--wx-border-radius, 0.375rem);
+    background: var(--wx-secondary-bg, #e9ecef);
+}
+
+.wx-form-editor-preview-move-column {
+    flex: 1 1 0;
+    height: 2.5rem;
+    border: 1px dashed var(--wx-border-color);
+    border-radius: var(--wx-border-radius, 0.375rem);
 }

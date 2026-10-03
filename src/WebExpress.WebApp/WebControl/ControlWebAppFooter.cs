@@ -10,7 +10,7 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Footer for a web app.
+    /// Renders the footer area shown at the bottom of a WebApp page.
     /// </summary>
     public class ControlWebAppFooter : Control, IControlWebAppFooter
     {
@@ -137,7 +137,7 @@ namespace WebExpress.WebApp.WebControl
                 renderContext?.PageContext
             ));
 
-            var footerCtrl = (preferences.Any() || primary.Any() || secondary.Any()) ? new ControlPanelFooter
+            var footerCtrl = (preferences.Any() || primary.Any() || secondary.Any()) ? new ControlFooter
             (
                 Id,
                 new ControlPanel(null, [.. preferences]),

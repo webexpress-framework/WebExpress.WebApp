@@ -37,11 +37,14 @@ The form controller manages the complete lifecycle of user interactions, from in
 - **Initialization & Hydration**
   - Upon loading, a container for global error messages (`.restform-error-container`) is created if it does not yet exist.
   - The controller retrieves the data and automatically populates the form fields.
+  - In a modal, the field area (`<main>`) is hidden in `delete` mode and otherwise left to the stylesheet: the controller clears its own inline `display` rather than forcing `block`, because an inline value outranks every rule a host might use to lay the fields out — a body reserved for a filling editor, for instance, needs a flex column there.
 
 - **Validation**
   - The controller uses the native HTML5 validation API (`required`, `pattern`, `min`/`max`, `type="email"`, etc.).
+  - A control that stores its value in a hidden input — a tile picker, a segmented choice — is barred from native constraint validation, so `required` has no effect on it. Such a control declares `data-wx-required="true"` on its hidden input instead, which is checked in the same pass; `data-wx-required-message` overrides the default wording.
   - In case of errors, submission is prevented, the first invalid field is focused, and an error message is displayed.
   - Specific validations for email patterns are additionally checked to compensate for browser inconsistencies.
+  - A validation message may carry `{name}` placeholders, which are filled from the values the rule was checked against (`{minlength}`, `{maxlength}`, `{min}`/`{max}`).
 
 - **Submission**
   - The browser's standard submit is prevented.

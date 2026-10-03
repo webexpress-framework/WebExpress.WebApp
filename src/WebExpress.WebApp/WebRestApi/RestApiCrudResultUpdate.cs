@@ -6,7 +6,7 @@ using WebExpress.WebCore.WebMessage;
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Represents the update result of a REST API CRUD operation.
+    /// The result returned after a REST API update operation.
     /// </summary>
     public class RestApiCrudResultUpdate : RestApiCrudResult, IRestApiCrudResultUpdate
     {

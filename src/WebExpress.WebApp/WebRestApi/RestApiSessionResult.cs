@@ -21,7 +21,8 @@ namespace WebExpress.WebApp.WebRestApi
         public bool Success { get; set; }
 
         /// <summary>
-        /// Gets or sets an optional authentication session identifier.
+        /// Gets or sets the token a token-based login hands the client. Stays empty for cookie
+        /// sessions, whose id must never reach script.
         /// </summary>
         public string SessionId { get; set; }
 

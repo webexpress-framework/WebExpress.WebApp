@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using WebExpress.WebApp.WebControl;
 using WebExpress.WebApp.WebPage;
 using WebExpress.WebApp.WebSection;
@@ -22,7 +22,10 @@ namespace WebExpress.WebApp.WebSettingPage
         /// <summary>
         /// Gets the area for setting tab.
         /// </summary>
-        public ControlWebAppSettingTab SettingTab { get; protected set; } = new ControlWebAppSettingTab("wx-settingtab");
+        public ControlWebAppSettingTab SettingTab { get; protected set; } = new ControlWebAppSettingTab("wx-settingtab")
+        {
+            Layout = _ => TypeLayoutTab.Underline
+        };
 
         /// <summary>
         /// Gets the sidebar control.
@@ -64,9 +67,13 @@ namespace WebExpress.WebApp.WebSettingPage
 
             // body
             Header.AppTitle.SetTitle(html.Head.Title);
+
+            // the marker goes on the root, as on every other page: the client's dark mode
+            // switch only ever rewrites the root, and a marker on the body would outrank
+            // it and keep the page dark after the user has switched to light
             if (Theme?.ThemeMode == ThemeMode.Dark)
             {
-                html.Body.AddUserAttribute("data-bs-theme", "dark");
+                html.AddUserAttribute("data-wx-theme", "dark");
             }
 
             var preferences = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionBodyPreferences>
@@ -87,7 +94,7 @@ namespace WebExpress.WebApp.WebSettingPage
             );
             html.Body.Add(primary.Select(x => x.Render(renderContext, this)));
 
-            var split = new ControlPanelSplit
+            var split = new ControlSplit
             (
                 "wx-split",
                 [Sidebar],
@@ -97,7 +104,10 @@ namespace WebExpress.WebApp.WebSettingPage
                 Border = _ => new PropertyBorder(true),
                 Orientation = _ => TypeOrientationSplit.Horizontal,
                 SidePanelInitialSize = _ => 350,
-                SidePanelMinSize = _ => 45
+                SidePanelMinSize = _ => 45,
+                // the toggle that expands the sidebar again sits in the sidebar's
+                // own toolbar, so the collapse has to leave the icon rail standing
+                SidePanelCollapseSize = _ => 45
             };
 
             html.Body.Add

@@ -1,7 +1,117 @@
+/* =====================================================================
+   Application tokens
+   ---------------------------------------------------------------------
+   The surfaces this layer adds on top of WebUI - the comment thread and
+   its composer, the permission matrix, the watcher list, the relation
+   view and the scrum boards - share one palette, addressed through
+   --wx-webapp-*. It is a naming layer over the semantic --wx-* tokens of
+   webexpress.webui.css rather than a second palette: every value resolves
+   through one of those, so re-skinning --wx-primary or switching
+   [data-wx-theme] carries this layer along and it needs no dark block of
+   its own to keep in step.
+
+   Defining them here is also what makes them optional at the call site.
+   Most sheets read them as an override in front of a framework token -
+   var(--wx-webapp-surface, var(--wx-body-bg)) - but a sheet that reads one
+   bare is just as correct, and without a definition those declarations are
+   invalid at computed-value time: the surface loses its background, its
+   border and its radius and is left with whatever the browser paints by
+   itself. That failure hides in light mode, where the fallback is a light
+   surface on a light page, and shows in dark mode - most plainly on a
+   native <select>, which reverts to a white field on a dark card.
+
+   An application still overrides any of these in its own theme sheet,
+   which loads last; that is the app level override the feature sheets
+   refer to.
+   ===================================================================== */
+:root, [data-wx-theme] {
+    /* surfaces: the card, the bars framing it, and a third level for the
+       rows nested inside one */
+    --wx-webapp-surface: var(--wx-body-bg);
+    --wx-webapp-surface-2: var(--wx-tertiary-bg);
+    --wx-webapp-surface-3: var(--wx-secondary-bg);
+
+    /* text: emphasised, normal, muted, subtle */
+    --wx-webapp-text: var(--wx-emphasis-color);
+    --wx-webapp-text-2: var(--wx-body-color);
+    --wx-webapp-text-3: var(--wx-secondary-color);
+    --wx-webapp-text-muted: var(--wx-tertiary-color);
+
+    /* lines: a drawn border, a softer one, and the divider inside a card */
+    --wx-webapp-border: var(--wx-border-color);
+    --wx-webapp-border-2: var(--wx-border-color-translucent);
+    --wx-webapp-divider: var(--wx-border-color-translucent);
+
+    /* accents */
+    --wx-webapp-primary: var(--wx-primary);
+    --wx-webapp-primary-soft: var(--wx-primary-bg-subtle);
+    --wx-webapp-primary-border: var(--wx-primary-border-subtle);
+    --wx-webapp-warn: var(--wx-warning);
+    --wx-webapp-danger: var(--wx-danger);
+
+    /* geometry and type */
+    --wx-webapp-r-sm: var(--wx-border-radius-sm);
+    --wx-webapp-r-md: var(--wx-border-radius);
+    --wx-webapp-font-mono: var(--wx-font-monospace);
+}
+
+/* =====================================================================
+   Application shell
+   ---------------------------------------------------------------------
+   The shell owns the viewport rather than the document: the window itself
+   never scrolls, the header, breadcrumb and footer stay put as bands, and
+   only the panes between them scroll. Scoping the scroll to the panes is
+   what keeps a long table from pushing the footer off screen and from
+   putting a second scrollbar next to the pane's own.
+
+   The lock only holds while every link of the chain may shrink below its
+   content, hence the min-height:0 repeated on each nested flex container:
+   a flex item's automatic minimum size is its content, which would
+   otherwise let a long table grow the pane past the viewport and take the
+   lock down with it.
+   ===================================================================== */
 body {
-    height: 100%;
+    height: 100vh;
+    /* dvh tracks the browser chrome that mobile shows and hides while
+       scrolling, so the footer never ends up underneath it; the vh above
+       stays as the fallback for engines without dvh */
+    height: 100dvh;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
+}
+
+/* the bands keep their intrinsic height and never yield it to the growing
+   region. They are named one by one rather than caught by body > *, so a
+   fragment rendered into one of the body sections keeps the default and is
+   still allowed to give way when the viewport is short */
+body > #wx-header,
+body > #wx-toast,
+body > #wx-breadcrumb,
+body > #wx-prologue,
+body > #wx-settingtab,
+body > #wx-epilogue,
+body > #wx-footer {
+    flex: 0 0 auto;
+}
+
+/* the region between the bands. The sidebar split claims it on pages that
+   have a sidebar; on pages without one the split control renders its single
+   panel unwrapped, which promotes the content to a direct child of the body,
+   so both have to be able to take the role. The login shell has neither and
+   brings its own */
+body > #wx-split,
+body > #wx-content,
+body > #login {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* the login shell has no pane of its own to scroll, so the region takes the
+   job: on a short screen the form gives way rather than being clipped by the
+   viewport lock */
+body > #login {
+    overflow-y: auto;
 }
 
 main {
@@ -46,7 +156,7 @@ main {
 }
 
 .wx-appnavigation > .wx-overflow-menu:hover {
-    background: var(--bs-body-bg);
+    background: var(--wx-body-bg);
 }
 
 .wx-appnavigation > .wx-overflow-menu > .btn {
@@ -58,15 +168,14 @@ main {
 }
 
 .wx-appnavigation > .wx-dropdown > button {
-    color: unset;
-}
-
-.wx-appnavigation > .wx-dropdown > .dropdown-menu[data-bs-popper] {
-    left: unset;
+    color: inherit;
+    padding-inline: clamp(0.2em, 1vw, 1em);
+    padding-block: 0.5em;
+    border-radius: 0.2em;
 }
 
 .wx-appnavigation .wx-overflow-menu-item {
-    color: rgba(var(--bs-link-color-rgb), var(--bs-link-opacity, 1));
+    color: rgba(var(--wx-link-color-rgb), var(--wx-link-opacity, 1));
 }
 
 .wx-app-dropdown {
@@ -74,14 +183,20 @@ main {
 }
 
 .wx-app-dropdown > .btn {
-    color: var(--bs-bory-bg);
-    border-radius: inherit;
-    border: unset;
+    color: inherit;
+    border-radius: 0.2em;
 }
 
-[data-bs-theme="dark"] .wx-app-dropdown > .btn {
-    color: var(--bs-body-color);
+/* the buttons of the bar - the dropdown toggles and the overflow trigger - take the hover
+   surface the theme paints on every entry, so the border the framework's button hover
+   draws would frame that surface where a link beside it has none */
+.wx-appnavigation > .btn:is(:hover, :focus, :active),
+.wx-appnavigation > .wx-dropdown > .btn:is(:hover, :focus, :active),
+.wx-app-dropdown > .btn:is(:hover, :focus, :active) {
+    border-color: transparent;
 }
+
+
 
 .wx-toast {
     font-size: clamp(0.8em, 0.9vw, 1em);
@@ -99,30 +214,228 @@ main {
     min-height: 100%;
 }
 
-.wx-main-pane {
+#wx-split > .wx-main-pane,
+#wx-splitter-content > .wx-main-pane {
     display: flex;
     flex-direction: row;
     align-items: stretch;
     justify-content: flex-start;
 }
 
+/* Every shell pane scrolls on its own. The split control only does this for
+   its main pane, and a side pane carrying a long navigation tree or a tall
+   property sheet needs it just as much. The rule stays on the two shell
+   splits by id so the splits inside the editors keep the overflow their own
+   canvases depend on. Only the vertical axis is declared: the horizontal one
+   follows it to auto on its own, which is what a table too wide for the pane
+   needs - pinning it to hidden would put that table out of reach. And
+   overscroll-behavior stops a pane that has hit its end from handing the
+   gesture to the page behind it, which on a touch device would otherwise read
+   as the whole shell bouncing. */
+#wx-split > .wx-side-pane,
+#wx-split > .wx-main-pane,
+#wx-splitter-content > .wx-side-pane,
+#wx-splitter-content > .wx-main-pane {
+    min-width: 0;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+/* The tint of the property sheet belongs to the pane, not to the sheet. The
+   pane is the scrollport, and a scroll container paints its own background
+   across the visible area whatever the scroll offset is - so the tint holds on
+   both axes and at every position. Painted on the sheet it did not: the sheet
+   is a block box inside that scrollport, so it ended where its content box
+   ended, and scrolling past it uncovered untinted pane below the properties.
+   Sizing the sheet to fill instead only ever fixed the vertical half of that,
+   and only until a sheet grew wider than its pane.
+
+   The split renders #wx-splitter-content only for a page that has a property
+   panel, and its side pane is that panel - the same pairing the overflow rule
+   above relies on. */
+#wx-splitter-content > .wx-side-pane {
+    background: var(--wx-tertiary-bg);
+}
+
+/* what is left for the sheet is the content flow: a block that keeps a usable
+   width and holds its properties off the pane edges */
 .wx-proterty {
     display: block;
-    background: var(--bs-tertiary-bg);
-    min-height: 100%;
     min-width: 15%;
-    height: 100%;
     padding: 0.5em;
 }
 
-.wx-content {
+/* the content column: the toolbar is a band of its own, so it stays in place
+   while the area below it scrolls */
+#wx-content {
     width: 100%;
     flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+#wx-content > #wx-content-toolbar {
+    flex: 0 0 auto;
+}
+
+/* the scrolling body of the content column - the nested property split where
+   the page has a property panel, the main panel itself where it has none */
+#wx-content > #wx-splitter-content {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* main already grows through the generic main rule above; what it lacks is
+   permission to shrink below its content and a scrollport of its own. It is
+   reached both as a column child of the content and as a row child of the
+   property split's main pane, so it has to grow on either axis */
+#wx-content-main {
+    min-height: 0;
+    min-width: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+/* A region that asks to fill the pane - a master-detail carrying a whole view,
+   a board, a calendar, a chart or an editor that is the view - can only do so if
+   every panel between it and the main panel
+   hands the height down. A page of stacked sections must not: a section allowed
+   to shrink below its content clips it instead of scrolling it. So the chain
+   turns into a column only while such a region is on the page, and only along
+   that region's own ancestry, which is what the :has() selects. Each panel on
+   that ancestry has to be both: a column, so it hands a height down, and a
+   growing item, so it has one to hand - a panel left at its content height
+   would pass on nothing and the region would sit at its minimum. The panels
+   beside it keep the default and stay at their content height.
+
+   The two :not() guards keep the rule from *revealing* anything. It carries an
+   id, so it outweighs every class-only rule that hides an element - including
+   `.tab-content > .tab-pane { display: none }`. Without the guards a tab set
+   whose panes each hold a filling region laid all of them out at once, and the
+   panes shared the height the active one was supposed to get: the region then
+   landed on its 12rem floor, the one outcome the mode exists to prevent. The
+   .d-none of the view control needs no guard - it hides with !important.
+
+   .wx-fill is the marker every filling control carries - board, calendar, chart,
+   form editor - and what each of them makes of the height it is handed is stated
+   in its own stylesheet. The master-detail predates the marker and keeps its own
+   class, so both are named here.
+
+   The chain ends at the region. The third :not() keeps the rule off everything
+   *inside* a filling region: a master-detail whose detail frame loads a page that
+   carries a filling control of its own - a class page with its dashboard - would
+   otherwise have its split matched as an ancestor of that control and turned into
+   a column, stacking the list above the detail it was meant to stand beside. What
+   a region does with the height it is handed, and what it loads into itself, is
+   its own stylesheet's business. */
+#wx-content-main :has(.wx-master-detail-fill, .wx-fill):not([hidden]):not(.tab-pane:not(.active)):not(:is(.wx-master-detail-fill, .wx-fill) *) {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 .wx-footer {
     display: flex;
     justify-content: space-between;
+}
+
+/* ---------------------------------------------------------------------
+   Compact screens
+   ---------------------------------------------------------------------
+   Below the tablet breakpoint there is no room for two panes beside each
+   other, so the shell stacks them: navigation above content, content above
+   the property sheet. Only the direction is declared here - the split
+   control follows the container's computed flex-direction and moves
+   dragging, collapsing and pane sizing onto the same axis, so the divider
+   keeps working between the stacked panes instead of turning into a dead
+   sliver. The bands and the per-pane scrollports are unchanged, so the
+   viewport stays locked and each pane keeps its own scrollbar.
+   --------------------------------------------------------------------- */
+@media (max-width: 767.98px) {
+    #wx-split,
+    #wx-splitter-content {
+        flex-direction: column;
+    }
+
+    /* the side pane keeps the extent the controller wrote for it and is the
+       only one of the two that may not be shrunk, so a tall main pane cannot
+       squeeze the navigation down to a sliver */
+    #wx-split > .wx-side-pane,
+    #wx-splitter-content > .wx-side-pane {
+        flex: 0 0 auto;
+    }
+
+    /* stacked, the navigation is a strip above the content rather than a third
+       of the screen: the configured extent was picked as a width and means
+       nothing as a height. The cap leaves the divider free to size it below */
+    #wx-split > .wx-side-pane {
+        max-height: 35vh;
+    }
+
+    /* the property sheet is capped against its own container rather than the
+       viewport, because what it sits in is already what the navigation strip
+       above left over - measured against the viewport it would take nearly all
+       of that remainder and leave the content it describes a few lines tall */
+    #wx-splitter-content > .wx-side-pane {
+        max-height: 45%;
+    }
+
+    /* the main pane takes what the side pane leaves. A zero basis is what keeps
+       it out of the shrink competition - sized from its content it would bid
+       for the whole stack and take the side pane's extent with it */
+    #wx-split > .wx-main-pane,
+    #wx-splitter-content > .wx-main-pane {
+        flex: 1 1 0;
+        min-height: 0;
+    }
+
+    /* a 6px divider is below what a fingertip can reliably hit, and a
+       double tap on it is what brings a stacked pane back */
+    #wx-split > .wx-splitter,
+    #wx-splitter-content > .wx-splitter {
+        height: 0.75rem;
+    }
+}
+
+/* ---------------------------------------------------------------------
+   Print
+   ---------------------------------------------------------------------
+   The viewport lock is a screen affordance. On paper it would reduce the
+   whole application to the one screenful that happened to be on screen, so
+   printing releases it and lets the panes flow at their full length, one
+   after another. The extents the split controller wrote are pixel values
+   for a screen-sized container and only yield to !important.
+   --------------------------------------------------------------------- */
+@media print {
+    body {
+        display: block;
+        height: auto;
+        overflow: visible;
+    }
+
+    #wx-split,
+    #wx-splitter-content,
+    #wx-content,
+    #wx-content-main,
+    #wx-split > .wx-side-pane,
+    #wx-split > .wx-main-pane,
+    #wx-splitter-content > .wx-side-pane,
+    #wx-splitter-content > .wx-main-pane {
+        display: block;
+        width: auto !important;
+        height: auto !important;
+        max-height: none;
+        overflow: visible !important;
+    }
+
+    /* a divider is something to drag; on paper it is a stripe of ink */
+    #wx-split > .wx-splitter,
+    #wx-splitter-content > .wx-splitter {
+        display: none;
+    }
 }
 
 .wx-message-queue-status {
@@ -135,5 +448,31 @@ main {
     width: 1em;
     height: 1em;
     border-radius: 50%;
+}
+
+/* played on a data control whose content was re-queried because of an
+   external data change (webexpress.webapp.data.changed), so the user sees
+   the update came from outside; the class is removed by the engine after
+   the animation duration */
+.wx-data-changed {
+    animation: wx-data-changed-flash 1.2s ease-out 1;
+}
+
+@keyframes wx-data-changed-flash {
+    0% {
+        background-color: var(--wx-primary-bg-subtle, rgba(13, 110, 253, 0.2));
+        box-shadow: 0 0 0 0.2rem var(--wx-primary-border-subtle, rgba(13, 110, 253, 0.35));
+    }
+
+    100% {
+        background-color: transparent;
+        box-shadow: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .wx-data-changed {
+        animation: none;
+    }
 }
 

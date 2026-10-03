@@ -4,7 +4,7 @@ using WebExpress.WebUI.WebControl;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Help control for a WebApp.
+    /// Contract for the help control in the WebApp header.
     /// </summary>
     public interface IControlWebAppHeaderHelp : IControl
     {

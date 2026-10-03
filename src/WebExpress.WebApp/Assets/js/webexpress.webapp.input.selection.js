@@ -27,13 +27,20 @@ webexpress.webapp.InputSelectionCtrl = class extends webexpress.webui.InputSelec
      * @param {HTMLElement} element - the dom element for the selection control.
      */
     constructor(element) {
+        // consume the island before the base constructor parses the children
+        // as selection items; the read caches on the element
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+
         super(element);
+
+        // the endpoint is authored in C# through the wx-service island
+        this._service = islandServices.data || null;
+        if (this._service) {
+            this._apiEndpoint = this._service.baseUri;
+        }
 
         // read configuration from dataset
         if (element && element.dataset) {
-            if (typeof element.dataset.uri === "string") {
-                this._apiEndpoint = element.dataset.uri;
-            }
             if (typeof element.dataset.method === "string") {
                 const m = element.dataset.method.trim().toUpperCase();
                 this._httpMethod = (m === "POST" || m === "GET") ? m : "GET";
@@ -98,7 +105,6 @@ webexpress.webapp.InputSelectionCtrl = class extends webexpress.webui.InputSelec
     _cleanupDataAttributes(element) {
         // remove only known configuration attributes to avoid unintended side effects
         const attrs = [
-            "data-uri",
             "data-method",
             "data-query-param",
             "data-page-param",
@@ -171,13 +177,19 @@ webexpress.webapp.InputSelectionCtrl = class extends webexpress.webui.InputSelec
         const init = this._buildRequestInit(term, this._abortCtrl.signal);
 
         // perform request using fetch api
-        fetch(url, init)
+        webexpress.webapp.ServiceRegistry.request(url, init)
             .then((res) => {
+                // ignore superseded requests that a newer keystroke aborted
+                if (res.error && res.error.kind === "abort") {
+                    const abort = new Error("aborted");
+                    abort.name = "AbortError";
+                    throw abort;
+                }
                 // check http status
                 if (!res.ok) {
                     throw new Error(`http ${res.status}`);
                 }
-                return res.json();
+                return res.data;
             })
             .then((response) => {
                 const rawData = response.items;
@@ -240,57 +252,7 @@ webexpress.webapp.InputSelectionCtrl = class extends webexpress.webui.InputSelec
      * @returns {Object} A normalized item compatible with InputSelectionCtrl.options.
      */
     _mapApiItem(apiItem) {
-        // choose field aliases defensively
-        const id = apiItem.id || null;
-        const uri = apiItem.uri || apiItem.url || "javascript:void(0);";
-        const content = apiItem.content || apiItem.name || apiItem.text || apiItem.title || "";
-        const icon = apiItem.icon || null;
-        const image = apiItem.image || apiItem.img || null;
-        const color = apiItem.color || null;
-        const disabled = Boolean(apiItem.disabled);
-        const role = apiItem.role || null;
-
-        // transform data/aria objects into attribute tuples
-        const dataTuples = [];
-        if (apiItem.data && typeof apiItem.data === "object") {
-            Object.keys(apiItem.data).forEach((k) => {
-                // ensure attribute key has data- prefix
-                const key = k.startsWith("data-") ? k : "data-" + k;
-                dataTuples.push([key, String(apiItem.data[k])]);
-            });
-        }
-
-        const ariaTuples = [];
-        if (apiItem.aria && typeof apiItem.aria === "object") {
-            Object.keys(apiItem.aria).forEach((k) => {
-                // ensure attribute key has aria- prefix
-                const key = k.startsWith("aria-") ? k : "aria-" + k;
-                ariaTuples.push([key, String(apiItem.aria[k])]);
-            });
-        }
-
-        return {
-            id: id,
-            value: id,
-            label: content,
-            content: content,
-            uri: uri,
-            image: image,
-            icon: icon,
-            color: color,
-            disabled: disabled,
-            data: dataTuples,
-            aria: ariaTuples,
-            role: role,
-            
-            // Action attributes mapping
-            primaryAction: apiItem.primaryAction || null,
-            primaryTarget: apiItem.primaryTarget || null,
-            primaryUri: apiItem.primaryUri || null,
-            secondaryAction: apiItem.secondaryAction || null,
-            secondaryTarget: apiItem.secondaryTarget || null,
-            secondaryUri: apiItem.secondaryUri || null
-        };
+        return webexpress.webapp.inputSelectionModel.mapApiItem(apiItem);
     }
 
     /**
@@ -299,14 +261,13 @@ webexpress.webapp.InputSelectionCtrl = class extends webexpress.webui.InputSelec
      * @returns {string} the composed request url.
      */
     _buildUrl(term) {
-        if (this._httpMethod !== "GET") {
-            return this._apiEndpoint;
-        }
-        const hasQuery = this._apiEndpoint.includes("?");
-        const sep = hasQuery ? "&" : "?";
-        const qp = `${encodeURIComponent(this._queryParam)}=${encodeURIComponent(term)}`;
-        const pp = `${encodeURIComponent(this._pageParam)}=${encodeURIComponent(this._page)}`;
-        return `${this._apiEndpoint}${sep}${qp}&${pp}`;
+        return webexpress.webapp.inputSelectionModel.buildUrl({
+            apiEndpoint: this._apiEndpoint,
+            httpMethod: this._httpMethod,
+            queryParam: this._queryParam,
+            pageParam: this._pageParam,
+            page: this._page
+        }, term);
     }
 
     /**
@@ -316,25 +277,12 @@ webexpress.webapp.InputSelectionCtrl = class extends webexpress.webui.InputSelec
      * @returns {RequestInit} the fetch init object.
      */
     _buildRequestInit(term, signal) {
-        const headers = { "Accept": "application/json" };
-        if (this._httpMethod === "POST") {
-            headers["Content-Type"] = "application/json";
-            return {
-                method: "POST",
-                headers: headers,
-                body: JSON.stringify({
-                    [this._queryParam]: term,
-                    [this._pageParam]: this._page
-                }),
-                signal: signal
-            };
-        } else {
-            return {
-                method: "GET",
-                headers: headers,
-                signal: signal
-            };
-        }
+        return webexpress.webapp.inputSelectionModel.buildRequestInit({
+            httpMethod: this._httpMethod,
+            queryParam: this._queryParam,
+            pageParam: this._pageParam,
+            page: this._page
+        }, term, signal);
     }
 };
 

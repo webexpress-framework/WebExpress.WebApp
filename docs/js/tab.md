@@ -16,29 +16,52 @@ The `webexpress.webapp.TabCtrl` component is a REST-enabled tab controller. It e
 
 ## Declarative Configuration
 
-The initial structure is defined in HTML. The root element is the tab host (`.wx-webapp-tab`), and children with `.wx-template` (or native `<template>`) are used as pane templates.
+The initial structure is defined in HTML. The root element is the tab host (`.wx-webapp-tab`), and native `<template>` children (or legacy `.wx-template` divs) are used as pane templates. Prefer native `<template>` elements: their content is inert, so nested controls are not instantiated and their `wx-service` islands are not consumed before the tab control extracts the template. A `.wx-template` div is live DOM — the controller initializes its content in place, which breaks panes created from it later.
 
 ### Container Element Attributes
 
 |Attribute     |Description                                                                           | Example 
 |---------------|---------------------------------------------------------------------------------------|----------------------------
-|`data-layout` |Visual style of tabs. Supported values: `tab`, `pill`, `underline`.                                            | `data-layout="underline"`
-|`data-uri`    |The uri is used to determine the tabs.   | `/api/1/tab`
+|`data-layout` |Visual style of tabs. Supported values: `tab`, `pill`, `underline`. Omitted for the default layout. On the server side it is the `Layout` property of `ControlDataTab`; its `HighlightColor` colors the marker of the `underline` layout. | `data-layout="underline"`
 |`data-readonly`|Disables add/close interactions when set to `true`. | `data-readonly="true"`
+|`data-movable-tab`|Enables drag-and-drop reordering of the tabs when set to `true`. Each tab header gets a ⠿ grip handle; dropping persists the new order via `PUT`. | `data-movable-tab="true"`
+
+### Empty-State Placeholder
+
+An optional `.wx-webapp-tab-empty` child of the host carries the placeholder shown while the tab set holds no items. The controller takes it out of the markup on init and puts it into the content area whenever the tab set is empty — after a load, after the last tab was closed, or right away when no data service is configured. While the first request is still in flight the placeholder stays away, so a pending load does not read as "nothing here".
+
+The server renders it hidden (`d-none`), because only the client knows whether the tab set is empty; the controller lifts the hiding. On the server side the placeholder is the `EmptyState` property of `ControlDataTab` (a `ControlEmptyState`), which also renders a generic default when none is authored.
+
+```html
+<div class="wx-webapp-tab-empty d-none">
+    <div class="wx-empty-state">
+        <span class="wx-empty-state-title">No tabs</span>
+        <span class="wx-empty-state-message">No tab has been created yet.</span>
+    </div>
+</div>
+```
+
+### Data Service
+
+The endpoint is the `data` service, a hidden `wx-service` island inside the host that the controller consumes on startup; a host without the island loads nothing and keeps its tabs local. Rendered from C#, `ControlDataTab` emits the island itself through `.DataService<TEndpoint>()`.
+
+```html
+<wx-service hidden name="data" base-uri="/api/1/tab"></wx-service>
+```
 
 ### Tab Template Element Attributes
 
 | Attribute                | Description                                                        | Example                         |
 |--------------------------|--------------------------------------------------------------------|---------------------------------|
 | `id`                     | Template identifier (`templateId` reference from REST payload).    | `id="monkeyTemplate"`          |
-| `data-icon`              | Icon CSS class shown in the template picker.                       | `data-icon="fas fa-map"`       |
+| `data-icon`              | Icon CSS class shown in the template picker.                       | `data-icon="map"`       |
 | `data-name`              | Display name shown in the template picker.                         | `data-name="Monkey Island"`    |
 | `data-description`       | Optional description shown under the template name in picker menu. | `data-description="Adventure"` |
 | `data-multiplicity`      | Optional maximum number of tab items that may be created from this template. Once the limit is reached, the add button (or this template's entry in the picker menu) is disabled. If omitted, the template is unlimited. | `data-multiplicity="3"`        |
 
 ## REST Data Contract
 
-### GET (`data-uri`)
+### GET (`data` service)
 
 The controller expects JSON with an `items` array:
 
@@ -49,8 +72,10 @@ The controller expects JSON with an `items` array:
       "id": "tab_profile",
       "label": "Profiles",
       "name": "All known profiles",
-      "icon": "fas fa-umbrella-beach",
+      "icon": "umbrella-beach",
       "color": "text-primary",
+      "badge": "12",
+      "badgeColor": "text-bg-danger",
       "primaryAction": "open",
       "primaryTarget": "self",
       "templateId": "profileTemplate",
@@ -62,6 +87,8 @@ The controller expects JSON with an `items` array:
   ]
 }
 ```
+
+The optional `badge` renders at the trailing edge of the tab header, typically a count. Its color arrives as the `badgeColor` css class (a system color) or the `badgeStyle` inline style (a user-defined color); on the server both derive from the typed `BadgeColor` property (`PropertyColorBackgroundBadge`) of `RestApiTabView`.
 
 ### POST (create tab)
 
@@ -86,11 +113,37 @@ The response must contain `newTab`:
 }
 ```
 
-### DELETE (close tab)
+### DELETE (delete tab)
 
-Closing a tab sends a `DELETE` request to:
+The close glyph on a tab header, or the `Delete` key on the focused tab, opens the shared `webexpress.webui.ModalConfirm` with the tab's name. The glyph is deliberately no button of its own: a tab list may hold nothing but tabs, so the keyboard path is the shortcut, which the tab announces through `aria-keyshortcuts`.
+Only confirmation sends a `DELETE` request through the configured data service to:
 
-`<data-uri>?id=<tabId>`
+`<base-uri>?id=<tabId>`
+
+The tab, selection and template capacity remain unchanged until the service succeeds.
+While the request is pending, confirmation and dismissal are locked to prevent duplicate
+requests. A failed or aborted request keeps the dialog open with a translated error and
+allows retry. Cancel, the dialog close button and Escape dismiss an idle confirmation
+without deleting anything. A control without a service removes the tab locally after
+confirmation. Readonly controls do not expose deletion.
+
+On success, the controller disposes the owned pane's child controls and emits
+`TAB_CLOSED_EVENT` once. Deleting the active tab selects its preceding neighbor (or the
+first remaining tab); deleting the last tab shows the empty-state placeholder. A data
+refresh preserves the selected id when it still exists and reapplies its visible state.
+
+### PUT (reorder tabs)
+
+When `data-movable-tab="true"` and the user drags a tab to a new position, the controller sends a `PUT` to the `base-uri` of the `data` service with the full ordered list of tab ids:
+
+```json
+{
+  "action": "reorder",
+  "order": ["tab_pirates", "tab_island", "tab_inventory", "tab_secrets"]
+}
+```
+
+The server applies the order and answers `204 No Content`. On the server side, derive from `RestApiTab<TIndexItem>` and override `ReorderViews(order, context, request)`.
 
 ## Binding Model
 
@@ -136,7 +189,7 @@ If an option is not defined for a key, defaults apply:
 Example for key `uri`:
 - `data-wx-bind-uri-mode="attr"`
 - `data-wx-bind-uri-name="data-uri"`
-- `data-wx-bind-uri-target=".wx-webapp-dashboard"`
+- `data-wx-bind-uri-target=".wx-webapp-like-mount"`
 
 ### Supported Modes
 
@@ -192,7 +245,7 @@ This ensures the resulting DOM contains only effective runtime attributes.
   data-wx-bind="uri, title, isActive"
   data-wx-bind-uri-mode="attr"
   data-wx-bind-uri-name="data-uri"
-  data-wx-bind-uri-target=".wx-webapp-dashboard"
+  data-wx-bind-uri-target=".wx-webapp-like-mount"
   data-wx-bind-title-mode="text"
   data-wx-bind-title-target=".title"
   data-wx-bind-isActive-mode="toggle"
@@ -256,19 +309,29 @@ The component dispatches events for tab interactions:
 - `webexpress.webapp.Event.TAB_CLOSED_EVENT`  
   Fired after a tab was removed. `detail.tabId` contains the removed tab id.
 
+- `webexpress.webapp.Event.TAB_REORDERED_EVENT`  
+  Fired after the tabs were reordered via drag and drop and the new order was persisted. `detail.order` contains the array of tab ids in their new sequence.
+
 ## Use Case Example
 
 ```html
-<div id="myTabs" class="wx-webapp-tab" data-layout="underline" data-uri="/api/1/tab">
+<div id="myTabs" class="wx-webapp-tab" data-layout="underline">
+    <wx-service hidden name="data" base-uri="/api/1/tab"></wx-service>
+
     <div class="wx-tab-toolbar">
         <div class="btn-group">
             <button class="btn btn-outline-secondary btn-sm">Action</button>
         </div>
     </div>
 
-    <div id="profile-tab" class="wx-template" data-icon="fas fa-map" data-name="Profile" data-description="Profile">
+    <template id="profile-tab" data-icon="map" data-name="Profile" data-description="Profile">
         <h5 data-wx-bind="title"></h5>
         <p data-wx-bind="name"></p>
-    </div>
+    </template>
 </div>
 ```
+
+
+## UI persistence
+
+The active tab is remembered in localStorage through the WebUI base (`wx-tab:{id}`, or `data-persist-key`). The selection is restored once the REST tab data is available. Use stable ids for both the host and its tabs.

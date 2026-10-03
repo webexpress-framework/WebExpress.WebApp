@@ -4,7 +4,7 @@ using WebExpress.WebUI.WebControl;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Headline for an web app.
+    /// Contract for the headline area of a WebApp page.
     /// </summary>
     public interface IControlWebAppHeadline : IControl
     {

@@ -43,6 +43,17 @@ namespace WebExpress.WebApp.Test.WebRestApi
         [InlineData("Description ~", 13, "~")]
         [InlineData("Description >", 13, ">", ">=")]
         [InlineData("Description ~ ", 14, "A item", "B item", "C item")]
+        [InlineData("Description ~ \"", 15, "A item", "B item", "C item")]
+        [InlineData("Description ~ \"A item\"", 22, "and", "or", "order by", "take", "skip")]
+        [InlineData("Description ~ \"A item\" ", 23, "and", "or", "order by", "take", "skip")]
+        [InlineData("Description in ", 15, "(")]
+        [InlineData("Description not in ", 19, "(")]
+        [InlineData("Description in (", 16, "A item", "B item", "C item")]
+        [InlineData("Description in (\"A item\"", 24, ",", ")")]
+        [InlineData("Description in (\"A item\" ", 25, ",", ")")]
+        [InlineData("Description in (\"A item\", ", 26, "A item", "B item", "C item")]
+        [InlineData("Description in (\"A item\") ", 26, "and", "or", "order by", "take", "skip")]
+        [InlineData("(Description ~ \"A item\" ", 24, "and", "or", ")")]
         public void Suggestions(string wql, int cursor, params string[] values)
         {
             // arrange
