@@ -65,7 +65,9 @@ namespace WebExpress.WebApp.WebStatusPage
 
             var message = new ControlCard()
             {
-                BackgroundColor = _ => new PropertyColorBackground(TypeColorBackground.Light)
+                // the recessed surface of the active theme: bg-light stays light in dark mode, and the
+                // theme's light text on it becomes unreadable
+                BackgroundColor = _ => new PropertyColorBackground("var(--wx-tertiary-bg)")
             }
                 .Add(new ControlText()
                 {
