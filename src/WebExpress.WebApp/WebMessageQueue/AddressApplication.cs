@@ -50,5 +50,14 @@ namespace WebExpress.WebApp.WebMessageQueue
                 StringComparison.OrdinalIgnoreCase
             );
         }
+
+        /// <summary>
+        /// Describes the address for the other instances of a cluster.
+        /// </summary>
+        /// <returns>The description; without an application it reaches every client.</returns>
+        public AddressDescriptor Describe()
+        {
+            return new AddressDescriptor { ApplicationId = _applicationId };
+        }
     }
 }

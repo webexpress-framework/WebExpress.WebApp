@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using WebExpress.WebApp.WebMessageQueue.Model;
 using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
+using WebExpress.WebCore.WebCluster;
 using WebExpress.WebCore.WebComponent;
 
 namespace WebExpress.WebApp.WebMessageQueue
@@ -28,6 +31,24 @@ namespace WebExpress.WebApp.WebMessageQueue
         private readonly SystemMetricsDispatcher _systemMetricsDispatcher;
         private readonly ChatChannelStore _chatChannelStore;
         private readonly IChatMessageHandler _chatMessageHandler;
+        private readonly IDisposable _clusterSubscription;
+
+        /// <summary>
+        /// The topic messages for clients connected to other instances travel on.
+        /// </summary>
+        internal const string ClusterTopic = "webexpress.messagequeue";
+
+        /// <summary>
+        /// The form a message takes between instances: the recipients as data and the message
+        /// as its clients receive it.
+        /// </summary>
+        /// <param name="Address">The recipients.</param>
+        /// <param name="Json">The serialized message.</param>
+        private sealed record ClusterEnvelope
+        (
+            [property: JsonPropertyName("address")] AddressDescriptor Address,
+            [property: JsonPropertyName("json")] string Json
+        );
 
         /// <summary>
         /// Gets the handler for inbound chat messages (send + history
@@ -69,8 +90,9 @@ namespace WebExpress.WebApp.WebMessageQueue
             _popupNotificationHandler = new PopupNotificationHandler(_componentHub);
             _progressTaskDispatcher = new ProgressTaskDispatcher(this, _componentHub);
             _systemMetricsDispatcher = new SystemMetricsDispatcher(this);
-            _chatChannelStore = new ChatChannelStore();
+            _chatChannelStore = new ChatChannelStore(sharedStore: () => _componentHub?.ClusterManager?.Store is { IsShared: true } store ? store : null);
             _chatMessageHandler = new ChatMessageHandler(this, _chatChannelStore);
+            _clusterSubscription = _componentHub?.ClusterManager?.Subscribe(ClusterTopic, OnClusterMessage);
         }
 
         /// <summary>
@@ -188,6 +210,22 @@ namespace WebExpress.WebApp.WebMessageQueue
             ArgumentNullException.ThrowIfNull(address);
             ArgumentNullException.ThrowIfNull(message);
 
+            Forward(address, message);
+
+            await DeliverAsync(address, message, cancellationToken);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Hands a message to the matching clients connected to this instance.
+        /// </summary>
+        /// <param name="address">The recipients.</param>
+        /// <param name="message">The message.</param>
+        /// <param name="cancellationToken">A token that propagates notification of request cancellation.</param>
+        /// <returns>A task that completes once every matching client was tried.</returns>
+        private async Task DeliverAsync(IAddress address, IMessage message, CancellationToken cancellationToken)
+        {
             var closedSessions = new List<Guid>();
 
             foreach (var entry in _connections)
@@ -217,8 +255,54 @@ namespace WebExpress.WebApp.WebMessageQueue
             {
                 _connections.TryRemove(id, out _);
             }
+        }
 
-            return this;
+        /// <summary>
+        /// Passes a message on to the other instances of a cluster, whose clients may match the
+        /// address just as well. It is not awaited: the caller - often a request changing data -
+        /// must not wait for other instances, and a lost live message only costs a refresh.
+        /// </summary>
+        /// <param name="address">The recipients.</param>
+        /// <param name="message">The message.</param>
+        private void Forward(IAddress address, IMessage message)
+        {
+            // a forwarded message stays on the instance it was forwarded to; passing it on again
+            // would echo it around the cluster
+            if (message is ForwardedMessage
+                || _componentHub?.ClusterManager is not { Transport: not null } cluster
+                || address.Describe() is not { } descriptor)
+            {
+                return;
+            }
+
+            var payload = JsonSerializer.SerializeToUtf8Bytes(new ClusterEnvelope(descriptor, message.ToJson()));
+
+            _ = cluster.PublishAsync(ClusterTopic, payload);
+        }
+
+        /// <summary>
+        /// Delivers a message another instance forwarded to the matching local clients.
+        /// </summary>
+        /// <param name="message">The cluster message.</param>
+        private void OnClusterMessage(ClusterMessage message)
+        {
+            ClusterEnvelope envelope;
+
+            try
+            {
+                envelope = JsonSerializer.Deserialize<ClusterEnvelope>(message.Payload);
+            }
+            catch (JsonException)
+            {
+                return;
+            }
+
+            if (envelope?.Address is null || string.IsNullOrEmpty(envelope.Json))
+            {
+                return;
+            }
+
+            _ = DeliverAsync(envelope.Address, new ForwardedMessage(envelope.Json), CancellationToken.None);
         }
 
         /// <summary>
@@ -253,6 +337,7 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// </summary>
         public void Dispose()
         {
+            _clusterSubscription?.Dispose();
             _systemMetricsDispatcher?.Dispose();
 
             GC.SuppressFinalize(this);

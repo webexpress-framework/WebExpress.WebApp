@@ -161,6 +161,39 @@ namespace WebExpress.WebApp.Test.WebRestApi
         }
 
         /// <summary>
+        /// Tests that the failed attempts counted on one instance lock the account on every
+        /// instance of a cluster, so an attacker cannot multiply the allowance by the number of
+        /// instances behind the load balancer.
+        /// </summary>
+        [Fact]
+        public void Lockout_IsSharedAcrossInstances()
+        {
+            // arrange
+            var shared = Path.Combine(_tokenDirectory, "cluster");
+            var store = new WebExpress.WebCore.WebCluster.FileClusterStore(shared);
+            var user = UniqueUser();
+            CreateAuthenticationHub().ClusterManager.UseStore(store);
+            var api = new TestRestApiLogin(user, "correct_password");
+
+            for (var i = 0; i < 4; i++)
+            {
+                api.Authenticate(CreateLoginRequest(user, "wrong"));
+            }
+
+            // act: the next attempt lands on another instance, which never saw the failures
+            ((System.Collections.IDictionary)typeof(RestApiSession)
+                .GetField("FailedAttempts", BindingFlags.Static | BindingFlags.NonPublic)
+                .GetValue(null)).Clear();
+            CreateAuthenticationHub().ClusterManager.UseStore(new WebExpress.WebCore.WebCluster.FileClusterStore(shared));
+            var result = new TestRestApiLogin(user, "correct_password").Authenticate(CreateLoginRequest(user, "correct_password"));
+
+            // validation
+            Assert.Equal(400, result.Status);
+            Assert.True(ParseResponseJson(result).GetProperty("retryAfter").GetInt32() > 0);
+            Assert.Equal(1, store.Count(RestApiSession.StoreScope));
+        }
+
+        /// <summary>
         /// A document that parses but carries the credentials in the wrong shape is answered
         /// as a format error, the same as a document that does not parse - it must not escape
         /// as an exception from the reader.

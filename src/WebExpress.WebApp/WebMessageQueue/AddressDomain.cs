@@ -60,6 +60,15 @@ namespace WebExpress.WebApp.WebMessageQueue
 
             return session?.Domains?.Contains(Domain, System.StringComparer.OrdinalIgnoreCase) ?? false;
         }
+
+        /// <summary>
+        /// Describes the address for the other instances of a cluster.
+        /// </summary>
+        /// <returns>The description, or null for an address without domain, which reaches no one.</returns>
+        public AddressDescriptor Describe()
+        {
+            return Domain is null ? null : new AddressDescriptor { Domains = [Domain] };
+        }
     }
 
     /// <summary>
@@ -85,6 +94,15 @@ namespace WebExpress.WebApp.WebMessageQueue
         public bool Matches(IClientSession session)
         {
             return _address.Matches(session);
+        }
+
+        /// <summary>
+        /// Describes the address for the other instances of a cluster.
+        /// </summary>
+        /// <returns>The description.</returns>
+        public AddressDescriptor Describe()
+        {
+            return _address.Describe();
         }
     }
 }

@@ -53,5 +53,15 @@ namespace WebExpress.WebApp.WebMessageQueue
             return _sessionId != Guid.Empty
                 && session.Session.Id == _sessionId;
         }
+
+        /// <summary>
+        /// Describes the address for the other instances of a cluster, where the same session
+        /// may hold connections of its own.
+        /// </summary>
+        /// <returns>The description.</returns>
+        public AddressDescriptor Describe()
+        {
+            return new AddressDescriptor { SessionId = _sessionId };
+        }
     }
 }

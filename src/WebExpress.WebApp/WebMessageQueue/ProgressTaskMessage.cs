@@ -96,5 +96,28 @@ namespace WebExpress.WebApp.WebMessageQueue
             Progress = task.Progress;
             Message = task.Message;
         }
+
+        /// <summary>
+        /// Initializes a new instance from a task that runs on another instance of the cluster,
+        /// known here only by the state it last recorded.
+        /// </summary>
+        /// <param name="taskId">The task id.</param>
+        /// <param name="state">The numeric task state.</param>
+        /// <param name="progress">The progress as a percentage.</param>
+        /// <param name="message">The status message.</param>
+        /// <param name="applicationId">The owning application id, if known.</param>
+        internal ProgressTaskMessage(string taskId, int state, int progress, string message, string applicationId)
+        {
+            Type = ProgressTaskMessageTypes.Update;
+            MessageId = Guid.NewGuid().ToString("N");
+            ApplicationId = applicationId;
+            Timestamp = DateTime.UtcNow;
+            Meta = new Dictionary<string, string>();
+
+            TaskId = taskId;
+            State = state;
+            Progress = progress;
+            Message = message;
+        }
     }
 }

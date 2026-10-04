@@ -279,6 +279,16 @@ namespace WebExpress.WebApp.WebMessageQueue
 
                 return session.Domains?.Any(d => _domains.Contains(d)) ?? false;
             }
+
+            /// <summary>
+            /// Describes the address for the other instances of a cluster, where collaborators
+            /// of the same domains may be connected.
+            /// </summary>
+            /// <returns>The description.</returns>
+            public AddressDescriptor Describe()
+            {
+                return new AddressDescriptor { Domains = [.. _domains], ExcludeConnectionId = _senderConnectionId };
+            }
         }
     }
 }

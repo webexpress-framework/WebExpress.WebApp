@@ -4,6 +4,7 @@ using System.Text.Json;
 using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebAttribute;
+using WebExpress.WebCore.WebCluster;
 using WebExpress.WebCore.WebIdentity;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
@@ -55,6 +56,13 @@ namespace WebExpress.WebApp.WebRestApi
         /// counters have to outlive the instance.
         /// </summary>
         private static readonly ConcurrentDictionary<string, RestApiSessionFailedAttemptInfo> FailedAttempts = new(StringComparer.Ordinal);
+
+        /// <summary>
+        /// The scope failed attempts are kept under in the cluster store. Behind a load balancer
+        /// each attempt may land on another instance; counted per instance, an attacker would get
+        /// the allowance once per instance.
+        /// </summary>
+        internal const string StoreScope = "login";
 
         /// <summary>
         /// Processes a login request containing user credentials.
@@ -299,7 +307,7 @@ namespace WebExpress.WebApp.WebRestApi
 
             var key = LockoutKey(request, username);
 
-            if (!FailedAttempts.TryGetValue(key, out var info))
+            if (!TryGetAttempt(key, out var info))
             {
                 return false;
             }
@@ -309,7 +317,7 @@ namespace WebExpress.WebApp.WebRestApi
             // keeps the store from holding entries for accounts no one is attacking any more
             if ((DateTime.UtcNow - info.LastAttempt).TotalSeconds >= PermanentLockoutDurationSeconds)
             {
-                FailedAttempts.TryRemove(key, out _);
+                RemoveAttempt(key);
                 return false;
             }
 
@@ -350,6 +358,22 @@ namespace WebExpress.WebApp.WebRestApi
         /// <param name="username">The username for which the attempt failed.</param>
         private void RecordFailedAttempt(IRequest request, string username)
         {
+            if (SharedStore is { } store)
+            {
+                var key = LockoutKey(request, username);
+                var count = TryGetAttempt(key, out var existing) ? existing.Count + 1 : 1;
+
+                // read and write are not atomic across instances; two attempts landing at the
+                // same moment may count once, which still bounds an attack to a small multiple
+                store.Set(StoreScope, key, JsonSerializer.SerializeToUtf8Bytes(new RestApiSessionFailedAttemptInfo
+                {
+                    Count = count,
+                    LastAttempt = DateTime.UtcNow
+                }), TimeSpan.FromSeconds(PermanentLockoutDurationSeconds));
+
+                return;
+            }
+
             FailedAttempts.AddOrUpdate(
                 LockoutKey(request, username),
                 _ => new RestApiSessionFailedAttemptInfo { Count = 1, LastAttempt = DateTime.UtcNow },
@@ -377,7 +401,58 @@ namespace WebExpress.WebApp.WebRestApi
         /// <param name="username">The username to unlock.</param>
         protected void ResetFailedAttempts(IRequest request, string username)
         {
-            FailedAttempts.TryRemove(LockoutKey(request, username), out _);
+            RemoveAttempt(LockoutKey(request, username));
+        }
+
+        /// <summary>
+        /// Returns the cluster store while instances share one, or null while the attempts are
+        /// counted in this process.
+        /// </summary>
+        private static IClusterStore SharedStore => WebEx.ComponentHub?.ClusterManager?.Store is { IsShared: true } store ? store : null;
+
+        /// <summary>
+        /// Reads the failed attempts recorded for a key.
+        /// </summary>
+        /// <param name="key">The lockout key.</param>
+        /// <param name="info">Receives the recorded attempts.</param>
+        /// <returns>True when attempts are recorded.</returns>
+        private static bool TryGetAttempt(string key, out RestApiSessionFailedAttemptInfo info)
+        {
+            if (SharedStore is not { } store)
+            {
+                return FailedAttempts.TryGetValue(key, out info);
+            }
+
+            info = null;
+
+            try
+            {
+                info = store.Get(StoreScope, key) is { } content
+                    ? JsonSerializer.Deserialize<RestApiSessionFailedAttemptInfo>(content)
+                    : null;
+            }
+            catch (JsonException)
+            {
+                // an unreadable record counts as none; the next failure writes a fresh one
+            }
+
+            return info is not null;
+        }
+
+        /// <summary>
+        /// Forgets the failed attempts recorded for a key.
+        /// </summary>
+        /// <param name="key">The lockout key.</param>
+        private static void RemoveAttempt(string key)
+        {
+            if (SharedStore is { } store)
+            {
+                store.Remove(StoreScope, key);
+
+                return;
+            }
+
+            FailedAttempts.TryRemove(key, out _);
         }
 
         /// <summary>
