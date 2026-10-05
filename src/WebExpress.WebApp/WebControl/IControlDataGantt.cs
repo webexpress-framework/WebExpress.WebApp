@@ -1,4 +1,5 @@
 using System;
+using WebExpress.WebApp.WebRestApi;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
@@ -9,6 +10,12 @@ namespace WebExpress.WebApp.WebControl
     /// </summary>
     public interface IControlDataGantt : IControl, IControlData
     {
+        /// <summary>
+        /// Gets the optional working calendar. A null calendar keeps
+        /// durations in calendar days; an explicit calendar enables working days.
+        /// </summary>
+        Func<IRenderControlContext, RestApiGanttCalendar> Calendar { get; }
+
         /// <summary>
         /// Gets the initial timeline scale: day, week or month.
         /// </summary>

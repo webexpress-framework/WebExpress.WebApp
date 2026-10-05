@@ -42,13 +42,15 @@ webexpress.webapp.ganttModel = {
             return null;
         }
 
-        const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        const match = value.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|T)/);
         if (!match) {
             return null;
         }
 
         const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
-        return isNaN(date.getTime()) ? null : date;
+        return date.getUTCFullYear() === Number(match[1])
+            && date.getUTCMonth() === Number(match[2]) - 1
+            && date.getUTCDate() === Number(match[3]) ? date : null;
     },
 
     /**
@@ -79,6 +81,103 @@ webexpress.webapp.ganttModel = {
      */
     diffDays(from, to) {
         return Math.round((to.getTime() - from.getTime()) / this.DAY_MS);
+    },
+
+    /**
+     * Normalizes an optional project calendar. Omitting it preserves calendar-day
+     * plans; an explicit calendar defaults to Monday through Friday.
+     * @param {object|null} raw - The working weekdays and ISO holiday dates.
+     * @returns {object|null} A serializable calendar, or null for calendar days.
+     */
+    normalizeCalendar(raw) {
+        if (!raw || typeof raw !== "object") {
+            return null;
+        }
+        const days = Array.isArray(raw.workingDays)
+            ? [...new Set(raw.workingDays.filter((day) => Number.isInteger(day) && day >= 0 && day <= 6))]
+            : [];
+        return {
+            workingDays: days.length ? days : [1, 2, 3, 4, 5],
+            holidays: [...new Set((Array.isArray(raw.holidays) ? raw.holidays : [])
+                .map((value) => this.parseDate(value)).filter(Boolean).map((date) => this.formatIso(date)))]
+        };
+    },
+
+    /**
+     * Tests whether a date contributes to task effort in the project calendar.
+     * @param {Date} date - The date to test.
+     * @param {object|null} calendar - The normalized calendar.
+     * @returns {boolean} True when the day contributes to duration.
+     */
+    isWorkingDay(date, calendar) {
+        return !calendar || (calendar.workingDays.includes(date.getUTCDay())
+            && !calendar.holidays.includes(this.formatIso(date)));
+    },
+
+    /**
+     * Snaps a start to an available day without changing a calendar-day plan.
+     * @param {Date} date - The requested start.
+     * @param {object|null} calendar - The normalized calendar.
+     * @param {number} [direction=1] - The search direction.
+     * @returns {Date} The nearest available date in the requested direction.
+     */
+    workingDate(date, calendar, direction = 1) {
+        let result = new Date(date);
+        while (!this.isWorkingDay(result, calendar)) {
+            result = this.addDays(result, direction < 0 ? -1 : 1);
+        }
+        return result;
+    },
+
+    /**
+     * Advances by effort days using an exclusive finish boundary. In reverse,
+     * the boundary is excluded so a Friday task ending Saturday round-trips.
+     * @param {Date} date - The start or exclusive finish boundary.
+     * @param {number} days - The signed whole working-day count.
+     * @param {object|null} calendar - The normalized calendar.
+     * @returns {Date} The calculated boundary.
+     */
+    addWorkingDays(date, days, calendar) {
+        if (!calendar) {
+            return this.addDays(date, days);
+        }
+        let result = new Date(date);
+        let remaining = Math.abs(days);
+        while (remaining > 0) {
+            if (days < 0) {
+                result = this.addDays(result, -1);
+            }
+            if (this.isWorkingDay(result, calendar)) {
+                remaining--;
+            }
+            if (days > 0) {
+                result = this.addDays(result, 1);
+            }
+        }
+        return result;
+    },
+
+    /**
+     * Counts effort within a half-open date interval, excluding its finish.
+     * @param {Date} start - The inclusive start.
+     * @param {Date} end - The exclusive finish.
+     * @param {object|null} calendar - The normalized calendar.
+     * @returns {number} The signed effort in working days.
+     */
+    workingDuration(start, end, calendar) {
+        if (!calendar) {
+            return this.diffDays(start, end);
+        }
+        if (end < start) {
+            return -this.workingDuration(end, start, calendar);
+        }
+        let duration = 0;
+        for (let day = start; day < end; day = this.addDays(day, 1)) {
+            if (this.isWorkingDay(day, calendar)) {
+                duration++;
+            }
+        }
+        return duration;
     },
 
     /**
@@ -122,9 +221,10 @@ webexpress.webapp.ganttModel = {
      * milestone. Progress is clamped to 0..100 and resources are coerced to a
      * string array, accepting a comma separated string or objects with a name.
      * @param {object} raw - The raw task.
+     * @param {object|null} [calendar=null] - The normalized project calendar.
      * @returns {object|null} The normalised task, or null without an id.
      */
-    normalizeTask(raw) {
+    normalizeTask(raw, calendar = null) {
         raw = raw || {};
         if (raw.id === undefined || raw.id === null || raw.id === "") {
             return null;
@@ -132,26 +232,27 @@ webexpress.webapp.ganttModel = {
 
         let start = this.parseDate(raw.start);
         let end = this.parseDate(raw.end);
-        let duration = Number(raw.duration);
-        duration = isNaN(duration) ? null : Math.max(0, Math.round(duration));
-
-        if (raw.type === "milestone") {
-            duration = 0;
-        }
+        let duration = raw.duration === null || raw.duration === undefined || raw.duration === ""
+            ? null : Number(raw.duration);
+        duration = duration !== null && Number.isFinite(duration) ? Math.max(0, Math.round(duration)) : null;
+        const milestone = raw.type === "milestone" || duration === 0
+            || (start && end && start.getTime() === end.getTime());
 
         if (!start && end) {
-            start = duration !== null ? this.addDays(end, -duration) : end;
+            start = duration !== null ? this.addWorkingDays(end, -duration, calendar) : end;
         }
-        if (!start) {
-            start = end || null;
-        }
-        if (start && end) {
-            duration = Math.max(0, this.diffDays(start, end));
-        } else if (start && duration !== null) {
-            end = this.addDays(start, duration);
-        } else if (start) {
-            duration = 1;
-            end = this.addDays(start, duration);
+        if (start) {
+            start = this.workingDate(start, calendar);
+            if (milestone) {
+                duration = 0;
+                end = start;
+            } else if (end && end > start) {
+                duration = Math.max(1, this.workingDuration(start, end, calendar));
+                end = this.addWorkingDays(start, duration, calendar);
+            } else {
+                duration = duration === null ? 1 : duration;
+                end = this.addWorkingDays(start, duration, calendar);
+            }
         }
 
         const progress = Math.min(100, Math.max(0, Number(raw.progress) || 0));
@@ -162,7 +263,7 @@ webexpress.webapp.ganttModel = {
         }
         resources = Array.isArray(resources)
             ? resources
-                .map((r) => (typeof r === "string" ? r : (r && r.name) || "").trim())
+                .map((r) => (typeof r === "string" ? r : (r && typeof r.name === "string" ? r.name : "")).trim())
                 .filter((r) => r !== "")
             : [];
 
@@ -221,10 +322,11 @@ webexpress.webapp.ganttModel = {
     normalizeProject(data) {
         data = data || {};
 
+        const calendar = this.normalizeCalendar(data.calendar);
         const rawTasks = Array.isArray(data.tasks) ? data.tasks : (Array.isArray(data.items) ? data.items : []);
         const tasks = rawTasks
-            .map((raw) => this.normalizeTask(raw))
-            .filter((task) => task !== null);
+            .map((raw) => this.normalizeTask(raw, calendar))
+            .filter((task, index, all) => task !== null && all.findIndex((other) => other && other.id === task.id) === index);
 
         const ids = new Set(tasks.map((task) => task.id));
 
@@ -232,6 +334,21 @@ webexpress.webapp.ganttModel = {
         for (const task of tasks) {
             if (task.parentId !== null && !ids.has(task.parentId)) {
                 task.parentId = null;
+            }
+        }
+
+        // break parent cycles before recursive tree traversal can hide or repeat tasks
+        const byId = new Map(tasks.map((task) => [task.id, task]));
+        for (const task of tasks) {
+            const visited = new Set([task.id]);
+            let parent = task.parentId;
+            while (parent !== null) {
+                if (visited.has(parent)) {
+                    task.parentId = null;
+                    break;
+                }
+                visited.add(parent);
+                parent = byId.get(parent).parentId;
             }
         }
 
@@ -243,14 +360,37 @@ webexpress.webapp.ganttModel = {
                 continue;
             }
             const key = link.from + ">" + link.to;
-            if (seen.has(key) || this.wouldCycle(links, link.from, link.to)) {
+            if (seen.has(key) || links.some((existing) => existing.id === link.id) || this.wouldCycle(links, link.from, link.to)) {
                 continue;
             }
             seen.add(key);
             links.push(link);
         }
 
-        return { tasks: tasks, links: links };
+        return { tasks: tasks, links: links, calendar: calendar };
+    },
+
+    /**
+     * Validates reparenting before a mutation can make tasks unreachable.
+     * @param {Array<object>} tasks - The current task list.
+     * @param {string} id - The task being added or moved.
+     * @param {string|null} parentId - The proposed parent.
+     * @returns {boolean} True when the parent exists and cannot form a cycle.
+     */
+    canParent(tasks, id, parentId) {
+        const visited = new Set([id]);
+        while (parentId !== null) {
+            if (visited.has(parentId)) {
+                return false;
+            }
+            visited.add(parentId);
+            const parent = tasks.find((task) => task.id === parentId);
+            if (!parent) {
+                return false;
+            }
+            parentId = parent.parentId;
+        }
+        return true;
     },
 
     /**
@@ -281,9 +421,13 @@ webexpress.webapp.ganttModel = {
      * The tasks are mutated in place and returned, because the rollup runs
      * right after a normalisation or a mutation on data the caller owns.
      * @param {Array<object>} tasks - The task list.
+     * @param {object|null} [calendar=null] - The normalized project calendar.
      * @returns {Array<object>} The same list with the containers updated.
      */
-    rollup(tasks) {
+    rollup(tasks, calendar = null) {
+        for (const task of tasks) {
+            task.type = task.duration === 0 ? "milestone" : "task";
+        }
         const roll = (parentId) => {
             const children = this.childrenOf(tasks, parentId);
             let start = null;
@@ -299,7 +443,7 @@ webexpress.webapp.ganttModel = {
                     child.start = sub.start !== null ? this.formatIso(sub.start) : child.start;
                     child.end = sub.end !== null ? this.formatIso(sub.end) : child.end;
                     child.duration = sub.start !== null && sub.end !== null
-                        ? this.diffDays(sub.start, sub.end)
+                        ? this.workingDuration(sub.start, sub.end, calendar)
                         : child.duration;
                     child.progress = sub.weight > 0 ? Math.round(sub.done / sub.weight) : child.progress;
                     child.type = "summary";
@@ -487,9 +631,10 @@ webexpress.webapp.ganttModel = {
      * @param {string} scale - The scale: day, week or month.
      * @param {Date} start - The range start.
      * @param {Date} end - The range end.
-     * @returns {object} The header { units, groups }, entries { start, days, label, weekend? }.
+     * @param {object|null} [calendar=null] - The normalized project calendar.
+     * @returns {object} The header with dated units and groups.
      */
-    buildScale(scale, start, end) {
+    buildScale(scale, start, end, calendar = null) {
         const units = [];
         const groups = [];
         const total = this.diffDays(start, end);
@@ -540,7 +685,9 @@ webexpress.webapp.ganttModel = {
                     start: day,
                     days: 1,
                     label: String(day.getUTCDate()),
-                    weekend: weekday === 0 || weekday === 6
+                    weekend: weekday === 0 || weekday === 6,
+                    nonWorking: calendar ? !this.isWorkingDay(day, calendar) : weekday === 0 || weekday === 6,
+                    holiday: !!calendar && calendar.holidays.includes(this.formatIso(day))
                 });
             }
             this._monthGroups(start, end, pushGroup);
@@ -572,18 +719,19 @@ webexpress.webapp.ganttModel = {
      * preserved, which is the drag-to-reschedule contract.
      * @param {object} task - The task.
      * @param {number} deltaDays - The signed day distance.
+     * @param {object|null} [calendar=null] - The normalized project calendar.
      * @returns {object|null} The patch { start, end }, or null for no-op.
      */
-    moveTask(task, deltaDays) {
+    moveTask(task, deltaDays, calendar = null) {
         const start = this.parseDate(task.start);
-        if (!start || deltaDays === 0) {
+        if (!start || !Number.isFinite(deltaDays) || deltaDays === 0) {
             return null;
         }
 
-        const newStart = this.addDays(start, deltaDays);
+        const newStart = this.workingDate(this.addDays(start, Math.round(deltaDays)), calendar, deltaDays);
         return {
             start: this.formatIso(newStart),
-            end: this.formatIso(this.addDays(newStart, task.duration))
+            end: this.formatIso(this.addWorkingDays(newStart, task.duration, calendar))
         };
     },
 
@@ -594,27 +742,30 @@ webexpress.webapp.ganttModel = {
      * @param {object} task - The task.
      * @param {string} edge - The dragged edge: "start" or "end".
      * @param {number} deltaDays - The signed day distance.
+     * @param {object|null} [calendar=null] - The normalized project calendar.
      * @returns {object|null} The patch { start, end, duration }, or null for no-op.
      */
-    resizeTask(task, edge, deltaDays) {
+    resizeTask(task, edge, deltaDays, calendar = null) {
         const start = this.parseDate(task.start);
-        if (!start || deltaDays === 0 || task.duration === 0) {
+        const end = this.parseDate(task.end);
+        if (!start || !end || !Number.isFinite(deltaDays) || deltaDays === 0
+            || task.duration === 0 || !["start", "end"].includes(edge)) {
             return null;
         }
-
-        let duration;
         let newStart = start;
-
+        let newEnd = end;
         if (edge === "start") {
-            duration = Math.max(1, task.duration - deltaDays);
-            newStart = this.addDays(start, task.duration - duration);
+            newStart = this.workingDate(this.addDays(start, Math.round(deltaDays)), calendar, deltaDays);
+            if (newStart >= end) {
+                newStart = this.addWorkingDays(end, -1, calendar);
+            }
         } else {
-            duration = Math.max(1, task.duration + deltaDays);
+            newEnd = this.addDays(end, Math.round(deltaDays));
         }
-
+        const duration = Math.max(1, this.workingDuration(newStart, newEnd, calendar));
         return {
             start: this.formatIso(newStart),
-            end: this.formatIso(this.addDays(newStart, duration)),
+            end: this.formatIso(this.addWorkingDays(newStart, duration, calendar)),
             duration: duration
         };
     },
@@ -635,6 +786,7 @@ webexpress.webapp.ganttModel = {
             progress: task.progress,
             resources: task.resources.slice(),
             parentId: task.parentId,
+            color: task.color,
             icon: task.icon
         };
     },

@@ -2,7 +2,7 @@
 
 # GanttCtrl
 
-The `GanttCtrl` component renders an interactive gantt chart: a task grid on the left and a scrollable timeline on the right, drawn from a pure JSON model of tasks and dependency links. Tasks carry a start date, an end date, a duration in days, a progress percentage and a resource list; tasks with children act as containers whose dates and progress are derived from their subtree and which collapse in the grid. Bars are dragged to reschedule, their edges resize the duration, a small handle adjusts the progress, and dragging a link port at a bar edge onto a port of another bar creates a typed dependency (FS, SS, FF, SF) rendered as an orthogonal connector with an arrowhead. New tasks are created through the toolbar button or a double-click on a free spot in the timeline; the grid cells (name, dates, duration, progress, resources) are edited inline.
+The `GanttCtrl` component renders an interactive gantt chart: a task grid on the left and a scrollable timeline on the right, drawn from a pure JSON model of tasks and dependency links. Tasks carry a start date, an end date, a duration in days, a progress percentage and a resource list; tasks with children act as containers whose dates and progress are derived from their subtree and which collapse in the grid. Bars are dragged to reschedule, their edges resize the duration, a small handle adjusts the progress, and dragging a link port at a bar edge onto another bar creates a typed dependency (FS, SS, FF, SF) rendered as an orthogonal connector with an arrowhead. New tasks are created through the toolbar button or a double-click on a free spot in the timeline; the grid cells (name, dates, duration, progress, resources) are edited inline.
 
 ```
    ┌──────────────────────────────────────────────────────────────────────────┐
@@ -63,6 +63,57 @@ The model separates data from presentation. A project is a plain JSON structure:
 - `icon` optionally names a per-task icon — a CSS icon class (for example `"ship"`) or an image URL, both resolved through the shared icon factory — shown before the task name in the grid and on the bar.
 - `type` is one of `FS` (finish-to-start, default), `SS`, `FF` and `SF`. Links that are self-referential, duplicated, dangling or would close a cycle are dropped on load and refused on creation.
 
+### Working Calendar
+
+The calendar is supplied as data by the surrounding application through `calendar` in the project response or the `wx-state` island. The C# `Calendar` factory can supply the same object through `data-calendar`. DataGantt does not provide a calendar editor or maintain a regional holiday catalogue. An explicit calendar enables working-day durations; an omitted or null initial calendar retains calendar-day durations.
+
+The calendar structure contains `workingDays`, using Sunday as `0` through Saturday as `6`, and `holidays`, containing ISO date strings. An omitted or invalid empty workweek defaults to Monday through Friday. Invalid holiday dates are ignored and duplicate dates are removed. Project responses that omit `calendar` retain the control's current configuration; `calendar: null` explicitly clears it.
+
+```json
+{
+    "calendar": {
+        "workingDays": [1, 2, 3, 4, 5],
+        "holidays": ["2026-07-06"]
+    },
+    "tasks": [
+        { "id": "review", "label": "Review", "start": "2026-07-03", "duration": 2 }
+    ],
+    "links": []
+}
+```
+
+The date interval includes the start and excludes the finish. In this example Friday and Tuesday contribute effort, so the task finishes at the start of Wednesday, July 8. A single working day on Friday finishes at the start of Saturday. The bar always spans calendar dates, while the duration column reports effort. Weekly non-working days and explicit holidays are shaded on the day scale.
+
+The editing rules use the same calendar throughout normalization, creation, start-date changes, drag previews, moves, edge resizing and container rollups. Moving a task preserves effort and snaps its start in the drag direction. Creation and direct date entry snap forward. Resizing retains at least one working day; entering zero in the duration cell creates a milestone. Entering a positive duration converts a milestone back to a task.
+
+The endpoint integration uses `RetrieveCalendar(IRequest)` to return a `RestApiGanttCalendar`. Applications own holiday calculation and calendar persistence. The nullable `RestApiGanttTask.Duration` distinguishes an omitted duration, which is derived from dates, from the explicit zero used for milestones.
+
+```csharp
+protected override RestApiGanttCalendar RetrieveCalendar(IRequest request)
+{
+    return new RestApiGanttCalendar
+    {
+        WorkingDays = [1, 2, 3, 4, 5],
+        Holidays = ["2026-07-06"]
+    };
+}
+```
+
+### Dependency Editing
+
+The relationship type selects the source and target bar boundaries. Selecting a connector exposes a localized type selector and a delete action in the toolbar. Read-only plans show the relationship without enabling changes. A link gesture starts at a source port and accepts a drop anywhere inside the target bar, including its label or progress fill. The left half selects the target start and the right half selects its finish. An explicit target port always selects its own boundary. The candidate bar and boundary are highlighted only when the link passes validation.
+
+| Type | Source boundary | Target boundary |
+|------|-----------------|-----------------|
+| FS | Finish | Start |
+| SS | Start | Start |
+| FF | Finish | Finish |
+| SF | Start | Finish |
+
+The update API is `updateLink(id, { type, from, to })`, where omitted fields retain their values. It preserves the link identity, rejects invalid types, missing endpoints, self references, duplicate pairs and cycles, and persists the complete link using `PUT /links/{id}`. A successful local edit raises `webexpress.webapp.gantt.link.update` and invokes `onLinkUpdate` with `{ link }`. Dependencies describe relationships and do not automatically reschedule successor tasks.
+
+The server integration requires overriding `UpdateLink(id, link, request)` to persist link edits. The base hook returns null until implemented, which produces HTTP 404. Invalid payloads produce HTTP 400. Applications must enforce graph consistency transactionally in their persistence hooks when multiple clients can edit the same project.
+
 ### REST Contract
 
 | Method   | URL                 | Body       | Response          | Purpose
@@ -72,6 +123,7 @@ The model separates data from presentation. A project is a plain JSON structure:
 | `PUT`    | `{data}/tasks/{id}` | task       | —                 | Persist a change (drag, resize, progress, inline edit).
 | `DELETE` | `{data}/tasks/{id}` | —          | —                 | Delete a task (issued per removed subtree member).
 | `POST`   | `{data}/links`      | link       | `{ id }` optional | Create a dependency.
+| `PUT`    | `{data}/links/{id}` | link       | link              | Update a dependency type or its endpoints.
 | `DELETE` | `{data}/links/{id}` | —          | —                 | Delete a dependency.
 
 ## Programmatic Control
@@ -90,6 +142,7 @@ gantt.value = { tasks: [...], links: [...] };
 const task = gantt.addTask({ label: "Review", start: "2026-07-13", duration: 2, resources: ["Anna"] });
 gantt.updateTask(task.id, { progress: 50 });
 gantt.addLink("t1", task.id, "FS");
+gantt.updateLink("l1", { type: "FF" });
 gantt.removeLink("l1");
 gantt.removeTask(task.id);          // cascades over the subtree and attached links
 
@@ -129,7 +182,7 @@ element.addEventListener(webexpress.webapp.GanttCtrl.LINK_CREATE_EVENT, (e) => {
 - **Drag a bar** — move the task by whole days (duration preserved).
 - **Drag a bar edge** — resize; the duration never falls below one day. Milestones and containers are not resizable.
 - **Drag the small bottom handle** — adjust the progress percentage.
-- **Drag a link port (circles at the bar edges)** onto a port of another bar — create a dependency. End→start is FS, start→start SS, end→end FF, start→end SF. Invalid drops (self, duplicate, cycle) are refused.
+- **Drag a link port (circles at the bar edges)** onto another bar — create a dependency. End→start is FS, start→start SS, end→end FF, start→end SF. Invalid drops (self, duplicate, cycle) are refused.
 - **Click a connector** — select it; **double-click** or press `Delete` — remove it.
 - **Double-click a free spot in the timeline** — create a task at that day, inserted at that row; the name goes straight into inline editing.
 - **Double-click a grid cell** — edit the name, dates, duration, progress or resources inline (`Enter`/blur commits, `Escape` cancels).

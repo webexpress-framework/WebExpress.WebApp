@@ -66,6 +66,9 @@ const SEED = {
 
 function seededControl(engine) {
     const element = engine.createElement("div");
+    // selection updates use simple class selectors that the shared stub omits
+    element.querySelectorAll = (selector) => byClass(element, selector.slice(1));
+    element.querySelector = (selector) => element.querySelectorAll(selector)[0] || null;
     appendServiceIsland(engine.document, element, { name: "data", kind: "rest", baseUri: "/api/plan", method: "GET", updateMethod: "PUT" });
     appendStateIsland(engine.document, element, SEED);
     return new engine.wxapp.GanttCtrl(element);
@@ -267,11 +270,11 @@ test("the delete key removes the selection", async () => {
     const ctrl = seededControl(engine);
 
     ctrl.select(null, "l1");
-    ctrl._element.dispatchEvent({ type: "keydown", key: "Delete" });
+    ctrl._element.dispatchEvent({ type: "keydown", key: "Delete", preventDefault() {} });
     assert.equal(ctrl.value.links.length, 0);
 
     ctrl.select("t2");
-    ctrl._element.dispatchEvent({ type: "keydown", key: "Delete" });
+    ctrl._element.dispatchEvent({ type: "keydown", key: "Delete", preventDefault() {} });
     assert.equal(ctrl.value.tasks.some((t) => t.id === "t2"), false);
 
     await settle();
@@ -397,8 +400,8 @@ test("shrinking the grid hides the columns right to left, keeping the name", asy
     const ctrl = seededControl(engine);
     const grid = ctrl._gridEl;
 
-    // at the default width every configured column shows
-    assert.equal(grid.classList.contains("wx-gantt-grid--hide-resources"), false);
+    // the actual CSS column widths reserve enough room for the task name
+    assert.equal(grid.classList.contains("wx-gantt-grid--hide-resources"), true);
     assert.equal(grid.classList.contains("wx-gantt-grid--hide-start"), false);
 
     // 300px keeps name, start and end; duration, progress and resources hide
@@ -459,4 +462,162 @@ test("the configured scales restrict the toolbar and the initial scale", () => {
 
     ctrl.setScale("day");
     assert.equal(ctrl.state.scale, "month");
+});
+
+
+test("calendar-backed bars span calendar dates and retain calendar data across refresh", async () => {
+    const engine = load();
+    const element = engine.createElement("div");
+    appendStateIsland(engine.document, element, { calendar: { holidays: ["2026-07-06"] }, tasks: [
+        { id: "a", start: "2026-07-03", duration: 2 },
+        { id: "b", start: "2026-07-08", duration: 1 }
+    ], links: [{ id: "l", from: "a", to: "b", type: "FS" }] });
+    const ctrl = new engine.wxapp.GanttCtrl(element);
+    const bar = byClass(element, "wx-gantt-bar")[0];
+    assert.equal(bar.style.width, (5 * ctrl._view.pxDay) + "px");
+    assert.equal(byClass(element, "wx-gantt-holiday").length, 1);
+    assert.equal(ctrl._anchor(ctrl.value.tasks[0], 0, "end", ctrl._view).x,
+        ctrl._anchor(ctrl.value.tasks[0], 0, "start", ctrl._view).x + 5 * ctrl._view.pxDay);
+    const copy = ctrl.value;
+    copy.calendar.holidays.length = 0;
+    assert.equal(ctrl.value.calendar.holidays.length, 1);
+    ctrl.value = { tasks: [{ id: "c", start: "2026-07-03", duration: 2 }] };
+    assert.equal(ctrl.value.tasks[0].end, "2026-07-08");
+    ctrl.value = { calendar: null, tasks: [{ id: "c", start: "2026-07-03", duration: 2 }] };
+    assert.equal(ctrl.value.tasks[0].end, "2026-07-05");
+    await settle();
+});
+
+test("all dependency types can be edited and persisted without replacing their id", async () => {
+    const engine = load();
+    const calls = [];
+    engine.setFetch(async (url, init) => {
+        calls.push({ url: url, init: init });
+        return { ok: true, status: 200, json: async () => ({}) };
+    });
+    const ctrl = seededControl(engine);
+    const changes = [];
+    ctrl.onLinkUpdate = (detail) => changes.push(detail.link);
+    ctrl.select(null, "l1");
+    await settle();
+    const select = byClass(ctrl._element, "wx-gantt-link-type")[0];
+    assert.equal(select.childNodes.length, 4);
+    select.value = "FF";
+    select.dispatchEvent({ type: "change" });
+    assert.equal(ctrl.value.links[0].type, "FF");
+    for (const type of ["FS", "SS", "FF", "SF"]) {
+        assert.equal(ctrl.updateLink("l1", { type: type }).type, type);
+    }
+    assert.equal(ctrl.updateLink("l1", { type: "bad" }), null);
+    assert.equal(ctrl.updateLink("l1", { to: "c1" }), null);
+    assert.equal(ctrl.addLink("t2", "c1", "bad"), null);
+    await settle();
+    assert.equal(changes.length, 5);
+    assert.equal(calls.length, 5);
+    assert.ok(calls.every((call) => call.url === "/api/plan/links/l1" && call.init.method === "PUT"));
+    assert.equal(JSON.parse(calls[4].init.body).type, "SF");
+    ctrl.setState({ readonly: true });
+    assert.equal(ctrl.updateLink("l1", { type: "SS" }), null);
+});
+
+test("editing text never turns Backspace or Delete into a task deletion", () => {
+    const engine = load();
+    const ctrl = seededControl(engine);
+    ctrl.select("t2");
+    for (const tagName of ["INPUT", "TEXTAREA", "SELECT"]) {
+        for (const key of ["Backspace", "Delete"]) {
+            ctrl._onKeyDown({ key: key, target: { tagName: tagName }, preventDefault() {} });
+            assert.equal(ctrl.value.tasks.length, 3);
+        }
+    }
+});
+
+test("task edits preserve identity and duration and allow milestone conversion", () => {
+    const engine = load();
+    const ctrl = seededControl(engine);
+    const moved = ctrl.updateTask("t2", { start: "2026-07-10", id: "replacement" });
+    assert.equal(moved.id, "t2");
+    assert.equal(moved.end, "2026-07-12");
+    assert.equal(moved.duration, 2);
+    assert.equal(ctrl.updateTask("t2", { duration: 0 }).type, "milestone");
+    assert.equal(ctrl.updateTask("t2", { duration: 3 }).end, "2026-07-13");
+    assert.equal(ctrl.updateTask("t2", { duration: 3 }).type, "task");
+    assert.equal(ctrl.updateTask("p", { parentId: "c1" }), null);
+    assert.equal(ctrl.addTask({ id: "t2" }), null);
+});
+
+test("links to undated tasks do not crash rendering", () => {
+    const engine = load();
+    const element = engine.createElement("div");
+    appendStateIsland(engine.document, element, { tasks: [{ id: "a" }, { id: "b" }],
+        links: [{ id: "l", from: "a", to: "b" }] });
+    const ctrl = new engine.wxapp.GanttCtrl(element);
+    assert.equal(ctrl.value.links.length, 1);
+    assert.equal(byClass(element, "wx-gantt-link").length, 0);
+});
+
+
+test("all connector types approach the correct side in both horizontal orders", () => {
+    const engine = load();
+    const ctrl = seededControl(engine);
+    for (const sourceX of [20, 180]) {
+        for (const fromSide of ["start", "end"]) {
+            for (const toSide of ["start", "end"]) {
+                const source = { x: sourceX, y: 16 };
+                const target = { x: 100, y: 80 };
+                const coordinates = ctrl._linkPath(source, fromSide, target, toSide).match(/-?\d+/g).map(Number);
+                assert.equal(Math.sign(coordinates[2] - source.x), fromSide === "start" ? -1 : 1);
+                assert.equal(Math.sign(coordinates.at(-2) - coordinates.at(-4)), toSide === "start" ? 1 : -1);
+            }
+        }
+    }
+});
+
+test("selection preserves the existing row node for subsequent double-click editing", async () => {
+    const engine = load();
+    const ctrl = seededControl(engine);
+    const row = byClass(ctrl._element, "wx-gantt-grid-row").find((el) => el.dataset.taskId === "t2");
+    ctrl.select("t2");
+    await settle();
+    const selected = byClass(ctrl._element, "wx-gantt-grid-row").find((el) => el.dataset.taskId === "t2");
+    assert.equal(selected, row);
+    assert.equal(selected.classList.contains("is-selected"), true);
+});
+
+
+test("dropping a source port on either half of a bar creates all four link types", () => {
+    for (const [fromSide, toSide, type] of [["end", "start", "FS"], ["start", "start", "SS"],
+        ["end", "end", "FF"], ["start", "end", "SF"]]) {
+        const engine = load();
+        const ctrl = seededControl(engine);
+        const source = ctrl.value.tasks.find((task) => task.id === "p");
+        const bar = byClass(ctrl._element, "wx-gantt-bar").find((el) => el.dataset.taskId === "t2");
+        bar.getBoundingClientRect = () => ({ left: 100, width: 80 });
+        const label = byClass(bar, "wx-gantt-bar-label")[0];
+        const clientX = toSide === "start" ? 120 : 160;
+        ctrl._beginLinkDrag({ clientX: 50, clientY: 10, preventDefault() {}, stopPropagation() {} }, source, fromSide, ctrl._view);
+        ctrl._handleDragMove({ target: label, clientX: clientX, clientY: 50 });
+        assert.equal(bar.classList.contains("is-link-target"), true);
+        assert.equal(bar.dataset.linkTargetSide, toSide);
+        ctrl._handleDragUp({ target: label, clientX: clientX, clientY: 50 });
+        assert.equal(ctrl.value.links.find((link) => link.from === "p").type, type);
+        assert.equal(bar.classList.contains("is-link-target"), false);
+    }
+});
+
+test("link drops reject self, cycles, duplicates and bars outside this chart", () => {
+    const engine = load();
+    const ctrl = seededControl(engine);
+    const bar = byClass(ctrl._element, "wx-gantt-bar").find((el) => el.dataset.taskId === "t2");
+    bar.getBoundingClientRect = () => ({ left: 100, width: 80 });
+    assert.equal(ctrl._resolveLinkTarget({ target: bar, clientX: 120 }, "t2"), null);
+    assert.equal(ctrl._resolveLinkTarget({ target: bar, clientX: 120 }, "c1"), null);
+    const predecessor = byClass(ctrl._element, "wx-gantt-bar").find((el) => el.dataset.taskId === "c1");
+    assert.equal(ctrl._resolveLinkTarget({ target: predecessor, clientX: 120 }, "t2"), null);
+    const foreign = engine.createElement("div");
+    foreign.className = "wx-gantt-bar";
+    foreign.dataset.taskId = "t2";
+    assert.equal(ctrl._resolveLinkTarget({ target: foreign, clientX: 120 }, "p"), null);
+    const port = byClass(bar, "wx-gantt-port--end")[0];
+    assert.equal(ctrl._resolveLinkTarget({ target: port, clientX: 101 }, "p").side, "end");
 });

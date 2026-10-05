@@ -16,7 +16,7 @@
  * -----------
  * Bars are dragged to reschedule (whole-day snapping), their edges resize the
  * duration and a small handle adjusts the progress. Dragging one of the link
- * ports at the bar edges onto a port of another bar creates a typed dependency
+ * ports at the bar edges onto another bar creates a typed dependency
  * (start/end port combinations map to FS, SS, FF and SF), drawn as orthogonal
  * SVG connectors with arrowheads. New tasks are created through the toolbar
  * button or a double-click on a free spot in the timeline; the grid cells are
@@ -43,8 +43,8 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
 
     // pane width each column claims before the next one may show; the sums
     // mark the thresholds at which shrinking hides the columns right to left,
-    // and they add up to the default grid width so every column shows there
-    static COLUMN_MIN_WIDTHS = { label: 130, start: 70, end: 70, duration: 50, progress: 50, resources: 50 };
+    // matching the CSS column bases keeps the task name from being squeezed out
+    static COLUMN_MIN_WIDTHS = { label: 130, start: 84, end: 84, duration: 60, progress: 60, resources: 110 };
 
     static DEFAULT_GRID_WIDTH = 420;
     static MIN_GRID_WIDTH = 160;
@@ -53,6 +53,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
     static TASK_CREATE_EVENT = "webexpress.webapp.gantt.task.create";
     static TASK_UPDATE_EVENT = "webexpress.webapp.gantt.task.update";
     static TASK_DELETE_EVENT = "webexpress.webapp.gantt.task.delete";
+    static LINK_UPDATE_EVENT = "webexpress.webapp.gantt.link.update";
     static LINK_CREATE_EVENT = "webexpress.webapp.gantt.link.create";
     static LINK_DELETE_EVENT = "webexpress.webapp.gantt.link.delete";
     static SELECT_EVENT = "webexpress.webapp.gantt.select";
@@ -62,6 +63,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
     onTaskUpdate = null;
     onTaskDelete = null;
     onLinkCreate = null;
+    onLinkUpdate = null;
     onLinkDelete = null;
 
     // configuration
@@ -77,7 +79,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
     // transient interaction state, deliberately outside the store because a
     // drag preview mutates the DOM directly and only commits on release
     _drag = null;
-    _dragOverPort = null;
+    _linkTarget = null;
     _pendingEditTaskId = null;
     _skipNextCanvasClick = false;
 
@@ -92,8 +94,16 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         webexpress.webapp.ServiceRegistry.fromElement(element);
 
         const model = webexpress.webapp.ganttModel;
-        const project = model.normalizeProject({ tasks: island.tasks, links: island.links });
-        model.rollup(project.tasks);
+        let calendar = island.calendar;
+        if (calendar === undefined && element.dataset.calendar) {
+            try {
+                calendar = JSON.parse(element.dataset.calendar);
+            } catch {
+                calendar = null;
+            }
+        }
+        const project = model.normalizeProject({ tasks: island.tasks, links: island.links, calendar: calendar });
+        model.rollup(project.tasks, project.calendar);
 
         const dataset = element.dataset || {};
         const scales = webexpress.webapp.GanttCtrl._parseScales(island.scales !== undefined ? island.scales : dataset.scales);
@@ -108,6 +118,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
                 zoom: Number(island.zoom !== undefined ? island.zoom : dataset.zoom) || 1,
                 readonly: island.readonly === true || dataset.readonly === "true",
                 gridCollapsed: island.gridCollapsed === true || dataset.gridCollapsed === "true",
+                calendar: project.calendar,
                 tasks: project.tasks,
                 links: project.links,
                 selectedTask: null,
@@ -127,7 +138,16 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         element.tabIndex = 0;
         element.addEventListener("keydown", (e) => this._onKeyDown(e));
 
+        this._markerId = this._newId("gantt-arrow");
         this.mount();
+        if (typeof ResizeObserver !== "undefined") {
+            this._resizeObserver = new ResizeObserver(() => {
+                if (this._gridEl && !this._gridCollapsed) {
+                    this._updateColumnFit(this._gridEl.clientWidth || this._gridWidth || webexpress.webapp.GanttCtrl.DEFAULT_GRID_WIDTH);
+                }
+            });
+            this._resizeObserver.observe(element);
+        }
 
         if (this._resource) {
             this._attachToViewState(element);
@@ -190,6 +210,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
     // component store, so every mutation re-renders through the subscription
     // that mount established
 
+    get _calendar() { return this.state.calendar; }
     get _tasks() { return this.state.tasks || []; }
     get _links() { return this.state.links || []; }
     get _scale() { return this.state.scale; }
@@ -214,7 +235,8 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
     get value() {
         return {
             tasks: this._tasks.map((task) => Object.assign({}, task, { resources: task.resources.slice() })),
-            links: this._links.map((link) => Object.assign({}, link))
+            links: this._links.map((link) => Object.assign({}, link)),
+            calendar: webexpress.webapp.ganttModel.normalizeCalendar(this._calendar)
         };
     }
 
@@ -327,8 +349,9 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
             progress: 0
         }, partial);
 
-        const task = model.normalizeTask(raw);
-        if (!task) {
+        const task = model.normalizeTask(raw, this._calendar);
+        if (!task || this._tasks.some((existing) => existing.id === task.id)
+            || !model.canParent(this._tasks, task.id, task.parentId)) {
             return null;
         }
 
@@ -341,7 +364,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
             }
         }
         tasks.splice(index, 0, task);
-        model.rollup(tasks);
+        model.rollup(tasks, this._calendar);
 
         this.setState({ tasks: tasks, selectedTask: task.id, selectedLink: null });
         this._persistTaskCreate(task);
@@ -366,19 +389,25 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
             return null;
         }
 
-        const raw = Object.assign({}, current, patch);
+        const raw = Object.assign({}, current, patch, { id: current.id });
+        if (patch.duration !== undefined && patch.type === undefined) {
+            delete raw.type;
+        }
+        if (patch.start !== undefined && patch.end === undefined) {
+            delete raw.end;
+        }
         if (patch.duration !== undefined && patch.end === undefined) {
             // the end is derived again, otherwise the stale end would win
             delete raw.end;
         }
 
-        const task = model.normalizeTask(raw);
-        if (!task) {
+        const task = model.normalizeTask(raw, this._calendar);
+        if (!task || !model.canParent(this._tasks, task.id, task.parentId)) {
             return null;
         }
 
         const tasks = this._tasks.map((t) => (t.id === id ? task : t));
-        model.rollup(tasks);
+        model.rollup(tasks, this._calendar);
 
         this.setState({ tasks: tasks });
         this._persistTaskUpdate(task);
@@ -420,7 +449,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         const links = this._links.filter((link) => !removed.has(link.from) && !removed.has(link.to));
         webexpress.webapp.ganttModel.rollup(tasks);
 
-        this.setState({ tasks: tasks, links: links, selectedTask: null });
+        this.setState({ tasks: tasks, links: links, selectedTask: null, selectedLink: null });
 
         for (const removedId of removed) {
             this._persistTaskDelete(removedId);
@@ -448,7 +477,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
      */
     addLink(fromId, toId, type = "FS") {
         const model = webexpress.webapp.ganttModel;
-        if (this._readonly || !model.canLink(this._tasks, this._links, fromId, toId).ok) {
+        if (!model.LINK_TYPES.includes(String(type).toUpperCase()) || this._readonly || !model.canLink(this._tasks, this._links, fromId, toId).ok) {
             return null;
         }
 
@@ -459,6 +488,39 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         this._persistLinkCreate(link);
         this._emit(webexpress.webapp.GanttCtrl.LINK_CREATE_EVENT, "onLinkCreate", { link: Object.assign({}, link) });
 
+        return link;
+    }
+
+    /**
+     * Changes an existing dependency without replacing its identity. Validation
+     * excludes the current link so changing its type does not appear duplicate.
+     * @param {string} id - The dependency id.
+     * @param {object} patch - The endpoint or relationship type changes.
+     * @returns {object|null} The changed link, or null when invalid or read-only.
+     */
+    updateLink(id, patch) {
+        const model = webexpress.webapp.ganttModel;
+        const current = this._links.find((link) => link.id === id);
+        if (!current || this._readonly) {
+            return null;
+        }
+        const raw = Object.assign({}, current, patch, { id: id });
+        if (!model.LINK_TYPES.includes(String(raw.type).toUpperCase())) {
+            return null;
+        }
+        const link = model.normalizeLink(raw);
+        if (!link || !model.canLink(this._tasks, this._links.filter((item) => item.id !== id), link.from, link.to).ok) {
+            return null;
+        }
+        this.setState({ links: this._links.map((item) => item.id === id ? link : item) });
+        if (this._service) {
+            this._service.update(model.linkToWire(link), { path: "/links/" + encodeURIComponent(id) }).then((result) => {
+                if (!result.ok && result.error.kind !== "abort") {
+                    this.setState({ error: result.error.message || "update failed" });
+                }
+            });
+        }
+        this._emit(webexpress.webapp.GanttCtrl.LINK_UPDATE_EVENT, "onLinkUpdate", { link: Object.assign({}, link) });
         return link;
     }
 
@@ -555,9 +617,10 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
      */
     _applyProject(data, extra = {}) {
         const model = webexpress.webapp.ganttModel;
-        const project = model.normalizeProject(data);
-        model.rollup(project.tasks);
-        this.setState(Object.assign({ tasks: project.tasks, links: project.links }, extra));
+        const project = model.normalizeProject(Object.assign({ calendar: this._calendar }, data));
+        model.rollup(project.tasks, project.calendar);
+        this.setState(Object.assign({ tasks: project.tasks, links: project.links, calendar: project.calendar,
+            selectedTask: null, selectedLink: null }, extra));
     }
 
     /**
@@ -737,6 +800,13 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         const ctor = webexpress.webapp.GanttCtrl;
         const model = webexpress.webapp.ganttModel;
         const state = this.state;
+        const previous = this._renderedState;
+        this._renderedState = state;
+        if (previous && (previous.selectedTask !== state.selectedTask || previous.selectedLink !== state.selectedLink)
+            && Object.keys(state).every((key) => ["selectedTask", "selectedLink"].includes(key) || state[key] === previous[key])) {
+            this._renderSelection();
+            return;
+        }
 
         const scrollLeft = this._chartScroll ? this._chartScroll.scrollLeft : 0;
         const scrollTop = this._chartScroll ? this._chartScroll.scrollTop : 0;
@@ -767,7 +837,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
 
         // the drag previews reroute connectors from the last rendered geometry
         this._view = view;
-        this._rowIndexById = {};
+        this._rowIndexById = Object.create(null);
         for (let i = 0; i < rows.length; i++) {
             this._rowIndexById[rows[i].task.id] = i;
         }
@@ -781,7 +851,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         this._element.replaceChildren(this._renderToolbar(), body);
 
         if (!this._gridCollapsed) {
-            this._updateColumnFit(gridWidth);
+            this._updateColumnFit(this._gridEl.clientWidth || gridWidth);
         }
 
         if (this._chartScroll) {
@@ -797,6 +867,26 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
             if (pending) {
                 this._beginCellEdit(pending.cell, pending.task, this._columns()[0]);
             }
+        }
+    }
+
+    /**
+     * Updates selection without detaching row cells between the two clicks of
+     * a double-click gesture. This also preserves focus in the task grid.
+     * @returns {void}
+     */
+    _renderSelection() {
+        for (const name of ["wx-gantt-grid-row", "wx-gantt-row-stripe", "wx-gantt-bar", "wx-gantt-milestone"]) {
+            for (const element of this._element.querySelectorAll("." + name)) {
+                element.classList.toggle("is-selected", element.dataset.taskId === this.state.selectedTask);
+            }
+        }
+        for (const entry of this._linkPaths ? this._linkPaths.values() : []) {
+            entry.path.classList.toggle("is-selected", entry.link.id === this.state.selectedLink);
+        }
+        const toolbar = this._element.querySelector(".wx-gantt-toolbar");
+        if (toolbar) {
+            toolbar.parentNode.replaceChild(this._renderToolbar(), toolbar);
         }
     }
 
@@ -825,6 +915,35 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
                 }
             });
             toolbar.appendChild(add);
+        }
+
+        const selectedLink = this._links.find((link) => link.id === this.state.selectedLink);
+        if (selectedLink) {
+            const label = document.createElement("label");
+            label.className = "wx-gantt-link-editor";
+            label.appendChild(document.createTextNode(this._i18n("webexpress.webapp:gantt.link_type", "Dependency") + " "));
+            const select = document.createElement("select");
+            select.className = "wx-gantt-btn wx-gantt-link-type";
+            select.disabled = this._readonly;
+            select.setAttribute("aria-label", this._i18n("webexpress.webapp:gantt.link_type", "Dependency"));
+            for (const type of webexpress.webapp.ganttModel.LINK_TYPES) {
+                const option = document.createElement("option");
+                option.value = type;
+                option.textContent = this._i18n("webexpress.webapp:gantt.link." + type, type);
+                select.appendChild(option);
+            }
+            select.value = selectedLink.type;
+            select.addEventListener("change", () => this.updateLink(selectedLink.id, { type: select.value }));
+            label.appendChild(select);
+            toolbar.appendChild(label);
+            if (!this._readonly) {
+                const remove = document.createElement("button");
+                remove.type = "button";
+                remove.className = "wx-gantt-btn wx-gantt-link-delete";
+                remove.textContent = this._i18n("webexpress.webapp:gantt.delete_link", "Delete dependency");
+                remove.addEventListener("click", () => this.removeLink(selectedLink.id));
+                toolbar.appendChild(remove);
+            }
         }
 
         const spacer = document.createElement("span");
@@ -1223,12 +1342,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
                 case "start": {
                     const start = model.parseDate(value);
                     if (start) {
-                        const end = model.parseDate(task.end);
-                        // a start moved beyond the end shifts the bar instead of
-                        // collapsing it into a milestone
-                        patch = end && start > end
-                            ? { start: value, end: model.formatIso(model.addDays(start, task.duration)) }
-                            : { start: value };
+                        patch = { start: value };
                     }
                     break;
                 }
@@ -1242,7 +1356,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
                 }
                 case "duration": {
                     const duration = Math.round(Number(value));
-                    if (!isNaN(duration) && duration >= 1) {
+                    if (Number.isFinite(duration) && value !== "" && duration >= 0) {
                         patch = { duration: duration };
                     }
                     break;
@@ -1277,7 +1391,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         });
 
         cell.replaceChildren(input);
-        input.focus();
+        input.focus({ preventScroll: true });
     }
 
     /**
@@ -1326,7 +1440,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
     _renderScaleHead(view) {
         const ctor = webexpress.webapp.GanttCtrl;
         const model = webexpress.webapp.ganttModel;
-        const header = model.buildScale(this._scale, view.range.start, view.range.end);
+        const header = model.buildScale(this._scale, view.range.start, view.range.end, this._calendar);
 
         const head = document.createElement("div");
         head.className = "wx-gantt-chart-head";
@@ -1349,7 +1463,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         units.className = "wx-gantt-scale-units";
         for (const unit of header.units) {
             const cell = document.createElement("div");
-            cell.className = "wx-gantt-scale-cell" + (unit.weekend ? " is-weekend" : "");
+            cell.className = "wx-gantt-scale-cell" + (unit.nonWorking ? " is-weekend" : "") + (unit.holiday ? " is-holiday" : "");
             cell.style.width = (unit.days * view.pxDay) + "px";
             if (this._scale === "week") {
                 cell.textContent = this._i18n("webexpress.webapp:gantt.week_short", "W") + unit.label;
@@ -1404,6 +1518,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
             const stripe = document.createElement("div");
             stripe.className = "wx-gantt-row-stripe"
                 + (view.rows[i].task.id === this.state.selectedTask ? " is-selected" : "");
+            stripe.dataset.taskId = view.rows[i].task.id;
             stripe.style.top = (i * ctor.ROW_HEIGHT) + "px";
             stripe.style.height = ctor.ROW_HEIGHT + "px";
             canvas.appendChild(stripe);
@@ -1411,13 +1526,13 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
 
         // weekend shading only reads well when a day has visible width
         if (this._scale === "day") {
-            const header = model.buildScale("day", view.range.start, view.range.end);
+            const header = model.buildScale("day", view.range.start, view.range.end, this._calendar);
             for (const unit of header.units) {
-                if (!unit.weekend) {
+                if (!unit.nonWorking) {
                     continue;
                 }
                 const column = document.createElement("div");
-                column.className = "wx-gantt-weekend";
+                column.className = "wx-gantt-weekend" + (unit.holiday ? " wx-gantt-holiday" : "");
                 column.style.left = model.dateToOffset(unit.start, view.range.start, view.pxDay) + "px";
                 column.style.width = view.pxDay + "px";
                 canvas.appendChild(column);
@@ -1465,7 +1580,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         this._svgLayer = svg;
         this._linkPaths = new Map();
 
-        const markerId = (this._element.id || "wx-gantt") + "-arrow";
+        const markerId = this._markerId;
         const defs = document.createElementNS(svgNs, "defs");
         const marker = document.createElementNS(svgNs, "marker");
         marker.setAttribute("id", markerId);
@@ -1481,7 +1596,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         defs.appendChild(marker);
         svg.appendChild(defs);
 
-        const rowIndex = {};
+        const rowIndex = Object.create(null);
         for (let i = 0; i < view.rows.length; i++) {
             rowIndex[view.rows[i].task.id] = i;
         }
@@ -1489,7 +1604,8 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         for (const link of this._links) {
             const fromIdx = rowIndex[link.from];
             const toIdx = rowIndex[link.to];
-            if (fromIdx === undefined || toIdx === undefined) {
+            if (fromIdx === undefined || toIdx === undefined
+                || !view.rows[fromIdx].task.start || !view.rows[toIdx].task.start) {
                 // an endpoint inside a collapsed container has no visible row
                 continue;
             }
@@ -1512,6 +1628,20 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
             const hit = document.createElementNS(svgNs, "path");
             hit.setAttribute("d", d);
             hit.classList.add("wx-gantt-link-hit");
+            const title = document.createElementNS(svgNs, "title");
+            title.textContent = view.rows[fromIdx].task.label + " → " + view.rows[toIdx].task.label
+                + ": " + this._i18n("webexpress.webapp:gantt.link." + link.type, link.type);
+            hit.appendChild(title);
+            hit.setAttribute("tabindex", "0");
+            hit.setAttribute("role", "button");
+            hit.setAttribute("aria-label", title.textContent);
+            hit.addEventListener("mousedown", (event) => event.stopPropagation());
+            hit.addEventListener("keydown", (event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    this.select(null, link.id);
+                }
+            });
             hit.addEventListener("click", () => this.select(null, link.id));
             hit.addEventListener("dblclick", () => this.removeLink(link.id));
             svg.appendChild(hit);
@@ -1533,7 +1663,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
     _anchor(task, rowIndex, side, view) {
         const model = webexpress.webapp.ganttModel;
         const left = model.dateToOffset(model.parseDate(task.start), view.range.start, view.pxDay);
-        const width = task.duration * view.pxDay;
+        const width = model.diffDays(model.parseDate(task.start), model.parseDate(task.end)) * view.pxDay;
 
         return this._anchorAt(left, width, rowIndex, side);
     }
@@ -1568,7 +1698,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         const rowIndex = this._rowIndexById ? this._rowIndexById[taskId] : undefined;
         const task = this._tasks.find((t) => t.id === taskId);
 
-        if (rowIndex === undefined || !task) {
+        if (rowIndex === undefined || !task || !task.start) {
             return null;
         }
 
@@ -1634,6 +1764,14 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         const a = from.x + stub * dirOut;
         const b = to.x + stub * dirIn;
 
+        if (dirOut === dirIn) {
+            const outer = dirOut === 1 ? Math.max(a, b) : Math.min(a, b);
+            return "M " + from.x + " " + from.y
+                + " L " + outer + " " + from.y
+                + " L " + outer + " " + to.y
+                + " L " + to.x + " " + to.y;
+        }
+
         if ((dirOut === 1 && b >= a) || (dirOut === -1 && b <= a)) {
             return "M " + from.x + " " + from.y
                 + " L " + a + " " + from.y
@@ -1686,7 +1824,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
             return milestone;
         }
 
-        const width = Math.max(task.duration * view.pxDay, 2);
+        const width = Math.max(model.diffDays(model.parseDate(task.start), model.parseDate(task.end)) * view.pxDay, 2);
 
         const bar = document.createElement("div");
         bar.className = "wx-gantt-bar"
@@ -1758,8 +1896,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
 
     /**
      * Appends the two link ports to a bar. Dragging a port starts a link
-     * gesture; hovering a port while a gesture runs marks it as the drop
-     * target.
+     * gesture; the entire target bar accepts the drop.
      * @param {HTMLElement} bar - The bar element.
      * @param {object} task - The task behind the bar.
      * @param {object} view - The computed view geometry.
@@ -1773,19 +1910,55 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
             const port = document.createElement("div");
             port.className = "wx-gantt-port wx-gantt-port--" + side;
             port.addEventListener("mousedown", (e) => this._beginLinkDrag(e, task, side, view));
-            port.addEventListener("mouseenter", () => {
-                if (this._drag && this._drag.type === "link") {
-                    this._dragOverPort = { task: task, side: side };
-                    port.classList.add("is-target");
-                }
-            });
-            port.addEventListener("mouseleave", () => {
-                if (this._dragOverPort && this._dragOverPort.task.id === task.id && this._dragOverPort.side === side) {
-                    this._dragOverPort = null;
-                }
-                port.classList.remove("is-target");
-            });
             bar.appendChild(port);
+        }
+    }
+
+    /**
+     * Resolves a link drop anywhere inside a bar, including its label and
+     * progress layer. Explicit ports select their boundary; otherwise the
+     * pointer's nearest half selects the start or finish boundary.
+     * @param {MouseEvent} event - The current pointer event.
+     * @param {string} fromId - The predecessor being connected.
+     * @returns {object|null} The valid target task, boundary and bar element.
+     */
+    _resolveLinkTarget(event, fromId) {
+        let element = event.target;
+        let side = null;
+        while (element && element !== this._element) {
+            if (element.classList) {
+                if (element.classList.contains("wx-gantt-port--start")) { side = "start"; }
+                if (element.classList.contains("wx-gantt-port--end")) { side = "end"; }
+                if (element.classList.contains("wx-gantt-bar") || element.classList.contains("wx-gantt-milestone")) {
+                    const task = this._tasks.find((item) => item.id === element.dataset.taskId);
+                    if (!this._element.contains(element) || !task
+                        || !webexpress.webapp.ganttModel.canLink(this._tasks, this._links, fromId, task.id).ok) {
+                        return null;
+                    }
+                    const rect = element.getBoundingClientRect();
+                    side = side || (event.clientX < rect.left + rect.width / 2 ? "start" : "end");
+                    return { task: task, side: side, element: element };
+                }
+            }
+            element = element.parentNode;
+        }
+        return null;
+    }
+
+    /**
+     * Highlights the accepted bar and boundary while removing stale feedback.
+     * @param {object|null} target - The current resolved drop target.
+     * @returns {void}
+     */
+    _setLinkTarget(target) {
+        if (this._linkTarget) {
+            this._linkTarget.element.classList.remove("is-link-target");
+            delete this._linkTarget.element.dataset.linkTargetSide;
+        }
+        this._linkTarget = target;
+        if (target) {
+            target.element.classList.add("is-link-target");
+            target.element.dataset.linkTargetSide = target.side;
         }
     }
 
@@ -1841,7 +2014,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
 
         const model = webexpress.webapp.ganttModel;
         const left = model.dateToOffset(model.parseDate(task.start), view.range.start, view.pxDay);
-        const width = task.duration * view.pxDay;
+        const width = model.diffDays(model.parseDate(task.start), model.parseDate(task.end)) * view.pxDay;
 
         this._drag = {
             type: type,
@@ -1925,7 +2098,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
             startX: e.clientX || 0,
             startY: e.clientY || 0
         };
-        this._dragOverPort = null;
+        this._linkTarget = null;
 
         this._element.classList.add("wx-gantt--linking");
         this._attachDragListeners();
@@ -1957,6 +2130,25 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
             drag.moved = true;
         }
 
+        if (this._calendar && ["move", "resize-start", "resize-end"].includes(drag.type)) {
+            const model = webexpress.webapp.ganttModel;
+            const days = Math.round(dx / drag.view.pxDay);
+            const patch = drag.type === "move"
+                ? model.moveTask(drag.task, days, this._calendar)
+                : model.resizeTask(drag.task, drag.type === "resize-start" ? "start" : "end", days, this._calendar);
+            const preview = patch || drag.task;
+            const start = model.parseDate(preview.start);
+            const end = model.parseDate(preview.end);
+            const left = model.dateToOffset(start, drag.view.range.start, drag.view.pxDay);
+            const width = model.diffDays(start, end) * drag.view.pxDay;
+            drag.bar.style.left = left + "px";
+            if (drag.task.duration > 0) {
+                drag.bar.style.width = Math.max(2, width) + "px";
+            }
+            this._updateLinkPreviews(drag.task.id, left, width, drag.rowIndex);
+            return;
+        }
+
         if (drag.type === "move") {
             const left = drag.left + dx;
             drag.bar.style.left = left + "px";
@@ -1975,9 +2167,14 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
             const pct = this._progressFromDx(drag, dx);
             drag.bar.childNodes[0].style.width = pct + "%";
         } else if (drag.type === "link") {
+            const target = this._resolveLinkTarget(e, drag.task.id);
+            this._setLinkTarget(target);
             const x = drag.from.x + dx;
             const y = drag.from.y + dy;
-            drag.temp.setAttribute("d", "M " + drag.from.x + " " + drag.from.y + " L " + x + " " + y);
+            const anchor = target ? this._anchorFor(target.task.id, target.side, drag.view) : null;
+            drag.temp.setAttribute("d", anchor
+                ? this._linkPath(drag.from, drag.side, anchor, target.side)
+                : "M " + drag.from.x + " " + drag.from.y + " L " + x + " " + y);
         } else if (drag.type === "split") {
             this._applySplit(drag.width + dx);
         } else if (drag.type === "pan") {
@@ -1991,8 +2188,8 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
 
     /**
      * Commits or discards the running gesture on release. A move or resize is
-     * snapped to whole days, a link gesture connects to the hovered port with
-     * the type the two sides imply.
+     * snapped to whole days, a link gesture connects to the target bar boundary
+     * selected by its explicit port or the nearest half of the bar.
      * @param {MouseEvent} e - The mouseup event.
      */
     _handleDragUp(e) {
@@ -2031,8 +2228,8 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
             if (drag.temp && drag.temp.parentNode) {
                 drag.temp.parentNode.removeChild(drag.temp);
             }
-            const target = this._dragOverPort;
-            this._dragOverPort = null;
+            const target = this._resolveLinkTarget(e, drag.task.id);
+            this._setLinkTarget(null);
             if (target && target.task.id !== drag.task.id) {
                 this.addLink(drag.task.id, target.task.id, this._linkTypeFor(drag.side, target.side));
             } else {
@@ -2050,12 +2247,12 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
 
         let patch = null;
         if (drag.type === "move") {
-            patch = model.moveTask(drag.task, deltaDays);
+            patch = model.moveTask(drag.task, deltaDays, this._calendar);
         } else if (drag.type === "resize-start") {
             // the model speaks "edge moved right", exactly the pointer distance
-            patch = model.resizeTask(drag.task, "start", deltaDays);
+            patch = model.resizeTask(drag.task, "start", deltaDays, this._calendar);
         } else if (drag.type === "resize-end") {
-            patch = model.resizeTask(drag.task, "end", deltaDays);
+            patch = model.resizeTask(drag.task, "end", deltaDays, this._calendar);
         } else if (drag.type === "progress") {
             const pct = this._progressFromDx(drag, dx);
             patch = pct !== drag.task.progress ? { progress: pct } : null;
@@ -2139,10 +2336,15 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
      * @param {KeyboardEvent} e - The keydown event.
      */
     _onKeyDown(e) {
+        const target = e.target;
+        if (target && (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable)) {
+            return;
+        }
         if (e.key === "Delete" || e.key === "Backspace") {
             if (this._readonly) {
                 return;
             }
+            e.preventDefault();
             if (this.state.selectedLink) {
                 this.removeLink(this.state.selectedLink);
             } else if (this.state.selectedTask) {
@@ -2250,6 +2452,10 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
      * the control is destroyed mid-drag.
      */
     destroy() {
+        this._setLinkTarget(null);
+        if (this._resizeObserver) {
+            this._resizeObserver.disconnect();
+        }
         if (this._onDragMove) {
             document.removeEventListener("mousemove", this._onDragMove);
             document.removeEventListener("mouseup", this._onDragUp);

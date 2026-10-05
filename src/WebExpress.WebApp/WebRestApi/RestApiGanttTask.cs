@@ -36,10 +36,11 @@ namespace WebExpress.WebApp.WebRestApi
         public string End { get; set; }
 
         /// <summary>
-        /// Gets or sets the duration in whole days. A value of zero marks a milestone.
+        /// Gets or sets the duration in whole working days when a calendar is supplied,
+        /// otherwise calendar days. Null derives it from dates; zero marks a milestone.
         /// </summary>
         [JsonPropertyName("duration")]
-        public int Duration { get; set; }
+        public int? Duration { get; set; }
 
         /// <summary>
         /// Gets or sets the completion percentage in the range 0..100.

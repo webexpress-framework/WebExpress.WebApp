@@ -38,6 +38,12 @@ namespace WebExpress.WebApp.WebRestApi
         public IEnumerable<RestApiGanttLink> Links { get; set; }
 
         /// <summary>
+        /// Gets or sets the optional working calendar supplied with the project.
+        /// </summary>
+        [JsonPropertyName("calendar")]
+        public RestApiGanttCalendar Calendar { get; set; }
+
+        /// <summary>
         /// Converts the current instance into a response.
         /// </summary>
         /// <returns>A response representing the project.</returns>
@@ -47,7 +53,8 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 title = Title,
                 tasks = Tasks ?? [],
-                links = Links ?? []
+                links = Links ?? [],
+                calendar = Calendar
             };
 
             var jsonData = JsonSerializer.Serialize(data, _jsonOptions);

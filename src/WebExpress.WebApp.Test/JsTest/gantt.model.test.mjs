@@ -249,3 +249,83 @@ test("model loads the project and persists a move through a service", async () =
     assert.equal(calls[1].url, "/api/plan/tasks/t1");
     assert.equal(JSON.parse(calls[1].body).start, "2026-07-07");
 });
+
+
+test("working calendar excludes weekly rest days and explicit holidays", () => {
+    const model = load().wxapp.ganttModel;
+    const calendar = model.normalizeCalendar({ holidays: ["2026-07-06"] });
+    const task = model.normalizeTask({ id: "a", start: "2026-07-03", duration: 2 }, calendar);
+    assert.equal(task.end, "2026-07-08");
+    assert.equal(task.duration, 2);
+    assert.equal(model.normalizeTask({ id: "b", end: task.end, duration: 2 }, calendar).start, task.start);
+    assert.equal(model.normalizeTask({ id: "c", start: task.start, end: task.end }, calendar).duration, 2);
+    assert.equal(model.normalizeTask({ id: "d", start: "2026-07-04", duration: 1 }, calendar).start, "2026-07-07");
+    assert.equal(model.normalizeTask({ id: "m", start: "2026-07-04", duration: 0 }, calendar).end, "2026-07-07");
+    assert.equal(model.normalizeTask({ id: "legacy", start: "2026-07-03", duration: 2 }).end, "2026-07-05");
+});
+
+test("working move and resize preserve effort and exclusive finish boundaries", () => {
+    const model = load().wxapp.ganttModel;
+    const calendar = model.normalizeCalendar({ holidays: ["2026-07-06"] });
+    const task = model.normalizeTask({ id: "a", start: "2026-07-02", duration: 2 }, calendar);
+    assert.deepEqual(model.moveTask(task, 1, calendar), { start: "2026-07-03", end: "2026-07-08" });
+    assert.deepEqual(model.moveTask(task, 2, calendar), { start: "2026-07-07", end: "2026-07-09" });
+    assert.deepEqual(model.resizeTask(task, "end", 4, calendar), { start: "2026-07-02", end: "2026-07-08", duration: 3 });
+    assert.deepEqual(model.resizeTask(task, "start", 20, calendar), { start: "2026-07-03", end: "2026-07-04", duration: 1 });
+    assert.deepEqual(model.resizeTask(task, "end", -20, calendar), { start: "2026-07-02", end: "2026-07-03", duration: 1 });
+    assert.equal(model.moveTask(task, Infinity, calendar), null);
+});
+
+test("calendar normalization keeps custom workweeks usable and marks holidays", () => {
+    const model = load().wxapp.ganttModel;
+    const calendar = model.normalizeCalendar({ workingDays: [2, 3, 4, 5, 6, 6, 9], holidays: ["2026-07-04", "bad", "2026-07-04"] });
+    assert.deepEqual(calendar.workingDays, [2, 3, 4, 5, 6]);
+    assert.deepEqual(calendar.holidays, ["2026-07-04"]);
+    const days = model.buildScale("day", model.parseDate("2026-07-03"), model.parseDate("2026-07-08"), calendar).units;
+    assert.deepEqual(days.map((day) => day.nonWorking), [false, true, true, true, false]);
+    assert.equal(days[1].holiday, true);
+    assert.equal(model.normalizeCalendar({ workingDays: [] }).workingDays.length, 5);
+});
+
+test("invalid dates and optional durations cannot produce inverted or invalid tasks", () => {
+    const model = load().wxapp.ganttModel;
+    for (const value of ["2026-02-30", "2026-13-01", "2026-01-00", "2026-01-01garbage"]) {
+        assert.equal(model.parseDate(value), null);
+    }
+    assert.equal(model.formatIso(model.parseDate("2024-02-29")), "2024-02-29");
+    for (const duration of [null, undefined, Infinity, NaN]) {
+        const task = model.normalizeTask({ id: "a", start: "2026-07-03", duration: duration });
+        assert.equal(task.duration, 1);
+        assert.equal(task.end, "2026-07-04");
+    }
+    assert.equal(model.normalizeTask({ id: "m", start: "2026-07-03", end: "2026-07-03" }).duration, 0);
+    const inverted = model.normalizeTask({ id: "a", start: "2026-07-03", end: "2026-07-01" });
+    assert.ok(inverted.end >= inverted.start);
+    assert.equal(model.normalizeTask({ id: "m", start: "2026-07-03", end: "2026-07-08", type: "milestone" }).end, "2026-07-03");
+    assert.deepEqual(model.normalizeTask({ id: "a", resources: [{ name: 12 }] }).resources, []);
+});
+
+test("duplicate task ids and parent cycles never hide tasks or recurse indefinitely", () => {
+    const model = load().wxapp.ganttModel;
+    const project = model.normalizeProject({ tasks: [
+        { id: "a", parentId: "b" }, { id: "b", parentId: "a" },
+        { id: "a" }, { id: "c", parentId: "c" }
+    ] });
+    model.rollup(project.tasks);
+    assert.equal(project.tasks.length, 3);
+    assert.equal(model.flatten(project.tasks).length, 3);
+    assert.equal(model.canParent(project.tasks, "a", "b"), false);
+    assert.equal(model.canParent(project.tasks, "a", "missing"), false);
+});
+
+test("container durations count workdays while spanning child calendar dates", () => {
+    const model = load().wxapp.ganttModel;
+    const project = model.normalizeProject({ calendar: { holidays: ["2026-07-06"] }, tasks: [
+        { id: "p" }, { id: "a", parentId: "p", start: "2026-07-03", duration: 2, progress: 50 },
+        { id: "b", parentId: "p", start: "2026-07-08", duration: 1, progress: 100 }
+    ] });
+    model.rollup(project.tasks, project.calendar);
+    assert.equal(project.tasks[0].duration, 3);
+    assert.equal(project.tasks[0].end, "2026-07-09");
+    assert.equal(project.tasks[0].progress, 67);
+});

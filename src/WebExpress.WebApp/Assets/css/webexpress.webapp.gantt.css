@@ -613,7 +613,14 @@ img.wx-gantt-bar-icon {
     opacity: 1;
 }
 
-.wx-gantt-port.is-target {
+.wx-gantt-bar.is-link-target,
+.wx-gantt-milestone.is-link-target {
+    outline: 2px solid var(--wx-primary, #0d6efd);
+    outline-offset: 2px;
+}
+
+[data-link-target-side="start"] > .wx-gantt-port--start,
+[data-link-target-side="end"] > .wx-gantt-port--end {
     background: var(--wx-primary, #0d6efd);
 }
 
@@ -638,4 +645,17 @@ img.wx-gantt-bar-icon {
     .wx-gantt-grid-cell--res {
         display: none;
     }
+}
+
+/* holidays remain distinguishable from weekly non-working days */
+.wx-gantt-holiday,
+.wx-gantt-scale-cell.is-holiday {
+    background: var(--wx-warning-bg-subtle, #fff3cd);
+}
+
+.wx-gantt-link-editor {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.8rem;
 }

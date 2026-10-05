@@ -15,6 +15,90 @@ namespace WebExpress.WebApp.Test.WebRestApi
     public class UnitTestRestApiGantt
     {
         /// <summary>
+        /// Verifies that each relationship type round-trips through the update route.
+        /// </summary>
+        /// <param name="type">The dependency relationship to persist.</param>
+        [Theory]
+        [InlineData("FS")]
+        [InlineData("SS")]
+        [InlineData("FF")]
+        [InlineData("SF")]
+        public void UpdateLinkType(string type)
+        {
+            // arrange
+            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var api = Seeded();
+            var body = JsonSerializer.Serialize(new { id = "wrong", from = "t1", to = "t3", type });
+
+            // act
+            var result = api.Update(Request("PUT", "/gantt/links/l1", body));
+
+            // validation
+            Assert.Equal(200, result.Status);
+            Assert.Equal(type, api.Links[0].Type);
+            Assert.Equal("l1", api.Links[0].Id);
+        }
+
+        /// <summary>
+        /// Verifies that malformed dependency edits never reach the store.
+        /// </summary>
+        [Fact]
+        public void RejectInvalidLinkUpdate()
+        {
+            // arrange
+            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var api = Seeded();
+            var body = JsonSerializer.Serialize(new { from = "t1", to = "t3", type = "invalid" });
+
+            // act
+            var result = api.Update(Request("PUT", "/gantt/links/l1", body));
+
+            // validation
+            Assert.Equal(400, result.Status);
+            Assert.Equal("FS", api.Links[0].Type);
+        }
+
+        /// <summary>
+        /// Verifies that the project response supplies working days and holidays as data.
+        /// </summary>
+        [Fact]
+        public void RetrieveCalendar()
+        {
+            // arrange
+            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var api = Seeded();
+            api.Calendar = new RestApiGanttCalendar { Holidays = ["2026-07-06"] };
+
+            // act
+            var response = api.Retrieve(Request("GET", "/gantt"));
+            using var document = JsonDocument.Parse((byte[])response.Content);
+
+            // validation
+            var calendar = document.RootElement.GetProperty("calendar");
+            Assert.Equal(5, calendar.GetProperty("workingDays").GetArrayLength());
+            Assert.Equal("2026-07-06", calendar.GetProperty("holidays")[0].GetString());
+        }
+
+        /// <summary>
+        /// Verifies that omitted duration remains distinguishable from a milestone.
+        /// </summary>
+        [Fact]
+        public void CreateTaskWithoutDuration()
+        {
+            // arrange
+            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var api = Seeded();
+            var body = JsonSerializer.Serialize(new { label = "Derived", start = "2026-07-03", end = "2026-07-08" });
+
+            // act
+            var response = api.Create(Request("POST", "/gantt/tasks", body));
+
+            // validation
+            Assert.Equal(200, response.Status);
+            Assert.Null(api.Tasks.Last().Duration);
+        }
+
+        /// <summary>
         /// Builds a request with a method, path and optional JSON body. The URI
         /// carries the path so the base class can route on the trailing
         /// segments.

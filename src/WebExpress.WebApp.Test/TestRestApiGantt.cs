@@ -123,6 +123,41 @@ namespace WebExpress.WebApp.Test
             return link;
         }
 
+        /// <summary>
+        /// Persists a dependency edit while retaining the canonical link id.
+        /// </summary>
+        /// <param name="id">The link id from the request path.</param>
+        /// <param name="link">The replacement dependency.</param>
+        /// <param name="request">The incoming request.</param>
+        /// <returns>The updated link, or null when it no longer exists.</returns>
+        protected override RestApiGanttLink UpdateLink(string id, RestApiGanttLink link, IRequest request)
+        {
+            var existing = _links.FirstOrDefault(item => item.Id == id);
+            if (existing is null)
+            {
+                return null;
+            }
+            existing.From = link.From;
+            existing.To = link.To;
+            existing.Type = link.Type;
+            return existing;
+        }
+
+        /// <summary>
+        /// Gets or sets the calendar supplied by the test fixture.
+        /// </summary>
+        public RestApiGanttCalendar Calendar { get; set; }
+
+        /// <summary>
+        /// Supplies the fixture calendar through the production retrieval hook.
+        /// </summary>
+        /// <param name="request">The incoming request.</param>
+        /// <returns>The configured calendar.</returns>
+        protected override RestApiGanttCalendar RetrieveCalendar(IRequest request)
+        {
+            return Calendar;
+        }
+
         /// <inheritdoc/>
         protected override bool DeleteLink(string id, IRequest request)
         {

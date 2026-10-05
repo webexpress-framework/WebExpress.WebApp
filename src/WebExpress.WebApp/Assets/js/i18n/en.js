@@ -181,6 +181,12 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "close": "Close",
 
     // gantt chart
+    "gantt.link_type": "Dependency",
+    "gantt.link.FS": "FS · Finish to start",
+    "gantt.link.SS": "SS · Start to start",
+    "gantt.link.FF": "FF · Finish to finish",
+    "gantt.link.SF": "SF · Start to finish",
+    "gantt.delete_link": "Delete dependency",
     "gantt.new_task": "New task",
     "gantt.scale.day": "Day",
     "gantt.scale.week": "Week",

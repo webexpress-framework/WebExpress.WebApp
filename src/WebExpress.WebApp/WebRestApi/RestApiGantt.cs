@@ -69,7 +69,8 @@ namespace WebExpress.WebApp.WebRestApi
                 {
                     Title = I18N.Translate(request, Title),
                     Tasks = RetrieveTasks(request),
-                    Links = RetrieveLinks(request)
+                    Links = RetrieveLinks(request),
+                    Calendar = RetrieveCalendar(request)
                 };
 
                 return result.ToResponse();
@@ -111,7 +112,7 @@ namespace WebExpress.WebApp.WebRestApi
                 if (Matches(segments, "links"))
                 {
                     var payload = GetPayload<RestApiGanttLink>(request);
-                    if (payload is null)
+                    if (!ValidateLink(payload))
                     {
                         return new ResponseBadRequest(new StatusMessage("invalid link payload."));
                     }
@@ -132,7 +133,7 @@ namespace WebExpress.WebApp.WebRestApi
 
         /// <summary>
         /// Handles the PUT/PATCH request that persists a task change
-        /// (/tasks/{id}).
+        /// (/tasks/{id}) or dependency change (/links/{id}).
         /// </summary>
         /// <param name="request">The incoming request.</param>
         /// <returns>The updated task, or an error response.</returns>
@@ -155,6 +156,21 @@ namespace WebExpress.WebApp.WebRestApi
                     var updated = UpdateTask(segments[1], payload, request);
                     return updated is null
                         ? new ResponseNotFound(new StatusMessage($"task '{segments[1]}' not found."))
+                        : ToJsonResponse(updated);
+                }
+
+                if (segments.Count == 2 && EqualsSegment(segments[0], "links"))
+                {
+                    var payload = GetPayload<RestApiGanttLink>(request);
+                    if (!ValidateLink(payload))
+                    {
+                        return new ResponseBadRequest(new StatusMessage("invalid link payload."));
+                    }
+
+                    payload.Id = segments[1];
+                    var updated = UpdateLink(segments[1], payload, request);
+                    return updated is null
+                        ? new ResponseNotFound(new StatusMessage($"link '{segments[1]}' not found."))
                         : ToJsonResponse(updated);
                 }
 
@@ -199,6 +215,47 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 return RestApiFault.BadRequest(request, ex, "error processing delete request.");
             }
+        }
+
+        /// <summary>
+        /// Supplies the project calendar so regional holidays remain an application concern.
+        /// </summary>
+        /// <param name="request">The incoming request.</param>
+        /// <returns>The working calendar, or null for calendar-day scheduling.</returns>
+        protected virtual RestApiGanttCalendar RetrieveCalendar(IRequest request)
+        {
+            return null;
+        }
+
+        /// <summary>
+        /// Persists changes to an existing dependency while preserving its identity.
+        /// Derived endpoints override this hook when link editing is supported.
+        /// </summary>
+        /// <param name="id">The canonical link id from the request path.</param>
+        /// <param name="link">The complete replacement link.</param>
+        /// <param name="request">The incoming request.</param>
+        /// <returns>The stored link, or null when no editable link exists.</returns>
+        protected virtual RestApiGanttLink UpdateLink(string id, RestApiGanttLink link, IRequest request)
+        {
+            return null;
+        }
+
+        /// <summary>
+        /// Rejects malformed dependencies before handing them to a persistence hook.
+        /// Graph consistency must also be enforced by the application's transactional store.
+        /// </summary>
+        /// <param name="link">The deserialized dependency.</param>
+        /// <returns>True when the endpoints and normalized relationship type are valid.</returns>
+        private static bool ValidateLink(RestApiGanttLink link)
+        {
+            if (link is null || string.IsNullOrWhiteSpace(link.From)
+                || string.IsNullOrWhiteSpace(link.To) || link.From == link.To)
+            {
+                return false;
+            }
+
+            link.Type = string.IsNullOrWhiteSpace(link.Type) ? "FS" : link.Type.ToUpperInvariant();
+            return link.Type is "FS" or "SS" or "FF" or "SF";
         }
 
         /// <summary>

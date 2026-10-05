@@ -1,4 +1,6 @@
 using System;
+using System.Text.Json;
+using WebExpress.WebApp.WebRestApi;
 using System.Collections.Generic;
 using WebExpress.WebApp.WebData;
 using WebExpress.WebCore.WebHtml;
@@ -29,6 +31,12 @@ namespace WebExpress.WebApp.WebControl
         /// resolves the nearest enclosing ViewState by ancestry.
         /// </summary>
         public Func<IRenderControlContext, string> ViewState { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional working calendar. A null calendar keeps
+        /// durations in calendar days; an explicit calendar enables working days.
+        /// </summary>
+        public Func<IRenderControlContext, RestApiGanttCalendar> Calendar { get; set; }
 
         /// <summary>
         /// Gets or sets the initial timeline scale: day, week or month. The
@@ -140,6 +148,7 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
+            var calendar = Calendar?.Invoke(renderContext);
             var scale = Scale?.Invoke(renderContext);
             var scales = Scales?.Invoke(renderContext);
             var columns = Columns?.Invoke(renderContext);
@@ -153,6 +162,7 @@ namespace WebExpress.WebApp.WebControl
                 Class = Css.Concatenate("wx-webapp-gantt", fill ? "wx-fill" : null, GetClasses(renderContext)),
                 Style = GetStyles(renderContext)
             }
+                .AddUserAttribute("data-calendar", calendar is null ? null : JsonSerializer.Serialize(calendar))
                 .AddUserAttribute("data-scale", scale)
                 .AddUserAttribute("data-scales", scales)
                 .AddUserAttribute("data-columns", columns)

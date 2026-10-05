@@ -12,6 +12,31 @@ namespace WebExpress.WebApp.Test.WebControl
     public class UnitTestControlDataGantt
     {
         /// <summary>
+        /// Verifies that a supplied calendar is serialized without adding calendar UI.
+        /// </summary>
+        [Fact]
+        public void CalendarData()
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlDataGantt
+            {
+                Calendar = _ => new WebExpress.WebApp.WebRestApi.RestApiGanttCalendar { Holidays = ["2026-07-06"] }
+            };
+
+            // act
+            var html = control.Render(context, visualTree).ToString();
+
+            // validation
+            Assert.Contains("data-calendar=", html);
+            Assert.Contains("2026-07-06", html);
+            Assert.DoesNotContain("<input", html);
+        }
+
+        /// <summary>
         /// Tests the id property of the api gantt control.
         /// </summary>
         [Theory]
