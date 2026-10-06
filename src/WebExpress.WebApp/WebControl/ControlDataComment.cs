@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using WebExpress.WebApp.WebData;
 using WebExpress.WebCore.WebHtml;
@@ -119,7 +120,7 @@ namespace WebExpress.WebApp.WebControl
 
             var readOnly = Readonly?.Invoke(renderContext) ?? false;
 
-            return new HtmlElementTextContentDiv()
+            var html = new HtmlElementTextContentDiv()
             {
                 Id = Id,
                 Class = Css.Concatenate("wx-webapp-comment", GetClasses(renderContext)),
@@ -130,6 +131,20 @@ namespace WebExpress.WebApp.WebControl
                 .AddUserAttribute("data-readonly", readOnly ? "true" : null)
                 .AddUserAttribute("data-categories", Categories?.Invoke(renderContext))
                 .EmitDataIslands(this, renderContext);
+
+            // a surface bound to a ViewState resource takes its comments and their service from the
+            // ViewState, which drops the surface's own islands; the services its editors offer -
+            // mention lookup, image upload, the image and link libraries - belong to the surface,
+            // so they stay on it
+            if (!string.IsNullOrEmpty(ResourceFactory?.Invoke(renderContext)))
+            {
+                html.EmitServiceIslands([.. ServiceFactories
+                    .Select(factory => factory?.Invoke(renderContext))
+                    .Where(descriptor => descriptor != null && descriptor.Name != "data")
+                    .Select(descriptor => descriptor.BindPathVariables(renderContext?.Request))]);
+            }
+
+            return html;
         }
     }
 }

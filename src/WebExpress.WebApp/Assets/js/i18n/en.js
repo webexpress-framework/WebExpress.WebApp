@@ -538,5 +538,25 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "relation.cardinality": "The cardinality of the link type is already exhausted.",
     "relation.invalid.address": "Please enter an address starting with http:// or https://.",
     "relation.type.duplicate": "A link type with this id already exists.",
-    "relation.type.in.use": "The link type is still in use and can only be deactivated."
+    "relation.type.in.use": "The link type is still in use and can only be deactivated.",
+
+    "editor.library.search": "Search",
+    "editor.library.loading": "Loading…",
+    "editor.library.empty": "No entries found.",
+    "editor.library.failed": "The entries could not be loaded.",
+    "editor.image.library.title": "Images",
+    "editor.image.library.select": "Please choose or upload an image.",
+    "editor.image.upload.button": "Upload image",
+    "editor.image.upload.hint": "or drop it here",
+    "editor.image.upload.progress": "Uploading",
+    "editor.image.upload.pending": "Please wait until the upload has finished.",
+    "editor.image.upload.type": "Please choose an image file.",
+    "editor.image.upload.failed": "The image could not be uploaded.",
+    "editor.image.upload.noaddress": "The server did not return an address for the image.",
+    "editor.image.alt": "Alternative text",
+    "editor.image.alt.placeholder": "Name of the image (optional)",
+    "editor.image.invalid": "This image address is not supported.",
+    "editor.link.library.title": "From the application",
+    "editor.link.library.select": "Please choose a link target.",
+    "editor.link.invalid": "This link address is not supported."
 });

@@ -55,3 +55,21 @@ test("comment composer destroy tears down without throwing", () => {
 
     assert.doesNotThrow(() => ctrl.destroy());
 });
+
+test("comment composer hands its upload, image and link services to the editor's dialogs", () => {
+    const { wxapp, createElement, setFetch, document } = load();
+    setFetch(async () => ({ ok: true, status: 200, headers: { get: () => "application/json" }, json: async () => ({}) }));
+
+    const element = createElement("div");
+    appendServiceIsland(document, element, { name: "data", kind: "rest", baseUri: "/api/comments/INC-1", method: "GET", updateMethod: "PUT" });
+    appendServiceIsland(document, element, { name: "upload", kind: "rest", baseUri: "/api/upload", method: "POST" });
+    appendServiceIsland(document, element, { name: "images", kind: "rest", baseUri: "/api/images", method: "GET" });
+    appendServiceIsland(document, element, { name: "links", kind: "rest", baseUri: "/api/links", method: "GET" });
+    element.dataset.categories = PRESET_CATEGORIES;
+
+    const ctrl = new wxapp.CommentComposerCtrl(element);
+
+    assert.equal(ctrl._editorHost.dataset.imageUploadUri, "/api/upload");
+    assert.equal(ctrl._editorHost.dataset.imageLibraryUri, "/api/images");
+    assert.equal(ctrl._editorHost.dataset.linkLibraryUri, "/api/links");
+});

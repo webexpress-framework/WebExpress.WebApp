@@ -538,5 +538,25 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "relation.cardinality": "Die Kardinalität des Verknüpfungstyps ist bereits ausgeschöpft.",
     "relation.invalid.address": "Bitte geben Sie eine Adresse an, die mit http:// oder https:// beginnt.",
     "relation.type.duplicate": "Ein Verknüpfungstyp mit dieser Kennung existiert bereits.",
-    "relation.type.in.use": "Der Verknüpfungstyp wird noch verwendet und kann nur deaktiviert werden."
+    "relation.type.in.use": "Der Verknüpfungstyp wird noch verwendet und kann nur deaktiviert werden.",
+
+    "editor.library.search": "Suchen",
+    "editor.library.loading": "Wird geladen …",
+    "editor.library.empty": "Keine Einträge gefunden.",
+    "editor.library.failed": "Die Einträge konnten nicht geladen werden.",
+    "editor.image.library.title": "Bilder",
+    "editor.image.library.select": "Bitte wählen Sie ein Bild aus oder laden Sie eines hoch.",
+    "editor.image.upload.button": "Bild hochladen",
+    "editor.image.upload.hint": "oder hierher ziehen",
+    "editor.image.upload.progress": "Wird hochgeladen",
+    "editor.image.upload.pending": "Bitte warten Sie, bis das Hochladen abgeschlossen ist.",
+    "editor.image.upload.type": "Bitte wählen Sie eine Bilddatei.",
+    "editor.image.upload.failed": "Das Bild konnte nicht hochgeladen werden.",
+    "editor.image.upload.noaddress": "Der Server hat keine Adresse für das Bild geliefert.",
+    "editor.image.alt": "Alternativtext",
+    "editor.image.alt.placeholder": "Name des Bildes (optional)",
+    "editor.image.invalid": "Diese Bildadresse wird nicht unterstützt.",
+    "editor.link.library.title": "Aus der Anwendung",
+    "editor.link.library.select": "Bitte wählen Sie ein Linkziel aus.",
+    "editor.link.invalid": "Diese Linkadresse wird nicht unterstützt."
 });

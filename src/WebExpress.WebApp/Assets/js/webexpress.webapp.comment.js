@@ -109,6 +109,12 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
         const uploadService = this.useService("upload");
         this._imageUploadUri = uploadService ? uploadService.baseUri : null;
 
+        const imagesService = this.useService("images");
+        this._imageLibraryUri = imagesService ? imagesService.baseUri : null;
+
+        const linksService = this.useService("links");
+        this._linkLibraryUri = linksService ? linksService.baseUri : null;
+
         this._currentUser = element.dataset.currentUser || null;
         this._readonly = element.dataset.readonly === "true";
 
@@ -225,8 +231,8 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
             this._uri = service.baseUri;
         }
 
-        // secondary services (mention resolution, inline image upload) also come
-        // from the ViewState in ViewState mode, since the control emits no islands of its own
+        // the secondary services (mention resolution, image upload, image and link libraries)
+        // stay on the surface as its own islands; a ViewState that declares them by name wins
         const usersService = viewState.useService("users");
         if (usersService) {
             this._usersUri = usersService.baseUri;
@@ -234,6 +240,14 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
         const uploadService = viewState.useService("upload");
         if (uploadService) {
             this._imageUploadUri = uploadService.baseUri;
+        }
+        const imagesService = viewState.useService("images");
+        if (imagesService) {
+            this._imageLibraryUri = imagesService.baseUri;
+        }
+        const linksService = viewState.useService("links");
+        if (linksService) {
+            this._linkLibraryUri = linksService.baseUri;
         }
 
         if (!this._categoriesPreset) {
@@ -833,6 +847,16 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
         // the edit pane.
         editorHost.className = "wx-comment-edit-editor";
         editorHost.innerHTML = comment.body || "";
+        // an edited comment offers the same images and link targets as a new one
+        if (this._imageUploadUri) {
+            editorHost.dataset.imageUploadUri = this._imageUploadUri;
+        }
+        if (this._imageLibraryUri) {
+            editorHost.dataset.imageLibraryUri = this._imageLibraryUri;
+        }
+        if (this._linkLibraryUri) {
+            editorHost.dataset.linkLibraryUri = this._linkLibraryUri;
+        }
 
         const actions = document.createElement("div");
         actions.className = "wx-comment-edit-actions";

@@ -559,6 +559,37 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
+        /// Declares the image library service of the comment surface, which lists the
+        /// images the image dialog of its editor offers with GET. The response
+        /// is a file result like the one of the file view: items carrying name,
+        /// uri and an optional preview image.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The comment control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataComment ImagesService<TEndpoint>(this ControlDataComment control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, ImagesPreset, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
+        }
+
+        /// <summary>
+        /// Declares the link library service of the comment surface, which lists the
+        /// targets the link dialog of its editor offers with GET. The response
+        /// carries items with uri, title and an optional description.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The comment control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataComment LinksService<TEndpoint>(this ControlDataComment control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, LinksPreset, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
+        }
+
+        /// <summary>
         /// Declares the users service of the comment composer, which resolves
         /// mentioned users with GET.
         /// </summary>
@@ -584,6 +615,37 @@ namespace WebExpress.WebApp.WebControl
             where TEndpoint : IEndpoint
         {
             return AddPreset(control, UploadPreset, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
+        }
+
+        /// <summary>
+        /// Declares the image library service of the comment composer, which lists the
+        /// images the image dialog of its editor offers with GET. The response
+        /// is a file result like the one of the file view: items carrying name,
+        /// uri and an optional preview image.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The composer control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataCommentComposer ImagesService<TEndpoint>(this ControlDataCommentComposer control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, ImagesPreset, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
+        }
+
+        /// <summary>
+        /// Declares the link library service of the comment composer, which lists the
+        /// targets the link dialog of its editor offers with GET. The response
+        /// carries items with uri, title and an optional description.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The composer control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataCommentComposer LinksService<TEndpoint>(this ControlDataCommentComposer control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, LinksPreset, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
         /// <summary>
@@ -1304,6 +1366,28 @@ namespace WebExpress.WebApp.WebControl
         private static DataServiceDescriptor UploadPreset(string baseUri)
         {
             return DataServiceDescriptor.Rest("upload").WithBaseUri(baseUri).WithMethod("POST");
+        }
+
+        /// <summary>
+        /// The preset of the named images service, which lists the images of
+        /// the image library.
+        /// </summary>
+        /// <param name="baseUri">The resolved endpoint.</param>
+        /// <returns>The configured descriptor.</returns>
+        private static DataServiceDescriptor ImagesPreset(string baseUri)
+        {
+            return DataServiceDescriptor.Rest("images").WithBaseUri(baseUri).WithMethod("GET");
+        }
+
+        /// <summary>
+        /// The preset of the named links service, which lists the link targets
+        /// of the link library.
+        /// </summary>
+        /// <param name="baseUri">The resolved endpoint.</param>
+        /// <returns>The configured descriptor.</returns>
+        private static DataServiceDescriptor LinksPreset(string baseUri)
+        {
+            return DataServiceDescriptor.Rest("links").WithBaseUri(baseUri).WithMethod("GET");
         }
 
         /// <summary>

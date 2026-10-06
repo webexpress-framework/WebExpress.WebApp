@@ -248,6 +248,28 @@ namespace WebExpress.WebApp.Test.WebData
         }
 
         /// <summary>
+        /// Tests that the comment surface and the composer declare the image
+        /// library and the link library of their editors in one typed call each,
+        /// beside the upload service.
+        /// </summary>
+        [Fact]
+        public void CommentPresetsRegisterTheEditorLibraryServices()
+        {
+            // act
+            var comment = new ControlDataComment()
+                .UploadService<FakeEndpoint>()
+                .ImagesService<FakeEndpoint>()
+                .LinksService<FakeEndpoint>();
+            var composer = new ControlDataCommentComposer()
+                .ImagesService<FakeEndpoint>()
+                .LinksService<FakeEndpoint>();
+
+            // validation
+            Assert.Equal(3, comment.ServiceFactories.Count);
+            Assert.Equal(2, composer.ServiceFactories.Count);
+        }
+
+        /// <summary>
         /// Tests that declaring the endpoint derives the domains from the CRUD
         /// item type, so an author who writes Endpoint&lt;TEndpoint&gt;() gets
         /// live data updates without naming the domain a second time.

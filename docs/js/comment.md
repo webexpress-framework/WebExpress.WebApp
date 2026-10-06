@@ -38,38 +38,59 @@ The control is bootstrapped from a single host element carrying the `wx-webapp-c
 
 ### Container Element Attributes
 
-| Attribute                | Description                                                                                                                                                                       | Example
-|--------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------
-| `data-current-user`      | ID of the currently authenticated user. Drives the "this is mine" visual treatment and gates the edit / delete affordances.                                                       | `data-current-user="u1"`
-| `data-readonly`          | When `"true"`, the composer is hidden and per-item actions (like, pin, reactions, replies, edit, delete) are disabled. The list is rendered for reading only.                       | `data-readonly="true"`
-| `data-categories`        | Optional JSON string overriding the default category set. Each entry needs `id`, `i18n` (i18n key for the label), `color` (CSS color), and `bg` (CSS background).                   | see [Categories](#categories) below
+|Attribute                |Description                                                                                                                                                                       | Example
+|-------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------
+|`data-current-user`      |ID of the currently authenticated user. Drives the "this is mine" visual treatment and gates the edit / delete affordances.                                                       | `data-current-user="u1"`
+|`data-readonly`          |When `"true"`, the composer is hidden and per-item actions (like, pin, reactions, replies, edit, delete) are disabled. The list is rendered for reading only.                       | `data-readonly="true"`
+|`data-categories`        |Optional JSON string overriding the default category set. Each entry needs `id`, `i18n` (i18n key for the label), `color` (CSS color), and `bg` (CSS background).                   | see [Categories](#categories) below
 
 ### Services
 
 Each endpoint is a named `wx-service` island, a hidden child element of the host that the control consumes on startup.
 
-| Service  | Description                                                                                                                         | Island
-|----------|-------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------
-| `data`   | REST endpoint for the comment collection of the current object. Required.                                                           | `<wx-service hidden name="data" base-uri="/api/comments/INC-00123"></wx-service>`
-| `users`  | REST endpoint used to resolve author IDs to display names and to power the `@`-mention picker. Required for author resolution and mentions. | `<wx-service hidden name="users" base-uri="/api/users"></wx-service>`
-| `upload` | Optional. When present, the composer's WYSIWYG editor enables image uploads via this endpoint.                                      | `<wx-service hidden name="upload" base-uri="/api/upload"></wx-service>`
+|Service  |Description                                                                                                                         | Island
+|---------|------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------
+|`data`   |REST endpoint for the comment collection of the current object. Required.                                                           | `<wx-service hidden name="data" base-uri="/api/comments/INC-00123"></wx-service>`
+|`users`  |REST endpoint used to resolve author IDs to display names and to power the `@`-mention picker. Required for author resolution and mentions. | `<wx-service hidden name="users" base-uri="/api/users"></wx-service>`
+|`upload` |Optional. The image dialog of the editor gets an **Images** page that uploads through this endpoint.                                | `<wx-service hidden name="upload" base-uri="/api/upload"></wx-service>`
+|`images` |Optional. The **Images** page lists the images of this endpoint to choose from.                                                    | `<wx-service hidden name="images" base-uri="/api/images"></wx-service>`
+|`links`  |Optional. The link dialog of the editor gets a **From the application** page that lists the link targets of this endpoint.          | `<wx-service hidden name="links" base-uri="/api/links"></wx-service>`
 
-Rendered from C#, `ControlDataComment` emits the islands itself: `.DataService<TEndpoint>()`, `.UsersService<TEndpoint>()` and `.UploadService<TEndpoint>()` resolve the endpoint types through the sitemap.
+Rendered from C#, `ControlDataComment` and `ControlDataCommentComposer` emit the islands themselves: `.DataService<TEndpoint>()`, `.UsersService<TEndpoint>()`, `.UploadService<TEndpoint>()`, `.ImagesService<TEndpoint>()` and `.LinksService<TEndpoint>()` resolve the endpoint types through the sitemap. New and edited comments offer the same pages.
+
+### Image and link pages
+
+WebUI's editor only offers an address field in its link and image dialogs. WebApp adds the
+pages that know the application's files and targets (`panels/webexpress.webapp.panel.editor.image.js`,
+`panels/webexpress.webapp.panel.editor.link.js`). They appear only in editors that name the
+services above. The page lists are searchable. A click chooses an entry, a double click chooses it
+and submits the dialog. When an image or link is edited, its current entry is selected as
+soon as it appears in the list.
+
+|Method |URL                   |Body                       |Response
+|-------|----------------------|---------------------------|----------------------------------------------------------------
+|`POST` |`{upload}`            |multipart, field `file`    |The stored file: `{ uri, name, ... }`. The image is inserted at this `uri`, so the server decides where the file lives.
+|`GET`  |`{images}?q={search}` |-                          |A file result as for the file view: `items` with `uri`, `name` and an optional preview `image`.
+|`GET`  |`{links}?q={search}`  |-                          |`items` with `uri`, `title` and an optional `description`.
+
+The `q` parameter is only sent when something has been typed into the search field. Entries
+with an address the editor does not accept (such as `javascript:`) are not listed. A chosen
+link links the selected text, or inserts the target's title if nothing was selected.
 
 ### REST Contract
 
-| Method   | URL                                              | Body                                                          | Response          | Purpose
-|----------|--------------------------------------------------|---------------------------------------------------------------|-------------------|-----------------------------------------
-| `GET`    | `{data}`                                     | —                                                             | `Comment[]`       | Initial load and refresh.
-| `POST`   | `{data}`                                     | `{ body, category, labels }`                                  | `Comment`         | Add a new top-level comment.
-| `PUT`    | `{data}/{id}`                                | `{ body, category, labels }`                                  | `Comment`         | Edit an existing comment (author only).
-| `DELETE` | `{data}/{id}`                                | —                                                             | `204 No Content`  | Delete a comment (author only).
-| `POST`   | `{data}/{id}/likes`                          | `{ on: true \| false }`                                       | `Comment`         | Toggle the current user's like.
-| `POST`   | `{data}/{id}/pin`                            | `{ on: true \| false }`                                       | `Comment`         | Toggle pin state.
-| `POST`   | `{data}/{id}/reactions`                      | `{ emoji: "👍" }`                                              | `Comment`         | Toggle the current user's reaction for that emoji.
-| `POST`   | `{data}/{id}/replies`                        | `{ body }`                                                    | `Reply`           | Add a reply to a comment.
-| `GET`    | `{users}?ids=u1,u2,u3`                  | —                                                             | `User[]`          | Batch-resolve author IDs for rendering.
-| `GET`    | `{users}?q={search}`                    | —                                                             | `User[]`          | Search candidates for the `@`-mention picker inside the composer.
+|Method   |URL                     |Body                         |Response         |Purpose
+|---------|------------------------|-----------------------------|-----------------|----------------------------------------
+|`GET`    |`{data}`                |—                            |`Comment[]`      |Initial load and refresh.
+|`POST`   |`{data}`                |`{ body, category, labels }` |`Comment`        |Add a new top-level comment.
+|`PUT`    |`{data}/{id}`           |`{ body, category, labels }` |`Comment`        |Edit an existing comment (author only).
+|`DELETE` |`{data}/{id}`           |—                            |`204 No Content` |Delete a comment (author only).
+|`POST`   |`{data}/{id}/likes`     |`{ on: true \| false }`      |`Comment`        |Toggle the current user's like.
+|`POST`   |`{data}/{id}/pin`       |`{ on: true \| false }`      |`Comment`        |Toggle pin state.
+|`POST`   |`{data}/{id}/reactions` |`{ emoji: "👍" }`            |`Comment`        |Toggle the current user's reaction for that emoji.
+|`POST`   |`{data}/{id}/replies`   |`{ body }`                   |`Reply`          |Add a reply to a comment.
+|`GET`    |`{users}?ids=u1,u2,u3`  |—                            |`User[]`         |Batch-resolve author IDs for rendering.
+|`GET`    |`{users}?q={search}`    |—                            |`User[]`         |Search candidates for the `@`-mention picker inside the composer.
 
 `Comment` objects are expected to carry `id`, `author`, `when`, `category`, `labels`, `body` (HTML), `pinned`, `likes` (array of user IDs), `reactions` (`{ "👍": ["u1","u2"], … }`), `edited` (`{ by, when }` or `null`), `collapsed`, and `replies` (`Reply[]`). `Reply` objects need `id`, `author`, `when`, and `body`. `User` objects need at least `id`, `name`, `initials`, `team`, and `color`.
 

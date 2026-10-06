@@ -138,6 +138,35 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
+        /// Tests that a surface bound to a ViewState resource keeps the services
+        /// its editors offer, while the comments service stays with the ViewState.
+        /// </summary>
+        [Fact]
+        public void BoundSurfaceKeepsItsEditorServices()
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlDataComment()
+            {
+                ResourceFactory = _ => "comments"
+            };
+            control.ServiceFactories.Add(_ => DataServiceDescriptor.Rest("data").WithBaseUri("/api/comments").WithMethod("GET"));
+            control.ServiceFactories.Add(_ => DataServiceDescriptor.Rest("upload").WithBaseUri("/api/upload").WithMethod("POST"));
+            control.ServiceFactories.Add(_ => DataServiceDescriptor.Rest("links").WithBaseUri("/api/links").WithMethod("GET"));
+
+            // act
+            var html = control.Render(context, visualTree).ToString();
+
+            // validation
+            Assert.Contains(@"data-wx-resource=""comments""", html);
+            Assert.Contains(@"name=""upload""", html);
+            Assert.Contains(@"name=""links""", html);
+            Assert.DoesNotContain(@"name=""data""", html);
+        }
+
+        /// <summary>
         /// Tests that a categories JSON override is forwarded verbatim into
         /// the <c>data-categories</c> attribute.
         /// </summary>

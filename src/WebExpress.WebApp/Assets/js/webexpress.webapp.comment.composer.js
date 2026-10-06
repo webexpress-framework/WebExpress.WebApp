@@ -44,6 +44,12 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webapp.Data {
         const uploadService = this.useService("upload");
         this._imageUploadUri = uploadService ? uploadService.baseUri : null;
 
+        const imagesService = this.useService("images");
+        this._imageLibraryUri = imagesService ? imagesService.baseUri : null;
+
+        const linksService = this.useService("links");
+        this._linkLibraryUri = linksService ? linksService.baseUri : null;
+
         this._currentUser = element.dataset.currentUser || null;
         this._defaultCategory = element.dataset.defaultCategory || "general";
         this._placeholder = element.dataset.placeholder
@@ -203,6 +209,12 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webapp.Data {
         this._editorHost.dataset.placeholder = this._i18n("webexpress.webapp:comment.compose.placeholder", "Write a comment…");
         if (this._imageUploadUri) {
             this._editorHost.dataset.imageUploadUri = this._imageUploadUri;
+        }
+        if (this._imageLibraryUri) {
+            this._editorHost.dataset.imageLibraryUri = this._imageLibraryUri;
+        }
+        if (this._linkLibraryUri) {
+            this._editorHost.dataset.linkLibraryUri = this._linkLibraryUri;
         }
         if (this._usersUri) {
             this._editorHost.dataset.mentionUri = this._usersUri;
