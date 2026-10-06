@@ -56,17 +56,18 @@ namespace WebExpress.WebApp.WebSettingPage
         }
 
         /// <summary>
-        /// Applies the policy check the server performs before it serves a page.
+        /// Applies the route conditions and policy check the server performs before it serves a page.
         /// </summary>
         /// <param name="request">The request whose identity is evaluated against the page policies.</param>
         /// <param name="pages">The candidate setting pages.</param>
-        /// <returns>The setting pages whose policies the identity satisfies.</returns>
+        /// <returns>The setting pages whose conditions and policies the request satisfies.</returns>
         private static IEnumerable<ISettingPageContext> Accessible(IRequest request, IEnumerable<ISettingPageContext> pages)
         {
             var identityManager = WebEx.ComponentHub.IdentityManager;
             var identity = identityManager?.GetCurrentIdentity(request);
 
-            return pages.Where(x => !(x.Policies?.Any() ?? false) || (identityManager?.CheckAccess(identity, x) ?? false));
+            return pages.Where(x => (x.Conditions?.All(condition => condition.Fulfillment(request)) ?? true)
+                && (!(x.Policies?.Any() ?? false) || (identityManager?.CheckAccess(identity, x) ?? false)));
         }
     }
 }
