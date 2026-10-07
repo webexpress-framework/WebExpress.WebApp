@@ -722,7 +722,9 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Persists a created link with POST, adopting a server assigned id.
+     * Persists a created link with POST, adopting a server assigned id. A
+     * refused link is withdrawn again, because the chart would otherwise show a
+     * dependency the server never stored until the next reload.
      * @param {object} link - The created link.
      */
     _persistLinkCreate(link) {
@@ -732,7 +734,15 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         this._service.create(webexpress.webapp.ganttModel.linkToWire(link), { path: "/links" }).then((result) => {
             if (!result.ok) {
                 if (result.error.kind !== "abort") {
-                    console.error("gantt create link failed:", webexpress.webapp.ServiceResult.describe(result));
+                    // a refused write carries its reason in the body, the error only the status
+                    const reason = result.data && typeof result.data.message === "string" && result.data.message.trim()
+                        ? result.data.message
+                        : null;
+                    this.setState({
+                        links: this._links.filter((l) => l.id !== link.id),
+                        selectedLink: this.state.selectedLink === link.id ? null : this.state.selectedLink,
+                        error: reason || result.error.message || "create failed"
+                    });
                 }
                 return;
             }

@@ -259,6 +259,27 @@ test("add link validates self, duplicate and cycle before posting", async () => 
     assert.equal(JSON.parse(posts[0].body).type, "SS");
 });
 
+test("a link the server refuses is withdrawn and its reason surfaces as the error", async () => {
+    const engine = load();
+    engine.setFetch(async () => ({
+        ok: false,
+        status: 400,
+        headers: { get: () => "application/json" },
+        json: async () => ({ message: "Dependency violates the plan." })
+    }));
+
+    const ctrl = seededControl(engine);
+
+    const link = ctrl.addLink("p", "t2", "SS");
+    assert.ok(ctrl.value.links.some((l) => l.id === link.id), "the link shows optimistically");
+
+    await settle();
+
+    assert.deepEqual(ctrl.value.links.map((l) => l.id), ["l1"], "only the stored link remains");
+    assert.equal(ctrl.state.selectedLink, null);
+    assert.equal(ctrl.state.error, "Dependency violates the plan.");
+});
+
 test("the delete key removes the selection", async () => {
     const engine = load();
     const calls = [];
