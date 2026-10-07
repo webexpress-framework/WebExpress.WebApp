@@ -73,6 +73,17 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, bool> GridCollapsed { get; set; }
 
         /// <summary>
+        /// Gets or sets a value indicating whether the toolbar offers the
+        /// sandbox. Inside it every change stays local, so a planner can try out
+        /// a rescheduling without the stored plan - and everyone else looking at
+        /// it - seeing the intermediate steps; ending the sandbox asks whether to
+        /// save all changes or discard them. It is opt in because it adds a
+        /// toolbar action every existing chart would otherwise gain, and it is
+        /// never offered on a read-only plan.
+        /// </summary>
+        public Func<IRenderControlContext, bool> Sandbox { get; set; }
+
+        /// <summary>
         /// Gets or sets whether the control takes the height its host offers
         /// instead of bringing one of its own.
         /// </summary>
@@ -154,6 +165,7 @@ namespace WebExpress.WebApp.WebControl
             var columns = Columns?.Invoke(renderContext);
             var readOnly = ReadOnly?.Invoke(renderContext) ?? false;
             var gridCollapsed = GridCollapsed?.Invoke(renderContext) ?? false;
+            var sandbox = Sandbox?.Invoke(renderContext) ?? false;
             var fill = Fill?.Invoke(renderContext) ?? false;
 
             var html = new HtmlElementTextContentDiv()
@@ -168,6 +180,7 @@ namespace WebExpress.WebApp.WebControl
                 .AddUserAttribute("data-columns", columns)
                 .AddUserAttribute("data-readonly", readOnly ? "true" : null)
                 .AddUserAttribute("data-grid-collapsed", gridCollapsed ? "true" : null)
+                .AddUserAttribute("data-sandbox", sandbox ? "true" : null)
                 .EmitDataIslands(this, renderContext);
 
             return html;

@@ -36,8 +36,9 @@ new ControlDataGantt("release-plan")
 | `data-columns`  | The grid columns shown, a comma separated subset of `name`, `start`, `end`, `duration`, `progress`, `resources`. Defaults to all; the name column always stays. | `data-columns="name,start,duration"`
 | `data-readonly` | Disables every mutating interaction; the timeline stays fully navigable.                 | `data-readonly="true"`
 | `data-grid-collapsed` | Starts with the task grid collapsed; the toolbar toggle, a double-click on the splitter or grabbing it bring the grid back. | `data-grid-collapsed="true"`
+| `data-sandbox`  | Offers the sandbox in the toolbar (see [Sandbox](#sandbox)). Never offered on a read-only plan. | `data-sandbox="true"`
 
-The same keys (`scale`, `scales`, `columns`, `readonly`, `gridCollapsed`, `zoom`) may instead be seeded through the `wx-state` island via `StateFactory`; island values win over the attributes. Seeding `tasks` and `links` renders the project without an initial `GET`.
+The same keys (`scale`, `scales`, `columns`, `readonly`, `gridCollapsed`, `sandbox`, `zoom`) may instead be seeded through the `wx-state` island via `StateFactory`; island values win over the attributes. Seeding `tasks` and `links` renders the project without an initial `GET`.
 
 ### Data Structure
 
@@ -126,6 +127,24 @@ The server integration requires overriding `UpdateLink(id, link, request)` to pe
 | `PUT`    | `{data}/links/{id}` | link       | link              | Update a dependency type or its endpoints.
 | `DELETE` | `{data}/links/{id}` | —          | —                 | Delete a dependency.
 
+Every mutation is shown before its request completes. When the server refuses a write, the chart takes the change back and shows a popup notification instead of hiding the timeline: a refused new link is removed and a refused link edit restores the previous link, while a refused task change or link deletion reloads the stored plan. The popup uses the `message` of a JSON error body when the server sends one, and a generic "not saved" text otherwise. The control also dispatches `webexpress.webui.data.error` with `{ action, error }`. The inline error panel with its retry action appears only when the initial load or a refresh fails. A `DELETE` answered with 404 is not a refusal: the resource is gone, which is what the deletion asked for. This keeps a server that cascades a container deletion over its subtree and links from turning the follow-up deletions into error popups.
+
+### Sandbox
+
+In the sandbox a planner can try out changes without the stored plan, or anyone else looking at it, seeing the steps in between. `ControlDataGantt.Sandbox = _ => true` (or `data-sandbox="true"`) adds a sandbox button with a flask icon to the toolbar; its name and hint show as tooltip and accessible label. While the sandbox is open:
+
+- a strip below the toolbar and a highlighted frame show that nothing is stored yet, together with the number of pending changes;
+- every interaction works as usual, but no request is sent; the control only records which tasks and links were touched;
+- reloads (a refresh, or a new slice from the ViewState) are held back so they cannot wipe the sandbox, and run once it closes;
+- leaving the page while changes are pending makes the browser ask for confirmation (`beforeunload`); an untouched sandbox lets the page go.
+
+**End sandbox** closes it right away when nothing is left to store. Otherwise the strip asks what to do with the changes: **Save all changes**, **Discard changes** or **Keep editing**.
+
+- **Save** sends the net result: one request per touched resource, compared with its state when the sandbox opened. A task changed ten times costs one `PUT`, and a task created and deleted again costs nothing. The requests go out one after another in an order the server can follow: created tasks (parents first), changed tasks, deleted links, changed links, created links, deleted tasks (children first). A server id returned for a created task replaces the client id before its children and links are sent. If the server refuses a request, the save stops, the refusal shows as a popup and the sandbox stays open with exactly the changes not stored yet, ready to be corrected and saved again, or discarded.
+- **Discard** restores the plan as it was when the sandbox opened. If a save already stored part of the changes, or a reload was held back, the plan is reloaded instead, since the entry state is then no longer what the server holds.
+
+The mutation events (`TASK_CREATE_EVENT`, …) still fire inside the sandbox, because they describe what the user did on screen. Their detail carries `sandbox: true` there, so a listener that mirrors the stored plan can skip them and react to `SANDBOX_LEAVE_EVENT` with `saved: true` instead.
+
 ## Programmatic Control
 
 Once initialized, the `GanttCtrl` instance is retrievable via `getInstanceByElement(element)`.
@@ -154,11 +173,19 @@ gantt.toggleCollapse("p1");         // collapse/expand a container (view only)
 gantt.toggleGrid();                 // collapse/expand the task grid pane
 gantt.select("t1");                 // or gantt.select(null, "l1") for a link
 gantt.refresh();                    // re-fetch from the endpoint
+
+// sandbox
+gantt.enterSandbox();               // false when already open or read-only
+gantt.inSandbox;                    // true while open
+gantt.sandboxChangeCount();         // requests a save would send
+gantt.endSandbox();                 // closes at once without changes, otherwise asks in the strip
+await gantt.saveSandbox();          // true when everything was stored and the sandbox closed
+gantt.discardSandbox();             // restores the state on entry
 ```
 
 ## Events & Callbacks
 
-Every mutation raises a DOM event on the host element and calls the matching assignable callback with the same detail:
+Every mutation raises a DOM event on the host element and calls the matching assignable callback with the same detail. Every detail also carries `sandbox`, which is `true` while the [sandbox](#sandbox) is open, so the change exists only on screen, and `false` otherwise:
 
 | Callback       | DOM event (`webexpress.webapp.GanttCtrl.*`)     | Detail
 |----------------|--------------------------------------------------|--------------------------------------
@@ -168,6 +195,8 @@ Every mutation raises a DOM event on the host element and calls the matching ass
 | `onLinkCreate` | `LINK_CREATE_EVENT`                              | `{ link }`
 | `onLinkDelete` | `LINK_DELETE_EVENT`                              | `{ link }`
 | —              | `SELECT_EVENT`                                   | `{ taskId, linkId }`
+| —              | `SANDBOX_ENTER_EVENT`                            | `{}`
+| —              | `SANDBOX_LEAVE_EVENT`                            | `{ saved }`
 
 ```javascript
 gantt.onTaskUpdate = ({ task, patch }) => console.log("rescheduled", task.id, patch);

@@ -32,6 +32,14 @@
  * DELETE /links/{id}. Every mutation raises a DOM event on the host and calls
  * the matching assignable callback (onTaskCreate, onTaskUpdate, onTaskDelete,
  * onLinkCreate, onLinkDelete).
+ *
+ * Sandbox
+ * -------
+ * Inside the sandbox the mutations stay local: the persistence hooks record
+ * which tasks and links were touched instead of sending requests. Ending the
+ * sandbox lets the user save the net result of all changes - one request per
+ * touched resource, compared against the state on entry - or discard them by
+ * restoring that state.
  */
 webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
 
@@ -57,6 +65,8 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
     static LINK_CREATE_EVENT = "webexpress.webapp.gantt.link.create";
     static LINK_DELETE_EVENT = "webexpress.webapp.gantt.link.delete";
     static SELECT_EVENT = "webexpress.webapp.gantt.select";
+    static SANDBOX_ENTER_EVENT = "webexpress.webapp.gantt.sandbox.enter";
+    static SANDBOX_LEAVE_EVENT = "webexpress.webapp.gantt.sandbox.leave";
 
     // assignable mutation callbacks, the imperative twin of the DOM events
     onTaskCreate = null;
@@ -72,6 +82,23 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
     _viewState = null;
     _allowedScales = null;
     _visibleColumns = null;
+    _sandboxOffered = false;
+
+    // the entry state and the touched ids of an open sandbox; outside the store
+    // because only the persistence hooks and the save read them
+    _sandbox = null;
+
+    // a navigation cannot wait for the user to decide about the sandbox, so the
+    // browser asks instead; registered only while a sandbox is open
+    _onBeforeUnload = (e) => {
+        if (this.sandboxChangeCount() === 0) {
+            return undefined;
+        }
+        e.preventDefault();
+        // chromium still shows the prompt only when returnValue is set
+        e.returnValue = "";
+        return "";
+    };
 
     // grid pane width chosen through the splitter, surviving re-renders
     _gridWidth = null;
@@ -122,12 +149,15 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
                 tasks: project.tasks,
                 links: project.links,
                 selectedTask: null,
-                selectedLink: null
+                selectedLink: null,
+                // null outside the sandbox, otherwise "active", "deciding" or "saving"
+                sandbox: null
             }
         });
 
         this._allowedScales = scales;
         this._visibleColumns = columns;
+        this._sandboxOffered = island.sandbox === true || dataset.sandbox === "true";
         this._service = this.useService("data");
         this._restUri = this._service ? this._service.baseUri : "";
         this._resource = dataset.wxResource || null;
@@ -215,7 +245,8 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
     get _links() { return this.state.links || []; }
     get _scale() { return this.state.scale; }
     get _zoom() { return this.state.zoom; }
-    get _readonly() { return this.state.readonly === true; }
+    // a sandbox being saved is frozen, an edit now would race the requests built from it
+    get _readonly() { return this.state.readonly === true || this.state.sandbox === "saving"; }
     get _gridCollapsed() { return this.state.gridCollapsed === true; }
 
     /**
@@ -323,6 +354,161 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         const range = model.projectRange(this._tasks);
         const offset = model.dateToOffset(model.parseDate(new Date()), range.start, model.pxPerDay(this._scale, this._zoom));
         this._chartScroll.scrollLeft = Math.max(0, offset - (this._chartScroll.clientWidth || 0) / 3);
+    }
+
+    // -------------------------------------------------------------- sandbox
+
+    /**
+     * Gets a value indicating whether the sandbox is open, in which changes
+     * stay local until they are saved or discarded.
+     * @returns {boolean} True while the sandbox is open.
+     */
+    get inSandbox() {
+        return this._sandbox !== null;
+    }
+
+    /**
+     * Opens the sandbox. From now on mutations are only recorded, so a planner
+     * can try out a rescheduling without the server - and everyone else looking
+     * at the plan - seeing the intermediate steps.
+     * @returns {boolean} True when opened, false when already open or read-only.
+     */
+    enterSandbox() {
+        if (this._sandbox || this._readonly) {
+            return false;
+        }
+
+        const model = webexpress.webapp.ganttModel;
+        // rollup mutates container tasks in place, so the entry state is kept as a copy
+        const entry = this.value;
+        this._sandbox = {
+            tasks: entry.tasks,
+            links: entry.links,
+            storedTasks: new Map(this._tasks.map((t) => [t.id, JSON.stringify(model.taskToWire(t))])),
+            storedLinks: new Map(this._links.map((l) => [l.id, JSON.stringify(model.linkToWire(l))])),
+            touchedTasks: new Set(),
+            touchedLinks: new Set(),
+            // a reload held back while open, or a save that got partway, leaves
+            // the entry state behind the server
+            stale: false,
+            wrote: false
+        };
+
+        window.addEventListener("beforeunload", this._onBeforeUnload);
+
+        this.setState({ sandbox: "active" });
+        this._emit(webexpress.webapp.GanttCtrl.SANDBOX_ENTER_EVENT, null, {});
+        return true;
+    }
+
+    /**
+     * Counts the requests saving the sandbox would send. Touched resources
+     * that ended where they started, or were created and deleted again, do
+     * not count, so the number is what the user really changed.
+     * @returns {number} The pending creates, changes and deletions.
+     */
+    sandboxChangeCount() {
+        if (!this._sandbox) {
+            return 0;
+        }
+        const plan = this._sandboxPlan();
+        return [plan.tasks, plan.links].reduce((sum, diff) => sum + diff.create.length + diff.update.length + diff.remove.length, 0);
+    }
+
+    /**
+     * Ends the sandbox the way the toolbar does: without changes it closes at
+     * once, otherwise it asks whether to save or discard them.
+     * @returns {void}
+     */
+    endSandbox() {
+        if (this.state.sandbox !== "active") {
+            return;
+        }
+        if (this.sandboxChangeCount() === 0) {
+            this.discardSandbox();
+            return;
+        }
+        this.setState({ sandbox: "deciding" });
+    }
+
+    /**
+     * Returns from the end decision to editing inside the sandbox.
+     * @returns {void}
+     */
+    continueSandbox() {
+        if (this.state.sandbox === "deciding") {
+            this.setState({ sandbox: "active" });
+        }
+    }
+
+    /**
+     * Saves the net result of the sandbox and closes it. The requests go out
+     * one by one, because a created task needs its server id before a child or
+     * a link can refer to it. A refusal stops the save and keeps the sandbox
+     * open with exactly the changes that were not stored yet, so the user can
+     * correct them and save again, or discard them.
+     * @returns {Promise<boolean>} True when everything was stored and the sandbox closed.
+     */
+    async saveSandbox() {
+        if (!this._sandbox || this.state.sandbox === "saving") {
+            return false;
+        }
+        if (!this._service) {
+            this._closeSandbox(true);
+            return true;
+        }
+
+        const model = webexpress.webapp.ganttModel;
+        const plan = this._sandboxPlan();
+        const task = (id) => this._tasks.find((t) => t.id === id);
+        const link = (id) => this._links.find((l) => l.id === id);
+        const steps = [
+            ...plan.tasks.create.map((id) => ({ kind: "tasks", op: "create", id: id,
+                send: () => this._service.create(model.taskToWire(task(id)), { path: "/tasks" }) })),
+            ...plan.tasks.update.map((id) => ({ kind: "tasks", op: "update", id: id,
+                send: () => this._service.update(model.taskToWire(task(id)), { path: "/tasks/" + encodeURIComponent(id) }) })),
+            // removals come first, so a dependency moved onto a pair another one
+            // has just left is not refused as a duplicate
+            ...plan.links.remove.map((id) => ({ kind: "links", op: "remove", id: id,
+                send: () => this._service.remove({ path: "/links/" + encodeURIComponent(id) }) })),
+            ...plan.links.update.map((id) => ({ kind: "links", op: "update", id: id,
+                send: () => this._service.update(model.linkToWire(link(id)), { path: "/links/" + encodeURIComponent(id) }) })),
+            ...plan.links.create.map((id) => ({ kind: "links", op: "create", id: id,
+                send: () => this._service.create(model.linkToWire(link(id)), { path: "/links" }) })),
+            ...plan.tasks.remove.map((id) => ({ kind: "tasks", op: "remove", id: id,
+                send: () => this._service.remove({ path: "/tasks/" + encodeURIComponent(id) }) }))
+        ];
+
+        this.setState({ sandbox: "saving" });
+
+        for (const step of steps) {
+            const result = await step.send();
+            if (!result.ok && !(step.op === "remove" && webexpress.webapp.GanttCtrl._alreadyGone(result))) {
+                if (result.error.kind !== "abort") {
+                    this._rejectWrite(step.op + " " + step.kind.slice(0, -1), result,
+                        this._i18n("webexpress.webapp:gantt.sandbox.save_failed", "Not all changes could be saved. The sandbox stays open."));
+                }
+                this.setState({ sandbox: "active" });
+                return false;
+            }
+            this._settleSandboxStep(step, result);
+        }
+
+        this._closeSandbox(true);
+        return true;
+    }
+
+    /**
+     * Discards every change of the sandbox by restoring the state on entry,
+     * and closes it.
+     * @returns {boolean} True when the sandbox was open and is now closed.
+     */
+    discardSandbox() {
+        if (!this._sandbox || this.state.sandbox === "saving") {
+            return false;
+        }
+        this._closeSandbox(false);
+        return true;
     }
 
     // ------------------------------------------------------------ mutations
@@ -513,13 +699,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
             return null;
         }
         this.setState({ links: this._links.map((item) => item.id === id ? link : item) });
-        if (this._service) {
-            this._service.update(model.linkToWire(link), { path: "/links/" + encodeURIComponent(id) }).then((result) => {
-                if (!result.ok && result.error.kind !== "abort") {
-                    this.setState({ error: result.error.message || "update failed" });
-                }
-            });
-        }
+        this._persistLinkUpdate(link, current);
         this._emit(webexpress.webapp.GanttCtrl.LINK_UPDATE_EVENT, "onLinkUpdate", { link: Object.assign({}, link) });
         return link;
     }
@@ -587,6 +767,11 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
      */
     async _load() {
         if (!this._service) {
+            return;
+        }
+        if (this._sandbox) {
+            // a reload would wipe the sandbox; it is caught up once the sandbox closes
+            this._sandbox.stale = true;
             return;
         }
 
@@ -658,7 +843,10 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
      */
     _applySlice(slice) {
         slice = slice || {};
-        if (slice.data) {
+        if (slice.data && this._sandbox) {
+            // a reload would wipe the sandbox; it is caught up once the sandbox closes
+            this._sandbox.stale = true;
+        } else if (slice.data) {
             this._applyProject(slice.data);
         }
         this._element.classList.remove("placeholder-glow");
@@ -671,19 +859,18 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
      * @param {object} task - The created task.
      */
     _persistTaskCreate(task) {
-        if (!this._service) {
+        if (this._recordInSandbox("tasks", task.id) || !this._service) {
             return;
         }
         this._service.create(webexpress.webapp.ganttModel.taskToWire(task), { path: "/tasks" }).then((result) => {
             if (!result.ok) {
                 if (result.error.kind !== "abort") {
-                    console.error("gantt create task failed:", webexpress.webapp.ServiceResult.describe(result));
+                    this._rejectWrite("create task", result);
+                    this.refresh();
                 }
                 return;
             }
-            const serverId = result.data && result.data.id !== undefined && result.data.id !== null
-                ? String(result.data.id)
-                : null;
+            const serverId = this._serverId(result);
             if (serverId && serverId !== task.id) {
                 this._remapTaskId(task.id, serverId);
             }
@@ -695,13 +882,14 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
      * @param {object} task - The updated task.
      */
     _persistTaskUpdate(task) {
-        if (!this._service) {
+        if (this._recordInSandbox("tasks", task.id) || !this._service) {
             return;
         }
         this._service.update(webexpress.webapp.ganttModel.taskToWire(task), { path: "/tasks/" + encodeURIComponent(task.id) })
             .then((result) => {
                 if (!result.ok && result.error.kind !== "abort") {
-                    console.error("gantt update task failed:", webexpress.webapp.ServiceResult.describe(result));
+                    this._rejectWrite("update task", result);
+                    this.refresh();
                 }
             });
     }
@@ -711,12 +899,13 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
      * @param {string} id - The task id.
      */
     _persistTaskDelete(id) {
-        if (!this._service) {
+        if (this._recordInSandbox("tasks", id) || !this._service) {
             return;
         }
         this._service.remove({ path: "/tasks/" + encodeURIComponent(id) }).then((result) => {
-            if (!result.ok && result.error.kind !== "abort") {
-                console.error("gantt delete task failed:", webexpress.webapp.ServiceResult.describe(result));
+            if (!result.ok && result.error.kind !== "abort" && !webexpress.webapp.GanttCtrl._alreadyGone(result)) {
+                this._rejectWrite("delete task", result);
+                this.refresh();
             }
         });
     }
@@ -728,31 +917,42 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
      * @param {object} link - The created link.
      */
     _persistLinkCreate(link) {
-        if (!this._service) {
+        if (this._recordInSandbox("links", link.id) || !this._service) {
             return;
         }
         this._service.create(webexpress.webapp.ganttModel.linkToWire(link), { path: "/links" }).then((result) => {
             if (!result.ok) {
                 if (result.error.kind !== "abort") {
-                    // a refused write carries its reason in the body, the error only the status
-                    const reason = result.data && typeof result.data.message === "string" && result.data.message.trim()
-                        ? result.data.message
-                        : null;
                     this.setState({
                         links: this._links.filter((l) => l.id !== link.id),
-                        selectedLink: this.state.selectedLink === link.id ? null : this.state.selectedLink,
-                        error: reason || result.error.message || "create failed"
+                        selectedLink: this.state.selectedLink === link.id ? null : this.state.selectedLink
                     });
+                    this._rejectWrite("create link", result);
                 }
                 return;
             }
-            const serverId = result.data && result.data.id !== undefined && result.data.id !== null
-                ? String(result.data.id)
-                : null;
+            const serverId = this._serverId(result);
             if (serverId && serverId !== link.id) {
-                this.setState({
-                    links: this._links.map((l) => (l.id === link.id ? Object.assign({}, l, { id: serverId }) : l))
-                });
+                this._remapLinkId(link.id, serverId);
+            }
+        });
+    }
+
+    /**
+     * Persists a link change with PUT. A refused change restores the previous
+     * link, unless a later edit of the same link has replaced it meanwhile -
+     * that edit is still in flight and owns the outcome.
+     * @param {object} link - The changed link.
+     * @param {object} previous - The link before the change.
+     */
+    _persistLinkUpdate(link, previous) {
+        if (this._recordInSandbox("links", link.id) || !this._service) {
+            return;
+        }
+        this._service.update(webexpress.webapp.ganttModel.linkToWire(link), { path: "/links/" + encodeURIComponent(link.id) }).then((result) => {
+            if (!result.ok && result.error.kind !== "abort") {
+                this.setState({ links: this._links.map((item) => item === link ? previous : item) });
+                this._rejectWrite("update link", result);
             }
         });
     }
@@ -762,14 +962,216 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
      * @param {string} id - The link id.
      */
     _persistLinkDelete(id) {
-        if (!this._service) {
+        if (this._recordInSandbox("links", id) || !this._service) {
             return;
         }
         this._service.remove({ path: "/links/" + encodeURIComponent(id) }).then((result) => {
-            if (!result.ok && result.error.kind !== "abort") {
-                console.error("gantt delete link failed:", webexpress.webapp.ServiceResult.describe(result));
+            if (!result.ok && result.error.kind !== "abort" && !webexpress.webapp.GanttCtrl._alreadyGone(result)) {
+                this._rejectWrite("delete link", result);
+                this.refresh();
             }
         });
+    }
+
+    /**
+     * Puts a refused write in front of the user without hiding the chart.
+     *
+     * Every mutation is applied before its request is out, so a refusal leaves
+     * the chart showing what is not stored. The caller takes the change back;
+     * this says why, because a bar or a connector that snaps back with no word
+     * reads as a bug of the chart rather than as a decision of the server. The
+     * inline error panel is reserved for a failed load, since it replaces the
+     * whole timeline.
+     * @param {string} action - The refused change, for the log and the event.
+     * @param {object} result - The failed service result.
+     * @param {string} [fallback] - The message when the server gave no reason.
+     */
+    _rejectWrite(action, result, fallback) {
+        console.error(`gantt ${action} failed:`, webexpress.webapp.ServiceResult.describe(result, { action: action }));
+
+        webexpress.webapp.ErrorChannel.present(result, {
+            service: this._service.name,
+            heading: this._i18n("webexpress.webapp:gantt.heading", "Plan"),
+            message: this._refusalReason(result)
+                || fallback
+                || this._i18n("webexpress.webapp:gantt.write_rejected", "The change was not saved and has been taken back.")
+        });
+
+        this._dispatch(webexpress.webui.Event.DATA_ERROR_EVENT, { action: action, error: result.error });
+    }
+
+    /**
+     * Reads the reason a RestApiRefusal put into the body of a refused write.
+     * @param {object} result - The failed service result.
+     * @returns {string|null} The reason, escaped for the popup, or null when the server gave none.
+     */
+    _refusalReason(result) {
+        const reason = result && result.data && result.data.message;
+
+        if (typeof reason !== "string" || !reason.trim()) {
+            return null;
+        }
+
+        // the popup renders its message as html, and a reason may quote a task name the user typed
+        return reason.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" })[c]);
+    }
+
+    /**
+     * Records a mutation of the open sandbox in place of persisting it. Only
+     * the id is kept: the save compares the final state of each touched
+     * resource with its state on entry, so a task dragged ten times costs one
+     * request.
+     * @param {string} kind - Either "tasks" or "links".
+     * @param {string} id - The touched id.
+     * @returns {boolean} True when recorded, so the caller must not send it.
+     */
+    _recordInSandbox(kind, id) {
+        if (!this._sandbox) {
+            return false;
+        }
+        (kind === "tasks" ? this._sandbox.touchedTasks : this._sandbox.touchedLinks).add(id);
+        return true;
+    }
+
+    /**
+     * Derives the requests saving the sandbox needs from the touched ids.
+     * @returns {object} The { tasks, links } diffs, each { create, update, remove } id lists.
+     */
+    _sandboxPlan() {
+        const model = webexpress.webapp.ganttModel;
+        const sandbox = this._sandbox;
+        const tasks = this._diffSandbox(this._tasks, sandbox.storedTasks, sandbox.touchedTasks, (t) => model.taskToWire(t));
+        const links = this._diffSandbox(this._links, sandbox.storedLinks, sandbox.touchedLinks, (l) => model.linkToWire(l));
+
+        // parents are created before and deleted after their children, which
+        // holds whether or not the server cascades a deletion
+        const depthNow = webexpress.webapp.GanttCtrl._depths(this._tasks);
+        const depthOnEntry = webexpress.webapp.GanttCtrl._depths(sandbox.tasks);
+        tasks.create.sort((a, b) => depthNow(a) - depthNow(b));
+        tasks.remove.sort((a, b) => depthOnEntry(b) - depthOnEntry(a));
+
+        return { tasks: tasks, links: links };
+    }
+
+    /**
+     * Compares the touched resources with their stored state.
+     * @param {Array<object>} items - The current tasks or links.
+     * @param {Map<string, string>} stored - The stored wire form by id.
+     * @param {Set<string>} touched - The ids the sandbox touched.
+     * @param {function(object): object} toWire - The wire mapping.
+     * @returns {object} The { create, update, remove } id lists.
+     */
+    _diffSandbox(items, stored, touched, toWire) {
+        const byId = new Map(items.map((item) => [item.id, item]));
+        const diff = { create: [], update: [], remove: [] };
+        for (const id of touched) {
+            const item = byId.get(id);
+            const before = stored.get(id);
+            if (item && before === undefined) {
+                diff.create.push(id);
+            } else if (!item && before !== undefined) {
+                diff.remove.push(id);
+            } else if (item && JSON.stringify(toWire(item)) !== before) {
+                diff.update.push(id);
+            }
+        }
+        return diff;
+    }
+
+    /**
+     * Builds a depth lookup over a task hierarchy.
+     * @param {Array<object>} tasks - The tasks.
+     * @returns {function(string): number} The nesting depth of a task id, 0 for a root.
+     */
+    static _depths(tasks) {
+        const parents = new Map(tasks.map((t) => [t.id, t.parentId]));
+        return (id) => {
+            let depth = 0;
+            for (let parent = parents.get(id); parent !== null && parent !== undefined && depth < parents.size; parent = parents.get(parent)) {
+                depth++;
+            }
+            return depth;
+        };
+    }
+
+    /**
+     * Moves a stored step out of the pending set, so a save that is refused
+     * later on and then retried does not send it again.
+     * @param {object} step - The step { kind, op, id }.
+     * @param {object} result - The successful service result.
+     */
+    _settleSandboxStep(step, result) {
+        const model = webexpress.webapp.ganttModel;
+        const sandbox = this._sandbox;
+        const isTask = step.kind === "tasks";
+        const stored = isTask ? sandbox.storedTasks : sandbox.storedLinks;
+
+        sandbox.wrote = true;
+        (isTask ? sandbox.touchedTasks : sandbox.touchedLinks).delete(step.id);
+
+        if (step.op === "remove") {
+            stored.delete(step.id);
+            return;
+        }
+
+        let id = step.id;
+        const serverId = step.op === "create" ? this._serverId(result) : null;
+        if (serverId && serverId !== id) {
+            // children and links still waiting to be sent must refer to the canonical id
+            if (isTask) {
+                this._remapTaskId(id, serverId);
+            } else {
+                this._remapLinkId(id, serverId);
+            }
+            id = serverId;
+        }
+        const item = (isTask ? this._tasks : this._links).find((x) => x.id === id);
+        stored.set(id, JSON.stringify(isTask ? model.taskToWire(item) : model.linkToWire(item)));
+    }
+
+    /**
+     * Closes the sandbox, restoring the entry state when it is discarded.
+     * @param {boolean} saved - True when the changes were stored.
+     */
+    _closeSandbox(saved) {
+        const sandbox = this._sandbox;
+        this._sandbox = null;
+        window.removeEventListener("beforeunload", this._onBeforeUnload);
+
+        this.setState(saved
+            ? { sandbox: null }
+            : { sandbox: null, tasks: sandbox.tasks, links: sandbox.links, selectedTask: null, selectedLink: null });
+        this._emit(webexpress.webapp.GanttCtrl.SANDBOX_LEAVE_EVENT, null, { saved: saved });
+
+        // the entry state is behind the server once a reload was held back or a
+        // save stored part of the changes before it was refused
+        if (sandbox.stale || (!saved && sandbox.wrote)) {
+            this.refresh();
+        }
+    }
+
+    /**
+     * Tells whether a refused DELETE found nothing to delete. That is the state
+     * the deletion asked for: a server that cascades a container deletion over
+     * its subtree and links answers the deletions of the children and links
+     * that follow with 404, and reporting those as refusals would take back a
+     * deletion that succeeded.
+     * @param {object} result - The failed service result of a DELETE.
+     * @returns {boolean} True when the resource was already gone.
+     */
+    static _alreadyGone(result) {
+        return result.error.kind === "http" && result.error.status === 404;
+    }
+
+    /**
+     * Reads the id a server assigned to a created resource.
+     * @param {object} result - The successful service result.
+     * @returns {string|null} The server id, or null when the server kept the client id.
+     */
+    _serverId(result) {
+        return result.data && result.data.id !== undefined && result.data.id !== null
+            ? String(result.data.id)
+            : null;
     }
 
     /**
@@ -789,6 +1191,18 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
                 to: l.to === oldId ? newId : l.to
             })),
             selectedTask: this.state.selectedTask === oldId ? newId : this.state.selectedTask
+        });
+    }
+
+    /**
+     * Replaces a client generated link id with the server assigned one.
+     * @param {string} oldId - The client id.
+     * @param {string} newId - The server id.
+     */
+    _remapLinkId(oldId, newId) {
+        this.setState({
+            links: this._links.map((l) => (l.id === oldId ? Object.assign({}, l, { id: newId }) : l)),
+            selectedLink: this.state.selectedLink === oldId ? newId : this.state.selectedLink
         });
     }
 
@@ -858,7 +1272,12 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         body.appendChild(this._renderSplitter());
         body.appendChild(state.error ? this._renderError() : this._renderChart(view));
 
-        this._element.replaceChildren(this._renderToolbar(), body);
+        this._element.classList.toggle("wx-gantt--sandbox", state.sandbox !== null);
+        if (state.sandbox !== null) {
+            this._element.replaceChildren(this._renderToolbar(), this._renderSandbox(), body);
+        } else {
+            this._element.replaceChildren(this._renderToolbar(), body);
+        }
 
         if (!this._gridCollapsed) {
             this._updateColumnFit(this._gridEl.clientWidth || gridWidth);
@@ -925,6 +1344,19 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
                 }
             });
             toolbar.appendChild(add);
+
+            if (this._sandboxOffered && this.state.sandbox === null) {
+                const label = this._i18n("webexpress.webapp:gantt.sandbox", "Sandbox");
+                const enter = this._sandboxButton("enter", label, () => this.enterSandbox());
+                const sandboxIcon = this._icon("wx-icon-light wx-icon-light-flask");
+                if (sandboxIcon) {
+                    // the icon replaces the text, so the name moves to the accessible label
+                    enter.replaceChildren(sandboxIcon);
+                    enter.setAttribute("aria-label", label);
+                }
+                enter.title = label + " - " + this._i18n("webexpress.webapp:gantt.sandbox.hint", "Try out changes without saving them");
+                toolbar.appendChild(enter);
+            }
         }
 
         const selectedLink = this._links.find((link) => link.id === this.state.selectedLink);
@@ -1016,6 +1448,64 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
 
         toolbar.appendChild(zoom);
         return toolbar;
+    }
+
+    /**
+     * Builds the strip shown while the sandbox is open. It keeps the user aware
+     * that nothing is stored yet, and it is where ending the sandbox asks
+     * whether to save or discard the changes - inline rather than in a modal,
+     * so the plan stays visible while the user decides.
+     * @returns {HTMLElement} The sandbox strip.
+     */
+    _renderSandbox() {
+        const phase = this.state.sandbox;
+        const strip = document.createElement("div");
+        strip.className = "wx-gantt-sandbox";
+        strip.setAttribute("role", "status");
+
+        const text = document.createElement("span");
+        text.className = "wx-gantt-sandbox-text";
+        strip.appendChild(text);
+
+        if (phase === "saving") {
+            text.textContent = this._i18n("webexpress.webapp:gantt.sandbox.saving", "Saving changes …");
+            return strip;
+        }
+
+        text.textContent = phase === "deciding"
+            ? this._i18n("webexpress.webapp:gantt.sandbox.decide", "End sandbox – what should happen to the changes?")
+            : this._i18n("webexpress.webapp:gantt.sandbox.active", "Sandbox – changes are only saved when you end it.");
+
+        const count = document.createElement("span");
+        count.className = "wx-gantt-sandbox-count";
+        count.textContent = this._i18n("webexpress.webapp:gantt.sandbox.changes", "Changes") + ": " + this.sandboxChangeCount();
+        strip.appendChild(count);
+
+        if (phase === "deciding") {
+            strip.appendChild(this._sandboxButton("save", this._i18n("webexpress.webapp:gantt.sandbox.save", "Save all changes"), () => this.saveSandbox(), true));
+            strip.appendChild(this._sandboxButton("discard", this._i18n("webexpress.webapp:gantt.sandbox.discard", "Discard changes"), () => this.discardSandbox()));
+            strip.appendChild(this._sandboxButton("continue", this._i18n("webexpress.webapp:gantt.sandbox.continue", "Keep editing"), () => this.continueSandbox()));
+        } else {
+            strip.appendChild(this._sandboxButton("end", this._i18n("webexpress.webapp:gantt.sandbox.end", "End sandbox"), () => this.endSandbox()));
+        }
+        return strip;
+    }
+
+    /**
+     * Builds one of the sandbox actions.
+     * @param {string} name - The action name, completing the css class.
+     * @param {string} label - The button text.
+     * @param {function(): void} onClick - The action.
+     * @param {boolean} [primary=false] - True for the emphasised action.
+     * @returns {HTMLButtonElement} The button.
+     */
+    _sandboxButton(name, label, onClick, primary = false) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "wx-gantt-btn wx-gantt-sandbox-" + name + (primary ? " wx-gantt-btn--primary" : "");
+        button.textContent = label;
+        button.addEventListener("click", onClick);
+        return button;
     }
 
     /**
@@ -2379,15 +2869,18 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
 
     /**
      * Dispatches a control event on the host element and calls the assignable
-     * callback twin when present.
+     * callback twin when present. Every detail says whether the sandbox is
+     * open, because a listener that mirrors the stored plan has to tell a
+     * change that only exists on screen from one the server received.
      * @param {string} name - The event name.
      * @param {string|null} callback - The callback property name, or null.
      * @param {object} detail - The event detail.
      */
     _emit(name, callback, detail) {
-        this._dispatch(name, Object.assign({ id: this._element.id }, detail));
+        const full = Object.assign({ sandbox: this._sandbox !== null }, detail);
+        this._dispatch(name, Object.assign({ id: this._element.id }, full));
         if (callback && typeof this[callback] === "function") {
-            this[callback](detail);
+            this[callback](full);
         }
     }
 
@@ -2469,6 +2962,9 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         if (this._onDragMove) {
             document.removeEventListener("mousemove", this._onDragMove);
             document.removeEventListener("mouseup", this._onDragUp);
+        }
+        if (this._sandbox) {
+            window.removeEventListener("beforeunload", this._onBeforeUnload);
         }
         super.destroy();
     }

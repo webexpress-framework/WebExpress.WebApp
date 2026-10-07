@@ -47,6 +47,12 @@ namespace WebExpress.WebApp.WebControl
         Func<IRenderControlContext, bool> GridCollapsed { get; }
 
         /// <summary>
+        /// Gets a value indicating whether the toolbar offers the sandbox, in
+        /// which changes stay local until the user saves or discards them.
+        /// </summary>
+        Func<IRenderControlContext, bool> Sandbox { get; }
+
+        /// <summary>
         /// Gets a value indicating whether the chart takes the height its host
         /// offers instead of bringing one of its own.
         /// </summary>

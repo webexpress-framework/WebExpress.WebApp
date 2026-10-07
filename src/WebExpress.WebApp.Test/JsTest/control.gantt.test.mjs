@@ -259,16 +259,38 @@ test("add link validates self, duplicate and cycle before posting", async () => 
     assert.equal(JSON.parse(posts[0].body).type, "SS");
 });
 
-test("a link the server refuses is withdrawn and its reason surfaces as the error", async () => {
+/**
+ * Loads a gantt whose server answers reads with the seed and refuses every
+ * write, and captures the popups it raises.
+ * @param {object|null} fault - The JSON error body, or null for a non-JSON 400.
+ * @returns {object} The engine, the control, the popups, the error events and the read count.
+ */
+function refusingControl(fault) {
     const engine = load();
-    engine.setFetch(async () => ({
-        ok: false,
-        status: 400,
-        headers: { get: () => "application/json" },
-        json: async () => ({ message: "Dependency violates the plan." })
-    }));
+    const net = { reads: 0 };
+    engine.setFetch(async (url, init) => {
+        if (init && init.method && init.method !== "GET") {
+            if (fault === null) {
+                return { ok: false, status: 400, headers: { get: () => "text/html" }, text: async () => "bad request" };
+            }
+            return { ok: false, status: 400, headers: { get: () => "application/json" }, json: async () => fault };
+        }
+        net.reads++;
+        return { ok: true, status: 200, headers: { get: () => "application/json" }, json: async () => SEED };
+    });
+    const popups = [];
+    engine.wxapp.MessageQueue = { dispatchLocal(payload) { popups.push(payload.notification); } };
+    // the engine harness carries no event names; without one the refusal would go out as "undefined"
+    engine.wx.Event.DATA_ERROR_EVENT = "webexpress.webui.data.error";
 
     const ctrl = seededControl(engine);
+    const errors = [];
+    ctrl._element.addEventListener("webexpress.webui.data.error", (e) => errors.push(e.detail));
+    return { engine, ctrl, popups, errors, net };
+}
+
+test("a link the server refuses is withdrawn and its reason shows as a popup", async () => {
+    const { ctrl, popups, errors } = refusingControl({ message: "Dependency violates the plan." });
 
     const link = ctrl.addLink("p", "t2", "SS");
     assert.ok(ctrl.value.links.some((l) => l.id === link.id), "the link shows optimistically");
@@ -277,7 +299,98 @@ test("a link the server refuses is withdrawn and its reason surfaces as the erro
 
     assert.deepEqual(ctrl.value.links.map((l) => l.id), ["l1"], "only the stored link remains");
     assert.equal(ctrl.state.selectedLink, null);
-    assert.equal(ctrl.state.error, "Dependency violates the plan.");
+    assert.equal(popups.length, 1);
+    assert.equal(popups[0].message, "Dependency violates the plan.");
+    assert.equal(popups[0].type, "alert-danger");
+    assert.equal(errors[0].action, "create link");
+
+    // the refusal must not swap the timeline for the load-failure panel
+    assert.equal(ctrl.state.error, null);
+    assert.equal(byClass(ctrl._element, "wx-gantt-error").length, 0);
+    assert.equal(byClass(ctrl._element, "wx-gantt-bar").length, 3);
+});
+
+test("a deletion the server already cascaded is no refusal", async () => {
+    // the server drops the subtree and the links with their container, so the
+    // deletions of the child and of the link that follow find nothing (404)
+    const engine = load();
+    const gone = new Set();
+    let reads = 0;
+    engine.setFetch(async (url, init) => {
+        const method = (init && init.method) || "GET";
+        if (method === "GET") {
+            reads++;
+            return { ok: true, status: 200, headers: { get: () => "application/json" }, json: async () => SEED };
+        }
+        if (gone.has(url)) {
+            return { ok: false, status: 404, headers: { get: () => "application/json" }, json: async () => ({ message: "not found" }) };
+        }
+        if (url === "/api/plan/tasks/p") {
+            ["/api/plan/tasks/c1", "/api/plan/links/l1"].forEach((u) => gone.add(u));
+        }
+        return { ok: true, status: 204, json: async () => ({}) };
+    });
+    const popups = [];
+    engine.wxapp.MessageQueue = { dispatchLocal(payload) { popups.push(payload.notification); } };
+    engine.wx.Event.DATA_ERROR_EVENT = "webexpress.webui.data.error";
+
+    const ctrl = seededControl(engine);
+    assert.equal(ctrl.removeTask("p"), true);
+    await settle();
+    await settle();
+
+    assert.equal(popups.length, 0);
+    assert.equal(reads, 0, "nothing is taken back, so nothing is reloaded");
+    assert.deepEqual(ctrl.value.tasks.map((t) => t.id), ["t2"]);
+});
+
+test("a refused link edit restores the previous link and keeps the chart", async () => {
+    const { ctrl, popups } = refusingControl({ message: "Type is locked." });
+
+    assert.equal(ctrl.updateLink("l1", { type: "SF" }).type, "SF");
+
+    await settle();
+
+    assert.equal(ctrl.value.links.length, 1);
+    assert.equal(ctrl.value.links[0].id, "l1");
+    assert.equal(ctrl.value.links[0].type, "FS");
+    assert.equal(popups[0].message, "Type is locked.");
+    assert.equal(ctrl.state.error, null);
+});
+
+test("a refused task change reloads the stored plan and says why in a popup", async () => {
+    const { ctrl, popups, errors, net } = refusingControl({ message: "Task is frozen." });
+
+    ctrl.updateTask("t2", { duration: 9 });
+    assert.equal(ctrl.value.tasks.find((t) => t.id === "t2").duration, 9);
+
+    await settle();
+    await settle();
+
+    assert.equal(net.reads, 1, "the stored plan is read back once");
+    assert.equal(ctrl.value.tasks.find((t) => t.id === "t2").duration, 2);
+    assert.equal(popups[0].message, "Task is frozen.");
+    assert.equal(errors[0].action, "update task");
+    assert.equal(ctrl.state.error, null);
+});
+
+test("a refusal without a reason falls back to the chart's own words", async () => {
+    const { ctrl, popups } = refusingControl(null);
+
+    ctrl.addLink("p", "t2");
+    await settle();
+
+    assert.equal(popups[0].message, "The change was not saved and has been taken back.");
+    assert.equal(popups[0].heading, "Plan");
+});
+
+test("a refusal reason is escaped, because the popup renders html", async () => {
+    const { ctrl, popups } = refusingControl({ message: "<b>Phase 1</b> & \"Go\"" });
+
+    ctrl.addLink("p", "t2");
+    await settle();
+
+    assert.equal(popups[0].message, "&lt;b&gt;Phase 1&lt;/b&gt; &amp; &quot;Go&quot;");
 });
 
 test("the delete key removes the selection", async () => {
@@ -641,4 +754,296 @@ test("link drops reject self, cycles, duplicates and bars outside this chart", (
     assert.equal(ctrl._resolveLinkTarget({ target: foreign, clientX: 120 }, "p"), null);
     const port = byClass(bar, "wx-gantt-port--end")[0];
     assert.equal(ctrl._resolveLinkTarget({ target: port, clientX: 101 }, "p").side, "end");
+});
+
+/**
+ * Loads a gantt that offers the sandbox, with a server that records every
+ * request, assigns "srv-<n>" ids on POST and refuses the requests a predicate
+ * names.
+ * @param {function(string, string): boolean} [refuse] - Refuses a request by method and url.
+ * @returns {object} The engine, the control, the recorded calls and the popups.
+ */
+function sandboxControl(refuse = () => false) {
+    const engine = load();
+    const calls = [];
+    let next = 0;
+    engine.setFetch(async (url, init) => {
+        const method = (init && init.method) || "GET";
+        calls.push({ method: method, url: url, body: init && init.body ? JSON.parse(init.body) : null });
+        if (refuse(method, url)) {
+            return { ok: false, status: 400, headers: { get: () => "application/json" }, json: async () => ({ message: "No." }) };
+        }
+        const body = method === "GET" ? SEED : method === "POST" ? { id: "srv-" + (++next) } : {};
+        return { ok: true, status: 200, headers: { get: () => "application/json" }, json: async () => body };
+    });
+    const popups = [];
+    engine.wxapp.MessageQueue = { dispatchLocal(payload) { popups.push(payload.notification); } };
+    engine.wx.Event.DATA_ERROR_EVENT = "webexpress.webui.data.error";
+
+    // the engine context has no window; the sandbox guards the page unload on it
+    const unload = new Set();
+    engine.sandbox.window = {
+        addEventListener(type, handler) { if (type === "beforeunload") unload.add(handler); },
+        removeEventListener(type, handler) { if (type === "beforeunload") unload.delete(handler); }
+    };
+
+    const element = engine.createElement("div");
+    element.querySelectorAll = (selector) => byClass(element, selector.slice(1));
+    element.querySelector = (selector) => element.querySelectorAll(selector)[0] || null;
+    element.dataset.sandbox = "true";
+    appendServiceIsland(engine.document, element, { name: "data", kind: "rest", baseUri: "/api/plan", method: "GET", updateMethod: "PUT" });
+    appendStateIsland(engine.document, element, SEED);
+    const ctrl = new engine.wxapp.GanttCtrl(element);
+    return { engine, ctrl, calls, popups, unload };
+}
+
+/**
+ * Fires the beforeunload handlers the way a navigation does.
+ * @param {Set<function>} handlers - The registered handlers.
+ * @returns {object} The event, telling whether the browser would ask.
+ */
+function navigateAway(handlers) {
+    const event = { prevented: false, returnValue: undefined, preventDefault() { this.prevented = true; } };
+    for (const handler of handlers) {
+        handler(event);
+    }
+    return event;
+}
+
+function click(root, name) {
+    const button = byClass(root, name)[0];
+    assert.ok(button, "the " + name + " action is offered");
+    button.dispatchEvent({ type: "click" });
+}
+
+test("the sandbox is offered only when configured and never on a read-only plan", async () => {
+    const engine = load();
+    engine.setFetch(async () => ({ ok: true, status: 200, json: async () => ({}) }));
+    const plain = seededControl(engine);
+    await settle();
+    assert.equal(byClass(plain._element, "wx-gantt-sandbox-enter").length, 0);
+
+    const { ctrl } = sandboxControl();
+    await settle();
+    const enter = byClass(ctrl._element, "wx-gantt-sandbox-enter");
+    assert.equal(enter.length, 1);
+    assert.equal(byClass(enter[0], "wx-icon-light-flask").length, 1, "the button shows the flask icon");
+    assert.equal(enter[0].childNodes.length, 1, "and no text beside it");
+    assert.equal(enter[0].getAttribute("aria-label"), "Sandbox", "the name stays available to assistive technology");
+
+    ctrl.setState({ readonly: true });
+    await settle();
+    assert.equal(byClass(ctrl._element, "wx-gantt-sandbox-enter").length, 0);
+    assert.equal(ctrl.enterSandbox(), false);
+});
+
+test("inside the sandbox changes stay local and discarding restores the entry state", async () => {
+    const { ctrl, calls } = sandboxControl();
+    const left = [];
+    ctrl._element.addEventListener(ctrl.constructor.SANDBOX_LEAVE_EVENT, (e) => left.push(e.detail));
+    await settle();
+
+    click(ctrl._element, "wx-gantt-sandbox-enter");
+    await settle();
+    assert.equal(ctrl.inSandbox, true);
+    assert.ok(ctrl._element.classList.contains("wx-gantt--sandbox"));
+    assert.equal(byClass(ctrl._element, "wx-gantt-sandbox").length, 1);
+
+    ctrl.addTask({ label: "Try", start: "2026-07-10", duration: 2 });
+    ctrl.updateTask("t2", { duration: 7 });
+    ctrl.removeLink("l1");
+    ctrl.updateTask("c1", { progress: 90 });
+    await settle();
+
+    assert.equal(calls.length, 0, "nothing reaches the server");
+    assert.equal(ctrl.sandboxChangeCount(), 4);
+
+    click(ctrl._element, "wx-gantt-sandbox-end");
+    await settle();
+    assert.equal(ctrl.state.sandbox, "deciding");
+    click(ctrl._element, "wx-gantt-sandbox-discard");
+    await settle();
+
+    assert.equal(ctrl.inSandbox, false);
+    assert.equal(calls.length, 0, "discarding sends nothing either");
+    assert.deepEqual(ctrl.value.tasks.map((t) => t.id), ["p", "c1", "t2"]);
+    assert.equal(ctrl.value.tasks.find((t) => t.id === "t2").duration, 2);
+    assert.equal(ctrl.value.tasks.find((t) => t.id === "c1").progress, 40);
+    assert.equal(ctrl.value.links.length, 1);
+    assert.equal(ctrl._element.classList.contains("wx-gantt--sandbox"), false);
+    assert.deepEqual(left.map((d) => d.saved), [false]);
+});
+
+test("ending a sandbox without changes closes it without asking", () => {
+    const { ctrl } = sandboxControl();
+    ctrl.enterSandbox();
+    ctrl.updateTask("t2", { duration: 7 });
+    ctrl.updateTask("t2", { duration: 2 });
+    assert.equal(ctrl.sandboxChangeCount(), 0, "a change taken back by hand is no change");
+
+    ctrl.endSandbox();
+    assert.equal(ctrl.inSandbox, false);
+});
+
+test("saving sends the net result once per resource, in an order the server can follow", async () => {
+    const { ctrl, calls } = sandboxControl();
+    const left = [];
+    ctrl._element.addEventListener(ctrl.constructor.SANDBOX_LEAVE_EVENT, (e) => left.push(e.detail));
+
+    ctrl.enterSandbox();
+    const parent = ctrl.addTask({ label: "Phase", start: "2026-07-10", duration: 2 });
+    const child = ctrl.addTask({ label: "Step", parentId: parent.id, start: "2026-07-10", duration: 1 });
+    ctrl.addLink(child.id, "t2", "FS");
+    ctrl.updateTask("t2", { duration: 3 });
+    ctrl.updateTask("t2", { duration: 4 });
+    ctrl.removeLink("l1");
+    const scratch = ctrl.addTask({ label: "Scratch" });
+    ctrl.removeTask(scratch.id);
+
+    ctrl.endSandbox();
+    assert.equal(ctrl.state.sandbox, "deciding");
+    assert.equal(await ctrl.saveSandbox(), true);
+
+    assert.deepEqual(calls.map((c) => c.method + " " + c.url), [
+        "POST /api/plan/tasks",
+        "POST /api/plan/tasks",
+        "PUT /api/plan/tasks/t2",
+        "DELETE /api/plan/links/l1",
+        "POST /api/plan/links"
+    ]);
+    assert.equal(calls[0].body.label, "Phase");
+    assert.equal(calls[1].body.parentId, "srv-1", "the child refers to the server id of its parent");
+    assert.equal(calls[2].body.duration, 4);
+    assert.equal(calls[4].body.from, "srv-2", "the link refers to the server id of the child");
+
+    assert.equal(ctrl.inSandbox, false);
+    assert.deepEqual(ctrl.value.tasks.map((t) => t.id).sort(), ["c1", "p", "srv-1", "srv-2", "t2"]);
+    assert.deepEqual(ctrl.value.links.map((l) => l.id), ["srv-3"]);
+    assert.deepEqual(left.map((d) => d.saved), [true]);
+});
+
+test("a task moved under a container created after it is still created behind that container", async () => {
+    const { ctrl, calls } = sandboxControl();
+
+    ctrl.enterSandbox();
+    const first = ctrl.addTask({ label: "First", start: "2026-07-10", duration: 1 });
+    const later = ctrl.addTask({ label: "Later", start: "2026-07-10", duration: 1 });
+    ctrl.updateTask(first.id, { parentId: later.id });
+
+    assert.equal(await ctrl.saveSandbox(), true);
+    assert.deepEqual(calls.map((c) => c.body.label), ["Later", "First"]);
+    assert.equal(calls[1].body.parentId, "srv-1");
+});
+
+test("a sandbox deletion that finds nothing left still counts as stored", async () => {
+    const { ctrl, popups } = sandboxControl();
+    ctrl.enterSandbox();
+    ctrl.removeLink("l1");
+    // the deleted link is already gone on the server
+    ctrl._service.remove = async () => ({ ok: false, error: { kind: "http", status: 404, message: "not found" } });
+
+    assert.equal(await ctrl.saveSandbox(), true);
+    assert.equal(popups.length, 0);
+    assert.equal(ctrl.inSandbox, false);
+});
+
+test("a refused save keeps the sandbox open with only the changes not yet stored", async () => {
+    let refusing = true;
+    const { ctrl, calls, popups } = sandboxControl((method) => refusing && method === "PUT");
+
+    ctrl.enterSandbox();
+    ctrl.addTask({ label: "New", start: "2026-07-10", duration: 2 });
+    ctrl.updateTask("t2", { duration: 5 });
+
+    assert.equal(await ctrl.saveSandbox(), false);
+    assert.equal(ctrl.state.sandbox, "active");
+    assert.equal(popups[0].message, "No.");
+    assert.equal(ctrl.sandboxChangeCount(), 1, "the stored task no longer counts");
+    assert.equal(ctrl.value.tasks.find((t) => t.id === "t2").duration, 5, "the refused change is kept for a retry");
+
+    refusing = false;
+    calls.length = 0;
+    assert.equal(await ctrl.saveSandbox(), true);
+    assert.deepEqual(calls.map((c) => c.method + " " + c.url), ["PUT /api/plan/tasks/t2"]);
+    assert.equal(ctrl.inSandbox, false);
+});
+
+test("discarding after a partial save reloads, since the entry state is no longer stored", async () => {
+    const { ctrl, calls } = sandboxControl((method) => method === "PUT");
+
+    ctrl.enterSandbox();
+    ctrl.addTask({ label: "New", start: "2026-07-10", duration: 2 });
+    ctrl.updateTask("t2", { duration: 5 });
+    await ctrl.saveSandbox();
+
+    calls.length = 0;
+    ctrl.discardSandbox();
+    await settle();
+    assert.deepEqual(calls.map((c) => c.method), ["GET"]);
+});
+
+test("a reload while the sandbox is open is held back and caught up when it closes", async () => {
+    const { ctrl, calls } = sandboxControl();
+
+    ctrl.enterSandbox();
+    ctrl.updateTask("t2", { duration: 5 });
+    ctrl.load();
+    await settle();
+    assert.equal(calls.length, 0);
+    assert.equal(ctrl.value.tasks.find((t) => t.id === "t2").duration, 5, "the sandbox survives the reload");
+
+    ctrl.discardSandbox();
+    await settle();
+    assert.deepEqual(calls.map((c) => c.method), ["GET"]);
+});
+
+test("leaving the page with unsaved sandbox changes makes the browser ask", async () => {
+    const { ctrl, unload } = sandboxControl();
+    assert.equal(unload.size, 0, "no guard outside the sandbox");
+
+    ctrl.enterSandbox();
+    assert.equal(unload.size, 1);
+    assert.equal(navigateAway(unload).prevented, false, "an untouched sandbox lets the page go");
+
+    ctrl.updateTask("t2", { duration: 5 });
+    const event = navigateAway(unload);
+    assert.equal(event.prevented, true);
+    assert.equal(event.returnValue, "");
+
+    assert.equal(await ctrl.saveSandbox(), true);
+    assert.equal(unload.size, 0, "a closed sandbox no longer guards the page");
+
+    ctrl.enterSandbox();
+    ctrl.updateTask("t2", { duration: 6 });
+    ctrl.destroy();
+    assert.equal(unload.size, 0, "teardown releases the guard");
+});
+
+test("every event detail says whether the change happened inside the sandbox", () => {
+    const { ctrl } = sandboxControl();
+    const callbacks = [];
+    const events = [];
+    ctrl.onTaskUpdate = (detail) => callbacks.push(detail.sandbox);
+    ctrl._element.addEventListener(ctrl.constructor.TASK_UPDATE_EVENT, (e) => events.push(e.detail.sandbox));
+
+    ctrl.updateTask("t2", { duration: 3 });
+    ctrl.enterSandbox();
+    ctrl.updateTask("t2", { duration: 4 });
+    ctrl.discardSandbox();
+    ctrl.updateTask("t2", { duration: 5 });
+
+    assert.deepEqual(callbacks, [false, true, false]);
+    assert.deepEqual(events, [false, true, false]);
+});
+
+test("a sandbox being saved refuses further edits", async () => {
+    const { ctrl } = sandboxControl();
+    ctrl.enterSandbox();
+    ctrl.updateTask("t2", { duration: 5 });
+    const saving = ctrl.saveSandbox();
+    assert.equal(ctrl.state.sandbox, "saving");
+    assert.equal(ctrl.updateTask("t2", { duration: 9 }), null);
+    assert.equal(ctrl.discardSandbox(), false);
+    await saving;
+    assert.equal(ctrl.value.tasks.find((t) => t.id === "t2").duration, 5);
 });

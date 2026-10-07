@@ -120,6 +120,32 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
+        /// Tests that the sandbox option emits its data attribute only when
+        /// true, so existing charts keep their toolbar unchanged.
+        /// </summary>
+        [Theory]
+        [InlineData(false, @"<div id=""*"" class=""wx-webapp-gantt""></div>")]
+        [InlineData(true, @"<div id=""*"" class=""wx-webapp-gantt"" data-sandbox=""true""></div>")]
+        public void Sandbox(bool sandbox, string expected)
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlDataGantt()
+            {
+                Sandbox = _ => sandbox
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
+
+        /// <summary>
         /// Tests that the fill mode marks the host, which is what makes the shell
         /// hand a height down to the chart instead of letting it keep its own.
         /// </summary>
