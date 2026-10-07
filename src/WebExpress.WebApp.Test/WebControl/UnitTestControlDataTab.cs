@@ -63,6 +63,35 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
+        /// Tests that the EditableTab and DeletableTab flags, which decide the entries
+        /// of the tab menu, each emit their attribute only when true.
+        /// </summary>
+        [Theory]
+        [InlineData(false, false, @"<div id=""*"" class=""wx-webapp-tab""><div class=""wx-webapp-tab-empty d-none"">*</div></div>")]
+        [InlineData(true, false, @"<div id=""*"" class=""wx-webapp-tab"" data-editable-tab=""true""><div class=""wx-webapp-tab-empty d-none"">*</div></div>")]
+        [InlineData(false, true, @"<div id=""*"" class=""wx-webapp-tab"" data-deletable-tab=""true""><div class=""wx-webapp-tab-empty d-none"">*</div></div>")]
+        [InlineData(true, true, @"<div id=""*"" class=""wx-webapp-tab"" data-editable-tab=""true"" data-deletable-tab=""true""><div class=""wx-webapp-tab-empty d-none"">*</div></div>")]
+        public void TabMenu(bool editable, bool deletable, string expected)
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlDataTab()
+            {
+                EditableTab = _ => editable,
+                DeletableTab = _ => deletable
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
+
+        /// <summary>
         /// Tests that the MovableTab flag emits a data-movable-tab attribute only when true.
         /// </summary>
         [Theory]

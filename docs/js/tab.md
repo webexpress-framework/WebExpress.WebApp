@@ -23,8 +23,24 @@ The initial structure is defined in HTML. The root element is the tab host (`.wx
 |Attribute     |Description                                                                           | Example 
 |---------------|---------------------------------------------------------------------------------------|----------------------------
 |`data-layout` |Visual style of tabs. Supported values: `tab`, `pill`, `underline`. Omitted for the default layout. On the server side it is the `Layout` property of `ControlDataTab`; its `HighlightColor` colors the marker of the `underline` layout. | `data-layout="underline"`
-|`data-readonly`|Disables add/close interactions when set to `true`. | `data-readonly="true"`
+|`data-readonly`|Disables adding, reordering and the tab menu when set to `true`. | `data-readonly="true"`
 |`data-movable-tab`|Enables drag-and-drop reordering of the tabs when set to `true`. Each tab header gets a ⠿ grip handle; dropping persists the new order via `PUT`. | `data-movable-tab="true"`
+|`data-editable-tab`|Offers *Rename tab* and *Color* in the tab menu when set to `true`; `F2` renames the focused tab. Both are persisted via `PUT`. On the server side it is the `EditableTab` property of `ControlDataTab`. Ignored when `data-readonly="true"`. | `data-editable-tab="true"`
+|`data-deletable-tab`|Offers *Delete tab* in the tab menu when set to `true`; `Delete` deletes the focused tab after confirmation. On the server side it is the `DeletableTab` property of `ControlDataTab`. Ignored when `data-readonly="true"`. | `data-deletable-tab="true"`
+
+### Tab Menu
+
+Each tab header carries a "…" menu, the same one the kanban columns have, as long as `data-editable-tab` or `data-deletable-tab` is set and the control is not read-only. Without either the menu is not rendered at all, so a page can deny it per user: both flags are `Func<IRenderControlContext, bool>` on the server and are evaluated per request, for example against the user's write permission.
+
+|Entry      |Shown with             |Action
+|-----------|-----------------------|------------------------------------------------
+|Rename tab |`data-editable-tab`    |Opens the rename field over the header (`F2`).
+|Color      |`data-editable-tab`    |Drills down in place to *None* and a palette of twelve colors.
+|Delete tab |`data-deletable-tab`   |Asks for confirmation, then deletes (`Delete`).
+
+A tab list may hold nothing but tabs, so neither the glyph nor the menu is part of it: the glyph is no control of its own (`aria-hidden`), and the menu lives in the header row outside the `tablist`, anchored to its glyph. The keyboard opens the same menu as a context menu - the menu key or `Shift+F10` on the focused tab - and lands on its first entry; a right click does the same for the pointer. The tab announces its shortcuts through `aria-keyshortcuts`, and closing the menu hands the focus back to the tab.
+
+The controller checks the flags again before it acts, so calling an action of a tab without the permission does nothing.
 
 ### Empty-State Placeholder
 
@@ -74,6 +90,7 @@ The controller expects JSON with an `items` array:
       "name": "All known profiles",
       "icon": "umbrella-beach",
       "color": "text-primary",
+      "tabColor": "#198754",
       "badge": "12",
       "badgeColor": "text-bg-danger",
       "primaryAction": "open",
@@ -89,6 +106,8 @@ The controller expects JSON with an `items` array:
 ```
 
 The optional `badge` renders at the trailing edge of the tab header, typically a count. Its color arrives as the `badgeColor` css class (a system color) or the `badgeStyle` inline style (a user-defined color); on the server both derive from the typed `BadgeColor` property (`PropertyColorBackgroundBadge`) of `RestApiTabView`.
+
+The optional `tabColor` is the color chosen from the tab menu, a `#rrggbb` value that underlines the tab header the way the `underline` layout marks its active tab: muted on inactive tabs, so a colored tab is never mistaken for the active one, and in full on the active tab. In the `underline` layout the color takes over the active marker. It is kept apart from `color`, the css class of the icon that the server authors; on the server it is the `TabColor` property of `RestApiTabView`.
 
 ### POST (create tab)
 
@@ -115,7 +134,7 @@ The response must contain `newTab`:
 
 ### DELETE (delete tab)
 
-The close glyph on a tab header, or the `Delete` key on the focused tab, opens the shared `webexpress.webui.ModalConfirm` with the tab's name. The glyph is deliberately no button of its own: a tab list may hold nothing but tabs, so the keyboard path is the shortcut, which the tab announces through `aria-keyshortcuts`.
+*Delete tab* in the tab menu, or the `Delete` key on the focused tab, opens the shared `webexpress.webui.ModalConfirm` with the tab's name. Both need `data-deletable-tab`.
 Only confirmation sends a `DELETE` request through the configured data service to:
 
 `<base-uri>?id=<tabId>`
@@ -125,7 +144,7 @@ While the request is pending, confirmation and dismissal are locked to prevent d
 requests. A failed or aborted request keeps the dialog open with a translated error and
 allows retry. Cancel, the dialog close button and Escape dismiss an idle confirmation
 without deleting anything. A control without a service removes the tab locally after
-confirmation. Readonly controls do not expose deletion.
+confirmation. Readonly controls and controls without `data-deletable-tab` do not expose deletion.
 
 On success, the controller disposes the owned pane's child controls and emits
 `TAB_CLOSED_EVENT` once. Deleting the active tab selects its preceding neighbor (or the
@@ -144,6 +163,46 @@ When `data-movable-tab="true"` and the user drags a tab to a new position, the c
 ```
 
 The server applies the order and answers `204 No Content`. On the server side, derive from `RestApiTab<TIndexItem>` and override `ReorderViews(order, context, request)`.
+
+### PUT (rename tab)
+
+When `data-editable-tab="true"`, *Rename tab* in the tab menu or `F2` on the focused tab opens a rename field over the header. The field is no tab, and a tab list may hold nothing but tabs, so it lives in the header row outside the `tablist` and is only laid over the header, which keeps its place.
+
+- `Enter` or leaving the field accepts the label, `Escape` discards it. Switching to another window does not count as leaving the field, and the `Enter` that confirms an IME candidate does not accept.
+- Focus returns to the tab after `Enter` or `Escape`; a field left by a click elsewhere leaves focus where the click put it.
+- Control characters turn into spaces, and the field takes at most 200 characters (the server default). A label that is empty after trimming, or unchanged, sends nothing.
+
+Otherwise the controller sends a `PUT` to the `base-uri` of the `data` service and keeps the field open, read-only, until the server answers:
+
+```json
+{
+  "action": "rename",
+  "id": "tab_pirates",
+  "label": "Pirate crews"
+}
+```
+
+The server stores the label and answers `204 No Content`; only then does the header show the new label. A failed request keeps the field open with a translated error (`role="alert"`, `aria-invalid`) and allows a retry. A load that lands while the request is pending does not undo the rename, and in a ViewState the label is patched into the resource slice rather than reloading every pane.
+
+On the server side, derive from `RestApiTab<TIndexItem>` and override `RenameView(viewId, label, context, request)`; the default refuses every rename. The label arrives trimmed and never empty. `IsValidLabel` refuses labels longer than `MaxLabelLength` (200) and labels with control characters or bidirectional overrides and isolates, answering `400`; both members can be overridden. Without a data service the rename stays local.
+
+The base `webexpress.webui.TabCtrl` offers `setTabLabel(tabId, label)` to relabel a tab programmatically.
+
+### PUT (color tab)
+
+When `data-editable-tab="true"`, the *Color* level of the tab menu offers *None* and a palette of twelve colors. Picking one sends a `PUT` to the `base-uri` of the `data` service; `color` is `null` for *None*:
+
+```json
+{
+  "action": "color",
+  "id": "tab_pirates",
+  "color": "#198754"
+}
+```
+
+The server stores the color and answers `204 No Content`; only then does the header show it. A failed request keeps the previous color and is announced beside the tab list (`role="alert"`) for a few seconds, since the menu that asked for it has already closed. As with the rename, a load that lands while the request is pending does not undo the change, and in a ViewState the color is patched into the resource slice.
+
+On the server side, override `RecolorView(viewId, color, context, request)` and store the value in `RestApiTabView.TabColor`; the default refuses every change. `IsValidColor` accepts a plain `#rrggbb` value only and answers anything else with `400`, so a stored color can never carry more css into the pages of other users. Without a data service the color stays local.
 
 ## Binding Model
 
@@ -311,6 +370,12 @@ The component dispatches events for tab interactions:
 
 - `webexpress.webapp.Event.TAB_REORDERED_EVENT`  
   Fired after the tabs were reordered via drag and drop and the new order was persisted. `detail.order` contains the array of tab ids in their new sequence.
+
+- `webexpress.webapp.Event.TAB_RECOLORED_EVENT`  
+  Fired after the color of a tab was changed and persisted. `detail.tabId` contains the tab id, `detail.color` the new color or `null`.
+
+- `webexpress.webapp.Event.TAB_RENAMED_EVENT`  
+  Fired after a tab header was renamed and the new label was persisted. `detail.tabId` contains the tab id, `detail.label` the new label.
 
 ## Use Case Example
 

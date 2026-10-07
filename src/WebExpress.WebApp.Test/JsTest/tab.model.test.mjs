@@ -34,6 +34,20 @@ test("create and reorder bodies carry the action and payload", () => {
 
     assert.deepEqual(wxapp.tabModel.createBody("t"), { action: "create", templateId: "t" });
     assert.deepEqual(wxapp.tabModel.reorderBody(["a", "b"]), { action: "reorder", order: ["a", "b"] });
+    assert.deepEqual(wxapp.tabModel.renameBody("a", "Alpha"), { action: "rename", id: "a", label: "Alpha" });
+    assert.deepEqual(wxapp.tabModel.colorBody("a", "#0d6efd"), { action: "color", id: "a", color: "#0d6efd" });
+    assert.deepEqual(wxapp.tabModel.colorBody("a", null), { action: "color", id: "a", color: null });
+    // the server accepts #rrggbb only, so every offered color must be one
+    assert.ok(wxapp.tabModel.COLOR_PALETTE.every(color => /^#[0-9a-f]{6}$/.test(color)));
+});
+
+test("normalize label trims and rejects a blank label", () => {
+    const { wxapp } = load();
+
+    assert.equal(wxapp.tabModel.normalizeLabel("  Alpha "), "Alpha");
+    assert.equal(wxapp.tabModel.normalizeLabel("   "), null);
+    assert.equal(wxapp.tabModel.normalizeLabel("Pirate\tcrews\u0007"), "Pirate crews", "control characters turn into gaps");
+    assert.equal(wxapp.tabModel.normalizeLabel(null), null);
 });
 
 test("extract new tab applies the requested template id and tolerates absence", () => {

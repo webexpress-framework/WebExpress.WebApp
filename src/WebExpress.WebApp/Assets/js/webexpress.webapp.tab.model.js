@@ -39,6 +39,51 @@ webexpress.webapp.tabModel = {
     },
 
     /**
+     * Builds the request body for renaming a tab.
+     * @param {string} id - The id of the renamed tab.
+     * @param {string} label - The new label.
+     * @returns {object} The rename body.
+     */
+    renameBody(id, label) {
+        return { action: "rename", id: id, label: label };
+    },
+
+    // the colors the tab menu offers; RestApiTab accepts any #rrggbb value
+    COLOR_PALETTE: [
+        "#0d6efd", "#6610f2", "#6f42c1", "#d63384", "#dc3545", "#fd7e14",
+        "#ffc107", "#198754", "#20c997", "#0dcaf0", "#6c757d", "#343a40"
+    ],
+
+    /**
+     * Builds the request body for changing the color of a tab.
+     * @param {string} id - The id of the tab.
+     * @param {string|null} color - The new color, or null for none.
+     * @returns {object} The color body.
+     */
+    colorBody(id, color) {
+        return { action: "color", id: id, color: color };
+    },
+
+    // the server default of RestApiTab.MaxLabelLength; a longer label is refused there
+    MAX_LABEL_LENGTH: 200,
+
+    /**
+     * Normalizes a label typed into the rename field. Control characters, which
+     * the server refuses, turn into spaces, since a pasted tab or line break was
+     * meant as a gap. A label that is empty after trimming is rejected, because
+     * a tab without a name cannot be told apart from its neighbours.
+     * @param {string|null|undefined} raw - The raw input value.
+     * @returns {string|null} The trimmed label, or null when it is unusable.
+     */
+    normalizeLabel(raw) {
+        const label = Array.from(String(raw ?? ""))
+            .map(ch => (ch.charCodeAt(0) < 32 || ch.charCodeAt(0) === 127) ? " " : ch)
+            .join("")
+            .trim();
+        return label !== "" ? label : null;
+    },
+
+    /**
      * Extracts the created tab from a create response, applying the requested
      * template id when the server did not echo it. Returns null when the
      * response does not carry a new tab.

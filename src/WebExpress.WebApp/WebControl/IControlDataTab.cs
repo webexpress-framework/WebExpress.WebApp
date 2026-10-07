@@ -33,6 +33,18 @@ namespace WebExpress.WebApp.WebControl
         Func<IRenderControlContext, bool> MovableTab { get; }
 
         /// <summary>
+        /// Gets a value indicating whether the tabs can be renamed and colored
+        /// through their "…" menu.
+        /// </summary>
+        Func<IRenderControlContext, bool> EditableTab { get; }
+
+        /// <summary>
+        /// Gets a value indicating whether the tabs can be deleted through their
+        /// "…" menu.
+        /// </summary>
+        Func<IRenderControlContext, bool> DeletableTab { get; }
+
+        /// <summary>
         /// Gets the layout of the tab headers.
         /// </summary>
         Func<IRenderControlContext, TypeLayoutTab> Layout { get; }

@@ -52,6 +52,15 @@ namespace WebExpress.WebApp.WebRestApi
         public string Color { get; set; }
 
         /// <summary>
+        /// Gets or sets the optional color of the tab as a <c>#rrggbb</c> value,
+        /// shown as an underline of the tab header. It is chosen by the user from
+        /// the tab menu and kept apart from <see cref="Color"/>, which is a css
+        /// class for the icon authored on the server.
+        /// </summary>
+        [JsonPropertyName("tabColor")]
+        public string TabColor { get; set; }
+
+        /// <summary>
         /// Gets or sets the optional badge text shown at the trailing edge of
         /// the tab header, for example the number of entries in the view. A
         /// null value hides the badge.

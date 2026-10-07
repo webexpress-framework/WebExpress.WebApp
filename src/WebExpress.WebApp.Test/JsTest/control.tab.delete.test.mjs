@@ -9,6 +9,7 @@ function setup(options = {}) {
     ] });
     const host = rt.createElement("div");
     if (options.readonly) { host.dataset.readonly = "true"; }
+    if (options.deletable !== false) { host.dataset.deletableTab = "true"; }
     const placeholder = rt.createElement("div");
     placeholder.className = "wx-webapp-tab-empty d-none";
     host.appendChild(placeholder);
@@ -28,8 +29,10 @@ function setup(options = {}) {
 
 function open(rt, id = "a") {
     const tab = rt.ctrl._tabs.find(item => item.id === id);
-    const header = Array.from(rt.ctrl._navElement.children).find(item => item.querySelector(".nav-link")?.dataset.tabId === tab.id);
-    header.querySelector(".wx-webapp-tab-close").click();
+    tab.headerElement.querySelector(".wx-webapp-tab-menu").click();
+    const entry = Array.from(tab.menuElement.querySelectorAll(".dropdown-item")).find(item => item.textContent === "Delete tab");
+    assert.ok(entry, "the tab menu offers the deletion");
+    entry.click();
     assert.ok(rt.ctrl._confirm, "deleting a tab opens the shared confirmation modal");
     return rt.ctrl._confirm;
 }
@@ -108,7 +111,7 @@ test("deleting a background tab preserves selection and never removes another co
 
 test("readonly and unknown tabs cannot request deletion", () => {
     const rt = setup({ readonly: true });
-    assert.equal(rt.host.querySelector(".wx-webapp-tab-close"), null);
+    assert.equal(rt.host.querySelector(".wx-webapp-tab-menu"), null);
     rt.ctrl._closeTab("a");
     rt.ctrl._readonly = false;
     rt.ctrl._closeTab("unknown");
@@ -166,16 +169,10 @@ test("destroying the tab control removes its confirmation and ignores a late DEL
     assert.deepEqual(rt.closed, []);
 });
 
-test("the close glyph is no control of its own: the tab list holds tabs only, and the delete key removes the focused tab", () => {
+test("the delete key removes the focused tab, and only where the deletion is allowed", () => {
     const rt = setup();
-    const close = rt.host.querySelector(".wx-webapp-tab-close");
-    assert.notEqual(close.tagName, "BUTTON", "a second control in the tab list is not allowed there");
-    assert.equal(close.getAttribute("aria-hidden"), "true");
-    assert.equal(close.closest('[role="tab"]'), null);
-    assert.ok(close.title.includes("Alpha"), "the pointer still learns what the glyph does");
-
     const tab = rt.ctrl._navElement.querySelector(".nav-link");
-    assert.equal(tab.getAttribute("aria-keyshortcuts"), "Delete", "the tab announces the shortcut that replaces the button");
+    assert.equal(tab.getAttribute("aria-keyshortcuts"), "Shift+F10 Delete", "the tab announces the shortcuts that stand in for the glyph");
     let prevented = false;
     tab.dispatchEvent({ type: "keydown", key: "Delete", target: tab, preventDefault: () => { prevented = true; } });
     assert.ok(prevented);
@@ -261,7 +258,7 @@ test("authored readonly tabs do not gain deletion buttons during base constructi
     host.appendChild(pane);
     rt.document.body.appendChild(host);
     new rt.wxapp.TabCtrl(host);
-    assert.equal(host.querySelector(".wx-webapp-tab-close"), null);
+    assert.equal(host.querySelector(".wx-webapp-tab-menu"), null);
 });
 
 // light dismiss of the template menu belongs to the browser, so the control

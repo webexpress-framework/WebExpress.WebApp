@@ -353,6 +353,10 @@ webexpress.webapp.Event = class {
 
     // Event triggered when the tab order changes via drag and drop
     static TAB_REORDERED_EVENT = "webexpress.webapp.tab.reordered";
+    // Event triggered when a tab header was renamed and the server accepted the new label
+    static TAB_RENAMED_EVENT = "webexpress.webapp.tab.renamed";
+    // Event triggered when a tab color was changed and the server accepted it
+    static TAB_RECOLORED_EVENT = "webexpress.webapp.tab.recolored";
     // Event triggered when the form editor finishes loading (or reloading) a form.
     static FORM_EDITOR_LOADED_EVENT = "webexpress.webapp.formeditor.loaded";
     // Event triggered when a node is added in the form editor.

@@ -58,6 +58,24 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, bool> MovableTab { get; set; }
 
         /// <summary>
+        /// Gets or sets a value indicating whether the tabs can be renamed and
+        /// colored. When <see langword="true"/>, the "…" menu of each tab header
+        /// offers both, and the change is persisted to the REST endpoint via a
+        /// <c>PUT</c>. The flag is evaluated per request, so users without write
+        /// permission can be denied the entries; has no effect on a read-only control.
+        /// </summary>
+        public Func<IRenderControlContext, bool> EditableTab { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the tabs can be deleted. When
+        /// <see langword="true"/>, the "…" menu of each tab header offers the
+        /// deletion, which is confirmed and then sent as a <c>DELETE</c>. The "…"
+        /// menu only appears while this or <see cref="EditableTab"/> holds; has no
+        /// effect on a read-only control.
+        /// </summary>
+        public Func<IRenderControlContext, bool> DeletableTab { get; set; }
+
+        /// <summary>
         /// Gets or sets the layout of the tab headers. The headers are built on the
         /// client from the data the service delivers, so the layout only travels there
         /// as an attribute instead of turning into a css class here.
@@ -175,6 +193,8 @@ namespace WebExpress.WebApp.WebControl
             var bind = Bind?.Invoke(renderContext);
             var @readonly = Readonly?.Invoke(renderContext) ?? false;
             var movableTab = MovableTab?.Invoke(renderContext) ?? false;
+            var editableTab = EditableTab?.Invoke(renderContext) ?? false;
+            var deletableTab = DeletableTab?.Invoke(renderContext) ?? false;
             var layout = Layout?.Invoke(renderContext) ?? TypeLayoutTab.Default;
             var fragmentManager = WebEx.ComponentHub.FragmentManager;
             var applicationContext = renderContext?.PageContext?.ApplicationContext;
@@ -216,6 +236,8 @@ namespace WebExpress.WebApp.WebControl
                 .AddUserAttribute("data-layout", layout != TypeLayoutTab.Default ? layout.ToString().ToLower() : null)
                 .AddUserAttribute("data-readonly", @readonly ? "true" : null)
                 .AddUserAttribute("data-movable-tab", movableTab ? "true" : null)
+                .AddUserAttribute("data-editable-tab", editableTab ? "true" : null)
+                .AddUserAttribute("data-deletable-tab", deletableTab ? "true" : null)
                 .Add(templatePreferences.Select(x => x.Render(renderContext, visualTree)))
                 .Add(templatePrimary.Select(x => x.Render(renderContext, visualTree)))
                 .Add(_templates.Select(x => x.Render(renderContext, visualTree)))

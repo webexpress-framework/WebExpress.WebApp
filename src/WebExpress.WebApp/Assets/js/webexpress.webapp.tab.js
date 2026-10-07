@@ -5,15 +5,23 @@
  * The following events are triggered:
  * - webexpress.webapp.Event.TAB_ADDED_EVENT
  * - webexpress.webapp.Event.TAB_CLOSED_EVENT
+ * - webexpress.webapp.Event.TAB_REORDERED_EVENT
+ * - webexpress.webapp.Event.TAB_RENAMED_EVENT
+ * - webexpress.webapp.Event.TAB_RECOLORED_EVENT
  */
 webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
     static _defaultTemplateIcon = "wx-icon-light wx-icon-light-card";
+
+    // how long an error of a closed menu stays announced, in milliseconds
+    static STATUS_DURATION = 6000;
 
     // configuration
     _restUri = "";
     _viewState = null;
     _readonly = false;
     _movableTab = false;
+    _editableTab = false;
+    _deletableTab = false;
     _templates = new Map();
     _templateOrder = [];
     _confirm = null;
@@ -24,6 +32,13 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
 
     // drag & drop reorder state
     _dragTabId = null;
+
+    // the open rename field, at most one at a time
+    _rename = null;
+
+    // the announcement of an error whose menu has already closed
+    _statusElement = null;
+    _statusTimer = null;
 
     // dom nodes for dynamic elements
     _addLi = null;
@@ -65,12 +80,20 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
 
         this._readonly = element.dataset.readonly === "true";
         this._movableTab = element.dataset.movableTab === "true";
+        this._editableTab = element.dataset.editableTab === "true";
+        this._deletableTab = element.dataset.deletableTab === "true";
 
         if (element.hasAttribute("data-readonly")) {
             element.removeAttribute("data-readonly");
         }
         if (element.hasAttribute("data-movable-tab")) {
             element.removeAttribute("data-movable-tab");
+        }
+        if (element.hasAttribute("data-editable-tab")) {
+            element.removeAttribute("data-editable-tab");
+        }
+        if (element.hasAttribute("data-deletable-tab")) {
+            element.removeAttribute("data-deletable-tab");
         }
 
         // data service from the wx-service island; a host without it loads
@@ -88,6 +111,9 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         if (this._navElement !== null) {
             this._navElement.classList.add("wx-form-designer-tabs");
         }
+
+        // the rename field is laid over a tab header from the header row
+        this._headerElement?.classList.add("wx-webapp-tab-header");
 
         if (!this._readonly) {
             this._initAddButton();
@@ -937,6 +963,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
             label: item.label || item.title || item.name || "unnamed tab",
             icon: item.icon || null,
             color: item.color || null,
+            tabColor: item.tabColor || null,
             badge: item.badge != null ? String(item.badge) : null,
             badgeColor: item.badgeColor || null,
             badgeStyle: item.badgeStyle || null,
@@ -965,7 +992,8 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
     }
 
     /**
-     * Overrides the base method to append a close button to each tab header.
+     * Overrides the base method to add the drag grip, the tab color and the "…"
+     * menu to each tab header.
      * @param {Object} tab - The Tab model.
      * @returns {HTMLElement} List item element.
      */
@@ -976,47 +1004,377 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         // the base constructor also builds authored tabs before derived fields are initialized
         const readonly = this._readonly ?? (this._element.dataset.readonly === "true");
         const movable = this._movableTab ?? (this._element.dataset.movableTab === "true");
+        const editable = !readonly && (this._editableTab ?? (this._element.dataset.editableTab === "true"));
+        const deletable = !readonly && (this._deletableTab ?? (this._element.dataset.deletableTab === "true"));
+
+        this._applyTabColor(tab, tab.tabColor || null);
 
         // add the drag-to-reorder grip when enabled
         if (movable && !readonly) {
             this._makeTabMovable(li, tab);
         }
 
-        if (readonly) {
+        const a = li.querySelector(".nav-link");
+        if (a === null || (!editable && !deletable)) {
             return li;
         }
 
-        const a = li.querySelector(".nav-link");
+        // a tab list may hold nothing but tabs, so the "…" glyph is no control of its own:
+        // the pointer clicks it, the keyboard opens the same menu as a context menu and
+        // reaches the entries through their shortcuts
+        const trigger = document.createElement("span");
+        trigger.className = "wx-webapp-tab-menu";
+        trigger.title = this._i18n("webexpress.webapp:tab.menu", "Tab options");
+        trigger.setAttribute("aria-hidden", "true");
+        const triggerIcon = document.createElement("i");
+        triggerIcon.className = this._iconClass("more");
+        trigger.appendChild(triggerIcon);
+        tab.menuTrigger = trigger;
 
-        if (a !== null) {
-            // a tab list may hold nothing but tabs, so the close glyph is no control of its own:
-            // the pointer clicks it, the keyboard deletes the focused tab with the delete key
-            const closeBtn = document.createElement("span");
-            closeBtn.className = "wx-webapp-tab-close";
-            closeBtn.title = this._i18n("webexpress.webapp:tab.delete.label", "Delete tab “{name}”").replace("{name}", () => tab.label);
-            closeBtn.setAttribute("aria-hidden", "true");
-            closeBtn.innerHTML = `<i class="${this._iconClass("xmark")}"></i>`;
+        // the open menu dismisses itself on the pointerdown that precedes this click,
+        // so whether the click closes it is decided by the state before that
+        let openBeforeClick = false;
+        trigger.addEventListener("pointerdown", () => {
+            openBeforeClick = tab.menuElement?.matches(":popover-open") === true;
+        });
+        trigger.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!openBeforeClick) {
+                this._openTabMenu(tab, false);
+            }
+            openBeforeClick = false;
+        });
 
-            // attach event listener to remove the tab
-            closeBtn.addEventListener("click", (e) => {
+        // the browser raises contextmenu for a right click, the menu key and shift+f10 alike
+        a.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+            this._openTabMenu(tab, true);
+        });
+
+        const shortcuts = ["Shift+F10"];
+        if (editable) {
+            shortcuts.push("F2");
+        }
+        if (deletable) {
+            shortcuts.push("Delete");
+        }
+        a.setAttribute("aria-keyshortcuts", shortcuts.join(" "));
+        a.addEventListener("keydown", (e) => {
+            if (e.key === "F2" && editable) {
                 e.preventDefault();
-                e.stopPropagation();
+                this._startRename(tab);
+            } else if (e.key === "Delete" && deletable) {
+                e.preventDefault();
                 this._closeTab(tab.id);
-            });
+            }
+        });
 
-            a.setAttribute("aria-keyshortcuts", "Delete");
-            a.addEventListener("keydown", (e) => {
-                if (e.key === "Delete") {
-                    e.preventDefault();
-                    this._closeTab(tab.id);
+        li.classList.add("wx-webapp-tab-has-menu");
+        li.appendChild(trigger);
+
+        return li;
+    }
+
+    /**
+     * Opens the "…" menu of a tab. The menu holds real buttons, which a tab list may
+     * not, so it lives in the header row outside the list and is only anchored to the
+     * glyph of its tab. It is built on first use, since most tabs never open it.
+     * @param {Object} tab - The Tab model.
+     * @param {boolean} focusFirst - Whether the keyboard opened it and needs the first entry.
+     */
+    _openTabMenu(tab, focusFirst) {
+        if (this._destroyed || !tab.menuTrigger || this._headerElement === null || !this._tabs.includes(tab)) {
+            return;
+        }
+
+        let menu = tab.menuElement;
+        if (!menu) {
+            menu = document.createElement("ul");
+            menu.className = "dropdown-menu dropdown-menu-end wx-webapp-tab-menu-list";
+            menu.setAttribute("aria-label", this._i18n("webexpress.webapp:tab.menu", "Tab options"));
+
+            webexpress.webui.NativeMenu.bind(tab.menuTrigger, menu, null);
+
+            // the color entry drills down in place, so a click on an entry must not
+            // close the menu; every entry that leaves it closes it itself
+            menu.setAttribute("data-wx-keep-open", "");
+
+            menu.addEventListener("toggle", (e) => {
+                const open = e.newState === "open";
+                tab.headerElement?.classList.toggle("wx-menu-open", open);
+
+                // the glyph is no focus target, so the browser has nowhere to return the
+                // focus to; the tab takes it unless an entry moved it on purpose
+                const active = document.activeElement;
+                if (!open && (active === null || active === document.body || menu.contains(active))) {
+                    tab.headerElement?.querySelector(".nav-link")?.focus({ preventScroll: true });
                 }
             });
 
-            li.classList.add("wx-webapp-tab-closable");
-            li.appendChild(closeBtn);
+            tab.menuElement = menu;
+            this._headerElement.appendChild(menu);
         }
 
+        this._populateTabMenuRoot(menu, tab);
+        webexpress.webui.NativeMenu.show(menu);
+
+        if (focusFirst) {
+            menu.querySelector(".dropdown-item")?.focus({ preventScroll: true });
+        }
+    }
+
+    /**
+     * Populates the tab menu with its top-level entries.
+     * @param {HTMLElement} menu - The dropdown menu element.
+     * @param {Object} tab - The Tab model.
+     */
+    _populateTabMenuRoot(menu, tab) {
+        menu.replaceChildren();
+
+        if (this._editableTab && !this._readonly) {
+            menu.appendChild(this._buildTabMenuEntry(menu, "pen",
+                this._i18n("webexpress.webapp:tab.edit", "Rename tab"),
+                () => this._startRename(tab)));
+            menu.appendChild(this._buildTabSubmenuEntry(menu, "palette",
+                this._i18n("webexpress.webapp:tab.color", "Color"),
+                () => this._populateTabMenuColors(menu, tab)));
+        }
+
+        if (this._deletableTab && !this._readonly) {
+            if (menu.childNodes.length > 0) {
+                const divider = document.createElement("li");
+                const rule = document.createElement("hr");
+                rule.className = "dropdown-divider";
+                divider.appendChild(rule);
+                menu.appendChild(divider);
+            }
+            menu.appendChild(this._buildTabMenuEntry(menu, "trash",
+                this._i18n("webexpress.webapp:tab.delete", "Delete tab"),
+                () => this._closeTab(tab.id)));
+        }
+    }
+
+    /**
+     * Populates the tab menu with the color palette and a "none" option.
+     * @param {HTMLElement} menu - The dropdown menu element.
+     * @param {Object} tab - The Tab model.
+     */
+    _populateTabMenuColors(menu, tab) {
+        menu.replaceChildren();
+
+        const back = document.createElement("li");
+        const backBtn = document.createElement("button");
+        backBtn.type = "button";
+        backBtn.className = "dropdown-item text-muted d-flex align-items-center";
+        const backIcon = document.createElement("i");
+        backIcon.className = this._iconClass("chevron-left") + " me-2";
+        backBtn.appendChild(backIcon);
+        backBtn.appendChild(document.createTextNode(this._i18n("webexpress.webapp:back", "Back")));
+        backBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            this._populateTabMenuRoot(menu, tab);
+            menu.querySelector(".dropdown-item")?.focus({ preventScroll: true });
+        });
+        back.appendChild(backBtn);
+        menu.appendChild(back);
+
+        menu.appendChild(this._buildTabMenuEntry(menu, tab.tabColor ? null : "check",
+            this._i18n("webexpress.webapp:tab.color.none", "None"),
+            () => this._recolorTab(tab.id, null)));
+
+        const li = document.createElement("li");
+        const grid = document.createElement("div");
+        grid.className = "wx-webapp-tab-color-grid";
+
+        const palette = webexpress.webapp.tabModel.COLOR_PALETTE;
+        for (let i = 0; i < palette.length; i++) {
+            const color = palette[i];
+            const swatch = document.createElement("button");
+            swatch.type = "button";
+            swatch.className = "wx-webapp-tab-swatch";
+            swatch.style.backgroundColor = color;
+            swatch.title = color;
+            swatch.setAttribute("aria-label", color);
+            if (tab.tabColor && tab.tabColor.toLowerCase() === color) {
+                swatch.classList.add("active");
+                swatch.setAttribute("aria-current", "true");
+            }
+            swatch.addEventListener("click", (e) => {
+                e.preventDefault();
+                webexpress.webui.NativeMenu.hide(menu);
+                this._recolorTab(tab.id, color);
+            });
+            grid.appendChild(swatch);
+        }
+
+        li.appendChild(grid);
+        menu.appendChild(li);
+
+        backBtn.focus({ preventScroll: true });
+    }
+
+    /**
+     * Builds an entry that leaves the menu and runs its action.
+     * @param {HTMLElement} menu - The dropdown menu element.
+     * @param {string|null} icon - The symbolic icon name, or null for an indent.
+     * @param {string} label - The entry label.
+     * @param {Function} action - The action to run once the menu is closed.
+     * @returns {HTMLElement} The list item element.
+     */
+    _buildTabMenuEntry(menu, icon, label, action) {
+        const li = this._buildTabMenuItem(icon, label);
+        li.firstChild.addEventListener("click", (e) => {
+            e.preventDefault();
+            webexpress.webui.NativeMenu.hide(menu);
+            action();
+        });
         return li;
+    }
+
+    /**
+     * Builds an entry that repopulates the menu in place with a sub-level, so no
+     * nested flyout has to be positioned.
+     * @param {HTMLElement} menu - The dropdown menu element.
+     * @param {string} icon - The symbolic icon name.
+     * @param {string} label - The entry label.
+     * @param {Function} populate - Repopulates the menu with the sub-level.
+     * @returns {HTMLElement} The list item element.
+     */
+    _buildTabSubmenuEntry(menu, icon, label, populate) {
+        const li = this._buildTabMenuItem(icon, label);
+        const button = li.firstChild;
+
+        const chevron = document.createElement("i");
+        chevron.className = this._iconClass("chevron-right") + " ms-auto ps-3";
+        button.appendChild(chevron);
+
+        button.addEventListener("click", (e) => {
+            e.preventDefault();
+            populate();
+        });
+        return li;
+    }
+
+    /**
+     * Builds the markup of a menu entry without its behavior.
+     * @param {string|null} icon - The symbolic icon name, or null for an indent.
+     * @param {string} label - The entry label.
+     * @returns {HTMLElement} The list item element.
+     */
+    _buildTabMenuItem(icon, label) {
+        const li = document.createElement("li");
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "dropdown-item d-flex align-items-center";
+
+        // an entry without icon keeps the indent, so the labels stay aligned
+        const iconEl = document.createElement("i");
+        iconEl.className = (icon ? this._iconClass(icon) + " " : "") + "me-2 wx-webapp-tab-menu-icon";
+        button.appendChild(iconEl);
+        button.appendChild(document.createTextNode(label));
+
+        li.appendChild(button);
+        return li;
+    }
+
+    /**
+     * Shows a tab color on its header. The value only ever lands in a custom
+     * property through the CSSOM, so a malformed color from the server is
+     * ignored by the browser rather than injected.
+     * @param {Object} tab - The Tab model.
+     * @param {string|null} color - The color, or null for none.
+     */
+    _applyTabColor(tab, color) {
+        tab.tabColor = color || null;
+
+        const li = tab.headerElement;
+        if (!li) {
+            return;
+        }
+
+        if (tab.tabColor) {
+            li.style.setProperty("--wx-webapp-tab-color", tab.tabColor);
+        } else {
+            li.style.removeProperty("--wx-webapp-tab-color");
+        }
+        li.classList.toggle("wx-webapp-tab-colored", tab.tabColor !== null);
+    }
+
+    /**
+     * Persists a tab color via PUT and shows it once the server accepted it. A
+     * refused change is announced, because the menu that asked for it is gone.
+     * @param {string} tabId - The id of the tab.
+     * @param {string|null} color - The palette color, or null for none.
+     * @returns {Promise<boolean>} Whether the color took effect.
+     */
+    async _recolorTab(tabId, color) {
+        if (this._readonly || !this._editableTab || this._destroyed || !this._tabs.some(item => item.id === tabId) || (this._resource && !this._service)) {
+            return false;
+        }
+
+        if (this._service) {
+            const result = await this._service.update(webexpress.webapp.tabModel.colorBody(tabId, color));
+            if (!result.ok) {
+                if (result.error.kind !== "abort") {
+                    console.error("failed to change the tab color:", webexpress.webapp.ServiceResult.describe(result));
+                    this._announceError(this._i18n("webexpress.webapp:tab.color.error", "The tab color could not be changed. Please try again."));
+                }
+                return false;
+            }
+        }
+
+        if (this._destroyed) {
+            return false;
+        }
+
+        // a load that finished while the request was pending rebuilt the headers
+        const tab = this._tabs.find(item => item.id === tabId);
+        if (tab) {
+            this._applyTabColor(tab, color);
+        }
+
+        if (this._viewState) {
+            this._patchSliceItem(tabId, { tabColor: color });
+        } else {
+            // a GET still in flight was answered before the change and would undo it
+            this._queryVersion++;
+            this._isLoading = false;
+            this._element.classList.remove("placeholder-glow");
+        }
+
+        this._dispatch(webexpress.webapp.Event.TAB_RECOLORED_EVENT, { tabId: tabId, color: color });
+        return true;
+    }
+
+    /**
+     * Announces an error of an action whose own surface has already closed. The
+     * message sits beside the tab list and leaves after a while, so it does not
+     * linger over content the user has moved on to.
+     * @param {string} message - The translated message.
+     */
+    _announceError(message) {
+        if (this._headerElement === null) {
+            return;
+        }
+
+        if (!this._statusElement) {
+            this._statusElement = document.createElement("div");
+            this._statusElement.className = "wx-webapp-tab-status";
+            this._statusElement.setAttribute("role", "alert");
+            this._headerElement.appendChild(this._statusElement);
+        }
+
+        this._statusElement.textContent = message;
+        this._statusElement.hidden = false;
+
+        clearTimeout(this._statusTimer);
+        this._statusTimer = setTimeout(() => {
+            if (this._statusElement) {
+                this._statusElement.hidden = true;
+                this._statusElement.textContent = "";
+            }
+        }, webexpress.webapp.TabCtrl.STATUS_DURATION);
     }
 
     /**
@@ -1232,12 +1590,219 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
     }
 
     /**
+     * Opens the rename field over a tab header. The field is no tab, and a tab
+     * list may hold nothing but tabs, so it lives in the header row outside the
+     * list and is only laid over the header it renames; the header keeps its
+     * place so the row does not jump.
+     * @param {Object} tab - The Tab model.
+     */
+    _startRename(tab) {
+        const li = tab.headerElement;
+        const a = li ? li.querySelector(".nav-link") : null;
+        if (this._readonly || !this._editableTab || this._destroyed || a === null || this._rename !== null || this._headerElement === null) {
+            return;
+        }
+
+        const container = document.createElement("div");
+        container.className = "wx-webapp-tab-rename";
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.className = "wx-webapp-tab-rename-input";
+        input.value = tab.label;
+        input.maxLength = webexpress.webapp.tabModel.MAX_LABEL_LENGTH;
+        input.setAttribute("aria-label", this._i18n("webexpress.webapp:tab.rename.label", "Rename tab “{name}”").replace("{name}", () => tab.label));
+
+        const error = document.createElement("div");
+        error.className = "wx-webapp-tab-rename-error";
+        error.id = tab.id + "-rename-error";
+        error.setAttribute("role", "alert");
+        error.hidden = true;
+
+        container.appendChild(input);
+        container.appendChild(error);
+
+        const session = { tab: tab, container: container, input: input, error: error, busy: false };
+        this._rename = session;
+
+        // the tab list walks its tabs with the arrow keys, which must move the caret here instead
+        input.addEventListener("keydown", (e) => {
+            e.stopPropagation();
+
+            // the enter that picks an ime candidate belongs to the composition, not to the field
+            if (e.isComposing || session.busy) {
+                return;
+            }
+
+            if (e.key === "Enter") {
+                e.preventDefault();
+                this._commitRename(session);
+            } else if (e.key === "Escape") {
+                e.preventDefault();
+                this._closeRename(session);
+            }
+        });
+        input.addEventListener("blur", () => {
+            // switching to another window blurs the field too, but the edit is not finished then
+            if (!document.hasFocus() || session.busy) {
+                return;
+            }
+            this._commitRename(session);
+        });
+
+        const headerRect = this._headerElement.getBoundingClientRect();
+        const liRect = li.getBoundingClientRect();
+        container.style.left = (liRect.left - headerRect.left) + "px";
+        container.style.top = (liRect.top - headerRect.top) + "px";
+        container.style.minWidth = liRect.width + "px";
+
+        li.classList.add("wx-webapp-tab-renaming");
+        this._headerElement.appendChild(container);
+        input.focus({ preventScroll: true });
+        input.select();
+    }
+
+    /**
+     * Sends an accepted label and keeps the field open until the server answers,
+     * so a refused rename can be told and retried where it was typed.
+     * @param {Object} session - The open rename.
+     * @returns {Promise<void>}
+     */
+    async _commitRename(session) {
+        if (this._rename !== session || session.busy) {
+            return;
+        }
+
+        const { tab, input, error } = session;
+        const label = webexpress.webapp.tabModel.normalizeLabel(input.value);
+        if (label === null || label === tab.label) {
+            this._closeRename(session);
+            return;
+        }
+
+        session.busy = true;
+        input.readOnly = true;
+        input.setAttribute("aria-busy", "true");
+
+        const renamed = await this._renameTab(tab.id, label);
+
+        // a refresh or teardown already closed the field
+        if (this._rename !== session) {
+            return;
+        }
+
+        session.busy = false;
+        input.readOnly = false;
+        input.removeAttribute("aria-busy");
+
+        if (renamed) {
+            this._closeRename(session);
+            return;
+        }
+
+        error.textContent = this._i18n("webexpress.webapp:tab.rename.error", "The tab could not be renamed. Please try again.");
+        error.hidden = false;
+        input.setAttribute("aria-invalid", "true");
+        input.setAttribute("aria-describedby", error.id);
+    }
+
+    /**
+     * Closes the rename field. Focus returns to the tab only when the field still
+     * holds it; a field left by a click elsewhere must not pull focus back.
+     * @param {Object} session - The open rename.
+     */
+    _closeRename(session) {
+        if (this._rename !== session) {
+            return;
+        }
+        this._rename = null;
+
+        const hadFocus = document.activeElement === session.input;
+        session.container.remove();
+
+        const li = session.tab.headerElement;
+        li?.classList.remove("wx-webapp-tab-renaming");
+
+        if (hadFocus && li?.isConnected) {
+            li.querySelector(".nav-link")?.focus({ preventScroll: true });
+        }
+    }
+
+    /**
+     * Persists a new label via PUT and shows it once the server accepted it.
+     * @param {string} tabId - The id of the renamed tab.
+     * @param {string} label - The new label.
+     * @returns {Promise<boolean>} Whether the rename took effect.
+     */
+    async _renameTab(tabId, label) {
+        if (this._readonly || !this._editableTab || this._destroyed || !this._tabs.some(item => item.id === tabId) || (this._resource && !this._service)) {
+            return false;
+        }
+
+        if (this._service) {
+            const result = await this._service.update(webexpress.webapp.tabModel.renameBody(tabId, label));
+            if (!result.ok) {
+                if (result.error.kind !== "abort") {
+                    console.error("failed to rename tab:", webexpress.webapp.ServiceResult.describe(result));
+                }
+                return false;
+            }
+        }
+
+        if (this._destroyed) {
+            return false;
+        }
+
+        // a load that finished while the request was pending rebuilt the headers with
+        // the old label, so the label is applied to whatever tab carries the id now
+        this.setTabLabel(tabId, label);
+
+        if (this._viewState) {
+            this._patchSliceItem(tabId, { label: label });
+        } else {
+            // a GET still in flight was answered before the rename and would undo it
+            this._queryVersion++;
+            this._isLoading = false;
+            this._element.classList.remove("placeholder-glow");
+        }
+
+        this._dispatch(webexpress.webapp.Event.TAB_RENAMED_EVENT, { tabId: tabId, label: label });
+        return true;
+    }
+
+    /**
+     * Writes changed fields of one tab into the central slice, so other views of
+     * the resource and later re-renders show them. The header already shows them,
+     * which is why the patched slice is marked as applied rather than rebuilding
+     * every pane.
+     * @param {string} tabId - The changed tab id.
+     * @param {object} fields - The changed item fields.
+     */
+    _patchSliceItem(tabId, fields) {
+        this._viewState.setState(state => {
+            const key = this._viewState.sliceKey(this._resource);
+            const slice = state[key];
+            if (!slice?.data) {
+                return null;
+            }
+            const patch = item => String(item.id) === tabId ? { ...item, ...fields } : item;
+            const data = { ...slice.data, items: webexpress.webapp.tabModel.mapTabs(slice.data).map(patch) };
+            this._lastSliceData = data;
+            return { [key]: {
+                ...slice,
+                data: data,
+                items: Array.isArray(slice.items) ? slice.items.map(patch) : slice.items
+            } };
+        });
+    }
+
+    /**
      * Confirms deletion while retaining the selected tab until the service succeeds.
      * @param {string} tabId - The identifier of the tab to close.
      */
     _closeTab(tabId) {
         const tab = this._tabs.find(item => item.id === tabId);
-        if (this._readonly || this._destroyed || this._deletingTabId !== null || !tab) {
+        if (this._readonly || !this._deletableTab || this._destroyed || this._deletingTabId !== null || !tab) {
             return;
         }
 
@@ -1330,6 +1895,11 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
      */
     _removeTabElements(tab) {
         tab.headerElement?.remove();
+        tab.menuElement?.remove();
+        // the rename field lives outside the header and would outlast it
+        if (this._rename?.tab === tab) {
+            this._closeRename(this._rename);
+        }
         tab.paneElement.remove();
         webexpress.webui.Controller.removeInstances(tab.paneElement);
     }
@@ -1363,6 +1933,10 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
      */
     destroy() {
         this._destroyed = true;
+        clearTimeout(this._statusTimer);
+        if (this._rename) {
+            this._closeRename(this._rename);
+        }
         this._confirm?.destroy();
         this._confirm = null;
         if (this._emptyStateElement) {
