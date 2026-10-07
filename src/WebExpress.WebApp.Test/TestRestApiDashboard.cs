@@ -60,7 +60,7 @@ namespace WebExpress.WebApp.Test
         /// <param name="request">
         /// The request containing the details for updating the columns.
         /// </param>
-        protected override void UpdtaeColumns(RestApiDashboardLayout layout, IRequest request)
+        protected override void UpdateColumns(RestApiDashboardLayout layout, IRequest request)
         {
             LastAction = layout?.Action;
             LastColumns = layout?.Columns;

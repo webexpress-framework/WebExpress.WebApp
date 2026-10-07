@@ -231,3 +231,26 @@ test("the status dialogs carry the status colors", () => {
     assert.equal(chips[2].style.cssText, "background:#7c3aed;color:#fff;");
     assert.ok(!chips[2].classList.contains("wx-selection-primary"));
 });
+
+test("a changed filter reloads the board only once the server has stored it", async () => {
+    const { board } = setup();
+    delete board._sendStateToServer;
+    const sent = [];
+    let store;
+    board._restUri = "/api/board";
+    board._service = { name: "data", update: (payload) => {
+        sent.push(JSON.parse(JSON.stringify(payload)));
+        return new Promise((resolve) => { store = resolve; });
+    } };
+    let reloads = 0;
+    board.update = () => reloads++;
+
+    board._filter = "priority = 'high'";
+    board._dispatchBoardSettings();
+    assert.deepEqual(sent, [{ action: "settings", filter: "priority = 'high'" }]);
+    assert.equal(reloads, 0, "a load sent now could overtake the write and bring the old filter back");
+
+    store({ ok: true });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.equal(reloads, 1);
+});

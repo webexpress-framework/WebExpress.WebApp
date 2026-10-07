@@ -41,7 +41,7 @@ The reorder operation within a column preserves the current status, including mo
 
 ## REST integration
 
-The server derives from `RestApiKanban<TIndexItem>` and overrides `RetrieveStatuses`, `RetrieveColumns`, and `RetrieveCards`. The corresponding DTOs expose `RestApiKanbanStatus`, `RestApiKanbanColumn.StatusIds`, `RestApiKanbanCard.StatusId`, and `RestApiKanbanCard.AllowedStatusIds`. Column updates reach the existing `UpdtaeColumns` hook with assignments in `RestApiLayoutColumn.StatusIds`.
+The server derives from `RestApiKanban<TIndexItem>` and overrides `RetrieveStatuses`, `RetrieveColumns`, and `RetrieveCards`. The corresponding DTOs expose `RestApiKanbanStatus`, `RestApiKanbanColumn.StatusIds`, `RestApiKanbanCard.StatusId`, and `RestApiKanbanCard.AllowedStatusIds`. Column updates reach the existing `UpdateColumns` hook with assignments in `RestApiLayoutColumn.StatusIds`.
 
 The confirmed card move is submitted through the configured service update operation. Its payload contains `cardId`, `columnId`, `swimlaneId`, and `statusId`. The endpoint verifies the selected status against the current catalog, column assignments, and card permissions before invoking `MoveCard(RestApiKanbanMove, IRequest)`. A reorder with an unchanged column and status does not require a workflow transition.
 

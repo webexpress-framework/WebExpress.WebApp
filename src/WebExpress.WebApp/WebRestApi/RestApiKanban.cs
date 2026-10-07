@@ -50,25 +50,28 @@ namespace WebExpress.WebApp.WebRestApi
         [Method(RequestMethod.GET)]
         public IResponse Retrieve(IRequest request)
         {
-            using var context = CreateContext();
-            var query = new Query<TIndexItem>() as IQuery<TIndexItem>;
-            var filters = request.GetParameter("f")?.Value?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries) ?? [];
-
-            // quickfilters
-            query = Filter(filters, query, request);
-
-            // the board settings dialog persists a wql filter that arrives as a
-            // request parameter on the next load; a server that stores it can
-            // seed the value through RetrieveFilter for full page reloads
-            var wql = RetrieveFilter(request.GetParameter("wql")?.Value, request);
-            query = ApplyWql(wql, query, request);
-
-            var columns = RetrieveColumns(request);
-            var swimlanes = RetrieveSwimlanes(request);
-            var cards = RetrieveCards(query, context, request);
-
+            // the hooks run inside the guard as well: a stored wql filter is applied
+            // again on every load, so one that fails to parse would otherwise break
+            // each load with an undescribed server error
             try
             {
+                using var context = CreateContext();
+                var query = new Query<TIndexItem>() as IQuery<TIndexItem>;
+                var filters = request.GetParameter("f")?.Value?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries) ?? [];
+
+                // quickfilters
+                query = Filter(filters, query, request);
+
+                // the board settings dialog persists a wql filter that arrives as a
+                // request parameter on the next load; a server that stores it can
+                // seed the value through RetrieveFilter for full page reloads
+                var wql = RetrieveFilter(request.GetParameter("wql")?.Value, request);
+                query = ApplyWql(wql, query, request);
+
+                var columns = RetrieveColumns(request);
+                var swimlanes = RetrieveSwimlanes(request);
+                var cards = RetrieveCards(query, context, request);
+
                 var result = new RestApiKanbanResult()
                 {
                     Title = I18N.Translate(request, Title),
@@ -112,7 +115,7 @@ namespace WebExpress.WebApp.WebRestApi
                     {
                         case "columns":
                             ValidateColumnStatuses(payload, request);
-                            UpdtaeColumns(payload, request);
+                            UpdateColumns(payload, request);
                             break;
                         case "swimlanes":
                             UpdateSwimlanes(payload, request);
@@ -273,8 +276,13 @@ namespace WebExpress.WebApp.WebRestApi
         /// <remarks>
         /// A change the application declines is refused with a <see cref="RestApiRefusal"/>,
         /// whose message reaches the user.
+        ///
+        /// A column the list no longer names was deleted by the user, who confirmed
+        /// that its cards go with it, so the implementation removes those cards. The
+        /// payload names no cards: the board only knows the cards its filter lets
+        /// through, so the store is the one place that sees all of them.
         /// </remarks>
-        protected virtual void UpdtaeColumns(RestApiDashboardLayout layout, IRequest request)
+        protected virtual void UpdateColumns(RestApiDashboardLayout layout, IRequest request)
         {
         }
 
@@ -289,6 +297,15 @@ namespace WebExpress.WebApp.WebRestApi
         /// <param name="request">
         /// The request containing the details for updating the swimlanes.
         /// </param>
+        /// <remarks>
+        /// The payload names no cards, because the board only knows the cards its
+        /// filter lets through, yet two changes move cards along and the
+        /// implementation applies them to every card in its store:
+        /// a lane the list no longer names was deleted by the user, who confirmed
+        /// that its cards go with it, so those cards are removed; and when the board
+        /// had no lane before, every card is put into the first lane, since a board
+        /// with lanes only shows the cards of its lanes.
+        /// </remarks>
         protected virtual void UpdateSwimlanes(RestApiDashboardLayout layout, IRequest request)
         {
         }

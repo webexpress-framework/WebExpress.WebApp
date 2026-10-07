@@ -68,6 +68,12 @@ namespace WebExpress.WebApp.Test
         public Exception MoveFailure { get; set; }
 
         /// <summary>
+        /// Gets or sets the exception the wql hook raises, to observe how the endpoint
+        /// answers a stored filter that no longer parses.
+        /// </summary>
+        public Exception WqlFailure { get; set; }
+
+        /// <summary>
         /// Supplies the configured workflow catalog for a test request.
         /// </summary>
         /// <param name="request">The incoming request.</param>
@@ -97,7 +103,7 @@ namespace WebExpress.WebApp.Test
         /// </summary>
         /// <param name="layout">The layout payload.</param>
         /// <param name="request">The incoming request.</param>
-        protected override void UpdtaeColumns(RestApiDashboardLayout layout, IRequest request)
+        protected override void UpdateColumns(RestApiDashboardLayout layout, IRequest request)
         {
             LastAction = layout?.Action;
             LastColumns = layout?.Columns;
@@ -177,6 +183,23 @@ namespace WebExpress.WebApp.Test
         protected override IEnumerable<RestApiKanbanCard> RetrieveCards(IQuery<TestIndexItem> query, IQueryContext context, IRequest request)
         {
             return Cards;
+        }
+
+        /// <summary>
+        /// Raises the configured wql failure, or leaves the query unchanged.
+        /// </summary>
+        /// <param name="wql">The wql filter.</param>
+        /// <param name="query">The query to narrow.</param>
+        /// <param name="request">The incoming request.</param>
+        /// <returns>The unchanged query.</returns>
+        protected override IQuery<TestIndexItem> ApplyWql(string wql, IQuery<TestIndexItem> query, IRequest request)
+        {
+            if (WqlFailure != null)
+            {
+                throw WqlFailure;
+            }
+
+            return query;
         }
     }
 }

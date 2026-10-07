@@ -79,7 +79,7 @@ namespace WebExpress.WebApp.WebRestApi
                     }
                     else
                     {
-                        UpdtaeColumns(payload, request);
+                        UpdateColumns(payload, request);
                     }
                 }
 
@@ -135,7 +135,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// <param name="request">
         /// The request containing the details for updating the columns.
         /// </param>
-        protected virtual void UpdtaeColumns(RestApiDashboardLayout layout, IRequest request)
+        protected virtual void UpdateColumns(RestApiDashboardLayout layout, IRequest request)
         {
         }
 

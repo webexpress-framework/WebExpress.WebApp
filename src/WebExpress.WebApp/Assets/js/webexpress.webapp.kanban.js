@@ -347,8 +347,6 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
                 case "settings":
                     this._filter = e.detail.filter || "";
                     this._sendStateToServer({ action: "settings", filter: this._filter });
-                    // apply the new filter immediately by reloading the board
-                    this.update();
                     break;
             }
         });
@@ -364,9 +362,15 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
         }
 
         this._service.update(payload).then((result) => {
+            // a new filter is applied by reloading, but only once it is stored: a
+            // load without wql falls back to the stored filter, so a reload that
+            // overtook the write would bring the old one back
+            const reload = payload.action === "settings"
+                || (this._statuses != null && (!payload.action || payload.action === "columns"));
+
             if (!result.ok && result.error.kind !== "abort") {
                 this._reject(payload.action || "move", result);
-            } else if (result.ok && this._statuses != null && (!payload.action || payload.action === "columns")) {
+            } else if (result.ok && reload) {
                 this.update();
             }
         });

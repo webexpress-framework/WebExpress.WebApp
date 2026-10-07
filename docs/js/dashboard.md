@@ -161,7 +161,7 @@ public sealed class MyDashboardApi : RestApiDashboard
     ];
 
     // PUT action:"columns" → reconcile the column list (add / rename / reorder / recolor / delete)
-    protected override void UpdtaeColumns(RestApiDashboardLayout layout, IRequest request) { /* … */ }
+    protected override void UpdateColumns(RestApiDashboardLayout layout, IRequest request) { /* … */ }
 
     // PUT with a board → rebuild the columns and their widgets (add / delete / settings)
     protected override void UpdateBoard(IEnumerable<RestApiDashboardBoardColumn> board, IRequest request) { /* … */ }

@@ -466,6 +466,26 @@ namespace WebExpress.WebApp.Test.WebRestApi
         }
 
         /// <summary>
+        /// Verifies that a load whose filter fails is answered as a bad request rather than
+        /// an unhandled error: a stored filter is applied on every load, so the board has to
+        /// learn what went wrong instead of failing silently each time.
+        /// </summary>
+        [Fact]
+        public void FailingWqlIsBadRequest()
+        {
+            // arrange
+            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var api = new TestRestApiKanban { WqlFailure = new InvalidOperationException("parse error") };
+
+            // act
+            var result = api.Retrieve(UnitTestControlFixture.CreateRequestMock());
+
+            // validation
+            Assert.Equal(400, result.Status);
+            Assert.Equal("error processing get request.", result.Content);
+        }
+
+        /// <summary>
         /// Creates a catalog where one assigned destination is denied by the card.
         /// </summary>
         /// <returns>The configured API fixture.</returns>
