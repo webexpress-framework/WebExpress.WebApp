@@ -28,8 +28,11 @@ namespace WebExpress.WebApp.WebRestApi
         public string Label { get; set; }
 
         /// <summary>
-        /// Gets or sets the optional column width (e.g. <c>1fr</c>, <c>25%</c>),
-        /// chosen through the column "…" menu.
+        /// Gets or sets the column width as a weight (e.g. <c>1fr</c>, <c>1.5fr</c>),
+        /// the share of the row the column takes relative to the others; the
+        /// board stores widths this way once a divider is dragged. A percentage,
+        /// <c>*</c> or <c>auto</c> is still read and converted in proportion, so it
+        /// cannot push the board past the edge of the row.
         /// </summary>
         [JsonPropertyName("size")]
         public string Size { get; set; }
