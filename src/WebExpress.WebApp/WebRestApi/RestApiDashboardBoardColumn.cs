@@ -22,7 +22,8 @@ namespace WebExpress.WebApp.WebRestApi
         public string Title { get; set; }
 
         /// <summary>
-        /// Gets or sets the column size (e.g. <c>1fr</c>, <c>25%</c>).
+        /// Gets or sets the column width as a weight (e.g. <c>1fr</c>, <c>1.5fr</c>),
+        /// the share of the row the column takes relative to the others.
         /// </summary>
         [JsonPropertyName("size")]
         public string Size { get; set; }

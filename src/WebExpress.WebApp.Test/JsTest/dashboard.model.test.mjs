@@ -46,6 +46,27 @@ test("normalize columns maps columns and widgets with defaults", () => {
     assert.equal(cols[0].widgets[0].instanceId.startsWith("wx_inst_c1_0_"), true);
 });
 
+test("normalize columns takes the removability from the closeable flag the REST widget serializes", () => {
+    const { wxapp } = load();
+    const cols = wxapp.dashboardModel.normalizeColumns({
+        columns: [{ id: "c1", widgets: [{ id: "w1", closeable: false }, { id: "w2", closeable: true }, { id: "w3", closeable: null }] }]
+    });
+
+    assert.equal(cols[0].widgets[0].removable, false, "the server can protect a widget from deletion");
+    assert.equal(cols[0].widgets[1].removable, true);
+    assert.equal(cols[0].widgets[2].removable, true, "an unset flag keeps the client default");
+});
+
+test("normalize columns keeps the instance id the server issued and makes one up only when it is missing", () => {
+    const { wxapp } = load();
+    const cols = wxapp.dashboardModel.normalizeColumns({
+        columns: [{ id: "c1", widgets: [{ id: "w1", instanceId: "stored-1" }, { id: "w2" }] }]
+    });
+
+    assert.equal(cols[0].widgets[0].instanceId, "stored-1", "the widget stays recognisable across reloads");
+    assert.equal(cols[0].widgets[1].instanceId.startsWith("wx_inst_c1_1_"), true);
+});
+
 test("normalize columns carries the widget name from title or label", () => {
     const { wxapp } = load();
     const cols = wxapp.dashboardModel.normalizeColumns({

@@ -13,8 +13,9 @@ webexpress.webapp = webexpress.webapp || {}
  */
 webexpress.webapp.dashboardModel = {
     /**
-     * Normalises a dashboard response into its columns and widgets, assigning a
-     * fresh instance id to each widget. Returns null when the response carries no
+     * Normalises a dashboard response into its columns and widgets, keeping the
+     * instance id the server issued and making up a fresh one for a widget that
+     * arrives without. Returns null when the response carries no
      * columns, so the caller can leave the current layout untouched, which
      * matches the historical behaviour.
      * @param {object} data - The raw dashboard response.
@@ -36,7 +37,8 @@ webexpress.webapp.dashboardModel = {
             badgeColor: col.badgeColor || null,
             badgeStyle: col.badgeStyle || null,
             widgets: (col.widgets || []).map((w, i) => ({
-                instanceId: "wx_inst_" + col.id + "_" + i + "_" + Date.now(),
+                // a server-issued id survives reloads, so an open dialog still finds its widget
+                instanceId: w.instanceId || "wx_inst_" + col.id + "_" + i + "_" + Date.now(),
                 id: w.id,
                 // the widget name is authored either as title or label; carry both
                 // so the card header and the settings dialog show the same value
@@ -45,7 +47,8 @@ webexpress.webapp.dashboardModel = {
                 icon: w.icon || null,
                 image: w.image || null,
                 color: w.color || null,
-                removable: w.removable !== false,
+                // the REST widget serializes the flag as closeable
+                removable: w.closeable !== false && w.removable !== false,
                 movable: w.movable !== false,
                 // an optional trailing badge in the widget header (e.g. an item count)
                 badge: w.badge != null ? String(w.badge) : null,

@@ -54,9 +54,9 @@ webexpress.webui.DashboardWidgets.register("widget_scrum_velocity", {
             host.appendChild(state);
         }
 
+        // the controller creates the chart once the card is attached, which also
+        // tears it down with the card; a hand-made instance would be built twice
         container.appendChild(host);
-
-        new webexpress.webapp.ScrumVelocityCtrl(host);
     },
 
     /**

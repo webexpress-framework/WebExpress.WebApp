@@ -18,6 +18,14 @@ namespace WebExpress.WebApp.WebRestApi
         public string Id { get; set; }
 
         /// <summary>
+        /// Gets or sets the id of this one widget on the board, as the endpoint
+        /// handed it out or as the client made it up for a newly added widget.
+        /// Storing it keeps the widget recognisable across reloads.
+        /// </summary>
+        [JsonPropertyName("instanceId")]
+        public string InstanceId { get; set; }
+
+        /// <summary>
         /// Gets or sets the widget name.
         /// </summary>
         [JsonPropertyName("title")]

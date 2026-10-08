@@ -25,7 +25,7 @@ The controller bootstraps from a host element carrying the `wx-webapp-dashboard`
 
 | Attribute                    | Enables                                                                                     |
 |------------------------------|---------------------------------------------------------------------------------------------|
-| `data-editable-column`       | The column "…" menu entries **Rename**, **Size** and **Color**.                             |
+| `data-editable-column`       | The column "…" menu entries **Rename**, **Equal column widths** and **Color**, and the width dividers between the columns. |
 | `data-movable-column`        | The ⠿ move handle and drag-and-drop column reordering (with before/after drop indicators).  |
 | `data-deletable-column`      | The column "…" menu entry **Delete**.                                                       |
 | `data-addable-column`        | The board "…" menu entry **New column**.                                                    |
@@ -37,10 +37,18 @@ Each attribute is emitted only when its `ControlDataDashboard` flag is set, so a
 ## Menus
 
 - **Board "…" menu** — adds a **New column** (`data-addable-column`) and lists the **addable items** the server declares in `availableWidgets` (`data-addable-widget`). Only server-declared widget types can be placed on the board.
-- **Column "…" menu** — **Rename** (inline edit), **Size** (drill-down: Auto / 25 % / 33 % / 50 % / 66 % / 75 %), **Color** (drill-down palette + None), **Delete**. Delete asks first through the framework confirmation dialog (`webexpress.webui.ModalConfirm`, the same one the tabs use), naming the column and its widgets; the column is only removed and persisted once confirmed.
+- **Column "…" menu** — **Rename** (inline edit), **Equal column widths**, **Color** (drill-down palette + None), **Delete**. Delete asks first through the framework confirmation dialog (`webexpress.webui.ModalConfirm`, the same one the tabs use), naming the column and its widgets; the column is only removed and persisted once confirmed.
 - **Widget "…" menu** — **Settings** (`data-configurable-widget`) and **Remove** (when the widget is removable). Remove asks first through the same confirmation dialog, naming the widget.
 
-Adding a column rebalances every column to an equal `1fr` fraction, so the existing columns make room for the new one.
+## Column Widths
+
+A column width is a **weight** (`fr`): the columns share the row among themselves, so the board always fills it exactly, however many columns there are and whatever widths are set. Percentages could not guarantee that, since each column claimed its share regardless of the others.
+
+- **Divider** (`data-editable-column`) — between every two columns. Dragging it moves width from one of the two to the other only, so the other columns keep their widths. A column cannot be dragged narrower than 160 px. The divider is a focusable `role="separator"`: the arrow keys move it in steps of a twentieth of the pair, and a double click splits the pair evenly. The width is persisted once the pointer is released.
+- **Equal column widths** (column "…" menu) — sets every column to `1fr`.
+- **New column** — gets the width of an average column; the existing columns keep their proportions.
+
+Sizes the server sends as percentages, `*` or `auto` are converted in proportion: a board that fitted keeps its look, an overfull one (e.g. three columns at `75%`) is scaled down until it fits. The first change made through the board stores every column as `fr`.
 
 While a column is dragged by its grip, the header under the pointer shows an insertion indicator on the edge where the column would land (`wx-board-col-drop-before` / `wx-board-col-drop-after`) and the dragged header dims (`wx-board-col-dragging`); after the drop the header at the new position briefly flashes (`wx-board-col-moved`, respecting `prefers-reduced-motion`) — the same feedback as the kanban.
 
@@ -85,7 +93,7 @@ Supported field `type`s: `text`, `number` (`min` / `max` / `step`), `select` (`o
         {
             "id": "info", "label": "Locations", "size": "33%", "color": "#0d6efd", "badge": "2", "badgeColor": "text-bg-secondary",
             "widgets": [
-                { "id": "widget_info", "title": "Scumm Bar", "color": "brown", "badge": "New", "badgeColor": "text-bg-success", "params": { "title": "Scumm Bar", "desc": "…" } }
+                { "id": "widget_info", "instanceId": "3f9c…", "title": "Scumm Bar", "color": "brown", "badge": "New", "badgeColor": "text-bg-success", "params": { "title": "Scumm Bar", "desc": "…" } }
             ]
         }
     ],
@@ -96,6 +104,12 @@ Supported field `type`s: `text`, `number` (`min` / `max` / `step`), `select` (`o
 ```
 
 `availableWidgets` is **server-owned**: only the listed widget type ids may be added. Each entry's `title` / `icon` / `description` override the client widget registry for the add-menu display; when omitted the registry default (and its i18n title) is used. The client still resolves the render function from its registry by `id`.
+
+`id` names the widget type, `instanceId` the one widget on the board. Hand out an `instanceId` and store the one the board update sends back: it keeps a widget recognisable across reloads, so a delete confirmation or settings dialog still open during a refresh acts on the right widget. Without it the client makes up a new id on every load, and such a dialog then does nothing.
+
+A widget may carry `"movable": false` and `"closeable": false`; both default to `true`, so a widget the server leaves untouched can be moved and removed.
+
+The `PUT`s run one after the other in the order of the changes, since each one carries a full snapshot. A refused `PUT` is reported through the `ErrorChannel`, and the stored board is loaded again. A refresh that arrives while a `PUT` is in flight waits until the queue is through.
 
 ### PUT — column change
 
@@ -122,7 +136,7 @@ Add, delete, reorder or reconfigure a widget. The full **board** (columns with t
         {
             "id": "crew", "title": "Crew", "size": "1fr", "color": "#fd7e14",
             "widgets": [
-                { "id": "widget_scrum_velocity", "title": "Crew Velocity", "color": "#20c997", "params": { "maxSprints": "8" } }
+                { "id": "widget_scrum_velocity", "instanceId": "3f9c…", "title": "Crew Velocity", "color": "#20c997", "params": { "maxSprints": "8" } }
             ]
         }
     ]

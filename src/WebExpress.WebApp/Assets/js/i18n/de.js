@@ -403,27 +403,13 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "tab.delete.confirm": "Löschen",
     "tab.delete.error": "Der Tab konnte nicht gelöscht werden. Bitte versuchen Sie es erneut.",
 
-    // columns (dashboard / kanban)
-    "column.edit": "Spalte umbenennen",
-    "column.move": "Spalte verschieben",
-    "column.delete": "Spalte löschen",
-    "column.delete.title": "Spalte löschen?",
-    "column.delete.confirm": "Löschen",
-    "column.add": "Neue Spalte",
-    "column.new": "Neue Spalte",
-    "column.menu": "Spaltenoptionen",
-    "column.size": "Größe",
-    "column.size.auto": "Auto",
-    "column.color": "Farbe",
-    "column.color.none": "Keine",
+    // back entry of drill-down menus (tab)
     "back": "Zurück",
 
-    // dashboard board and widget menus
-    "dashboard.menu": "Optionen",
-    "dashboard.column.delete.message": "Möchten Sie die Spalte „{name}“ mit allen Widgets löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
-    "dashboard.widget.add": "Element hinzufügen",
-    "dashboard.widget.menu": "Optionen",
-    "dashboard.widget.settings": "Einstellungen",
+    "dashboard.heading": "Dashboard",
+    "dashboard.update.rejected": "Die Änderung wurde nicht gespeichert und zurückgenommen.",
+
+    // dashboard widgets built on webapp controls
     "dashboard.widget.scrum_velocity.title": "Velocity",
     "dashboard.widget.scrum_velocity.max_sprints": "Anzahl Sprints",
 
@@ -436,24 +422,8 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "kanban.status.move": "Karte verschieben",
     "kanban.status.cancel": "Abbrechen",
     "kanban.status.label": "Status",
-    "kanban.menu": "Optionen",
-    "kanban.column.delete.message": "Möchten Sie die Spalte „{name}“ mit allen Karten löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
     "kanban.heading": "Board",
     "kanban.update.rejected": "Die Änderung wurde nicht gespeichert und zurückgenommen.",
-    "board.settings": "Einstellungen",
-    "swimlane.add": "Neue Swimlane",
-    "swimlane.new": "Neue Swimlane",
-    "swimlane.menu": "Swimlane-Optionen",
-    "swimlane.edit": "Swimlane umbenennen",
-    "swimlane.color": "Farbe",
-    "swimlane.color.none": "Keine",
-    "swimlane.delete": "Swimlane löschen",
-    "swimlane.delete.title": "Swimlane löschen?",
-    "swimlane.delete.message": "Möchten Sie die Swimlane „{name}“ mit allen Karten löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
-    "swimlane.delete.confirm": "Löschen",
-    "swimlane.settings": "Einstellungen",
-    "swimlane.moveup": "Nach oben verschieben",
-    "swimlane.movedown": "Nach unten verschieben",
 
     // tags
     "tag.title": "Schlagwörter",

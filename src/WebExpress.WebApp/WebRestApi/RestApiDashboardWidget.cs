@@ -16,6 +16,17 @@ namespace WebExpress.WebApp.WebRestApi
         public virtual string Id { get; private set; }
 
         /// <summary>
+        /// Gets or sets the id of this one widget on the board. The widget id
+        /// names the type and is shared by every widget of that type, so a
+        /// client that keeps a widget across a reload - an open delete
+        /// confirmation or settings dialog - needs this to find it again. The
+        /// board update sends it back for the endpoint to store; left unset,
+        /// the client makes up a new one on every load.
+        /// </summary>
+        [JsonPropertyName("instanceId")]
+        public string InstanceId { get; set; }
+
+        /// <summary>
         /// Gets or sets the widget title.
         /// </summary>
         [JsonPropertyName("title")]
@@ -34,10 +45,11 @@ namespace WebExpress.WebApp.WebRestApi
         public bool? Movable { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether the widget can be closed.
+        /// Gets or sets a value indicating whether the widget can be closed. Left
+        /// unset, the widget stays closeable, as on the client.
         /// </summary>
         [JsonPropertyName("closeable")]
-        public bool Closeable { get; set; }
+        public bool? Closeable { get; set; }
 
         /// <summary>
         /// Gets or sets the optional badge text shown at the trailing edge of the

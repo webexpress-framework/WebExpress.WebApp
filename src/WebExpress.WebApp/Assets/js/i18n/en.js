@@ -403,27 +403,13 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "tab.delete.confirm": "Delete",
     "tab.delete.error": "The tab could not be deleted. Please try again.",
 
-    // columns (dashboard / kanban)
-    "column.edit": "Rename column",
-    "column.move": "Reorder column",
-    "column.delete": "Delete column",
-    "column.delete.title": "Delete column?",
-    "column.delete.confirm": "Delete",
-    "column.add": "New column",
-    "column.new": "New column",
-    "column.menu": "Column options",
-    "column.size": "Size",
-    "column.size.auto": "Auto",
-    "column.color": "Color",
-    "column.color.none": "None",
+    // back entry of drill-down menus (tab)
     "back": "Back",
 
-    // dashboard board and widget menus
-    "dashboard.menu": "Options",
-    "dashboard.column.delete.message": "Delete column “{name}” and all of its widgets? This action cannot be undone.",
-    "dashboard.widget.add": "Add item",
-    "dashboard.widget.menu": "Options",
-    "dashboard.widget.settings": "Settings",
+    "dashboard.heading": "Dashboard",
+    "dashboard.update.rejected": "The change was not saved and has been taken back.",
+
+    // dashboard widgets built on webapp controls
     "dashboard.widget.scrum_velocity.title": "Velocity",
     "dashboard.widget.scrum_velocity.max_sprints": "Number of sprints",
 
@@ -436,24 +422,8 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "kanban.status.move": "Move card",
     "kanban.status.cancel": "Cancel",
     "kanban.status.label": "Status",
-    "kanban.menu": "Options",
-    "kanban.column.delete.message": "Delete column “{name}” and all of its cards? This action cannot be undone.",
     "kanban.heading": "Board",
     "kanban.update.rejected": "The change was not saved and has been taken back.",
-    "board.settings": "Settings",
-    "swimlane.add": "New swimlane",
-    "swimlane.new": "New swimlane",
-    "swimlane.menu": "Swimlane options",
-    "swimlane.edit": "Rename swimlane",
-    "swimlane.color": "Color",
-    "swimlane.color.none": "None",
-    "swimlane.delete": "Delete swimlane",
-    "swimlane.delete.title": "Delete swimlane?",
-    "swimlane.delete.message": "Delete swimlane “{name}” and all of its cards? This action cannot be undone.",
-    "swimlane.delete.confirm": "Delete",
-    "swimlane.settings": "Settings",
-    "swimlane.moveup": "Move up",
-    "swimlane.movedown": "Move down",
 
     // tags
     "tag.title": "Tags",

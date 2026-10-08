@@ -157,8 +157,8 @@ test("a card move refused without a reason falls back to the board's own words",
 
     // assert
     assert.equal(popups.length, 1);
-    // the harness translation answers with the key, the page with the bundle text
-    assert.match(popups[0].notification.message, /kanban\.update\.rejected|taken back/);
+    // the harness loads no webapp bundle, so the board's english fallback is what shows
+    assert.equal(popups[0].notification.message, "The change was not saved and has been taken back.");
 });
 
 test("a card move the server refuses is taken back and reported", async () => {

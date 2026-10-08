@@ -9,6 +9,12 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
     _abortController = null;
     _viewState = null;
 
+    // every save carries a full board snapshot, so the saves run one after the
+    // other: an older snapshot overtaking a newer one would store the older layout
+    _saveQueue = Promise.resolve();
+    _pendingSaves = 0;
+    _reloadDeferred = false;
+
     /**
      * Initializes the REST Dashboard control.
      * @param {HTMLElement} element - The root element.
@@ -41,7 +47,7 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
             // an external change of the service's domains re-queries and
             // flashes, so changes made by other users re-render standalone too
             const dataChanges = webexpress.webapp.DataChangeSubscription.attachReload(
-                [this._service], () => this._receiveData(), element);
+                [this._service], () => this._reload(), element);
             if (dataChanges) {
                 (element._wxCleanup = element._wxCleanup || []).push(() => dataChanges.detach());
             }
@@ -147,6 +153,13 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
      * @param {Object} data - The json payload containing columns and layout.
      */
     updateData(data) {
+        // a board loaded while a save is in flight may predate it and would undo the
+        // user's change on screen, so it is dropped and loaded again once saved
+        if (this._pendingSaves > 0) {
+            this._reloadDeferred = true;
+            return;
+        }
+
         // the server owns which widget types the board may add
         this._availableWidgets = webexpress.webapp.dashboardModel.normalizeAvailableWidgets(data);
 
@@ -190,11 +203,60 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
             return;
         }
 
-        this._service.update(payload).then((r) => {
-            if (!r.ok) {
-                console.error("dashboard update state failed", r.error);
-            }
+        this._pendingSaves++;
+        this._saveQueue = this._saveQueue
+            .then(() => this._service.update(payload))
+            .then((r) => {
+                if (!r.ok) {
+                    this._reject(payload.action, r);
+                }
+            })
+            // a rejected link would stall every later save of the queue
+            .catch((error) => console.error("dashboard update state failed", error))
+            .finally(() => {
+                this._pendingSaves--;
+                if (this._pendingSaves === 0 && this._reloadDeferred) {
+                    this._reloadDeferred = false;
+                    this._reload();
+                }
+            });
+    }
+
+    /**
+     * Takes back a change the server refused. The board shows a change before it
+     * is stored, so a refusal leaves the screen ahead of the server: the stored
+     * board is loaded back once the queued saves are through, and the user is told
+     * why the change snapped back.
+     * @param {string} action - The change that was refused.
+     * @param {object} result - The failed service result.
+     */
+    _reject(action, result) {
+        console.error(`dashboard ${action} failed:`, webexpress.webapp.ServiceResult.describe(result, { action: action }));
+
+        webexpress.webapp.ErrorChannel.present(result, {
+            service: this._service.name,
+            heading: this._i18n("webexpress.webapp:dashboard.heading", "Dashboard"),
+            message: this._i18n("webexpress.webapp:dashboard.update.rejected", "The change was not saved and has been taken back.")
         });
+
+        this._dispatch(webexpress.webui.Event.DATA_ERROR_EVENT, { action: action, error: result.error });
+        this._reloadDeferred = true;
+    }
+
+    /**
+     * Loads the stored board again, unless a save is in flight; then the load
+     * waits until the queue is through, so it cannot revert a change on screen.
+     */
+    _reload() {
+        if (this._pendingSaves > 0) {
+            this._reloadDeferred = true;
+            return;
+        }
+        if (this._viewState) {
+            this._viewState.reload(this._resource);
+            return;
+        }
+        this._receiveData();
     }
 
     /**

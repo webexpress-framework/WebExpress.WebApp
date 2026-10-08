@@ -57,9 +57,9 @@ namespace WebExpress.WebApp.WebControl
 
         /// <summary>
         /// Gets or sets a value indicating whether the board offers the "…" menu
-        /// to add a new widget (dashboard item). The available item types are
-        /// restricted by <see cref="AvailableWidgets"/> when set, otherwise every
-        /// widget the client registry flags as available is offered.
+        /// to add a new widget (dashboard item). Only the item types the REST
+        /// endpoint returns from RestApiDashboard.RetrieveAvailableWidgets are
+        /// offered; without any, the menu offers no widget.
         /// </summary>
         public Func<IRenderControlContext, bool> AddableWidget { get; set; }
 
