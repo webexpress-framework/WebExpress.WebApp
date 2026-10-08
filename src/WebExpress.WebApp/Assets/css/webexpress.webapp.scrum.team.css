@@ -1,0 +1,196 @@
+.wx-scrum-team {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    position: relative;
+}
+
+/* the avatar circles, the +N chip and the overlap come from the
+   webexpress.webui avatar-group styles; these rules only reset the buttons and
+   keep the points badge that the avatar group itself does not carry */
+.wx-scrum-team-avatar,
+.wx-scrum-team-more {
+    cursor: pointer;
+    padding: 0;
+    font: inherit;
+    line-height: 1;
+}
+
+/* the points badge must escape the circle, so this avatar opts out of the
+   avatar-group clipping */
+.wx-scrum-team-avatar {
+    overflow: visible;
+}
+
+.wx-scrum-team-badge {
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 3px;
+    border-radius: 999px;
+    border: 1px solid var(--wx-body-bg, #fff);
+    background: var(--wx-webapp-primary, var(--wx-primary, #0d6efd));
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 13px;
+    text-align: center;
+    font-family: var(--wx-webapp-font-mono, var(--wx-font-monospace, ui-monospace, SFMono-Regular, Menlo, monospace));
+}
+
+.wx-scrum-team-total {
+    margin-left: 10px;
+    border: 1px solid var(--wx-webapp-border, var(--wx-border-color, #dee2e6));
+    background: var(--wx-webapp-surface-2, var(--wx-tertiary-bg, #eef1f4));
+    border-radius: 999px;
+    padding: 0;
+    cursor: pointer;
+}
+
+.wx-scrum-team-total:hover {
+    border-color: var(--wx-webapp-primary, var(--wx-primary, #0d6efd));
+}
+
+.wx-scrum-team-total-pill {
+    display: inline-block;
+    padding: 4px 9px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--wx-webapp-text-2, var(--wx-body-color, #495057));
+    font-family: var(--wx-webapp-font-mono, var(--wx-font-monospace, ui-monospace, SFMono-Regular, Menlo, monospace));
+}
+
+.wx-scrum-team-total:hover .wx-scrum-team-total-pill {
+    color: var(--wx-webapp-primary, var(--wx-primary, #0d6efd));
+}
+
+.wx-scrum-team-empty-row {
+    font-size: 12.5px;
+    color: var(--wx-webapp-text-3, var(--wx-secondary-color, #6c757d));
+}
+
+/* modal table */
+.wx-scrum-team-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.wx-scrum-team-table thead th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--wx-webapp-text-3, var(--wx-secondary-color, #6c757d));
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--wx-webapp-divider, var(--wx-border-color, #dee2e6));
+}
+
+.wx-scrum-team-table tbody td {
+    padding: 8px 10px;
+    border-bottom: 1px dashed var(--wx-webapp-divider, var(--wx-border-color-translucent, #e9ecef));
+    vertical-align: middle;
+}
+
+.wx-scrum-team-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.wx-scrum-team-table tfoot td {
+    padding: 10px;
+    border-top: 2px solid var(--wx-webapp-divider, var(--wx-border-color, #dee2e6));
+    font-weight: 700;
+    color: var(--wx-webapp-text, var(--wx-body-color, #212529));
+}
+
+.wx-scrum-team-points-col {
+    text-align: right;
+    white-space: nowrap;
+    width: 1%;
+    font-family: var(--wx-webapp-font-mono, var(--wx-font-monospace, ui-monospace, SFMono-Regular, Menlo, monospace));
+}
+
+.wx-scrum-team-person {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.wx-scrum-team-avatar-sm {
+    width: 26px;
+    height: 26px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    border: 1px solid var(--wx-webapp-border, var(--wx-border-color, #dee2e6));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9.5px;
+    font-weight: 700;
+    color: #1d2230;
+    object-fit: cover;
+}
+
+.wx-scrum-team-person-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+
+.wx-scrum-team-person-name {
+    color: var(--wx-webapp-text, var(--wx-body-color, #212529));
+    font-weight: 500;
+}
+
+.wx-scrum-team-person-team {
+    font-size: 11px;
+    color: var(--wx-webapp-text-3, var(--wx-secondary-color, #6c757d));
+}
+
+.wx-scrum-team-points-badge {
+    display: inline-block;
+    min-width: 26px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--wx-webapp-surface-2, var(--wx-tertiary-bg, #eef1f4));
+    border: 1px solid var(--wx-webapp-border, var(--wx-border-color, #dee2e6));
+    color: var(--wx-webapp-text-2, var(--wx-body-color, #495057));
+    font-weight: 700;
+}
+
+.wx-scrum-team-points-badge.done {
+    background: #198754;
+    border-color: #198754;
+    color: #fff;
+}
+
+.wx-scrum-team-progress {
+    display: block;
+    margin-top: 5px;
+    width: 140px;
+    max-width: 100%;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--wx-webapp-surface-2, var(--wx-tertiary-bg, #eef1f4));
+    overflow: hidden;
+}
+
+.wx-scrum-team-progress > span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: #198754;
+}
+
+.wx-scrum-team-empty {
+    padding: 16px;
+    text-align: center;
+    color: var(--wx-webapp-text-3, var(--wx-secondary-color, #6c757d));
+    font-size: 12.5px;
+}

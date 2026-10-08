@@ -40,9 +40,9 @@ namespace WebExpress.WebApp.WebRestApi
         [Method(RequestMethod.GET)]
         public IResponse Retrieve(IRequest request)
         {
-            var defaultPageSize = "25";
-            var pageNumber = Convert.ToInt32(request.GetParameter("p")?.Value ?? "0");
-            var pageSize = Convert.ToInt32(request.GetParameter("l")?.Value ?? defaultPageSize);
+            const int defaultPageSize = 25;
+            var pageNumber = request.ParseIntParameter("p", 0);
+            var pageSize = request.ParseIntParameter("l", defaultPageSize);
             var filter = request.GetParameter("q")?.Value ?? string.Empty;
             var wql = request.GetParameter("wql")?.Value ?? null;
             var query = new Query<TIndexItem>() as IQuery<TIndexItem>;
@@ -84,7 +84,7 @@ namespace WebExpress.WebApp.WebRestApi
             }
             catch (Exception ex)
             {
-                return new ResponseBadRequest(new StatusMessage($"Error processing request. {ex}"));
+                return RestApiFault.BadRequest(request, ex, "Error processing request.");
             }
         }
 

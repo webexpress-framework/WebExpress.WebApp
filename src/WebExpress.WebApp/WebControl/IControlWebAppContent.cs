@@ -3,7 +3,7 @@
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Represents the content control for a web application.
+    /// Contract for the main content area of a WebApp page.
     /// </summary>
     public interface IControlWebAppContent : IControl
     {

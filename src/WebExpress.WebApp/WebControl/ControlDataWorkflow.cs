@@ -1,0 +1,148 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Net;
+using WebExpress.WebApp.WebData;
+using WebExpress.WebCore.WebHtml;
+using WebExpress.WebCore.WebUri;
+using WebExpress.WebUI.WebControl;
+using WebExpress.WebUI.WebPage;
+
+namespace WebExpress.WebApp.WebControl
+{
+    /// <summary>
+    /// Represents a control panel for API workflow interactions.
+    /// </summary>
+    /// <remarks>
+    /// The control is ViewState-capable: bound to a resource of an enclosing
+    /// <see cref="ControlViewState"/> ViewState through <c>Resource&lt;TResource&gt;()</c>,
+    /// it emits only the <c>data-wx-resource</c> binding and renders the slice the
+    /// ViewState loads centrally, while the debounced autosave still persists through
+    /// the ViewState's data service; left unbound it owns its <c>wx-service</c> island
+    /// and loads itself (standalone). The path is chosen automatically by
+    /// <see cref="DataIslandExtensions.EmitDataIslands"/>.
+    /// </remarks>
+    public class ControlDataWorkflow : ControlPanel, IControlDataWorkflow, IDataIsland, IViewStateBound
+    {
+        /// <summary>
+        /// Gets or sets the resolver of the ViewState resource the control renders. Set type-safely
+        /// through <c>Resource&lt;TResource&gt;()</c>. When null, the control is standalone and
+        /// owns its own islands.
+        /// </summary>
+        public Func<IRenderControlContext, string> ResourceFactory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional ViewState id the control binds to, emitted as the
+        /// <c>data-wx-viewstate</c> attribute. When null, the control resolves its ViewState by the
+        /// resource it binds to.
+        /// </summary>
+        public Func<IRenderControlContext, string> ViewState { get; set; }
+
+        /// <summary>
+        /// Gets the data service descriptors of the control, emitted together as
+        /// the data-wx-service island that the JavaScript engine consumes in
+        /// preference to the legacy data-uri fallback, which keeps the endpoint
+        /// and parameter knowledge authored in C#. When empty, the control
+        /// behaves exactly as before and the client uses its legacy descriptor.
+        /// See WebExpress/docs/view-state-service.md.
+        /// </summary>
+        public IList<Func<IRenderControlContext, DataServiceDescriptor>> ServiceFactories { get; } = [];
+
+        /// <summary>
+        /// Gets or sets the single data service descriptor, as a convenience for
+        /// the common control with exactly one service. Reading returns the
+        /// first declared service, assigning replaces all declared services.
+        /// </summary>
+        public Func<IRenderControlContext, DataServiceDescriptor> ServiceFactory
+        {
+            get => ServiceFactories.Count > 0 ? ServiceFactories[0] : null;
+            set
+            {
+                ServiceFactories.Clear();
+
+                if (value != null)
+                {
+                    ServiceFactories.Add(value);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the optional template reference, emitted as the
+        /// data-wx-template attribute that the client Templates registry
+        /// resolves into a registered view.
+        /// </summary>
+        public Func<IRenderControlContext, string> TemplateFactory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional initial state, emitted as the data-wx-state island.
+        /// </summary>
+        public Func<IRenderControlContext, DataState> StateFactory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the cell size of the designer's background grid, in canvas
+        /// units. A value of 0 (the default) leaves the grid off; the grid is a
+        /// layout aid, so it is shown only where it is asked for.
+        /// </summary>
+        public Func<IRenderControlContext, int> Grid { get; set; }
+
+        /// <summary>
+        /// Gets or sets whether dragging a state or a waypoint snaps it to the grid.
+        /// Has no effect while <see cref="Grid"/> is 0.
+        /// </summary>
+        public Func<IRenderControlContext, bool> GridSnap { get; set; }
+
+        /// <summary>
+        /// Gets or sets whether the designer takes the height its host offers instead of
+        /// bringing one of its own.
+        /// </summary>
+        /// <remarks>
+        /// The canvas and the properties pane scroll on their own, which needs a definite
+        /// height, and a host rarely has one - hence the self-imposed default of the
+        /// <c>--wx-we-host-height</c> custom property. That is the right shape for a designer
+        /// shown among other blocks on a page. Where the designer <em>is</em> the view, it is
+        /// the wrong one: a canvas with a height of its own inside an application-shell pane
+        /// either leaves dead space below it or reaches past the pane, which then scrolls
+        /// around a canvas that already pans.
+        ///
+        /// A host that is a flex column - which the WebApp content panel becomes on its own
+        /// for a filling control - drives the height. A host that hands nothing down falls
+        /// back to the self-imposed height, never to the content: the panes only scroll while
+        /// the designer is bounded.
+        /// </remarks>
+        public Func<IRenderControlContext, bool> Fill { get; set; } = _ => false;
+
+        /// <summary>
+        /// Initializes a new instance of the class.
+        /// </summary>
+        /// <param name="id">The control id.</param>
+        public ControlDataWorkflow(string id = null)
+            : base(id ?? RandomId.Create())
+        {
+        }
+
+        /// <summary>
+        /// Converts the control to an HTML representation.
+        /// </summary>
+        /// <param name="renderContext">The context in which the control is rendered.</param>
+        /// <param name="visualTree">The visual tree.</param>
+        /// <returns>An HTML node representing the rendered control.</returns>
+        public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
+        {
+
+            var grid = Grid?.Invoke(renderContext) ?? 0;
+            var fill = Fill?.Invoke(renderContext) ?? false;
+
+            var html = new HtmlElementTextContentDiv()
+            {
+                Id = Id,
+                Class = Css.Concatenate("wx-webapp-workflow-editor", fill ? "wx-fill" : null, GetClasses(renderContext)),
+                Style = GetStyles(renderContext)
+            }
+                .AddUserAttribute("data-grid", grid > 0 ? grid.ToString() : null)
+                .AddUserAttribute("data-grid-snap", grid > 0 && (GridSnap?.Invoke(renderContext) ?? false) ? "true" : null)
+                .EmitDataIslands(this, renderContext);
+
+            return html;
+        }
+    }
+}

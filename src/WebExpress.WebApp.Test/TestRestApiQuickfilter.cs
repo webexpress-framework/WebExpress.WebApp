@@ -2,6 +2,8 @@
 using WebExpress.WebApp.WebRestApi;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebIndex.Queries;
+using WebExpress.WebUI.WebControl;
+using WebExpress.WebUI.WebIcon;
 
 namespace WebExpress.WebApp.Test
 {
@@ -43,7 +45,11 @@ namespace WebExpress.WebApp.Test
             return _testData.Select(x => new RestApiQuickfilterItem()
             {
                 Id = x.Id.ToString(),
-                Name = x.Key
+                Name = x.Key,
+                Icon = new IconStar(),
+                Color = new PropertyColorButton(TypeColorButton.Success),
+                Badge = x.Names.Count().ToString(),
+                BadgeColor = new PropertyColorBackgroundBadge(TypeColorBackgroundBadge.Danger)
             });
         }
     }

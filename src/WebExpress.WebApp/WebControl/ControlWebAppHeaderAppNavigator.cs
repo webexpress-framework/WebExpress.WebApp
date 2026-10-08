@@ -12,7 +12,7 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// App navigator for a WebApp.
+    /// Renders the app navigator in the WebApp header, the control for switching between applications.
     /// </summary>
     public class ControlWebAppHeaderAppNavigator : Control, IControlWebAppHeaderAppNavigator
     {
@@ -133,12 +133,16 @@ namespace WebExpress.WebApp.WebControl
                 {
                     Classes = ["wx-appnavigator"],
                     Icon = _ => new ImageIcon(application?.Icon?.ToUri(), new PropertySizeIcon(1, TypeSizeUnit.Em)),
+                    // the menu button shows the logo alone, so the application name is its name
+                    Tooltip = _ => I18N.Translate(renderContext, application?.ApplicationName)
                 }
                     .Add(items)
                 : new ControlImage(Id)
                 {
                     Classes = ["wx-appnavigator"],
-                    Uri = _ => application?.Icon?.ToUri()
+                    Uri = _ => application?.Icon?.ToUri(),
+                    // the logo stands for the application: its name is the text alternative
+                    Alt = _ => I18N.Translate(renderContext, application?.ApplicationName)
                 };
 
             return navigatorCtrl?.Render(renderContext, visualTree);
@@ -155,17 +159,20 @@ namespace WebExpress.WebApp.WebControl
 
             var preferences = Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppPreferences>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ));
 
             var primary = Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppPrimary>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ));
 
             var secondary = Secondary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppSecondary>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ));
 
             if (preferences.Any() || primary.Any() || secondary.Any())

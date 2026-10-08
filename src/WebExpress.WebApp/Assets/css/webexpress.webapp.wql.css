@@ -13,8 +13,35 @@
 
 .wx-wql .wx-wql-input {
     resize: vertical;
-    overflow: auto; 
+    overflow: auto;
     min-height: 1.5em;
+}
+
+/* clear button: a subtle themed xmark that shares the field border (no left
+   border, so it reads as part of the input) and turns danger-red on hover */
+.wx-wql-clear {
+    border: 1px solid var(--wx-border-color, #ced4da);
+    border-left: none;
+    background-color: var(--wx-body-bg, #fff);
+    color: var(--wx-secondary-color, #6c757d);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.65rem;
+    line-height: 1;
+    transition: color 0.15s, background-color 0.15s;
+}
+
+.wx-wql-clear:hover,
+.wx-wql-clear:focus {
+    color: var(--wx-danger, #dc3545);
+    background-color: var(--wx-tertiary-bg, rgba(0, 0, 0, 0.03));
+}
+
+/* keep the focus ring subtle and on-brand */
+.wx-wql-clear:focus {
+    box-shadow: none;
+    outline: none;
 }
 
 /* show error if input is marked invalid */
@@ -51,12 +78,12 @@ div.is-invalid + .wx-wql-error {
 
 /* grammar/keyword elements */
 .wx-wql .keyword    { color: #005cc5; font-weight: bold; }
-.wx-wql .logical    { color: var(--bs-primary); font-weight: bold; }
-.wx-wql .operator   { color: var(--bs-danger); font-weight: bold; }
+.wx-wql .logical    { color: var(--wx-primary); font-weight: bold; }
+.wx-wql .operator   { color: var(--wx-danger); font-weight: bold; }
 .wx-wql .function   { color: #22863a; font-weight: bold; }
-.wx-wql .attribute  { color: var(--bs-success); }
+.wx-wql .attribute  { color: var(--wx-success); }
 .wx-wql .number     { color: #032f62; }
-.wx-wql .string     { color: var(--bs-warning); }
+.wx-wql .string     { color: var(--wx-warning); }
 .wx-wql .comment    { color: #6a737d; font-style: italic; }
 .wx-wql .comma      { color: #586069; }
 .wx-wql .paren      { color: #586069; }

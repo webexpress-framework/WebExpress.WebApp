@@ -4,6 +4,7 @@ using System.Text.Json;
 using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebAttribute;
+using WebExpress.WebCore.WebCluster;
 using WebExpress.WebCore.WebIdentity;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
@@ -30,15 +31,38 @@ namespace WebExpress.WebApp.WebRestApi
         protected virtual int BaseLockoutDelaySeconds => 30;
 
         /// <summary>
-        /// Gets the maximum number of failed attempts allowed before the account is permanently locked.
+        /// Gets the maximum number of failed attempts allowed before the account is hard-locked.
         /// Defaults to 5.
         /// </summary>
         protected virtual int PermanentLockoutAttempts => 5;
 
         /// <summary>
-        /// Tracks failed login attempts per user.
+        /// Gets how long, in seconds, an account stays hard-locked after reaching
+        /// <see cref="PermanentLockoutAttempts"/>, and equally the idle span after which any
+        /// lockout state is forgotten. Defaults to one hour.
         /// </summary>
-        private static readonly ConcurrentDictionary<string, RestApiSessionFailedAttemptInfo> FailedAttempts = new(StringComparer.OrdinalIgnoreCase);
+        /// <remarks>
+        /// The previous hard lock had no way back short of a restart. Bounding it means an
+        /// account unlocks itself once the attacker gives up, which is the automatic half of the
+        /// unlock story; <see cref="ResetFailedAttempts"/> is the manual half, for an
+        /// administrator who wants to clear a lock at once.
+        /// </remarks>
+        protected virtual int PermanentLockoutDurationSeconds => 60 * 60;
+
+        /// <summary>
+        /// Tracks failed login attempts, keyed by application and user so a lockout is confined
+        /// to the application (tenant) it happened in rather than shared across every application
+        /// in the process. Static because a fresh endpoint instance handles each request, so the
+        /// counters have to outlive the instance.
+        /// </summary>
+        private static readonly ConcurrentDictionary<string, RestApiSessionFailedAttemptInfo> FailedAttempts = new(StringComparer.Ordinal);
+
+        /// <summary>
+        /// The scope failed attempts are kept under in the cluster store. Behind a load balancer
+        /// each attempt may land on another instance; counted per instance, an attacker would get
+        /// the allowance once per instance.
+        /// </summary>
+        internal const string StoreScope = "login";
 
         /// <summary>
         /// Processes a login request containing user credentials.
@@ -60,24 +84,21 @@ namespace WebExpress.WebApp.WebRestApi
                     using var doc = JsonDocument.Parse(bytes);
                     var root = doc.RootElement;
 
-                    if (root.TryGetProperty("username", out var u))
+                    // a document that parses but has the wrong shape - an array at the root,
+                    // a number where the name belongs - is as much a format error as one that
+                    // does not parse; the readers would throw on it, and only the parse is
+                    // covered by the catch below
+                    if (root.ValueKind != JsonValueKind.Object
+                        || !TryReadString(root, "username", out username)
+                        || !TryReadString(root, "password", out password))
                     {
-                        username = u.GetString();
-                    }
-
-                    if (root.TryGetProperty("password", out var p))
-                    {
-                        password = p.GetString();
+                        return FormatError(request);
                     }
                 }
             }
             catch (JsonException)
             {
-                return new RestApiSessionResult
-                {
-                    Success = false,
-                    Message = I18N.Translate("webexpress.webapp:login.error.format")
-                }.ToResponse();
+                return FormatError(request);
             }
 
             if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
@@ -85,13 +106,13 @@ namespace WebExpress.WebApp.WebRestApi
                 return new RestApiSessionResult
                 {
                     Success = false,
-                    Message = I18N.Translate("webexpress.webapp:login.error.empty")
+                    Message = I18N.Translate(request, "webexpress.webapp:login.error.empty")
                 }.ToResponse();
             }
 
             // check if the user is currently locked out
             var normalizedUser = username.Trim();
-            if (IsLockedOut(normalizedUser, out var remainingSeconds))
+            if (IsLockedOut(request, normalizedUser, out var remainingSeconds))
             {
                 if (remainingSeconds == -1)
                 {
@@ -99,7 +120,7 @@ namespace WebExpress.WebApp.WebRestApi
                     return new RestApiSessionResult
                     {
                         Success = false,
-                        Message = I18N.Translate("webexpress.webapp:login.error.locked")
+                        Message = I18N.Translate(request, "webexpress.webapp:login.error.locked")
                     }.ToResponse();
                 }
                 else
@@ -108,7 +129,7 @@ namespace WebExpress.WebApp.WebRestApi
                     return new RestApiSessionResult
                     {
                         Success = false,
-                        Message = string.Format(I18N.Translate("webexpress.webapp:login.error.retryafter"), remainingSeconds),
+                        Message = I18N.Translate(request, "webexpress.webapp:login.error.retryafter", remainingSeconds),
                         RetryAfter = remainingSeconds
                     }.ToResponse();
                 }
@@ -120,30 +141,42 @@ namespace WebExpress.WebApp.WebRestApi
             if (identity is not null)
             {
                 // clear failed attempts on successful login
-                FailedAttempts.TryRemove(normalizedUser, out _);
+                ResetFailedAttempts(request, normalizedUser);
 
-                var sessinId = GenerateSession(identity, request);
+                var tokens = EstablishIdentity(identity, request);
+
+                // valid credentials are not enough: if credentials could not be issued the
+                // client has nothing to authenticate later requests with, so this is a login
+                // failure, not a success with missing credentials
+                if (tokens is null)
+                {
+                    return new RestApiSessionResult
+                    {
+                        Success = false,
+                        Message = I18N.Translate(request, "webexpress.webapp:login.error.session")
+                    }.ToResponse();
+                }
 
                 return new RestApiSessionResult
                 {
                     Success = true,
-                    SessionId = sessinId,
-                    Message = I18N.Translate("webexpress.webapp:login.success")
+                    SessionId = null,
+                    Message = I18N.Translate(request, "webexpress.webapp:login.success")
                 }.ToResponse();
             }
 
             // record failed attempt
-            RecordFailedAttempt(normalizedUser);
+            RecordFailedAttempt(request, normalizedUser);
 
             // check if locked out after this attempt
-            if (IsLockedOut(normalizedUser, out var retryAfter))
+            if (IsLockedOut(request, normalizedUser, out var retryAfter))
             {
                 if (retryAfter == -1)
                 {
                     return new RestApiSessionResult
                     {
                         Success = false,
-                        Message = I18N.Translate("webexpress.webapp:login.error.locked")
+                        Message = I18N.Translate(request, "webexpress.webapp:login.error.locked")
                     }.ToResponse();
                 }
                 else
@@ -151,7 +184,7 @@ namespace WebExpress.WebApp.WebRestApi
                     return new RestApiSessionResult
                     {
                         Success = false,
-                        Message = I18N.Translate("webexpress.webapp:login.error.ratelimit"),
+                        Message = I18N.Translate(request, "webexpress.webapp:login.error.ratelimit"),
                         RetryAfter = retryAfter
                     }.ToResponse();
                 }
@@ -160,7 +193,53 @@ namespace WebExpress.WebApp.WebRestApi
             return new RestApiSessionResult
             {
                 Success = false,
-                Message = I18N.Translate("webexpress.webapp:login.error.invalid")
+                Message = I18N.Translate(request, "webexpress.webapp:login.error.invalid")
+            }.ToResponse();
+        }
+
+        /// <summary>
+        /// Reads one credential from the login document.
+        /// </summary>
+        /// <remarks>
+        /// A missing or null property is not an error here: the caller reports empty
+        /// credentials, which is the message a user who left a field blank should get. A
+        /// property of another type is, because it cannot be what the client sends and
+        /// reading it as a string would throw.
+        /// </remarks>
+        /// <param name="root">The document's root object.</param>
+        /// <param name="name">The property name.</param>
+        /// <param name="value">The credential, or null when the property is absent or null.</param>
+        /// <returns><see langword="true"/> when the property is absent, null or a string.</returns>
+        private static bool TryReadString(JsonElement root, string name, out string value)
+        {
+            value = null;
+
+            if (!root.TryGetProperty(name, out var property) || property.ValueKind == JsonValueKind.Null)
+            {
+                return true;
+            }
+
+            if (property.ValueKind != JsonValueKind.String)
+            {
+                return false;
+            }
+
+            value = property.GetString();
+
+            return true;
+        }
+
+        /// <summary>
+        /// Builds the response for a login document the endpoint cannot read.
+        /// </summary>
+        /// <param name="request">The request whose language determines the error message.</param>
+        /// <returns>The failure response.</returns>
+        private static IResponse FormatError(IRequest request)
+        {
+            return new RestApiSessionResult
+            {
+                Success = false,
+                Message = I18N.Translate(request, "webexpress.webapp:login.error.format")
             }.ToResponse();
         }
 
@@ -178,7 +257,7 @@ namespace WebExpress.WebApp.WebRestApi
             return new RestApiSessionResult
             {
                 Success = true,
-                Message = I18N.Translate("webexpress.webapp:logout.success")
+                Message = I18N.Translate(request, "webexpress.webapp:logout.success")
             }.ToResponse();
         }
 
@@ -191,19 +270,22 @@ namespace WebExpress.WebApp.WebRestApi
         protected abstract IIdentity ValidateCredentials(string username, string password);
 
         /// <summary>
-        /// Generates an sessionId for the given identity.
+        /// Issues the common token pair after a provider has verified the user credentials.
         /// </summary>
+        /// <remarks>
+        /// The identity manager queues protected cookies for the outgoing response. A failed issuance
+        /// remains a login failure, and neither token is returned in the JSON response.
+        /// </remarks>
         /// <param name="identity">The authenticated identity.</param>
         /// <param name="request">The original request.</param>
-        /// <returns>A token string, or null if token-based auth is not used.</returns>
-        protected virtual string GenerateSession(IIdentity identity, IRequest request)
+        /// <returns>The issued credentials, or null if authentication could not be established.</returns>
+        protected virtual IdentityTokenPair EstablishIdentity(IIdentity identity, IRequest request)
         {
-            return WebEx.ComponentHub.IdentityManager.Login(identity, request)?
-                .Id.ToString();
+            return WebEx.ComponentHub.IdentityManager.Login(identity, request);
         }
 
         /// <summary>
-        /// Invalidates the authentication token or session for the given request.
+        /// Revokes renewal and clears the authentication cookies for the given request.
         /// </summary>
         /// <param name="request">The original request.</param>
         protected virtual void InvalidateSession(IRequest request)
@@ -215,19 +297,31 @@ namespace WebExpress.WebApp.WebRestApi
         /// Checks whether a user is currently locked out due to excessive failed attempts
         /// and calculates the remaining penalty time using exponential backoff.
         /// </summary>
+        /// <param name="request">The request, used to scope the lockout to its application.</param>
         /// <param name="username">The username to check.</param>
-        /// <param name="remainingSeconds">The number of seconds remaining, or -1 for permanent lockout.</param>
+        /// <param name="remainingSeconds">The number of seconds remaining, or -1 for a hard lockout.</param>
         /// <returns>True if locked out; otherwise, false.</returns>
-        private bool IsLockedOut(string username, out int remainingSeconds)
+        private bool IsLockedOut(IRequest request, string username, out int remainingSeconds)
         {
             remainingSeconds = 0;
 
-            if (!FailedAttempts.TryGetValue(username, out var info))
+            var key = LockoutKey(request, username);
+
+            if (!TryGetAttempt(key, out var info))
             {
                 return false;
             }
 
-            // permanently lock account if maximum attempts are reached
+            // any lockout state, hard or throttled, is forgotten once the account has been left
+            // alone for the full lockout duration - this is the automatic unlock, and it also
+            // keeps the store from holding entries for accounts no one is attacking any more
+            if ((DateTime.UtcNow - info.LastAttempt).TotalSeconds >= PermanentLockoutDurationSeconds)
+            {
+                RemoveAttempt(key);
+                return false;
+            }
+
+            // hard-lock the account once it reaches the ceiling, until the duration above lapses
             if (info.Count >= PermanentLockoutAttempts)
             {
                 remainingSeconds = -1;
@@ -260,11 +354,28 @@ namespace WebExpress.WebApp.WebRestApi
         /// <summary>
         /// Records a failed login attempt for the specified user.
         /// </summary>
+        /// <param name="request">The request, used to scope the attempt to its application.</param>
         /// <param name="username">The username for which the attempt failed.</param>
-        private void RecordFailedAttempt(string username)
+        private void RecordFailedAttempt(IRequest request, string username)
         {
+            if (SharedStore is { } store)
+            {
+                var key = LockoutKey(request, username);
+                var count = TryGetAttempt(key, out var existing) ? existing.Count + 1 : 1;
+
+                // read and write are not atomic across instances; two attempts landing at the
+                // same moment may count once, which still bounds an attack to a small multiple
+                store.Set(StoreScope, key, JsonSerializer.SerializeToUtf8Bytes(new RestApiSessionFailedAttemptInfo
+                {
+                    Count = count,
+                    LastAttempt = DateTime.UtcNow
+                }), TimeSpan.FromSeconds(PermanentLockoutDurationSeconds));
+
+                return;
+            }
+
             FailedAttempts.AddOrUpdate(
-                username,
+                LockoutKey(request, username),
                 _ => new RestApiSessionFailedAttemptInfo { Count = 1, LastAttempt = DateTime.UtcNow },
                 (_, existing) =>
                 {
@@ -276,6 +387,90 @@ namespace WebExpress.WebApp.WebRestApi
                     };
                 }
             );
+        }
+
+        /// <summary>
+        /// Clears the failed-attempt record for a user, lifting any lockout at once.
+        /// </summary>
+        /// <remarks>
+        /// Called on a successful login and available to a derived administrative endpoint as the
+        /// manual counterpart to the time-based unlock, so a locked-out account need not wait out
+        /// <see cref="PermanentLockoutDurationSeconds"/>.
+        /// </remarks>
+        /// <param name="request">The request, used to scope the reset to its application.</param>
+        /// <param name="username">The username to unlock.</param>
+        protected void ResetFailedAttempts(IRequest request, string username)
+        {
+            RemoveAttempt(LockoutKey(request, username));
+        }
+
+        /// <summary>
+        /// Returns the cluster store while instances share one, or null while the attempts are
+        /// counted in this process.
+        /// </summary>
+        private static IClusterStore SharedStore => WebEx.ComponentHub?.ClusterManager?.Store is { IsShared: true } store ? store : null;
+
+        /// <summary>
+        /// Reads the failed attempts recorded for a key.
+        /// </summary>
+        /// <param name="key">The lockout key.</param>
+        /// <param name="info">Receives the recorded attempts.</param>
+        /// <returns>True when attempts are recorded.</returns>
+        private static bool TryGetAttempt(string key, out RestApiSessionFailedAttemptInfo info)
+        {
+            if (SharedStore is not { } store)
+            {
+                return FailedAttempts.TryGetValue(key, out info);
+            }
+
+            info = null;
+
+            try
+            {
+                info = store.Get(StoreScope, key) is { } content
+                    ? JsonSerializer.Deserialize<RestApiSessionFailedAttemptInfo>(content)
+                    : null;
+            }
+            catch (JsonException)
+            {
+                // an unreadable record counts as none; the next failure writes a fresh one
+            }
+
+            return info is not null;
+        }
+
+        /// <summary>
+        /// Forgets the failed attempts recorded for a key.
+        /// </summary>
+        /// <param name="key">The lockout key.</param>
+        private static void RemoveAttempt(string key)
+        {
+            if (SharedStore is { } store)
+            {
+                store.Remove(StoreScope, key);
+
+                return;
+            }
+
+            FailedAttempts.TryRemove(key, out _);
+        }
+
+        /// <summary>
+        /// Builds the store key that scopes a lockout to one application and user.
+        /// </summary>
+        /// <remarks>
+        /// The username is lower-cased so the lockout is case-insensitive in the user while the
+        /// application id, which is case-sensitive, stays intact; a newline separates the two so
+        /// no application id and username can run together into another pair's key.
+        /// </remarks>
+        /// <param name="request">The request whose application scopes the key.</param>
+        /// <param name="username">The username.</param>
+        /// <returns>The composite key.</returns>
+        private static string LockoutKey(IRequest request, string username)
+        {
+            var scope = request?.ApplicationContext?.ApplicationId ?? string.Empty;
+
+            return scope + "\n" + (username ?? string.Empty).ToLowerInvariant();
         }
     }
 }

@@ -36,9 +36,9 @@ namespace WebExpress.WebApp.WebRestApi
         public IResponse Retrieve(IRequest request)
         {
             // default page size aligned with dropdown max entries
-            var defaultPageSize = "25";
-            var pageNumber = Convert.ToInt32(request.GetParameter("p")?.Value ?? "0");
-            var pageSize = Convert.ToInt32(request.GetParameter("l")?.Value ?? defaultPageSize);
+            const int defaultPageSize = 25;
+            var pageNumber = request.ParseIntParameter("p", 0);
+            var pageSize = request.ParseIntParameter("l", defaultPageSize);
             var filter = request.GetParameter("q")?.Value ?? string.Empty;
             var wql = request.GetParameter("wql")?.Value ?? null;
             var query = new Query<TIndexItem>() as IQuery<TIndexItem>; ;
@@ -61,7 +61,10 @@ namespace WebExpress.WebApp.WebRestApi
                 query = query.WithPaging(pageNumber * pageSize, pageSize);
 
                 using var context = CreateContext();
-                var items = RetrieveItems(query, context, request);
+
+                // materialize once so the lazy index query is not enumerated twice
+                // (once to count, once to serialize)
+                var items = RetrieveItems(query, context, request)?.ToList() ?? [];
 
                 var result = new RestApiDropdownResult<IIndexItem>()
                 {
@@ -70,7 +73,9 @@ namespace WebExpress.WebApp.WebRestApi
                     {
                         PageNumber = pageNumber,
                         PageSize = pageSize,
-                        TotalCount = items.Count()
+                        // prepended headers and dividers ride in the same stream but are
+                        // not selectable, so they must not inflate the reported total
+                        TotalCount = items.Count(i => i.Type == RestApiDropdownItem.TypeItem)
                     }
                 };
 
@@ -78,7 +83,7 @@ namespace WebExpress.WebApp.WebRestApi
             }
             catch (Exception ex)
             {
-                return new ResponseBadRequest(new StatusMessage($"Error processing request. {ex}"));
+                return RestApiFault.BadRequest(request, ex, "Error processing request.");
             }
         }
 

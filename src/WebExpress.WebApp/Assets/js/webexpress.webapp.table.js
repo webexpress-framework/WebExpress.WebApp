@@ -1,29 +1,37 @@
-﻿/**
+/**
  * A REST-enabled table control that extends the reorderable table class and
  * integrates with a REST API. Supports standard pagination.
  *
  * Emits events:
  * - webexpress.webui.Event.DATA_ARRIVED_EVENT
+ *
+ * Phase two of the View, State and Service migration:
+ * - the query, paging and result state is owned by a standalone
+ *   webexpress.webapp.ViewState, exposed through accessors so the inherited
+ *   pager, sorting and persistence logic keeps working against a single source
+ *   of truth
+ * - the data load and the layout state update go through a
+ *   webexpress.webapp.RestService, configured from the data-wx-service island or,
+ *   inside a ViewState, from the service of the bound resource; a host without
+ *   either loads nothing
+ * - the pure column and row normalisation lives in webexpress.webapp.tableModel
+ *   and is unit tested in isolation
+ * The emitted events and the rendered DOM are unchanged.
  */
-webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderable {
+webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtrl {
     // configuration
     _restUri = "";
+    _viewState = null;
+    _sliceTotal = 0;
 
-    // state
-    _orderBy = null;
-    _orderDir = null;
-    _search = "";
-    _wql = "";
-    _filter = "";
-    _page = 0;
-    _pageSize = 50;
-    _totalRecords = 0;
-    _isLoading = false;
+    // a query that was asked for while the table was hidden and still has to run
+    _pendingLoad = false;
+
+    // view data
     _rows = {};
 
     // ui helpers
     _progressDiv = null;
-    _abortController = null;
 
     // pager & info
     _pagerElement = null;
@@ -44,22 +52,50 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
 
     /**
      * Construct a new TableCtrl instance.
-     * Reads configuration from the element's data attributes:
-     * - data-uri: REST endpoint
-     * - data-page-size: number of rows per page
+     * The endpoint comes from the wx-service island; data-page-size configures
+     * the number of rows per page.
      * @param {HTMLElement} element - The host DOM element for this controller.
      */
     constructor(element) {
+        // consume the islands before the base constructor reshapes the
+        // children; later reads are served from the element cache
+        webexpress.webapp.Data.readState(element);
+        webexpress.webapp.ServiceRegistry.fromElement(element);
+
         super(element);
 
-        this._restUri = element.dataset.uri || "";
-        element.removeAttribute("data-uri");
+        // a data table has no switch for it and has always let its columns be hidden
+        this._allowColumnRemove = true;
+
+        // the resource a ViewState renders. when present, the table is a pure view
+        // of a central resource the enclosing ViewState owns; when absent it owns
+        // its state and loads itself (standalone).
+        this._resource = (element.dataset && element.dataset.wxResource) || null;
+
+        // canonical state: a single source of truth that the accessors below
+        // read from and write to. seeded from the optional wx-state island. in
+        // ViewState mode this is replaced by the ViewState once it resolves.
+        this._store = new webexpress.webapp.ViewState(element, { standalone: true, state: Object.assign({
+            search: "",
+            wql: "",
+            filter: "",
+            page: 0,
+            pageSize: 50,
+            orderBy: null,
+            orderDir: null,
+            total: 0,
+            loading: false,
+            error: null
+        }, webexpress.webapp.Data.readState(element)) });
+
+        // data service from the wx-service island
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+        this._service = islandServices.data;
+        this._restUri = this._service ? this._service.baseUri : "";
 
         if (element.dataset.pageSize) {
-            this._pageSize = parseInt(element.dataset.pageSize, 10);
-            if (isNaN(this._pageSize) || this._pageSize <= 0) {
-                this._pageSize = 50;
-            }
+            const parsed = parseInt(element.dataset.pageSize, 10);
+            this._pageSize = (isNaN(parsed) || parsed <= 0) ? 50 : parsed;
         }
 
         this._initProgressBar(element);
@@ -78,13 +114,111 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
 
         // initialize pager and info area
         this._initPager(element);
+        this._initVisibilityReload(element);
 
-        if (this._restUri) {
-            this._receiveData();
+        if (this._resource) {
+            // ViewState mode: the enclosing ViewState loads the resource centrally; this
+            // table only subscribes to its slice and renders it
+            this._attachToViewState(element);
+        } else if (this._restUri) {
+            this._load();
+
+            // an external change of the service's domains re-queries and
+            // flashes, so changes made by other users re-render standalone too
+            const dataChanges = webexpress.webapp.DataChangeSubscription.attachReload(
+                [this._service], () => this._load(), element);
+            if (dataChanges) {
+                (element._wxCleanup = element._wxCleanup || []).push(() => dataChanges.detach());
+            }
         } else {
             this._toggleProgress(false);
         }
     }
+
+    /**
+     * Attaches the table to the enclosing ViewState and renders its
+     * resource slice. The ViewState owns the state, the service and the central
+     * load, so the table becomes a pure view: it subscribes to the slice and
+     * re-renders whenever the ViewState re-queries the resource. The shared ViewState
+     * state also becomes the table's store, so the search, paging and sort binds
+     * drive the same keys every control in the ViewState reads.
+     * @param {HTMLElement} element The host element.
+     */
+    _attachToViewState(element) {
+        const viewStateId = (element.dataset && element.dataset.wxViewstate) || null;
+
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
+            this._viewState = viewState;
+            this._store = viewState;
+
+            const service = viewState.serviceForResource(this._resource);
+            if (service) {
+                this._service = service;
+                this._restUri = service.baseUri;
+            }
+
+            const unsubscribe = viewState.watch((state) => viewState.slice(this._resource, state), (slice) => this._applySlice(slice));
+            (element._wxCleanup = element._wxCleanup || []).push(unsubscribe);
+
+            this._applySlice(viewState.slice(this._resource));
+        });
+    }
+
+    /**
+     * Renders a resource slice the ViewState loaded centrally. The slice carries the
+     * raw response, which the table normalises into its columns and rows exactly
+     * as the standalone load does.
+     * @param {object} slice The resource slice { items, total, data, loading, error }.
+     */
+    _applySlice(slice) {
+        slice = slice || {};
+        this._sliceTotal = Number(slice.total) || 0;
+
+        if (slice.data) {
+            this.updateData(slice.data);
+        }
+
+        // the slice is the record of the central load: the progress shows while it says
+        // a query is in flight, not only until the next notification arrives
+        this._toggleProgress(!!slice.loading);
+
+        if (slice.error) {
+            console.error("TableCtrl Request failed:", webexpress.webapp.ServiceResult.describe({ error: slice.error }, { resource: this._resource }));
+        }
+    }
+
+    // state accessors backed by the store, so the single source of truth is the
+    // store while the inherited pager, sorting and persistence logic keeps
+    // reading fields
+
+    get _search() { return this._store.getState().search; }
+    set _search(value) { this._store.setState({ search: value }); }
+
+    get _wql() { return this._store.getState().wql; }
+    set _wql(value) { this._store.setState({ wql: value }); }
+
+    get _filter() { return this._store.getState().filter; }
+    set _filter(value) { this._store.setState({ filter: value }); }
+
+    get _page() { return this._store.getState().page; }
+    set _page(value) { this._store.setState({ page: value }); }
+
+    get _pageSize() { return this._store.getState().pageSize; }
+    set _pageSize(value) { this._store.setState({ pageSize: value }); }
+
+    get _orderBy() { return this._store.getState().orderBy; }
+    set _orderBy(value) { this._store.setState({ orderBy: value }); }
+
+    get _orderDir() { return this._store.getState().orderDir; }
+    set _orderDir(value) { this._store.setState({ orderDir: value }); }
+
+    // in ViewState mode the total comes from the resource slice, not from a top
+    // level state key, so several resources in one ViewState keep separate totals
+    get _totalRecords() { return this._viewState ? this._sliceTotal : this._store.getState().total; }
+    set _totalRecords(value) { this._store.setState({ total: value }); }
+
+    get _isLoading() { return this._store.getState().loading; }
+    set _isLoading(value) { this._store.setState({ loading: value }); }
 
     /**
      * Initialize DOM and document-level event listeners required by the control.
@@ -102,7 +236,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
             if (this._element.contains(e.target)) {
                 targetMatches = true;
             }
-            
+
             const detail = e.detail || {};
             if (detail.id) {
                 if (detail.id === this._element.id) {
@@ -116,8 +250,10 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
                     this._orderDir = detail.sortDirection;
                     this._page = 0;
 
-                    if (this._restUri) {
-                        this._receiveData();
+                    if (this._viewState) {
+                        this._viewState.reload(this._resource);
+                    } else if (this._restUri) {
+                        this._load();
                     } else {
                         this._dispatch(webexpress.webui.Event.TABLE_SORT_EVENT, {
                             orderBy: this._orderBy, orderDir: this._orderDir
@@ -136,31 +272,55 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
      * @param {HTMLElement} host - The host element to search or attach the pager to.
      */
     _initPager(host) {
-        // find existing pager element
-        const paginationId = host.dataset.wxSourcePaging || null;
-        const init = () => {
-            this._pagerElement = document.querySelector(paginationId);
-
-            if (this._pagerElement) {
-                this._pagerCtrl = webexpress.webui.Controller.getInstanceByElement(this._pagerElement);
-            }
-
-            this._syncPagerAndInfo();
-        }
+        const init = () => this._syncPagerAndInfo();
 
         if (document.readyState === "loading") {
             document.addEventListener("DOMContentLoaded", () => init());
         } else {
             init();
         }
-        
+
         // create info div to show totals and current page details
         this._infoDiv = document.createElement("div");
         this._infoDiv.className = "text-muted small";
         this._infoDiv.style.marginTop = "0.25rem";
         this._infoDiv.textContent = "";
-        
+
         host.appendChild(this._infoDiv);
+    }
+
+    /**
+     * Resolves the pagination control the table reports its page count to, and
+     * remembers it once it exists.
+     * @remarks
+     * The pager is a sibling control rather than a child, and the controller
+     * builds a pane's controls in document order - the pager sits below the
+     * table, so its instance does not exist yet while the table is being
+     * constructed. Resolving once therefore left the reference empty for good:
+     * the table wrote its page count into the pager's dataset, nothing read it,
+     * and the pager kept offering the single page it had rendered at startup.
+     * The lookup is repeated until it succeeds instead, which costs one query
+     * per response and nothing after that.
+     * @returns {object|null} The pagination control, or null while there is none.
+     */
+    _resolvePager() {
+        const selector = (this._element && this._element.dataset)
+            ? (this._element.dataset.wxSourcePaging || null)
+            : null;
+
+        if (!selector) {
+            return null;
+        }
+
+        if (!this._pagerElement) {
+            this._pagerElement = document.querySelector(selector);
+        }
+
+        if (this._pagerElement && !this._pagerCtrl) {
+            this._pagerCtrl = webexpress.webui.Controller.getInstanceByElement(this._pagerElement);
+        }
+
+        return this._pagerCtrl;
     }
 
     /**
@@ -169,17 +329,21 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
      * and refreshes the textual information about totals and current page.
      */
     _syncPagerAndInfo() {
+        this._resolvePager();
+
         const total = Number(this._totalRecords) || 0;
         let totalPages = 1;
         if (this._pageSize > 0) {
             totalPages = Math.max(1, Math.ceil(total / this._pageSize));
         }
 
-        // clamp current page to available range
+        // clamp current page to available range. the upper bound only applies
+        // when the total is known, so a page seeded through the data-wx-state
+        // island survives until the first response reports the real total
         if (this._page < 0) {
             this._page = 0;
         }
-        if (this._page >= totalPages) {
+        if (total > 0 && this._page >= totalPages) {
             this._page = totalPages - 1;
         }
 
@@ -215,7 +379,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
 
         // update textual info
         if (this._infoDiv) {
-            this._infoDiv.textContent = "Page " + (currentPage + 1) + " of " + totalPages + " / " + itemsOnPage + " of " + total + " items";
+            this._infoDiv.textContent = webexpress.webapp.pagingInfo(this, currentPage, totalPages, itemsOnPage, total);
         }
     }
 
@@ -264,136 +428,63 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
     }
 
     /**
-     * Request data from the configured REST endpoint.
+     * Request data from the configured REST endpoint through the data service.
+     * A superseded query is cancelled by the service, so a stale response
+     * arrives as an abort result and is ignored here.
+     * @returns {Promise<void>} Resolves when the load completes.
      */
-    _receiveData() {
-        // abort if no uri
-        if (!this._restUri) {
+    async _load() {
+        // abort if no uri or service
+        if (!this._restUri || !this._service) {
             return;
         }
 
-        // abort previous request if present
-        if (this._abortController) {
-            // call abort without reason to trigger a standard AbortError
-            this._abortController.abort();
-        }
-        this._abortController = new AbortController();
-
         this._toggleProgress(true);
 
-        // build request url with fallback for relative uris
-        const base = window.location.origin;
-        let urlObj;
-        try {
-            urlObj = new URL(this._restUri, base);
-        } catch (e) {
-            urlObj = new URL(this._restUri, document.baseURI);
-        }
+        const params = webexpress.webapp.tableModel.queryParams(this._store.getState());
+        const result = await this._service.query(params);
 
-        // set query parameters
-        if (this._search) {
-            urlObj.searchParams.set("q", this._search);
-        } else {
-            urlObj.searchParams.set("q", "");
-        }
-
-        if (this._wql) {
-            urlObj.searchParams.set("wql", this._wql);
-        } else {
-            urlObj.searchParams.set("wql", "");
-        }
-
-        if (this._filter) {
-            urlObj.searchParams.set("f", this._filter);
-        } else {
-            urlObj.searchParams.set("f", "");
-        }
-
-        urlObj.searchParams.set("p", this._page);
-        urlObj.searchParams.set("l", this._pageSize);
-
-        if (this._orderBy) {
-            urlObj.searchParams.set("o", this._orderBy);
-            if (this._orderDir) {
-                urlObj.searchParams.set("d", this._orderDir);
+        if (!result.ok) {
+            // handle aborts silently (a newer query replaced this one)
+            if (result.error.kind === "abort") {
+                return;
             }
+
+            console.error("TableCtrl Request failed:", webexpress.webapp.ServiceResult.describe(result, {
+                uri: this._restUri,
+                params: params
+            }));
+            this._store.setState({ error: result.error });
+            this._toggleProgress(false);
+            this._isLoading = false;
+            return;
         }
 
-        const fetchUrl = this._restUri.startsWith("http") ? urlObj.href : (urlObj.pathname + urlObj.search);
+        const response = result.data;
 
-        fetch(fetchUrl, { signal: this._abortController.signal })
-            .then((res) => {
-                if (!res.ok) {
-                    throw new Error("Request failed: " + res.status);
-                }
-                return res.json();
-            })
-            .then((response) => {
-                // try multiple possible fields for total
-                const totalFromResponse = response.total ?? null;
+        // reduce the total and the clamped page into the store
+        this._store.setState(webexpress.webapp.tableModel.reduceResponse(this._store.getState(), response));
 
-                // determine number of rows actually returned
-                let receivedRows = 0;
-                if (Array.isArray(response.rows)) {
-                    receivedRows = response.rows.length;
-                }
+        // slice raw rows to the page size before integrating
+        const newRows = webexpress.webapp.tableModel.sliceRows(response.rows || [], this._pageSize);
+        const responseForUpdate = Object.assign({}, response, { rows: newRows });
 
-                // set or infer totalrecords
-                if (totalFromResponse !== null) {
-                    this._totalRecords = Number(totalFromResponse) || 0;
-                } else {
-                    this._totalRecords = (this._page * this._pageSize) + receivedRows;
-                }
+        // integrate received data into table structures
+        this.updateData(responseForUpdate);
 
-                // compute total pages and clamp current page
-                const totalPages = Math.max(1, Math.ceil(this._totalRecords / this._pageSize));
-                if (this._page >= totalPages) {
-                    this._page = totalPages - 1;
-                }
+        // notify listeners that data arrived
+        this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
+            id: this._element.id,
+            response: responseForUpdate,
+            page: this._page
+        });
 
-                // normalize rows and apply client-side cap
-                let newRows = response.rows || [];
-                if (Array.isArray(newRows)) {
-                    if (newRows.length > this._pageSize) {
-                        // slice to configured page size
-                        newRows = newRows.slice(0, this._pageSize);
-                    }
-                }
+        // sync pager and info in a microtask
+        setTimeout(() => {
+            this._syncPagerAndInfo();
+        }, 0);
 
-                // ensure the response passed to updatedata reflects any slicing
-                const responseForUpdate = Object.assign({}, response, { rows: newRows });
-
-                // integrate received data into table structures
-                this.updateData(responseForUpdate);
-
-                // notify listeners that data arrived
-                this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
-                    id: this._element.id,
-                    response: responseForUpdate,
-                    page: this._page
-                });
-
-                // sync pager and info in a microtask
-                setTimeout(() => {
-                    this._syncPagerAndInfo();
-                }, 0);
-
-                this._toggleProgress(false);
-                this._abortController = null;
-            })
-            .catch((error) => {
-                // handle aborts silently
-                const isAbort = (error && typeof error === "object" && error.name === "AbortError");
-                if (isAbort) {
-                    return;
-                }
-
-                console.error("TableCtrl Request failed:", error);
-
-                this._toggleProgress(false);
-                this._abortController = null;
-                this._isLoading = false;
-            });
+        this._toggleProgress(false);
     }
 
     /**
@@ -405,101 +496,36 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
             return;
         }
 
-        if (!this._columns || this._columns === this._previewColumns) {
-            this._columns = (response.columns || []).map((c, idx) => {
-                let rType = c.rendererType || null;
-                let rOpts = c.rendererOptions || {};
-                if (c.template) {
-                    if (typeof c.template === "object") {
-                        rType = c.template.type;
-                        rOpts = c.template.options || {};
-                        if (c.template.editable) {
-                            rOpts.editable = c.template.editable;
-                        }
-                    }
-                }
-                
-                let isVisible = true;
-                if (typeof c.visible === "boolean") {
-                    isVisible = c.visible;
-                }
-                
-                let isResizable = true;
-                if (typeof c.resizable === "boolean") {
-                    isResizable = c.resizable;
-                }
+        const sourceColumns = Array.isArray(response.columns)
+            ? webexpress.webapp.tableModel.normalizeColumns(response, this._orderBy, this._orderDir) : null;
+        if (sourceColumns) {
+            this._sourceColumnIds = sourceColumns.map(column => column.id);
+        }
+        const initialColumns = !this._columns?.length || this._columns === this._previewColumns;
+        if (initialColumns) {
+            this._columns = sourceColumns || [];
+        }
 
-                return {
-                    id: c.id || `col_${idx}`,
-                    label: c.label || c.id,
-                    name: c.name || null,
-                    visible: isVisible,
-                    sort: null,
-                    width: c.width || null,
-                    minWidth: c.minWidth || null,
-                    resizable: isResizable,
-                    icon: c.icon || null,
-                    image: c.image || null,
-                    color: c.color || null,
-                    rendererType: rType,
-                    rendererOptions: rOpts
-                };
-            });
-            if (this._orderBy) {
-                const targetCol = this._columns.find((c) => c.id === this._orderBy);
-                if (targetCol) {
-                    targetCol.sort = this._orderDir || "asc";
-                }
+        // normalize incoming rows (recursing into children and slicing)
+        this._rows = webexpress.webapp.tableModel.normalizeRows(response, this._pageSize);
+
+        if (!initialColumns) {
+            // response cells follow server order even after the reader reorders columns
+            const sourceIndex = new Map((this._sourceColumnIds || []).map((id, index) => [id, index]));
+            const rows = [...this._rows];
+            while (rows.length) {
+                const row = rows.pop();
+                row.cells = this._columns.map(column => row.cells[sourceIndex.get(column.id)] || { content: "" });
+                if (row.children) rows.push(...row.children);
             }
         }
 
-        /**
-         * Convert a raw server row object into the internal row representation.
-         * @param {Object} r - raw row object from the response
-         * @param {Object|null} parent - parent row, or null for root rows
-         * @returns {Object} normalized row
-         */
-        const normalizeRow = (r, parent = null) => {
-            let isExpanded = true;
-            if (typeof r.expanded === "boolean") {
-                isExpanded = r.expanded;
-            }
-            
-            const row = {
-                id: r.id || null,
-                class: r.class || null,
-                style: r.style || null,
-                color: r.color || null,
-                image: r.image || null,
-                icon: r.icon || null,
-                uri: r.uri || r.url || null,
-                target: r.target || null,
-                primaryAction: r.primaryAction || null,
-                secondaryAction: r.secondaryAction || null,
-                bind: r.bind || null,
-                cells: r.cells || [],
-                options: r.options || null,
-                children: [],
-                parent: parent,
-                expanded: isExpanded
-            };
-            if (r.children) {
-                if (Array.isArray(r.children)) {
-                    row.children = r.children.map((child) => normalizeRow(child, row));
-                }
-            }
-            return row;
-        };
+        this._loadState();
 
-        // normalize incoming rows
-        let newRows = (response.rows || []).map((r) => normalizeRow(r, null));
-
-        if (newRows.length > this._pageSize) {
-            // slice to first pagesize entries
-            newRows = newRows.slice(0, this._pageSize);
-        }
-
-        this._rows = newRows;
+        // the query owns REST sorting; a local layout preference cannot change its result
+        this._columns.forEach(column => {
+            column.sort = column.id === this._orderBy ? this._orderDir : null;
+        });
 
         let optionsExist = false;
         if (this._options) {
@@ -507,17 +533,17 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
                 optionsExist = true;
             }
         }
-        
+
         if (!optionsExist) {
             if (this._rows.some((r) => r.options && r.options.length > 0)) {
                 optionsExist = true;
             }
         }
-        
+
         this._hasOptions = optionsExist;
 
         this.render();
-        
+
         // sync pager and info after full render
         this._syncPagerAndInfo();
     }
@@ -621,32 +647,132 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
     }
 
     /**
-     * Send a state payload to the configured REST endpoint using PUT.
-     * The payload uses the same shape consumed by
-     * <c>RestApiTable.Configure</c>:
+     * Send a state payload to the configured REST endpoint through the data
+     * service using its update operation (PUT). The payload uses the same shape
+     * consumed by <c>RestApiTable.Configure</c>:
      * <c>{ "c": [{ "id", "visible", "width" }, ...], "r": ["rowId", ...] }</c>.
      * @param {Object} stateObj - JSON-serializable object representing the state.
      */
     _sendStateToServer(stateObj) {
-        if (!this._restUri) {
+        if (!this._restUri || !this._service) {
             return;
         }
-        fetch(this._restUri, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(stateObj)
-        }).catch((err) => console.error("Update state failed", err));
+        this._service.update(stateObj).then((result) => {
+            if (!result.ok && result.error.kind !== "abort") {
+                this._reject(stateObj.c ? "columns" : "rows", result);
+            }
+        });
+    }
+
+    /**
+     * Takes back a layout change the server refused.
+     *
+     * Columns and rows are rearranged on screen first and stored afterwards, so a refusal
+     * leaves the table in a layout that is not stored. The stored layout is loaded back
+     * over it, which is the one state both sides agree on, and the refusal is put in front
+     * of the user - a column that jumps back with no word about why reads as a bug of the
+     * table rather than as a decision of the server.
+     * @param {string} action - The change that was refused: columns or rows.
+     * @param {object} result - The failed service result.
+     */
+    _reject(action, result) {
+        console.error(`table ${action} update failed:`, webexpress.webapp.ServiceResult.describe(result, { action: action }));
+
+        webexpress.webapp.ErrorChannel.present(result, {
+            service: this._service.name,
+            heading: this._i18n("webexpress.webapp:table.heading", "Table"),
+            message: this._i18n("webexpress.webapp:table.update.rejected", "The layout change was not saved and has been taken back.")
+        });
+
+        this._dispatch(webexpress.webui.Event.DATA_ERROR_EVENT, { action: action, error: result.error });
+        this.update();
     }
 
     /**
      * Updates the control.
      */
     update() {
+        if (this._viewState) {
+            this._viewState.reload(this._resource);
+            return;
+        }
         if (this._restUri) {
             if (this._isVisible()) {
-                this._receiveData();
+                this._load();
             }
         }
+    }
+
+    /**
+     * Dispatches an intent against the table's store and service, mirroring
+     * the dispatch surface of the Data base, so that the search, paging and
+     * filter binds and the dispatch action all feed the same unidirectional
+     * loop.
+     * @param {string} name The intent name.
+     * @param {*} payload The intent payload.
+     * @returns {*} The return value of the intent effect, when present.
+     */
+    dispatch(name, payload) {
+        return webexpress.webapp.Intents.dispatch(name, {
+            store: this._store,
+            payload: payload,
+            services: { data: this._service },
+            component: this,
+            viewState: this._viewState,
+            element: this._element
+        });
+    }
+
+    /**
+     * Loads the table when it is backed by a service and visible. Intent
+     * effects call this after their reducer updated the store.
+     * @remarks
+     * A hidden table is not queried, but the query it would have run is
+     * remembered and issued the moment it is shown (see
+     * <c>_initVisibilityReload</c>). The presentations of one view - table, list,
+     * tile - share a search box and a quickfilter bar, so a term entered while
+     * this one was hidden belongs to it as well; without the deferral, switching
+     * the presentation answers with whatever was on screen before the filter was
+     * typed.
+     * @returns {Promise<void>|undefined} Resolves when the load completes.
+     */
+    load() {
+        if (this._viewState) {
+            return this._viewState.reload(this._resource);
+        }
+
+        if (!this._restUri) {
+            return undefined;
+        }
+
+        if (!this._isVisible()) {
+            this._pendingLoad = true;
+            return undefined;
+        }
+
+        this._pendingLoad = false;
+
+        return this._load();
+    }
+
+    /**
+     * Subscribes to the visibility changes of the enclosing view, so a query that
+     * was deferred while the table was hidden runs when it is shown.
+     * @param {HTMLElement} element - The host element.
+     */
+    _initVisibilityReload(element) {
+        const handler = () => {
+            if (!this._pendingLoad || !this._isVisible()) {
+                return;
+            }
+
+            this._pendingLoad = false;
+            this._load();
+        };
+
+        document.addEventListener(webexpress.webui.Event.CHANGE_VISIBILITY_EVENT, handler);
+        (element._wxCleanup = element._wxCleanup || []).push(
+            () => document.removeEventListener(webexpress.webui.Event.CHANGE_VISIBILITY_EVENT, handler));
     }
 
     /**
@@ -655,24 +781,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
      * @param {string} [searchType="basic"] -  Filter type ("basic" or "wql").
      */
     search(pattern = "", searchType = "basic") {
-        if (searchType === "basic") {
-            this._search = pattern;
-            this._wql = null;
-        } else if (searchType === "wql") {
-            this._search = null;
-            this._wql = pattern;
-        } else {
-            this._search = null;
-            this._wql = null;
-        }
-
-        this._page = 0;
-        
-        if (this._restUri) {
-            if (this._isVisible()) {
-                this._receiveData();
-            }
-        }
+        this.dispatch("table/search", { pattern: pattern, searchType: searchType });
     }
 
     /**
@@ -680,42 +789,29 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableCtrlReorderabl
      * @param {string} pattern - Filter pattern.
      */
     filter(pattern = "") {
-        this._filter = pattern;
-        this._page = 0;
-
-        if (this._restUri) {
-            if (this._isVisible()) {
-                this._receiveData();
-            }
-        }
+        this.dispatch("table/filter", { pattern: pattern });
     }
-    
+
     /**
      * Sets and loads the page.
      * @param {string} page - The current page pattern.
      */
     paging(page = 0) {
-        this._page = page;
-
-        if (this._restUri) {
-            if (this._isVisible()) {
-                this._receiveData();
-            }
-        }
+        this.dispatch("table/page", { page: page });
     }
-    
+
     /**
-     * Creates bootstrap placeholder markup for preview cells.
-     * @param {string} widthClass Bootstrap width class for the placeholder.
-     * @returns {string} Bootstrap placeholder markup.
+     * Creates WebExpress placeholder markup for preview cells.
+     * @param {string} widthClass WebExpress width class for the placeholder.
+     * @returns {string} WebExpress placeholder markup.
      */
     _createPlaceholderCellContent(widthClass = "col-12") {
         return `<span class="placeholder ${widthClass}"></span>`;
     }
-    
+
     /**
-     * Creates a preview row with bootstrap placeholders.
-     * @param {Array<string>} widths Bootstrap width classes for each cell.
+     * Creates a preview row with WebExpress placeholders.
+     * @param {Array<string>} widths WebExpress width classes for each cell.
      * @returns {Object} Preview row definition.
      */
     _createPreviewRow(widths) {

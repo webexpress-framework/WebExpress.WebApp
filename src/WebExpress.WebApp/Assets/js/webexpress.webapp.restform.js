@@ -11,7 +11,7 @@
  * - webexpress.webui.Event.UPLOAD_SUCCESS_EVENT
  * - webexpress.webui.Event.UPLOAD_ERROR_EVENT
  */
-webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
+webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
     /**
      * Create a new RestFormCtrl instance.
      * Configuration is read strictly from data-attributes on the form element.
@@ -19,17 +19,40 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
      * @param {HTMLFormElement} element The form element to enhance.
      */
     constructor(element) {
-        super(element);
+        const ds = element.dataset;
 
-        const ds = this._element.dataset;
+        // data service used for the load and the submit; the form shapes its own
+        // requests (see restFormModel) and routes them through the service. the
+        // endpoint is authored in C# through the wx-service island, and the Data
+        // base aborts the service on teardown.
+        const services = webexpress.webapp.ServiceRegistry.fromElement(element);
+
+        // canonical ui state: a single source of truth for the transient flags,
+        // exposed through the accessors below. seeded from the optional
+        // wx-state island.
+        const initialState = Object.assign({
+            loading: false,
+            submitting: false,
+            mode: "new"
+        }, webexpress.webapp.Data.readState(element));
+
+        super(element, { state: initialState, services });
+
+        this._service = this.useService("data");
+
+        this._attachViewState(element);
+
         const parseBool = (val, defaultVal) => {
             return val === "true" ? true : (val === "false" ? false : defaultVal);
         };
 
         this.options = {
             id: ds.id || null,
-            api: ds.uri || ds.url || ds.api || null,
-            method: (ds.method || this._element.method || "POST").toUpperCase(),
+            api: this._service ? this._service.baseUri : null,
+            // read the method attribute rather than the idl property, which reports
+            // the html default of "get" when the attribute is absent and would make
+            // the post fallback unreachable
+            method: (ds.method || element.getAttribute("method") || "POST").toUpperCase(),
             headers: {},
             json: parseBool(ds.json, true),
             validateOnSubmit: parseBool(ds.validateOnSubmit, true),
@@ -44,7 +67,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
         this.mode = ["new", "edit", "delete"].includes(mode) ? mode : (this.options.id ? "edit" : "new");
 
         // cleanup attributes
-        ["data-api", "data-method", "data-json", "data-validate-on-submit", "data-show-inline-errors", "data-mode"]
+        ["data-method", "data-json", "data-validate-on-submit", "data-show-inline-errors", "data-mode"]
             .forEach((attr) => {
                 this._element.removeAttribute(attr);
             });
@@ -57,11 +80,9 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
                 this.options.headers["Content-Type"] = "application/json; charset=utf-8";
             }
         }
-        
+
         this._element.classList.add("wx-restform");
 
-        this._submitting = false;
-        this._loading = false;
         this._fieldErrorMap = new Map();
         this._confirmHtml = null;
 
@@ -82,6 +103,42 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
+     * Wires the form to an enclosing ViewState when it was authored with
+     * Resource<T>(). A successful submit then re-queries the bound resource so a
+     * ViewState-bound list or table re-renders with the created or edited record,
+     * rather than relying only on the upload success and data arrived events. A
+     * form without a resource binding stays standalone.
+     * @param {HTMLElement} element - the host element carrying the binding.
+     */
+    _attachViewState(element) {
+        this._viewState = null;
+        this._viewStateResource = element.getAttribute("data-wx-model-query")
+            || element.getAttribute("data-wx-resource")
+            || null;
+
+        if (!this._viewStateResource) {
+            return;
+        }
+
+        const viewStateId = element.getAttribute("data-wx-viewstate") || null;
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
+            this._viewState = viewState;
+        });
+    }
+
+    // transient ui state accessors backed by the store, so the single source of
+    // truth is the store while the existing logic keeps reading fields
+
+    get _loading() { return this._store.getState().loading; }
+    set _loading(value) { this._store.setState({ loading: value }); }
+
+    get _submitting() { return this._store.getState().submitting; }
+    set _submitting(value) { this._store.setState({ submitting: value }); }
+
+    get mode() { return this._store.getState().mode; }
+    set mode(value) { this._store.setState({ mode: value }); }
+
+    /**
      * Initialize control: attach event listeners and trigger data loading if configured.
      * Ensures the correct DOM order of structural elements.
      */
@@ -95,9 +152,17 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
         this._ensureContainer("wx-restform-prolog-container", "_formPrologContainer", [], this._confirmContainer);
 
         const headerEl = this._element.querySelector(".modal-body");
-        const main = headerEl ? headerEl.querySelector("main") : null;
+        const main = headerEl ? headerEl.querySelector(".wx-form-main") : null;
         if (main) {
-            main.style.display = this.mode === "delete" ? "none" : "block";
+            if (this.mode === "delete") {
+                main.style.display = "none";
+            } else {
+                // the inline value is cleared rather than set to "block", so how the fields are
+                // laid out stays the stylesheet's decision - a form whose body is one filling
+                // surface needs a flex column here, and an inline display outranks every rule
+                // that could say so
+                main.style.removeProperty("display");
+            }
         }
         this.load();
     }
@@ -202,24 +267,8 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
         const modal = this._element.closest(".modal");
-        if (!modal || !window.bootstrap) {
-            return;
-        }
-
-        try {
-            const Modal = window.bootstrap.Modal;
-            let inst = null;
-            if (typeof Modal.getInstance === "function") {
-                inst = Modal.getInstance(modal);
-            }
-            if (!inst) {
-                inst = new Modal(modal);
-            }
-            if (inst) {
-                inst.hide();
-            }
-        } catch (e) {
-            // ignore bootstrap errors
+        if (modal?.open) {
+            modal.close();
         }
     }
 
@@ -250,23 +299,20 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
         this._dispatch(webexpress.webui.Event.TASK_START_EVENT, { name: "loading" });
 
         try {
-            let url = new URL(this.options.api, window.location.origin);
-            if (this.options.id) {
-                url.searchParams.append("id", String(this.options.id || ""));
-            }
-            url.searchParams.append("mode", this.mode);
+            const url = webexpress.webapp.restFormModel.buildLoadUrl(
+                this.options.api, this.options.id, this.mode, window.location.origin);
 
-            const resp = await fetch(url.toString(), {
+            const result = await this._service.request(url, {
                 method: "GET",
                 headers: { "Accept": "application/json" },
                 credentials: this.options.credentials || "same-origin"
             });
 
-            if (!resp.ok) {
-                throw new Error(this._i18n("webexpress.webapp:error.load_failed", { status: resp.status }));
+            if (!result.ok) {
+                throw new Error(this._i18n("webexpress.webapp:error.load_failed", { status: result.status }));
             }
 
-            const json = await resp.json();
+            const json = result.data;
             const dataObj = (json && typeof json === "object") ? json : {};
             const formData = dataObj.data || (Object.keys(dataObj).length ? dataObj : null);
 
@@ -282,10 +328,10 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
             }
 
             if (typeof this.options.onLoadSuccess === "function") {
-                this.options.onLoadSuccess(json, resp);
+                this.options.onLoadSuccess(json, result.response);
             }
 
-            this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, { data: json, status: resp.status });
+            this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, { data: json, status: result.status });
             this._dispatch(webexpress.webui.Event.CHANGE_VALUE_EVENT, { source: "load", data: json });
 
         } catch (error) {
@@ -378,6 +424,25 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
+     * Substitutes the named and positional placeholders of a message with the
+     * supplied values, so a translated message can carry the numbers it talks
+     * about. A placeholder without a value is left untouched.
+     * @param {string} message The message carrying {name} placeholders.
+     * @param {Object} params The values, keyed by placeholder name.
+     * @returns {string} The message with the placeholders replaced.
+     */
+    _applyParams(message, params) {
+        if (!message || !params) {
+            return message || "";
+        }
+
+        return String(message).replace(/\{(\w+)\}/g, (match, name) => {
+            const value = params[name];
+            return (value === undefined || value === null) ? match : String(value);
+        });
+    }
+
+    /**
      * Validates a single form field element.
      * Can be overridden by subclasses or used by them.
      * @param {HTMLElement} el The element to validate.
@@ -389,6 +454,13 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
         }
 
         let msg = null;
+
+        // a control that stores its value in a hidden input (a picker, a segmented
+        // choice) is barred from native constraint validation, so it declares a
+        // required value through data-wx-required instead
+        if (el.dataset && el.dataset.wxRequired === "true" && !String(el.value || "").trim()) {
+            return el.dataset.wxRequiredMessage || this._i18n("webexpress.webapp:validation.required");
+        }
 
         if (!el.validity.valid) {
             msg = el.validationMessage || this._i18n("webexpress.webapp:validation.invalid");
@@ -456,6 +528,20 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
             this._displayAggregatedErrors(messages);
         }
         return formIsValid;
+    }
+
+    /**
+     * Returns what a submit would send, without sending it.
+     *
+     * A surface that writes the same fields somewhere else - the document form saves the
+     * unpublished draft while the author types - has to send the shape the publish sends, or
+     * the endpoint behind it reads two contracts instead of one. Reading the form a second time
+     * would let the two drift apart on the next controlled input, so the payload is built here,
+     * once, for both.
+     * @returns {Object} The payload a submit would send.
+     */
+    serialize() {
+        return this._buildPayload();
     }
 
     /**
@@ -537,15 +623,16 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
             }
         }
 
-        const { url, init } = this._prepareRequest(endpoint, payload);
+        const { url, init } = webexpress.webapp.restFormModel.buildRequest(
+            endpoint, this.options, payload, window.location.origin);
 
         this._setSubmitting(true);
         this._dispatch(webexpress.webui.Event.TASK_START_EVENT, { name: "submitting" });
         this._dispatch(webexpress.webui.Event.DATA_REQUESTED_EVENT, { type: "submit", url: url });
 
         try {
-            const resp = await fetch(url, init);
-            await this._handleResponse(resp);
+            const result = await this._service.request(url, init);
+            this._handleResult(result);
         } catch (error) {
             if (typeof this.options.onError === "function") {
                 this.options.onError(error);
@@ -564,146 +651,80 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
      * @returns {{url: string, init: Object}} Request configuration.
      */
     _prepareRequest(endpoint, payload) {
-        const method = this.options.method;
-        const init = {
-            method: method,
-            headers: Object.assign({}, this.options.headers),
-            credentials: this.options.credentials || "same-origin"
-        };
-
-        const urlObj = new URL(endpoint, window.location.origin);
-        let requestUrl = endpoint;
-
-        const appendParams = (target, data) => {
-            for (const [k, v] of Object.entries(data)) {
-                const values = Array.isArray(v) ? v : [v];
-                values.forEach((val) => {
-                    target.searchParams.append(k, val == null ? "" : String(val));
-                });
-            }
-        };
-
-        if (["GET", "HEAD", "DELETE"].includes(method)) {
-            // remove content-type for these methods
-            Object.keys(init.headers).forEach((h) => {
-                if (h.toLowerCase() === "content-type") {
-                    delete init.headers[h];
-                }
-            });
-
-            if (method === "DELETE") {
-                const idParam = this.options.id || payload.id || payload.Id;
-                if (idParam) {
-                    urlObj.searchParams.append("id", String(idParam));
-                }
-            } else {
-                appendParams(urlObj, payload);
-            }
-            requestUrl = urlObj.toString();
-        } else {
-            // post/put/patch
-            if (this.options.json) {
-                init.body = JSON.stringify(payload);
-                if (!Object.keys(init.headers).some((k) => {
-                    return k.toLowerCase() === "content-type";
-                })) {
-                    init.headers["Content-Type"] = "application/json; charset=utf-8";
-                }
-            } else {
-                const params = new URLSearchParams();
-                for (const [k, v] of Object.entries(payload)) {
-                    const values = Array.isArray(v) ? v : [v];
-                    values.forEach((val) => {
-                        params.append(k, val == null ? "" : String(val));
-                    });
-                }
-                init.body = params.toString();
-                if (!Object.keys(init.headers).some((k) => {
-                    return k.toLowerCase() === "content-type";
-                })) {
-                    init.headers["Content-Type"] = "application/x-www-form-urlencoded; charset=utf-8";
-                }
-            }
-
-            if (this.options.id) {
-                if (!urlObj.searchParams.has("id")) {
-                    urlObj.searchParams.append("id", String(this.options.id));
-                    requestUrl = urlObj.toString();
-                }
-            }
-        }
-
-        return { url: requestUrl, init: init };
+        return webexpress.webapp.restFormModel.buildRequest(endpoint, this.options, payload, window.location.origin);
     }
 
     /**
-     * Handles the fetch response parsing and UI updates.
-     * @param {Response} resp The fetch response object.
+     * Handles a normalised service result by classifying it into a success, a
+     * validation or a system error outcome and updating the UI accordingly. The
+     * classification and the server error normalisation are pure and live in
+     * restFormModel; the DOM updates stay here. A system error is thrown so the
+     * submit caller reports it through its catch.
+     * @param {object} result - The normalised service result.
      */
-    async _handleResponse(resp) {
-        let json = null;
-        const contentType = resp.headers.get("content-type") || "";
+    _handleResult(result) {
+        const json = result.data;
+        const classification = webexpress.webapp.restFormModel.classifyResponse(result.ok, result.status, json);
 
-        if (contentType.includes("application/json")) {
-            try {
-                json = await resp.json();
-            } catch (e) {
-                // ignore json parse error on empty body
-            }
-        } else {
-            try {
-                json = { text: await resp.text() };
-            } catch (e) {
-                // ignore
-            }
-        }
-
-        if (resp.ok) {
+        if (classification.kind === "success") {
             this.clearErrors();
             if (typeof this.options.onSuccess === "function") {
-                this.options.onSuccess(json, resp);
+                this.options.onSuccess(json, result.response);
             }
 
-            this._dispatch(webexpress.webui.Event.UPLOAD_SUCCESS_EVENT, { response: json, status: resp.status, form: this._element });
+            // the endpoint travels with the event so a surface that reads the same
+            // service can tell that its data changed and reload; without it a
+            // listener cannot distinguish a write to its own service from any other
+            this._dispatch(webexpress.webui.Event.UPLOAD_SUCCESS_EVENT, { response: json, status: result.status, form: this._element, endpoint: this.options.api });
             this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, { type: "submit", data: json });
 
-            const dataBlock = (json && json.data) ? json.data : json;
-            const confirmHtml = (dataBlock && dataBlock.confirmHtml) || (json && json.confirmHtml);
-            const message = (dataBlock && dataBlock.message) || (json && (json.confirmMessage || json.message));
+            // when bound to a ViewState, re-query the resource so a ViewState-bound
+            // list or table re-renders with the created or edited record
+            if (this._viewState) {
+                this._viewState.dispatch("viewstate/reload", { resource: this._viewStateResource });
+            }
 
-            if (json && (!json.message || json.hideForm === true)) {
+            if (classification.closeModal) {
                 this._closeEnclosingModal();
-            } else {
-                if (confirmHtml) {
-                    this._showConfirm(String(confirmHtml));
-                } else if (message) {
-                    this._showConfirm(String(message));
-                } else if (this._confirmHtml) {
-                    this._showConfirm(null);
+            } else if (classification.confirmHtml) {
+                this._showConfirm(String(classification.confirmHtml));
+            } else if (classification.message) {
+                this._showConfirm(String(classification.message));
+            } else if (this._confirmHtml) {
+                this._showConfirm(null);
+            }
+        } else if (classification.kind === "validation") {
+            this.clearErrors();
+
+            const messages = [];
+            for (const e of (classification.errors || [])) {
+                if (e.field) {
+                    const field = this._findFieldByName(e.field);
+                    if (field) {
+                        this._showFieldError(field, e.message);
+                    }
                 }
+                messages.push(e.message);
             }
-        } else if (resp.status === 400) {
-            // handle validation errors
-            if (Array.isArray(json)) {
-                this._applyServerArrayErrors(json);
-            } else if (json && json.errors) {
-                this._applyServerFieldErrors(json.errors);
-            } else {
-                const msg = (json && (json.message || json.error)) || this._i18n("webexpress.webapp:validation.failed");
-                this._displayAggregatedErrors([typeof msg === "object" ? JSON.stringify(msg) : msg]);
+
+            if (messages.length === 0) {
+                const fallback = classification.message || this._i18n("webexpress.webapp:validation.failed");
+                messages.push(typeof fallback === "object" ? JSON.stringify(fallback) : fallback);
             }
+
+            this._displayAggregatedErrors(messages);
 
             if (typeof this.options.onError === "function") {
-                this.options.onError(json, resp);
+                this.options.onError(json, result.response);
             }
-            this._dispatch(webexpress.webui.Event.UPLOAD_ERROR_EVENT, { type: "validation", response: json, status: resp.status, form: this._element });
+            this._dispatch(webexpress.webui.Event.UPLOAD_ERROR_EVENT, { type: "validation", response: json, status: result.status, form: this._element });
         } else {
             // handle system errors
             const message = this._i18n("webexpress.webapp:error.request_failed")
-                .replace("{status}", resp.status);
+                .replace("{status}", result.status);
             const err = new Error(message);
-            err.status = resp.status;
-            err.response = resp;
+            err.status = result.status;
+            err.response = result.response;
             err.payload = json;
             throw err;
         }
@@ -738,56 +759,6 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
         } else {
             this._element.classList.remove("wx-restform-submitting");
         }
-    }
-
-    /**
-     * Applies server-side field errors provided as a key-value map.
-     * @param {Object} errors A map of fieldName → message returned by the server.
-     */
-    _applyServerFieldErrors(errors) {
-        this.clearErrors();
-        if (!errors || typeof errors !== "object") {
-            return;
-        }
-
-        const messages = [];
-        for (const [name, msg] of Object.entries(errors)) {
-            const field = this._findFieldByName(name);
-            if (field) {
-                this._showFieldError(field, msg);
-            }
-            messages.push(msg);
-        }
-        this._displayAggregatedErrors(messages);
-    }
-
-    /**
-     * Applies server-side validation errors provided as an array.
-     * @param {Array} errorsArray The array of validation error objects returned by the server.
-     */
-    _applyServerArrayErrors(errorsArray) {
-        this.clearErrors();
-        if (!Array.isArray(errorsArray)) {
-            return;
-        }
-
-        const messages = [];
-        for (const err of errorsArray) {
-            if (!err) {
-                continue;
-            }
-            const msg = err.message || err.msg || err.Message || JSON.stringify(err);
-            const fieldName = err.field || err.Field;
-
-            if (fieldName) {
-                const field = this._findFieldByName(fieldName);
-                if (field) {
-                    this._showFieldError(field, msg);
-                }
-            }
-            messages.push(msg);
-        }
-        this._displayAggregatedErrors(messages);
     }
 
     /**
@@ -981,7 +952,8 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
         Object.assign(input, {
             type: "text", className: "form-control", placeholder: confirmItem, autocomplete: "off"
         });
-        input.setAttribute("aria-label", this._i18n("webexpress.webapp:delete.confirmation.input.aria-label", { item: confirmItem }));
+        input.setAttribute("aria-label", this._i18n("webexpress.webapp:delete.confirmation.input.aria-label", "Type {item} to confirm deletion.")
+            .replace("{item}", confirmItem));
 
         // store input ref
         this._confirmInput = input;

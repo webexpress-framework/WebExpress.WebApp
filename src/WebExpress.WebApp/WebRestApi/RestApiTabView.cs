@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Serialization;
+using WebExpress.WebUI.WebControl;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -49,6 +50,43 @@ namespace WebExpress.WebApp.WebRestApi
         /// </summary>
         [JsonPropertyName("color")]
         public string Color { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional color of the tab as a <c>#rrggbb</c> value,
+        /// shown as an underline of the tab header. It is chosen by the user from
+        /// the tab menu and kept apart from <see cref="Color"/>, which is a css
+        /// class for the icon authored on the server.
+        /// </summary>
+        [JsonPropertyName("tabColor")]
+        public string TabColor { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional badge text shown at the trailing edge of
+        /// the tab header, for example the number of entries in the view. A
+        /// null value hides the badge.
+        /// </summary>
+        [JsonPropertyName("badge")]
+        public string Badge { get; set; }
+
+        /// <summary>
+        /// Gets or sets the badge background color. The typed color is authored
+        /// here and collapses into the serialized css class or inline style, so
+        /// no caller ever writes a raw CSS string.
+        /// </summary>
+        [JsonIgnore]
+        public PropertyColorBackgroundBadge BadgeColor { get; set; }
+
+        /// <summary>
+        /// Gets the CSS class of a system badge color, derived from <see cref="BadgeColor"/>.
+        /// </summary>
+        [JsonPropertyName("badgeColor")]
+        public string BadgeColorCss => BadgeColor?.ToClass();
+
+        /// <summary>
+        /// Gets the inline style of a user-defined badge color, derived from <see cref="BadgeColor"/>.
+        /// </summary>
+        [JsonPropertyName("badgeStyle")]
+        public string BadgeColorStyle => BadgeColor?.ToStyle();
 
         /// <summary>
         /// Gets or sets the optional primary action identifier.

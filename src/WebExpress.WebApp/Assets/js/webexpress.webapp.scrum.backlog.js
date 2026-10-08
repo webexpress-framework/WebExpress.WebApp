@@ -2,11 +2,12 @@
  * Scrum backlog control.
  * Adds context menus, sprint editing/deletion, precise drag & drop ranking,
  * keyboard accessibility, sprint completion/start logic, smart duration selection,
- * configurable icons, bootstrap-based modals and item selection (single & multi).
+ * configurable icons, WebExpress-based modals and item selection (single & multi).
  */
-webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
+webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
 
     _restUri = null;
+    _viewState = null;
     _title = null;
     _sprints = [];
     _items = [];
@@ -28,36 +29,65 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
      * @param {HTMLElement} element - The host element.
      */
     constructor(element) {
-        super(element);
+        // resolve the data service and seed the sprints and items from the
+        // optional wx-state island before super, so the component owns the
+        // store and the service map; the model builds the sprint and item
+        // paths and the bodies
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+        const services = islandServices;
+        const initialState = Object.assign({ sprints: [], items: [] }, webexpress.webapp.Data.readState(element));
 
-        this._restUri = element.dataset.restUri || element.getAttribute("data-rest-uri") || null;
+        super(element, { state: initialState, services: services });
+
         this._title = element.dataset.title || element.getAttribute("data-title") || this._i18n("webexpress.webapp:scrum.backlog", "Backlog");
 
         const selAttr = element.dataset.selectable || element.getAttribute("data-selectable");
         this._selectable = selAttr !== "false";
         this._readonly = element.dataset.readonly === "true";
 
-        // read configurable icons or use font awesome defaults
+        this._service = this.useService("data");
+        this._restUri = this._service ? this._service.baseUri : null;
+
+        // the resource a ViewState renders. when present, the backlog data is a
+        // central resource the enclosing ViewState owns and loads; selection and
+        // drag state stay local to this control.
+        this._resource = (element.dataset && element.dataset.wxResource) || null;
+
+        // optional users service backing the assignee picker
+        this._users = this.useService("users");
+
+        // the story-point scale offered in the assign/estimate dialog; falls back
+        // to a rounded fibonacci sequence when the host carries no scale
+        this._estimationScale = webexpress.webapp.scrumBacklogModel.estimationScale(element.dataset.estimationScale);
+
+        // read configurable icons or use theme-resolved defaults; icons without
+        // a light glyph stay on their font awesome class in both themes
         // item type icons are not configured here - they are delivered per item via item.icon from the rest api
         this._icons = {
             // sections and status
-            active: element.dataset.iconActive || "fas fa-play-circle",
-            planned: element.dataset.iconPlanned || "far fa-calendar-alt",
-            backlog: element.dataset.iconBacklog || "fas fa-list",
+            active: element.dataset.iconActive || "wx-icon-light wx-icon-light-play-circle",
+            planned: element.dataset.iconPlanned || this._iconClass("calendar"),
+            backlog: element.dataset.iconBacklog || this._iconClass("list"),
+            sprintMenu: element.dataset.iconSprintMenu || this._iconClass("more"),
 
             // context menu actions
-            moveToBacklog: element.dataset.iconMoveToBacklog || "fas fa-inbox",
-            moveToSprint: element.dataset.iconMoveToSprint || "fas fa-share",
-            startSprint: element.dataset.iconStartSprint || "fas fa-play",
-            completeSprint: element.dataset.iconCompleteSprint || "fas fa-check-double",
-            editSprint: element.dataset.iconEditSprint || "fas fa-edit",
-            deleteSprint: element.dataset.iconDeleteSprint || "fas fa-trash-alt"
+            moveToBacklog: element.dataset.iconMoveToBacklog || this._iconClass("inbox"),
+            moveToSprint: element.dataset.iconMoveToSprint || this._iconClass("share"),
+            startSprint: element.dataset.iconStartSprint || this._iconClass("play"),
+            completeSprint: element.dataset.iconCompleteSprint || "wx-icon-light wx-icon-light-check-double",
+            editSprint: element.dataset.iconEditSprint || this._iconClass("edit"),
+            deleteSprint: element.dataset.iconDeleteSprint || this._iconClass("trash"),
+
+            // item assignment and estimation
+            assign: element.dataset.iconAssign || "wx-icon-light wx-icon-light-user-plus",
+            estimate: element.dataset.iconEstimate || "wx-icon-light wx-icon-light-scale-balanced"
         };
 
         element.removeAttribute("data-rest-uri");
         element.removeAttribute("data-title");
         element.removeAttribute("data-selectable");
         element.removeAttribute("data-readonly");
+        element.removeAttribute("data-estimation-scale");
 
         element.classList.add("wx-scrum-backlog");
         if (this._selectable) {
@@ -67,11 +97,77 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
         // global keyboard shortcuts (Ctrl+A, Escape)
         element.addEventListener("keydown", this._onRootKeyDown);
 
-        if (this._restUri) {
+        // when the server seeded the backlog through the data-wx-state island,
+        // render it without a round trip; otherwise load from the endpoint or
+        // parse the inline static configuration
+        const seeded = this.state;
+        if (this._resource) {
+            // ViewState mode: the enclosing ViewState loads the backlog resource centrally
+            this._attachToViewState(element);
+        } else if ((Array.isArray(seeded.sprints) && seeded.sprints.length > 0)
+            || (Array.isArray(seeded.items) && seeded.items.length > 0)) {
+            this.data = { sprints: seeded.sprints || [], items: seeded.items || [] };
+        } else if (this._restUri) {
             this._load();
         } else {
             this._parseStaticConfig();
             this.render();
+        }
+
+        // the backlog does not run the Data mount, so the live update wiring
+        // happens here: an external change of the service's domains re-queries
+        // and flashes, so changes made by other users re-render standalone too
+        if (!this._resource) {
+            this._dataChanges = webexpress.webapp.DataChangeSubscription.attachReload(
+                [this._service], () => this._load(), element);
+        }
+    }
+
+    /**
+     * Attaches the backlog to the enclosing ViewState and renders its
+     * resource slice. The ViewState owns the service and the central load, so the
+     * backlog re-renders whenever the ViewState re-queries the resource, while its
+     * sprint and item mutations still flow through the ViewState service.
+     * @param {HTMLElement} element The host element.
+     */
+    _attachToViewState(element) {
+        const viewStateId = (element.dataset && element.dataset.wxViewstate) || null;
+
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
+            this._viewState = viewState;
+
+            const service = viewState.serviceForResource(this._resource);
+            if (service) {
+                this._service = service;
+                this._restUri = service.baseUri;
+            }
+
+            // the assignee picker's users service also comes from the ViewState in
+            // ViewState mode, resolved by the type-safe users binding the control
+            // emits, since the control owns no islands of its own
+            const usersName = element.dataset && element.dataset.wxUsers;
+            const usersService = usersName ? viewState.useService(usersName) : null;
+            if (usersService) {
+                this._users = usersService;
+            }
+
+            const unsubscribe = viewState.watch((state) => viewState.slice(this._resource, state), (slice) => this._applySlice(slice));
+            (element._wxCleanup = element._wxCleanup || []).push(unsubscribe);
+
+            this._applySlice(viewState.slice(this._resource));
+        });
+    }
+
+    /**
+     * Renders a backlog resource slice the ViewState loaded centrally. The raw
+     * sprints and items response flows through the data setter, which normalises
+     * and renders it; the local selection and drag state are preserved.
+     * @param {object} slice The resource slice { items, total, data, loading, error }.
+     */
+    _applySlice(slice) {
+        slice = slice || {};
+        if (slice.data) {
+            this.data = slice.data;
         }
     }
 
@@ -80,14 +176,15 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
      * @returns {void}
      */
     _parseStaticConfig() {
-        const cfgEl = this._element.querySelector(":scope > script[type='application/json']");
+        const cfgEl = this._element.querySelector(":ViewState > script[type='application/json']");
         if (!cfgEl) {
             return;
         }
         try {
             const parsed = JSON.parse(cfgEl.textContent);
-            this._sprints = Array.isArray(parsed.sprints) ? parsed.sprints : [];
-            this._items = Array.isArray(parsed.items) ? parsed.items : [];
+            const norm = webexpress.webapp.scrumBacklogModel.normalizeData(parsed);
+            this._sprints = norm.sprints;
+            this._items = norm.items;
             this._rebuildIndexes();
             this._ensureRanking();
         } catch (e) {
@@ -118,8 +215,9 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
      * @param {Object} data - { sprints: [], items: [] }
      */
     set data(data) {
-        this._sprints = Array.isArray(data?.sprints) ? data.sprints : [];
-        this._items = Array.isArray(data?.items) ? data.items : [];
+        const norm = webexpress.webapp.scrumBacklogModel.normalizeData(data);
+        this._sprints = norm.sprints;
+        this._items = norm.items;
         this._rebuildIndexes();
         this._ensureRanking();
         this._pruneSelection();
@@ -154,6 +252,16 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
+     * Reloads the backlog. The public load surface of the component
+     * contract, so intents and the data change subscription can trigger a
+     * reload without knowing the internal loader.
+     * @returns {void}
+     */
+    load() {
+        return this._load();
+    }
+
+    /**
      * Loads sprints and items from the REST API.
      * @returns {void}
      */
@@ -164,11 +272,14 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
 
         this._dispatch(webexpress.webui.Event.DATA_REQUESTED_EVENT, { uri: this._restUri });
 
-        fetch(this._restUri, { headers: { "Accept": "application/json" } })
-            .then((r) => r.json())
-            .then((data) => {
-                this._sprints = Array.isArray(data?.sprints) ? data.sprints : [];
-                this._items = Array.isArray(data?.items) ? data.items : [];
+        this._service.query({})
+            .then((r) => {
+                if (!r.ok) {
+                    throw new Error(r.error ? r.error.message : ("HTTP " + r.status));
+                }
+                const norm = webexpress.webapp.scrumBacklogModel.normalizeData(r.data);
+                this._sprints = norm.sprints;
+                this._items = norm.items;
                 this._rebuildIndexes();
                 this._ensureRanking();
                 this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, { uri: this._restUri });
@@ -189,12 +300,13 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
         if (!this._restUri) {
             return Promise.resolve(sprint);
         }
-        return fetch(this._restUri, {
-            method: "POST",
-            headers: { "Accept": "application/json", "Content-Type": "application/json" },
-            body: JSON.stringify(sprint)
-        })
-            .then((r) => r.json())
+        return this._service.create(sprint)
+            .then((r) => {
+                if (!r.ok) {
+                    throw new Error(r.error ? r.error.message : ("HTTP " + r.status));
+                }
+                return r.data;
+            })
             .catch((err) => {
                 console.error("ScrumBacklogCtrl: failed to create sprint", err);
                 return sprint;
@@ -210,12 +322,13 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
         if (!this._restUri) {
             return Promise.resolve(sprint);
         }
-        return fetch(this._restUri + "/sprints/" + encodeURIComponent(sprint.id), {
-            method: "PUT",
-            headers: { "Accept": "application/json", "Content-Type": "application/json" },
-            body: JSON.stringify(sprint)
-        })
-            .then((r) => r.json())
+        return this._service.update(sprint, { path: webexpress.webapp.scrumBacklogModel.sprintPath(sprint.id) })
+            .then((r) => {
+                if (!r.ok) {
+                    throw new Error(r.error ? r.error.message : ("HTTP " + r.status));
+                }
+                return r.data;
+            })
             .catch((err) => {
                 console.error("ScrumBacklogCtrl: failed to update sprint", err);
                 return sprint;
@@ -231,11 +344,13 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
         if (!this._restUri) {
             return Promise.resolve();
         }
-        return fetch(this._restUri + "/sprints/" + encodeURIComponent(sprintId), {
-            method: "DELETE",
-            headers: { "Accept": "application/json" }
-        })
-            .then(() => undefined)
+        return this._service.remove({ path: webexpress.webapp.scrumBacklogModel.sprintPath(sprintId) })
+            .then((r) => {
+                if (!r.ok && r.status !== 204) {
+                    throw new Error(r.error ? r.error.message : ("HTTP " + r.status));
+                }
+                return undefined;
+            })
             .catch((err) => {
                 console.error("ScrumBacklogCtrl: failed to delete sprint", err);
                 return undefined;
@@ -251,12 +366,16 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
         if (!this._restUri) {
             return Promise.resolve(item);
         }
-        return fetch(this._restUri + "/items/" + encodeURIComponent(item.id) + "/rank", {
-            method: "PUT",
-            headers: { "Accept": "application/json", "Content-Type": "application/json" },
-            body: JSON.stringify({ sprintId: item.sprintId || null, rank: item.rank })
-        })
-            .then((r) => r.json())
+        return this._service.update(
+            webexpress.webapp.scrumBacklogModel.itemRankBody(item),
+            { path: webexpress.webapp.scrumBacklogModel.itemRankPath(item.id) }
+        )
+            .then((r) => {
+                if (!r.ok) {
+                    throw new Error(r.error ? r.error.message : ("HTTP " + r.status));
+                }
+                return r.data;
+            })
             .catch((err) => {
                 console.error("ScrumBacklogCtrl: failed to persist rank", err);
                 return item;
@@ -282,15 +401,12 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
         // attempt a batch endpoint; fall back transparently on 404
-        fetch(this._restUri + "/items/rank-batch", {
-            method: "PUT",
-            headers: { "Accept": "application/json", "Content-Type": "application/json" },
-            body: JSON.stringify({
-                ranks: items.map((i) => ({ id: i.id, sprintId: i.sprintId || null, rank: i.rank }))
-            })
-        })
+        this._service.update(
+            webexpress.webapp.scrumBacklogModel.rankBatchBody(items),
+            { path: webexpress.webapp.scrumBacklogModel.rankBatchPath() }
+        )
             .then((r) => {
-                if (r.status === 404 || r.status === 405) {
+                if (r.status === 404 || r.status === 405 || (r.error && r.error.kind === "network")) {
                     for (const it of items) {
                         this._persistItemRank(it);
                     }
@@ -316,15 +432,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
         if (!sprint) {
             return;
         }
-        const normalized = Object.assign({
-            id: sprint.id || ("sp_" + Date.now()),
-            name: sprint.name || "",
-            goal: sprint.goal || "",
-            status: sprint.status || "planned",
-            start: sprint.start || null,
-            end: sprint.end || null,
-            capacity: typeof sprint.capacity === "number" ? sprint.capacity : 0
-        }, sprint);
+        const normalized = webexpress.webapp.scrumBacklogModel.normalizeSprint(sprint);
         this._sprints.push(normalized);
         this._sprintIndex.set(normalized.id, normalized);
         this.render();
@@ -865,11 +973,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
      * @returns {void}
      */
     _rewriteRanks(sprintId, orderedItems) {
-        let rank = 1;
-        for (const it of orderedItems) {
-            it.sprintId = sprintId || null;
-            it.rank = rank++;
-        }
+        webexpress.webapp.scrumBacklogModel.rewriteRanks(sprintId, orderedItems);
     }
 
     /**
@@ -878,23 +982,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
      * @returns {Array<Object>}
      */
     _itemsForSprintSorted(sprintId) {
-        const sid = sprintId || null;
-        const out = this._items.filter((i) => {
-            return (i.sprintId || null) === sid || (sid === null && (!i.sprintId || i.status === "backlog"));
-        });
-
-        out.sort((a, b) => {
-            const ra = typeof a.rank === "number" ? a.rank : Number.MAX_SAFE_INTEGER;
-            const rb = typeof b.rank === "number" ? b.rank : Number.MAX_SAFE_INTEGER;
-            if (ra !== rb) {
-                return ra - rb;
-            }
-            const ka = String(a.key || a.title || "");
-            const kb = String(b.key || b.title || "");
-            return ka.localeCompare(kb);
-        });
-
-        return out;
+        return webexpress.webapp.scrumBacklogModel.itemsForSprintSorted(this._items, sprintId);
     }
 
     /**
@@ -974,7 +1062,10 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
             const createBtn = document.createElement("button");
             createBtn.type = "button";
             createBtn.className = "btn btn-primary btn-sm wx-scrum-create-sprint";
-            createBtn.innerHTML = "<i class=\"fas fa-plus\"></i> " + this._i18n("webexpress.webapp:scrum.create_sprint", "Create sprint");
+            createBtn.append(
+                webexpress.webui.Icon.create(this._iconClass("plus")),
+                " " + this._i18n("webexpress.webapp:scrum.create_sprint", "Create sprint")
+            );
             createBtn.addEventListener("click", () => this.openSprintDialog());
             toolbar.appendChild(createBtn);
         }
@@ -1002,11 +1093,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
         status.className = "wx-scrum-status " + (sprint.status || "");
 
         const statusKey = (sprint.status || "planned").toLowerCase();
-        const statusIconClass = this._icons[statusKey] || "fas fa-circle";
-
-        const statusIcon = document.createElement("i");
-        statusIcon.className = statusIconClass + " wx-scrum-status-icon me-1";
-        status.appendChild(statusIcon);
+        status.appendChild(webexpress.webui.Icon.create(this._icons[statusKey] || this._iconClass("circle"), "wx-scrum-status-icon me-1"));
         status.appendChild(document.createTextNode(sprint.status || ""));
         head.appendChild(status);
 
@@ -1030,7 +1117,10 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
             const menuBtn = document.createElement("button");
             menuBtn.type = "button";
             menuBtn.className = "btn btn-sm btn-light wx-scrum-sprint-menu";
-            menuBtn.textContent = "⋯";
+            menuBtn.title = this._i18n("webexpress.webui:table.options.label", "Options");
+            menuBtn.setAttribute("aria-label", menuBtn.title);
+            menuBtn.setAttribute("aria-haspopup", "menu");
+            menuBtn.appendChild(webexpress.webui.Icon.create(this._icons.sprintMenu || this._iconClass("more")));
             menuBtn.addEventListener("click", (e) => {
                 e.stopPropagation();
                 this._openSprintMenu(e, sprint);
@@ -1122,12 +1212,17 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
         }
 
         const type = document.createElement("span");
-        type.className = "wx-scrum-type " + (item.type || "");
-        // icon class is supplied per item by the rest api (item.icon); fall back to a neutral marker
-        const iconClass = (typeof item.icon === "string" && item.icon.trim()) ? item.icon.trim() : "fas fa-circle";
-        const typeIcon = document.createElement("i");
-        typeIcon.className = iconClass;
-        type.appendChild(typeIcon);
+        // the type is application data and lands in the class list, so it goes through the
+        // token form rather than verbatim - see _typeToken
+        type.className = ("wx-scrum-type " + this._typeToken(item.type)).trim();
+        // the badge carries no label of its own, so the type is readable on hover
+        if (item.type) {
+            type.title = item.type;
+        }
+        // the icon is supplied per item by the rest api (item.icon) as either a
+        // css class or an image source; fall back to a neutral marker
+        const iconSpec = (typeof item.icon === "string" && item.icon.trim()) ? item.icon.trim() : this._iconClass("circle");
+        type.appendChild(webexpress.webui.Icon.create(iconSpec));
         row.appendChild(type);
 
         const key = document.createElement("span");
@@ -1150,11 +1245,35 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
         points.textContent = String(item.points || 0);
         row.appendChild(points);
 
+        let assignee;
+        if (item.assigneeId && item.assigneeImage) {
+            assignee = document.createElement("img");
+            assignee.className = "wx-scrum-assignee";
+            assignee.src = item.assigneeImage;
+            assignee.alt = item.assigneeName || "";
+            assignee.title = item.assigneeName || "";
+        } else {
+            assignee = document.createElement("span");
+            assignee.className = "wx-scrum-assignee";
+            if (item.assigneeId) {
+                assignee.style.background = item.assigneeColor || "#6c757d";
+                assignee.textContent = item.assigneeInitials || (item.assigneeName || "?").slice(0, 2).toUpperCase();
+                assignee.title = item.assigneeName || "";
+            } else {
+                assignee.classList.add("wx-scrum-assignee-empty");
+                assignee.title = this._i18n("webexpress.webapp:scrum.assignee.unassigned", "Unassigned");
+            }
+        }
+        row.appendChild(assignee);
+
         if (!this._readonly && allowAddToSprint && targetSprint) {
             const add = document.createElement("button");
             add.type = "button";
             add.className = "wx-scrum-add-sprint";
-            add.textContent = "→ " + (targetSprint.name || this._i18n("webexpress.webapp:scrum.sprint", "Sprint"));
+            add.append(
+                webexpress.webui.Icon.create(this._icons.moveToSprint),
+                " " + (targetSprint.name || this._i18n("webexpress.webapp:scrum.sprint", "Sprint"))
+            );
             add.addEventListener("click", (e) => {
                 e.stopPropagation();
                 // honor multiselect on the quick-add button
@@ -1252,6 +1371,28 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
         }
 
         return row;
+    }
+
+    /**
+     * Turns an item type into a single css class token: lower case, every run of other
+     * characters folded to one hyphen.
+     *
+     * The type is application data - the deployment names its own - and it is written into
+     * the class list of the type badge so a sheet can colour it. Verbatim that misfires in
+     * both directions: a two-word name ("User Story") lands as two classes, of which the
+     * second is a class nobody wrote a rule for, and a name carrying punctuation or a
+     * leading digit is not a valid class at all. The type colours the sheet ships are
+     * written lower case, so a name in the application's own casing is folded to match.
+     *
+     * @param {string|null|undefined} type - The item type as the rest api delivered it.
+     * @returns {string} The class token, or "" when no type was supplied.
+     */
+    _typeToken(type) {
+        return String(type ?? "")
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, "");
     }
 
     /**
@@ -1427,14 +1568,24 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
             ? this._i18n("webexpress.webapp:scrum.menu.move_n_to", "Move {n} to").replace("{n}", activeIds.length)
             : this._i18n("webexpress.webapp:scrum.menu.move_to", "Move to");
 
-        const entries = [
-            {
-                label: moveToBacklogLabel,
-                icon: this._icons.moveToBacklog,
-                disabled: allInBacklog,
-                action: () => this.moveItemsToSprint(activeIds, null)
-            }
-        ];
+        const entries = [];
+
+        // assignment and estimation operate on a single item
+        if (!isMulti) {
+            entries.push({
+                label: this._i18n("webexpress.webapp:scrum.menu.assign", "Assign & estimate…"),
+                icon: this._icons.assign,
+                action: () => this._openItemEditDialog(item)
+            });
+            entries.push({ separator: true });
+        }
+
+        entries.push({
+            label: moveToBacklogLabel,
+            icon: this._icons.moveToBacklog,
+            disabled: allInBacklog,
+            action: () => this.moveItemsToSprint(activeIds, null)
+        });
 
         if (sprintTargets.length > 0) {
             entries.push({ separator: true });
@@ -1519,18 +1670,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
      * @returns {boolean}
      */
     _crossesActiveSprint(items, targetSprintId) {
-        const activeId = this._activeSprintId();
-        if (!activeId) {
-            return false;
-        }
-        const targetIsActive = targetSprintId === activeId;
-        for (const it of items) {
-            const sourceIsActive = (it.sprintId || null) === activeId;
-            if (sourceIsActive !== targetIsActive) {
-                return true;
-            }
-        }
-        return false;
+        return webexpress.webapp.scrumBacklogModel.crossesActiveSprint(items, targetSprintId, this._activeSprintId());
     }
 
     /**
@@ -1575,7 +1715,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
             .replace("{n}", count)
             .replace("{sprint}", activeName);
 
-        const host = document.createElement("div");
+        const host = document.createElement("dialog");
 
         const header = document.createElement("span");
         header.className = "wx-modal-header";
@@ -1629,7 +1769,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
 
-        const host = document.createElement("div");
+        const host = document.createElement("dialog");
 
         const header = document.createElement("span");
         header.className = "wx-modal-header";
@@ -1660,7 +1800,10 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
         const deleteBtn = document.createElement("button");
         deleteBtn.type = "button";
         deleteBtn.className = "btn btn-danger";
-        deleteBtn.innerHTML = '<i class="fas fa-trash-alt me-2"></i>' + this._i18n("webexpress.webui:delete", "Delete");
+        deleteBtn.append(
+            webexpress.webui.Icon.create(this._icons.deleteSprint, "me-2"),
+            this._i18n("webexpress.webui:delete", "Delete")
+        );
         footer.appendChild(deleteBtn);
 
         host.appendChild(footer);
@@ -1700,8 +1843,8 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
             top: y + "px",
             zIndex: "1060",
             minWidth: "220px",
-            background: "var(--bs-body-bg, #fff)",
-            border: "1px solid var(--bs-border-color, #dee2e6)",
+            background: "var(--wx-body-bg, #fff)",
+            border: "1px solid var(--wx-border-color, #dee2e6)",
             borderRadius: "0.375rem",
             boxShadow: "0 12px 36px rgba(0, 0, 0, 0.18)",
             padding: "0.25rem"
@@ -1713,7 +1856,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
                 Object.assign(hr.style, {
                     height: "1px",
                     margin: "0.25rem 0",
-                    background: "var(--bs-border-color, #dee2e6)"
+                    background: "var(--wx-border-color, #dee2e6)"
                 });
                 menu.appendChild(hr);
                 continue;
@@ -1735,9 +1878,8 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
             });
             btn.disabled = !!entry.disabled;
 
-            if (entry.icon) {
-                const iconNode = document.createElement("i");
-                iconNode.className = entry.icon + " fa-fw";
+            const iconNode = webexpress.webui.Icon.create(entry.icon, "fa-fw");
+            if (iconNode) {
                 btn.appendChild(iconNode);
             }
 
@@ -1754,7 +1896,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
 
             btn.addEventListener("mouseenter", () => {
                 if (!btn.disabled) {
-                    btn.style.background = "var(--bs-tertiary-bg, #f8f9fa)";
+                    btn.style.background = "var(--wx-tertiary-bg, #f8f9fa)";
                 }
             });
             btn.addEventListener("mouseleave", () => {
@@ -2185,7 +2327,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
      * @returns {void}
      */
     _openSprintFormDialog(cfg) {
-        const host = document.createElement("div");
+        const host = document.createElement("dialog");
 
         const header = document.createElement("span");
         header.className = "wx-modal-header";
@@ -2221,6 +2363,271 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webui.Ctrl {
 
         modal.show();
         form.focus();
+    }
+
+    /**
+     * Opens the assign/estimate dialog for a single backlog item. The assignee
+     * is chosen from a searchable, avatar-driven picker fed by the optional users
+     * service; the story-point estimate is picked from the configured scale.
+     * @param {Object} item - The item to assign and estimate.
+     * @returns {void}
+     */
+    _openItemEditDialog(item) {
+        if (this._readonly) {
+            return;
+        }
+
+        // the dialog edits a working copy of the assignment so the board only
+        // changes when the dialog is saved
+        let selectedUser = item.assigneeId
+            ? { id: item.assigneeId, name: item.assigneeName, initials: item.assigneeInitials, color: item.assigneeColor, image: item.assigneeImage }
+            : null;
+        let candidates = [];
+
+        const host = document.createElement("dialog");
+
+        const header = document.createElement("span");
+        header.className = "wx-modal-header";
+        header.textContent = this._i18n("webexpress.webapp:scrum.dialog.assign_estimate", "Assign & estimate");
+        host.appendChild(header);
+
+        const content = document.createElement("div");
+        content.className = "wx-modal-content px-3 py-2";
+
+        const assigneeField = this._buildField(this._i18n("webexpress.webapp:scrum.field.assignee", "Assignee"));
+        const picker = document.createElement("div");
+        picker.className = "wx-scrum-assignee-picker";
+
+        const selectedBox = document.createElement("div");
+        selectedBox.className = "wx-scrum-assignee-selected";
+        picker.appendChild(selectedBox);
+
+        const search = document.createElement("input");
+        search.type = "search";
+        search.className = "form-control wx-scrum-assignee-search";
+        search.placeholder = this._i18n("webexpress.webapp:scrum.assignee.search", "Search people…");
+        picker.appendChild(search);
+
+        const results = document.createElement("div");
+        results.className = "wx-scrum-assignee-results";
+        picker.appendChild(results);
+
+        assigneeField.field.appendChild(picker);
+        content.appendChild(assigneeField.wrapper);
+
+        const pointsField = this._buildField(this._i18n("webexpress.webapp:scrum.field.points", "Story points"), "mb-0");
+        const pointsHost = document.createElement("div");
+        pointsHost.dataset.scale = this._estimationScale.join(",");
+        if (Number.isFinite(item.points)) {
+            pointsHost.dataset.value = String(item.points);
+        }
+        pointsField.field.appendChild(pointsHost);
+        content.appendChild(pointsField.wrapper);
+
+        // the estimate is edited through the reusable estimate input control
+        const pointsCtrl = new webexpress.webui.InputEstimateCtrl(pointsHost);
+
+        host.appendChild(content);
+
+        const footer = document.createElement("div");
+        footer.className = "wx-modal-footer";
+        const submitBtn = document.createElement("button");
+        submitBtn.type = "button";
+        submitBtn.className = "btn btn-primary";
+        submitBtn.textContent = this._i18n("webexpress.webapp:save", "Save");
+        footer.appendChild(submitBtn);
+        host.appendChild(footer);
+
+        document.body.appendChild(host);
+
+        const renderSelected = () => {
+            selectedBox.replaceChildren();
+            if (!selectedUser) {
+                const empty = document.createElement("span");
+                empty.className = "wx-scrum-assignee-selected-empty";
+                empty.textContent = this._i18n("webexpress.webapp:scrum.assignee.unassigned", "Unassigned");
+                selectedBox.appendChild(empty);
+                return;
+            }
+            selectedBox.appendChild(this._buildAssigneeAvatar(selectedUser, "wx-scrum-assignee-selected-avatar"));
+            const name = document.createElement("span");
+            name.className = "wx-scrum-assignee-selected-name";
+            name.textContent = selectedUser.name || selectedUser.id || "";
+            selectedBox.appendChild(name);
+            const clear = document.createElement("button");
+            clear.type = "button";
+            clear.className = "wx-scrum-assignee-clear";
+            clear.title = this._i18n("webexpress.webapp:scrum.assignee.unassigned", "Unassigned");
+            clear.appendChild(webexpress.webui.Icon.create(this._iconClass("xmark")));
+            clear.addEventListener("click", () => {
+                selectedUser = null;
+                renderSelected();
+                renderResults();
+            });
+            selectedBox.appendChild(clear);
+        };
+
+        const renderResults = () => {
+            const q = search.value.trim().toLowerCase();
+            results.replaceChildren();
+            const matches = candidates.filter((u) => {
+                if (selectedUser && u.id === selectedUser.id) {
+                    return false;
+                }
+                if (!q) {
+                    return true;
+                }
+                return (u.name || "").toLowerCase().includes(q) || (u.team || "").toLowerCase().includes(q);
+            });
+            for (const u of matches) {
+                const row = document.createElement("button");
+                row.type = "button";
+                row.className = "wx-scrum-assignee-result";
+                row.appendChild(this._buildAssigneeAvatar(u, "wx-scrum-assignee-result-avatar"));
+                const body = document.createElement("span");
+                body.className = "wx-scrum-assignee-result-body";
+                const name = document.createElement("span");
+                name.className = "wx-scrum-assignee-result-name";
+                name.textContent = u.name || u.id || "";
+                body.appendChild(name);
+                if (u.team) {
+                    const team = document.createElement("span");
+                    team.className = "wx-scrum-assignee-result-team";
+                    team.textContent = u.team;
+                    body.appendChild(team);
+                }
+                row.appendChild(body);
+                row.addEventListener("click", () => {
+                    selectedUser = u;
+                    search.value = "";
+                    renderSelected();
+                    renderResults();
+                });
+                results.appendChild(row);
+            }
+        };
+
+        renderSelected();
+
+        // load all candidates once and filter client-side, so typing in the
+        // search box never hits the network again
+        this._loadAssignees().then((users) => {
+            candidates = users;
+            // replace the lightweight selection seeded from the item with the
+            // full record so any richer field (such as an avatar image) is shown
+            if (selectedUser) {
+                const full = users.find((u) => u.id === selectedUser.id);
+                if (full) {
+                    selectedUser = full;
+                    renderSelected();
+                }
+            }
+            renderResults();
+        });
+
+        search.addEventListener("input", () => renderResults());
+
+        const modal = new webexpress.webui.ModalCtrl(host);
+
+        submitBtn.addEventListener("click", () => {
+            // an unset estimate keeps the item's current points
+            const points = pointsCtrl.value != null ? pointsCtrl.value : item.points;
+            this.updateItem(item.id, {
+                assigneeId: selectedUser ? selectedUser.id : null,
+                points: points,
+                assignee: selectedUser
+            });
+            modal.hide();
+        });
+
+        host.addEventListener(webexpress.webui.Event.MODAL_HIDE_EVENT, () => host.remove());
+        modal.show();
+        setTimeout(() => search.focus(), 100);
+    }
+
+    /**
+     * Builds an avatar element for a candidate user, preferring an image when
+     * one is supplied and otherwise falling back to the initials on the person's
+     * color, matching the avatars shown on the backlog rows.
+     * @param {Object} user - The user record.
+     * @param {string} className - An extra class identifying the avatar context.
+     * @returns {HTMLElement} The avatar element.
+     */
+    _buildAssigneeAvatar(user, className) {
+        if (user && user.image) {
+            const img = document.createElement("img");
+            img.className = "wx-scrum-assignee-avatar " + className;
+            img.src = user.image;
+            img.alt = user.name || "";
+            return img;
+        }
+
+        const span = document.createElement("span");
+        span.className = "wx-scrum-assignee-avatar " + className;
+        span.style.background = (user && user.color) || "#6c757d";
+        span.textContent = (user && user.initials) || ((user && user.name ? user.name : "?").slice(0, 2).toUpperCase());
+        return span;
+    }
+
+    /**
+     * Loads the candidate assignees from the optional users service.
+     * @returns {Promise<Array<Object>>} The candidate users, or an empty list.
+     */
+    _loadAssignees() {
+        if (!this._users) {
+            return Promise.resolve([]);
+        }
+        return this._users.query({ search: "" })
+            .then((r) => (r.ok && Array.isArray(r.data)) ? r.data : [])
+            .catch((err) => {
+                console.warn("ScrumBacklogCtrl: failed to load assignees", err);
+                return [];
+            });
+    }
+
+    /**
+     * Updates the assignment and estimate of an item: applies the change
+     * optimistically, persists it and reconciles with the server on failure.
+     * @param {string} id - The item id.
+     * @param {{assigneeId: (string|null), points: number, assignee: (Object|null)}} values
+     * @returns {Promise<void>}
+     */
+    updateItem(id, values) {
+        const item = this._itemIndex.get(id);
+        if (!item) {
+            return Promise.resolve();
+        }
+
+        const points = Math.trunc(Number(values.points));
+        if (Number.isFinite(points) && points >= 0) {
+            item.points = points;
+        }
+
+        const user = values.assignee || null;
+        item.assigneeId = user ? user.id : null;
+        item.assigneeName = user ? user.name : null;
+        item.assigneeInitials = user ? user.initials : null;
+        item.assigneeColor = user ? user.color : null;
+        item.assigneeImage = user ? (user.image || null) : null;
+        this.render();
+
+        if (!this._service) {
+            return Promise.resolve();
+        }
+
+        return this._service.update(
+            webexpress.webapp.scrumBacklogModel.itemBody(values),
+            { path: webexpress.webapp.scrumBacklogModel.itemPath(id) }
+        )
+            .then((r) => {
+                if (!r.ok) {
+                    throw new Error(r.error ? r.error.message : ("HTTP " + r.status));
+                }
+            })
+            .catch((err) => {
+                console.error("ScrumBacklogCtrl: failed to update item", err);
+                this._load();
+            });
     }
 
     /**

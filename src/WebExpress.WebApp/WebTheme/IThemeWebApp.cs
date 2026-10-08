@@ -3,7 +3,7 @@
 namespace WebExpress.WebApp.WebTheme
 {
     /// <summary>
-    /// Represents a theme for a web application.
+    /// Contract for the WebApp's theme, which controls the application's overall look and feel.
     /// </summary>
     public interface IThemeWebApp : ITheme
     {

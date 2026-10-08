@@ -3,7 +3,7 @@
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Represents the delete result of a REST API CRUD operation.
+    /// Contract for the result returned after a REST API delete (CRUD) operation.
     /// </summary>
     public interface IRestApiCrudResultDelete : IRestApiResult
     {

@@ -4,7 +4,7 @@ using WebExpress.WebCore.WebRestApi;
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Represents the result of a REST API CRUD operation.
+    /// Base class for the result of a REST API CRUD (create, read, update, delete) operation, convertible into an HTTP response.
     /// </summary>
     public abstract class RestApiCrudResult : IRestApiResult
     {

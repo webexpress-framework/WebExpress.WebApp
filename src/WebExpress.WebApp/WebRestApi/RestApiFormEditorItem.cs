@@ -5,7 +5,7 @@ namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
     /// Represents the root DTO of a form structure exchanged with the visual
-    /// form-editor (<c>ControlRestFormEditor</c> / <c>webexpress.webapp.RestFormEditorCtrl</c>).
+    /// form-editor (<c>ControlDataFormEditor</c> / <c>webexpress.webapp.RestFormEditorCtrl</c>).
     /// </summary>
     public class RestApiFormEditorItem
     {

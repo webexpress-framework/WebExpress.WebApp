@@ -51,8 +51,8 @@ namespace WebExpress.WebApp.WebMessageQueue
 
         /// <summary>
         /// Interprets, validates and forwards the specified collaborative
-        /// payload to all clients that are part of the same collaborative
-        /// scope as the originating socket.
+        /// payload to all clients that are part of the same collaboration
+        /// group as the originating socket.
         /// </summary>
         /// <param name="source">
         /// The socket that received the raw message. Cannot be <c>null</c>.
@@ -223,7 +223,8 @@ namespace WebExpress.WebApp.WebMessageQueue
             return type == CollaborativeMessageTypes.Presence
                 || type == CollaborativeMessageTypes.Cursor
                 || type == CollaborativeMessageTypes.Input
-                || type == CollaborativeMessageTypes.Caret;
+                || type == CollaborativeMessageTypes.Caret
+                || type == CollaborativeMessageTypes.Draft;
         }
 
         /// <summary>
@@ -277,6 +278,16 @@ namespace WebExpress.WebApp.WebMessageQueue
                 }
 
                 return session.Domains?.Any(d => _domains.Contains(d)) ?? false;
+            }
+
+            /// <summary>
+            /// Describes the address for the other instances of a cluster, where collaborators
+            /// of the same domains may be connected.
+            /// </summary>
+            /// <returns>The description.</returns>
+            public AddressDescriptor Describe()
+            {
+                return new AddressDescriptor { Domains = [.. _domains], ExcludeConnectionId = _senderConnectionId };
             }
         }
     }

@@ -22,6 +22,116 @@ namespace WebExpress.WebApp.Test
         }
 
         /// <summary>
+        /// Gets the action of the most recent update.
+        /// </summary>
+        public string LastAction { get; private set; }
+
+        /// <summary>
+        /// Gets the columns of the most recent column-layout update.
+        /// </summary>
+        public IReadOnlyList<RestApiLayoutColumn> LastColumns { get; private set; }
+
+        /// <summary>
+        /// Gets the swimlanes of the most recent swimlane-layout update.
+        /// </summary>
+        public IReadOnlyList<RestApiLayoutSwimlane> LastSwimlanes { get; private set; }
+
+        /// <summary>
+        /// Gets the wql filter of the most recent settings update.
+        /// </summary>
+        public string LastFilter { get; private set; }
+
+        /// <summary>
+        /// Gets or sets the status catalog used by transition validation.
+        /// </summary>
+        public IEnumerable<RestApiKanbanStatus> Statuses { get; set; }
+
+        /// <summary>
+        /// Gets or sets the columns exposed to transition validation.
+        /// </summary>
+        public IEnumerable<RestApiKanbanColumn> Columns { get; set; } = [];
+
+        /// <summary>
+        /// Gets or sets the cards exposed to transition validation.
+        /// </summary>
+        public IEnumerable<RestApiKanbanCard> Cards { get; set; } = [];
+
+        /// <summary>
+        /// Gets the last accepted move to distinguish validation from persistence.
+        /// </summary>
+        public RestApiKanbanMove LastMove { get; private set; }
+
+        /// <summary>
+        /// Gets or sets the exception the persistence hook raises, to observe how the endpoint
+        /// answers a refused or failed move.
+        /// </summary>
+        public Exception MoveFailure { get; set; }
+
+        /// <summary>
+        /// Gets or sets the exception the wql hook raises, to observe how the endpoint
+        /// answers a stored filter that no longer parses.
+        /// </summary>
+        public Exception WqlFailure { get; set; }
+
+        /// <summary>
+        /// Supplies the configured workflow catalog for a test request.
+        /// </summary>
+        /// <param name="request">The incoming request.</param>
+        /// <returns>The test status catalog.</returns>
+        protected override IEnumerable<RestApiKanbanStatus> RetrieveStatuses(IRequest request)
+        {
+            return Statuses;
+        }
+
+        /// <summary>
+        /// Records only moves accepted by the server validation boundary.
+        /// </summary>
+        /// <param name="move">The accepted destination.</param>
+        /// <param name="request">The incoming request.</param>
+        protected override void MoveCard(RestApiKanbanMove move, IRequest request)
+        {
+            if (MoveFailure != null)
+            {
+                throw MoveFailure;
+            }
+
+            LastMove = move;
+        }
+
+        /// <summary>
+        /// Captures the column-layout update for verification.
+        /// </summary>
+        /// <param name="layout">The layout payload.</param>
+        /// <param name="request">The incoming request.</param>
+        protected override void UpdateColumns(RestApiDashboardLayout layout, IRequest request)
+        {
+            LastAction = layout?.Action;
+            LastColumns = layout?.Columns;
+        }
+
+        /// <summary>
+        /// Captures the swimlane-layout update for verification.
+        /// </summary>
+        /// <param name="layout">The layout payload.</param>
+        /// <param name="request">The incoming request.</param>
+        protected override void UpdateSwimlanes(RestApiDashboardLayout layout, IRequest request)
+        {
+            LastAction = layout?.Action;
+            LastSwimlanes = layout?.Swimlanes;
+        }
+
+        /// <summary>
+        /// Captures the settings update for verification.
+        /// </summary>
+        /// <param name="layout">The layout payload.</param>
+        /// <param name="request">The incoming request.</param>
+        protected override void UpdateSettings(RestApiDashboardLayout layout, IRequest request)
+        {
+            LastAction = layout?.Action;
+            LastFilter = layout?.Filter;
+        }
+
+        /// <summary>
         /// Retrieves the collection of dashboard columns.
         /// </summary>
         /// <param name="request">
@@ -33,8 +143,7 @@ namespace WebExpress.WebApp.Test
         /// </returns>
         protected override IEnumerable<RestApiKanbanColumn> RetrieveColumns(IRequest request)
         {
-            // return empty by default
-            return [];
+            return Columns;
         }
 
         /// <summary>
@@ -73,8 +182,24 @@ namespace WebExpress.WebApp.Test
         /// </returns>
         protected override IEnumerable<RestApiKanbanCard> RetrieveCards(IQuery<TestIndexItem> query, IQueryContext context, IRequest request)
         {
-            // return empty by default
-            return [];
+            return Cards;
+        }
+
+        /// <summary>
+        /// Raises the configured wql failure, or leaves the query unchanged.
+        /// </summary>
+        /// <param name="wql">The wql filter.</param>
+        /// <param name="query">The query to narrow.</param>
+        /// <param name="request">The incoming request.</param>
+        /// <returns>The unchanged query.</returns>
+        protected override IQuery<TestIndexItem> ApplyWql(string wql, IQuery<TestIndexItem> query, IRequest request)
+        {
+            if (WqlFailure != null)
+            {
+                throw WqlFailure;
+            }
+
+            return query;
         }
     }
 }

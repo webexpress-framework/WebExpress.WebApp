@@ -63,8 +63,8 @@ namespace WebExpress.WebApp.WebControl
             return new HtmlElementTextContentDiv()
             {
                 Id = Id,
-                Class = Css.Concatenate("wx-webapp-progress-task", GetClasses()),
-                Style = GetStyles()
+                Class = Css.Concatenate("wx-webapp-progress-task", GetClasses(renderContext)),
+                Style = GetStyles(renderContext)
             }
                 .AddUserAttribute("data-task", taskId)
                 .AddUserAttribute("data-show-on-start", showOnStart ? "true" : null)

@@ -13,6 +13,16 @@
     pointer-events: auto;
 }
 
+/* Docked into a host of its own - a dialog footer bar, say. Who is here is a fact about the
+   whole surface, so the bar is laid out by what it was docked into rather than floating over
+   the shared area. */
+.wx-collaborative-presence.wx-collaborative-presence-docked {
+    position: static;
+    top: auto;
+    right: auto;
+    z-index: auto;
+}
+
 .wx-collaborative-chip {
     display: inline-flex;
     align-items: center;

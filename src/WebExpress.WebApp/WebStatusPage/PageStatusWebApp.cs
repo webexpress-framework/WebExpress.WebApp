@@ -9,7 +9,7 @@ using WebExpress.WebUI.WebControl;
 namespace WebExpress.WebApp.WebStatusPage
 {
     /// <summary>
-    /// A status page.
+    /// Base class for a WebApp status page: the page shown for an HTTP status (such as an error), rendered with the WebApp's visual tree.
     /// </summary>
     public abstract class PageStatusWebApp : IStatusPage<VisualTreeWebApp>
     {
@@ -63,9 +63,10 @@ namespace WebExpress.WebApp.WebStatusPage
                 Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
             };
 
-            var message = new ControlPanelCard()
+            var message = new ControlCard()
             {
-                BackgroundColor = _ => new PropertyColorBackground(TypeColorBackground.Light)
+                // light is a fixed palette color and would glare as a bright block in dark mode
+                BackgroundColor = _ => new PropertyColorBackground(TypeColorBackground.Tertiary)
             }
                 .Add(new ControlText()
                 {
@@ -79,7 +80,7 @@ namespace WebExpress.WebApp.WebStatusPage
             }
                 .Add(title, description, !string.IsNullOrWhiteSpace(StatusMessage) ? message : null);
 
-            var flex = new ControlPanelFlex()
+            var flex = new ControlFlex()
             {
                 Layout = _ => TypeLayoutFlex.Inline,
                 Justify = _ => TypeJustifiedFlex.Start,

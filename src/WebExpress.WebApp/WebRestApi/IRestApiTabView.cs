@@ -1,7 +1,9 @@
-﻿namespace WebExpress.WebApp.WebRestApi
+﻿using System.Text.Json.Serialization;
+
+namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Represents a tab view configuration for a REST API, including display 
+    /// Represents a tab view configuration for a REST API, including display
     /// and identification properties.
     /// </summary>
     public interface IRestApiTabView
@@ -40,6 +42,27 @@
         /// Gets the optional color class associated with this tab.
         /// </summary>
         string Color { get; }
+
+        /// <summary>
+        /// Gets the optional badge text shown at the trailing edge of the tab
+        /// header, for example the number of entries in the view.
+        /// </summary>
+        string Badge { get; }
+
+        /// <summary>
+        /// Gets the CSS class of a system badge color. The attribute keeps the
+        /// wire name stable when the create path serializes the interface.
+        /// </summary>
+        [JsonPropertyName("badgeColor")]
+        string BadgeColorCss { get; }
+
+        /// <summary>
+        /// Gets the inline style of a user-defined badge color. The attribute
+        /// keeps the wire name stable when the create path serializes the
+        /// interface.
+        /// </summary>
+        [JsonPropertyName("badgeStyle")]
+        string BadgeColorStyle { get; }
 
         /// <summary>
         /// Gets the optional primary action identifier associated with this tab.

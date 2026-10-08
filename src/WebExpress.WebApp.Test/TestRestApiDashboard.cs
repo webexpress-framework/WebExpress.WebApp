@@ -20,6 +20,21 @@ namespace WebExpress.WebApp.Test
         }
 
         /// <summary>
+        /// Gets the action of the most recent column-layout update.
+        /// </summary>
+        public string LastAction { get; private set; }
+
+        /// <summary>
+        /// Gets the columns of the most recent column-layout update.
+        /// </summary>
+        public IReadOnlyList<RestApiLayoutColumn> LastColumns { get; private set; }
+
+        /// <summary>
+        /// Gets the board of the most recent full board update.
+        /// </summary>
+        public IReadOnlyList<RestApiDashboardBoardColumn> LastBoard { get; private set; }
+
+        /// <summary>
         /// Retrieves the collection of dashboard columns.
         /// </summary>
         /// <param name="request">
@@ -45,8 +60,20 @@ namespace WebExpress.WebApp.Test
         /// <param name="request">
         /// The request containing the details for updating the columns.
         /// </param>
-        protected override void UpdtaeColumns(RestApiDashboardLayout layout, IRequest request)
+        protected override void UpdateColumns(RestApiDashboardLayout layout, IRequest request)
         {
+            LastAction = layout?.Action;
+            LastColumns = layout?.Columns;
+        }
+
+        /// <summary>
+        /// Captures the full board of the most recent board update.
+        /// </summary>
+        /// <param name="board">The full board carried in the request.</param>
+        /// <param name="request">The incoming request.</param>
+        protected override void UpdateBoard(IEnumerable<RestApiDashboardBoardColumn> board, IRequest request)
+        {
+            LastBoard = board?.ToList();
         }
     }
 }

@@ -5,9 +5,7 @@ using System.Reflection;
 using System.Text.Json;
 using WebExpress.WebApp.WebAttribute;
 using WebExpress.WebApp.WebMessageQueue;
-using WebExpress.WebCore;
 using WebExpress.WebCore.WebAttribute;
-using WebExpress.WebCore.WebDomain;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebParameter;
 using WebExpress.WebCore.WebRestApi;
@@ -83,25 +81,14 @@ namespace WebExpress.WebApp.WebRestApi
                     return new ResponseBadRequest(new StatusMessage("Creation failed."));
                 }
 
-                // notify domain listeners
-                if (newItem is IDomain domain)
-                {
-                    var messageQueueManager = WebEx.ComponentHub
-                        .GetComponentManager<MessageQueueManager>();
-
-                    var message = new Message("update");
-                    var address = new AddressDomain(domain);
-
-                    _ = messageQueueManager.SendAsync(address, message);
-                }
+                // notify domain listeners so open ViewStates re-query the changed data
+                _ = DataChangedNotifier.NotifyAsync(newItem, DataChangeOperation.Created, newItem?.Id.ToString());
 
                 return result.ToResponse();
             }
             catch (Exception ex)
             {
-                return new ResponseBadRequest(
-                    new StatusMessage($"Error creating resource: {ex.Message}")
-                );
+                return RestApiFault.BadRequest(request, ex, "Error creating resource.");
             }
         }
 
@@ -118,9 +105,9 @@ namespace WebExpress.WebApp.WebRestApi
                 // extract 'id' parameter if present
                 var id = request.GetParameter<ParameterId>()?.Value ?? string.Empty;
                 // current page number
-                var pageNumber = Convert.ToInt32(request.GetParameter("p")?.Value ?? "0");
+                var pageNumber = request.ParseIntParameter("p", 0);
                 // number of items per page
-                var pageSize = Convert.ToInt32(request.GetParameter("s")?.Value ?? "50");
+                var pageSize = request.ParseIntParameter("s", 50);
                 var modeParam = request.GetParameter("mode")?.Value ?? "default";
                 var mode = modeParam switch
                 {
@@ -187,7 +174,7 @@ namespace WebExpress.WebApp.WebRestApi
             }
             catch (Exception ex)
             {
-                return new ResponseBadRequest(new StatusMessage($"Error processing request.{ex}"));
+                return RestApiFault.BadRequest(request, ex, "Error processing request.");
             }
         }
 
@@ -471,22 +458,15 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 var result = Update(existingItem, fieldMap, request);
 
-                if (existingItem is IDomain domain)
-                {
-                    var messageQueueManager = WebEx.ComponentHub
-                        .GetComponentManager<MessageQueueManager>();
-                    var message = new Message("update");
-                    var address = new AddressDomain(domain);
-
-                    _ = messageQueueManager.SendAsync(address, message);
-                }
+                // notify domain listeners so open ViewStates re-query the changed data
+                _ = DataChangedNotifier.NotifyAsync(existingItem, DataChangeOperation.Updated, existingItem.Id.ToString());
 
                 return result?.ToResponse();
             }
             catch (Exception ex)
             {
                 // any exception during update is treated as a bad request
-                return new ResponseBadRequest(new StatusMessage($"Error updating resource: {ex.Message}"));
+                return RestApiFault.BadRequest(request, ex, "Error updating resource.");
             }
         }
 
@@ -619,24 +599,14 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 var result = Delete(item, request);
 
-                if (item is IDomain domain)
-                {
-                    var messageQueueManager = WebEx.ComponentHub
-                        .GetComponentManager<MessageQueueManager>();
-                    var message = new Message("update");
-                    var address = new AddressDomain(domain);
-
-                    _ = messageQueueManager.SendAsync(address, message);
-                }
+                // notify domain listeners so open ViewStates re-query the changed data
+                _ = DataChangedNotifier.NotifyAsync(item, DataChangeOperation.Deleted, item.Id.ToString());
 
                 return result.ToResponse();
             }
             catch (Exception ex)
             {
-                return new ResponseBadRequest
-                (
-                    new StatusMessage($"Error deleting resource: {ex.Message}")
-                );
+                return RestApiFault.BadRequest(request, ex, "Error deleting resource.");
             }
         }
 

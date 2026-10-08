@@ -6,30 +6,30 @@
  * properties panel (side pane). All design tokens (palette, spacing, radii,
  * shadows) are declared as CSS custom properties on `.wx-workflow-editor`
  * so a host application can override them per theme without touching this
- * file. The class names mirror the KleeneStar Workflows.html prototype
- * (props / prop-row / prop-section / rule-list) translated to the
- * `wx-workflow-editor-` namespace, so visual hierarchy and behaviour stay
- * consistent with the design handoff.
+ * file. The class names (props / prop-row / prop-section / rule-list) live
+ * under the `wx-workflow-editor-` namespace.
  */
 
 /* ───────── Design tokens ───────── */
 .wx-workflow-editor {
-    --wx-we-bg:            var(--bs-body-bg, #fff);
-    --wx-we-surface:       var(--bs-body-bg, #fff);
-    --wx-we-surface-2:     var(--bs-tertiary-bg, var(--bs-secondary-bg, #f5f7fa));
-    --wx-we-surface-3:     var(--bs-secondary-bg, #eef0f4);
-    --wx-we-border:        var(--bs-border-color, #dee2e6);
+    --wx-we-bg:            var(--wx-body-bg, #fff);
+    --wx-we-surface:       var(--wx-body-bg, #fff);
+    --wx-we-surface-2:     var(--wx-tertiary-bg, var(--wx-secondary-bg, #f5f7fa));
+    --wx-we-surface-3:     var(--wx-secondary-bg, #eef0f4);
+    --wx-we-border:        var(--wx-border-color, #dee2e6);
     --wx-we-divider:       color-mix(in oklab, var(--wx-we-border) 80%, transparent);
-    --wx-we-text-1:        var(--bs-body-color, #1f2328);
-    --wx-we-text-2:        var(--bs-secondary-color, color-mix(in oklab, var(--bs-body-color, #1f2328) 75%, var(--bs-body-bg, #fff)));
-    --wx-we-text-3:        color-mix(in oklab, var(--bs-body-color, #1f2328) 60%, var(--bs-body-bg, #fff));
-    --wx-we-text-muted:    color-mix(in oklab, var(--bs-body-color, #1f2328) 45%, var(--bs-body-bg, #fff));
-    --wx-we-primary:       var(--bs-primary, #0d6efd);
+    --wx-we-text-1:        var(--wx-body-color, #1f2328);
+    --wx-we-text-2:        var(--wx-secondary-color, color-mix(in oklab, var(--wx-body-color, #1f2328) 75%, var(--wx-body-bg, #fff)));
+    --wx-we-text-3:        color-mix(in oklab, var(--wx-body-color, #1f2328) 60%, var(--wx-body-bg, #fff));
+    --wx-we-text-muted:    color-mix(in oklab, var(--wx-body-color, #1f2328) 45%, var(--wx-body-bg, #fff));
+    --wx-we-primary:       var(--wx-primary, #0d6efd);
+    /* the accent as text on the body background, which the surface accent falls short of */
+    --wx-we-primary-text:  var(--wx-primary-text-emphasis, #052c65);
     --wx-we-primary-soft:  color-mix(in oklab, var(--wx-we-primary) 12%, var(--wx-we-bg));
     --wx-we-primary-strong:color-mix(in oklab, var(--wx-we-primary) 35%, var(--wx-we-bg));
-    --wx-we-success:       var(--bs-success, #198754);
-    --wx-we-danger:        var(--bs-danger, #dc3545);
-    --wx-we-warning:       var(--bs-warning, #f59e0b);
+    --wx-we-success:       var(--wx-success, #198754);
+    --wx-we-danger:        var(--wx-danger, #dc3545);
+    --wx-we-warning:       var(--wx-warning, #f59e0b);
 
     --wx-we-radius-sm:     6px;
     --wx-we-radius:        8px;
@@ -42,23 +42,42 @@
     --wx-we-space-3:       12px;
     --wx-we-space-4:       16px;
 
-    --wx-we-font-mono:     var(--bs-font-monospace, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+    --wx-we-font-mono:     var(--wx-font-monospace, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
 
-    /* override-friendly host height; falls back to the parent's intrinsic size. */
-    --wx-we-host-min-height: 480px;
+    /* The editor's height. It is definite rather than content-driven, so the
+       canvas keeps its size while the properties panel fills and empties.
+       Override --wx-we-host-height (or set an inline height) to give the editor
+       a different extent, for example 100% inside a parent that has one. */
+    --wx-we-host-min-height: 600px;
 }
-
-[data-bs-theme="dark"] .wx-workflow-editor {
+@scope ([data-wx-theme="dark"]) to ([data-wx-theme="light"]) {
+:scope .wx-workflow-editor {
     --wx-we-shadow-md: 0 10px 28px rgba(0, 0, 0, 0.5);
+}
 }
 
 /* ───────── Host element ───────── */
-.wx-webapp-workflow-editor.wx-workflow-editor {
+/* The host is addressed by the classes the controllers put on it at mount
+   (wx-graph-editor from the base, wx-workflow-editor from the designer), never by
+   the wx-webapp-workflow-editor the author wrote: the controller registry strips
+   that one before the constructor runs, so a rule keyed on it matches nothing
+   and the graph editor's own content-driven sizing silently takes over. Both
+   classes are named so this rule outranks the graph editor's single-class one
+   whatever the stylesheets' load order. */
+.wx-graph-editor.wx-workflow-editor {
     display: flex;
     flex-direction: column;
     width: 100%;
+
+    /* A definite height, not a content-driven one. With `height: 100%` against
+       an auto-height parent the editor is sized by whatever its panes contain,
+       so it grew and shrank as the properties panel filled with rule lists or
+       was collapsed - the canvas jumped under the pointer on every selection.
+       The height is now stable and each pane scrolls inside it. A host that
+       wants a different extent sets --wx-we-host-height (or an inline height). */
+    height: var(--wx-we-host-height, var(--wx-we-host-min-height));
     min-height: var(--wx-we-host-min-height);
-    height: 100%;
+
     background: var(--wx-we-bg);
     color: var(--wx-we-text-1);
     border: 1px solid var(--wx-we-border);
@@ -66,10 +85,34 @@
     overflow: hidden;
 }
 
-/* The Split host fills the remaining vertical space. */
+/* Fill mode: the designer takes the height its host offers instead of bringing one
+   of its own, which is what an application shell asks of the content of a pane.
+   Both the basis and the height are stated: a flex column host drives the basis,
+   and where a host hands nothing down the height still has to come from the
+   environment rather than from the content - 100% would resolve to auto against an
+   auto-height host, which is the content, the one answer this mode exists to stop
+   the canvas from following. The cap keeps the designer inside a host that does
+   have an extent, and the floor keeps a pane too short for the toolbar and a row
+   of states scrolling rather than crushing them. */
+.wx-graph-editor.wx-workflow-editor.wx-fill {
+    flex: 1 1 var(--wx-we-host-height, var(--wx-we-host-min-height));
+    max-height: 100%;
+    min-height: 12rem;
+}
+
+/* The Split host fills the remaining vertical space. Both panes are capped by
+   it (min-height: 0), so neither can push the editor taller than it is. */
 .wx-workflow-editor-split {
     flex: 1 1 auto;
     min-height: 0;
+    height: 100%;
+}
+
+.wx-workflow-editor-split > .wx-main-pane,
+.wx-workflow-editor-split > .wx-side-pane {
+    min-height: 0;
+    max-height: 100%;
+    overflow: hidden;
 }
 
 /* ───────── Canvas pane (main) ───────── */
@@ -110,6 +153,24 @@
     display: none !important;
 }
 
+/* creation actions sit above the panel body and stay put while the body is
+   rebuilt for the current selection */
+.wx-workflow-editor-props-actions {
+    flex: 0 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--wx-we-space-2);
+    padding: var(--wx-we-space-2) var(--wx-we-space-3);
+    border-bottom: 1px solid var(--wx-we-border);
+    background: var(--wx-we-surface-2);
+}
+
+.wx-workflow-editor-props-actions .wx-workflow-editor-btn.is-active {
+    border-color: var(--wx-we-primary);
+    background: var(--wx-we-primary-soft);
+    color: var(--wx-we-primary);
+}
+
 .wx-workflow-editor-props-host {
     flex: 1 1 auto;
     min-height: 0;
@@ -117,10 +178,12 @@
 }
 
 /* ───────── Properties view (mirrors prototype `.props`) ───────── */
+/* the shell grows with its content and the host around it scrolls; capping it
+   at 100% would make a long rule list unreachable instead of scrollable */
 .wx-workflow-editor-props {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    min-height: 100%;
     background: var(--wx-we-surface);
 }
 
@@ -200,7 +263,8 @@
 .wx-workflow-editor-preflight--ok {
     background: color-mix(in oklab, var(--wx-we-success) 10%, var(--wx-we-bg));
     border-color: color-mix(in oklab, var(--wx-we-success) 35%, var(--wx-we-border));
-    color: color-mix(in oklab, var(--wx-we-success) 75%, var(--wx-we-text-1));
+    /* more body text than green in the mix: three quarters green reads under 4.5:1 on the dark theme */
+    color: color-mix(in oklab, var(--wx-we-success) 50%, var(--wx-we-text-1));
 }
 
 .wx-workflow-editor-preflight--ok > .fas {
@@ -361,6 +425,63 @@
     border-radius: var(--wx-we-radius-sm);
     background: var(--wx-we-surface);
     cursor: pointer;
+}
+
+/* the framework colour control brings its own trigger, so the row only has to
+   give it the width the other inputs use */
+.wx-workflow-editor-prop-row__color-control {
+    min-width: 90px;
+}
+
+.wx-workflow-editor-prop-row__toggle {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: var(--wx-we-primary);
+}
+
+/* ───────── Persistence status ───────── */
+.wx-workflow-editor-status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--wx-we-space-2);
+    margin-left: auto;
+    padding: 0 var(--wx-we-space-2);
+    font-size: 0.8125rem;
+    white-space: nowrap;
+    color: var(--wx-we-text-muted, #6c757d);
+}
+
+.wx-workflow-editor-status--dirty {
+    color: var(--wx-we-text-muted, #6c757d);
+}
+
+.wx-workflow-editor-status--saving {
+    color: var(--wx-we-primary, #0d6efd);
+}
+
+.wx-workflow-editor-status--saved {
+    color: #198754;
+}
+
+.wx-workflow-editor-status--error {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.wx-workflow-editor-status__retry {
+    padding: 2px var(--wx-we-space-2);
+    border: 1px solid currentColor;
+    border-radius: var(--wx-we-radius-sm);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.wx-workflow-editor-status__retry:hover {
+    background: rgba(220, 53, 69, 0.1);
 }
 
 /* ───────── Sections (mirror prototype `.prop-section`) ───────── */
@@ -642,7 +763,7 @@
 .wx-workflow-editor-btn--ghost {
     background: transparent;
     border-color: transparent;
-    color: var(--wx-we-primary);
+    color: var(--wx-we-primary-text);
 }
 
 .wx-workflow-editor-btn--ghost:hover,
@@ -663,7 +784,7 @@
 
 /* ───────── Responsive ───────── */
 @media (max-width: 720px) {
-    .wx-webapp-workflow-editor.wx-workflow-editor {
+    .wx-graph-editor.wx-workflow-editor {
         --wx-we-host-min-height: 360px;
     }
 

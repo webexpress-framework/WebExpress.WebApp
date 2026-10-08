@@ -20,6 +20,21 @@ namespace WebExpress.WebApp.Test
         public string LastCreateTemplateId { get; private set; }
 
         /// <summary>
+        /// Gets the tab id and label of the last accepted rename, or null.
+        /// </summary>
+        public (string Id, string Label)? LastRename { get; private set; }
+
+        /// <summary>
+        /// Gets the tab id and color of the last accepted color change, or null.
+        /// </summary>
+        public (string Id, string Color)? LastRecolor { get; private set; }
+
+        /// <summary>
+        /// Gets the tab order of the last reorder, or null.
+        /// </summary>
+        public IReadOnlyList<string> LastOrder { get; private set; }
+
+        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="views">The views returned for GET requests.</param>
@@ -46,8 +61,9 @@ namespace WebExpress.WebApp.Test
                 Id = "new-tab",
                 Title = "New Tab",
                 Name = "Created Tab",
-                Icon = "fas fa-star",
+                Icon = "wx-icon-light wx-icon-light-star",
                 TemplateId = "defaultTemplate",
+                Badge = "1",
                 Binding = new
                 {
                     title = "Created Tab",
@@ -64,6 +80,46 @@ namespace WebExpress.WebApp.Test
             LastCreateTemplateId = templateId;
 
             return base.CreateView(context, request, templateId);
+        }
+
+        /// <summary>
+        /// Remembers the reorder and accepts it.
+        /// </summary>
+        protected override bool ReorderViews(IReadOnlyList<string> order, IQueryContext context, IRequest request)
+        {
+            LastOrder = order;
+
+            return true;
+        }
+
+        /// <summary>
+        /// Remembers the color change and accepts it for known views only.
+        /// </summary>
+        protected override bool RecolorView(string viewId, string color, IQueryContext context, IRequest request)
+        {
+            if (!_views.Any(v => v.Id == viewId))
+            {
+                return false;
+            }
+
+            LastRecolor = (viewId, color);
+
+            return true;
+        }
+
+        /// <summary>
+        /// Remembers the rename and accepts it for known views only.
+        /// </summary>
+        protected override bool RenameView(string viewId, string label, IQueryContext context, IRequest request)
+        {
+            if (!_views.Any(v => v.Id == viewId))
+            {
+                return false;
+            }
+
+            LastRename = (viewId, label);
+
+            return true;
         }
     }
 }

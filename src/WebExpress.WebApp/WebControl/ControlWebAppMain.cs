@@ -142,7 +142,7 @@ namespace WebExpress.WebApp.WebControl
                 renderContext?.PageContext
             ));
 
-            var mainCtlr = new ControlPanelMain
+            var mainCtlr = new ControlMain
             (
                 Id,
                 new ControlPanel

@@ -33,6 +33,12 @@ namespace WebExpress.WebApp.WebMessageQueue
         {
             ArgumentNullException.ThrowIfNull(message);
 
+            // a message from another instance is passed on exactly as it was rendered there
+            if (message is ForwardedMessage forwarded)
+            {
+                return forwarded.Json;
+            }
+
             return JsonSerializer.Serialize(message, message.GetType(), _jsonOptions);
         }
     }

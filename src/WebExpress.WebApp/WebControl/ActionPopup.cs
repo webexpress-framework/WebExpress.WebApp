@@ -27,7 +27,7 @@ namespace WebExpress.WebApp.WebControl
         public string Message { get; set; }
 
         /// <summary>
-        /// Gets or sets the Bootstrap alert class (e.g. <c>alert-success</c>,
+        /// Gets or sets the WebExpress alert class (e.g. <c>alert-success</c>,
         /// <c>alert-info</c>, <c>alert-warning</c>, <c>alert-danger</c>).
         /// Defaults to <c>alert-primary</c> when omitted on the client.
         /// </summary>
@@ -57,7 +57,7 @@ namespace WebExpress.WebApp.WebControl
         /// </summary>
         /// <param name="heading">The heading text.</param>
         /// <param name="message">The message body.</param>
-        /// <param name="type">The Bootstrap alert class.</param>
+        /// <param name="type">The WebExpress alert class.</param>
         /// <param name="durability">The lifetime in milliseconds.</param>
         public ActionPopup(string heading, string message, string type = null, int durability = 5000)
         {

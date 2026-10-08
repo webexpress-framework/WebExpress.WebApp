@@ -26,6 +26,10 @@ webexpress.webapp.MessageQueue = new class {
         // remembered for automatic reconnect attempts
         this._wsUrl = null;
         this._domains = null;
+
+        // domains subscribed at runtime (by ViewStates); re-announced
+        // after every reconnect because the server keeps them per connection
+        this._subscribedDomains = new Set();
     }
 
     /**
@@ -104,6 +108,7 @@ webexpress.webapp.MessageQueue = new class {
             this._lastError = null;
             // reset backoff so the next disconnect starts the staircase over
             this._reconnectDelay = this._reconnectDelayInitial;
+            this._sendDomainSubscription();
         });
 
         this._ws.addEventListener("message", (evt) => {
@@ -123,7 +128,7 @@ webexpress.webapp.MessageQueue = new class {
                 }
             }
 
-            if (payload && typeof payload === "object" && payload.type === "update") {
+            if (payload && typeof payload === "object" && payload.type === "webexpress.webapp.data.changed") {
                 const updateEvent = new CustomEvent(webexpress.webapp.Event.UPDATE_EVENT, {
                     detail: { payload }
                 });
@@ -191,6 +196,48 @@ webexpress.webapp.MessageQueue = new class {
         this._reconnectDelay = Math.min(this._reconnectDelay * 2, this._reconnectMax);
     }
 
+
+    /**
+     * Subscribes the connection to data change messages of the given domains.
+     * A ViewState calls this with the domains its services declare, so
+     * the server addresses it like a page that declared them up front. The
+     * subscription is remembered and re-announced after every reconnect,
+     * because the server keeps the domain set per connection.
+     * @param {Array<string>} domains - The wire names of the domains.
+     */
+    subscribeDomains(domains) {
+        if (!Array.isArray(domains)) {
+            return;
+        }
+
+        let added = false;
+        for (const domain of domains) {
+            if (typeof domain === "string" && domain.length > 0 && !this._subscribedDomains.has(domain)) {
+                this._subscribedDomains.add(domain);
+                added = true;
+            }
+        }
+
+        if (added) {
+            this._sendDomainSubscription();
+        }
+    }
+
+    /**
+     * Announces the accumulated domain subscription to the server. Sent on
+     * every new subscription and after every reconnect; the server merges the
+     * domains, so repeating the full set is idempotent.
+     */
+    _sendDomainSubscription() {
+        if (this._subscribedDomains.size === 0) {
+            return;
+        }
+
+        this.send({
+            type: "webexpress.webapp.data.subscribe",
+            domains: Array.from(this._subscribedDomains)
+        });
+    }
 
     /**
      * Dispatches a synthesized payload to every registered listener
@@ -303,6 +350,13 @@ webexpress.webapp.Event = class {
     static TAB_ADDED_EVENT = "webexpress.webapp.tab.added";
     // Event triggered when a tab is closed dynamically.
     static TAB_CLOSED_EVENT = "webexpress.webapp.tab.closed";
+
+    // Event triggered when the tab order changes via drag and drop
+    static TAB_REORDERED_EVENT = "webexpress.webapp.tab.reordered";
+    // Event triggered when a tab header was renamed and the server accepted the new label
+    static TAB_RENAMED_EVENT = "webexpress.webapp.tab.renamed";
+    // Event triggered when a tab color was changed and the server accepted it
+    static TAB_RECOLORED_EVENT = "webexpress.webapp.tab.recolored";
     // Event triggered when the form editor finishes loading (or reloading) a form.
     static FORM_EDITOR_LOADED_EVENT = "webexpress.webapp.formeditor.loaded";
     // Event triggered when a node is added in the form editor.
@@ -319,9 +373,17 @@ webexpress.webapp.Event = class {
     static FORM_EDITOR_TAB_RENAMED_EVENT = "webexpress.webapp.formeditor.tab.renamed";
     // Event triggered when the form editor's layout (two-pane / tree-table / three-pane) changes.
     static FORM_EDITOR_LAYOUT_CHANGED_EVENT = "webexpress.webapp.formeditor.layout.changed";
-    // Event triggered after a successful structure save.
+    // Event triggered after a successful structure save to the form itself (no draft declared).
     static FORM_EDITOR_SAVED_EVENT = "webexpress.webapp.formeditor.saved";
-    // Event triggered when a structure save fails validation.
+    // Event triggered after the structure was stored as the unpublished draft.
+    static FORM_EDITOR_DRAFT_SAVED_EVENT = "webexpress.webapp.formeditor.draft.saved";
+    // Event triggered after the unpublished draft was dropped and the published structure re-loaded.
+    static FORM_EDITOR_DRAFT_DISCARDED_EVENT = "webexpress.webapp.formeditor.draft.discarded";
+    // Event triggered after the structure was published, which ends the draft.
+    static FORM_EDITOR_PUBLISHED_EVENT = "webexpress.webapp.formeditor.published";
+    // Event triggered whenever the form editor's save state changes.
+    static FORM_EDITOR_STATE_EVENT = "webexpress.webapp.formeditor.state";
+    // Event triggered when a structure save or publication fails validation.
     static FORM_EDITOR_VALIDATION_FAILED_EVENT = "webexpress.webapp.formeditor.validation.failed";
     // Event triggered when a remote user joins a CollaborativeCtrl container.
     static COLLABORATIVE_USER_JOIN = "webexpress.webapp.collaborative.user.join";
@@ -341,11 +403,117 @@ webexpress.webapp.Event = class {
     static COMMENT_REACTION_EVENT = "webexpress.webapp.comment.reaction";
     // Event triggered when a reply is added to a comment
     static COMMENT_REPLY_EVENT = "webexpress.webapp.comment.reply";
-    // Event triggered when an observer is added
-    static OBSERVER_ADDED_EVENT = "webexpress.webapp.observer.added";
-    // Event triggered when an observer is removed
-    static OBSERVER_REMOVED_EVENT = "webexpress.webapp.observer.removed";
+    // Event triggered when the unpublished draft of an editor form was stored
+    static EDITOR_DRAFT_SAVED = "webexpress.webapp.editor.draft.saved";
+    // Event triggered when the unpublished draft of an editor form was dropped
+    static EDITOR_DRAFT_DISCARDED = "webexpress.webapp.editor.draft.discarded";
+    // Event triggered when a document was published and its draft therefore ended
+    static EDITOR_PUBLISHED = "webexpress.webapp.editor.published";
+    // Event triggered whenever the save state of an editor form changes
+    static EDITOR_STATE = "webexpress.webapp.editor.state";
+    // Event triggered when a watcher is added
+    static WATCHER_ADDED_EVENT = "webexpress.webapp.watcher.added";
+    // Event triggered when a watcher is removed
+    static WATCHER_REMOVED_EVENT = "webexpress.webapp.watcher.removed";
+    // Event triggered when a tag is added
+    static TAG_ADDED_EVENT = "webexpress.webapp.tag.added";
+    // Event triggered when a tag is removed
+    static TAG_REMOVED_EVENT = "webexpress.webapp.tag.removed";
+    // Event triggered when the policy set of a group is assigned or changed
+    static PERMISSION_ASSIGNED_EVENT = "webexpress.webapp.permission.assigned";
+    // Event triggered when every policy of a group is revoked
+    static PERMISSION_REMOVED_EVENT = "webexpress.webapp.permission.removed";
+    // Event triggered when a link was established
+    static RELATION_ADDED_EVENT = "webexpress.webapp.relation.added";
+    // Event triggered when the status or the note of a link changed
+    static RELATION_UPDATED_EVENT = "webexpress.webapp.relation.updated";
+    // Event triggered when a link was removed
+    static RELATION_REMOVED_EVENT = "webexpress.webapp.relation.removed";
+    // Event triggered when a link type was defined or changed
+    static RELATION_TYPE_SAVED_EVENT = "webexpress.webapp.relation.editor.saved";
+    // Event triggered when a link type was removed
+    static RELATION_TYPE_REMOVED_EVENT = "webexpress.webapp.relation.editor.removed";
+    // Event triggered when the link types were rearranged
+    static RELATION_TYPE_REORDERED_EVENT = "webexpress.webapp.relation.editor.reordered";
 }
+
+/**
+ * Reads the paging figures out of a data response.
+ * @remarks
+ * The REST results of the paged control families (table, list, tile) report
+ * them in a "pagination" block - the wire shape of RestApiPaginationInfo, which
+ * names them page, pageSize, total and totalPages - while a hand written
+ * endpoint may put the same figures at the top level. Both are accepted, so the
+ * three reducers read one shape and none of them has to know which endpoint
+ * answered. A figure that is absent stays null rather than becoming a zero,
+ * which the callers need in order to tell "the endpoint does not count its
+ * result" from "the result is empty".
+ * @param {object} response - The raw server response.
+ * @returns {{total: number|null, page: number|null, pageSize: number|null}} The paging figures.
+ */
+webexpress.webapp.pagingOf = function (response) {
+    const top = response || {};
+    const block = top.pagination || {};
+
+    const read = function (...names) {
+        for (const name of names) {
+            const value = top[name] ?? block[name];
+
+            if (value === undefined || value === null) {
+                continue;
+            }
+
+            const number = Number(value);
+
+            if (Number.isFinite(number)) {
+                return number;
+            }
+        }
+
+        return null;
+    };
+
+    return {
+        total: read("total", "totalCount", "count"),
+        page: read("page", "pageNumber"),
+        pageSize: read("pageSize")
+    };
+};
+
+/**
+ * Builds the caption of the paging info line the paged data controls (table,
+ * list, tile) render below their content. It lives here rather than in each of
+ * them so the wording and its translation stay in one place. The control is
+ * passed in because the translation goes through its inherited _i18n, which
+ * carries the fallback for a bundle that does not know the key.
+ * @param {object} ctrl - The control that renders the line.
+ * @param {number} page - The zero-based current page.
+ * @param {number} pageCount - The number of pages.
+ * @param {number} itemsOnPage - The number of items on the current page.
+ * @param {number} total - The number of items in total.
+ * @returns {string} The caption.
+ */
+webexpress.webapp.pagingInfo = function (ctrl, page, pageCount, itemsOnPage, total) {
+    return ctrl._i18n("webexpress.webapp:paging.info", "Page {0} of {1} / {2} of {3} items")
+        .replace("{0}", String(page + 1))
+        .replace("{1}", String(pageCount))
+        .replace("{2}", String(itemsOnPage))
+        .replace("{3}", String(total));
+};
+
+/**
+ * Builds the caption of the paging info line while the requested page is still
+ * loading, so the line does not keep reporting the previous window.
+ * @param {object} ctrl - The control that renders the line.
+ * @param {number} page - The zero-based requested page.
+ * @param {number} pageCount - The number of pages.
+ * @returns {string} The caption.
+ */
+webexpress.webapp.pagingInfoLoading = function (ctrl, page, pageCount) {
+    return ctrl._i18n("webexpress.webapp:paging.info.loading", "Page {0} of {1} - loading…")
+        .replace("{0}", String(page + 1))
+        .replace("{1}", String(pageCount));
+};
 
 // initialize the WebSocket connection after the DOM is fully loaded    
 document.addEventListener("DOMContentLoaded", function () {  

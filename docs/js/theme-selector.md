@@ -1,8 +1,8 @@
 ![WebExpress](https://raw.githubusercontent.com/webexpress-framework/.github/main/docs/assets/img/banner.png)
 
-# DropdownTheme
+# DropdownThemeCtrl
 
-The `webexpress.webapp.DropdownTheme` is a REST-backed theme picker that extends `webexpress.webui.DropdownCtrl`. It loads the themes registered for the current application from a REST endpoint, surfaces the active theme as the dropdown's label so exactly one theme is always selected, hands the user's choice to the application via a `PUT`, and reloads the page. The framework does **not** persist the choice itself - storage is owned by the application, which also tells the visual tree which theme to use on subsequent renders.
+The `webexpress.webapp.DropdownThemeCtrl` is a REST-backed theme picker that extends `webexpress.webui.DropdownCtrl`. It loads the themes registered for the current application from a REST endpoint, surfaces the active theme as the dropdown's label so exactly one theme is always selected, hands the user's choice to the application via a `PUT`, and reloads the page. The framework does **not** persist the choice itself - storage is owned by the application, which also tells the visual tree which theme to use on subsequent renders.
 
 ```
    ┌──────────────────────────────────────────────┐
@@ -16,19 +16,21 @@ The `webexpress.webapp.DropdownTheme` is a REST-backed theme picker that extends
 
 ## Declarative Configuration
 
-The control is rendered server-side by `ControlRestSelectionTheme`. Manual HTML usage is also supported:
+The control is rendered server-side by `ControlDataSelectionTheme`. Manual HTML usage is also supported:
 
 |Attribute                |Description
 |-------------------------|-----------------------------------------------------------------
 |`class`                  |Must contain `wx-webapp-dropdown-theme`.
-|`data-uri`               |REST endpoint returning the theme list (see contract below).
 |`data-reload-on-change`  |Set to `"false"` to keep the page after a selection (default reloads).
 
 ```html
 <div class="wx-webapp-dropdown-theme"
-     id="themeSelector"
-     data-uri="/app/api/1/themeapi"></div>
+     id="themeSelector">
+    <wx-service hidden name="data" base-uri="/app/api/1/themeapi"></wx-service>
+</div>
 ```
+
+The REST endpoint returning the theme list (see contract below) is the `data` service, a hidden `wx-service` island inside the host. Rendered from C#, `ControlDataSelectionTheme` emits the island through `.DataService<TEndpoint>()`.
 
 ## REST Data Contract
 
@@ -74,19 +76,19 @@ public sealed class ThemeApi : RestApiTheme
 }
 
 // 2. drop the selector onto a page - it is a standalone dropdown:
-new ControlRestSelectionTheme("themeSelector")
+new ControlDataSelectionTheme("themeSelector")
 {
-    RestUri = _ => sitemapManager.GetUri<ThemeApi>(applicationContext)
+    RestEndpoint = _ => sitemapManager.GetUri<ThemeApi>(applicationContext)
 };
 
 // 3. tell the visual tree which theme to render with on every request -
 //    the framework does not consult your store on its own:
 public override void Process(IRenderContext ctx, VisualTreeWebApp visualTree)
 {
-    if (MyStore.Get(ctx.Request) == typeof(LightIconTheme).FullName?.ToLower())
-        visualTree.UseTheme<LightIconTheme>();
+    if (MyStore.Get(ctx.Request) == typeof(LightModeTheme).FullName?.ToLower())
+        visualTree.UseTheme<LightModeTheme>();
     else
-        visualTree.UseTheme<DefaultIconTheme>();
+        visualTree.UseTheme<DarkModeTheme>();
 
     base.Process(ctx, visualTree);
 }
@@ -101,7 +103,7 @@ The visual tree picks the active theme in the following order:
 1. Explicit per-request `visualTree.UseTheme<TTheme>()` (called by application code from the page's `Process` override based on whatever the application stored).
 2. Application's `[Theme<TTheme>]` default.
 3. First theme registered for the application (legacy fallback).
-4. `null` -> icon theme falls back to `TypeIconTheme.Default`.
+4. `null` -> the page renders without a theme.
 
 The framework does NOT inspect cookies, sessions, or identities - persistence and theme activation are owned by the application.
 

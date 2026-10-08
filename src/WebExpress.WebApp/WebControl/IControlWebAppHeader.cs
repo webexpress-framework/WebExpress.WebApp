@@ -3,7 +3,7 @@
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Header for a web app.
+    /// Contract for the header bar of a WebApp page.
     /// </summary>
     public interface IControlWebAppHeader : IControl
     {
@@ -41,6 +41,11 @@ namespace WebExpress.WebApp.WebControl
         /// Gets or sets the quick create.
         /// </summary>
         public IControlWebAppHeaderQuickCreate QuickCreate { get; }
+
+        /// <summary>
+        /// Gets or sets the search of the application.
+        /// </summary>
+        public IControlWebAppHeaderSearch Search { get; }
 
         /// <summary>
         /// Gets or sets the navigation of the application helpers.

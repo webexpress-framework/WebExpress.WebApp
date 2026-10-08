@@ -12,17 +12,23 @@ namespace WebExpress.WebApp.Test
     public sealed class TestRestApiDropdown : RestApiDropdown<TestIndexItem>
     {
         private readonly IEnumerable<TestIndexItem> _testData;
+        private readonly bool _prependHeader;
 
         /// <summary>
-        /// Initializes a new instance of the TestRestApiTile class with the specified data 
+        /// Initializes a new instance of the TestRestApiTile class with the specified data
         /// and tile title.
         /// </summary>
         /// <param name="data">
         /// The collection of TestIndexItem objects to be displayed in the tile. Cannot be null.
         /// </param>
-        public TestRestApiDropdown(IEnumerable<TestIndexItem> data)
+        /// <param name="prependHeader">
+        /// When set, the retrieved stream is led by a non-clickable header and a divider so
+        /// tests can exercise the "Recently opened" caption scenario the feature targets.
+        /// </param>
+        public TestRestApiDropdown(IEnumerable<TestIndexItem> data, bool prependHeader = false)
         {
             _testData = data;
+            _prependHeader = prependHeader;
         }
 
         /// <summary>
@@ -46,12 +52,24 @@ namespace WebExpress.WebApp.Test
         /// </returns>
         protected override IEnumerable<RestApiDropdownItem> RetrieveItems(IQuery<TestIndexItem> query, IQueryContext context, IRequest request)
         {
-            return query.Apply(_testData.AsQueryable())
+            var items = query.Apply(_testData.AsQueryable())
                 .Select(x => new RestApiDropdownItem()
                 {
                     Id = x.Id,
                     Text = x.Description
                 });
+
+            if (!_prependHeader)
+            {
+                return items;
+            }
+
+            return new RestApiDropdownItem[]
+            {
+                new RestApiDropdownItemHeader("Recently opened"),
+                new RestApiDropdownItemDivider()
+            }
+            .Concat(items);
         }
 
         /// <summary>
