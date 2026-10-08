@@ -331,3 +331,205 @@ test("destroy aborts services, unregisters and releases the back-reference", () 
     vs.flush();
     assert.equal(calls, 0, "a destroyed view state notifies no one");
 });
+
+// regressions of the view state review
+
+test("an inbound parameter also reads the echo from the pagination block of a REST list result", async () => {
+    const engine = loadEngine();
+    engine.setFetch(async () => ({
+        ok: true,
+        status: 200,
+        // the server clamped page 7 of a result that shrank to two pages
+        json: async () => ({ items: [], pagination: { page: 1, pageSize: 10, total: 12, totalPages: 2 } })
+    }));
+
+    const host = buildViewState(engine, {
+        state: { page: 7 },
+        service: { name: "data", baseUri: "/api/orders", method: "GET" },
+        resources: [{ name: "orders", service: "data", target: "orders", auto: false, params: [{ name: "page", state: "page", dir: "inout" }] }]
+    });
+
+    const vs = new engine.wxapp.ViewState(host);
+    await vs.load("orders");
+    vs.flush();
+
+    assert.equal(vs.getState().page, 1, "the clamped page flows back into state");
+});
+
+test("a service that throws ends the loading state instead of leaving the slice loading", async () => {
+    const engine = loadEngine();
+    const host = buildViewState(engine, {
+        resources: [{ name: "orders", service: "data", target: "orders", auto: false, params: [] }]
+    });
+    const vs = new engine.wxapp.ViewState(host, {
+        services: { data: { query() { throw new Error("boom"); } } }
+    });
+
+    const errors = [];
+    engine.sandbox.console = { ...console, error: (...args) => errors.push(args) };
+
+    const result = await vs.load("orders");
+    vs.flush();
+
+    assert.equal(result.ok, false);
+    assert.equal(vs.getState().orders.loading, false, "the slice stops loading");
+    assert.equal(vs.getState().orders.error.kind, "exception", "the failure is kept on the slice");
+    assert.equal(errors.length, 1, "the failure is logged once");
+});
+
+test("a malformed service uri neither leaves the slice loading nor holds the request channel", async () => {
+    const engine = loadEngine();
+    engine.setFetch(async () => { throw new Error("fetch must not run for a uri that cannot be built"); });
+    engine.sandbox.console = { ...console, error: () => { } };
+
+    const host = buildViewState(engine, {
+        service: { name: "data", baseUri: "http://[malformed", method: "GET" },
+        resources: [{ name: "orders", service: "data", target: "orders", auto: false, params: [] }]
+    });
+    const vs = new engine.wxapp.ViewState(host);
+
+    await vs.load("orders");
+    vs.flush();
+
+    assert.equal(vs.getState().orders.loading, false);
+    assert.equal(vs.useService("data")._channel("orders").abort, null, "no controller stays installed on the channel");
+});
+
+test("a control waits for the ViewState that declares its resource rather than binding the enclosing one", () => {
+    const engine = loadEngine();
+
+    const outer = buildViewState(engine, { viewStateId: "outer", state: {} });
+    const control = engine.document.createElement("div");
+    control.dataset.wxResource = "orders";
+    outer.appendChild(control);
+
+    const resolved = [];
+    engine.wxapp.ViewStateRegistry.whenReady(control, null, (vs) => resolved.push(vs));
+
+    new engine.wxapp.ViewState(outer);
+    assert.equal(resolved.length, 0, "the enclosing ViewState does not declare the resource");
+
+    const declaring = new engine.wxapp.ViewState(buildViewState(engine, {
+        viewStateId: "declaring",
+        resources: [{ name: "orders", service: "data", target: "orders", auto: false, params: [] }]
+    }));
+
+    assert.deepEqual(resolved, [declaring], "the declaring ViewState that registered later wins");
+});
+
+test("a control whose resource nobody declares settles for the enclosing ViewState after the pass", async () => {
+    const engine = loadEngine();
+
+    const outer = buildViewState(engine, { viewStateId: "outer", state: {} });
+    const control = engine.document.createElement("div");
+    control.dataset.wxResource = "unknown";
+    outer.appendChild(control);
+
+    const resolved = [];
+    engine.wxapp.ViewStateRegistry.whenReady(control, null, (vs) => resolved.push(vs));
+    const vs = new engine.wxapp.ViewState(outer);
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    assert.deepEqual(resolved, [vs], "the enclosing ViewState answers once nothing declares the resource");
+    assert.equal(engine.wxapp.ViewStateRegistry._pending.length, 0);
+});
+
+test("a control removed before its ViewState registers is never attached", () => {
+    const engine = loadEngine();
+
+    const host = buildViewState(engine, { viewStateId: "late", state: {} });
+    engine.document.body.appendChild(host);
+
+    const removed = engine.document.createElement("div");
+    host.appendChild(removed);
+    const cleaned = engine.document.createElement("div");
+    host.appendChild(cleaned);
+
+    const calls = [];
+    // neither caller keeps the cancel function, like most controls
+    engine.wxapp.ViewStateRegistry.whenReady(removed, null, () => calls.push("removed"));
+    engine.wxapp.ViewStateRegistry.whenReady(cleaned, null, () => calls.push("cleaned"));
+
+    host.removeChild(removed);
+    // the controller runs the element cleanups when it tears a removed element down
+    for (const cleanup of cleaned._wxCleanup) {
+        cleanup();
+    }
+
+    new engine.wxapp.ViewState(host);
+
+    assert.deepEqual(calls, [], "no callback of a removed control runs");
+    assert.equal(engine.wxapp.ViewStateRegistry._pending.length, 0, "the requests are dropped");
+});
+
+test("a control built in a detached container still resolves once its ViewState exists", () => {
+    const engine = loadEngine();
+
+    const detached = engine.document.createElement("div");
+    let resolved = null;
+    engine.wxapp.ViewStateRegistry.whenReady(detached, "late", (vs) => { resolved = vs; });
+
+    const vs = new engine.wxapp.ViewState(buildViewState(engine, { viewStateId: "late", state: {} }));
+
+    assert.equal(resolved, vs, "never having been connected is not being removed");
+});
+
+test("a request queued by a whenReady callback survives the flush that ran the callback", () => {
+    const engine = loadEngine();
+    const registry = engine.wxapp.ViewStateRegistry;
+
+    const parent = engine.document.createElement("div");
+    const child = engine.document.createElement("div");
+
+    let childResolved = null;
+    registry.whenReady(parent, "first", () => {
+        // a composed child asks for a ViewState that does not exist yet
+        registry.whenReady(child, "second", (vs) => { childResolved = vs; });
+    });
+
+    new engine.wxapp.ViewState(buildViewState(engine, { viewStateId: "first", state: {} }));
+    assert.equal(childResolved, null);
+
+    const second = new engine.wxapp.ViewState(buildViewState(engine, { viewStateId: "second", state: {} }));
+    assert.equal(childResolved, second, "the child's request was kept and resolves now");
+});
+
+test("a request cancelled by an earlier callback of the same flush does not run", () => {
+    const engine = loadEngine();
+    const registry = engine.wxapp.ViewStateRegistry;
+
+    const first = engine.document.createElement("div");
+    const second = engine.document.createElement("div");
+
+    let cancelSecond = null;
+    let secondRan = false;
+    registry.whenReady(first, "shared", () => cancelSecond());
+    cancelSecond = registry.whenReady(second, "shared", () => { secondRan = true; });
+
+    new engine.wxapp.ViewState(buildViewState(engine, { viewStateId: "shared", state: {} }));
+
+    assert.equal(secondRan, false, "the cancel issued during the flush holds");
+});
+
+test("a standalone ViewState leaves the services of its host to the owning control", () => {
+    const engine = loadEngine();
+    const registry = engine.wxapp.ServiceRegistry;
+
+    let created = 0;
+    const create = registry.create.bind(registry);
+    registry.create = (descriptor) => {
+        created += 1;
+        return create(descriptor);
+    };
+
+    const host = engine.document.createElement("div");
+    appendServiceIsland(engine.document, host, { name: "data", baseUri: "/api/orders", method: "GET" });
+
+    const control = new engine.wxapp.Data(host);
+
+    assert.equal(created, 1, "one set of services per control");
+    assert.ok(control.useService("data"), "the control owns the service");
+    assert.equal(control.store.useService("data"), null, "the standalone state holds none");
+});

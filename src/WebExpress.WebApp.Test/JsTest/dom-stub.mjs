@@ -57,6 +57,19 @@ class Element {
 
     get parentElement() { return this.parentNode && this.parentNode.nodeType === 1 ? this.parentNode : null; }
 
+    /**
+     * An element is connected when its ancestor chain reaches the document
+     * body, which the stub marks as the root.
+     */
+    get isConnected() {
+        let current = this;
+        while (current) {
+            if (current._isRoot) { return true; }
+            current = current.parentNode;
+        }
+        return false;
+    }
+
     get nodeName() { return this.tagName; }
 
     get innerText() { return this.textContent; }
@@ -267,6 +280,7 @@ function findById(node, id) {
  */
 export function createDocument() {
     const body = new Element("body");
+    body._isRoot = true;
     const listeners = {};
 
     return {

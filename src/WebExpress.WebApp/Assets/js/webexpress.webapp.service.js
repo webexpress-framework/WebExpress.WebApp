@@ -19,7 +19,7 @@ webexpress.webapp.ServiceResult = {
 
     /**
      * Builds a failed result.
-     * @param {string} kind - One of "network", "http", "parse", "abort", "validation".
+     * @param {string} kind - One of "network", "http", "parse", "abort", "validation", "exception".
      * @param {number} [status=0] - The http status when applicable.
      * @param {string} [message=""] - A human readable message.
      * @param {boolean} [retriable=false] - Whether retrying may succeed.
@@ -560,6 +560,9 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
      * @returns {Promise<object>} A normalised result.
      */
     async _sendOnce(method, request, channel) {
+        // built before the channel is claimed: a malformed uri throws, and a controller
+        // installed ahead of it would stay on the channel with no finally to release it
+        const url = this._buildUrl(request.params, request.path);
         let abort = null;
 
         if (channel) {
@@ -570,7 +573,6 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
             channel.abort = abort;
         }
 
-        const url = this._buildUrl(request.params, request.path);
         const headers = Object.assign({ "Accept": "application/json" }, this._descriptor.headers || {});
         const init = { method: method, headers: headers };
 

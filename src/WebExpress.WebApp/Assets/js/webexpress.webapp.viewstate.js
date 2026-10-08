@@ -113,12 +113,17 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
         // consumes and caches the island on the element, so a later control
         // that probes the same host does not re-read a stale island.
         this._state = Object.assign({}, options.state || webexpress.webapp.Data.readState(element));
-        this._services = options.services || webexpress.webapp.ServiceRegistry.fromElement(element);
-        this._resources = options.resources || webexpress.webapp.ViewState._consumeResourceIslands(element);
 
+        // the owning control resolves the services of its host itself; reading them
+        // here too would build a second, never used set of service instances
         if (this._standalone) {
+            this._services = options.services || {};
+            this._resources = options.resources || {};
             return;
         }
+
+        this._services = options.services || webexpress.webapp.ServiceRegistry.fromElement(element);
+        this._resources = options.resources || webexpress.webapp.ViewState._consumeResourceIslands(element);
 
         // an immediate back-reference, so a descendant control resolves this
         // ViewState even though the controller instantiates children before their
@@ -392,7 +397,15 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
 
         this.setState({ [target]: Object.assign({}, state[target], { loading: true, error: null }) });
 
-        const result = await service.query(params, { channel: name });
+        let result;
+        try {
+            result = await service.query(params, { channel: name });
+        } catch (error) {
+            // a service that throws instead of returning a failure result must not
+            // leave the slice loading for good
+            console.error(`ViewState resource "${name}" failed to load.`, error);
+            result = webexpress.webapp.ServiceResult.fail("exception", 0, error && error.message ? error.message : String(error), false);
+        }
 
         // a newer load of this resource owns the slice now; whatever this one brought
         // back - data, a failure or the abort the newer one caused - is stale
@@ -417,11 +430,21 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
         // raw data while still sharing the central load and the loading flags
         const patch = { [target]: { items: projected.items, total: projected.total, data: data, loading: false, error: null } };
 
+        // the REST list results echo their paging inside the pagination block, a hand
+        // written endpoint at the top level; the top level wins, as in pagingOf
+        const echoed = (key) => {
+            if (!data || typeof data !== "object") {
+                return undefined;
+            }
+            return data[key] !== undefined ? data[key] : (data.pagination ? data.pagination[key] : undefined);
+        };
+
         for (const param of resource.params) {
             if (param.dir === "out") {
                 continue;
             }
-            if (data && data[param.name] !== undefined) {
+            const value = echoed(param.name);
+            if (value !== undefined) {
                 // copy the latest state so response mappings preserve unrelated nested edits
                 const keys = String(param.state || "").split(".").filter((key) => key.length > 0);
                 let source = Object.assign({}, this.getState(), patch);
@@ -431,7 +454,7 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
                     cursor[key] = Object.assign({}, source);
                     cursor = cursor[key];
                 }
-                cursor[keys[keys.length - 1]] = data[param.name];
+                cursor[keys[keys.length - 1]] = value;
             }
         }
 
@@ -638,9 +661,15 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
         }
 
         for (const name of resources) {
+            // a lazy resource nobody loaded yet may still lack the parameters it needs
+            // (a detail without its selected id); its first load picks up the change
+            if (!this._loads.has(name)) {
+                continue;
+            }
+
             Promise.resolve(this.reload(name)).then((result) => {
                 if (result && result.ok) {
-                    webexpress.webapp.ViewState._flashBoundControls(name);
+                    this._flashBoundControls(name);
                 }
             }).catch(() => {
                 // a failed re-query already surfaced through the error channel
@@ -649,12 +678,15 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Plays the change flash on every control bound to a resource. The bound
-     * controls are found by their data-wx-resource binding, which is also how
-     * they resolve their ViewState, so no control has to opt in individually.
+     * Plays the change flash on every control bound to a resource of this
+     * ViewState. The bound controls are found by their data-wx-resource binding,
+     * which is also how they resolve their ViewState, so no control has to opt in
+     * individually. A resource name is not unique across ViewStates, so a control
+     * with the same binding that resolves to another ViewState is left alone - its
+     * data did not change.
      * @param {string} resource - The resource name.
      */
-    static _flashBoundControls(resource) {
+    _flashBoundControls(resource) {
         if (typeof document === "undefined" || typeof document.querySelectorAll !== "function") {
             return;
         }
@@ -664,6 +696,10 @@ webexpress.webapp.ViewState = class extends webexpress.webui.Ctrl {
             : String(resource).replace(/["\\]/g, "\\$&");
 
         for (const element of document.querySelectorAll(`[data-wx-resource="${escaped}"]`)) {
+            const viewStateId = (element.dataset && element.dataset.wxViewstate) || null;
+            if (webexpress.webapp.ViewStateRegistry.resolve(element, viewStateId) !== this) {
+                continue;
+            }
             webexpress.webapp.DataChangeSubscription.flash(element);
         }
     }
@@ -748,6 +784,9 @@ webexpress.webapp.ViewStateRegistry = new class {
         // a name is not unique across ViewStates, so the index cannot hold one owner
         this._byResource = new Map();
         this._pending = [];
+        this._flushing = false;
+        this._flushAgain = false;
+        this._fallbackScheduled = false;
     }
 
     /**
@@ -843,11 +882,16 @@ webexpress.webapp.ViewStateRegistry = new class {
      * Resolves the ViewState a control belongs to. An explicit id wins and may
      * point at a ViewState that is not an ancestor, for example a toolbar that
      * drives a content region; otherwise the nearest enclosing ViewState is used.
+     * A control bound to a resource that no ViewState declares falls back to the
+     * nearest enclosing ViewState, unless the lookup is strict: the declaring
+     * ViewState may simply not have registered yet, and a waiting control must
+     * not settle for one whose slice of that resource stays empty for good.
      * @param {HTMLElement} element - The control element.
      * @param {string} [id] - An explicit ViewState id.
+     * @param {boolean} [strict=false] - Refuses the fallback to a ViewState that does not declare the resource.
      * @returns {webexpress.webapp.ViewState|null} The resolved ViewState or null.
      */
-    resolve(element, id) {
+    resolve(element, id, strict = false) {
         if (id) {
             return this.get(id);
         }
@@ -879,7 +923,7 @@ webexpress.webapp.ViewStateRegistry = new class {
             }
         }
 
-        return enclosing;
+        return strict ? null : enclosing;
     }
 
     /**
@@ -887,51 +931,125 @@ webexpress.webapp.ViewStateRegistry = new class {
      * it is available. The ViewState may not exist yet when the control is
      * constructed, because the controller instantiates children before their
      * host; in that case the request is queued and resolved when the ViewState
-     * registers itself, which is independent of DOM event order and timing.
+     * registers itself, which is independent of DOM event order and timing. A
+     * control bound to a resource waits for the ViewState that declares it; only
+     * once the current synchronous pass is over does it settle for the
+     * nearest enclosing ViewState instead. The request is cancelled with the
+     * element's cleanups, so a control removed before its ViewState exists is
+     * never attached afterwards, whether or not its caller keeps the returned
+     * cancel function.
      * @param {HTMLElement} element - The control element.
      * @param {string} [id] - An explicit ViewState id.
      * @param {Function} callback - Receives the resolved ViewState.
      * @returns {Function} Cancels a pending resolution when the caller is removed.
      */
     whenReady(element, id, callback) {
-        const found = this.resolve(element, id);
+        const found = this.resolve(element, id, true);
         if (found) {
             callback(found);
             return () => { };
         }
 
-        const waiter = { element: element, id: id, callback: callback };
-        this._pending.push(waiter);
-        return () => {
+        const waiter = {
+            element: element,
+            id: id,
+            callback: callback,
+            // a control built in a detached container is attached later, so only one
+            // that was connected and no longer is counts as removed
+            connected: !!(element && element.isConnected),
+            settled: false
+        };
+
+        const cancel = () => {
+            waiter.settled = true;
             this._pending = this._pending.filter((pending) => pending !== waiter);
         };
+
+        this._pending.push(waiter);
+
+        if (element && typeof element === "object") {
+            (element._wxCleanup = element._wxCleanup || []).push(cancel);
+        }
+
+        this._scheduleFallback();
+
+        return cancel;
+    }
+
+    /**
+     * Settles the requests no declaring ViewState answered once the current
+     * synchronous pass is over for their nearest enclosing ViewState. The
+     * controller instantiates a whole subtree synchronously, so by then every
+     * ViewState of that pass has registered.
+     */
+    _scheduleFallback() {
+        if (this._fallbackScheduled) {
+            return;
+        }
+
+        this._fallbackScheduled = true;
+
+        webexpress.webapp._microtask(() => {
+            this._fallbackScheduled = false;
+            this._flushPending(false);
+        });
     }
 
     /**
      * Resolves the controls that asked for a ViewState before it existed. A request
-     * that still cannot be resolved stays queued for a later ViewState.
+     * that still cannot be resolved stays queued for a later ViewState, and one whose
+     * control has been removed in the meantime is dropped. Requests queued and
+     * ViewStates registered by a callback while the flush runs are picked up by the
+     * same flush.
+     * @param {boolean} [strict=true] - Refuses the fallback to a ViewState that does not declare the resource.
      */
-    _flushPending() {
-        if (this._pending.length === 0) {
+    _flushPending(strict = true) {
+        if (this._flushing) {
+            this._flushAgain = true;
             return;
         }
 
-        const stillPending = [];
+        this._flushing = true;
 
-        for (const waiter of this._pending) {
-            const resolved = this.resolve(waiter.element, waiter.id);
-            if (resolved) {
-                try {
-                    waiter.callback(resolved);
-                } catch (error) {
-                    console.error("ViewState whenReady callback failed", error);
+        try {
+            do {
+                this._flushAgain = false;
+
+                const waiters = this._pending;
+                const stillPending = [];
+                this._pending = [];
+
+                for (const waiter of waiters) {
+                    // a callback earlier in this pass may have cancelled it
+                    if (waiter.settled) {
+                        continue;
+                    }
+
+                    if (waiter.connected && waiter.element && waiter.element.isConnected === false) {
+                        waiter.settled = true;
+                        continue;
+                    }
+
+                    const resolved = this.resolve(waiter.element, waiter.id, strict);
+                    if (!resolved) {
+                        stillPending.push(waiter);
+                        continue;
+                    }
+
+                    waiter.settled = true;
+
+                    try {
+                        waiter.callback(resolved);
+                    } catch (error) {
+                        console.error("ViewState whenReady callback failed", error);
+                    }
                 }
-            } else {
-                stillPending.push(waiter);
-            }
-        }
 
-        this._pending = stillPending;
+                this._pending = stillPending.concat(this._pending);
+            } while (this._flushAgain);
+        } finally {
+            this._flushing = false;
+        }
     }
 
     /**

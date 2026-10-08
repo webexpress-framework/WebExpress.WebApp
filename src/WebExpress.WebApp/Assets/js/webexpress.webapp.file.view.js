@@ -160,7 +160,10 @@ webexpress.webapp.FileViewCtrl = class extends webexpress.webui.Ctrl {
             this._unsubscribe = null;
         }
 
-        if (this._service && typeof this._service.abort === "function") {
+        // the service a ViewState lends for the bound resource is shared with every
+        // other resource of that ViewState, and its abort would cancel their loads too
+        const borrowed = this._viewState && this._viewState.serviceForResource(this._resource) === this._service;
+        if (this._service && !borrowed && typeof this._service.abort === "function") {
             this._service.abort();
         }
 

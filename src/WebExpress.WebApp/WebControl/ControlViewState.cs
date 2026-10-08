@@ -90,13 +90,20 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
+            // the host replaces the panel's element, so it carries the role and theme
+            // marker the panel would have emitted itself
+            var role = Role?.Invoke(renderContext);
+            var theme = Theme?.Invoke(renderContext) ?? TypeTheme.None;
+
             var html = new HtmlElementTextContentDiv([.. Content.Select(x => x?.Render(renderContext, visualTree))])
             {
                 Id = Id,
                 Class = Css.Concatenate("wx-webapp-viewstate", GetClasses(renderContext)),
-                Style = GetStyles(renderContext)
+                Style = GetStyles(renderContext),
+                Role = role
             }
-                .AddUserAttribute("data-wx-viewstate", Id);
+                .AddUserAttribute("data-wx-viewstate", Id)
+                .AddUserAttribute("data-wx-theme", theme.ToValue());
 
             var resources = ResourceFactories
                 .Select(factory => factory?.Invoke(renderContext))

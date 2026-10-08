@@ -438,3 +438,36 @@ test("the presentation the user chose is the one the control comes back in", () 
 
     assert.equal(ctrl._activePane, "tile");
 });
+
+test("removing a view bound to a ViewState leaves the shared service's other loads running", () => {
+    const rt = loadRuntime();
+
+    let aborts = 0;
+    const shared = {
+        abort() { aborts += 1; },
+        query: async () => ({ ok: true, data: { items: [] } })
+    };
+
+    const viewStateHost = rt.createElement("div");
+    viewStateHost.dataset.wxViewstate = "documents";
+    rt.document.body.appendChild(viewStateHost);
+
+    new rt.wxapp.ViewState(viewStateHost, {
+        services: { data: shared },
+        resources: {
+            files: { name: "files", service: "data", target: "files", auto: false, params: [] },
+            details: { name: "details", service: "data", target: "details", auto: false, params: [] }
+        }
+    });
+
+    const element = host(rt, {});
+    element.dataset.wxResource = "files";
+    viewStateHost.appendChild(element);
+
+    const ctrl = construct(rt, element);
+    assert.equal(ctrl._service, shared, "the view uses the service the ViewState lends");
+
+    ctrl.destroy();
+
+    assert.equal(aborts, 0, "the details resource keeps loading through the same service");
+});

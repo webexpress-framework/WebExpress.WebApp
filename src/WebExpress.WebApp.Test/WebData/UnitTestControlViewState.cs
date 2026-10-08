@@ -3,6 +3,7 @@ using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebControl;
 using WebExpress.WebApp.WebData;
 using WebExpress.WebCore.WebEndpoint;
+using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.Test.WebData
@@ -33,6 +34,28 @@ namespace WebExpress.WebApp.Test.WebData
 
             Assert.Contains("wx-webapp-viewstate", html);
             Assert.Contains("data-wx-viewstate=\"orders\"", html);
+        }
+
+        /// <summary>
+        /// Tests that the host keeps the role and the theme marker of the panel it
+        /// derives from, because it renders its own element in place of the panel's.
+        /// </summary>
+        [Fact]
+        public void EmitsThePanelRoleAndTheme()
+        {
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlViewState("orders")
+            {
+                Role = _ => "region",
+                Theme = _ => TypeTheme.Dark
+            };
+
+            var html = control.Render(context, visualTree).ToString();
+
+            Assert.Contains("role=\"region\"", html);
+            Assert.Contains("data-wx-theme=\"dark\"", html);
         }
 
         /// <summary>

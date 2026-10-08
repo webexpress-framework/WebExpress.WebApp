@@ -80,6 +80,16 @@ async function settleChanges(engine, ms = 80) {
     }
 }
 
+/**
+ * Loads resources once, because a data change re-queries only what was loaded:
+ * a lazy resource nobody asked for yet may still lack its parameters.
+ */
+async function loadFirst(vs, ...names) {
+    for (const name of names) {
+        await vs.load(name);
+    }
+}
+
 test("a ViewState with domain-declaring services registers and subscribes on the queue", () => {
     const engine = loadEngine();
     const queue = installQueue(engine);
@@ -111,6 +121,8 @@ test("a data change of the subscribed domain re-queries the bound resource", asy
     });
 
     const vs = new engine.wxapp.ViewState(buildViewState(engine));
+    await loadFirst(vs, "orders");
+    fetchCalls = 0;
 
     queue.push({ type: CHANGED_TYPE, domain: ORDER_DOMAIN, operation: "updated", itemId: "42" });
     await settleChanges(engine);
@@ -130,7 +142,9 @@ test("the domain matching is case-insensitive, mirroring the server derivation",
         return { ok: true, status: 200, json: async () => ({ items: [], total: 0 }) };
     });
 
-    new engine.wxapp.ViewState(buildViewState(engine));
+    const vs = new engine.wxapp.ViewState(buildViewState(engine));
+    await loadFirst(vs, "orders");
+    fetchCalls = 0;
 
     queue.push({ type: CHANGED_TYPE, domain: "My.App.Order", operation: "created" });
     await settleChanges(engine);
@@ -169,7 +183,9 @@ test("a burst of changes coalesces into one re-query per resource", async () => 
         return { ok: true, status: 200, json: async () => ({ items: [], total: 0 }) };
     });
 
-    new engine.wxapp.ViewState(buildViewState(engine));
+    const vs = new engine.wxapp.ViewState(buildViewState(engine));
+    await loadFirst(vs, "orders");
+    fetchCalls = 0;
 
     for (let i = 0; i < 5; i++) {
         queue.push({ type: CHANGED_TYPE, domain: ORDER_DOMAIN, operation: "updated", itemId: String(i) });
@@ -190,6 +206,8 @@ test("destroy unregisters the queue listener and cancels a pending re-query", as
     });
 
     const vs = new engine.wxapp.ViewState(buildViewState(engine));
+    await loadFirst(vs, "orders");
+    fetchCalls = 0;
 
     queue.push({ type: CHANGED_TYPE, domain: ORDER_DOMAIN, operation: "updated" });
     vs.destroy();
@@ -211,13 +229,16 @@ test("controls bound to a re-queried resource play the change flash", async () =
     // a ViewState-bound control carries the data-wx-resource binding on its host
     const control = engine.document.createElement("div");
     control.setAttribute("data-wx-resource", "orders");
+    control.dataset.wxResource = "orders";
     engine.document.body.appendChild(control);
 
     const other = engine.document.createElement("div");
     other.setAttribute("data-wx-resource", "customers");
+    other.dataset.wxResource = "customers";
     engine.document.body.appendChild(other);
 
-    new engine.wxapp.ViewState(host);
+    const vs = new engine.wxapp.ViewState(host);
+    await loadFirst(vs, "orders");
 
     queue.push({ type: CHANGED_TYPE, domain: ORDER_DOMAIN, operation: "updated" });
     await settleChanges(engine);
@@ -239,9 +260,11 @@ test("the change flash is removed after its duration and can restart", async () 
     engine.document.body.appendChild(host);
     const control = engine.document.createElement("div");
     control.setAttribute("data-wx-resource", "orders");
+    control.dataset.wxResource = "orders";
     engine.document.body.appendChild(control);
 
-    new engine.wxapp.ViewState(host);
+    const vs = new engine.wxapp.ViewState(host);
+    await loadFirst(vs, "orders");
 
     queue.push({ type: CHANGED_TYPE, domain: ORDER_DOMAIN, operation: "updated" });
     await settleChanges(engine, 70);
@@ -349,11 +372,67 @@ test("all resources of the changed domain re-query, others stay untouched", asyn
         name: "customers", service: "customers-data", target: "customers", auto: false, params: []
     });
 
-    new engine.wxapp.ViewState(host);
+    const vs = new engine.wxapp.ViewState(host);
+    await loadFirst(vs, "orders", "customers");
+    urls.length = 0;
 
     queue.push({ type: CHANGED_TYPE, domain: ORDER_DOMAIN, operation: "deleted" });
     await settleChanges(engine);
 
     assert.equal(urls.length, 1, "only the order resource re-queries");
     assert.ok(urls[0].includes("/api/orders"));
+});
+
+test("a lazy resource nobody loaded yet is not re-queried by a data change", async () => {
+    const engine = loadEngine();
+    const queue = installQueue(engine);
+
+    let fetchCalls = 0;
+    engine.setFetch(async () => {
+        fetchCalls += 1;
+        return { ok: true, status: 200, json: async () => ({ items: [], total: 0 }) };
+    });
+
+    const vs = new engine.wxapp.ViewState(buildViewState(engine, { auto: false }));
+
+    queue.push({ type: CHANGED_TYPE, domain: ORDER_DOMAIN, operation: "updated" });
+    await settleChanges(engine);
+    vs.flush();
+
+    assert.equal(fetchCalls, 0, "the lazy resource still waits for its first load");
+    assert.equal(vs.getState().orders, undefined, "no slice is written for it");
+});
+
+test("the change flash leaves controls of another ViewState that declares the same resource", async () => {
+    const engine = loadEngine();
+    const queue = installQueue(engine);
+
+    engine.setFetch(async () => ({ ok: true, status: 200, json: async () => ({ items: [], total: 0 }) }));
+
+    const changedHost = buildViewState(engine);
+    changedHost.dataset.wxViewstate = "changed";
+    engine.document.body.appendChild(changedHost);
+    const own = engine.document.createElement("div");
+    own.setAttribute("data-wx-resource", "orders");
+    own.dataset.wxResource = "orders";
+    changedHost.appendChild(own);
+
+    const quietHost = buildViewState(engine, { domains: ["my.app.customer"] });
+    quietHost.dataset.wxViewstate = "quiet";
+    engine.document.body.appendChild(quietHost);
+    const foreign = engine.document.createElement("div");
+    foreign.setAttribute("data-wx-resource", "orders");
+    foreign.dataset.wxResource = "orders";
+    quietHost.appendChild(foreign);
+
+    const changed = new engine.wxapp.ViewState(changedHost);
+    const quiet = new engine.wxapp.ViewState(quietHost);
+    await loadFirst(changed, "orders");
+    await loadFirst(quiet, "orders");
+
+    queue.push({ type: CHANGED_TYPE, domain: ORDER_DOMAIN, operation: "updated" });
+    await settleChanges(engine);
+
+    assert.ok(own.classList.contains("wx-data-changed"), "the control of the changed ViewState flashes");
+    assert.ok(!foreign.classList.contains("wx-data-changed"), "the same resource of another ViewState did not change");
 });
