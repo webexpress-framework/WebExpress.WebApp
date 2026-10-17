@@ -160,6 +160,30 @@ namespace WebExpress.WebApp.WebRestApi
                     .Distinct()
                     .ToList();
 
+                var preceding = referenceToken is null
+                    ? []
+                    : ila.Items.Take(ila.Items.ToList().IndexOf(referenceToken) + 1).ToList();
+
+                // a filter operand may be negated, the attribute of a sort order may not
+                var negatable = (suggestionTypes.Any(x => x is WqlExpressionType.Attribute or WqlExpressionType.None) ||
+                    !followMode && currentToken.ExpressionType == WqlExpressionType.LogicalOperator &&
+                    currentToken.Token.Value.Equals("not", StringComparison.OrdinalIgnoreCase)) &&
+                    !preceding.Any(x => x.ExpressionType == WqlExpressionType.Order);
+
+                if (negatable && "not".StartsWith(prefix, StringComparison.OrdinalIgnoreCase) && !suggestions.Contains("not"))
+                {
+                    suggestions.Add("not");
+                }
+
+                // between the bounds of a range only its "and" may follow, as "or" would cut the range off
+                var lastOperator = preceding.LastOrDefault(x => x.ExpressionType is WqlExpressionType.Operator or WqlExpressionType.LogicalOperator);
+
+                if (lastOperator?.ExpressionType == WqlExpressionType.Operator &&
+                    lastOperator.Token.Value.Replace(" ", "").ToLowerInvariant() is "between" or "notbetween")
+                {
+                    suggestions.Remove("or");
+                }
+
                 return new RestApiWqlPromptAnalyzeResult()
                 {
                     Lookahead = ila,
@@ -272,7 +296,8 @@ namespace WebExpress.WebApp.WebRestApi
 
                     var operators = new List<string>
                     {
-                        "~", "=", "!=", ">", "<", ">=", "<=", "is", "is not", "in", "not in"
+                        "~", "!~", "=", "!=", ">", "<", ">=", "<=", "is", "is not", "in", "not in",
+                        "between", "not between", "starts with", "ends with", "contains"
                     };
 
                     items.AddRange
