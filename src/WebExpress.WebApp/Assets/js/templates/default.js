@@ -193,12 +193,12 @@ webexpress.webui.TableTemplates.register("rest_combo", (val, table, row, cell, n
 webexpress.webui.TableTemplates.register("rest_tag", (val, table, row, cell, name, opts) => {
     opts = opts || {};
 
-    if (!val && !opts.editable) {
+    const editable = opts.editable === true || opts.editable === "true";
+    if (!val && !editable) {
         return "";
     }
 
     const container = document.createElement("div");
-    const editable = opts.editable === true || opts.editable === "true";
     const placeholder = opts.placeholder || null;
 
     if (editable) {

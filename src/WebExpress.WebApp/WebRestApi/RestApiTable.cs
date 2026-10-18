@@ -360,14 +360,19 @@ namespace WebExpress.WebApp.WebRestApi
         /// for the retrieval operation. Cannot be null.
         /// </param>
         /// <param name="columns">
-        /// The collection of columns available for the specified REST API request.
+        /// The collection of columns available for the specified REST API request, in the
+        /// order the response sends them. The cells of every row must follow this order:
+        /// a cell carries no column id, so the client assigns it to a column by its
+        /// position. An endpoint that returns a stored, reordered layout from
+        /// <see cref="RetrieveColums"/> therefore builds its cells from these columns
+        /// rather than in a fixed order.
         /// </param>
         /// <param name="request">
         /// The request that provides the operational context for resolving
         /// the appropriate REST API URI.
         /// </param>
         /// <returns>
-        /// An enumerable collection of table rows that satisfy the query and 
+        /// An enumerable collection of table rows that satisfy the query and
         /// context. The collection may be empty if no rows match the criteria.
         /// </returns>
         protected abstract IEnumerable<RestApiTableRow> RetrieveRows(IQuery<TIndexItem> query, IQueryContext context, IEnumerable<RestApiTableColumn> columns, IRequest request);

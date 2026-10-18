@@ -71,6 +71,25 @@ test("rest service returns an empty body for a 204 delete", async () => {
     assert.equal(result.status, 204);
 });
 
+test("rest service takes a 200 without a body as a confirmed write", async () => {
+    const { wxapp, setFetch } = loadEngine();
+    setFetch(async () => ({
+        ok: true,
+        status: 200,
+        headers: { get: (name) => (name.toLowerCase() === "content-length" ? "0" : null) },
+        json: async () => { throw new SyntaxError("Unexpected end of JSON input"); }
+    }));
+
+    const service = new wxapp.RestService({ baseUri: "/api/table", updateMethod: "PUT" });
+    const result = await service.update({ c: [{ id: "name", visible: true }] });
+
+    // the table configure endpoint answers like this; read as a parse failure, the
+    // table took back a layout the server had already stored
+    assert.equal(result.ok, true);
+    assert.equal(result.data, null);
+    assert.equal(result.status, 200);
+});
+
 test("rest service normalises a network error", async () => {
     const { wxapp, setFetch } = loadEngine();
     setFetch(async () => { throw new TypeError("boom"); });

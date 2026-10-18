@@ -535,7 +535,9 @@ webexpress.webapp.PermissionCtrl = class extends webexpress.webapp.TableCtrl {
     /**
      * Applies an inline edit of the policy chips. The dialog reports nothing
      * here: it lives outside the host and keeps its picked value until it is
-     * assigned, so only the rows of stored entries reach the endpoint.
+     * assigned, so only the rows of stored entries reach the endpoint. The editor
+     * waits for the outcome of the write, so chips the endpoint refused are set
+     * back instead of standing there as if they were stored.
      * @param {Event} e - The inline edit save event.
      */
     _onInlineSave(e) {
@@ -546,7 +548,11 @@ webexpress.webapp.PermissionCtrl = class extends webexpress.webapp.TableCtrl {
             return;
         }
 
-        this._setPolicies(row._dataRowRef.id, e.detail.value);
+        const outcome = this._setPolicies(row._dataRowRef.id, e.detail.value);
+
+        if (typeof e.detail.waitUntil === "function") {
+            e.detail.waitUntil(outcome);
+        }
     }
 
     /**
@@ -562,14 +568,16 @@ webexpress.webapp.PermissionCtrl = class extends webexpress.webapp.TableCtrl {
     }
 
     /**
-     * Replaces the policy set of a group through PUT and reloads the page.
+     * Replaces the policy set of a group through PUT and reloads the page. A refused
+     * write is put in front of the user, because the chips the editor sets back would
+     * otherwise read as an edit that got lost.
      * @param {string} groupId - The id of the group.
      * @param {Array<string>|string} value - The new policy set.
-     * @returns {Promise<void>} Resolves when the update completed.
+     * @returns {Promise<boolean>} Resolves to whether the policy set was stored.
      */
     async _setPolicies(groupId, value) {
         if (!groupId || !this._service) {
-            return;
+            return false;
         }
 
         const model = webexpress.webapp.permissionModel;
@@ -578,11 +586,17 @@ webexpress.webapp.PermissionCtrl = class extends webexpress.webapp.TableCtrl {
 
         if (!result.ok) {
             console.warn("PermissionCtrl: update failed", webexpress.webapp.ServiceResult.describe(result));
-            return;
+            webexpress.webapp.ErrorChannel.present(result, {
+                service: this._service.name,
+                heading: this._i18n("webexpress.webapp:permission.title", "Permissions"),
+                message: this._i18n("webexpress.webapp:permission.update.rejected", "The permissions were not saved and have been reset.")
+            });
+            return false;
         }
 
         await this._load();
         this._dispatch(webexpress.webapp.Event.PERMISSION_ASSIGNED_EVENT, { groupId: groupId, policyIds: policyIds });
+        return true;
     }
 
     /**

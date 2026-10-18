@@ -602,7 +602,12 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
                 return result;
             }
 
-            if (response.status === 204 || method === "DELETE") {
+            // a write the endpoint confirms without a body - 204, or 200 with a length of
+            // zero - succeeded; reading it as json would turn the success into a failure
+            const length = response.headers && typeof response.headers.get === "function"
+                ? response.headers.get("content-length")
+                : null;
+            if (response.status === 204 || method === "DELETE" || length === "0") {
                 return webexpress.webapp.ServiceResult.ok(null, response.status);
             }
 

@@ -73,6 +73,9 @@ function stubFetch(rt, entries, options = {}) {
         if (method === "POST" && options.rejectGroup === JSON.parse(init.body).groupId) {
             return { ok: false, status: 409, json: async () => ({}) };
         }
+        if (method === "PUT" && options.rejectPut) {
+            return { ok: false, status: 409, json: async () => ({}) };
+        }
         if (method === "POST" || method === "PUT") {
             return { ok: true, status: 200, json: async () => entries[0] };
         }
@@ -305,6 +308,64 @@ test("permission writes an inline edit of the chips through PUT", async () => {
     assert.ok(put, "the policy set is written with a PUT");
     assert.ok(put.url.endsWith("/g1"), "the group is addressed through the path");
     assert.deepEqual(JSON.parse(put.body), { policyIds: ["p1", "p3"] });
+});
+
+/**
+ * Edits the chips of the first row through its inline editor and submits them. The stub
+ * does not bubble, so the save event is handed on to the host as the browser would.
+ * @param {object} rt - The loaded runtime.
+ * @param {object} ctrl - The permission control.
+ * @param {Array<object>} editors - The inline editors the cells built.
+ * @param {Array<string>} policyIds - The policies to save.
+ * @returns {object} The inline editor of the row.
+ */
+function editChips(rt, ctrl, editors, policyIds) {
+    const smart = editors.find((editor) => ctrl._rows[0]._anchorTr.contains(editor._element));
+    assert.ok(smart, "the policy cell carries an inline editor");
+    const host = smart._element;
+    if (!host._wxBubbles) {
+        host._wxBubbles = true;
+        host.addEventListener(rt.wx.Event.SAVE_INLINE_EDIT_EVENT, (e) => ctrl._element.dispatchEvent(e));
+    }
+
+    smart._startEditing(host);
+    smart._getEditorValue = () => policyIds;
+    host.querySelector("form").dispatchEvent({ type: "submit", preventDefault() { } });
+    return smart;
+}
+
+test("permission sets refused chips back, reports the refusal and keeps the cell editable", async () => {
+    const rt = load();
+    const editors = [];
+    const SmartEdit = rt.wx.SmartEditCtrl;
+    rt.wx.SmartEditCtrl = class extends SmartEdit {
+        constructor(element) {
+            super(element);
+            editors.push(this);
+        }
+    };
+    const popups = [];
+    rt.wxapp.MessageQueue = { dispatchLocal(payload) { popups.push(payload); } };
+    const calls = stubFetch(rt, [{ groupId: "g1", groupName: "IT Support", policyIds: ["p1"] }], { rejectPut: true });
+
+    const ctrl = new rt.wxapp.PermissionCtrl(createHost(rt));
+    await settle();
+    const reads = calls.filter((call) => call.method === "GET").length;
+
+    const smart = editChips(rt, ctrl, editors, ["p1", "p3"]);
+    await settle();
+
+    assert.equal(calls.filter((call) => call.method === "PUT").length, 1, "the policy set was sent");
+    assert.equal(smart._activeEdit, null, "the edit has ended");
+    assert.deepEqual(Array.from(smart.value), ["p1"], "the chips are set back to the stored set");
+    assert.equal(ctrl._rows[0].cells[1].content, "p1", "the model keeps the stored set");
+    assert.equal(popups.length, 1, "the refusal is put in front of the user");
+    assert.equal(popups[0].notification.type, "alert-danger");
+    assert.equal(calls.filter((call) => call.method === "GET").length, reads, "nothing is reloaded for a refusal");
+
+    editChips(rt, ctrl, editors, ["p2"]);
+    await settle();
+    assert.equal(calls.filter((call) => call.method === "PUT").length, 2, "the cell can be edited again for a retry");
 });
 
 test("permission revokes a group through DELETE and reloads", async () => {

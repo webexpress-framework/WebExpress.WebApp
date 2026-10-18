@@ -143,6 +143,70 @@ webexpress.webapp.tableModel = {
     },
 
     /**
+     * Merges the columns of a response with a local layout. The server owns what a column
+     * is - its label, its template, its options - and which columns exist; the layout
+     * contributes only how the reader arranged them: the order, the visibility and the
+     * width. A column the layout does not know is appended, a column the server no longer
+     * sends is dropped with its layout entry.
+     * @param {Array<object>} serverColumns - The normalised columns of the response.
+     * @param {Array<{id: string, visible: boolean, width: *}>|null} layout - The local
+     *     layout in display order, or null when there is none.
+     * @returns {Array<object>} The columns in display order.
+     */
+    mergeColumns(serverColumns, layout) {
+        serverColumns = serverColumns || [];
+        if (!Array.isArray(layout) || layout.length === 0) {
+            return serverColumns;
+        }
+
+        const byId = new Map(serverColumns.map((column) => [column.id, column]));
+        const merged = [];
+
+        for (const entry of layout) {
+            const column = entry ? byId.get(entry.id) : null;
+            if (!column || merged.includes(column)) {
+                continue;
+            }
+            if (typeof entry.visible === "boolean") {
+                column.visible = entry.visible;
+            }
+            if (entry.width !== null && entry.width !== undefined && entry.width !== "") {
+                column.width = entry.width;
+            }
+            merged.push(column);
+        }
+
+        for (const column of serverColumns) {
+            if (!merged.includes(column)) {
+                merged.push(column);
+            }
+        }
+
+        return merged;
+    },
+
+    /**
+     * Reads the column layout out of a persisted table state.
+     * @param {object|null} stored - The persisted state: order and cols.
+     * @returns {Array<{id: string, visible: boolean, width: *}>|null} The layout in
+     *     display order, or null when the state holds none.
+     */
+    storedLayout(stored) {
+        if (!stored || !Array.isArray(stored.order) || stored.order.length === 0) {
+            return null;
+        }
+
+        const settings = new Map((Array.isArray(stored.cols) ? stored.cols : [])
+            .filter((entry) => entry && entry.id)
+            .map((entry) => [entry.id, entry]));
+
+        return stored.order.map((id) => {
+            const entry = settings.get(id) || {};
+            return { id: id, visible: entry.visible, width: entry.width };
+        });
+    },
+
+    /**
      * Normalises the response rows into the internal row representation,
      * recursing into children and slicing to the page size.
      * @param {object} response - The raw server response.

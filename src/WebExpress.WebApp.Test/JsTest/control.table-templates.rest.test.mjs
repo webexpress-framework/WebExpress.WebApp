@@ -106,3 +106,10 @@ test("rest_tag editable renders the tags in the SmartEdit read view", async () =
     const text = c.textContent;
     assert.ok(text.includes("pirate") && text.includes("grog"), "the read view shows the tags");
 });
+
+test("rest_tag reads editable false as read-only and keeps the editor of an empty editable cell", () => {
+    const rt = loadRuntime();
+    assert.equal(render(rt, "rest_tag", "", { editable: "false" }), "", "an empty read-only cell stays empty");
+    const c = render(rt, "rest_tag", "", { editable: "true" });
+    assert.ok(c.classList.contains("wx-smart-edit"), "an empty editable cell keeps a way to add a tag");
+});

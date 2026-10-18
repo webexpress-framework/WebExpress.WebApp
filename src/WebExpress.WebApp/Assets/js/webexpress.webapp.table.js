@@ -31,6 +31,11 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
     // a query that was asked for while the table was hidden and still has to run
     _pendingLoad = false;
 
+    // the layout of the columns and the arrangement of the rows the server confirmed
+    // last, which a refused change goes back to
+    _confirmedLayout = null;
+    _confirmedRows = null;
+
     // the pagination control the table reports its page count to, and what it reported
     _pagerElement = null;
     _pagerCtrl = null;
@@ -338,6 +343,18 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
     }
 
     /**
+     * Selects the first row once real rows arrived. The table opens on its placeholders
+     * before the first load is under way, and a placeholder taken as the first row would
+     * use up the one automatic selection.
+     */
+    _autoSelectFirstRow() {
+        if (this._rows === this._previewBody) {
+            return;
+        }
+        super._autoSelectFirstRow();
+    }
+
+    /**
      * Stops what outlives a render: the pending layout updates and the queries in flight.
      */
     onUnmount() {
@@ -372,8 +389,10 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
 
             if (targetMatches) {
                 if (detail.columnId) {
-                    this._orderBy = detail.columnId;
-                    this._orderDir = detail.sortDirection;
+                    // a lifted sort leaves the order to the server rather than asking
+                    // for the column without a direction
+                    this._orderDir = detail.sortDirection || null;
+                    this._orderBy = this._orderDir ? detail.columnId : null;
                     this._page = 0;
 
                     if (this._viewState) {
@@ -544,6 +563,12 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
 
     /**
      * Normalize and integrate server response into internal table data structures.
+     *
+     * The columns are merged anew with every response: the server owns what a column is
+     * and which columns exist, the local layout only how the reader arranged them. The
+     * cells of the response follow the order of the server and are brought into the
+     * order on screen. The rows are new objects, so the selection is carried over by the
+     * row id - or given up and announced when its row is gone.
      * @param {Object} response - parsed JSON response from the REST endpoint.
      */
     updateData(response) {
@@ -551,22 +576,21 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
             return;
         }
 
+        const model = webexpress.webapp.tableModel;
         const sourceColumns = Array.isArray(response.columns)
-            ? webexpress.webapp.tableModel.normalizeColumns(response, this._orderBy, this._orderDir) : null;
+            ? model.normalizeColumns(response, this._orderBy, this._orderDir) : null;
         if (sourceColumns) {
             this._sourceColumnIds = sourceColumns.map(column => column.id);
-        }
-        const initialColumns = !this._columns?.length || this._columns === this._previewColumns;
-        if (initialColumns) {
-            this._columns = sourceColumns || [];
+            this._columns = model.mergeColumns(sourceColumns, this._currentLayout());
+        } else if (this._hasPlaceholderColumns()) {
+            this._columns = [];
         }
 
-        // normalize incoming rows (recursing into children and slicing)
-        this._rows = webexpress.webapp.tableModel.normalizeRows(response, this._pageSize);
+        const previous = this._selectedRow;
+        this._rows = model.normalizeRows(response, this._pageSize);
 
-        if (!initialColumns) {
-            // response cells follow server order even after the reader reorders columns
-            const sourceIndex = new Map((this._sourceColumnIds || []).map((id, index) => [id, index]));
+        if (this._sourceColumnIds) {
+            const sourceIndex = new Map(this._sourceColumnIds.map((id, index) => [id, index]));
             const rows = [...this._rows];
             while (rows.length) {
                 const row = rows.pop();
@@ -575,16 +599,64 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
             }
         }
 
-        this._loadState();
+        this._restoreCollapsed(this._readStoredState());
 
         // the query owns REST sorting; a local layout preference cannot change its result
         this._columns.forEach(column => {
             column.sort = column.id === this._orderBy ? this._orderDir : null;
         });
 
+        // what the server sent is the state both sides agree on
+        if (!this._confirmedLayout && this._columns.length) {
+            this._confirmedLayout = this._layoutOf(this._columns);
+        }
+        this._confirmedRows = this._snapshotRowTree();
+
+        const selected = previous && previous.id != null ? this._findRowById(previous.id) : null;
+        const lost = !!previous && !selected && !this._previewBody.includes(previous);
+        this._selectedRow = selected;
+
         this._recalculateHasOptions();
         this._clampPage();
         this.render();
+
+        if (lost) {
+            this._dispatch(webexpress.webui.Event.SELECT_ROW_EVENT, {
+                sender: this._element,
+                row: null,
+                rowId: null
+            });
+        }
+    }
+
+    /**
+     * Indicates whether the table still shows the placeholders of its first load, or no
+     * columns at all.
+     * @returns {boolean} True when there is no layout of real columns.
+     */
+    _hasPlaceholderColumns() {
+        return !this._columns.length || this._columns === this._previewColumns;
+    }
+
+    /**
+     * Gets the local layout a response is merged with: the layout on screen once there
+     * is one - a change on its way to the server stays on screen across a reload until
+     * the server answered it - and the layout stored locally before the first response.
+     * @returns {Array<{id: string, visible: boolean, width: *}>|null} The layout.
+     */
+    _currentLayout() {
+        return this._hasPlaceholderColumns()
+            ? webexpress.webapp.tableModel.storedLayout(this._readStoredState())
+            : this._layoutOf(this._columns);
+    }
+
+    /**
+     * Gets the layout of columns: order, visibility and width.
+     * @param {Array<object>} columns - The columns in display order.
+     * @returns {Array<{id: string, visible: boolean, width: *}>} The layout.
+     */
+    _layoutOf(columns) {
+        return columns.map((column) => ({ id: column.id, visible: column.visible !== false, width: column.width ?? null }));
     }
 
     /**
@@ -596,6 +668,10 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
      * control), so a single override produces a debounced snapshot covering
      * all three dimensions. Row reordering is handled separately because the
      * base control does not include row order in its persisted state.
+     *
+     * A change is provisional until the server stored it: only then does it become
+     * the confirmed state and is it stored locally as well, so a refusal has a state
+     * to go back to and the local store never holds a layout the server refused.
      *
      * @param {HTMLElement} element - the host element to attach listeners to.
      */
@@ -610,10 +686,11 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
 
         // Intercept the base control's persistence hook so every column-side
         // change (reorder, visibility, width) is mirrored to the server.
-        const basePersist = this._schedulePersist ? this._schedulePersist.bind(this) : null;
         this._schedulePersist = () => {
-            if (basePersist) {
-                basePersist();
+            if (!this._restUri || !this._service) {
+                // nothing will answer, so the change is confirmed as it is made
+                this._confirmLayout(this._layoutOf(this._columns));
+                return;
             }
             this._scheduleColumnSync();
         };
@@ -664,8 +741,50 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
         }
         this._columnSyncTimer = setTimeout(() => {
             this._columnSyncTimer = null;
-            this._sendStateToServer({ c: this._snapshotColumns() });
+            const layout = this._layoutOf(this._columns);
+            this._sendStateToServer({ c: this._snapshotColumns() }, () => this._confirmLayout(layout));
         }, 300);
+    }
+
+    /**
+     * Makes a column layout the confirmed one and stores it locally.
+     * @param {Array<{id: string, visible: boolean, width: *}>} layout - The layout.
+     */
+    _confirmLayout(layout) {
+        this._confirmedLayout = layout;
+        if (this._persistKey) {
+            this._persistState(layout);
+        }
+    }
+
+    /**
+     * Captures the arrangement of the rows: the top level and the children of every
+     * row, by reference, so a refused move can be undone whatever level it changed.
+     * @returns {{rows: Array<object>, children: Map<object, Array<object>>}} The snapshot.
+     */
+    _snapshotRowTree() {
+        const children = new Map();
+        const stack = [...this._rows];
+        while (stack.length) {
+            const row = stack.pop();
+            const list = Array.isArray(row.children) ? row.children : [];
+            children.set(row, list.slice());
+            stack.push(...list);
+        }
+        return { rows: this._rows.slice(), children: children };
+    }
+
+    /**
+     * Puts the rows back into a captured arrangement.
+     * @param {{rows: Array<object>, children: Map<object, Array<object>>}} snapshot - The snapshot.
+     */
+    _restoreRowTree(snapshot) {
+        for (const [row, list] of snapshot.children) {
+            row.children = list.slice();
+            list.forEach((child) => { child.parent = row; });
+        }
+        snapshot.rows.forEach((row) => { row.parent = null; });
+        this._rows = snapshot.rows.slice();
     }
 
     /**
@@ -681,7 +800,10 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
         }
         this._rowSyncTimer = setTimeout(() => {
             this._rowSyncTimer = null;
-            this._sendStateToServer({ r: this._rows.map((r) => r.id).filter((id) => id != null) });
+            const snapshot = this._snapshotRowTree();
+            this._sendStateToServer({ r: this._rows.map((r) => r.id).filter((id) => id != null) }, () => {
+                this._confirmedRows = snapshot;
+            });
         }, 300);
     }
 
@@ -691,13 +813,18 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
      * consumed by <c>RestApiTable.Configure</c>:
      * <c>{ "c": [{ "id", "visible", "width" }, ...], "r": ["rowId", ...] }</c>.
      * @param {Object} stateObj - JSON-serializable object representing the state.
+     * @param {Function} [onConfirm] - Called once the server stored the state.
      */
-    _sendStateToServer(stateObj) {
+    _sendStateToServer(stateObj, onConfirm) {
         if (!this._restUri || !this._service) {
             return;
         }
         this._service.update(stateObj).then((result) => {
-            if (!result.ok && result.error.kind !== "abort") {
+            if (result.ok) {
+                if (typeof onConfirm === "function") {
+                    onConfirm();
+                }
+            } else if (result.error.kind !== "abort") {
                 this._reject(stateObj.c ? "columns" : "rows", result);
             }
         });
@@ -707,10 +834,12 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
      * Takes back a layout change the server refused.
      *
      * Columns and rows are rearranged on screen first and stored afterwards, so a refusal
-     * leaves the table in a layout that is not stored. The stored layout is loaded back
-     * over it, which is the one state both sides agree on, and the refusal is put in front
-     * of the user - a column that jumps back with no word about why reads as a bug of the
-     * table rather than as a decision of the server.
+     * leaves the table in a layout that is not stored. The table goes back to the state
+     * the server confirmed last - the order, visibility and width of the columns and the
+     * arrangement of the rows - stores that one locally and renders it; only without a
+     * confirmed state is the table loaded anew. The refusal is put in front of the user -
+     * a column that jumps back with no word about why reads as a bug of the table rather
+     * than as a decision of the server.
      * @param {string} action - The change that was refused: columns or rows.
      * @param {object} result - The failed service result.
      */
@@ -724,7 +853,43 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
         });
 
         this._dispatch(webexpress.webui.Event.DATA_ERROR_EVENT, { action: action, error: result.error });
-        this.update();
+
+        if (!this._confirmedLayout && !this._confirmedRows) {
+            this.update();
+            return;
+        }
+
+        // a change still waiting for its debounce would only send the state taken back
+        clearTimeout(this._columnSyncTimer);
+        clearTimeout(this._rowSyncTimer);
+        this._columnSyncTimer = null;
+        this._rowSyncTimer = null;
+
+        if (this._confirmedLayout) {
+            this._restoreLayout(this._confirmedLayout);
+            this._confirmLayout(this._confirmedLayout);
+        }
+        if (this._confirmedRows) {
+            this._restoreRowTree(this._confirmedRows);
+        }
+        this.render();
+    }
+
+    /**
+     * Puts the columns back into a layout: the order with the cells, the visibility and
+     * the width.
+     * @param {Array<{id: string, visible: boolean, width: *}>} layout - The layout.
+     */
+    _restoreLayout(layout) {
+        this._applyColumnOrder(layout.map((entry) => entry.id));
+        const byId = new Map(layout.map((entry) => [entry.id, entry]));
+        for (const column of this._columns) {
+            const entry = byId.get(column.id);
+            if (entry) {
+                column.visible = entry.visible !== false;
+                column.width = entry.width;
+            }
+        }
     }
 
     /**

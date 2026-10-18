@@ -334,6 +334,7 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "permission.column.group": "Gruppe",
     "permission.column.policies": "Berechtigungen",
     "permission.remove": "Gruppe entfernen",
+    "permission.update.rejected": "Die Berechtigungen wurden nicht gespeichert und zurückgesetzt.",
 
     // watcher
     "watcher.title": "Beobachter",

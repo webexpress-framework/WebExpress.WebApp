@@ -75,13 +75,15 @@ test("a table layout change the server refuses is taken back and reported", asyn
     await settle();
     const readsBefore = net.calls.reads;
 
-    // act - the user rearranged the columns and the server does not take it
+    // act - the user hid the column and the server does not take it
+    table._columns[0].visible = false;
     table._sendStateToServer({ c: [{ id: "c1", visible: false, width: 0 }] });
     await settle();
 
     // assert
     assert.equal(net.calls.writes, 1, "the change was sent");
-    assert.equal(net.calls.reads, readsBefore + 1, "the stored layout is loaded back over the refused one");
+    assert.equal(table._columns[0].visible, true, "the confirmed layout is put back over the refused one");
+    assert.equal(net.calls.reads, readsBefore, "without loading the table anew");
     assert.equal(popups.length, 1, "the refusal is put in front of the user");
     assert.equal(popups[0].notification.type, "alert-danger");
     assert.equal(errors.length, 1, "the host announces the refusal");
