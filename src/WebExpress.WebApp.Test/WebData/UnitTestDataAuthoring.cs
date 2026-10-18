@@ -248,6 +248,26 @@ namespace WebExpress.WebApp.Test.WebData
         }
 
         /// <summary>
+        /// Tests that one users service call serves a standalone control and a ViewState-bound
+        /// one alike: it declares the owned island and the binding to the ViewState service.
+        /// A call without arguments used to bind only the ViewState service, which left a
+        /// standalone watcher without its candidate search.
+        /// </summary>
+        [Fact]
+        public void UsersServiceDeclaresIslandAndViewStateBinding()
+        {
+            // act
+            var watcher = new ControlDataWatcher().UsersService<FakeEndpoint>();
+            var backlog = new ControlDataScrumBacklog().UsersService<FakeEndpoint>();
+
+            // validation
+            Assert.Single(watcher.ServiceFactories);
+            Assert.Equal(DataTypeName.Of<FakeEndpoint>(), watcher.UsersFactory(null));
+            Assert.Single(backlog.ServiceFactories);
+            Assert.Equal(DataTypeName.Of<FakeEndpoint>(), backlog.UsersFactory(null));
+        }
+
+        /// <summary>
         /// Tests that the comment surface and the composer declare the image
         /// library and the link library of their editors in one typed call each,
         /// beside the upload service.

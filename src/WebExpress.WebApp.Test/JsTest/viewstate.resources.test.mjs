@@ -13,6 +13,7 @@
 import { test } from "node:test";
 import assert from "node:assert";
 import { loadEngine, webappAsset, appendServiceIsland, appendStateIsland, appendResourceIsland } from "./harness.mjs";
+import { loadControl } from "./controls.harness.mjs";
 
 test("resource parameters follow nested state paths in both directions without mutating sibling values", async () => {
     const engine = loadEngine();
@@ -274,23 +275,7 @@ test("a resource is followed where it loads: its target, not its name", async ()
 });
 
 test("the table shows the progress while its slice is loading and hides it when the load is over", async () => {
-    const engine = loadEngine({
-        bootstrap: `
-            webexpress.webui.TableReorderableCtrl = class extends webexpress.webui.Ctrl {
-                constructor(element) {
-                    super(element);
-                    this._table = document.createElement("table");
-                    this._columns = [];
-                    this._rows = [];
-                    this._options = [];
-                    this._hasOptions = false;
-                }
-                render() { }
-                _loadState() { }
-            };
-        `,
-        extraFiles: [webappAsset("webexpress.webapp.table.model.js"), webappAsset("webexpress.webapp.table.js")]
-    });
+    const engine = loadControl({ deps: ["webexpress.webapp.table.model.js"], file: "webexpress.webapp.table.js" });
     const net = deferredFetch();
     engine.setFetch(net.fetch);
 

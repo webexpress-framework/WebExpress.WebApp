@@ -70,6 +70,12 @@ The dialog is the framework modal (`webexpress.webui.ModalCtrl`), built on the f
 - Each group is a `POST` of its own, issued one after another. The dialog closes once all of them were written; if the endpoint rejects some, it stays open with exactly those groups still picked, so a retry does not need the picks to be made again. Every written group is announced with its own `PERMISSION_ASSIGNED_EVENT`.
 - Once every group of the directory owns a row, the **Assign groups** button is disabled and states why, because the dialog could then only offer an empty picker.
 
+## Rendering and State
+
+The surface renders on the view of the REST table (`webexpress.webapp.TableCtrl`), which renders its host from its state: the toolbar, the progress bar, the table and the paging info line. The table's own state is a standalone ViewState holding the rows and columns together with the query; the permission surface adds the group and the policy directory and the groups that own a row, so the **Assign groups** button renders its availability from them. A directory that has not arrived yet exhausts nothing, so the button is offered until a loaded directory says otherwise. A reload patches the bar and the rows rather than rebuilding them - the contributed tools keep their instances, and a row keeps its node.
+
+The assign dialog is the exception: the framework modal moves the header, the content and the footer onto bars of its own, so its markup is built once and its pickers are refilled on every open rather than reconciled.
+
 ## Declarative Configuration
 
 The control is bootstrapped from a single host element carrying the `wx-webapp-permission` CSS class. The services are declared through `wx-service` island elements inside the host, additional options through `data-` attributes; the control then rewrites the element's contents to render the table. A child element carrying the class `wx-permission-tools` survives the rewrite: it is lifted onto the toolbar and holds the contributed tools.

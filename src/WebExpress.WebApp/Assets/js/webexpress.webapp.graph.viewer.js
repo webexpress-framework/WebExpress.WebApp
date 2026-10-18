@@ -13,6 +13,9 @@
  * slice and the ViewState owns the central load; without a binding it owns its
  * wx-service island and loads itself (standalone).
  *
+ * The loading flag is state of the viewer, like the canvas it renders; the loading
+ * mark sits on the host, which is the render root, so it is applied after each render.
+ *
  * REST contract:
  *   GET {data} → { nodes: [...], edges: [...] }
  *
@@ -42,17 +45,15 @@ webexpress.webapp.GraphViewerCtrl = class extends webexpress.webui.GraphViewerCt
         this._resource = (element.dataset && element.dataset.wxResource) || null;
         this._viewState = null;
 
-        // canonical ui state: a single source of truth for the loading flag,
-        // seeded from the optional wx-state island. in ViewState mode this is
-        // replaced by the ViewState once it resolves.
         const seed = webexpress.webapp.Data.readState(element);
-        this._store = new webexpress.webapp.ViewState(element, {
-            standalone: true,
-            state: Object.assign({ loading: false }, seed)
-        });
+        this.setState({ loading: !!seed.loading });
 
         const services = webexpress.webapp.ServiceRegistry.fromElement(element);
         this._service = services.data || null;
+
+        if (new.target === webexpress.webapp.GraphViewerCtrl) {
+            this._open();
+        }
 
         // a graph the server seeded through the wx-state island paints without a
         // round trip; the endpoint is then only asked on an explicit refresh
@@ -77,6 +78,15 @@ webexpress.webapp.GraphViewerCtrl = class extends webexpress.webui.GraphViewerCt
     }
 
     /**
+     * Returns the state the binds address: the ViewState of the region the graph is a
+     * slice of, or the viewer's own.
+     * @returns {object} The state container.
+     */
+    get store() {
+        return this._viewState || this._store;
+    }
+
+    /**
      * Attaches the viewer to the enclosing ViewState and renders its resource
      * slice. The ViewState owns the state, the service and the central load, so
      * the graph re-renders whenever the ViewState re-queries the resource.
@@ -87,7 +97,6 @@ webexpress.webapp.GraphViewerCtrl = class extends webexpress.webui.GraphViewerCt
 
         webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
             this._viewState = viewState;
-            this._store = viewState;
 
             const service = viewState.serviceForResource(this._resource);
             if (service) {
@@ -113,15 +122,26 @@ webexpress.webapp.GraphViewerCtrl = class extends webexpress.webui.GraphViewerCt
             this._applyGraph(slice.data);
         }
 
-        this._element.classList.remove("placeholder-glow");
         this._loading = false;
     }
 
-    // loading flag accessor backed by the store, so the single source of truth
-    // is the store
+    // the loading flag is shown at once: it starts and ends a load, which is no
+    // gesture to paint once per frame
 
-    get _loading() { return this._store.getState().loading; }
-    set _loading(value) { this._store.setState({ loading: value }); }
+    get _loading() { return !!this.state.loading; }
+    set _loading(value) {
+        this.setState({ loading: !!value });
+        this._store.flush();
+    }
+
+    /**
+     * Marks the host while a load is in flight.
+     * @param {object} state - The rendered state.
+     */
+    onUpdate(state) {
+        super.onUpdate(state);
+        this._element.classList.toggle("placeholder-glow", !!state.loading);
+    }
 
     /**
      * Loads the graph from the configured service and renders it.
@@ -132,7 +152,6 @@ webexpress.webapp.GraphViewerCtrl = class extends webexpress.webui.GraphViewerCt
         }
 
         this._loading = true;
-        this._element.classList.add("placeholder-glow");
         this._dispatch(webexpress.webui.Event.DATA_REQUESTED_EVENT, {});
 
         const result = await this._service.query({});
@@ -141,7 +160,6 @@ webexpress.webapp.GraphViewerCtrl = class extends webexpress.webui.GraphViewerCt
             // a superseded query arrives as an abort result and is ignored
             if (result.error.kind !== "abort") {
                 console.error("graph viewer load failed:", webexpress.webapp.ServiceResult.describe(result));
-                this._element.classList.remove("placeholder-glow");
                 this._loading = false;
             }
             return;
@@ -150,17 +168,17 @@ webexpress.webapp.GraphViewerCtrl = class extends webexpress.webui.GraphViewerCt
         this._applyGraph(result.data);
         this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, {});
 
-        this._element.classList.remove("placeholder-glow");
         this._loading = false;
     }
 
     /**
      * Normalises a raw graph payload and hands it to the base control, which
-     * re-renders and refits the view.
+     * re-renders and refits the view; the graph is shown before it is announced.
      * @param {object} data - The raw payload carrying the nodes and edges.
      */
     _applyGraph(data) {
         this.model = webexpress.webapp.graphViewerModel.normalizeGraph(data);
+        this._store.flush();
         this._dispatch(webexpress.webui.Event.UPDATED_EVENT, {});
     }
 

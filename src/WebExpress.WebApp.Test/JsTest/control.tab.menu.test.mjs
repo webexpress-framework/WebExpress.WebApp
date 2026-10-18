@@ -30,8 +30,23 @@ function setup(options = {}) {
     return { ...rt, host, ctrl, requests, recolored };
 }
 
+/**
+ * Gets the nodes of a tab: the tab models are state, the nodes are references the
+ * control captures while rendering.
+ * @param {object} rt - The runtime with the control.
+ * @param {string} id - The tab id.
+ * @returns {object} The header, menu and pane of the tab.
+ */
+function nodesOf(rt, id) {
+    return {
+        get headerElement() { return rt.ctrl._headers.get(id); },
+        get menuElement() { return rt.ctrl._menus.get(id); },
+        get paneElement() { return rt.ctrl._panes.get(id); }
+    };
+}
+
 function tabOf(rt, id) {
-    return rt.ctrl._tabs.find(item => item.id === id);
+    return nodesOf(rt, id);
 }
 
 function openMenu(rt, id) {
@@ -112,6 +127,7 @@ test("a click on the glyph of an open menu closes it instead of reopening it", (
 test("rename from the menu opens the rename field", () => {
     const rt = setup();
     entry(openMenu(rt, "a"), "Rename tab").click();
+    rt.ctrl.store.flush();
     assert.equal(tabOf(rt, "a").menuElement.matches(":popover-open"), false);
     assert.ok(rt.ctrl._headerElement.querySelector(".wx-webapp-tab-rename-input"));
 });
@@ -120,6 +136,7 @@ test("the color level drills down in place and persists the chosen swatch", asyn
     const rt = setup();
     const menu = openMenu(rt, "a");
     entry(menu, "Color").click();
+    rt.ctrl.store.flush();
     assert.equal(menu.matches(":popover-open"), true, "the sub-level opens in the same menu");
     assert.deepEqual(entries(menu), ["Back", "None"]);
     const swatches = menu.querySelectorAll(".wx-webapp-tab-swatch");
@@ -155,6 +172,7 @@ test("a tab carries its color from the payload and marks it in the palette; none
     assert.equal(header.style.getPropertyValue("--wx-webapp-tab-color"), "#198754");
     const menu = openMenu(rt, "b");
     entry(menu, "Color").click();
+    rt.ctrl.store.flush();
     const active = menu.querySelector(".wx-webapp-tab-swatch.active");
     assert.equal(active.title, "#198754");
     entry(menu, "None").click();
@@ -168,7 +186,9 @@ test("back returns to the top level", () => {
     const rt = setup();
     const menu = openMenu(rt, "a");
     entry(menu, "Color").click();
+    rt.ctrl.store.flush();
     entry(menu, "Back").click();
+    rt.ctrl.store.flush();
     assert.deepEqual(entries(menu), ["Rename tab", "Color", "Delete tab"]);
 });
 
@@ -210,11 +230,16 @@ test("in a ViewState the color is patched into the slice without rebuilding the 
     assert.equal(tabOf(rt, "a").paneElement, pane, "the pane survives");
 });
 
-test("a refresh drops the menus of replaced tabs", () => {
+test("a refresh drops the menu of a tab it removed and keeps the one of a tab that stays", () => {
     const rt = setup();
     const menu = openMenu(rt, "a");
-    rt.ctrl.updateData([{ id: "a", label: "Alpha" }]);
+    rt.ctrl.updateData([{ id: "a", label: "Alpha" }, { id: "b", label: "Beta" }]);
+    assert.equal(menu.isConnected, true, "a live update does not close the menu in use");
+    assert.equal(menu.matches(":popover-open"), true);
+    rt.ctrl.updateData([{ id: "b", label: "Beta" }]);
+    rt.ctrl.store.flush();
     assert.equal(menu.isConnected, false);
+    assert.equal(rt.ctrl.state.menu, null);
 });
 
 test("without permission the actions refuse even when called directly", async () => {

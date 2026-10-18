@@ -5,70 +5,42 @@ webexpress.webapp = webexpress.webapp || {}
  * The Data base, part of the View, State and Service architecture: the base class of a
  * control that owns state and services of its own.
  *
- * It extends the Ctrl base and ties together a standalone ViewState (the observable state
- * container of the control), a set of services, a render function and the lifecycle. It
- * seeds its state from the wx-state island element, resolves its services from the
- * wx-service island elements, exposes a dispatch method for intents and runs the onMount,
- * onUpdate and onUnmount hooks. A control that keeps its state imperatively and only
- * reaches the network stays on Ctrl. Older comments call this base the Component and its
- * ViewState the Store; the vocabulary is recorded in section 0.2 of
- * WebExpress/docs/view-state-service.md.
+ * It extends webexpress.webui.StateCtrl, which owns the render loop and the lifecycle
+ * (render, mount, onMount, onUpdate, onUnmount), and adds what belongs to the data
+ * concept: a standalone ViewState as the state container, the services of the
+ * wx-service islands, the seed of the wx-state island, a C# authored template, the
+ * dispatch of intents and the reload on server side data changes. A control that keeps
+ * its state imperatively and only reaches the network stays on Ctrl. Older comments call
+ * this base the Component and its ViewState the Store; the vocabulary is recorded in
+ * section 0.2 of WebExpress/docs/view-state-service.md.
  *
  * A subclass implements render(state) to return a virtual node tree, which the renderer
  * patches into the render root. A subclass that prefers imperative updates may instead
  * implement onUpdate(state) and omit render, which is the form most controls use today.
  */
-webexpress.webapp.Data = class extends webexpress.webui.Ctrl {
+webexpress.webapp.Data = class extends webexpress.webui.StateCtrl {
     /**
      * Creates a control for a host element.
      * @param {HTMLElement} element - The host element.
      * @param {object} [options={}] - Optional overrides: state, store (a ViewState to use as
-     *     the state), services, shared, renderRoot.
+     *     the state), services, template, renderRoot.
      */
     constructor(element, options = {}) {
-        super(element);
-
-        this._mounted = false;
-        this._unsubscribe = null;
-        this._dataChanges = null;
-        this._renderRoot = options.renderRoot || element;
-
-        const initialState = options.state || webexpress.webapp.Data.readState(element);
-
         // the state is a standalone ViewState: the observable state container without
         // the resource and registry machinery of a hosted one, so the Data base owns one
         // source of truth and depends on no second container type
-        this._store = options.store
-            || new webexpress.webapp.ViewState(element, { state: initialState, standalone: true });
+        super(element, {
+            renderRoot: options.renderRoot,
+            store: options.store || new webexpress.webapp.ViewState(element, {
+                state: options.state || webexpress.webapp.Data.readState(element),
+                standalone: true
+            })
+        });
 
+        this._dataChanges = null;
         this._services = options.services || webexpress.webapp.ServiceRegistry.fromElement(element);
         this._templateId = options.template
             || (element && typeof element.getAttribute === "function" ? element.getAttribute("data-wx-template") : null);
-    }
-
-    /**
-     * Returns the current state.
-     * @returns {object} The state.
-     */
-    get state() {
-        return this._store.getState();
-    }
-
-    /**
-     * Returns the ViewState that holds the state of this control.
-     * @returns {webexpress.webapp.ViewState} The standalone ViewState.
-     */
-    get store() {
-        return this._store;
-    }
-
-    /**
-     * Applies a shallow patch to the state.
-     * @param {object|Function} patch - The patch.
-     * @returns {object} The resulting state.
-     */
-    setState(patch) {
-        return this._store.setState(patch);
     }
 
     /**
@@ -97,9 +69,8 @@ webexpress.webapp.Data = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Subscribes to the ViewState, performs the first render and runs onMount. A
-     * subclass calls this at the end of its constructor once it has finished
-     * its own setup.
+     * Mounts the control (see StateCtrl.mount), wires it to the server side data changes
+     * and announces the mount.
      * @returns {this} The control for chaining.
      */
     mount() {
@@ -107,82 +78,66 @@ webexpress.webapp.Data = class extends webexpress.webui.Ctrl {
             return this;
         }
 
-        this._unsubscribe = this._store.subscribe((state) => this._apply(state));
-        this._apply(this._store.getState());
-        this._mounted = true;
-
         // when a service declares the domains its endpoint serves, a server
         // side data change of those domains reloads the control and plays
         // the change flash on the host, so the user sees changes made by
         // other users; controls without a load or without domain-declaring
         // services stay detached from the queue
-        if (typeof this.load === "function") {
+        if (this._reloadsOnDataChange()) {
             this._dataChanges = webexpress.webapp.DataChangeSubscription.attachReload(
                 this._services, () => this.load(), this._element);
         }
 
-        if (typeof this.onMount === "function") {
-            this.onMount(this._store.getState());
-        }
+        super.mount();
+        this._announceMount();
 
-        // announce the mount, so binds that target this control can resolve
-        // its ViewState even when they were bound before the control existed
+        return this;
+    }
+
+    /**
+     * Announces the mount, so binds that target this control can resolve its ViewState
+     * even when they were bound before the control existed.
+     */
+    _announceMount() {
         if (this._element && typeof this._element.dispatchEvent === "function") {
             this._element.dispatchEvent(new CustomEvent("webexpress.webapp.data.mount", {
                 bubbles: true,
                 detail: { component: this }
             }));
         }
-
-        return this;
     }
 
     /**
-     * Renders the current state into the render root and runs onUpdate after
-     * the first render. The first render is driven by mount and runs onMount
-     * instead of onUpdate. A view referenced through data-wx-template is the
-     * C# authored view of the component and wins; otherwise the subclass
-     * render method is used (the Ctrl base carries a no operation render, so
-     * the template could never win the other way around). A virtual node tree
-     * is patched by the keyed reconciler, a DOM node replaces the content of
-     * the render root.
-     * @param {object} state - The current state.
+     * Tells whether a server side data change reloads the control. A control with a load
+     * does by default; a control that holds what the user is typing opts out, since a
+     * change made elsewhere must not overwrite it.
+     * @returns {boolean} True when a data change reloads the control.
      */
-    _apply(state) {
-        let tree;
+    _reloadsOnDataChange() {
+        return typeof this.load === "function";
+    }
+
+    /**
+     * Produces the view of a state. A view referenced through data-wx-template is the C#
+     * authored view of the component and wins over the subclass render method (the Ctrl
+     * base carries a no operation render, so the template could never win the other way
+     * around).
+     * @param {object} state - The state.
+     * @returns {*} A virtual node tree, a DOM node or nothing.
+     */
+    _viewTree(state) {
         const template = this._templateId && webexpress.webapp.Templates
             ? webexpress.webapp.Templates.resolve(this._templateId)
             : null;
 
-        if (template) {
-            tree = template(state, this);
-        } else if (typeof this.render === "function") {
-            tree = this.render(state);
-        }
-
-        if (tree !== undefined && tree !== null) {
-            if (typeof Node !== "undefined" && tree instanceof Node) {
-                (this._renderRoot || this._element).replaceChildren(tree);
-            } else if (webexpress.webapp.Renderer) {
-                webexpress.webapp.Renderer.patch(this._renderRoot || this._element, tree);
-            }
-        }
-
-        if (this._mounted && typeof this.onUpdate === "function") {
-            this.onUpdate(state);
-        }
+        return template ? template(state, this) : super._viewTree(state);
     }
 
     /**
-     * Tears the control down. It unsubscribes from the ViewState, aborts in
-     * flight services, releases a shared ViewState and runs onUnmount.
+     * Tears the control down. It detaches from the data changes, aborts in flight
+     * services and then stops rendering (see StateCtrl.destroy).
      */
     destroy() {
-        if (this._unsubscribe) {
-            this._unsubscribe();
-            this._unsubscribe = null;
-        }
-
         if (this._dataChanges) {
             this._dataChanges.detach();
             this._dataChanges = null;
@@ -195,12 +150,6 @@ webexpress.webapp.Data = class extends webexpress.webui.Ctrl {
                 }
             }
         }
-
-        if (typeof this.onUnmount === "function") {
-            this.onUnmount();
-        }
-
-        this._mounted = false;
 
         super.destroy();
     }

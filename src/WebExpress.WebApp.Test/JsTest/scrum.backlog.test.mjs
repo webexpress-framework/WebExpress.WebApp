@@ -1,11 +1,9 @@
 /**
- * Headless tests for the scrum backlog control after it was lifted onto the
- * Component base (View, State and Service). The backlog is large and mutates its
- * items in place throughout, so it is a light lift: it extends Component for the
- * store, the service map, the seed and the lifecycle, but keeps its own manual
- * render flow. The tests assert that it extends Component, seeds its sprints and
- * items from the wx-state island and skips the load in that case, and
- * otherwise loads from the service.
+ * Headless tests for the scrum backlog control on the Data base (View, State and
+ * Service). The tests assert that it extends the base, seeds its sprints and items
+ * from the wx-state island and skips the load in that case, otherwise loads from
+ * the service, and renders a ViewState resource slice. The view itself is covered
+ * by control.scrum-backlog.test.mjs.
  *
  * Run with Node 18 or newer from the jstest folder:
  *   node --test

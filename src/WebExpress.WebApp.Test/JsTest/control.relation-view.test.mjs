@@ -251,7 +251,7 @@ test("the toolbar carries the add affordance as the primary action", async () =>
     const ctrl = new rt.wxapp.RelationViewCtrl(host);
     await settle();
 
-    assert.ok(ctrl._addButton.classList.contains("btn-primary"));
+    assert.ok(host.querySelector(".wx-relation-view-add").classList.contains("btn-primary"));
 
     // the surface lists every category together, so the only switch left is
     // the one between the two presentations
@@ -1037,4 +1037,83 @@ test("what an object is called cannot become markup of the dropdown", async () =
     const content = state.targetCtrl.options[0].content;
     assert.ok(!content.includes("<img"), "the title of an object is text, not markup");
     assert.ok(content.includes("&lt;img"));
+});
+
+// ---------------------------------------------------------------------------
+// the surface is a pure function of the state
+// ---------------------------------------------------------------------------
+
+test("render describes the surface without touching the DOM", async () => {
+    const { rt, host } = surface();
+    const ctrl = new rt.wxapp.RelationViewCtrl(host);
+    await settle();
+    const before = host.childNodes.slice();
+    const tree = ctrl.render(Object.assign({}, ctrl.state, { view: "graph", groups: [] }));
+    assert.deepEqual(host.childNodes, before);
+    assert.equal(tree[1].children[0].keep, true, "the graph viewer's host is kept from the reconciler");
+});
+
+test("the server rendered panes keep their identity and content across renders", async () => {
+    const { rt, host } = surface();
+    const pane = rt.createElement("div");
+    pane.classList.add("wx-relation-view-pane");
+    pane.setAttribute("data-view", "timeline");
+    pane.setAttribute("hidden", "hidden");
+    pane.textContent = "the timeline";
+    host.appendChild(pane);
+
+    const ctrl = new rt.wxapp.RelationViewCtrl(host);
+    await settle();
+    ctrl.setState({ view: "timeline" });
+    await settle();
+    ctrl.setState({ view: "list", total: 99 });
+    await settle();
+
+    assert.equal(host.childNodes.at(-1), pane, "the pane is the node the server rendered");
+    assert.equal(pane.textContent, "the timeline");
+    assert.equal(pane.hasAttribute("hidden"), true);
+    assert.equal(ctrl._totalBadge.textContent, "99");
+});
+
+test("the graph viewer keeps its instance while the links change and goes with the graph", async () => {
+    const { rt, host } = surface();
+    const ctrl = new rt.wxapp.RelationViewCtrl(host);
+    await settle();
+    ctrl.setState({ view: "graph" });
+    await settle();
+    const viewer = ctrl._graphCtrl;
+    const nodes = viewer.model.nodes.length;
+
+    ctrl.setState({ groups: ctrl.state.groups.slice(0, 1), total: 1 });
+    await settle();
+    assert.equal(ctrl._graphCtrl, viewer, "a changed model is handed to the same viewer");
+    assert.ok(viewer.model.nodes.length < nodes, "and the viewer shows the new links");
+
+    ctrl.setState({ view: "list" });
+    await settle();
+    assert.equal(ctrl._graphCtrl, null);
+    assert.equal(host.querySelectorAll(".wx-relation-view-graph").length, 0);
+});
+
+test("a load marks the host while it runs", async () => {
+    let release;
+    const { rt, host } = surface({ respond: () => new Promise((resolve) => { release = () => resolve({ ok: true, status: 200, json: async () => RESULT }); }) });
+    new rt.wxapp.RelationViewCtrl(host);
+    await settle();
+    assert.ok(host.classList.contains("wx-relation-view-loading"));
+    release();
+    await settle();
+    assert.equal(host.classList.contains("wx-relation-view-loading"), false);
+});
+
+test("the detail dialog is refilled in place for the next link", async () => {
+    const { rt, host } = surface();
+    const ctrl = new rt.wxapp.RelationViewCtrl(host);
+    await settle();
+    const [first, second] = ctrl.value;
+    ctrl._openDetail(first.id);
+    const note = ctrl._detailBody.querySelector(".wx-relation-view-note");
+    ctrl._openDetail(second.id);
+    assert.equal(ctrl._detailBody.querySelector(".wx-relation-view-note"), note, "the reconciler patched the dialog instead of rebuilding it");
+    assert.equal(note.textContent, second.comment || "No note on this link.");
 });

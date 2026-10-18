@@ -12,6 +12,10 @@
  * (inline image upload), plus the data-current-user, data-default-category
  * and data-placeholder attributes.
  *
+ * The markup is a pure function of the state (render), patched into the host by the keyed
+ * reconciler of the Data base. The WYSIWYG editor is a nested control: its host is rendered with
+ * the keep flag, so the reconciler never touches what the editor builds inside it.
+ *
  * REST contract (against the data service):
  *   POST   {uri}                body { body, category, labels }     → Comment
  *
@@ -32,8 +36,23 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webapp.Data {
         // url; the new comment is posted through the configured data service,
         // and the Data base aborts the service on teardown.
         const services = webexpress.webapp.ServiceRegistry.fromElement(element);
+        const defaultCategory = element.dataset.defaultCategory || "general";
 
-        super(element, { services });
+        let categories = {};
+        let categoriesPreset = false;
+        if (element.dataset.categories) {
+            try {
+                categories = webexpress.webapp.commentComposerModel.normalizeCategories(JSON.parse(element.dataset.categories));
+                categoriesPreset = true;
+            } catch (_) {
+                categoriesPreset = false;
+            }
+        }
+
+        super(element, {
+            services,
+            state: { expanded: false, categories: categories, category: defaultCategory, labels: "", submitting: false }
+        });
 
         this._service = this.useService("data");
         this._uri = this._service ? this._service.baseUri : null;
@@ -51,23 +70,31 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webapp.Data {
         this._linkLibraryUri = linksService ? linksService.baseUri : null;
 
         this._currentUser = element.dataset.currentUser || null;
-        this._defaultCategory = element.dataset.defaultCategory || "general";
+        this._defaultCategory = defaultCategory;
         this._placeholder = element.dataset.placeholder
             || this._i18n("webexpress.webapp:comment.composer.trigger", "Write a comment…");
 
-        this._categoriesPreset = false;
-        this._categories = {};
-        if (element.dataset.categories) {
-            try {
-                this._categories = this._normalizeCategories(JSON.parse(element.dataset.categories));
-                this._categoriesPreset = true;
-            } catch (_) {
-                this._categoriesPreset = false;
-            }
-        }
-
         this._editorRef = null;
-        this._expanded = false;
+        // the editor host, captured from the render; the editor itself is created on expansion
+        this._editorHost = null;
+        this._wasExpanded = false;
+
+        // stable handlers, so a render does not swap the listeners of unchanged nodes
+        this._onExpand = () => this._expand();
+        this._onSubmit = () => this._submit();
+        this._onCancel = () => this._collapse();
+        this._onCategory = (e) => this.setState({ category: e.target.value });
+        this._onLabels = (e) => this.setState({ labels: e.target.value });
+        this._onEditorKeyDown = (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                e.preventDefault();
+                this._submit();
+            } else if (e.key === "Escape") {
+                if (!this._hasContent()) {
+                    this._collapse();
+                }
+            }
+        };
 
         // clean host
         element.textContent = "";
@@ -76,12 +103,10 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webapp.Data {
         element.removeAttribute("data-placeholder");
         element.removeAttribute("data-categories");
         element.classList.add("wx-comment-composer");
-        element.classList.add("wx-comment-composer-collapsed");
 
-        this._buildDom();
-        this._attachEventHandlers();
+        this.mount();
         this._attachViewState(element);
-        if (!this._categoriesPreset) {
+        if (!categoriesPreset) {
             void this._loadCategories();
         }
     }
@@ -111,9 +136,8 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Loads the categories from the REST API and refreshes the picker.
-     * Failures fall back to whatever categories were already known (often
-     * none) so that the composer remains usable.
+     * Loads the categories from the REST API into the state. Failures fall back to whatever
+     * categories were already known (often none) so that the composer remains usable.
      */
     async _loadCategories() {
         if (!this._uri) {
@@ -123,8 +147,7 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webapp.Data {
             const url = webexpress.webapp.commentComposerModel.categoriesUrl(this._uri);
             const res = await webexpress.webapp.ServiceRegistry.request(url, { headers: { "Accept": "application/json" } });
             if (!res.ok) throw new Error(res.error ? res.error.message : String(res.status));
-            this._categories = this._normalizeCategories(res.data);
-            this._rebuildCategoryOptions();
+            this.setState({ categories: this._normalizeCategories(res.data) });
         } catch (e) {
             console.warn("CommentComposerCtrl: categories load failed", e);
         }
@@ -141,182 +164,157 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Repopulates the category select after categories have loaded.
+     * Gets the category the picker shows: the chosen one while it exists, else the first
+     * category, as a select falls back to its first option.
+     * @param {object} state - The state.
+     * @returns {string} The category id, or "" without categories.
      */
-    _rebuildCategoryOptions() {
-        if (!this._catSelect) {
-            return;
+    _selectedCategory(state) {
+        if (state.categories[state.category]) {
+            return state.category;
         }
-        const previous = this._catSelect.value;
-        this._catSelect.replaceChildren();
-        for (const cat of Object.values(this._categories)) {
-            const opt = document.createElement("option");
-            opt.value = cat.id;
-            opt.textContent = this._i18n(cat.i18n, cat.id);
-            this._catSelect.appendChild(opt);
-        }
-        if (previous && this._categories[previous]) {
-            this._catSelect.value = previous;
-        } else if (this._categories[this._defaultCategory]) {
-            this._catSelect.value = this._defaultCategory;
-        }
+        return Object.keys(state.categories)[0] || "";
     }
 
     /**
-     * Builds the collapsed trigger and the (initially hidden) full form.
+     * Renders the collapsed trigger and the full form; which of the two shows is a matter of
+     * the host classes and the stylesheet.
+     * @param {object} state - The current state.
+     * @returns {Array<object>} The virtual node tree of the host.
      */
-    _buildDom() {
-        // collapsed trigger
-        this._trigger = document.createElement("button");
-        this._trigger.type = "button";
-        this._trigger.className = "wx-comment-composer-trigger";
-        this._trigger.textContent = this._placeholder;
-        this._element.appendChild(this._trigger);
-
-        // expanded form
-        this._form = document.createElement("div");
-        this._form.className = "wx-comment-composer-form";
-
-        const head = document.createElement("div");
-        head.className = "wx-comment-composer-head";
-
-        const title = document.createElement("strong");
-        title.className = "wx-comment-composer-title";
-        title.textContent = this._i18n("webexpress.webapp:comment.compose.head", "Write a new comment");
-
-        this._catSelect = document.createElement("select");
-        this._catSelect.className = "wx-comment-composer-cat";
-        for (const cat of Object.values(this._categories)) {
-            const opt = document.createElement("option");
-            opt.value = cat.id;
-            opt.textContent = this._i18n(cat.i18n, cat.id);
-            this._catSelect.appendChild(opt);
-        }
-        if (this._categories[this._defaultCategory]) {
-            this._catSelect.value = this._defaultCategory;
-        }
-
-        head.appendChild(title);
-        head.appendChild(this._catSelect);
-
-        // editor host — intentionally without the auto-registered
-        // "wx-webui-editor" class so that only our explicit
-        // _ensureEditor() instantiates an EditorCtrl. Adding the class
-        // would let the controller registry create a second editor on
-        // insertion, nesting it inside the composer.
-        this._editorHost = document.createElement("div");
-        this._editorHost.className = "wx-comment-composer-editor";
-        this._editorHost.dataset.placeholder = this._i18n("webexpress.webapp:comment.compose.placeholder", "Write a comment…");
+    render(state) {
+        const h = webexpress.webui.h;
+        const editorData = { placeholder: this._i18n("webexpress.webapp:comment.compose.placeholder", "Write a comment…") };
         if (this._imageUploadUri) {
-            this._editorHost.dataset.imageUploadUri = this._imageUploadUri;
+            editorData.imageUploadUri = this._imageUploadUri;
         }
         if (this._imageLibraryUri) {
-            this._editorHost.dataset.imageLibraryUri = this._imageLibraryUri;
+            editorData.imageLibraryUri = this._imageLibraryUri;
         }
         if (this._linkLibraryUri) {
-            this._editorHost.dataset.linkLibraryUri = this._linkLibraryUri;
+            editorData.linkLibraryUri = this._linkLibraryUri;
         }
         if (this._usersUri) {
-            this._editorHost.dataset.mentionUri = this._usersUri;
+            editorData.mentionUri = this._usersUri;
         }
 
-        // footer
-        const foot = document.createElement("div");
-        foot.className = "wx-comment-composer-foot";
-
-        this._labelsInput = document.createElement("input");
-        this._labelsInput.type = "text";
-        this._labelsInput.className = "wx-comment-composer-labels";
-        this._labelsInput.placeholder = this._i18n("webexpress.webapp:comment.labels.placeholder", "Labels (comma-separated)");
-
-        const hint = document.createElement("span");
-        hint.className = "wx-comment-composer-hint";
-        hint.textContent = this._i18n("webexpress.webapp:comment.compose.hint", "Ctrl + Enter to send");
-
-        this._submitBtn = document.createElement("button");
-        this._submitBtn.type = "button";
-        this._submitBtn.className = "wx-comment-composer-submit btn btn-primary btn-sm";
-        this._submitBtn.textContent = this._i18n("webexpress.webapp:comment.compose.submit", "Send");
-
-        this._cancelBtn = document.createElement("button");
-        this._cancelBtn.type = "button";
-        this._cancelBtn.className = "wx-comment-composer-cancel btn btn-secondary btn-sm";
-        this._cancelBtn.textContent = this._i18n("webexpress.webui:cancel", "Cancel");
-
-        
-
-        foot.appendChild(this._labelsInput);
-        foot.appendChild(hint);
-        foot.appendChild(this._submitBtn);
-        foot.appendChild(this._cancelBtn);
-        
-        this._form.appendChild(head);
-        this._form.appendChild(this._editorHost);
-        this._form.appendChild(foot);
-
-        this._element.appendChild(this._form);
+        return [
+            h("button", {
+                key: "trigger",
+                type: "button",
+                class: "wx-comment-composer-trigger",
+                on: { click: this._onExpand, focus: this._onExpand }
+            }, this._placeholder),
+            h("div", { key: "form", class: "wx-comment-composer-form" },
+                h("div", { class: "wx-comment-composer-head" },
+                    h("strong", { class: "wx-comment-composer-title" },
+                        this._i18n("webexpress.webapp:comment.compose.head", "Write a new comment")),
+                    h("select", {
+                        class: "wx-comment-composer-cat",
+                        value: this._selectedCategory(state),
+                        on: { change: this._onCategory }
+                    }, Object.values(state.categories).map((cat) =>
+                        h("option", { key: cat.id, value: cat.id }, this._i18n(cat.i18n, cat.id))))),
+                // without the auto-registered "wx-webui-editor" class, so that only _ensureEditor()
+                // instantiates an EditorCtrl; the class would let the controller registry create a
+                // second editor on insertion, nested inside the composer
+                h("div", {
+                    key: "editor",
+                    class: "wx-comment-composer-editor",
+                    keep: true,
+                    dataset: editorData,
+                    on: { keydown: this._onEditorKeyDown },
+                    ref: (el) => { this._editorHost = el; }
+                }),
+                h("div", { class: "wx-comment-composer-foot" },
+                    h("input", {
+                        type: "text",
+                        class: "wx-comment-composer-labels",
+                        placeholder: this._i18n("webexpress.webapp:comment.labels.placeholder", "Labels (comma-separated)"),
+                        value: state.labels,
+                        on: { input: this._onLabels }
+                    }),
+                    h("span", { class: "wx-comment-composer-hint" },
+                        this._i18n("webexpress.webapp:comment.compose.hint", "Ctrl + Enter to send")),
+                    h("button", {
+                        type: "button",
+                        class: "wx-comment-composer-submit btn btn-primary btn-sm",
+                        disabled: state.submitting,
+                        on: { click: this._onSubmit }
+                    }, this._i18n("webexpress.webapp:comment.compose.submit", "Send")),
+                    h("button", {
+                        type: "button",
+                        class: "wx-comment-composer-cancel btn btn-secondary btn-sm",
+                        on: { click: this._onCancel }
+                    }, this._i18n("webexpress.webui:cancel", "Cancel"))))
+        ];
     }
 
     /**
-     * Wires UI event handlers for collapse / expand / submit.
+     * Applies the collapsed or expanded marker to the host, which lies outside the rendered tree.
+     * @param {object} state - The rendered state.
      */
-    _attachEventHandlers() {
-        this._trigger.addEventListener("click", () => this._expand());
-        this._trigger.addEventListener("focus", () => this._expand());
-
-        this._submitBtn.addEventListener("click", () => this._submit());
-        this._cancelBtn.addEventListener("click", () => this._collapse());
-
-        this._editorHost.addEventListener("keydown", (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-                e.preventDefault();
-                this._submit();
-            } else if (e.key === "Escape") {
-                if (!this._hasContent()) {
-                    this._collapse();
-                }
-            }
-        });
+    onMount(state) {
+        this._syncHost(state);
     }
 
     /**
-     * Expands the composer: hides the trigger, shows the full form,
-     * lazily instantiates the EditorCtrl and focuses it.
+     * Applies the host marker and, on expansion, creates and focuses the editor once the form
+     * is shown.
+     * @param {object} state - The rendered state.
+     */
+    onUpdate(state) {
+        this._syncHost(state);
+        if (state.expanded && !this._wasExpanded) {
+            this._ensureEditor();
+            // focus the editor on the next frame so the EditorCtrl has wired up
+            queueMicrotask(() => {
+                try {
+                    this._editorRef?.focus?.();
+                } catch (_) {
+                    this._editorHost?.focus?.();
+                }
+            });
+        }
+        this._wasExpanded = state.expanded;
+    }
+
+    /**
+     * Mirrors the expansion onto the host classes the stylesheet switches on.
+     * @param {object} state - The rendered state.
+     */
+    _syncHost(state) {
+        this._element.classList.toggle("wx-comment-composer-expanded", state.expanded);
+        this._element.classList.toggle("wx-comment-composer-collapsed", !state.expanded);
+    }
+
+    /**
+     * Expands the composer: hides the trigger and shows the full form.
      */
     _expand() {
-        if (this._expanded) {
-            return;
+        if (!this.state.expanded) {
+            this.setState({ expanded: true });
         }
-        this._expanded = true;
-        this._element.classList.remove("wx-comment-composer-collapsed");
-        this._element.classList.add("wx-comment-composer-expanded");
-        this._ensureEditor();
-        // focus the editor on the next frame so the EditorCtrl has wired up
-        queueMicrotask(() => {
-            try {
-                this._editorRef?.focus?.();
-            } catch (_) {
-                this._editorHost.focus?.();
-            }
-        });
     }
 
     /**
-     * Collapses the composer back to the trigger state. Resets the form
-     * fields so the next expansion starts fresh.
+     * Collapses the composer back to the trigger state and resets the form, so the next
+     * expansion starts fresh.
      */
     _collapse() {
-        this._expanded = false;
-        this._element.classList.remove("wx-comment-composer-expanded");
-        this._element.classList.add("wx-comment-composer-collapsed");
-        this._resetForm();
+        if (this._editorRef) {
+            this._editorRef.value = "";
+        } else if (this._editorHost) {
+            this._editorHost.innerHTML = "";
+        }
+        this.setState({ expanded: false, labels: "", category: this._defaultCategory });
     }
 
     /**
      * Instantiates the EditorCtrl if it has not been created yet.
      */
     _ensureEditor() {
-        if (this._editorRef) {
+        if (this._editorRef || !this._editorHost) {
             return;
         }
         try {
@@ -331,26 +329,9 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webapp.Data {
      * @returns {boolean}
      */
     _hasContent() {
-        const html = this._editorRef ? this._editorRef.exportHtml({ layout: false }) : this._editorHost.innerHTML;
+        const html = this._editorRef ? this._editorRef.exportHtml({ layout: false }) : this._editorHost?.innerHTML;
         const trimmed = (html || "").trim();
         return trimmed.length > 0 && trimmed !== "<p><br></p>";
-    }
-
-    /**
-     * Clears the editor, labels and category back to defaults.
-     */
-    _resetForm() {
-        if (this._editorRef) {
-            this._editorRef.value = "";
-        } else if (this._editorHost) {
-            this._editorHost.innerHTML = "";
-        }
-        if (this._labelsInput) {
-            this._labelsInput.value = "";
-        }
-        if (this._catSelect && this._categories[this._defaultCategory]) {
-            this._catSelect.value = this._defaultCategory;
-        }
     }
 
     /**
@@ -365,10 +346,10 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webapp.Data {
             return;
         }
         const body = this._editorRef ? this._editorRef.exportHtml({ layout: false }) : this._editorHost.innerHTML;
-        const category = this._catSelect.value;
-        const labels = webexpress.webapp.commentComposerModel.parseLabels(this._labelsInput.value);
+        const category = this._selectedCategory(this.state);
+        const labels = webexpress.webapp.commentComposerModel.parseLabels(this.state.labels);
 
-        this._submitBtn.disabled = true;
+        this.setState({ submitting: true });
         try {
             const res = await this._service.create({ body, category, labels });
             if (!res.ok) throw new Error(res.error ? res.error.message : String(res.status));
@@ -383,7 +364,7 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webapp.Data {
         } catch (e) {
             console.warn("CommentComposerCtrl: submit failed", e);
         } finally {
-            this._submitBtn.disabled = false;
+            this.setState({ submitting: false });
         }
     }
 };

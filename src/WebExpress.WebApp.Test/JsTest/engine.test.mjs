@@ -188,88 +188,8 @@ test("service registry request routes one off calls through a shared service", a
     assert.ok(wxapp.ServiceRegistry._shared, "the shared service is created lazily and reused");
 });
 
-// Renderer
-
-test("renderer creates elements and text", () => {
-    const { wxapp, createElement } = loadEngine();
-    const h = wxapp.h;
-    const root = createElement("div");
-
-    wxapp.Renderer.patch(root, [h("span", { class: "a" }, "hello"), h("b", null, "x")]);
-
-    assert.equal(root.childNodes.length, 2);
-    assert.equal(root.childNodes[0].tagName, "SPAN");
-    assert.equal(root.childNodes[0].className, "a");
-    assert.equal(root.childNodes[0].textContent, "hello");
-    assert.equal(root.childNodes[1].tagName, "B");
-});
-
-test("renderer updates props and text in place", () => {
-    const { wxapp, createElement } = loadEngine();
-    const h = wxapp.h;
-    const root = createElement("div");
-
-    wxapp.Renderer.patch(root, [h("span", { class: "a" }, "hi")]);
-    const span = root.childNodes[0];
-
-    wxapp.Renderer.patch(root, [h("span", { class: "b", "data-x": "1" }, "ho")]);
-
-    assert.equal(root.childNodes[0], span);
-    assert.equal(span.className, "b");
-    assert.equal(span.getAttribute("data-x"), "1");
-    assert.equal(span.textContent, "ho");
-});
-
-test("renderer reorders keyed nodes and preserves identity", () => {
-    const { wxapp, createElement } = loadEngine();
-    const h = wxapp.h;
-    const root = createElement("div");
-
-    wxapp.Renderer.patch(root, [h("li", { key: "a" }, "A"), h("li", { key: "b" }, "B"), h("li", { key: "c" }, "C")]);
-    const a = root.childNodes[0];
-    const b = root.childNodes[1];
-    const c = root.childNodes[2];
-
-    wxapp.Renderer.patch(root, [h("li", { key: "c" }, "C"), h("li", { key: "a" }, "A"), h("li", { key: "b" }, "B")]);
-
-    assert.equal(root.childNodes.length, 3);
-    assert.equal(root.childNodes[0], c);
-    assert.equal(root.childNodes[1], a);
-    assert.equal(root.childNodes[2], b);
-});
-
-test("renderer keep flag preserves a nested subtree", () => {
-    const { wxapp, createElement } = loadEngine();
-    const h = wxapp.h;
-    const root = createElement("div");
-
-    wxapp.Renderer.patch(root, [h("div", { class: "host", keep: true })]);
-    const host = root.childNodes[0];
-
-    const nested = createElement("span");
-    host.appendChild(nested);
-    assert.equal(host.childNodes.length, 1);
-
-    wxapp.Renderer.patch(root, [h("div", { class: "host2", keep: true })]);
-
-    assert.equal(root.childNodes[0], host);
-    assert.equal(host.className, "host2");
-    assert.equal(host.childNodes.length, 1);
-    assert.equal(host.childNodes[0], nested);
-});
-
-test("renderer removes stale nodes", () => {
-    const { wxapp, createElement } = loadEngine();
-    const h = wxapp.h;
-    const root = createElement("div");
-
-    wxapp.Renderer.patch(root, [h("li", null, "1"), h("li", null, "2"), h("li", null, "3")]);
-    assert.equal(root.childNodes.length, 3);
-
-    wxapp.Renderer.patch(root, [h("li", null, "1")]);
-    assert.equal(root.childNodes.length, 1);
-    assert.equal(root.childNodes[0].textContent, "1");
-});
+// the renderer belongs to the WebUI view layer; its tests are renderer.test.mjs in
+// WebExpress.WebUI.Test, the render loop of the Data base is covered below
 
 // Intents
 
@@ -309,7 +229,7 @@ test("intent dispatch of an unknown intent does not throw", () => {
 // Component
 
 test("component seeds state, renders and re-renders", () => {
-    const { wxapp, createElement, document } = loadEngine();
+    const { wx, wxapp, createElement, document } = loadEngine();
 
     class Counter extends wxapp.Data {
         constructor(element) {
@@ -317,7 +237,7 @@ test("component seeds state, renders and re-renders", () => {
             this.mount();
         }
         render(state) {
-            return wxapp.h("p", { class: "v" }, String(state.count));
+            return wx.h("p", { class: "v" }, String(state.count));
         }
     }
 
@@ -369,7 +289,7 @@ test("component readState coerces the typed wx-prop values", () => {
 });
 
 test("component seeds its store from the c# authored wx-state island", () => {
-    const { wxapp, createElement, document } = loadEngine();
+    const { wx, wxapp, createElement, document } = loadEngine();
 
     // the exact island shape that a c# DataState (page 0, pageSize 50) emits
     const probe = createElement("div");
@@ -382,7 +302,7 @@ test("component seeds its store from the c# authored wx-state island", () => {
             this.mount();
         }
         render(state) {
-            return wxapp.h("span", { class: "p" }, String(state.page) + "/" + String(state.pageSize));
+            return wx.h("span", { class: "p" }, String(state.page) + "/" + String(state.pageSize));
         }
     }
 
@@ -394,7 +314,7 @@ test("component seeds its store from the c# authored wx-state island", () => {
 });
 
 test("component destroy stops further renders", () => {
-    const { wxapp, createElement } = loadEngine();
+    const { wx, wxapp, createElement } = loadEngine();
 
     class Probe extends wxapp.Data {
         constructor(element) {
@@ -404,7 +324,7 @@ test("component destroy stops further renders", () => {
         }
         render(state) {
             this.renders += 1;
-            return wxapp.h("span", null, String(state.n || 0));
+            return wx.h("span", null, String(state.n || 0));
         }
     }
 
@@ -417,6 +337,33 @@ test("component destroy stops further renders", () => {
     component.store.flush();
 
     assert.equal(component.renders, rendersAfterMount);
+});
+
+test("component update renders its current state, as the view switch calls it", () => {
+    const { wx, wxapp, createElement } = loadEngine();
+
+    class Counter extends wxapp.Data {
+        constructor(element) {
+            super(element, { state: { count: 3 } });
+            this.updates = 0;
+            this.mount();
+        }
+        render(state) {
+            return wx.h("span", null, String(state.count));
+        }
+        onUpdate() {
+            this.updates += 1;
+        }
+    }
+
+    const element = createElement("div");
+    const component = new Counter(element);
+
+    assert.ok(component instanceof wx.StateCtrl, "the data base renders through the WebUI view layer");
+    // the base Ctrl would call render without a state here
+    component.update();
+    assert.equal(element.childNodes[0].textContent, "3");
+    assert.equal(component.updates, 1);
 });
 
 // Multiple services per component
@@ -522,9 +469,9 @@ test("error channel stays silent on success and on abort", async () => {
 // Templates
 
 test("component without a render uses the referenced registered template", () => {
-    const { wxapp, createElement, document } = loadEngine();
+    const { wx, wxapp, createElement, document } = loadEngine();
 
-    wxapp.Templates.register("orders-view", (state) => wxapp.h("p", { class: "t" }, String(state.count)));
+    wxapp.Templates.register("orders-view", (state) => wx.h("p", { class: "t" }, String(state.count)));
 
     class Probe extends wxapp.Data {
         constructor(element) {

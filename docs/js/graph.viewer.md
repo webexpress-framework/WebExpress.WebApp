@@ -202,6 +202,10 @@ When a resource is bound the control:
 
 Left unbound, the control owns its `wx-service` island and loads itself (standalone), exactly as documented above. The path is chosen automatically — by `DataIslandExtensions.EmitDataIslands` on the server and by the presence of `data-wx-resource` on the client.
 
+## Rendering
+
+The viewer renders through the WebUI graph viewer, from its frame state; the loading flag is part of that state, and the loading mark on the host follows it. A loaded graph is rendered before `UPDATED_EVENT` announces it.
+
 ## Seeding and Reloading
 
 An initial graph can be handed to the control through the `wx-state` island, in which case the first paint costs no round trip and the endpoint is only asked on an explicit `refresh()`:

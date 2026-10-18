@@ -20,6 +20,11 @@
  * subscribes to that slice and the ViewState owns the central load; without a
  * binding it owns its own wx-service island and loads itself (standalone).
  *
+ * The chart is a pure function of the state (render), patched into the host by the keyed
+ * reconciler of the Data base. The slider is a nested control: its row is rendered with the keep
+ * flag and keyed by the history length, so a re-render never touches it, while a history of a
+ * different length gets a new slider, which reads its scale only when it is created.
+ *
  * REST contract:
  *   GET {data} → [{ id, name, committed, completed }]   (oldest sprint first)
  *
@@ -42,19 +47,18 @@ webexpress.webapp.ScrumVelocityCtrl = class extends webexpress.webapp.Data {
         // Component seeds its store from the optional wx-state island and owns
         // the service map
         const services = webexpress.webapp.ServiceRegistry.fromElement(element);
+        const maxSprints = parseInt(element.dataset.maxSprints || "6", 10);
+        const showSprintFilter = element.dataset.showSprintFilter === "true";
         const initialState = Object.assign({ sprints: [] }, webexpress.webapp.Data.readState(element));
+        // the plotted window, as one based inclusive indices into the loaded sprints
+        initialState.window = showSprintFilter
+            ? webexpress.webapp.scrumVelocityModel.clampWindow(null, initialState.sprints.length, maxSprints)
+            : null;
 
         super(element, { state: initialState, services: services });
 
-        this._maxSprints = parseInt(element.dataset.maxSprints || "6", 10);
-        this._showSprintFilter = element.dataset.showSprintFilter === "true";
-        // the plotted window, as one based inclusive indices into the loaded
-        // sprints; seeded from the trailing MaxSprints slice on the first render
-        this._window = null;
-        // the sprint count the current filter was built for, so a history that
-        // changed length is answered with a new slider rather than with a stale scale
-        this._filterTotal = -1;
-        this._filter = null;
+        this._maxSprints = maxSprints;
+        this._showSprintFilter = showSprintFilter;
         // the resource a ViewState renders; when present the sprints are a pure
         // view of a central resource the enclosing ViewState owns, when absent the
         // control loads itself (standalone)
@@ -133,22 +137,31 @@ webexpress.webapp.ScrumVelocityCtrl = class extends webexpress.webapp.Data {
         return this.state.sprints || [];
     }
 
+    /**
+     * Replaces the sprints and keeps the selected window inside the new history.
+     * @param {Array<object>} value - The sprints, oldest first.
+     */
     set _sprints(value) {
-        this.setState({ sprints: value });
+        this.setState({
+            sprints: value,
+            window: this._showSprintFilter
+                ? webexpress.webapp.scrumVelocityModel.clampWindow(this.state.window, value.length, this._maxSprints)
+                : null
+        });
     }
 
     /**
-     * Renders the chart on the first paint.
+     * Announces the first paint.
      */
     onMount() {
-        this._render();
+        this._dispatch(webexpress.webui.Event.UPDATED_EVENT, {});
     }
 
     /**
-     * Renders the chart whenever the sprint state changes.
+     * Announces every later paint.
      */
     onUpdate() {
-        this._render();
+        this._dispatch(webexpress.webui.Event.UPDATED_EVENT, {});
     }
 
     /**
@@ -187,126 +200,85 @@ webexpress.webapp.ScrumVelocityCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Renders the velocity chart from `this._sprints`.
+     * Renders the chart, or the empty hint, and the filter row.
+     * @param {object} state - The current state.
+     * @returns {Array<object>} The virtual node tree of the host.
      */
-    _render() {
+    render(state) {
+        const h = webexpress.webui.h;
         const model = webexpress.webapp.scrumVelocityModel;
-
-        if (this._showSprintFilter) {
-            this._clampWindow(this._sprints.length);
-        }
-
-        const sprints = this._visibleSprints();
+        const sprints = this._visibleSprints(state);
         const children = [];
 
         if (sprints.length === 0) {
-            const empty = document.createElement("div");
-            empty.className = "wx-scrum-velocity-empty";
-            empty.textContent = this._i18n("webexpress.webapp:scrum.velocity.empty", "No completed sprints yet.");
-            children.push(empty);
+            children.push(h("div", { key: "empty", class: "wx-scrum-velocity-empty" },
+                this._i18n("webexpress.webapp:scrum.velocity.empty", "No completed sprints yet.")));
         } else {
             const average = model.average(sprints);
             const scale = model.maxValue(sprints) * webexpress.webapp.ScrumVelocityCtrl.HEADROOM;
 
-            children.push(this._buildHeader(average));
-            children.push(this._buildPlot(sprints, average, scale));
-            children.push(this._buildLabels(sprints));
-            children.push(this._buildLegend());
+            children.push(this._renderHeader(average));
+            children.push(this._renderPlot(sprints, average, scale));
+            children.push(this._renderLabels(sprints));
+            children.push(this._renderLegend());
         }
 
-        const filter = this._filterRow();
-        if (filter) {
-            children.push(filter);
-        }
-
-        // the filter outlives the chart it narrows, so the children are replaced
-        // in one operation: emptying the host first would leave the slider
-        // detached long enough for the controller to tear its instance down
-        this._element.replaceChildren(...children);
-
-        this._dispatch(webexpress.webui.Event.UPDATED_EVENT, {});
+        children.push(this._renderFilter(state));
+        return children;
     }
 
     /**
      * Returns the sprints the chart plots: the window the filter selects, or the
      * trailing MaxSprints slice while there is no filter.
+     * @param {object} state - The current state.
      * @returns {Array<object>} The sprints to plot, oldest first.
      */
-    _visibleSprints() {
-        const sprints = this._sprints;
+    _visibleSprints(state) {
+        const sprints = state.sprints || [];
 
         if (!this._showSprintFilter) {
             return webexpress.webapp.scrumVelocityModel.lastN(sprints, this._maxSprints);
         }
 
-        return this._window ? sprints.slice(this._window.min - 1, this._window.max) : [];
+        return state.window ? sprints.slice(state.window.min - 1, state.window.max) : [];
     }
 
     /**
-     * Keeps the selected window inside the loaded history.
-     *
-     * Untouched, the window is the trailing MaxSprints slice, so switching the
-     * filter on does not change what the chart first shows. A history that came
-     * back shorter is clamped rather than reset, because a visitor who narrowed
-     * the chart down to two sprints did not ask to be sent back to the default.
-     *
-     * @param {number} total - The number of loaded sprints.
+     * Renders the filter row around the framework's dual handle slider. The row is kept from
+     * the reconciler and keyed by the history length: the slider reads its scale once, so a
+     * different sprint count is answered with a new slider rather than an update of the old one.
+     * @param {object} state - The current state.
+     * @returns {object|null} The filter row, or null when there is nothing to narrow.
      */
-    _clampWindow(total) {
-        if (total === 0) {
-            this._window = null;
-            return;
-        }
-
-        if (!this._window) {
-            const size = this._maxSprints > 0 ? Math.min(this._maxSprints, total) : total;
-            this._window = { min: total - size + 1, max: total };
-            return;
-        }
-
-        const min = Math.min(Math.max(1, this._window.min), total);
-
-        this._window = { min: min, max: Math.min(Math.max(min, this._window.max), total) };
-    }
-
-    /**
-     * Returns the filter row, rebuilding it whenever the loaded history changed
-     * length. The slider reads its scale once, in its constructor, so a
-     * different sprint count is answered with a new slider rather than with an
-     * update of the old one.
-     * @returns {HTMLElement|null} The filter row, or null when there is nothing to narrow.
-     */
-    _filterRow() {
-        const total = this._sprints.length;
+    _renderFilter(state) {
+        const total = (state.sprints || []).length;
+        const registry = webexpress.webui.Controller && webexpress.webui.Controller.classRegistry;
 
         // a single sprint is already the whole history; a slider over it would
         // offer a choice that does not exist
-        if (!this._showSprintFilter || total < 2 || !this._window) {
+        if (!this._showSprintFilter || total < 2 || !state.window || !registry || !registry.has("wx-webui-input-slider")) {
             return null;
         }
 
-        if (this._filterTotal !== total) {
-            this._filter = this._buildFilter(total);
-            this._filterTotal = total;
-        }
-
-        return this._filter;
+        return webexpress.webui.h("div", {
+            key: "filter-" + total,
+            class: "wx-scrum-velocity-filter",
+            keep: true,
+            ref: (row) => this._mountFilter(row, total, state.window)
+        });
     }
 
     /**
-     * Builds the filter row: a caption and the framework's dual handle slider
-     * over the loaded history.
+     * Builds the caption and the slider inside a newly rendered filter row; a row that already
+     * holds its slider is left as it is.
+     * @param {HTMLElement} row - The filter row.
      * @param {number} total - The number of loaded sprints.
-     * @returns {HTMLElement|null} The filter row, or null when the slider control is not on the page.
+     * @param {{min:number, max:number}} window - The window the handles start on.
      */
-    _buildFilter(total) {
-        const registry = webexpress.webui.Controller && webexpress.webui.Controller.classRegistry;
-        if (!registry || !registry.has("wx-webui-input-slider")) {
-            return null;
+    _mountFilter(row, total, window) {
+        if (row.firstChild) {
+            return;
         }
-
-        const row = document.createElement("div");
-        row.className = "wx-scrum-velocity-filter";
 
         const caption = document.createElement("span");
         caption.className = "wx-scrum-velocity-filter-caption";
@@ -320,8 +292,8 @@ webexpress.webapp.ScrumVelocityCtrl = class extends webexpress.webapp.Data {
         host.dataset.min = "1";
         host.dataset.max = String(total);
         host.dataset.step = "1";
-        host.dataset.valueMin = String(this._window.min);
-        host.dataset.valueMax = String(this._window.max);
+        host.dataset.valueMin = String(window.min);
+        host.dataset.valueMax = String(window.max);
         row.appendChild(host);
 
         // the marker class is consumed by the controller on instantiation, so
@@ -337,155 +309,94 @@ webexpress.webapp.ScrumVelocityCtrl = class extends webexpress.webapp.Data {
                 e.stopPropagation();
             }
 
-            this._window = { min: e.detail.valueMin, max: e.detail.valueMax };
-            this._render();
+            this.setState({ window: { min: e.detail.valueMin, max: e.detail.valueMax } });
         });
-
-        return row;
     }
 
     /**
-     * Builds the header with the eyebrow and the rolling average chip.
+     * Renders the header with the eyebrow and the rolling average chip.
      * @param {number} average - The average velocity.
-     * @returns {HTMLElement}
+     * @returns {object} The header virtual node.
      */
-    _buildHeader(average) {
-        const header = document.createElement("div");
-        header.className = "wx-scrum-velocity-header";
-
-        const eyebrow = document.createElement("span");
-        eyebrow.className = "wx-scrum-velocity-eyebrow";
-        eyebrow.textContent = this._i18n("webexpress.webapp:scrum.velocity.title", "Velocity");
-        header.appendChild(eyebrow);
-
-        const avg = document.createElement("span");
-        avg.className = "wx-scrum-velocity-avg";
-        avg.title = this._i18n("webexpress.webapp:scrum.velocity.average", "Average");
-        avg.textContent = "Ø " + this._formatPoints(average) + " "
-            + this._i18n("webexpress.webapp:scrum.velocity.points_abbr", "pts");
-        header.appendChild(avg);
-
-        return header;
+    _renderHeader(average) {
+        const h = webexpress.webui.h;
+        return h("div", { key: "header", class: "wx-scrum-velocity-header" },
+            h("span", { class: "wx-scrum-velocity-eyebrow" },
+                this._i18n("webexpress.webapp:scrum.velocity.title", "Velocity")),
+            h("span", {
+                class: "wx-scrum-velocity-avg",
+                title: this._i18n("webexpress.webapp:scrum.velocity.average", "Average")
+            }, "Ø " + this._formatPoints(average) + " "
+                + this._i18n("webexpress.webapp:scrum.velocity.points_abbr", "pts")));
     }
 
     /**
-     * Builds the plot area with the per-sprint columns and the average line.
+     * Renders the plot area with the per-sprint columns and the average line.
      * @param {Array<object>} sprints - The sprints to plot.
      * @param {number} average - The average velocity.
      * @param {number} scale - The value mapped to the full plot height.
-     * @returns {HTMLElement}
+     * @returns {object} The plot virtual node.
      */
-    _buildPlot(sprints, average, scale) {
-        const plot = document.createElement("div");
-        plot.className = "wx-scrum-velocity-plot";
-
-        for (const sprint of sprints) {
-            plot.appendChild(this._buildColumn(sprint, scale));
-        }
-
-        if (average > 0) {
-            const line = document.createElement("div");
-            line.className = "wx-scrum-velocity-avg-line";
-            line.style.bottom = this._pct(average, scale);
-            line.title = this._i18n("webexpress.webapp:scrum.velocity.average", "Average")
-                + ": " + this._formatPoints(average) + " "
-                + this._i18n("webexpress.webapp:scrum.velocity.points_abbr", "pts");
-            this._applyColor(line, this._colors.average);
-            plot.appendChild(line);
-        }
-
-        return plot;
+    _renderPlot(sprints, average, scale) {
+        const h = webexpress.webui.h;
+        return h("div", { key: "plot", class: "wx-scrum-velocity-plot" },
+            sprints.map((sprint) => this._renderColumn(sprint, scale)),
+            average > 0 && h("div", Object.assign({
+                key: "average",
+                title: this._i18n("webexpress.webapp:scrum.velocity.average", "Average")
+                    + ": " + this._formatPoints(average) + " "
+                    + this._i18n("webexpress.webapp:scrum.velocity.points_abbr", "pts")
+            }, this._colored("wx-scrum-velocity-avg-line", "bottom:" + this._pct(average, scale), this._colors.average))));
     }
 
     /**
-     * Builds a single sprint column with the committed backdrop, the completed
+     * Renders a single sprint column with the committed backdrop, the completed
      * bar and the value label.
      * @param {object} sprint - The sprint record.
      * @param {number} scale - The value mapped to the full plot height.
-     * @returns {HTMLElement}
+     * @returns {object} The column virtual node.
      */
-    _buildColumn(sprint, scale) {
-        const col = document.createElement("div");
-        col.className = "wx-scrum-velocity-col";
-        col.title = sprint.name + ": " + sprint.completed + "/" + sprint.committed + " "
-            + this._i18n("webexpress.webapp:scrum.velocity.points_abbr", "pts");
-
-        const committed = document.createElement("span");
-        committed.className = "wx-scrum-velocity-bar-committed";
-        committed.style.height = this._pct(sprint.committed, scale);
-        this._applyColor(committed, this._colors.committed);
-        col.appendChild(committed);
-
-        const completed = document.createElement("span");
-        completed.className = "wx-scrum-velocity-bar-completed";
-        completed.style.height = this._pct(sprint.completed, scale);
-        this._applyColor(completed, this._colors.completed);
-        col.appendChild(completed);
-
-        const value = document.createElement("span");
-        value.className = "wx-scrum-velocity-value";
-        value.style.bottom = "calc(" + this._pct(sprint.completed, scale) + " + 3px)";
-        value.textContent = String(sprint.completed);
-        col.appendChild(value);
-
-        return col;
+    _renderColumn(sprint, scale) {
+        const h = webexpress.webui.h;
+        return h("div", {
+            key: sprint.id,
+            class: "wx-scrum-velocity-col",
+            title: sprint.name + ": " + sprint.completed + "/" + sprint.committed + " "
+                + this._i18n("webexpress.webapp:scrum.velocity.points_abbr", "pts")
+        },
+            h("span", this._colored("wx-scrum-velocity-bar-committed", "height:" + this._pct(sprint.committed, scale), this._colors.committed)),
+            h("span", this._colored("wx-scrum-velocity-bar-completed", "height:" + this._pct(sprint.completed, scale), this._colors.completed)),
+            h("span", {
+                class: "wx-scrum-velocity-value",
+                style: "bottom:calc(" + this._pct(sprint.completed, scale) + " + 3px)"
+            }, String(sprint.completed)));
     }
 
     /**
-     * Builds the row of sprint labels below the plot, aligned to the columns.
+     * Renders the row of sprint labels below the plot, aligned to the columns.
      * @param {Array<object>} sprints - The sprints.
-     * @returns {HTMLElement}
+     * @returns {object} The labels virtual node.
      */
-    _buildLabels(sprints) {
-        const labels = document.createElement("div");
-        labels.className = "wx-scrum-velocity-labels";
-
-        for (const sprint of sprints) {
-            const label = document.createElement("span");
-            label.className = "wx-scrum-velocity-label";
-            label.textContent = sprint.name;
-            label.title = sprint.name;
-            labels.appendChild(label);
-        }
-
-        return labels;
+    _renderLabels(sprints) {
+        const h = webexpress.webui.h;
+        return h("div", { key: "labels", class: "wx-scrum-velocity-labels" },
+            sprints.map((sprint) => h("span", { key: sprint.id, class: "wx-scrum-velocity-label", title: sprint.name }, sprint.name)));
     }
 
     /**
-     * Builds the legend distinguishing the committed backdrop from the completed
+     * Renders the legend distinguishing the committed backdrop from the completed
      * velocity bar.
-     * @returns {HTMLElement}
+     * @returns {object} The legend virtual node.
      */
-    _buildLegend() {
-        const legend = document.createElement("div");
-        legend.className = "wx-scrum-velocity-legend";
+    _renderLegend() {
+        const h = webexpress.webui.h;
+        const item = (variant, text) => h("span", { class: "wx-scrum-velocity-legend-item" },
+            h("span", this._colored("wx-scrum-velocity-swatch " + variant, "", this._colors[variant])),
+            h("span", null, text));
 
-        legend.appendChild(this._buildLegendItem("completed", this._i18n("webexpress.webapp:scrum.velocity.completed", "Completed")));
-        legend.appendChild(this._buildLegendItem("committed", this._i18n("webexpress.webapp:scrum.velocity.committed", "Committed")));
-
-        return legend;
-    }
-
-    /**
-     * Builds a single legend item with a colour swatch and a label.
-     * @param {string} variant - The swatch variant, "completed" or "committed".
-     * @param {string} text - The label text.
-     * @returns {HTMLElement}
-     */
-    _buildLegendItem(variant, text) {
-        const item = document.createElement("span");
-        item.className = "wx-scrum-velocity-legend-item";
-
-        const swatch = document.createElement("span");
-        swatch.className = "wx-scrum-velocity-swatch " + variant;
-        this._applyColor(swatch, this._colors[variant]);
-        item.appendChild(swatch);
-
-        const label = document.createElement("span");
-        label.textContent = text;
-        item.appendChild(label);
-
-        return item;
+        return h("div", { key: "legend", class: "wx-scrum-velocity-legend" },
+            item("completed", this._i18n("webexpress.webapp:scrum.velocity.completed", "Completed")),
+            item("committed", this._i18n("webexpress.webapp:scrum.velocity.committed", "Committed")));
     }
 
     /**
@@ -513,26 +424,22 @@ webexpress.webapp.ScrumVelocityCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Applies a color descriptor to an element, preferring the CSS class and
-     * falling back to the inline style declaration. A null or empty descriptor
-     * leaves the element's stylesheet default untouched.
-     * @param {HTMLElement} element - The target element.
+     * Combines the class and the inline style of a colored element, preferring the color's
+     * CSS class and falling back to its inline declaration. A null or empty descriptor leaves
+     * the stylesheet default untouched.
+     * @param {string} className - The element's own classes.
+     * @param {string} style - The element's own inline style.
      * @param {{css: (string|null), style: (string|null)}} color - The descriptor.
+     * @returns {{class: string, style: string}} The props of the element.
      */
-    _applyColor(element, color) {
-        if (!element || !color) {
-            return;
+    _colored(className, style, color) {
+        if (color && color.css) {
+            return { class: className + " " + color.css.split(/\s+/).filter(Boolean).join(" "), style: style };
         }
-
-        if (color.css) {
-            for (const cls of color.css.split(/\s+/)) {
-                if (cls) {
-                    element.classList.add(cls);
-                }
-            }
-        } else if (color.style) {
-            element.style.cssText += ";" + color.style;
+        if (color && color.style) {
+            return { class: className, style: style + ";" + color.style };
         }
+        return { class: className, style: style };
     }
 
     /**
@@ -572,7 +479,8 @@ webexpress.webapp.ScrumVelocityCtrl = class extends webexpress.webapp.Data {
      * @returns {{min:number, max:number}|null} The window.
      */
     get sprintWindow() {
-        return this._window ? { min: this._window.min, max: this._window.max } : null;
+        const window = this.state.window;
+        return window ? { min: window.min, max: window.max } : null;
     }
 };
 

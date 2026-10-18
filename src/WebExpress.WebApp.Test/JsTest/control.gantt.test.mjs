@@ -1,9 +1,12 @@
 /**
- * Headless tests for the gantt control on the Component base (View, State and
- * Service). The tests assert that it extends Component, seeds its project from
+ * Headless tests for the gantt control on the Data base (View, State and
+ * Service). The tests assert that it extends the base, seeds its project from
  * the wx-state island and skips the network load in that case, loads from the
  * data service otherwise, renders the grid and the bars, persists task and
- * link mutations REST-fully and raises the mutation events and callbacks.
+ * link mutations REST-fully and raises the mutation events and callbacks. The
+ * view tests at the end cover the render as a function of the state: gesture
+ * previews and the cell editor are state, and a mutation never changes the
+ * task list a render has drawn.
  *
  * Run with Node 18 or newer from the jstest folder:
  *   node --test
@@ -485,17 +488,23 @@ test("dragging a bar reroutes its connectors live and commits on release", async
 
     const ctrl = seededControl(engine);
     const bar = byClass(ctrl._element, "wx-gantt-bar").find((b) => b.dataset.taskId === "c1");
-    const before = ctrl._linkPaths.get("l1").path.getAttribute("d");
+    const connector = () => byClass(ctrl._element, "wx-gantt-link")[0].getAttribute("d");
+    const before = connector();
+    const left = Number.parseFloat(bar.style.left);
 
     // drag the bar two days (72px at 36px per day) to the right
     bar.dispatchEvent({ type: "mousedown", clientX: 0 });
     engine.document.dispatchEvent({ type: "mousemove", clientX: 72 });
+    ctrl.store.flush();
 
     // the connector follows the previewed bar instead of waiting for the drop
-    const during = ctrl._linkPaths.get("l1").path.getAttribute("d");
-    assert.notEqual(during, before);
+    assert.notEqual(connector(), before);
+    assert.equal(bar.style.left, (left + 72) + "px", "the same bar node is drawn at the previewed place");
+    assert.equal(ctrl.value.tasks.find((t) => t.id === "c1").start, "2026-07-01", "nothing is committed during the drag");
 
     engine.document.dispatchEvent({ type: "mouseup", clientX: 72 });
+    ctrl.store.flush();
+    assert.equal(ctrl.state.preview, null, "the release ends the preview");
 
     const task = ctrl.value.tasks.find((t) => t.id === "c1");
     assert.equal(task.start, "2026-07-03");
@@ -540,6 +549,9 @@ test("shrinking the grid hides the columns right to left, keeping the name", asy
 
     // 300px keeps name, start and end; duration, progress and resources hide
     ctrl._applySplit(300);
+    ctrl.store.flush();
+    assert.equal(ctrl._gridEl, grid, "the pane is patched, not rebuilt");
+    assert.equal(grid.style.flexBasis, "300px");
     assert.equal(grid.classList.contains("wx-gantt-grid--hide-resources"), true);
     assert.equal(grid.classList.contains("wx-gantt-grid--hide-progress"), true);
     assert.equal(grid.classList.contains("wx-gantt-grid--hide-duration"), true);
@@ -548,6 +560,7 @@ test("shrinking the grid hides the columns right to left, keeping the name", asy
 
     // the minimum width leaves the name column alone, which never hides
     ctrl._applySplit(160);
+    ctrl.store.flush();
     assert.equal(grid.classList.contains("wx-gantt-grid--hide-start"), true);
     assert.equal(grid.classList.contains("wx-gantt-grid--hide-end"), true);
     assert.equal(grid.classList.contains("wx-gantt-grid--hide-label"), false);
@@ -731,11 +744,16 @@ test("dropping a source port on either half of a bar creates all four link types
         const clientX = toSide === "start" ? 120 : 160;
         ctrl._beginLinkDrag({ clientX: 50, clientY: 10, preventDefault() {}, stopPropagation() {} }, source, fromSide, ctrl._view);
         ctrl._handleDragMove({ target: label, clientX: clientX, clientY: 50 });
+        ctrl.store.flush();
         assert.equal(bar.classList.contains("is-link-target"), true);
         assert.equal(bar.dataset.linkTargetSide, toSide);
+        assert.equal(byClass(ctrl._element, "wx-gantt-link--temp").length, 1, "the drawn connector is rendered");
         ctrl._handleDragUp({ target: label, clientX: clientX, clientY: 50 });
+        ctrl.store.flush();
         assert.equal(ctrl.value.links.find((link) => link.from === "p").type, type);
         assert.equal(bar.classList.contains("is-link-target"), false);
+        assert.equal(bar.dataset.linkTargetSide, undefined);
+        assert.equal(byClass(ctrl._element, "wx-gantt-link--temp").length, 0);
     }
 });
 
@@ -1046,4 +1064,169 @@ test("a sandbox being saved refuses further edits", async () => {
     assert.equal(ctrl.discardSandbox(), false);
     await saving;
     assert.equal(ctrl.value.tasks.find((t) => t.id === "t2").duration, 5);
+});
+
+// ------------------------------------------------------------------ view
+
+/**
+ * Finds the cell of a column in the grid row of a task.
+ * @param {object} ctrl - The gantt control.
+ * @param {string} taskId - The task id.
+ * @param {string} key - The column key.
+ * @returns {object} The cell element.
+ */
+function cell(ctrl, taskId, key) {
+    const row = byClass(ctrl._element, "wx-gantt-grid-row").find((el) => el.dataset.taskId === taskId);
+    return byClass(row, "wx-gantt-grid-cell--key-" + key)[0];
+}
+
+test("render describes the chart without touching the DOM", () => {
+    const engine = load();
+    const ctrl = seededControl(engine);
+    const before = ctrl._element.childNodes.slice();
+
+    const tree = ctrl.render(Object.assign({}, ctrl.state, { tasks: [], links: [] }));
+
+    assert.equal(ctrl._element.childNodes.length, before.length);
+    assert.ok(ctrl._element.childNodes.every((node, i) => node === before[i]));
+    assert.deepEqual(Array.from(tree.filter(Boolean), (node) => node.key), ["toolbar", "body"]);
+});
+
+test("a mutation sets new task lists and leaves the rendered ones as they were", () => {
+    const engine = load();
+    engine.setFetch(async () => ({ ok: true, status: 200, json: async () => ({}) }));
+    const ctrl = seededControl(engine);
+    const rendered = ctrl.state.tasks;
+    const snapshot = JSON.stringify(rendered);
+
+    ctrl.updateTask("c1", { duration: 9 });
+    ctrl.toggleCollapse("p");
+    ctrl.removeTask("t2");
+
+    assert.equal(JSON.stringify(rendered), snapshot, "not even the container the rollup derives changed in place");
+    assert.notEqual(ctrl.state.tasks, rendered);
+    assert.equal(ctrl.value.tasks.find((t) => t.id === "p").duration, 9);
+});
+
+test("removing a task derives its container with the calendar of the plan", () => {
+    const engine = load();
+    const element = engine.createElement("div");
+    appendStateIsland(engine.document, element, { calendar: {}, tasks: [
+        { id: "p", label: "Phase", start: "2026-07-01", duration: 1 },
+        { id: "a", parentId: "p", start: "2026-07-03", duration: 2 },
+        { id: "b", parentId: "p", start: "2026-07-01", duration: 1 }
+    ] });
+    const ctrl = new engine.wxapp.GanttCtrl(element);
+
+    ctrl.removeTask("b");
+
+    // friday to tuesday holds two working days, not four calendar days
+    const container = ctrl.value.tasks.find((t) => t.id === "p");
+    assert.equal(container.start, "2026-07-03");
+    assert.equal(container.duration, 2);
+});
+
+test("a cell edit is state: it survives other renders and commits on enter", () => {
+    const engine = load();
+    engine.setFetch(async () => ({ ok: true, status: 200, json: async () => ({}) }));
+    const ctrl = seededControl(engine);
+
+    cell(ctrl, "t2", "duration").dispatchEvent({ type: "dblclick" });
+    ctrl.store.flush();
+    const input = byClass(ctrl._element, "wx-gantt-cell-input")[0];
+    assert.equal(input.value, "2");
+
+    input.value = "5";
+    input.dispatchEvent({ type: "input" });
+    ctrl.select("c1");
+    ctrl.store.flush();
+    assert.equal(byClass(ctrl._element, "wx-gantt-cell-input")[0], input, "the editor node outlives the render");
+    assert.equal(input.value, "5", "and keeps what the user typed");
+
+    input.dispatchEvent({ type: "keydown", key: "Enter" });
+    ctrl.store.flush();
+    assert.equal(ctrl.value.tasks.find((t) => t.id === "t2").duration, 5);
+    assert.equal(byClass(ctrl._element, "wx-gantt-cell-input").length, 0);
+    assert.equal(cell(ctrl, "t2", "duration").textContent, "5 d");
+});
+
+test("escape leaves a cell edit without a change, and containers only edit their name", () => {
+    const engine = load();
+    const ctrl = seededControl(engine);
+
+    cell(ctrl, "t2", "label").dispatchEvent({ type: "dblclick" });
+    ctrl.store.flush();
+    const input = byClass(ctrl._element, "wx-gantt-cell-input")[0];
+    input.value = "Renamed";
+    input.dispatchEvent({ type: "input" });
+    input.dispatchEvent({ type: "keydown", key: "Escape" });
+    ctrl.store.flush();
+    assert.equal(ctrl.value.tasks.find((t) => t.id === "t2").label, "Solo");
+    assert.equal(byClass(ctrl._element, "wx-gantt-cell-input").length, 0);
+
+    assert.equal(cell(ctrl, "p", "duration").classList.contains("is-editable"), false);
+    assert.equal(cell(ctrl, "p", "label").classList.contains("is-editable"), true);
+});
+
+test("a task added through the toolbar is named in place, even after the server renamed it", async () => {
+    const engine = load();
+    engine.setFetch(async (url, init) => ({
+        ok: true, status: 200,
+        json: async () => ((init && init.method) === "POST" ? { id: "srv-1" } : {})
+    }));
+    const ctrl = seededControl(engine);
+
+    byClass(ctrl._element, "wx-gantt-add")[0].dispatchEvent({ type: "click" });
+    ctrl.store.flush();
+    const created = ctrl.state.editing.taskId;
+    const first = byClass(ctrl._element, "wx-gantt-cell-input")[0];
+    assert.equal(first.value, "New task");
+    first.value = "Named";
+    first.dispatchEvent({ type: "input" });
+
+    await settle();
+    ctrl.store.flush();
+    assert.notEqual(created, "srv-1");
+    assert.equal(ctrl.state.editing.taskId, "srv-1", "the edit moved to the server id");
+
+    // the replaced editor losing the focus does not end the edit
+    first.dispatchEvent({ type: "blur", target: first });
+    const editor = byClass(ctrl._element, "wx-gantt-cell-input")[0];
+    assert.ok(editor);
+    assert.equal(editor.value, "Named");
+
+    editor.dispatchEvent({ type: "keydown", key: "Enter" });
+    assert.equal(ctrl.value.tasks.find((t) => t.id === "srv-1").label, "Named");
+    await settle();
+});
+
+test("a progress drag previews the fill and commits the percentage on release", () => {
+    const engine = load();
+    engine.setFetch(async () => ({ ok: true, status: 200, json: async () => ({}) }));
+    const ctrl = seededControl(engine);
+    const bar = byClass(ctrl._element, "wx-gantt-bar").find((b) => b.dataset.taskId === "c1");
+    const fill = byClass(bar, "wx-gantt-bar-progress")[0];
+
+    // three days are 108px, so 27px add a quarter to the 40 percent
+    byClass(bar, "wx-gantt-progress-handle")[0].dispatchEvent({ type: "mousedown", clientX: 0 });
+    engine.document.dispatchEvent({ type: "mousemove", clientX: 27 });
+    ctrl.store.flush();
+    assert.equal(fill.style.width, "65%");
+    assert.equal(ctrl.value.tasks.find((t) => t.id === "c1").progress, 40);
+
+    engine.document.dispatchEvent({ type: "mouseup", clientX: 27 });
+    ctrl.store.flush();
+    assert.equal(ctrl.value.tasks.find((t) => t.id === "c1").progress, 65);
+    assert.equal(byClass(bar, "wx-gantt-bar-progress")[0], fill);
+});
+
+test("teardown releases the keyboard of the host", () => {
+    const engine = load();
+    engine.setFetch(async () => ({ ok: true, status: 200, json: async () => ({}) }));
+    const ctrl = seededControl(engine);
+    ctrl.select("t2");
+
+    ctrl.destroy();
+    ctrl._element.dispatchEvent({ type: "keydown", key: "Delete", preventDefault() {} });
+    assert.equal(ctrl.value.tasks.length, 3);
 });

@@ -2,7 +2,7 @@
  * Headless tests for the workflow editor control (View, State and Service).
  *
  * They instantiate the real webexpress.webapp.WorkflowEditorCtrl on the DOM
- * stub with a stubbed WebUI graph editor base and assert the id contract of
+ * stub on its real WebUI graph editor base and assert the id contract of
  * the REST integration: the workflow id authored in the wx-state island
  * rides along as the wire query parameter on the load GET and the autosave
  * PUT, and a load that resolves after destroy leaves the editor untouched.
@@ -14,103 +14,22 @@
 
 import { test } from "node:test";
 import assert from "node:assert";
-import { loadEngine, webappAsset, appendServiceIsland, appendStateIsland, appendResourceIsland } from "./harness.mjs";
+import { appendServiceIsland, appendStateIsland, appendResourceIsland } from "./harness.mjs";
+import { loadControl } from "./controls.harness.mjs";
 
-// the workflow editor extends the WebUI graph editor, which the engine harness
-// does not load; the stub carries the members the workflow control calls. The
-// model setter mirrors the real viewer chain (normalize, then materialize the
-// visual nodes the autosave merges positions back from), and the listener
-// registry mirrors the real base, whose teardown releases everything the
-// control registered on the window. The window itself is not provided by the
-// DOM stub either, so it is stubbed with a working listener list.
-const GRAPH_EDITOR_BASE_STUB = `
-    var window = {
-        _listeners: {},
-        addEventListener(type, handler) {
-            (this._listeners[type] || (this._listeners[type] = new Set())).add(handler);
-        },
-        removeEventListener(type, handler) {
-            if (this._listeners[type]) { this._listeners[type].delete(handler); }
-        },
-        dispatchEvent(event) {
-            const set = this._listeners[event.type];
-            if (set) { Array.from(set).forEach((handler) => handler(event)); }
-            return true;
-        }
-    };
-    webexpress.webui.GraphEditorCtrl = class extends webexpress.webui.Ctrl {
-        constructor(element) {
-            super(element);
-            // the real graph viewer base clears the host while building its
-            // svg canvas, so the islands must be consumed before super
-            element.innerHTML = "";
-            this._windowListeners = [];
-            this._toolbarContainer = null;
-            this._selectedNodeId = null;
-            this._selectedEdgeId = null;
-            this._model = { nodes: [], edges: [] };
-            this._nodes = [];
-        }
-        get model() { return this._model; }
-        set model(val) {
-            this._model = this._normalizeModel(val);
-            this._nodes = (this._model.nodes || []).map((n) => ({ id: n.id, x: n.x, y: n.y, width: 0, height: 0 }));
-        }
-        _normalizeModel(model) {
-            const m = model || {};
-            return {
-                nodes: (m.nodes || []).map((n) => Object.assign({}, n)),
-                edges: (m.edges || []).map((e) => Object.assign({}, e))
-            };
-        }
-        _addWindowListener(type, handler) {
-            window.addEventListener(type, handler);
-            this._windowListeners.push({ type, handler });
-        }
-        _removeWindowListener(type, handler) {
-            window.removeEventListener(type, handler);
-        }
-        _ownsKeyEvent(e) {
-            return !!e && !!e.target && this._element.contains(e.target);
-        }
-        _syncModelPosition(node) {
-            const modelNode = this._model.nodes.find((m) => m.id === node.id);
-            if (modelNode) {
-                modelNode.x = node.x - (node.width || 0) / 2;
-                modelNode.y = node.y - (node.height || 0) / 2;
-            }
-            return modelNode || null;
-        }
-        _syncModelPositions() {
-            (this._nodes || []).forEach((n) => this._syncModelPosition(n));
-        }
-        _saveStateToHistory() { }
-        _emitChangeSafe() { }
-        _updateToolbarState() { }
-        _deselectAll() { }
-        destroy() {
-            for (const entry of this._windowListeners) {
-                window.removeEventListener(entry.type, entry.handler);
-            }
-            this._windowListeners = [];
-        }
-    };
-`;
+// the workflow editor extends the WebUI graph editor, which the control harness loads
+function load() {
+    const engine = loadControl({
+        deps: ["webexpress.webapp.workflow.editor.model.js"],
+        file: "webexpress.webapp.workflow.editor.js"
+    });
 
-function load(options) {
-    const engine = loadEngine(Object.assign({
-        bootstrap: GRAPH_EDITOR_BASE_STUB,
-        extraFiles: [
-            webappAsset("webexpress.webapp.workflow.editor.model.js"),
-            webappAsset("webexpress.webapp.workflow.editor.js")
-        ]
-    }, options));
-
-    // the properties panel renders through querySelector, which the DOM stub
-    // does not implement; the spy keeps the call count observable instead
+    // the spy keeps the explicit rebuilds of the properties panel observable
     const propsPanelCalls = { count: 0 };
+    const rebuild = engine.wxapp.WorkflowEditorCtrl.prototype._renderPropsPanel;
     engine.wxapp.WorkflowEditorCtrl.prototype._renderPropsPanel = function () {
         propsPanelCalls.count++;
+        return rebuild.call(this);
     };
 
     return { engine, propsPanelCalls };
@@ -233,7 +152,8 @@ test("workflow editor autosave puts the wire payload keyed by the authored id", 
     const body = JSON.parse(requests[1].body);
     // the body id is the server-issued meta id, the query id stays the authored one
     assert.equal(body.id, "wf1");
-    assert.equal(body.states[0].x, 999);
+    // the model stores the top left corner of the node the drag moved by its centre
+    assert.equal(body.states[0].x, Math.round(999 - editor._nodes[0].width / 2));
     assert.equal(body.states.length, 2);
     assert.equal(body.transitions.length, 1);
     assert.equal(body.transitions[0].from, "todo");

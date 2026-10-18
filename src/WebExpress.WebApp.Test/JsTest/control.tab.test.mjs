@@ -84,6 +84,7 @@ test("wx-webapp-tab shows the empty-state placeholder while no tab item exists",
     assert.equal(placeholder._wxDetached, true, "the detach is flagged, so the controller keeps its instances");
 
     ctrl.updateData([]);
+    ctrl.store.flush();
     assert.equal(placeholder.parentNode, content, "an empty payload brings the placeholder back");
 });
 

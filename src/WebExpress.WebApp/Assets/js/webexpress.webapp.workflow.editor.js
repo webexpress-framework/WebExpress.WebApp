@@ -9,6 +9,17 @@
  * collapses / expands the properties pane. The split state persists across
  * reloads via localStorage keyed by the editor id.
  *
+ * Rendering
+ * ---------
+ * The split host is structure the split control owns - it re-parents the panes and
+ * puts its handle between them - so the editor builds it once and renders into the
+ * panes: the canvas pane is the render root of the graph editor, and the properties
+ * pane is patched from the same state after every render. The save status at the end
+ * of the toolbar, the action bar of the panel and the loading mark of the host follow
+ * the state; the properties view is built into a kept slot whenever the selection
+ * changes or a rule edit asks for it, so the field the user is typing in survives
+ * every render in between.
+ *
  * Properties panel
  * ----------------
  * Selecting a state or transition in the canvas renders an inline properties
@@ -44,7 +55,6 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
     _catalog = { guards: [], validations: [], postfunctions: [] };
 
     // request state
-    _isLoading = false;
     _destroyed = false;
     _saveDebounce = null;
     _saveInFlight = false;
@@ -58,10 +68,6 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
     _saveState = "idle";
     _lastSavedAt = null;
     _statusMessage = null;
-    _statusEl = null;
-    _statusIcon = null;
-    _statusText = null;
-    _statusRetry = null;
     _retryAction = null;
 
     // workflow header metadata kept for round-tripping
@@ -71,8 +77,6 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
     _splitHost = null;
     _canvasPane = null;
     _propsPane = null;
-    _propsHost = null;
-    _toggleBtn = null;
 
     // remembered tab selection so the panel does not snap back to the first
     // tab on every render (e.g. while picking a rule)
@@ -106,8 +110,18 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
 
         element.classList.add("wx-workflow-editor");
 
+        this.setState({
+            loading: false,
+            propsRevision: 0,
+            status: { state: "idle", message: null, savedAt: null, retry: false }
+        });
+
         this._buildLayout();
         this._setupShortcuts();
+
+        if (new.target === webexpress.webapp.WorkflowEditorCtrl) {
+            this._open();
+        }
 
         if (this._resource) {
             this._attachToViewState(element);
@@ -117,6 +131,11 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
 
         this._renderPropsPanel();
     }
+
+    // the loading flag is state; the mark it puts on the host follows each render
+
+    get _isLoading() { return !!this.state.loading; }
+    set _isLoading(value) { this.setState({ loading: !!value }); }
 
     /**
      * Attaches the editor to the enclosing ViewState and renders its
@@ -157,7 +176,6 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
         }
 
         this._isLoading = !!slice.loading;
-        this._element.classList.toggle("placeholder-glow", this._isLoading);
 
         // a server refresh must not replace changes awaiting acknowledgement
         if (this._saveInFlight || this._savePending || this._savePaused || slice.loading) {
@@ -167,7 +185,6 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
         // a ViewState that failed to load its slice would otherwise leave the
         // canvas empty and silent
         if (slice.error) {
-            this._element.classList.remove("placeholder-glow");
             this._isLoading = false;
             this._statusMessage = this._i18n("webexpress.webui:workflow.editor.status.load.error");
             this._setSaveState("error", () => {
@@ -188,7 +205,6 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
         this._meta = webexpress.webapp.workflowEditorModel.normalizeMeta(response);
         this._catalog = webexpress.webapp.workflowEditorModel.normalizeCatalog(response);
         this.model = this._fromWireFormat(response);
-        this._element.classList.remove("placeholder-glow");
         this._isLoading = false;
         this._statusMessage = null;
         this._setSaveState("idle");
@@ -196,57 +212,19 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
     }
 
     /**
-     * Builds the split layout that wraps the canvas pane and the right-side
-     * properties pane. The base GraphEditorCtrl has already added the toolbar
-     * and SVG as direct children of `this._element`; we move them into a
-     * dedicated canvas pane, then wrap canvas pane + props pane with a
-     * `wx-webui-split` host so SplitCtrl auto-instantiates and provides the
-     * draggable divider.
+     * Builds the split layout once: the split host and its two panes, the canvas pane
+     * becoming the root the graph editor renders into. The split control instantiates
+     * on the host when it enters the document and re-parents the panes around its
+     * handle, which is why the host is never reconciled.
      */
     _buildLayout() {
         const host = this._element;
 
-        // pull existing children (toolbar + svg) into the canvas pane
         this._canvasPane = document.createElement("div");
         this._canvasPane.className = "wx-main-pane wx-workflow-editor-canvas";
 
-        const movable = Array.from(host.childNodes);
-        for (const child of movable) {
-            this._canvasPane.appendChild(child);
-        }
-
-        // collapse-toggle button lives in the toolbar so the user can hide /
-        // show the side panel without touching the splitter handle.
-        if (this._toolbarContainer) {
-            const sep = document.createElement("div");
-            sep.className = "wx-simple-sep";
-            this._toolbarContainer.appendChild(sep);
-
-            const toggle = document.createElement("button");
-            toggle.type = "button";
-            toggle.id = "btn-toggle-props";
-            toggle.className = "wx-simple-btn wx-workflow-editor-toggle";
-            toggle.title = this._i18n("webexpress.webui:workflow.editor.props.toggle");
-            this._appendIcon(toggle, this._iconClass("columns"));
-            toggle.onclick = (e) => {
-                e.stopPropagation();
-                this._togglePropsPane();
-            };
-            this._toolbarContainer.appendChild(toggle);
-            this._toggleBtn = toggle;
-
-            this._buildStatusIndicator();
-        }
-
-        // properties pane (right side)
         this._propsPane = document.createElement("div");
         this._propsPane.className = "wx-side-pane wx-workflow-editor-props-pane";
-
-        this._propsHost = document.createElement("div");
-        this._propsHost.className = "wx-workflow-editor-props-host";
-        this._propsPane.appendChild(this._propsHost);
-
-        this._buildPropsActions();
 
         // split host - registered class name `wx-webui-split` is auto-replaced by
         // the controller registry once appended to the DOM.
@@ -263,6 +241,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
         this._splitHost.appendChild(this._propsPane);
 
         host.appendChild(this._splitHost);
+        this._renderRoot = this._canvasPane;
     }
 
     /**
@@ -282,94 +261,138 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
     }
 
     /**
-     * Builds the action bar at the top of the properties pane, carrying the
-     * creation actions the toolbar no longer shows. It sits outside the panel
-     * body so a selection change does not rebuild it.
+     * Describes the end of the toolbar: the button that shows and hides the properties
+     * pane, and the persistence status. Autosave is silent by nature, so without the
+     * status a failed save is indistinguishable from a successful one and the user keeps
+     * editing work that never reaches the server.
+     * @param {object} state - The state.
+     * @returns {Array<object>} The virtual nodes.
      */
-    _buildPropsActions() {
-        const bar = document.createElement("div");
-        bar.className = "wx-workflow-editor-props-actions";
+    _renderToolbarExtras(state) {
+        const h = webexpress.webui.h;
+        const states = {
+            idle: { key: "", icon: "circle-check", modifier: "" },
+            dirty: { key: "workflow.editor.status.dirty", icon: "pen", modifier: "--dirty" },
+            saving: { key: "workflow.editor.status.saving", icon: "arrows-rotate", modifier: "--saving" },
+            saved: { key: "workflow.editor.status.saved", icon: "circle-check", modifier: "--saved" },
+            error: { key: "workflow.editor.status.error", icon: "triangle-exclamation", modifier: "--error" }
+        };
+        const status = state.status || { state: "idle" };
+        const current = states[status.state] || states.idle;
 
-        this._btnNewState = this._buildIconButton(
-            "wx-workflow-editor-btn wx-workflow-editor-btn--ghost",
-            this._iconClass("circle-plus"),
-            this._i18n("webexpress.webui:workflow.editor.actions.state"));
-        this._btnNewState.addEventListener("click", (e) => {
-            e.stopPropagation();
-            if (this._isAddEdgeMode) {
-                this._resetAddEdgeMode();
-            }
-            this._addNode();
-        });
-        bar.appendChild(this._btnNewState);
-
-        this._btnNewTransition = this._buildIconButton(
-            "wx-workflow-editor-btn wx-workflow-editor-btn--ghost",
-            this._iconClass("share-nodes"),
-            this._i18n("webexpress.webui:workflow.editor.actions.transition"));
-        this._btnNewTransition.addEventListener("click", (e) => {
-            e.stopPropagation();
-            this._toggleAddEdgeMode(!this._isAddEdgeMode);
-        });
-        bar.appendChild(this._btnNewTransition);
-
-        this._propsActions = bar;
-        this._propsPane.insertBefore(bar, this._propsHost);
-    }
-
-    /**
-     * Reflects the add-transition mode on its panel button, which is the only
-     * place that mode is now visible.
-     */
-    _updatePropsActions() {
-        if (!this._btnNewTransition) {
-            return;
+        // a saved state carries the time of the last successful write, so the user can
+        // tell a stale success from a fresh one
+        let text = current.key ? this._i18n("webexpress.webui:" + current.key) : "";
+        if (status.state === "saved" && status.savedAt) {
+            text += " " + new Date(status.savedAt).toLocaleTimeString();
         }
-        const active = !!this._isAddEdgeMode;
-        this._btnNewTransition.classList.toggle("is-active", active);
-        this._btnNewTransition.setAttribute("aria-pressed", active ? "true" : "false");
+        if (status.state === "error" && status.message) {
+            text += " (" + status.message + ")";
+        }
+
+        return [
+            h("div", { key: "sep-props", class: "wx-simple-sep" }),
+            h("button", {
+                key: "toggle-props",
+                type: "button",
+                id: "btn-toggle-props",
+                class: "wx-simple-btn wx-workflow-editor-toggle",
+                title: this._i18n("webexpress.webui:workflow.editor.props.toggle"),
+                on: this._handler("workflow", "toggle-props", () => ({
+                    click: (e) => {
+                        e.stopPropagation();
+                        this._togglePropsPane();
+                    }
+                })),
+                ref: (el) => { this._toggleBtn = el; }
+            }, h("i", { class: this._iconClass("columns"), "aria-hidden": "true" })),
+            h("div", {
+                key: "status",
+                class: "wx-workflow-editor-status" + (current.modifier ? " wx-workflow-editor-status" + current.modifier : ""),
+                role: "status",
+                "aria-live": "polite",
+                ref: (el) => { this._statusEl = el; }
+            },
+                h("i", { key: "icon", class: this._iconClass(current.icon), "aria-hidden": "true", ref: (el) => { this._statusIcon = el; } }),
+                h("span", { key: "text", class: "wx-workflow-editor-status__text", ref: (el) => { this._statusText = el; } }, text),
+                h("button", {
+                    key: "retry",
+                    type: "button",
+                    class: "wx-workflow-editor-status__retry",
+                    style: { display: status.state === "error" && status.retry ? "" : "none" },
+                    on: this._handler("workflow", "retry", () => ({
+                        click: (e) => {
+                            e.stopPropagation();
+                            if (this._retryAction) {
+                                this._retryAction();
+                            }
+                        }
+                    })),
+                    ref: (el) => { this._statusRetry = el; }
+                }, this._i18n("webexpress.webui:workflow.editor.status.retry")))
+        ];
     }
 
     /**
-     * Builds the persistence status indicator that lives at the end of the
-     * toolbar. Autosave is silent by nature, so without it a failed save is
-     * indistinguishable from a successful one and the user keeps editing work
-     * that never reaches the server.
+     * Describes the properties pane: the action bar carrying the creation actions the
+     * toolbar no longer shows - outside the panel body, so a selection change does not
+     * rebuild it - and the slot the properties view is built into.
+     * @param {object} state - The state.
+     * @returns {Array<object>} The virtual nodes of the pane.
      */
-    _buildStatusIndicator() {
-        const status = document.createElement("div");
-        status.className = "wx-workflow-editor-status";
-        status.setAttribute("role", "status");
-        status.setAttribute("aria-live", "polite");
+    _renderPropsPane(state) {
+        const h = webexpress.webui.h;
+        const adding = !!state.addEdge;
+        const action = (key, extraClass, icon, label, props, onClick) => h("button", Object.assign({
+            key: key,
+            type: "button",
+            class: "wx-workflow-editor-btn wx-workflow-editor-btn--ghost" + extraClass,
+            on: this._handler("workflowAction", key, () => ({
+                click: (e) => {
+                    e.stopPropagation();
+                    onClick();
+                }
+            }))
+        }, props), h("i", { class: this._iconClass(icon), "aria-hidden": "true" }), h("span", null, label));
 
-        this._statusIcon = document.createElement("i");
-        this._statusIcon.setAttribute("aria-hidden", "true");
-        status.appendChild(this._statusIcon);
-
-        this._statusText = document.createElement("span");
-        this._statusText.className = "wx-workflow-editor-status__text";
-        status.appendChild(this._statusText);
-
-        this._statusRetry = document.createElement("button");
-        this._statusRetry.type = "button";
-        this._statusRetry.className = "wx-workflow-editor-status__retry";
-        this._statusRetry.textContent = this._i18n("webexpress.webui:workflow.editor.status.retry");
-        this._statusRetry.style.display = "none";
-        this._statusRetry.addEventListener("click", (e) => {
-            e.stopPropagation();
-            if (this._retryAction) {
-                this._retryAction();
-            }
-        });
-        status.appendChild(this._statusRetry);
-
-        this._statusEl = status;
-        this._toolbarContainer.appendChild(status);
-        this._renderSaveState();
+        return [
+            h("div", { key: "actions", class: "wx-workflow-editor-props-actions", ref: (el) => { this._propsActions = el; } },
+                action("state", "", "circle-plus", this._i18n("webexpress.webui:workflow.editor.actions.state"),
+                    { ref: (el) => { this._btnNewState = el; } },
+                    () => {
+                        if (this._isAddEdgeMode) {
+                            this._resetAddEdgeMode();
+                        }
+                        this._addNode();
+                    }),
+                // the panel button is the only place the add-transition mode shows
+                action("transition", adding ? " is-active" : "", "share-nodes", this._i18n("webexpress.webui:workflow.editor.actions.transition"),
+                    { "aria-pressed": adding ? "true" : "false", ref: (el) => { this._btnNewTransition = el; } },
+                    () => this._toggleAddEdgeMode(!this._isAddEdgeMode))),
+            h("div", {
+                key: "host",
+                class: "wx-workflow-editor-props-host",
+                keep: true,
+                ref: (el) => this._placePropsPanel(el, state)
+            })
+        ];
     }
 
     /**
-     * Records the current persistence state and repaints the indicator.
+     * Follows a render with what lies outside the canvas pane: the properties pane and
+     * the loading mark of the host.
+     * @param {object} state - The rendered state.
+     */
+    onUpdate(state) {
+        super.onUpdate(state);
+        this._element.classList.toggle("placeholder-glow", !!state.loading);
+        if (this._propsPane && !this._destroyed) {
+            webexpress.webui.Renderer.patch(this._propsPane, this._renderPropsPane(state));
+        }
+    }
+
+    /**
+     * Records the current persistence state and shows it.
      * @param {"idle"|"dirty"|"saving"|"saved"|"error"} state - The new state.
      * @param {Function} [retry] - The action the retry button should run.
      */
@@ -385,38 +408,19 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
     }
 
     /**
-     * Paints the indicator for the current state. A saved state carries the
-     * time of the last successful write, so the user can tell a stale success
-     * from a fresh one.
+     * Puts the persistence state into the view state and shows it at once, because it
+     * reports a request that just ended rather than a gesture.
      */
     _renderSaveState() {
-        if (!this._statusEl) {
-            return;
-        }
-
-        const states = {
-            idle: { key: "", icon: "circle-check", modifier: "" },
-            dirty: { key: "workflow.editor.status.dirty", icon: "pen", modifier: "--dirty" },
-            saving: { key: "workflow.editor.status.saving", icon: "arrows-rotate", modifier: "--saving" },
-            saved: { key: "workflow.editor.status.saved", icon: "circle-check", modifier: "--saved" },
-            error: { key: "workflow.editor.status.error", icon: "triangle-exclamation", modifier: "--error" }
-        };
-        const current = states[this._saveState] || states.idle;
-
-        this._statusEl.className = "wx-workflow-editor-status"
-            + (current.modifier ? " wx-workflow-editor-status" + current.modifier : "");
-        this._statusIcon.className = this._iconClass(current.icon);
-
-        let text = current.key ? this._i18n("webexpress.webui:" + current.key) : "";
-        if (this._saveState === "saved" && this._lastSavedAt) {
-            text += " " + this._lastSavedAt.toLocaleTimeString();
-        }
-        if (this._saveState === "error" && this._statusMessage) {
-            text += " (" + this._statusMessage + ")";
-        }
-        this._statusText.textContent = text;
-
-        this._statusRetry.style.display = this._saveState === "error" && this._retryAction ? "" : "none";
+        this.setState({
+            status: {
+                state: this._saveState,
+                message: this._statusMessage,
+                savedAt: this._lastSavedAt ? this._lastSavedAt.getTime() : null,
+                retry: !!this._retryAction
+            }
+        });
+        this._store.flush();
     }
 
     /**
@@ -476,7 +480,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
 
             if (e.key === "F2" && this._selectedNodeId) {
                 e.preventDefault();
-                const input = this._propsHost.querySelector("[data-edit-key='label']");
+                const input = this._propsHost && this._propsHost.querySelector("[data-edit-key='label']");
                 if (input) {
                     input.focus();
                     input.select();
@@ -511,7 +515,6 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
         }
 
         this._isLoading = true;
-        this._element.classList.add("placeholder-glow");
 
         // the rest service maps the logical id to its wire name and aborts a
         // previous in-flight load when a newer one replaces it
@@ -525,7 +528,6 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
                 if (!res.ok) {
                     // a failed load leaves an empty canvas that looks like an
                     // empty workflow; the state has to be visible and retryable
-                    this._element.classList.remove("placeholder-glow");
                     this._isLoading = false;
                     this._statusMessage = this._i18n("webexpress.webui:workflow.editor.status.load.error")
                         + " " + res.status;
@@ -537,7 +539,6 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
                 this._meta = webexpress.webapp.workflowEditorModel.normalizeMeta(response);
                 this._catalog = webexpress.webapp.workflowEditorModel.normalizeCatalog(response);
                 this.model = this._fromWireFormat(response);
-                this._element.classList.remove("placeholder-glow");
                 this._isLoading = false;
                 this._setSaveState("idle");
                 this._renderPropsPanel();
@@ -557,30 +558,13 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
     /**
      * Hooks the autosave flow into the change pipeline. The properties panel
      * is intentionally NOT rebuilt here - that would tear down the input the
-     * user is currently typing in. Panel refresh is driven by selection
-     * changes (`_updateToolbarState`) and by the rule editors that explicitly
-     * request a refresh after non-input mutations (add / remove / reorder).
+     * user is currently typing in. The panel follows the selection by itself and
+     * the rule editors request a rebuild after non-input mutations (add / remove /
+     * reorder).
      */
     _emitChangeSafe() {
         super._emitChangeSafe();
         this._scheduleSave();
-    }
-
-    /**
-     * Toolbar updates fire whenever the selection changes, so the right-side
-     * panel can be refreshed in lockstep. The panel is only rebuilt when the
-     * selection actually changes - re-renders triggered while typing in an
-     * input field are avoided to preserve focus.
-     */
-    _updateToolbarState() {
-        super._updateToolbarState();
-        this._updatePropsActions();
-
-        const sel = (this._selectedNodeId || "") + "::" + (this._selectedEdgeId || "");
-        if (sel !== this._lastRenderedSelection) {
-            this._lastRenderedSelection = sel;
-            this._renderPropsPanel();
-        }
     }
 
     /**
@@ -775,9 +759,8 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
 
     /**
      * Override: replaces the modal-based properties dialog with the inline
-     * right-side panel. Selecting an item updates `_selectedNodeId` /
-     * `_selectedEdgeId`, so we just re-render the panel and ensure it is
-     * visible.
+     * right-side panel. The panel already shows the selection, so it is rebuilt
+     * and its pane made visible.
      */
     _openPropertiesModal() {
         if (!this._selectedNodeId && !this._selectedEdgeId) {
@@ -794,30 +777,48 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
     }
 
     /**
-     * Renders the inline properties view based on the current selection.
+     * Rebuilds the properties view now, for a change the panel cannot see in the
+     * selection: a loaded model, an added or removed rule, a changed reference.
      */
     _renderPropsPanel() {
-        if (!this._propsHost) {
+        if (this._destroyed) {
             return;
         }
-        this._propsHost.textContent = "";
+        this.setState({ propsRevision: (this.state.propsRevision || 0) + 1 });
+        this._store.flush();
+    }
 
-        if (this._selectedNodeId) {
-            const node = (this._model && this._model.nodes.find(n => n.id === this._selectedNodeId)) || null;
+    /**
+     * Builds the properties view into its slot when the selection changed or a rebuild
+     * was asked for; between those the slot is left alone.
+     * @param {HTMLElement} el - The slot.
+     * @param {object} state - The rendered state.
+     */
+    _placePropsPanel(el, state) {
+        this._propsHost = el;
+        const key = (state.selectedNode || "") + "::" + (state.selectedEdge || "") + "::" + (state.propsRevision || 0);
+        if (el._wxPropsKey === key) {
+            return;
+        }
+        el._wxPropsKey = key;
+        el.textContent = "";
+
+        if (state.selectedNode) {
+            const node = (this._model && this._model.nodes.find(n => n.id === state.selectedNode)) || null;
             if (node) {
-                this._propsHost.appendChild(this._renderStateProps(node));
+                el.appendChild(this._renderStateProps(node));
                 return;
             }
         }
-        if (this._selectedEdgeId) {
-            const edge = (this._model && this._model.edges.find(e => (e.id || "") === this._selectedEdgeId)) || null;
+        if (state.selectedEdge) {
+            const edge = (this._model && this._model.edges.find(e => (e.id || "") === state.selectedEdge)) || null;
             if (edge) {
-                this._propsHost.appendChild(this._renderTransitionProps(edge));
+                el.appendChild(this._renderTransitionProps(edge));
                 return;
             }
         }
 
-        this._propsHost.appendChild(this._renderEmptyProps());
+        el.appendChild(this._renderEmptyProps());
     }
 
     /**

@@ -11,6 +11,12 @@
  * status / decision / solution), free-form labels, a body in HTML, a list of
  * likes, a reactions map (emoji → user-ids), and a flat replies array.
  *
+ * The surface is a pure function of the state (render), patched into the host by the keyed
+ * reconciler of the Data base. The comments and everything the reader opens on them - a
+ * collapsed comment, the inline editor, a reply draft, a delete confirmation, the reaction
+ * picker - are state, so a like or a reload never throws away what the reader was doing. The
+ * WYSIWYG editor of a comment in edit mode is a nested control on a node the reconciler keeps.
+ *
  * Declarative configuration: the host carries wx-service islands named
  * "data" (comments endpoint), "users" (mention resolution) and "upload"
  * (inline image upload), plus the data-current-user attribute.
@@ -96,10 +102,30 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
             sortBy: "date",          // "date" | "likes"
             sortDir: (persistedSortDir === "asc" || persistedSortDir === "desc") ? persistedSortDir : "desc",
             filterCat: "all",
-            editingId: null          // id of comment currently in edit-mode
+            editingId: null,         // id of comment currently in edit-mode
+            editDraft: null,         // { category, labels } of the comment in edit-mode
+            comments: [],
+            categories: {},
+            users: {},               // userId -> user record
+            collapsed: {},           // commentId -> true
+            replyDrafts: {},         // commentId -> reply text, present while a reply is open
+            confirmDelete: {},       // commentId -> true while the delete strip shows
+            reactionPicker: null     // commentId whose reaction picker is open
         }, webexpress.webapp.Data.readState(element));
-        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
-        const services = islandServices;
+        const services = webexpress.webapp.ServiceRegistry.fromElement(element);
+
+        // categories are sourced from the REST API ({uri}/categories) unless
+        // a static override is supplied via the data-categories attribute
+        // (used for offline / read-only embeds).
+        let categoriesPreset = false;
+        if (element.dataset.categories) {
+            try {
+                initialState.categories = webexpress.webapp.commentModel.normalizeCategories(JSON.parse(element.dataset.categories));
+                categoriesPreset = true;
+            } catch (_) {
+                categoriesPreset = false;
+            }
+        }
 
         super(element, { state: initialState, services: services });
 
@@ -117,20 +143,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
 
         this._currentUser = element.dataset.currentUser || null;
         this._readonly = element.dataset.readonly === "true";
-
-        // categories are sourced from the REST API ({uri}/categories) unless
-        // a static override is supplied via the data-categories attribute
-        // (used for offline / read-only embeds).
-        this._categoriesPreset = false;
-        this._categories = {};
-        if (element.dataset.categories) {
-            try {
-                this._categories = this._normalizeCategories(JSON.parse(element.dataset.categories));
-                this._categoriesPreset = true;
-            } catch (_) {
-                this._categoriesPreset = false;
-            }
-        }
+        this._categoriesPreset = categoriesPreset;
 
         // the data service backs the categories, comments, users, edit, delete,
         // like, pin, reaction and reply requests
@@ -144,10 +157,26 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
         this._resource = (element.dataset && element.dataset.wxResource) || null;
         this._viewState = null;
 
-        // data and caches (view state, not part of the store)
-        this._comments = [];
-        this._editorEditRef = null; // EditorCtrl instance while editing
-        this._userCache = {};    // userId -> user record
+        // the editor of the comment in edit mode, a nested control
+        this._editorEditRef = null;
+        this._editorHost = null;
+        this._sortDirBtn = null;
+        // reply fields that have just opened and still wait for the focus
+        this._focusReplies = new Set();
+        this._replyInputs = new Map();
+
+        // stable handlers, so a render does not swap the listeners of unchanged nodes
+        this._onFilter = (e) => this.setState({ filterCat: e.target.value });
+        this._onSort = (e) => this.setState({ sortBy: e.target.value });
+        this._onSortDir = () => {
+            const sortDir = this._sortDir === "asc" ? "desc" : "asc";
+            webexpress.webui.LocalStorage.setItem("wx_comment_sort_dir", sortDir);
+            this.setState({ sortDir: sortDir });
+        };
+        this._onEditCategory = (e) => this.setState({ editDraft: Object.assign({}, this.state.editDraft, { category: e.target.value }) });
+        this._onEditLabels = (e) => this.setState({ editDraft: Object.assign({}, this.state.editDraft, { labels: e.target.value }) });
+        this._onCommentAdded = (event) => this._handleCommentAdded(event);
+        this._onDocumentMouseDown = (e) => this._closeReactionPicker(e);
 
         // clean host
         element.textContent = "";
@@ -156,8 +185,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
         element.removeAttribute("data-categories");
         element.classList.add("wx-comment");
 
-        this._buildDom();
-        this._attachEventHandlers();
+        this.mount();
         void this._init();
     }
 
@@ -177,6 +205,18 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
     set _editingId(value) { this._store.setState({ editingId: value }); }
 
     /**
+     * The comments, backed by the store so a change re-renders.
+     * @returns {Array<object>} The comments.
+     */
+    get _comments() {
+        return this.state.comments || [];
+    }
+
+    set _comments(value) {
+        this.setState({ comments: value });
+    }
+
+    /**
      * Bootstraps the control: loads categories from the REST API (unless
      * provided declaratively) and then performs the initial comment load.
      */
@@ -193,16 +233,11 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
         if (!this._categoriesPreset) {
             await this._loadCategories();
         }
-        this._rebuildFilterOptions();
 
         // when the server seeded the comments through the data-wx-state island,
         // render them without a round trip; otherwise load from the endpoint
-        const seeded = this.state.comments;
-        if (Array.isArray(seeded) && seeded.length > 0) {
-            this._comments = seeded.slice();
+        if (this._comments.length > 0) {
             await this._preloadUsers();
-            this._rebuildFilterOptions();
-            this._renderList();
         } else {
             await this._load();
         }
@@ -253,7 +288,6 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
         if (!this._categoriesPreset) {
             await this._loadCategories();
         }
-        this._rebuildFilterOptions();
 
         const unsubscribe = viewState.watch((state) => viewState.slice(this._resource, state), (slice) => this._applySlice(slice));
         (element._wxCleanup = element._wxCleanup || []).push(unsubscribe);
@@ -271,11 +305,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
         slice = slice || {};
         const data = slice.data;
         this._comments = Array.isArray(data) ? data : (Array.isArray(slice.items) ? slice.items : []);
-
-        this._preloadUsers().then(() => {
-            this._rebuildFilterOptions();
-            this._renderList();
-        });
+        void this._preloadUsers();
     }
 
     /**
@@ -284,17 +314,17 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
      */
     async _loadCategories() {
         if (!this._uri || !this._service) {
-            this._categories = {};
+            this.setState({ categories: {} });
             return;
         }
         const result = await this._service.request(
             webexpress.webapp.commentModel.categoriesUrl(this._uri),
             { headers: { "Accept": "application/json" } });
         if (result.ok) {
-            this._categories = this._normalizeCategories(result.data);
+            this.setState({ categories: this._normalizeCategories(result.data) });
         } else {
             console.warn("CommentCtrl: categories load failed", webexpress.webapp.ServiceResult.describe(result));
-            this._categories = {};
+            this.setState({ categories: {} });
         }
     }
 
@@ -309,133 +339,53 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Tears down listeners.
+     * Listens for comments authored by the separate composer control and for clicks that
+     * close the reaction picker, for as long as the control is mounted.
      */
-    destroy() {
-        if (this._onCommentAdded) {
-            document.removeEventListener(webexpress.webapp.Event.COMMENT_ADDED_EVENT, this._onCommentAdded);
-            this._onCommentAdded = null;
-        }
+    onMount() {
+        document.addEventListener(webexpress.webapp.Event.COMMENT_ADDED_EVENT, this._onCommentAdded);
+        document.addEventListener("mousedown", this._onDocumentMouseDown);
     }
 
     /**
-     * Builds the static DOM scaffold: toolbar, list container.
+     * Creates the editor of a comment that just entered edit mode and focuses a reply field
+     * that just opened; both are side effects the tree cannot express.
+     * @param {object} state - The rendered state.
      */
-    _buildDom() {
-        this._toolbar = document.createElement("div");
-        this._toolbar.className = "wx-comment-toolbar";
-
-        // category filter
-        this._filterSelect = document.createElement("select");
-        this._filterSelect.className = "wx-comment-filter";
-        this._rebuildFilterOptions();
-
-        // sort selector
-        this._sortSelect = document.createElement("select");
-        this._sortSelect.className = "wx-comment-sort";
-        const optDate = document.createElement("option");
-        optDate.value = "date";
-        optDate.textContent = this._i18n("webexpress.webapp:comment.sort.date", "Date");
-        const optLikes = document.createElement("option");
-        optLikes.value = "likes";
-        optLikes.textContent = this._i18n("webexpress.webapp:comment.sort.likes", "Likes");
-        this._sortSelect.appendChild(optDate);
-        this._sortSelect.appendChild(optLikes);
-
-        this._sortDirBtn = document.createElement("button");
-        this._sortDirBtn.type = "button";
-        this._sortDirBtn.className = "wx-comment-sort-dir";
-        this._updateSortDirBtn();
-
-        const filterLabel = document.createElement("span");
-        filterLabel.className = "wx-comment-toolbar-label";
-        filterLabel.textContent = this._i18n("webexpress.webapp:comment.filter", "Filter") + ":";
-
-        const sortLabel = document.createElement("span");
-        sortLabel.className = "wx-comment-toolbar-label";
-        sortLabel.textContent = this._i18n("webexpress.webapp:comment.sort", "Sort") + ":";
-
-        this._toolbar.appendChild(filterLabel);
-        this._toolbar.appendChild(this._filterSelect);
-        this._toolbar.appendChild(sortLabel);
-        this._toolbar.appendChild(this._sortSelect);
-        this._toolbar.appendChild(this._sortDirBtn);
-
-        const pinnedNote = document.createElement("span");
-        pinnedNote.className = "wx-comment-pinned-note";
-        const pinnedNoteIcon = document.createElement("i");
-        pinnedNoteIcon.className = this._affordanceIconClass("pin");
-        pinnedNoteIcon.setAttribute("aria-hidden", "true");
-        pinnedNote.appendChild(pinnedNoteIcon);
-        pinnedNote.appendChild(document.createTextNode(" " + this._i18n("webexpress.webapp:comment.pinned-on-top", "Pinned comments stay on top")));
-        this._toolbar.appendChild(pinnedNote);
-
-        // list area
-        this._list = document.createElement("div");
-        this._list.className = "wx-comment-list";
-
-        this._element.appendChild(this._toolbar);
-        this._element.appendChild(this._list);
+    onUpdate(state) {
+        if (state.editingId && this._editorHost && !this._editorEditRef) {
+            try {
+                this._editorEditRef = new webexpress.webui.EditorCtrl(this._editorHost);
+            } catch (e) {
+                console.warn("CommentCtrl: edit-editor init failed", e);
+            }
+        }
+        for (const id of this._focusReplies) {
+            this._replyInputs.get(id)?.focus?.();
+        }
+        this._focusReplies.clear();
     }
 
     /**
-     * Re-populates the filter select options. Called on init and after each
-     * load when category counts change.
+     * Releases the document listeners.
      */
-    _rebuildFilterOptions() {
-        const prev = this._filterSelect.value;
-        this._filterSelect.replaceChildren();
-        const all = document.createElement("option");
-        all.value = "all";
-        const counts = this._counts();
-        all.textContent = this._i18n("webexpress.webapp:comment.filter.all", "All categories") + ` (${counts.all})`;
-        this._filterSelect.appendChild(all);
-        for (const cat of Object.values(this._categories)) {
-            const opt = document.createElement("option");
-            opt.value = cat.id;
-            const label = this._i18n(cat.i18n, cat.id);
-            opt.textContent = `${label} (${counts[cat.id] || 0})`;
-            this._filterSelect.appendChild(opt);
-        }
-        if (prev) {
-            this._filterSelect.value = prev;
-        }
+    onUnmount() {
+        document.removeEventListener(webexpress.webapp.Event.COMMENT_ADDED_EVENT, this._onCommentAdded);
+        document.removeEventListener("mousedown", this._onDocumentMouseDown);
     }
 
     /**
      * Counts comments per category for the toolbar display.
+     * @param {object} [state=this.state] - The state to count in.
      * @returns {Object<string, number>}
      */
-    _counts() {
-        const c = { all: this._comments.length };
-        for (const k of Object.keys(this._categories)) {
-            c[k] = this._comments.filter(x => x.category === k).length;
+    _counts(state = this.state) {
+        const comments = state.comments || [];
+        const c = { all: comments.length };
+        for (const k of Object.keys(state.categories)) {
+            c[k] = comments.filter(x => x.category === k).length;
         }
         return c;
-    }
-
-    /**
-     * Wires UI event handlers.
-     */
-    _attachEventHandlers() {
-        this._filterSelect.addEventListener("change", () => {
-            this._filterCat = this._filterSelect.value;
-            this._renderList();
-        });
-        this._sortSelect.addEventListener("change", () => {
-            this._sortBy = this._sortSelect.value;
-            this._renderList();
-        });
-        this._sortDirBtn.addEventListener("click", () => {
-            this._sortDir = this._sortDir === "asc" ? "desc" : "asc";
-            webexpress.webui.LocalStorage.setItem("wx_comment_sort_dir", this._sortDir);
-            this._updateSortDirBtn();
-            this._renderList();
-        });
-
-        // pick up new comments authored by the separate composer control
-        this._onCommentAdded = (event) => this._handleCommentAdded(event);
-        document.addEventListener(webexpress.webapp.Event.COMMENT_ADDED_EVENT, this._onCommentAdded);
     }
 
     /**
@@ -455,22 +405,8 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
         if (this._comments.some(c => c.id === detail.comment.id)) {
             return;
         }
-        this._comments.push(detail.comment);
-        this._preloadUsers().then(() => {
-            this._rebuildFilterOptions();
-            this._renderList();
-        });
-    }
-
-    /**
-     * Updates the label of the sort-direction button.
-     */
-    _updateSortDirBtn() {
-        if (this._sortDir === "asc") {
-            this._sortDirBtn.textContent = this._i18n("webexpress.webapp:comment.sort.asc", "Ascending");
-        } else {
-            this._sortDirBtn.textContent = this._i18n("webexpress.webapp:comment.sort.desc", "Descending");
-        }
+        this._comments = this._comments.concat([detail.comment]);
+        void this._preloadUsers();
     }
 
     /**
@@ -479,20 +415,17 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
     async _load() {
         if (!this._uri || !this._service) {
             this._comments = [];
-            this._renderList();
             return;
         }
         const result = await this._service.request(this._uri, { headers: { "Accept": "application/json" } });
         if (result.ok) {
-            this._comments = result.data;
+            this._comments = Array.isArray(result.data) ? result.data : [];
         } else {
             console.warn("CommentCtrl: load failed", webexpress.webapp.ServiceResult.describe(result));
             this._comments = [];
         }
         // pre-warm user cache for everyone referenced
         await this._preloadUsers();
-        this._rebuildFilterOptions();
-        this._renderList();
     }
 
     /**
@@ -515,7 +448,8 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
             }
         }
         if (this._currentUser) ids.add(this._currentUser);
-        const missing = [...ids].filter(id => !this._userCache[id]);
+        const known = this.state.users;
+        const missing = [...ids].filter(id => typeof id !== "object" && !known[id]);
         if (missing.length === 0) {
             return;
         }
@@ -523,509 +457,515 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
             webexpress.webapp.commentModel.buildUsersUrl(this._usersUri, missing),
             { headers: { "Accept": "application/json" } });
         if (result.ok) {
+            const users = Object.assign({}, this.state.users);
             for (const u of result.data) {
-                this._userCache[u.id] = u;
+                users[u.id] = u;
             }
+            this.setState({ users: users });
         } else {
             console.warn("CommentCtrl: user preload failed", webexpress.webapp.ServiceResult.describe(result));
         }
     }
 
     /**
-     * Returns a user record from the local cache, or a placeholder when
-     * the cache hasn't seen the id yet.
-     * @param {string} id
+     * Returns a user record from the cache, or a placeholder when the cache hasn't seen the
+     * id yet. A server that embeds the author record instead of its id is answered with it.
+     * @param {string|object} id - The user id, or the user record.
+     * @param {object} [users=this.state.users] - The user cache.
      * @returns {Object}
      */
-    _user(id) {
-        return this._userCache[id] || { id, name: id, initials: String(id).slice(0, 2).toUpperCase(), color: "#888", team: "" };
+    _user(id, users = this.state.users) {
+        if (id && typeof id === "object") {
+            return id;
+        }
+        return users[id] || { id, name: id, initials: String(id).slice(0, 2).toUpperCase(), color: "#888", team: "" };
     }
 
     /**
-     * Renders the comment list according to the current filter and sort.
-     * Preserves the page scroll position across the rebuild so user actions
-     * (like, pin, collapse, edit, reply, …) do not yank the viewport back to
-     * the top.
+     * Returns the comments the list shows: the selected category, pinned comments first, then
+     * in the selected order.
+     * @param {object} state - The state.
+     * @returns {Array<object>} The comments to render.
      */
-    _renderList() {
-        const scrollEl = document.scrollingElement || document.documentElement;
-        const savedScroll = scrollEl ? scrollEl.scrollTop : 0;
-
-        this._list.replaceChildren();
-
-        let arr = this._comments.slice();
-        if (this._filterCat !== "all") {
-            arr = arr.filter(c => c.category === this._filterCat);
+    _visibleComments(state) {
+        let arr = (state.comments || []).slice();
+        if (state.filterCat !== "all") {
+            arr = arr.filter(c => c.category === state.filterCat);
         }
-        arr.sort((a, b) => {
+        return arr.sort((a, b) => {
             // pinned first regardless of sort
             if ((a.pinned ? 1 : 0) !== (b.pinned ? 1 : 0)) {
                 return a.pinned ? -1 : 1;
             }
             let cmp = 0;
-            if (this._sortBy === "likes") {
+            if (state.sortBy === "likes") {
                 cmp = (a.likes?.length || 0) - (b.likes?.length || 0);
             } else {
                 cmp = String(a.when || "").localeCompare(String(b.when || ""));
             }
-            return this._sortDir === "asc" ? cmp : -cmp;
+            return state.sortDir === "asc" ? cmp : -cmp;
         });
-
-        if (arr.length === 0) {
-            const empty = document.createElement("div");
-            empty.className = "wx-comment-empty";
-            empty.textContent = this._filterCat === "all"
-                ? this._i18n("webexpress.webapp:comment.empty", "No comments yet")
-                : this._i18n("webexpress.webapp:comment.empty.filtered", "No comments in this category");
-            this._list.appendChild(empty);
-        } else {
-            for (const c of arr) {
-                this._list.appendChild(this._renderComment(c));
-            }
-        }
-
-        // restore the viewport — both immediately (covers the common case) and
-        // on the next frame to defeat any browser-side scroll adjustments that
-        // happen after layout settles.
-        if (scrollEl) {
-            scrollEl.scrollTop = savedScroll;
-            requestAnimationFrame(() => {
-                if (scrollEl.scrollTop !== savedScroll) {
-                    scrollEl.scrollTop = savedScroll;
-                }
-            });
-        }
     }
 
     /**
-     * Builds the DOM for a single comment.
-     * @param {Object} comment
-     * @returns {HTMLElement}
+     * Renders an icon from a resolved class string; icons are decoration next to a label.
+     * @param {string} iconClass - The resolved icon classes.
+     * @returns {object} The icon virtual node.
      */
-    _renderComment(comment) {
-        const author = this._user(comment.author);
-        const cat = this._categories[comment.category]
-            || this._categories.general
+    _icon(iconClass) {
+        return webexpress.webui.h("i", { class: iconClass, "aria-hidden": "true" });
+    }
+
+    /**
+     * Renders the toolbar and the list. Unchanged comments keep their nodes, so an action on
+     * one comment neither rebuilds the others nor moves the page.
+     * @param {object} state - The current state.
+     * @returns {Array<object>} The virtual node tree of the host.
+     */
+    render(state) {
+        const h = webexpress.webui.h;
+        const counts = this._counts(state);
+        const comments = this._visibleComments(state);
+
+        return [
+            h("div", { key: "toolbar", class: "wx-comment-toolbar" },
+                h("span", { class: "wx-comment-toolbar-label" }, this._i18n("webexpress.webapp:comment.filter", "Filter") + ":"),
+                h("select", { class: "wx-comment-filter", value: state.filterCat, on: { change: this._onFilter } },
+                    h("option", { key: "all", value: "all" },
+                        this._i18n("webexpress.webapp:comment.filter.all", "All categories") + ` (${counts.all})`),
+                    Object.values(state.categories).map((cat) => h("option", { key: cat.id, value: cat.id },
+                        `${this._i18n(cat.i18n, cat.id)} (${counts[cat.id] || 0})`))),
+                h("span", { class: "wx-comment-toolbar-label" }, this._i18n("webexpress.webapp:comment.sort", "Sort") + ":"),
+                h("select", { class: "wx-comment-sort", value: state.sortBy, on: { change: this._onSort } },
+                    h("option", { value: "date" }, this._i18n("webexpress.webapp:comment.sort.date", "Date")),
+                    h("option", { value: "likes" }, this._i18n("webexpress.webapp:comment.sort.likes", "Likes"))),
+                h("button", {
+                    type: "button",
+                    class: "wx-comment-sort-dir",
+                    on: { click: this._onSortDir },
+                    ref: (el) => { this._sortDirBtn = el; }
+                }, state.sortDir === "asc"
+                    ? this._i18n("webexpress.webapp:comment.sort.asc", "Ascending")
+                    : this._i18n("webexpress.webapp:comment.sort.desc", "Descending")),
+                h("span", { class: "wx-comment-pinned-note" },
+                    this._icon(this._affordanceIconClass("pin")),
+                    " " + this._i18n("webexpress.webapp:comment.pinned-on-top", "Pinned comments stay on top"))),
+            h("div", { key: "list", class: "wx-comment-list" }, comments.length === 0
+                ? h("div", { key: "empty", class: "wx-comment-empty" }, state.filterCat === "all"
+                    ? this._i18n("webexpress.webapp:comment.empty", "No comments yet")
+                    : this._i18n("webexpress.webapp:comment.empty.filtered", "No comments in this category"))
+                : comments.map((comment) => this._renderComment(comment, state)))
+        ];
+    }
+
+    /**
+     * Renders a single comment.
+     * @param {Object} comment - The comment.
+     * @param {object} state - The current state.
+     * @returns {object} The comment virtual node.
+     */
+    _renderComment(comment, state) {
+        const h = webexpress.webui.h;
+        const author = this._user(comment.author, state.users);
+        const cat = state.categories[comment.category]
+            || state.categories.general
             || webexpress.webapp.CommentCtrl._fallbackCategory(comment.category);
-        const isMe = comment.author === this._currentUser;
+        const isMe = (author.id ?? comment.author) === this._currentUser;
         const liked = (comment.likes || []).includes(this._currentUser);
-        const collapsed = !!comment.collapsed;
-        const editing = this._editingId === comment.id;
+        const collapsed = !!state.collapsed[comment.id];
+        const editing = state.editingId === comment.id;
+        const replies = comment.replies || [];
+        const classes = ["wx-comment-item"];
+        if (comment.pinned) classes.push("wx-comment-item-pinned");
+        if (collapsed) classes.push("wx-comment-item-collapsed");
+        if (isMe) classes.push("wx-comment-item-me");
 
-        const wrap = document.createElement("article");
-        wrap.className = "wx-comment-item"
-            + (comment.pinned ? " wx-comment-item-pinned" : "")
-            + (collapsed ? " wx-comment-item-collapsed" : "")
-            + (isMe ? " wx-comment-item-me" : "");
-        wrap.dataset.commentId = comment.id;
-
-        // header
-        const head = document.createElement("header");
-        head.className = "wx-comment-head";
-        head.innerHTML = `
-            <span class="wx-comment-avatar wx-comment-avatar-lg" style="background:${author.color || "#888"}" title="${this._esc(author.name)}">${this._esc(author.initials || "?")}</span>
-            <div class="wx-comment-head-main">
-                <div class="wx-comment-author-row">
-                    <span class="wx-comment-author">${this._esc(author.name)}</span>
-                    ${author.team ? `<span class="wx-comment-team">· ${this._esc(author.team)}</span>` : ""}
-                    <span class="wx-comment-when${comment.edited ? " wx-comment-when-edited" : ""}">${this._esc(comment.when)}</span>
-                    ${comment.pinned ? `<span class="wx-comment-pinned"><i class="${this._affordanceIconClass("pin")}" aria-hidden="true"></i> ${this._esc(this._i18n("webexpress.webapp:comment.pinned", "Pinned"))}</span>` : ""}
-                </div>
-                <div class="wx-comment-labels">
-                    <span class="wx-comment-category" style="color:${cat.color};background:${cat.bg}">${this._esc(this._i18n(cat.i18n, cat.id))}</span>
-                    ${(comment.labels || []).map(l => `<span class="wx-comment-label">${this._esc(l)}</span>`).join("")}
-                </div>
-            </div>
-        `;
-
-        // header actions
-        const actions = document.createElement("div");
-        actions.className = "wx-comment-head-actions";
-
-        const likeBtn = this._iconBtn(this._affordanceIconClass(liked ? "likeFilled" : "likeOutline"), liked
-            ? this._i18n("webexpress.webapp:comment.like.remove", "Unlike")
-            : this._i18n("webexpress.webapp:comment.like", "Like"));
-        likeBtn.classList.toggle("wx-comment-action-liked", liked);
-        const likeCount = document.createElement("span");
-        likeCount.className = "wx-comment-like-count";
-        likeCount.textContent = String((comment.likes || []).length);
-        likeBtn.appendChild(likeCount);
-        likeBtn.addEventListener("click", () => this._toggleLike(comment));
-        actions.appendChild(likeBtn);
-
-        const pinBtn = this._iconBtn(this._affordanceIconClass("pin"), comment.pinned
-            ? this._i18n("webexpress.webapp:comment.pin.remove", "Unpin")
-            : this._i18n("webexpress.webapp:comment.pin", "Pin"));
-        pinBtn.classList.toggle("wx-comment-action-pinned", !!comment.pinned);
-        pinBtn.addEventListener("click", () => this._togglePin(comment));
-        actions.appendChild(pinBtn);
-
-        const collapseBtn = this._iconBtn(this._affordanceIconClass(collapsed ? "chevronRight" : "chevronDown"), collapsed
-            ? this._i18n("webexpress.webapp:comment.expand", "Expand")
-            : this._i18n("webexpress.webapp:comment.collapse", "Collapse"));
-        collapseBtn.addEventListener("click", () => {
-            comment.collapsed = !collapsed;
-            this._renderList();
-        });
-        actions.appendChild(collapseBtn);
-
-        if (isMe && !this._readonly) {
-            const editBtn = this._iconBtn(this._affordanceIconClass("edit"), this._i18n("webexpress.webapp:comment.edit", "Edit"));
-            editBtn.addEventListener("click", () => {
-                this._editingId = editing ? null : comment.id;
-                this._renderList();
-            });
-            actions.appendChild(editBtn);
-
-            const delBtn = this._iconBtn(this._affordanceIconClass("delete"), this._i18n("webexpress.webapp:comment.delete", "Delete"));
-            delBtn.addEventListener("click", () => this._confirmDelete(comment, wrap));
-            actions.appendChild(delBtn);
-        }
-        head.appendChild(actions);
-        wrap.appendChild(head);
-
-        // body OR editor
-        if (editing) {
-            wrap.appendChild(this._renderEditor(comment));
-        } else {
-            const body = document.createElement("div");
-            body.className = "wx-comment-body";
-            body.innerHTML = comment.body || "";
-            wrap.appendChild(body);
-
-            // reactions
-            wrap.appendChild(this._renderReactions(comment));
-        }
-
-        // footer
-        const footer = document.createElement("footer");
-        footer.className = "wx-comment-footer";
-
-        const replyBtn = document.createElement("button");
-        replyBtn.type = "button";
-        replyBtn.className = "wx-comment-reply-btn";
-        const replyIcon = document.createElement("i");
-        replyIcon.className = this._affordanceIconClass("reply");
-        replyIcon.setAttribute("aria-hidden", "true");
-        replyBtn.appendChild(replyIcon);
-        replyBtn.appendChild(document.createTextNode(" " + this._i18n("webexpress.webapp:comment.reply", "Reply")));
-        replyBtn.addEventListener("click", () => this._startReply(comment, wrap));
-        if (!this._readonly) {
-            footer.appendChild(replyBtn);
-        }
-
-        if ((comment.replies || []).length > 0) {
-            const count = document.createElement("span");
-            count.className = "wx-comment-reply-count";
-            const n = comment.replies.length;
-            const key = n === 1
-                ? "webexpress.webapp:comment.replies.singular"
-                : "webexpress.webapp:comment.replies.plural";
-            count.textContent = this._i18n(key, n === 1 ? "{count} reply" : "{count} replies").replace("{count}", n);
-            footer.appendChild(count);
-        }
-
-        if (comment.edited) {
-            const ed = document.createElement("span");
-            ed.className = "wx-comment-edited-note";
-            const w = comment.edited.when || "";
-            ed.textContent = this._i18n("webexpress.webapp:comment.edited.at", "edited {when}").replace("{when}", w);
-            footer.appendChild(ed);
-        }
-        wrap.appendChild(footer);
-
-        // replies
-        if ((comment.replies || []).length > 0) {
-            wrap.appendChild(this._renderReplies(comment));
-        }
-
-        return wrap;
+        return h("article", { key: comment.id, class: classes.join(" "), dataset: { commentId: comment.id } },
+            h("header", { class: "wx-comment-head" },
+                h("span", {
+                    class: "wx-comment-avatar wx-comment-avatar-lg",
+                    style: { background: author.color || "#888" },
+                    title: author.name
+                }, author.initials || "?"),
+                h("div", { class: "wx-comment-head-main" },
+                    h("div", { class: "wx-comment-author-row" },
+                        h("span", { class: "wx-comment-author" }, author.name),
+                        author.team && h("span", { class: "wx-comment-team" }, "· " + author.team),
+                        h("span", { class: comment.edited ? "wx-comment-when wx-comment-when-edited" : "wx-comment-when" }, comment.when),
+                        comment.pinned && h("span", { class: "wx-comment-pinned" },
+                            this._icon(this._affordanceIconClass("pin")),
+                            " " + this._i18n("webexpress.webapp:comment.pinned", "Pinned"))),
+                    h("div", { class: "wx-comment-labels" },
+                        h("span", { class: "wx-comment-category", style: { color: cat.color, background: cat.bg } },
+                            this._i18n(cat.i18n, cat.id)),
+                        (comment.labels || []).map((label) => h("span", { key: label, class: "wx-comment-label" }, label)))),
+                h("div", { class: "wx-comment-head-actions" },
+                    this._actionButton("like", liked ? "likeFilled" : "likeOutline", liked
+                        ? this._i18n("webexpress.webapp:comment.like.remove", "Unlike")
+                        : this._i18n("webexpress.webapp:comment.like", "Like"),
+                    () => this._toggleLike(comment), liked ? "wx-comment-action-liked" : null,
+                    h("span", { class: "wx-comment-like-count" }, String((comment.likes || []).length))),
+                    this._actionButton("pin", "pin", comment.pinned
+                        ? this._i18n("webexpress.webapp:comment.pin.remove", "Unpin")
+                        : this._i18n("webexpress.webapp:comment.pin", "Pin"),
+                    () => this._togglePin(comment), comment.pinned ? "wx-comment-action-pinned" : null),
+                    this._actionButton("collapse", collapsed ? "chevronRight" : "chevronDown", collapsed
+                        ? this._i18n("webexpress.webapp:comment.expand", "Expand")
+                        : this._i18n("webexpress.webapp:comment.collapse", "Collapse"),
+                    () => this._toggleCollapsed(comment.id)),
+                    isMe && !this._readonly && this._actionButton("edit", "edit",
+                        this._i18n("webexpress.webapp:comment.edit", "Edit"), () => this._toggleEdit(comment)),
+                    isMe && !this._readonly && this._actionButton("delete", "delete",
+                        this._i18n("webexpress.webapp:comment.delete", "Delete"), () => this._setFlag("confirmDelete", comment.id, true)))),
+            editing
+                ? this._renderEditor(comment, state)
+                : [h("div", { key: "body", class: "wx-comment-body", html: comment.body || "" }), this._renderReactions(comment, state)],
+            h("footer", { key: "footer", class: "wx-comment-footer" },
+                !this._readonly && h("button", {
+                    type: "button",
+                    class: "wx-comment-reply-btn",
+                    on: { click: () => this._startReply(comment.id) }
+                }, this._icon(this._affordanceIconClass("reply")), " " + this._i18n("webexpress.webapp:comment.reply", "Reply")),
+                replies.length > 0 && h("span", { class: "wx-comment-reply-count" },
+                    this._i18n(replies.length === 1 ? "webexpress.webapp:comment.replies.singular" : "webexpress.webapp:comment.replies.plural",
+                        replies.length === 1 ? "{count} reply" : "{count} replies").replace("{count}", replies.length)),
+                comment.edited && h("span", { class: "wx-comment-edited-note" },
+                    this._i18n("webexpress.webapp:comment.edited.at", "edited {when}").replace("{when}", comment.edited.when || ""))),
+            replies.length > 0 && h("div", { key: "replies", class: "wx-comment-replies" },
+                replies.map((reply, index) => this._renderReply(reply, index, state))),
+            comment.id in state.replyDrafts && this._renderReplyCompose(comment, state),
+            state.confirmDelete[comment.id] && this._renderDeleteConfirm(comment));
     }
 
     /**
-     * Builds a small icon-only action button rendered with an icon of the
-     * glyph.
-     * @param {string} iconClass - The resolved icon class (e.g. "wx-icon-light wx-icon-light-heart").
+     * Renders a small icon-only action button of a comment's header.
+     * @param {string} key - The key of the button within the header.
+     * @param {string} icon - The affordance name of the icon.
      * @param {string} title - Accessible label.
-     * @returns {HTMLButtonElement}
+     * @param {Function} onClick - The action.
+     * @param {string|null} [state] - A class marking an active state.
+     * @param {object} [extra] - A further child, such as a count.
+     * @returns {object} The button virtual node.
      */
-    _iconBtn(iconClass, title) {
-        const b = document.createElement("button");
-        b.type = "button";
-        b.className = "wx-comment-action";
-        b.title = title;
-        b.setAttribute("aria-label", title);
-        const icon = document.createElement("i");
-        icon.className = iconClass;
-        icon.setAttribute("aria-hidden", "true");
-        b.appendChild(icon);
-        return b;
+    _actionButton(key, icon, title, onClick, state, extra) {
+        return webexpress.webui.h("button", {
+            key: key,
+            type: "button",
+            class: state ? "wx-comment-action " + state : "wx-comment-action",
+            title: title,
+            "aria-label": title,
+            on: { click: onClick }
+        }, this._icon(this._affordanceIconClass(icon)), extra);
     }
 
     /**
-     * Builds the reactions row.
-     * @param {Object} comment
-     * @returns {HTMLElement}
+     * Renders the reactions row with the reaction picker.
+     * @param {Object} comment - The comment.
+     * @param {object} state - The current state.
+     * @returns {object} The reactions virtual node.
      */
-    _renderReactions(comment) {
-        const row = document.createElement("div");
-        row.className = "wx-comment-reactions";
-
+    _renderReactions(comment, state) {
+        const h = webexpress.webui.h;
         const entries = Object.entries(comment.reactions || {}).filter(([, users]) => users.length > 0);
-        for (const [emoji, users] of entries) {
-            const mine = users.includes(this._currentUser);
-            const names = users.map(uid => this._user(uid).name).join(", ");
-            const b = document.createElement("button");
-            b.type = "button";
-            b.className = "wx-comment-reaction" + (mine ? " wx-comment-reaction-mine" : "");
-            b.title = names + (mine ? " · " + this._i18n("webexpress.webapp:comment.reaction.you-too", "and you") : "");
-            b.innerHTML = `<span class="wx-comment-reaction-emoji">${emoji}</span> ${users.length}`;
-            b.addEventListener("click", () => this._toggleReaction(comment, emoji));
-            row.appendChild(b);
-        }
+        const pickerOpen = state.reactionPicker === comment.id;
+        const addLabel = this._i18n("webexpress.webapp:comment.reaction.add", "Add reaction");
 
-        if (!this._readonly) {
-            const wrap = document.createElement("span");
-            wrap.className = "wx-comment-reaction-add-wrap";
-
-            const addBtn = document.createElement("button");
-            addBtn.type = "button";
-            addBtn.className = "wx-comment-reaction-add";
-            addBtn.title = this._i18n("webexpress.webapp:comment.reaction.add", "Add reaction");
-            addBtn.setAttribute("aria-label", addBtn.title);
-            const addBtnIcon = document.createElement("i");
-            addBtnIcon.className = this._affordanceIconClass("plus");
-            addBtnIcon.setAttribute("aria-hidden", "true");
-            addBtn.appendChild(addBtnIcon);
-
-            const popup = document.createElement("div");
-            popup.className = "wx-comment-reaction-popup";
-            popup.style.display = "none";
-            for (const em of webexpress.webapp.CommentCtrl.REACTIONS) {
-                const b = document.createElement("button");
-                b.type = "button";
-                b.textContent = em;
-                b.addEventListener("click", () => {
-                    popup.style.display = "none";
-                    this._toggleReaction(comment, em);
-                });
-                popup.appendChild(b);
-            }
-
-            addBtn.addEventListener("click", (e) => {
-                e.stopPropagation();
-                const open = popup.style.display !== "none";
-                popup.style.display = open ? "none" : "flex";
-            });
-            // outside-click close
-            document.addEventListener("mousedown", (e) => {
-                if (popup.style.display === "none") return;
-                if (!wrap.contains(e.target)) popup.style.display = "none";
-            });
-
-            wrap.appendChild(addBtn);
-            wrap.appendChild(popup);
-            row.appendChild(wrap);
-        }
-        return row;
+        return h("div", { key: "reactions", class: "wx-comment-reactions" },
+            entries.map(([emoji, users]) => {
+                const mine = users.includes(this._currentUser);
+                const names = users.map(uid => this._user(uid, state.users).name).join(", ");
+                return h("button", {
+                    key: emoji,
+                    type: "button",
+                    class: mine ? "wx-comment-reaction wx-comment-reaction-mine" : "wx-comment-reaction",
+                    title: names + (mine ? " · " + this._i18n("webexpress.webapp:comment.reaction.you-too", "and you") : ""),
+                    on: { click: () => this._toggleReaction(comment, emoji) }
+                }, h("span", { class: "wx-comment-reaction-emoji" }, emoji), " " + users.length);
+            }),
+            !this._readonly && h("span", { key: "add", class: "wx-comment-reaction-add-wrap" },
+                h("button", {
+                    type: "button",
+                    class: "wx-comment-reaction-add",
+                    title: addLabel,
+                    "aria-label": addLabel,
+                    on: { click: (e) => { e.stopPropagation(); this.setState({ reactionPicker: pickerOpen ? null : comment.id }); } }
+                }, this._icon(this._affordanceIconClass("plus"))),
+                h("div", { class: "wx-comment-reaction-popup", style: { display: pickerOpen ? "flex" : "none" } },
+                    webexpress.webapp.CommentCtrl.REACTIONS.map((emoji) => h("button", {
+                        key: emoji,
+                        type: "button",
+                        on: { click: () => { this.setState({ reactionPicker: null }); this._toggleReaction(comment, emoji); } }
+                    }, emoji)))));
     }
 
     /**
-     * Builds the inline editor used when a comment is being edited.
-     * @param {Object} comment
-     * @returns {HTMLElement}
+     * Closes an open reaction picker when the pointer goes down outside of it.
+     * @param {Event} e - The mousedown event.
      */
-    _renderEditor(comment) {
-        const wrap = document.createElement("div");
-        wrap.className = "wx-comment-edit";
+    _closeReactionPicker(e) {
+        const open = this.state.reactionPicker;
+        if (!open) {
+            return;
+        }
+        const wrap = e.target && e.target.closest ? e.target.closest(".wx-comment-reaction-add-wrap") : null;
+        const article = wrap && wrap.closest ? wrap.closest("[data-comment-id]") : null;
+        if (!article || article.dataset.commentId !== open) {
+            this.setState({ reactionPicker: null });
+        }
+    }
 
-        const editorHost = document.createElement("div");
-        // intentionally do NOT add the auto-registered "wx-webui-editor"
-        // class here — the controller registry would otherwise instantiate
-        // an EditorCtrl on insertion AND our queueMicrotask call below
-        // would instantiate a second one, producing a nested editor inside
-        // the edit pane.
-        editorHost.className = "wx-comment-edit-editor";
-        editorHost.innerHTML = comment.body || "";
+    /**
+     * Renders the inline editor used when a comment is being edited. The editor host is kept
+     * from the reconciler: the WYSIWYG editor created on it owns everything inside.
+     * @param {Object} comment - The comment.
+     * @param {object} state - The current state.
+     * @returns {object} The editor virtual node.
+     */
+    _renderEditor(comment, state) {
+        const h = webexpress.webui.h;
+        const draft = state.editDraft || { category: comment.category, labels: (comment.labels || []).join(", ") };
         // an edited comment offers the same images and link targets as a new one
+        const editorData = {};
         if (this._imageUploadUri) {
-            editorHost.dataset.imageUploadUri = this._imageUploadUri;
+            editorData.imageUploadUri = this._imageUploadUri;
         }
         if (this._imageLibraryUri) {
-            editorHost.dataset.imageLibraryUri = this._imageLibraryUri;
+            editorData.imageLibraryUri = this._imageLibraryUri;
         }
         if (this._linkLibraryUri) {
-            editorHost.dataset.linkLibraryUri = this._linkLibraryUri;
+            editorData.linkLibraryUri = this._linkLibraryUri;
         }
 
-        const actions = document.createElement("div");
-        actions.className = "wx-comment-edit-actions";
+        return h("div", { key: "edit", class: "wx-comment-edit" },
+            // intentionally without the auto-registered "wx-webui-editor" class: the
+            // controller registry would otherwise instantiate a second EditorCtrl
+            h("div", {
+                key: "editor-" + comment.id,
+                class: "wx-comment-edit-editor",
+                keep: true,
+                dataset: editorData,
+                ref: (el) => this._mountEditorHost(el, comment)
+            }),
+            h("div", { class: "wx-comment-edit-actions" },
+                h("select", { class: "wx-comment-edit-cat", value: draft.category, on: { change: this._onEditCategory } },
+                    Object.values(state.categories).map((cat) => h("option", { key: cat.id, value: cat.id }, this._i18n(cat.i18n, cat.id)))),
+                h("input", {
+                    type: "text",
+                    class: "wx-comment-edit-labels",
+                    placeholder: this._i18n("webexpress.webapp:comment.labels.placeholder", "Labels (comma-separated)"),
+                    value: draft.labels,
+                    on: { input: this._onEditLabels }
+                }),
+                h("span", { class: "wx-comment-spacer" }),
+                h("button", {
+                    type: "button",
+                    class: "btn btn-primary btn-sm",
+                    on: { click: () => this._saveEdit(comment, this._editPatch(comment)) }
+                }, this._i18n("webexpress.webui:save", "Save")),
+                h("button", {
+                    type: "button",
+                    class: "btn btn-secondary btn-sm",
+                    on: { click: () => this._endEdit() }
+                }, this._i18n("webexpress.webui:cancel", "Cancel"))));
+    }
 
-        const catSelect = document.createElement("select");
-        catSelect.className = "wx-comment-edit-cat";
-        for (const cat of Object.values(this._categories)) {
-            const opt = document.createElement("option");
-            opt.value = cat.id;
-            opt.textContent = this._i18n(cat.i18n, cat.id);
-            if (comment.category === cat.id) opt.selected = true;
-            catSelect.appendChild(opt);
+    /**
+     * Collects what the edit mode changed: the editor's body and the drafted category and labels.
+     * @param {Object} comment - The comment being edited.
+     * @returns {object} The patch as { body, category, labels }.
+     */
+    _editPatch(comment) {
+        const draft = this.state.editDraft || { category: comment.category, labels: (comment.labels || []).join(", ") };
+        return {
+            body: this._editorEditRef ? this._editorEditRef.exportHtml({ layout: false }) : (this._editorHost ? this._editorHost.innerHTML : comment.body || ""),
+            category: draft.category,
+            labels: String(draft.labels || "").split(",").map(s => s.trim()).filter(Boolean)
+        };
+    }
+
+    /**
+     * Fills a newly rendered editor host with the comment's body; the editor is created on it
+     * once the render is in place.
+     * @param {HTMLElement} host - The editor host.
+     * @param {Object} comment - The comment being edited.
+     */
+    _mountEditorHost(host, comment) {
+        if (this._editorHost === host) {
+            return;
         }
+        this._editorHost = host;
+        this._editorEditRef = null;
+        host.innerHTML = comment.body || "";
+    }
 
-        const labelsInput = document.createElement("input");
-        labelsInput.type = "text";
-        labelsInput.className = "wx-comment-edit-labels";
-        labelsInput.placeholder = this._i18n("webexpress.webapp:comment.labels.placeholder", "Labels (comma-separated)");
-        labelsInput.value = (comment.labels || []).join(", ");
+    /**
+     * Renders one reply of a comment.
+     * @param {Object} reply - The reply.
+     * @param {number} index - Its position, the key of a reply without an id.
+     * @param {object} state - The current state.
+     * @returns {object} The reply virtual node.
+     */
+    _renderReply(reply, index, state) {
+        const h = webexpress.webui.h;
+        const user = this._user(reply.author, state.users);
 
-        const saveBtn = document.createElement("button");
-        saveBtn.type = "button";
-        saveBtn.className = "btn btn-primary btn-sm";
-        saveBtn.textContent = this._i18n("webexpress.webui:save", "Save");
-        saveBtn.addEventListener("click", () => {
-            const newBody = this._editorEditRef ? this._editorEditRef.exportHtml({ layout: false }) : editorHost.innerHTML;
-            this._saveEdit(comment, {
-                body: newBody,
-                category: catSelect.value,
-                labels: labelsInput.value.split(",").map(s => s.trim()).filter(Boolean)
-            });
+        return h("div", { key: reply.id || "r" + index, class: "wx-comment-reply" },
+            h("span", { class: "wx-comment-avatar wx-comment-avatar-sm", style: { background: user.color || "#888" } }, user.initials || "?"),
+            h("div", null,
+                h("div", { class: "wx-comment-reply-head" },
+                    h("span", { class: "wx-comment-reply-author" }, user.name),
+                    h("span", { class: "wx-comment-reply-when" }, reply.when || "")),
+                h("div", { class: "wx-comment-reply-body", html: reply.body || "" })));
+    }
+
+    /**
+     * Renders the inline reply field below a comment.
+     * @param {Object} comment - The comment.
+     * @param {object} state - The current state.
+     * @returns {object} The reply field virtual node.
+     */
+    _renderReplyCompose(comment, state) {
+        const h = webexpress.webui.h;
+
+        return h("div", { key: "reply-compose", class: "wx-comment-reply-compose" },
+            h("textarea", {
+                placeholder: this._i18n("webexpress.webapp:comment.reply.placeholder", "Write a reply…"),
+                value: state.replyDrafts[comment.id],
+                on: { input: (e) => this._setFlag("replyDrafts", comment.id, e.target.value) },
+                ref: (el) => { this._replyInputs.set(comment.id, el); }
+            }),
+            h("div", { class: "wx-comment-reply-compose-actions" },
+                h("button", {
+                    type: "button",
+                    class: "btn btn-primary btn-sm",
+                    on: { click: () => this._sendReply(comment) }
+                }, this._i18n("webexpress.webapp:comment.reply.send", "Reply")),
+                h("button", {
+                    type: "button",
+                    class: "btn btn-secondary btn-sm",
+                    on: { click: () => this._setFlag("replyDrafts", comment.id, undefined) }
+                }, this._i18n("webexpress.webui:cancel", "Cancel"))));
+    }
+
+    /**
+     * Renders the inline delete confirmation strip of a comment.
+     * @param {Object} comment - The comment.
+     * @returns {object} The strip virtual node.
+     */
+    _renderDeleteConfirm(comment) {
+        const h = webexpress.webui.h;
+
+        return h("div", { key: "delete-confirm", class: "wx-comment-delete-confirm" },
+            h("span", null,
+                h("strong", null, this._i18n("webexpress.webapp:comment.delete.confirm.title", "Delete comment?")),
+                " " + this._i18n("webexpress.webapp:comment.delete.confirm.body", "This action cannot be undone.")),
+            h("span", { class: "wx-comment-spacer" }),
+            h("button", {
+                type: "button",
+                class: "btn btn-danger btn-sm",
+                on: { click: () => this._delete(comment) }
+            }, this._i18n("webexpress.webapp:comment.delete", "Delete")),
+            h("button", {
+                type: "button",
+                class: "btn btn-secondary btn-sm",
+                on: { click: () => this._setFlag("confirmDelete", comment.id, undefined) }
+            }, this._i18n("webexpress.webui:cancel", "Cancel")));
+    }
+
+    /**
+     * Sets or clears the entry of one comment in a per-comment state map.
+     * @param {string} map - The state key, such as "collapsed" or "replyDrafts".
+     * @param {string} id - The comment id.
+     * @param {*} value - The value; undefined removes the entry.
+     */
+    _setFlag(map, id, value) {
+        const next = Object.assign({}, this.state[map]);
+        if (value === undefined) {
+            delete next[id];
+        } else {
+            next[id] = value;
+        }
+        this.setState({ [map]: next });
+    }
+
+    /**
+     * Collapses or expands a comment.
+     * @param {string} id - The comment id.
+     */
+    _toggleCollapsed(id) {
+        this._setFlag("collapsed", id, this.state.collapsed[id] ? undefined : true);
+    }
+
+    /**
+     * Opens the reply field of a comment, or focuses the one that is already open.
+     * @param {string} id - The comment id.
+     */
+    _startReply(id) {
+        this._focusReplies.add(id);
+        if (id in this.state.replyDrafts) {
+            this._replyInputs.get(id)?.focus?.();
+            this._focusReplies.delete(id);
+            return;
+        }
+        this._setFlag("replyDrafts", id, "");
+    }
+
+    /**
+     * Sends the reply draft of a comment and closes the field on success.
+     * @param {Object} comment - The comment.
+     */
+    async _sendReply(comment) {
+        const body = String(this.state.replyDrafts[comment.id] || "").trim();
+        if (!body) {
+            return;
+        }
+        if (await this._postReply(comment, body)) {
+            this._setFlag("replyDrafts", comment.id, undefined);
+        }
+    }
+
+    /**
+     * Enters or leaves the edit mode of a comment.
+     * @param {Object} comment - The comment.
+     */
+    _toggleEdit(comment) {
+        if (this.state.editingId === comment.id) {
+            this._endEdit();
+            return;
+        }
+        this._editorEditRef = null;
+        this._editorHost = null;
+        this.setState({
+            editingId: comment.id,
+            editDraft: { category: comment.category, labels: (comment.labels || []).join(", ") }
         });
+    }
 
-        const cancelBtn = document.createElement("button");
-        cancelBtn.type = "button";
-        cancelBtn.className = "btn btn-secondary btn-sm";
-        cancelBtn.textContent = this._i18n("webexpress.webui:cancel", "Cancel");
-        cancelBtn.addEventListener("click", () => {
-            this._editingId = null;
-            this._editorEditRef = null;
-            this._renderList();
-        });
+    /**
+     * Leaves the edit mode and drops the editor with its host.
+     */
+    _endEdit() {
+        this._editorEditRef = null;
+        this._editorHost = null;
+        this.setState({ editingId: null, editDraft: null });
+    }
 
-        actions.appendChild(catSelect);
-        actions.appendChild(labelsInput);
-        const spacer = document.createElement("span");
-        spacer.className = "wx-comment-spacer";
-        actions.appendChild(spacer);
-        actions.appendChild(saveBtn);
-        actions.appendChild(cancelBtn);
-
-        wrap.appendChild(editorHost);
-        wrap.appendChild(actions);
-
-        // instantiate the EditorCtrl after this fragment is connected to the DOM
-        queueMicrotask(() => {
-            try {
-                this._editorEditRef = new webexpress.webui.EditorCtrl(editorHost);
-            } catch (e) {
-                console.warn("CommentCtrl: edit-editor init failed", e);
+    /**
+     * Replaces one comment with an updated copy, keeping the list immutable.
+     * @param {string} id - The comment id.
+     * @param {object} patch - The changed fields, or a whole comment.
+     * @returns {object|null} The updated comment.
+     */
+    _patchComment(id, patch) {
+        let updated = null;
+        this._comments = this._comments.map((c) => {
+            if (c.id !== id) {
+                return c;
             }
+            updated = Object.assign({}, c, patch);
+            return updated;
         });
-
-        return wrap;
-    }
-
-    /**
-     * Builds the replies block for a comment.
-     * @param {Object} comment
-     * @returns {HTMLElement}
-     */
-    _renderReplies(comment) {
-        const wrap = document.createElement("div");
-        wrap.className = "wx-comment-replies";
-        for (const r of comment.replies) {
-            const ru = this._user(r.author);
-            const row = document.createElement("div");
-            row.className = "wx-comment-reply";
-            row.innerHTML = `
-                <span class="wx-comment-avatar wx-comment-avatar-sm" style="background:${ru.color || "#888"}">${this._esc(ru.initials || "?")}</span>
-                <div>
-                    <div class="wx-comment-reply-head">
-                        <span class="wx-comment-reply-author">${this._esc(ru.name)}</span>
-                        <span class="wx-comment-reply-when">${this._esc(r.when || "")}</span>
-                    </div>
-                    <div class="wx-comment-reply-body">${r.body || ""}</div>
-                </div>
-            `;
-            wrap.appendChild(row);
-        }
-        return wrap;
-    }
-
-    /**
-     * Inserts an inline reply textarea below the comment.
-     * @param {Object} comment
-     * @param {HTMLElement} wrap - The comment's host element.
-     */
-    _startReply(comment, wrap) {
-        const existing = wrap.querySelector(".wx-comment-reply-compose");
-        if (existing) {
-            existing.querySelector("textarea")?.focus();
-            return;
-        }
-        const box = document.createElement("div");
-        box.className = "wx-comment-reply-compose";
-
-        const ta = document.createElement("textarea");
-        ta.placeholder = this._i18n("webexpress.webapp:comment.reply.placeholder", "Write a reply…");
-
-        const actions = document.createElement("div");
-        actions.className = "wx-comment-reply-compose-actions";
-
-        const send = document.createElement("button");
-        send.type = "button";
-        send.className = "btn btn-primary btn-sm";
-        send.textContent = this._i18n("webexpress.webapp:comment.reply.send", "Reply");
-        send.addEventListener("click", async () => {
-            const body = ta.value.trim();
-            if (!body) return;
-            await this._postReply(comment, body);
-            box.remove();
-        });
-
-        const cancel = document.createElement("button");
-        cancel.type = "button";
-        cancel.className = "btn btn-secondary btn-sm";
-        cancel.textContent = this._i18n("webexpress.webui:cancel", "Cancel");
-        cancel.addEventListener("click", () => box.remove());
-
-        actions.appendChild(send);
-        actions.appendChild(cancel);
-        box.appendChild(ta);
-        box.appendChild(actions);
-        wrap.appendChild(box);
-        ta.focus();
-    }
-
-    /**
-     * Shows the inline delete-confirmation strip inside a comment.
-     * @param {Object} comment
-     * @param {HTMLElement} wrap
-     */
-    _confirmDelete(comment, wrap) {
-        if (wrap.querySelector(".wx-comment-delete-confirm")) {
-            return;
-        }
-        const strip = document.createElement("div");
-        strip.className = "wx-comment-delete-confirm";
-        strip.innerHTML = `
-            <span><strong>${this._esc(this._i18n("webexpress.webapp:comment.delete.confirm.title", "Delete comment?"))}</strong> ${this._esc(this._i18n("webexpress.webapp:comment.delete.confirm.body", "This action cannot be undone."))}</span>
-            <span class="wx-comment-spacer"></span>
-        `;
-
-        const del = document.createElement("button");
-        del.type = "button";
-        del.className = "btn btn-danger btn-sm";
-        del.textContent = this._i18n("webexpress.webapp:comment.delete", "Delete");
-        del.addEventListener("click", () => this._delete(comment));
-
-        const cancel = document.createElement("button");
-        cancel.type = "button";
-        cancel.className = "btn btn-secondary btn-sm";
-        cancel.textContent = this._i18n("webexpress.webui:cancel", "Cancel");
-        cancel.addEventListener("click", () => strip.remove());
-
-        strip.appendChild(del);
-        strip.appendChild(cancel);
-        wrap.appendChild(strip);
+        return updated;
     }
 
     /**
@@ -1043,10 +983,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
         if (result.ok) {
             const updated = result.data;
             this._comments = this._comments.map(c => c.id === updated.id ? updated : c);
-            this._editingId = null;
-            this._editorEditRef = null;
-            this._rebuildFilterOptions();
-            this._renderList();
+            this._endEdit();
             this._dispatch(webexpress.webapp.Event.COMMENT_UPDATED_EVENT, { comment: updated });
         } else {
             console.warn("CommentCtrl: edit failed", webexpress.webapp.ServiceResult.describe(result));
@@ -1066,8 +1003,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
         });
         if (result.ok) {
             this._comments = this._comments.filter(c => c.id !== comment.id);
-            this._rebuildFilterOptions();
-            this._renderList();
+            this._setFlag("confirmDelete", comment.id, undefined);
             this._dispatch(webexpress.webapp.Event.COMMENT_DELETED_EVENT, { id: comment.id });
         } else {
             console.warn("CommentCtrl: delete failed", webexpress.webapp.ServiceResult.describe(result));
@@ -1086,9 +1022,8 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
             path: webexpress.webapp.commentModel.commentSubPath(comment.id, "likes")
         });
         if (result.ok) {
-            comment.likes = result.data.likes;
-            this._renderList();
-            this._dispatch(webexpress.webapp.Event.COMMENT_UPDATED_EVENT, { comment });
+            const updated = this._patchComment(comment.id, { likes: result.data.likes });
+            this._dispatch(webexpress.webapp.Event.COMMENT_UPDATED_EVENT, { comment: updated });
         } else {
             console.warn("CommentCtrl: like failed", webexpress.webapp.ServiceResult.describe(result));
         }
@@ -1106,9 +1041,8 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
             path: webexpress.webapp.commentModel.commentSubPath(comment.id, "pin")
         });
         if (result.ok) {
-            comment.pinned = result.data.pinned;
-            this._renderList();
-            this._dispatch(webexpress.webapp.Event.COMMENT_UPDATED_EVENT, { comment });
+            const updated = this._patchComment(comment.id, { pinned: result.data.pinned });
+            this._dispatch(webexpress.webapp.Event.COMMENT_UPDATED_EVENT, { comment: updated });
         } else {
             console.warn("CommentCtrl: pin failed", webexpress.webapp.ServiceResult.describe(result));
         }
@@ -1127,9 +1061,8 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
             path: webexpress.webapp.commentModel.commentSubPath(comment.id, "reactions")
         });
         if (result.ok) {
-            comment.reactions = result.data.reactions;
-            this._renderList();
-            this._dispatch(webexpress.webapp.Event.COMMENT_REACTION_EVENT, { commentId: comment.id, emoji, reactions: comment.reactions });
+            const updated = this._patchComment(comment.id, { reactions: result.data.reactions });
+            this._dispatch(webexpress.webapp.Event.COMMENT_REACTION_EVENT, { commentId: comment.id, emoji, reactions: updated.reactions });
         } else {
             console.warn("CommentCtrl: reaction failed", webexpress.webapp.ServiceResult.describe(result));
         }
@@ -1139,32 +1072,24 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
      * Posts a reply to a comment.
      * @param {Object} comment
      * @param {string} body
+     * @returns {Promise<boolean>} True when the reply was stored.
      */
     async _postReply(comment, body) {
         if (!this._service) {
-            return;
+            return false;
         }
         const result = await this._service.create({ body }, {
             path: webexpress.webapp.commentModel.commentSubPath(comment.id, "replies")
         });
         if (result.ok) {
             const reply = result.data;
-            comment.replies = comment.replies || [];
-            comment.replies.push(reply);
-            this._renderList();
+            const current = this._comments.find((c) => c.id === comment.id) || comment;
+            this._patchComment(comment.id, { replies: (current.replies || []).concat([reply]) });
             this._dispatch(webexpress.webapp.Event.COMMENT_REPLY_EVENT, { commentId: comment.id, reply });
-        } else {
-            console.warn("CommentCtrl: reply failed", webexpress.webapp.ServiceResult.describe(result));
+            return true;
         }
-    }
-
-    /**
-     * Minimal HTML escape.
-     * @param {string} s
-     * @returns {string}
-     */
-    _esc(s) {
-        return String(s ?? "").replace(/[<>"&]/g, c => ({ "<": "&lt;", ">": "&gt;", '"': "&quot;", "&": "&amp;" }[c]));
+        console.warn("CommentCtrl: reply failed", webexpress.webapp.ServiceResult.describe(result));
+        return false;
     }
 
     /**

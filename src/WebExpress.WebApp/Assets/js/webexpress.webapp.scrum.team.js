@@ -13,6 +13,9 @@
  * Declarative configuration: the host carries a wx-service island named "data"
  * for the team endpoint.
  *
+ * The avatar row and the modal table are pure functions of the state, turned into DOM by the
+ * keyed reconciler: the row by the Data base on every state change, the table when the modal opens.
+ *
  * It is ViewState-capable: when the host carries a data-wx-resource binding the
  * members are a slice of an enclosing ViewState, so the control
  * subscribes to that slice and the ViewState owns the central load; without a
@@ -60,7 +63,8 @@ webexpress.webapp.ScrumTeamCtrl = class extends webexpress.webapp.Data {
         element.removeAttribute("data-max-visible");
         element.classList.add("wx-scrum-team");
 
-        this._buildDom();
+        // stable handler, so a render does not swap the listeners of unchanged nodes
+        this._onOpen = () => this._openModal();
 
         // subscribe to the store, perform the first render and run onMount
         this.mount();
@@ -124,27 +128,17 @@ webexpress.webapp.ScrumTeamCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Renders the avatar row on the first paint.
+     * Announces the first paint.
      */
     onMount() {
-        this._render();
+        this._dispatch(webexpress.webui.Event.UPDATED_EVENT, {});
     }
 
     /**
-     * Renders the avatar row whenever the member state changes.
+     * Announces every later paint.
      */
     onUpdate() {
-        this._render();
-    }
-
-    /**
-     * Builds the static DOM scaffold (the avatar row).
-     */
-    _buildDom() {
-        this._row = document.createElement("div");
-        // the people render as an overlapping avatar group (webexpress.webui)
-        this._row.className = "wx-avatar-group";
-        this._element.appendChild(this._row);
+        this._dispatch(webexpress.webui.Event.UPDATED_EVENT, {});
     }
 
     /**
@@ -183,96 +177,69 @@ webexpress.webapp.ScrumTeamCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Renders the avatar row from `this._members`.
+     * Renders the avatar row: the first members, an overflow chip and the total chip, or a
+     * hint when nobody works in the sprint.
+     * @param {object} state - The current state.
+     * @returns {Array<object>} The virtual node tree of the host.
      */
-    _render() {
-        this._row.replaceChildren();
+    render(state) {
+        const h = webexpress.webui.h;
+        const members = state.members || [];
 
-        const members = this._members;
+        // the people render as an overlapping avatar group (webexpress.webui)
         if (members.length === 0) {
-            const empty = document.createElement("span");
-            empty.className = "wx-scrum-team-empty-row";
-            empty.textContent = this._i18n("webexpress.webapp:scrum.team.empty", "No people in this sprint.");
-            this._row.appendChild(empty);
-            this._dispatch(webexpress.webui.Event.UPDATED_EVENT, {});
-            return;
+            return [h("div", { key: "row", class: "wx-avatar-group" },
+                h("span", { class: "wx-scrum-team-empty-row" },
+                    this._i18n("webexpress.webapp:scrum.team.empty", "No people in this sprint.")))];
         }
 
-        const visible = members.slice(0, this._maxVisible);
-        const overflow = members.length - visible.length;
-
-        for (const m of visible) {
-            this._row.appendChild(this._makeAvatar(m));
-        }
-
-        if (overflow > 0) {
-            const more = document.createElement("button");
-            more.type = "button";
-            more.className = "wx-avatar-group-more wx-scrum-team-more";
-            more.textContent = "+" + overflow;
-            more.title = members.slice(this._maxVisible).map(m => m.name).join(", ");
-            more.addEventListener("click", () => this._openModal());
-            this._row.appendChild(more);
-        }
-
-        const total = document.createElement("button");
-        total.type = "button";
-        total.className = "wx-scrum-team-total";
-        total.title = this._i18n("webexpress.webapp:scrum.team.show_all", "Show all people");
-        total.appendChild(this._makePointsBadge(webexpress.webapp.scrumTeamModel.totalPoints(members), "Σ"));
-        total.addEventListener("click", () => this._openModal());
-        this._row.appendChild(total);
-
-        this._dispatch(webexpress.webui.Event.UPDATED_EVENT, {});
+        const hidden = members.slice(this._maxVisible);
+        return [h("div", { key: "row", class: "wx-avatar-group" },
+            members.slice(0, this._maxVisible).map((member) => this._renderAvatar(member)),
+            hidden.length > 0 && h("button", {
+                key: "more",
+                type: "button",
+                class: "wx-avatar-group-more wx-scrum-team-more",
+                title: hidden.map((member) => member.name).join(", "),
+                on: { click: this._onOpen }
+            }, "+" + hidden.length),
+            h("button", {
+                key: "total",
+                type: "button",
+                class: "wx-scrum-team-total",
+                title: this._i18n("webexpress.webapp:scrum.team.show_all", "Show all people"),
+                on: { click: this._onOpen }
+            }, h("span", { class: "wx-scrum-team-total-pill" },
+                "Σ " + webexpress.webapp.scrumTeamModel.totalPoints(members) + " "
+                + this._i18n("webexpress.webapp:scrum.team.points_abbr", "pts"))))];
     }
 
     /**
-     * Builds a single avatar element for a member, badged with their points.
-     * Clicking the avatar opens the full table modal.
+     * Renders a single avatar for a member, badged with their points. Clicking the avatar
+     * opens the full table modal.
      * @param {object} member - The member record.
-     * @returns {HTMLElement}
+     * @returns {object} The avatar virtual node.
      */
-    _makeAvatar(member) {
-        const av = document.createElement("button");
-        av.type = "button";
-        av.className = "wx-avatar-group-avatar wx-scrum-team-avatar";
-        av.title = member.name
+    _renderAvatar(member) {
+        const h = webexpress.webui.h;
+        const title = member.name
             + (member.team ? " · " + member.team : "")
             + " · " + member.completed + "/" + member.points + " " + this._i18n("webexpress.webapp:scrum.team.points_abbr", "pts")
             + " " + this._i18n("webexpress.webapp:scrum.team.completed", "completed").toLowerCase();
-        av.setAttribute("aria-label", av.title);
-        if (member.image) {
-            const img = document.createElement("img");
-            img.className = "wx-avatar-group-img";
-            img.src = member.image;
-            img.alt = member.name || "";
-            av.appendChild(img);
-        } else {
-            av.style.background = member.color || "#888";
-            av.appendChild(document.createTextNode(member.initials));
-        }
 
-        const badge = document.createElement("span");
-        badge.className = "wx-scrum-team-badge";
-        badge.textContent = String(member.points);
-        this._applyColor(badge, this._colors.points);
-        av.appendChild(badge);
-
-        av.addEventListener("click", () => this._openModal());
-        return av;
-    }
-
-    /**
-     * Builds a labelled points pill, used by the trailing total chip.
-     * @param {number} points - The point value.
-     * @param {string} prefix - A short prefix symbol shown ahead of the value.
-     * @returns {HTMLElement}
-     */
-    _makePointsBadge(points, prefix) {
-        const pill = document.createElement("span");
-        pill.className = "wx-scrum-team-total-pill";
-        pill.textContent = prefix + " " + points + " " + this._i18n("webexpress.webapp:scrum.team.points_abbr", "pts");
-        return pill;
+        return h("button", {
+            key: member.id,
+            type: "button",
+            class: "wx-avatar-group-avatar wx-scrum-team-avatar",
+            title: title,
+            "aria-label": title,
+            style: member.image ? {} : { background: member.color || "#888" },
+            on: { click: this._onOpen }
+        },
+            member.image
+                ? h("img", { class: "wx-avatar-group-img", src: member.image, alt: member.name || "" })
+                : member.initials,
+            h("span", this._colored("wx-scrum-team-badge", "", this._colors.points), String(member.points)));
     }
 
     /**
@@ -292,7 +259,7 @@ webexpress.webapp.ScrumTeamCtrl = class extends webexpress.webapp.Data {
 
         const content = document.createElement("div");
         content.className = "wx-modal-content px-3 py-2";
-        content.appendChild(this._buildTable(sorted));
+        webexpress.webui.Renderer.patch(content, this._renderTable(sorted));
         host.appendChild(content);
 
         document.body.appendChild(host);
@@ -303,163 +270,71 @@ webexpress.webapp.ScrumTeamCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Builds the people-vs-points table for the modal, breaking the load down
+     * Renders the people-vs-points table for the modal, breaking the load down
      * into the completed and the planned story points per person and closing
      * with a total row for each.
      * @param {Array<object>} members - The members, already sorted.
-     * @returns {HTMLTableElement}
+     * @returns {object} The table virtual node.
      */
-    _buildTable(members) {
-        const plannedTotal = webexpress.webapp.scrumTeamModel.totalPoints(members);
-        const completedTotal = webexpress.webapp.scrumTeamModel.completedPoints(members);
+    _renderTable(members) {
+        const h = webexpress.webui.h;
+        const head = (text, numeric) => h("th", { class: numeric ? "wx-scrum-team-points-col" : null }, text);
 
-        const table = document.createElement("table");
-        table.className = "wx-scrum-team-table";
-
-        const thead = document.createElement("thead");
-        const headRow = document.createElement("tr");
-        headRow.appendChild(this._th(this._i18n("webexpress.webapp:scrum.team.person", "Person")));
-        headRow.appendChild(this._th(this._i18n("webexpress.webapp:scrum.team.completed", "Completed"), true));
-        headRow.appendChild(this._th(this._i18n("webexpress.webapp:scrum.team.planned", "Planned"), true));
-        thead.appendChild(headRow);
-        table.appendChild(thead);
-
-        const tbody = document.createElement("tbody");
-        if (members.length === 0) {
-            const tr = document.createElement("tr");
-            const td = document.createElement("td");
-            td.colSpan = 3;
-            td.className = "wx-scrum-team-empty";
-            td.textContent = this._i18n("webexpress.webapp:scrum.team.empty", "No people in this sprint.");
-            tr.appendChild(td);
-            tbody.appendChild(tr);
-        } else {
-            for (const m of members) {
-                tbody.appendChild(this._buildTableRow(m));
-            }
-        }
-        table.appendChild(tbody);
-
-        const tfoot = document.createElement("tfoot");
-        const footRow = document.createElement("tr");
-        const footLabel = document.createElement("td");
-        footLabel.textContent = this._i18n("webexpress.webapp:scrum.team.total", "Total");
-        footRow.appendChild(footLabel);
-        footRow.appendChild(this._pointsCell(completedTotal, "done"));
-        footRow.appendChild(this._pointsCell(plannedTotal));
-        tfoot.appendChild(footRow);
-        table.appendChild(tfoot);
-
-        return table;
+        return h("table", { class: "wx-scrum-team-table" },
+            h("thead", null, h("tr", null,
+                head(this._i18n("webexpress.webapp:scrum.team.person", "Person")),
+                head(this._i18n("webexpress.webapp:scrum.team.completed", "Completed"), true),
+                head(this._i18n("webexpress.webapp:scrum.team.planned", "Planned"), true))),
+            h("tbody", null, members.length === 0
+                ? h("tr", null, h("td", { colspan: 3, class: "wx-scrum-team-empty" },
+                    this._i18n("webexpress.webapp:scrum.team.empty", "No people in this sprint.")))
+                : members.map((member) => this._renderTableRow(member))),
+            h("tfoot", null, h("tr", null,
+                h("td", null, this._i18n("webexpress.webapp:scrum.team.total", "Total")),
+                this._renderPointsCell(webexpress.webapp.scrumTeamModel.completedPoints(members), "done"),
+                this._renderPointsCell(webexpress.webapp.scrumTeamModel.totalPoints(members)))));
     }
 
     /**
-     * Builds a single table row for a member, with the completion progress bar
+     * Renders a single table row for a member, with the completion progress bar
      * under the name and the completed and planned points in their columns.
      * @param {object} member - The member record.
-     * @returns {HTMLTableRowElement}
+     * @returns {object} The row virtual node.
      */
-    _buildTableRow(member) {
-        const tr = document.createElement("tr");
-
-        const tdPerson = document.createElement("td");
-        const person = document.createElement("div");
-        person.className = "wx-scrum-team-person";
-
-        let avatar;
-        if (member.image) {
-            avatar = document.createElement("img");
-            avatar.className = "wx-scrum-team-avatar-sm";
-            avatar.src = member.image;
-            avatar.alt = member.name || "";
-        } else {
-            avatar = document.createElement("span");
-            avatar.className = "wx-scrum-team-avatar-sm";
-            avatar.style.background = member.color || "#888";
-            avatar.textContent = member.initials;
-        }
-        person.appendChild(avatar);
-
-        const body = document.createElement("span");
-        body.className = "wx-scrum-team-person-body";
-
-        const name = document.createElement("span");
-        name.className = "wx-scrum-team-person-name";
-        name.textContent = member.name;
-        body.appendChild(name);
-
-        if (member.team) {
-            const team = document.createElement("span");
-            team.className = "wx-scrum-team-person-team";
-            team.textContent = member.team;
-            body.appendChild(team);
-        }
-
-        body.appendChild(this._buildProgress(member));
-        person.appendChild(body);
-        tdPerson.appendChild(person);
-
-        tr.appendChild(tdPerson);
-        tr.appendChild(this._pointsCell(member.completed, "done"));
-        tr.appendChild(this._pointsCell(member.points));
-        return tr;
-    }
-
-    /**
-     * Builds the per-member completion bar visualising the completed share of
-     * the planned points.
-     * @param {object} member - The member record.
-     * @returns {HTMLElement}
-     */
-    _buildProgress(member) {
+    _renderTableRow(member) {
+        const h = webexpress.webui.h;
         const pct = member.points > 0 ? Math.round((member.completed / member.points) * 100) : 0;
 
-        const bar = document.createElement("span");
-        bar.className = "wx-scrum-team-progress";
-        bar.title = member.completed + "/" + member.points + " " + this._i18n("webexpress.webapp:scrum.team.points_abbr", "pts");
-
-        const fill = document.createElement("span");
-        fill.style.width = pct + "%";
-        this._applyColor(fill, this._colors.completed);
-        bar.appendChild(fill);
-
-        return bar;
+        return h("tr", { key: member.id },
+            h("td", null, h("div", { class: "wx-scrum-team-person" },
+                member.image
+                    ? h("img", { class: "wx-scrum-team-avatar-sm", src: member.image, alt: member.name || "" })
+                    : h("span", { class: "wx-scrum-team-avatar-sm", style: { background: member.color || "#888" } }, member.initials),
+                h("span", { class: "wx-scrum-team-person-body" },
+                    h("span", { class: "wx-scrum-team-person-name" }, member.name),
+                    member.team && h("span", { class: "wx-scrum-team-person-team" }, member.team),
+                    h("span", {
+                        class: "wx-scrum-team-progress",
+                        title: member.completed + "/" + member.points + " " + this._i18n("webexpress.webapp:scrum.team.points_abbr", "pts")
+                    }, h("span", this._colored(null, "width:" + pct + "%", this._colors.completed)))))),
+            this._renderPointsCell(member.completed, "done"),
+            this._renderPointsCell(member.points));
     }
 
     /**
-     * Builds a right-aligned points table header cell.
-     * @param {string} text - The header text.
-     * @param {boolean} [numeric=false] - Whether the column holds points.
-     * @returns {HTMLTableCellElement}
-     */
-    _th(text, numeric = false) {
-        const th = document.createElement("th");
-        if (numeric) {
-            th.className = "wx-scrum-team-points-col";
-        }
-        th.textContent = text;
-        return th;
-    }
-
-    /**
-     * Builds a right-aligned points table cell carrying a badge.
+     * Renders a right-aligned points table cell carrying a badge.
      * @param {number} points - The point value.
      * @param {string} [variant] - An optional badge variant, for example "done".
-     * @returns {HTMLTableCellElement}
+     * @returns {object} The cell virtual node.
      */
-    _pointsCell(points, variant) {
-        const td = document.createElement("td");
-        td.className = "wx-scrum-team-points-col";
+    _renderPointsCell(points, variant) {
+        const h = webexpress.webui.h;
+        const className = "wx-scrum-team-points-badge" + (variant ? " " + variant : "");
+        const badge = variant === "done"
+            ? this._colored(className, "", this._colors.completed)
+            : { class: className };
 
-        const badge = document.createElement("span");
-        badge.className = "wx-scrum-team-points-badge" + (variant ? " " + variant : "");
-        badge.textContent = String(points);
-        if (variant === "done") {
-            this._applyColor(badge, this._colors.completed);
-        }
-        td.appendChild(badge);
-
-        return td;
+        return h("td", { class: "wx-scrum-team-points-col" }, h("span", badge, String(points)));
     }
 
     /**
@@ -487,26 +362,22 @@ webexpress.webapp.ScrumTeamCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Applies a color descriptor to an element, preferring the CSS class and
-     * falling back to the inline style declaration. A null or empty descriptor
-     * leaves the element's stylesheet default untouched.
-     * @param {HTMLElement} element - The target element.
+     * Combines the class and the inline style of a colored element, preferring the color's
+     * CSS class and falling back to its inline declaration. A null or empty descriptor leaves
+     * the stylesheet default untouched.
+     * @param {string|null} className - The element's own classes.
+     * @param {string} style - The element's own inline style.
      * @param {{css: (string|null), style: (string|null)}} color - The descriptor.
+     * @returns {{class: (string|null), style: string}} The props of the element.
      */
-    _applyColor(element, color) {
-        if (!element || !color) {
-            return;
+    _colored(className, style, color) {
+        if (color && color.css) {
+            return { class: [className, ...color.css.split(/\s+/)].filter(Boolean).join(" "), style: style };
         }
-
-        if (color.css) {
-            for (const cls of color.css.split(/\s+/)) {
-                if (cls) {
-                    element.classList.add(cls);
-                }
-            }
-        } else if (color.style) {
-            element.style.cssText += ";" + color.style;
+        if (color && color.style) {
+            return { class: className, style: style + ";" + color.style };
         }
+        return { class: className, style: style };
     }
 
     /**

@@ -186,6 +186,23 @@ class Element {
     get src() { return this.getAttribute("src"); }
     set src(value) { this.setAttribute("src", value); }
 
+    // boolean and numeric properties reflect their content attribute as well, so a view
+    // that states them as attributes and a test that reads the property agree
+    get hidden() { return this.hasAttribute("hidden"); }
+    set hidden(value) { if (value) { this.setAttribute("hidden", ""); } else { this.removeAttribute("hidden"); } }
+
+    get disabled() { return this.hasAttribute("disabled"); }
+    set disabled(value) { if (value) { this.setAttribute("disabled", ""); } else { this.removeAttribute("disabled"); } }
+
+    get readOnly() { return this.hasAttribute("readonly"); }
+    set readOnly(value) { if (value) { this.setAttribute("readonly", ""); } else { this.removeAttribute("readonly"); } }
+
+    get maxLength() { return this.hasAttribute("maxlength") ? Number(this.getAttribute("maxlength")) : -1; }
+    set maxLength(value) { this.setAttribute("maxlength", String(value)); }
+
+    get title() { return this.getAttribute("title") ?? ""; }
+    set title(value) { this.setAttribute("title", value); }
+
     get children() { return this.childNodes.filter((n) => n.nodeType === 1); }
 
     get innerText() { return this.textContent; }

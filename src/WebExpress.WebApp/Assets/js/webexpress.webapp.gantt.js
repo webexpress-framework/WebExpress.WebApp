@@ -33,6 +33,18 @@
  * the matching assignable callback (onTaskCreate, onTaskUpdate, onTaskDelete,
  * onLinkCreate, onLinkDelete).
  *
+ * Rendering
+ * ---------
+ * The chart is a pure function of the state: render(state) describes the
+ * toolbar, the grid and the timeline, and the keyed reconciler patches the
+ * host. What a running gesture shows is state as well - the previewed
+ * geometry of a dragged bar, the connector a link gesture draws, the grid
+ * width chosen through the splitter, an open cell editor - so the connectors
+ * follow a dragged bar through the same render that draws it. Only the widths
+ * the layout decides are measured, and they enter the state like any change.
+ * The project is never changed in place: every mutation sets new task and
+ * link lists.
+ *
  * Sandbox
  * -------
  * Inside the sandbox the mutations stay local: the persistence hooks record
@@ -100,15 +112,82 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         return "";
     };
 
-    // grid pane width chosen through the splitter, surviving re-renders
-    _gridWidth = null;
-
-    // transient interaction state, deliberately outside the store because a
-    // drag preview mutates the DOM directly and only commits on release
+    // the bookkeeping of a running gesture (where it started, the task as it
+    // was); what the gesture shows is state, so the render draws it
     _drag = null;
-    _linkTarget = null;
-    _pendingEditTaskId = null;
     _skipNextCanvasClick = false;
+
+    _onHostKeyDown = (e) => this._onKeyDown(e);
+    _onSplitterDown = (e) => this._beginSplitDrag(e);
+    _onSplitterDblClick = () => this.toggleGrid();
+    _onChartScroll = () => this._syncVerticalScroll();
+    _onCanvasMouseDown = (e) => this._beginPan(e);
+    _onCanvasDblClickHandler = (e) => this._onCanvasDblClick(e);
+
+    _onAdd = () => {
+        const task = this.addTask();
+        if (task) {
+            this._beginCellEdit(task.id, "label");
+        }
+    };
+
+    _onChartWheel = (e) => {
+        // ctrl+wheel zooms around the timeline like map interfaces do
+        if (e.ctrlKey) {
+            if (typeof e.preventDefault === "function") {
+                e.preventDefault();
+            }
+            if (e.deltaY < 0) { this.zoomIn(); } else { this.zoomOut(); }
+        }
+    };
+
+    // the timeline pane owns the vertical scroll, the grid only follows; a
+    // wheel over the grid is forwarded so both panes feel scrollable
+    _onGridWheel = (e) => {
+        if (this._chartScroll && e.deltaY) {
+            this._chartScroll.scrollTop += e.deltaY;
+            this._syncVerticalScroll();
+            if (typeof e.preventDefault === "function") {
+                e.preventDefault();
+            }
+        }
+    };
+
+    _onCanvasClick = (e) => {
+        // a pan that actually moved must not be mistaken for a click
+        if (this._skipNextCanvasClick) {
+            this._skipNextCanvasClick = false;
+            return;
+        }
+        // a click on the empty surface clears the selection
+        if (e.target === this._canvas) {
+            this.select(null, null);
+        }
+    };
+
+    _onEditInput = () => {
+        const editing = this.state.editing;
+        if (editing && this._editInput) {
+            this.setState({ editing: Object.assign({}, editing, { draft: this._editInput.value }) });
+        }
+    };
+
+    _onEditKeyDown = (e) => {
+        if (e.key === "Enter") {
+            this._commitEdit();
+        } else if (e.key === "Escape") {
+            this.setState({ editing: null });
+        }
+    };
+
+    // a blur from an editor the render has already replaced (a server id
+    // renamed the row) must not end the edit that lives on in its successor
+    _onEditBlur = (e) => {
+        if (e && e.target && e.target !== this._editInput) {
+            return;
+        }
+        this._commitEdit();
+    };
 
     /**
      * Initializes the gantt control on the host element.
@@ -151,7 +230,19 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
                 selectedTask: null,
                 selectedLink: null,
                 // null outside the sandbox, otherwise "active", "deciding" or "saving"
-                sandbox: null
+                sandbox: null,
+                // the widths the layout decided, measured: the host width sets the
+                // filler days of the timeline, the grid pane width the visible columns
+                hostWidth: element.clientWidth || 0,
+                fitWidth: null,
+                // the grid pane width chosen through the splitter
+                gridWidth: null,
+                // the open cell editor { taskId, key, draft }
+                editing: null,
+                // the bar a gesture moves { taskId, left, width, progress }
+                preview: null,
+                // the connector a link gesture draws { from, fromSide, pointer, target }
+                linkDraft: null
             }
         });
 
@@ -166,18 +257,9 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         // strips it on instantiation), so the control marks itself distinctly
         element.classList.add("wx-gantt");
         element.tabIndex = 0;
-        element.addEventListener("keydown", (e) => this._onKeyDown(e));
 
         this._markerId = this._newId("gantt-arrow");
         this.mount();
-        if (typeof ResizeObserver !== "undefined") {
-            this._resizeObserver = new ResizeObserver(() => {
-                if (this._gridEl && !this._gridCollapsed) {
-                    this._updateColumnFit(this._gridEl.clientWidth || this._gridWidth || webexpress.webapp.GanttCtrl.DEFAULT_GRID_WIDTH);
-                }
-            });
-            this._resizeObserver.observe(element);
-        }
 
         if (this._resource) {
             this._attachToViewState(element);
@@ -245,9 +327,29 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
     get _links() { return this.state.links || []; }
     get _scale() { return this.state.scale; }
     get _zoom() { return this.state.zoom; }
-    // a sandbox being saved is frozen, an edit now would race the requests built from it
-    get _readonly() { return this.state.readonly === true || this.state.sandbox === "saving"; }
+    get _readonly() { return this._readonlyOf(this.state); }
     get _gridCollapsed() { return this.state.gridCollapsed === true; }
+
+    /**
+     * Tells whether a state forbids edits. A sandbox being saved is frozen, an
+     * edit now would race the requests built from it.
+     * @param {object} state - The state.
+     * @returns {boolean} True when the plan cannot be edited.
+     */
+    _readonlyOf(state) {
+        return state.readonly === true || state.sandbox === "saving";
+    }
+
+    /**
+     * Derives the containers of a task list from their subtrees. The rollup
+     * writes into the tasks it is given, so it works on copies: the tasks of
+     * the current state belong to a render that has already happened.
+     * @param {Array<object>} tasks - The tasks.
+     * @returns {Array<object>} New tasks with the derived container fields.
+     */
+    _rolledUp(tasks) {
+        return webexpress.webapp.ganttModel.rollup(tasks.map((task) => Object.assign({}, task)), this._calendar);
+    }
 
     /**
      * Collapses or expands the task grid pane, leaving the full width to the
@@ -379,11 +481,11 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         }
 
         const model = webexpress.webapp.ganttModel;
-        // rollup mutates container tasks in place, so the entry state is kept as a copy
-        const entry = this.value;
+        // no mutation changes a task or link list in place, so the lists of the
+        // entry state stay as they are and discarding can return to them
         this._sandbox = {
-            tasks: entry.tasks,
-            links: entry.links,
+            tasks: this._tasks,
+            links: this._links,
             storedTasks: new Map(this._tasks.map((t) => [t.id, JSON.stringify(model.taskToWire(t))])),
             storedLinks: new Map(this._links.map((l) => [l.id, JSON.stringify(model.linkToWire(l))])),
             touchedTasks: new Set(),
@@ -550,13 +652,14 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
             }
         }
         tasks.splice(index, 0, task);
-        model.rollup(tasks, this._calendar);
+        const rolled = this._rolledUp(tasks);
+        const created = rolled[index];
 
-        this.setState({ tasks: tasks, selectedTask: task.id, selectedLink: null });
-        this._persistTaskCreate(task);
-        this._emit(webexpress.webapp.GanttCtrl.TASK_CREATE_EVENT, "onTaskCreate", { task: Object.assign({}, task) });
+        this.setState({ tasks: rolled, selectedTask: created.id, selectedLink: null });
+        this._persistTaskCreate(created);
+        this._emit(webexpress.webapp.GanttCtrl.TASK_CREATE_EVENT, "onTaskCreate", { task: Object.assign({}, created) });
 
-        return task;
+        return created;
     }
 
     /**
@@ -592,17 +695,17 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
             return null;
         }
 
-        const tasks = this._tasks.map((t) => (t.id === id ? task : t));
-        model.rollup(tasks, this._calendar);
+        const tasks = this._rolledUp(this._tasks.map((t) => (t.id === id ? task : t)));
+        const updated = tasks.find((t) => t.id === id);
 
         this.setState({ tasks: tasks });
-        this._persistTaskUpdate(task);
+        this._persistTaskUpdate(updated);
         this._emit(webexpress.webapp.GanttCtrl.TASK_UPDATE_EVENT, "onTaskUpdate", {
-            task: Object.assign({}, task),
+            task: Object.assign({}, updated),
             patch: Object.assign({}, patch)
         });
 
-        return task;
+        return updated;
     }
 
     /**
@@ -631,9 +734,8 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         }
 
         const removedLinks = this._links.filter((link) => removed.has(link.from) || removed.has(link.to));
-        const tasks = this._tasks.filter((t) => !removed.has(t.id));
+        const tasks = this._rolledUp(this._tasks.filter((t) => !removed.has(t.id)));
         const links = this._links.filter((link) => !removed.has(link.from) && !removed.has(link.to));
-        webexpress.webapp.ganttModel.rollup(tasks);
 
         this.setState({ tasks: tasks, links: links, selectedTask: null, selectedLink: null });
 
@@ -1190,7 +1292,11 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
                 from: l.from === oldId ? newId : l.from,
                 to: l.to === oldId ? newId : l.to
             })),
-            selectedTask: this.state.selectedTask === oldId ? newId : this.state.selectedTask
+            selectedTask: this.state.selectedTask === oldId ? newId : this.state.selectedTask,
+            // a task named right after its creation keeps its editor under the server id
+            editing: this.state.editing && this.state.editing.taskId === oldId
+                ? Object.assign({}, this.state.editing, { taskId: newId })
+                : this.state.editing
         });
     }
 
@@ -1209,41 +1315,136 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
     // --------------------------------------------------------------- render
 
     /**
-     * Renders the toolbar, the grid pane and the timeline pane from the
-     * current state. The render is imperative and rebuilds the host; the
-     * scroll position of the timeline survives the rebuild.
-     * @returns {void}
+     * Describes the chart for a state: the toolbar, the sandbox strip while the
+     * sandbox is open, and the body with the grid pane, the splitter and the
+     * timeline pane. The keyed reconciler patches the host, so rows, bars and
+     * the scroll position of the timeline survive every render - which is what
+     * keeps a grid row alive between the two clicks of a double-click.
+     * @param {object} state - The current state.
+     * @returns {Array<object>} The virtual node tree of the host.
      */
-    render() {
-        // a running gesture previews on the live DOM; rebuilding now would
-        // detach the dragged bar, so the commit on release renders instead
-        if (this._drag) {
-            return;
+    render(state) {
+        const h = webexpress.webui.h;
+        const view = this._geometry(state);
+
+        return [
+            this._renderToolbar(state),
+            state.sandbox !== null && this._renderSandbox(state),
+            h("div", { key: "body", class: "wx-gantt-body" },
+                this._renderGrid(state, view),
+                this._renderSplitter(),
+                state.error ? this._renderError() : this._renderChart(state, view))
+        ];
+    }
+
+    /**
+     * Wires what lives outside the rendered tree: the keyboard of the host and
+     * the observer that feeds the widths the layout decided into the state.
+     * @param {object} state - The state of the first render.
+     */
+    onMount(state) {
+        this._element.addEventListener("keydown", this._onHostKeyDown);
+        if (typeof ResizeObserver !== "undefined") {
+            this._resizeObserver = new ResizeObserver(() => this._measure());
+            this._resizeObserver.observe(this._element);
+            if (this._gridEl) {
+                this._resizeObserver.observe(this._gridEl);
+            }
+        }
+        this._syncHost(state);
+    }
+
+    /**
+     * Follows a render with what the DOM has to do itself: the host marker of
+     * the sandbox, the scroll mirror of the grid pane and the focus of a cell
+     * editor that has just opened.
+     * @param {object} state - The rendered state.
+     */
+    onUpdate(state) {
+        this._syncHost(state);
+        this._syncVerticalScroll();
+
+        const edit = state.editing ? state.editing.taskId + "/" + state.editing.key : null;
+        if (edit !== this._focusedEdit) {
+            this._focusedEdit = edit;
+            if (edit && this._editInput && this._editInput.isConnected !== false) {
+                this._editInput.focus({ preventScroll: true });
+            }
+        }
+    }
+
+    /**
+     * Releases the host listener, the observer, a running gesture and the
+     * unload guard of an open sandbox.
+     */
+    onUnmount() {
+        this._element.removeEventListener("keydown", this._onHostKeyDown);
+        if (this._resizeObserver) {
+            this._resizeObserver.disconnect();
+        }
+        if (this._onDragMove) {
+            document.removeEventListener("mousemove", this._onDragMove);
+            document.removeEventListener("mouseup", this._onDragUp);
+        }
+        if (this._sandbox) {
+            window.removeEventListener("beforeunload", this._onBeforeUnload);
+        }
+    }
+
+    /**
+     * Marks the host while the sandbox is open; the host itself is not part of
+     * the rendered tree.
+     * @param {object} state - The rendered state.
+     */
+    _syncHost(state) {
+        this._element.classList.toggle("wx-gantt--sandbox", state.sandbox !== null);
+    }
+
+    /**
+     * Feeds the widths the layout decided into the state: the host width
+     * decides how many filler days the timeline needs, the grid pane width
+     * which columns fit.
+     */
+    _measure() {
+        const patch = {};
+        const hostWidth = this._element.clientWidth || 0;
+        if (hostWidth !== this.state.hostWidth) {
+            patch.hostWidth = hostWidth;
+        }
+        // a collapsed pane measures nothing worth fitting columns to
+        const fitWidth = this._gridEl && !this._gridCollapsed ? this._gridEl.clientWidth || 0 : 0;
+        if (fitWidth > 0 && fitWidth !== this.state.fitWidth) {
+            patch.fitWidth = fitWidth;
+        }
+        if (Object.keys(patch).length > 0) {
+            this.setState(patch);
+        }
+    }
+
+    /**
+     * Computes the geometry the grid, the timeline and the gestures share. The
+     * range is extended so the timeline always fills its pane, otherwise the
+     * header and the row stripes would stop at the last task. The result is
+     * kept until one of its inputs changes, because a gesture renders on every
+     * pointer move.
+     * @param {object} state - The state.
+     * @returns {object} The view { rows, rowIndex, range, pxDay, width, height }.
+     */
+    _geometry(state) {
+        const inputs = [state.tasks, state.scale, state.zoom, state.hostWidth, state.gridWidth, state.gridCollapsed];
+        if (this._geometryInputs && inputs.every((value, i) => value === this._geometryInputs[i])) {
+            return this._geometryView;
         }
 
         const ctor = webexpress.webapp.GanttCtrl;
         const model = webexpress.webapp.ganttModel;
-        const state = this.state;
-        const previous = this._renderedState;
-        this._renderedState = state;
-        if (previous && (previous.selectedTask !== state.selectedTask || previous.selectedLink !== state.selectedLink)
-            && Object.keys(state).every((key) => ["selectedTask", "selectedLink"].includes(key) || state[key] === previous[key])) {
-            this._renderSelection();
-            return;
-        }
-
-        const scrollLeft = this._chartScroll ? this._chartScroll.scrollLeft : 0;
-        const scrollTop = this._chartScroll ? this._chartScroll.scrollTop : 0;
-
-        const rows = model.flatten(this._tasks);
-        const range = model.projectRange(this._tasks);
+        const tasks = state.tasks || [];
+        const rows = model.flatten(tasks);
+        const range = model.projectRange(tasks);
         const pxDay = model.pxPerDay(state.scale, state.zoom);
 
-        // the range is extended so the timeline always fills the pane,
-        // otherwise the header and the row stripes would stop at the last task
-        const hostWidth = this._element.clientWidth || 0;
-        const gridWidth = this._gridCollapsed ? 0 : (this._gridWidth || ctor.DEFAULT_GRID_WIDTH);
-        const available = hostWidth - gridWidth - ctor.SPLITTER_WIDTH;
+        const gridWidth = state.gridCollapsed === true ? 0 : (state.gridWidth || ctor.DEFAULT_GRID_WIDTH);
+        const available = (state.hostWidth || 0) - gridWidth - ctor.SPLITTER_WIDTH;
         let totalDays = model.diffDays(range.start, range.end);
         const minDays = Math.ceil(Math.max(0, available) / pxDay);
         if (minDays > totalDays) {
@@ -1251,261 +1452,160 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
             totalDays = minDays;
         }
 
-        const view = {
+        const rowIndex = Object.create(null);
+        for (let i = 0; i < rows.length; i++) {
+            rowIndex[rows[i].task.id] = i;
+        }
+
+        this._geometryInputs = inputs;
+        this._geometryView = {
             rows: rows,
+            rowIndex: rowIndex,
             range: range,
             pxDay: pxDay,
             width: totalDays * pxDay,
             height: Math.max(1, rows.length) * ctor.ROW_HEIGHT
         };
-
-        // the drag previews reroute connectors from the last rendered geometry
-        this._view = view;
-        this._rowIndexById = Object.create(null);
-        for (let i = 0; i < rows.length; i++) {
-            this._rowIndexById[rows[i].task.id] = i;
-        }
-
-        const body = document.createElement("div");
-        body.className = "wx-gantt-body";
-        body.appendChild(this._renderGrid(view));
-        body.appendChild(this._renderSplitter());
-        body.appendChild(state.error ? this._renderError() : this._renderChart(view));
-
-        this._element.classList.toggle("wx-gantt--sandbox", state.sandbox !== null);
-        if (state.sandbox !== null) {
-            this._element.replaceChildren(this._renderToolbar(), this._renderSandbox(), body);
-        } else {
-            this._element.replaceChildren(this._renderToolbar(), body);
-        }
-
-        if (!this._gridCollapsed) {
-            this._updateColumnFit(this._gridEl.clientWidth || gridWidth);
-        }
-
-        if (this._chartScroll) {
-            this._chartScroll.scrollLeft = scrollLeft;
-            this._chartScroll.scrollTop = scrollTop;
-            this._syncVerticalScroll();
-        }
-
-        // a task created through the toolbar goes straight into label editing
-        if (this._pendingEditTaskId) {
-            const pending = this._labelCells && this._labelCells[this._pendingEditTaskId];
-            this._pendingEditTaskId = null;
-            if (pending) {
-                this._beginCellEdit(pending.cell, pending.task, this._columns()[0]);
-            }
-        }
+        return this._geometryView;
     }
 
     /**
-     * Updates selection without detaching row cells between the two clicks of
-     * a double-click gesture. This also preserves focus in the task grid.
-     * @returns {void}
+     * Gets the geometry of the current state, which the gestures and the
+     * double-click measure against.
+     * @returns {object} The view.
      */
-    _renderSelection() {
-        for (const name of ["wx-gantt-grid-row", "wx-gantt-row-stripe", "wx-gantt-bar", "wx-gantt-milestone"]) {
-            for (const element of this._element.querySelectorAll("." + name)) {
-                element.classList.toggle("is-selected", element.dataset.taskId === this.state.selectedTask);
-            }
-        }
-        for (const entry of this._linkPaths ? this._linkPaths.values() : []) {
-            entry.path.classList.toggle("is-selected", entry.link.id === this.state.selectedLink);
-        }
-        const toolbar = this._element.querySelector(".wx-gantt-toolbar");
-        if (toolbar) {
-            toolbar.parentNode.replaceChild(this._renderToolbar(), toolbar);
-        }
+    get _view() {
+        return this._geometry(this.state);
     }
 
     /**
-     * Builds the toolbar with the add action, the scale switch, the zoom
+     * Describes the toolbar with the add action, the sandbox entry, the editor
+     * of a selected dependency, the grid toggle, the scale switch, the zoom
      * controls and the today shortcut.
-     * @returns {HTMLElement} The toolbar element.
+     * @param {object} state - The current state.
+     * @returns {object} The toolbar virtual node.
      */
-    _renderToolbar() {
-        const toolbar = document.createElement("div");
-        toolbar.className = "wx-gantt-toolbar";
+    _renderToolbar(state) {
+        const h = webexpress.webui.h;
+        const readonly = this._readonlyOf(state);
+        const link = (state.links || []).find((l) => l.id === state.selectedLink) || null;
+        const sandboxLabel = this._i18n("webexpress.webapp:gantt.sandbox", "Sandbox");
+        const linkLabel = this._i18n("webexpress.webapp:gantt.link_type", "Dependency");
 
-        if (!this._readonly) {
-            const add = document.createElement("button");
-            add.type = "button";
-            add.className = "wx-gantt-btn wx-gantt-btn--primary wx-gantt-add";
-            const icon = this._icon("wx-icon-light wx-icon-light-plus");
-            if (icon) {
-                add.appendChild(icon);
-            }
-            add.appendChild(document.createTextNode(" " + this._i18n("webexpress.webapp:gantt.new_task", "New task")));
-            add.addEventListener("click", () => {
-                const task = this.addTask();
-                if (task) {
-                    this._pendingEditTaskId = task.id;
-                }
-            });
-            toolbar.appendChild(add);
-
-            if (this._sandboxOffered && this.state.sandbox === null) {
-                const label = this._i18n("webexpress.webapp:gantt.sandbox", "Sandbox");
-                const enter = this._sandboxButton("enter", label, () => this.enterSandbox());
-                const sandboxIcon = this._icon("wx-icon-light wx-icon-light-flask");
-                if (sandboxIcon) {
-                    // the icon replaces the text, so the name moves to the accessible label
-                    enter.replaceChildren(sandboxIcon);
-                    enter.setAttribute("aria-label", label);
-                }
-                enter.title = label + " - " + this._i18n("webexpress.webapp:gantt.sandbox.hint", "Try out changes without saving them");
-                toolbar.appendChild(enter);
-            }
-        }
-
-        const selectedLink = this._links.find((link) => link.id === this.state.selectedLink);
-        if (selectedLink) {
-            const label = document.createElement("label");
-            label.className = "wx-gantt-link-editor";
-            label.appendChild(document.createTextNode(this._i18n("webexpress.webapp:gantt.link_type", "Dependency") + " "));
-            const select = document.createElement("select");
-            select.className = "wx-gantt-btn wx-gantt-link-type";
-            select.disabled = this._readonly;
-            select.setAttribute("aria-label", this._i18n("webexpress.webapp:gantt.link_type", "Dependency"));
-            for (const type of webexpress.webapp.ganttModel.LINK_TYPES) {
-                const option = document.createElement("option");
-                option.value = type;
-                option.textContent = this._i18n("webexpress.webapp:gantt.link." + type, type);
-                select.appendChild(option);
-            }
-            select.value = selectedLink.type;
-            select.addEventListener("change", () => this.updateLink(selectedLink.id, { type: select.value }));
-            label.appendChild(select);
-            toolbar.appendChild(label);
-            if (!this._readonly) {
-                const remove = document.createElement("button");
-                remove.type = "button";
-                remove.className = "wx-gantt-btn wx-gantt-link-delete";
-                remove.textContent = this._i18n("webexpress.webapp:gantt.delete_link", "Delete dependency");
-                remove.addEventListener("click", () => this.removeLink(selectedLink.id));
-                toolbar.appendChild(remove);
-            }
-        }
-
-        const spacer = document.createElement("span");
-        spacer.className = "wx-gantt-toolbar-spacer";
-        toolbar.appendChild(spacer);
-
-        const gridToggle = document.createElement("button");
-        gridToggle.type = "button";
-        gridToggle.className = "wx-gantt-btn wx-gantt-grid-toggle" + (this._gridCollapsed ? " is-active" : "");
-        gridToggle.title = this._i18n("webexpress.webapp:gantt.toggle_grid", "Show or hide the task list");
-        const gridIcon = this._icon("wx-icon-light wx-icon-light-columns");
-        if (gridIcon) {
-            gridToggle.appendChild(gridIcon);
-        } else {
-            gridToggle.textContent = "▤";
-        }
-        gridToggle.addEventListener("click", () => this.toggleGrid());
-        toolbar.appendChild(gridToggle);
-
-        if (this._allowedScales.length > 1) {
-            const scales = document.createElement("div");
-            scales.className = "wx-gantt-scales";
-            for (const scale of this._allowedScales) {
-                const btn = document.createElement("button");
-                btn.type = "button";
-                btn.className = "wx-gantt-btn wx-gantt-scale-btn" + (scale === this._scale ? " is-active" : "");
-                btn.dataset.scale = scale;
-                btn.textContent = this._i18n("webexpress.webapp:gantt.scale." + scale, scale);
-                btn.addEventListener("click", () => this.setScale(scale));
-                scales.appendChild(btn);
-            }
-            toolbar.appendChild(scales);
-        }
-
-        const zoom = document.createElement("div");
-        zoom.className = "wx-gantt-zoom";
-
-        const zoomOut = document.createElement("button");
-        zoomOut.type = "button";
-        zoomOut.className = "wx-gantt-btn wx-gantt-zoom-out";
-        zoomOut.title = this._i18n("webexpress.webapp:gantt.zoom_out", "Zoom out");
-        zoomOut.textContent = "−";
-        zoomOut.addEventListener("click", () => this.zoomOut());
-        zoom.appendChild(zoomOut);
-
-        const zoomIn = document.createElement("button");
-        zoomIn.type = "button";
-        zoomIn.className = "wx-gantt-btn wx-gantt-zoom-in";
-        zoomIn.title = this._i18n("webexpress.webapp:gantt.zoom_in", "Zoom in");
-        zoomIn.textContent = "+";
-        zoomIn.addEventListener("click", () => this.zoomIn());
-        zoom.appendChild(zoomIn);
-
-        const today = document.createElement("button");
-        today.type = "button";
-        today.className = "wx-gantt-btn wx-gantt-today-btn";
-        today.textContent = this._i18n("webexpress.webapp:gantt.today", "Today");
-        today.addEventListener("click", () => this.scrollToToday());
-        zoom.appendChild(today);
-
-        toolbar.appendChild(zoom);
-        return toolbar;
+        return h("div", { key: "toolbar", class: "wx-gantt-toolbar" },
+            !readonly && h("button", {
+                key: "add",
+                type: "button",
+                class: "wx-gantt-btn wx-gantt-btn--primary wx-gantt-add",
+                on: { click: this._onAdd }
+            }, this._icon("wx-icon-light wx-icon-light-plus"), " " + this._i18n("webexpress.webapp:gantt.new_task", "New task")),
+            // the icon replaces the text, so the name moves to the accessible label
+            !readonly && this._sandboxOffered && state.sandbox === null && h("button", {
+                key: "sandbox",
+                type: "button",
+                class: "wx-gantt-btn wx-gantt-sandbox-enter",
+                "aria-label": sandboxLabel,
+                title: sandboxLabel + " - " + this._i18n("webexpress.webapp:gantt.sandbox.hint", "Try out changes without saving them"),
+                on: { click: () => this.enterSandbox() }
+            }, this._icon("wx-icon-light wx-icon-light-flask")),
+            link && h("label", { key: "link", class: "wx-gantt-link-editor" },
+                linkLabel + " ",
+                h("select", {
+                    class: "wx-gantt-btn wx-gantt-link-type",
+                    disabled: readonly,
+                    "aria-label": linkLabel,
+                    value: link.type,
+                    ref: (el) => { this._linkType = el; },
+                    on: { change: () => this.updateLink(link.id, { type: this._linkType.value }) }
+                }, webexpress.webapp.ganttModel.LINK_TYPES.map((type) =>
+                    h("option", { key: type, value: type }, this._i18n("webexpress.webapp:gantt.link." + type, type))))),
+            link && !readonly && h("button", {
+                key: "link-delete",
+                type: "button",
+                class: "wx-gantt-btn wx-gantt-link-delete",
+                on: { click: () => this.removeLink(link.id) }
+            }, this._i18n("webexpress.webapp:gantt.delete_link", "Delete dependency")),
+            h("span", { key: "spacer", class: "wx-gantt-toolbar-spacer" }),
+            h("button", {
+                key: "grid",
+                type: "button",
+                class: ["wx-gantt-btn wx-gantt-grid-toggle", state.gridCollapsed === true && "is-active"],
+                title: this._i18n("webexpress.webapp:gantt.toggle_grid", "Show or hide the task list"),
+                on: { click: () => this.toggleGrid() }
+            }, this._icon("wx-icon-light wx-icon-light-columns")),
+            this._allowedScales.length > 1 && h("div", { key: "scales", class: "wx-gantt-scales" },
+                this._allowedScales.map((scale) => h("button", {
+                    key: scale,
+                    type: "button",
+                    class: ["wx-gantt-btn wx-gantt-scale-btn", scale === state.scale && "is-active"],
+                    dataset: { scale: scale },
+                    on: { click: () => this.setScale(scale) }
+                }, this._i18n("webexpress.webapp:gantt.scale." + scale, scale)))),
+            h("div", { key: "zoom", class: "wx-gantt-zoom" },
+                h("button", {
+                    type: "button",
+                    class: "wx-gantt-btn wx-gantt-zoom-out",
+                    title: this._i18n("webexpress.webapp:gantt.zoom_out", "Zoom out"),
+                    on: { click: () => this.zoomOut() }
+                }, "−"),
+                h("button", {
+                    type: "button",
+                    class: "wx-gantt-btn wx-gantt-zoom-in",
+                    title: this._i18n("webexpress.webapp:gantt.zoom_in", "Zoom in"),
+                    on: { click: () => this.zoomIn() }
+                }, "+"),
+                h("button", {
+                    type: "button",
+                    class: "wx-gantt-btn wx-gantt-today-btn",
+                    on: { click: () => this.scrollToToday() }
+                }, this._i18n("webexpress.webapp:gantt.today", "Today"))));
     }
 
     /**
-     * Builds the strip shown while the sandbox is open. It keeps the user aware
-     * that nothing is stored yet, and it is where ending the sandbox asks
+     * Describes the strip shown while the sandbox is open. It keeps the user
+     * aware that nothing is stored yet, and it is where ending the sandbox asks
      * whether to save or discard the changes - inline rather than in a modal,
      * so the plan stays visible while the user decides.
-     * @returns {HTMLElement} The sandbox strip.
+     * @param {object} state - The current state.
+     * @returns {object} The sandbox strip virtual node.
      */
-    _renderSandbox() {
-        const phase = this.state.sandbox;
-        const strip = document.createElement("div");
-        strip.className = "wx-gantt-sandbox";
-        strip.setAttribute("role", "status");
-
-        const text = document.createElement("span");
-        text.className = "wx-gantt-sandbox-text";
-        strip.appendChild(text);
-
+    _renderSandbox(state) {
+        const h = webexpress.webui.h;
+        const phase = state.sandbox;
+        let text = this._i18n("webexpress.webapp:gantt.sandbox.active", "Sandbox – changes are only saved when you end it.");
         if (phase === "saving") {
-            text.textContent = this._i18n("webexpress.webapp:gantt.sandbox.saving", "Saving changes …");
-            return strip;
+            text = this._i18n("webexpress.webapp:gantt.sandbox.saving", "Saving changes …");
+        } else if (phase === "deciding") {
+            text = this._i18n("webexpress.webapp:gantt.sandbox.decide", "End sandbox – what should happen to the changes?");
         }
 
-        text.textContent = phase === "deciding"
-            ? this._i18n("webexpress.webapp:gantt.sandbox.decide", "End sandbox – what should happen to the changes?")
-            : this._i18n("webexpress.webapp:gantt.sandbox.active", "Sandbox – changes are only saved when you end it.");
-
-        const count = document.createElement("span");
-        count.className = "wx-gantt-sandbox-count";
-        count.textContent = this._i18n("webexpress.webapp:gantt.sandbox.changes", "Changes") + ": " + this.sandboxChangeCount();
-        strip.appendChild(count);
-
-        if (phase === "deciding") {
-            strip.appendChild(this._sandboxButton("save", this._i18n("webexpress.webapp:gantt.sandbox.save", "Save all changes"), () => this.saveSandbox(), true));
-            strip.appendChild(this._sandboxButton("discard", this._i18n("webexpress.webapp:gantt.sandbox.discard", "Discard changes"), () => this.discardSandbox()));
-            strip.appendChild(this._sandboxButton("continue", this._i18n("webexpress.webapp:gantt.sandbox.continue", "Keep editing"), () => this.continueSandbox()));
-        } else {
-            strip.appendChild(this._sandboxButton("end", this._i18n("webexpress.webapp:gantt.sandbox.end", "End sandbox"), () => this.endSandbox()));
-        }
-        return strip;
+        return h("div", { key: "sandbox", class: "wx-gantt-sandbox", role: "status" },
+            h("span", { key: "text", class: "wx-gantt-sandbox-text" }, text),
+            phase !== "saving" && h("span", { key: "count", class: "wx-gantt-sandbox-count" },
+                this._i18n("webexpress.webapp:gantt.sandbox.changes", "Changes") + ": " + this.sandboxChangeCount()),
+            phase === "deciding" && [
+                this._sandboxButton("save", this._i18n("webexpress.webapp:gantt.sandbox.save", "Save all changes"), () => this.saveSandbox(), true),
+                this._sandboxButton("discard", this._i18n("webexpress.webapp:gantt.sandbox.discard", "Discard changes"), () => this.discardSandbox()),
+                this._sandboxButton("continue", this._i18n("webexpress.webapp:gantt.sandbox.continue", "Keep editing"), () => this.continueSandbox())
+            ],
+            phase === "active" && this._sandboxButton("end", this._i18n("webexpress.webapp:gantt.sandbox.end", "End sandbox"), () => this.endSandbox()));
     }
 
     /**
-     * Builds one of the sandbox actions.
+     * Describes one of the sandbox actions.
      * @param {string} name - The action name, completing the css class.
      * @param {string} label - The button text.
      * @param {function(): void} onClick - The action.
      * @param {boolean} [primary=false] - True for the emphasised action.
-     * @returns {HTMLButtonElement} The button.
+     * @returns {object} The button virtual node.
      */
     _sandboxButton(name, label, onClick, primary = false) {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "wx-gantt-btn wx-gantt-sandbox-" + name + (primary ? " wx-gantt-btn--primary" : "");
-        button.textContent = label;
-        button.addEventListener("click", onClick);
-        return button;
+        return webexpress.webui.h("button", {
+            key: name,
+            type: "button",
+            class: ["wx-gantt-btn wx-gantt-sandbox-" + name, primary && "wx-gantt-btn--primary"],
+            on: { click: onClick }
+        }, label);
     }
 
     /**
@@ -1527,81 +1627,76 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Builds the left grid pane with the column header and one row per visible
-     * task. Cells are edited inline on double-click.
+     * Describes the left grid pane with the column header and one row per
+     * visible task. The pane hides the columns its width cannot hold.
+     * @param {object} state - The current state.
      * @param {object} view - The computed view geometry.
-     * @returns {HTMLElement} The grid pane.
+     * @returns {object} The grid pane virtual node.
      */
-    _renderGrid(view) {
+    _renderGrid(state, view) {
+        const h = webexpress.webui.h;
         const ctor = webexpress.webapp.GanttCtrl;
-        const grid = document.createElement("div");
-        grid.className = "wx-gantt-grid";
-        this._gridEl = grid;
+        const collapsed = state.gridCollapsed === true;
+        const columns = this._columns();
+        const hidden = collapsed ? [] : this._hiddenColumns(state.fitWidth || state.gridWidth || ctor.DEFAULT_GRID_WIDTH);
 
-        if (this._gridCollapsed) {
-            grid.classList.add("wx-gantt-grid--collapsed");
-        }
-
-        if (this._gridWidth) {
-            grid.style.flexBasis = this._gridWidth + "px";
-            grid.style.maxWidth = "none";
-        }
-
-        const head = document.createElement("div");
-        head.className = "wx-gantt-grid-head";
-        head.style.height = ctor.HEAD_HEIGHT + "px";
-        for (const column of this._columns()) {
-            const cell = document.createElement("div");
-            cell.className = "wx-gantt-grid-cell wx-gantt-grid-cell--" + column.cls;
-            cell.classList.add("wx-gantt-grid-cell--key-" + column.key);
-            cell.textContent = column.label;
-            head.appendChild(cell);
-        }
-        grid.appendChild(head);
-
-        const rowsHost = document.createElement("div");
-        rowsHost.className = "wx-gantt-grid-rows";
-        this._gridRows = rowsHost;
-        this._labelCells = {};
-
-        // the timeline pane owns the vertical scroll, the grid only follows;
-        // a wheel over the grid is forwarded so both panes feel scrollable
-        rowsHost.addEventListener("wheel", (e) => {
-            if (this._chartScroll && e.deltaY) {
-                this._chartScroll.scrollTop += e.deltaY;
-                this._syncVerticalScroll();
-                if (typeof e.preventDefault === "function") {
-                    e.preventDefault();
-                }
-            }
-        });
-
-        if (view.rows.length === 0) {
-            const empty = document.createElement("div");
-            empty.className = "wx-gantt-empty";
-            empty.textContent = this._i18n("webexpress.webapp:gantt.empty", "No tasks yet.");
-            rowsHost.appendChild(empty);
-        }
-
-        for (const row of view.rows) {
-            rowsHost.appendChild(this._renderGridRow(row));
-        }
-
-        grid.appendChild(rowsHost);
-        return grid;
+        return h("div", {
+            key: "grid",
+            class: ["wx-gantt-grid", collapsed && "wx-gantt-grid--collapsed"].concat(hidden.map((key) => "wx-gantt-grid--hide-" + key)),
+            style: state.gridWidth ? { flexBasis: state.gridWidth + "px", maxWidth: "none" } : {},
+            ref: (el) => { this._gridEl = el; }
+        },
+            h("div", { key: "head", class: "wx-gantt-grid-head", style: { height: ctor.HEAD_HEIGHT + "px" } },
+                columns.map((column) => h("div", {
+                    key: column.key,
+                    class: "wx-gantt-grid-cell wx-gantt-grid-cell--" + column.cls + " wx-gantt-grid-cell--key-" + column.key
+                }, column.label))),
+            h("div", {
+                key: "rows",
+                class: "wx-gantt-grid-rows",
+                ref: (el) => { this._gridRows = el; },
+                on: { wheel: this._onGridWheel }
+            },
+                view.rows.length === 0 && h("div", { key: "empty", class: "wx-gantt-empty" }, this._i18n("webexpress.webapp:gantt.empty", "No tasks yet.")),
+                view.rows.map((row) => this._renderGridRow(state, row, columns))));
     }
 
     /**
-     * Builds the draggable splitter between the grid pane and the timeline
-     * pane. Dragging it resizes the grid; the chosen width survives re-renders.
-     * @returns {HTMLElement} The splitter element.
+     * Picks the grid columns that no longer fit the pane width, right to left,
+     * so shrinking the pane trades detail columns for the name column instead
+     * of crushing every cell. The cumulative claim keeps the hiding order
+     * stable, and the name column never hides.
+     * @param {number} width - The grid pane width in pixels.
+     * @returns {Array<string>} The keys of the hidden columns.
+     */
+    _hiddenColumns(width) {
+        const minWidths = webexpress.webapp.GanttCtrl.COLUMN_MIN_WIDTHS;
+        const hidden = [];
+        let claimed = minWidths.label;
+
+        for (const key of this._visibleColumns) {
+            if (key === "label") {
+                continue;
+            }
+            claimed += minWidths[key] || 0;
+            if (claimed > width) {
+                hidden.push(key);
+            }
+        }
+        return hidden;
+    }
+
+    /**
+     * Describes the draggable splitter between the grid pane and the timeline
+     * pane. Dragging it resizes the grid, a double-click collapses it.
+     * @returns {object} The splitter virtual node.
      */
     _renderSplitter() {
-        const splitter = document.createElement("div");
-        splitter.className = "wx-gantt-splitter";
-        splitter.addEventListener("mousedown", (e) => this._beginSplitDrag(e));
-        splitter.addEventListener("dblclick", () => this.toggleGrid());
-        return splitter;
+        return webexpress.webui.h("div", {
+            key: "splitter",
+            class: "wx-gantt-splitter",
+            on: { mousedown: this._onSplitterDown, dblclick: this._onSplitterDblClick }
+        });
     }
 
     /**
@@ -1627,7 +1722,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         this._drag = {
             type: "split",
             startX: e.clientX || 0,
-            width: this._gridWidth || (this._gridEl && this._gridEl.offsetWidth) || ctor.DEFAULT_GRID_WIDTH
+            width: this.state.gridWidth || (this._gridEl && this._gridEl.offsetWidth) || ctor.DEFAULT_GRID_WIDTH
         };
 
         this._element.classList.add("wx-gantt--dragging");
@@ -1635,144 +1730,114 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Applies a grid pane width, clamped so both panes stay usable, and
-     * remembers it for the next render.
+     * Applies a grid pane width, clamped so both panes stay usable.
      * @param {number} width - The requested width in pixels.
      */
     _applySplit(width) {
         const ctor = webexpress.webapp.GanttCtrl;
-        const hostWidth = this._element.clientWidth || 0;
+        const hostWidth = this._element.clientWidth || this.state.hostWidth || 0;
         const max = hostWidth > 0 ? Math.max(ctor.MIN_GRID_WIDTH, hostWidth - 220) : Number.MAX_SAFE_INTEGER;
         const clamped = Math.min(max, Math.max(ctor.MIN_GRID_WIDTH, width));
 
-        this._gridWidth = clamped;
-        if (this._gridEl) {
-            this._gridEl.style.flexBasis = clamped + "px";
-            this._gridEl.style.maxWidth = "none";
-        }
-        this._updateColumnFit(clamped);
+        // the pane takes the width at once, so the column fit follows a running
+        // drag without waiting for the observer to measure it
+        this.setState({ gridWidth: clamped, fitWidth: clamped });
     }
 
     /**
-     * Hides the grid columns that no longer fit the pane width, right to left,
-     * so shrinking the pane trades detail columns for the name column instead
-     * of crushing every cell. The cumulative claim keeps the hiding order
-     * stable, and the name column never hides. The fit is applied through
-     * classes on the grid element, so a running splitter drag updates it live
-     * without a re-render.
-     * @param {number} width - The grid pane width in pixels.
-     */
-    _updateColumnFit(width) {
-        if (!this._gridEl) {
-            return;
-        }
-
-        const minWidths = webexpress.webapp.GanttCtrl.COLUMN_MIN_WIDTHS;
-        let claimed = minWidths.label;
-
-        for (const key of this._visibleColumns) {
-            if (key === "label") {
-                continue;
-            }
-            claimed += minWidths[key] || 0;
-            this._gridEl.classList.toggle("wx-gantt-grid--hide-" + key, claimed > width);
-        }
-    }
-
-    /**
-     * Builds one grid row: the indented name cell with the collapse caret, the
-     * date, duration, progress and resources cells and the delete action.
+     * Describes one grid row: the cells and the delete action.
+     * @param {object} state - The current state.
      * @param {object} row - The flattened row { task, depth, hasChildren }.
-     * @returns {HTMLElement} The row element.
+     * @param {Array<object>} columns - The visible column descriptors.
+     * @returns {object} The row virtual node.
      */
-    _renderGridRow(row) {
+    _renderGridRow(state, row, columns) {
+        const h = webexpress.webui.h;
         const ctor = webexpress.webapp.GanttCtrl;
-        const task = row.task;
-        const columns = this._columns();
+        const id = row.task.id;
+        const readonly = this._readonlyOf(state);
 
-        const rowEl = document.createElement("div");
-        rowEl.className = "wx-gantt-grid-row"
-            + (task.id === this.state.selectedTask ? " is-selected" : "")
-            + (row.hasChildren ? " is-summary" : "");
-        rowEl.dataset.taskId = task.id;
-        rowEl.style.height = ctor.ROW_HEIGHT + "px";
-        rowEl.addEventListener("click", () => this.select(task.id));
-
-        for (const column of columns) {
-            const cell = document.createElement("div");
-            cell.className = "wx-gantt-grid-cell wx-gantt-grid-cell--" + column.cls;
-            cell.classList.add("wx-gantt-grid-cell--key-" + column.key);
-
-            if (column.key === "label") {
-                cell.style.paddingLeft = (8 + row.depth * 16) + "px";
-
-                if (row.hasChildren) {
-                    const caret = document.createElement("button");
-                    caret.type = "button";
-                    caret.className = "wx-gantt-caret";
-                    caret.setAttribute("aria-expanded", task.collapsed ? "false" : "true");
-                    caret.setAttribute("aria-label", this._i18n("webexpress.webui:list.tree.toggle", "Expand or collapse"));
-                    const drawing = webexpress.webui.Icon.create("angle-down");
-                    drawing.style.transform = task.collapsed ? "rotate(-90deg)" : "none";
-                    caret.appendChild(drawing);
-                    caret.addEventListener("click", (e) => {
+        return h("div", {
+            key: id,
+            class: ["wx-gantt-grid-row", id === state.selectedTask && "is-selected", row.hasChildren && "is-summary"],
+            dataset: { taskId: id },
+            style: { height: ctor.ROW_HEIGHT + "px" },
+            on: { click: this._handler("select", id, () => () => this.select(id)) }
+        },
+            columns.map((column) => this._renderGridCell(state, row, column, readonly)),
+            !readonly && h("button", {
+                key: "delete",
+                type: "button",
+                class: "wx-gantt-row-delete",
+                title: this._i18n("webexpress.webapp:gantt.delete_task", "Delete task"),
+                on: {
+                    click: this._handler("delete", id, () => (e) => {
                         if (typeof e.stopPropagation === "function") {
                             e.stopPropagation();
                         }
-                        this.toggleCollapse(task.id);
-                    });
-                    cell.appendChild(caret);
+                        this.removeTask(id);
+                    })
                 }
+            }, this._icon("wx-icon-light wx-icon-light-trash")));
+    }
 
-                if (task.icon) {
-                    const icon = this._icon(task.icon);
-                    if (icon) {
-                        icon.classList.add("wx-gantt-grid-icon");
-                        cell.appendChild(icon);
-                    }
-                }
+    /**
+     * Describes one grid cell, or its inline editor while the cell is edited.
+     * The name cell carries the indentation, the collapse caret and the icon.
+     * @param {object} state - The current state.
+     * @param {object} row - The flattened row { task, depth, hasChildren }.
+     * @param {object} column - The column descriptor.
+     * @param {boolean} readonly - True when the plan cannot be edited.
+     * @returns {object} The cell virtual node.
+     */
+    _renderGridCell(state, row, column, readonly) {
+        const h = webexpress.webui.h;
+        const task = row.task;
+        const id = task.id;
+        // containers derive everything but their name from the subtree
+        const editable = !readonly && (column.key === "label" || !row.hasChildren);
+        const editing = editable && state.editing && state.editing.taskId === id && state.editing.key === column.key
+            ? state.editing
+            : null;
+        const props = {
+            key: column.key,
+            class: ["wx-gantt-grid-cell wx-gantt-grid-cell--" + column.cls + " wx-gantt-grid-cell--key-" + column.key, editable && "is-editable"],
+            style: column.key === "label" ? { paddingLeft: (8 + row.depth * 16) + "px" } : {},
+            on: editable ? { dblclick: this._handler("edit-" + column.key, id, () => () => this._beginCellEdit(id, column.key)) } : {}
+        };
 
-                const label = document.createElement("span");
-                label.className = "wx-gantt-grid-label";
-                label.textContent = task.label;
-                cell.appendChild(label);
-
-                this._labelCells[task.id] = { cell: cell, task: task };
-            } else {
-                cell.textContent = this._cellText(task, column.key);
-            }
-
-            // containers derive everything but their name from the subtree
-            const editable = !this._readonly && (column.key === "label" || !row.hasChildren);
-            if (editable) {
-                cell.classList.add("is-editable");
-                cell.addEventListener("dblclick", () => this._beginCellEdit(cell, task, column));
-            }
-
-            rowEl.appendChild(cell);
+        if (editing) {
+            return h("div", props, h("input", {
+                key: "editor",
+                class: "wx-gantt-cell-input",
+                type: column.edit === "date" ? "date" : (column.edit === "number" ? "number" : "text"),
+                value: editing.draft,
+                ref: (el) => { this._editInput = el; },
+                on: { input: this._onEditInput, keydown: this._onEditKeyDown, blur: this._onEditBlur }
+            }));
+        }
+        if (column.key !== "label") {
+            return h("div", props, this._cellText(task, column.key));
         }
 
-        if (!this._readonly) {
-            const del = document.createElement("button");
-            del.type = "button";
-            del.className = "wx-gantt-row-delete";
-            del.title = this._i18n("webexpress.webapp:gantt.delete_task", "Delete task");
-            const icon = this._icon("wx-icon-light wx-icon-light-trash");
-            if (icon) {
-                del.appendChild(icon);
-            } else {
-                del.textContent = "×";
-            }
-            del.addEventListener("click", (e) => {
-                if (typeof e.stopPropagation === "function") {
-                    e.stopPropagation();
+        return h("div", props,
+            row.hasChildren && h("button", {
+                key: "caret",
+                type: "button",
+                class: "wx-gantt-caret",
+                "aria-expanded": task.collapsed ? "false" : "true",
+                "aria-label": this._i18n("webexpress.webui:list.tree.toggle", "Expand or collapse"),
+                on: {
+                    click: this._handler("collapse", id, () => (e) => {
+                        if (typeof e.stopPropagation === "function") {
+                            e.stopPropagation();
+                        }
+                        this.toggleCollapse(id);
+                    })
                 }
-                this.removeTask(task.id);
-            });
-            rowEl.appendChild(del);
-        }
-
-        return rowEl;
+            }, this._icon("angle-down", null, { style: { transform: task.collapsed ? "rotate(-90deg)" : "none" } })),
+            this._icon(task.icon, "wx-gantt-grid-icon", { key: "icon" }),
+            h("span", { key: "label", class: "wx-gantt-grid-label" }, task.label));
     }
 
     /**
@@ -1799,311 +1864,210 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Replaces a grid cell content with an inline editor and commits the value
-     * on enter or blur. Escape cancels and restores the rendered cell.
-     * @param {HTMLElement} cell - The cell element.
-     * @param {object} task - The task behind the row.
-     * @param {object} column - The column descriptor.
+     * Opens the inline editor of a grid cell. The edit is state, so the editor
+     * survives the renders that happen meanwhile - a server id arriving for a
+     * task just created moves it to the renamed row instead of losing it.
+     * @param {string} taskId - The task id.
+     * @param {string} key - The column key.
      * @returns {void}
      */
-    _beginCellEdit(cell, task, column) {
-        if (this._readonly) {
+    _beginCellEdit(taskId, key) {
+        const task = this._tasks.find((t) => t.id === taskId);
+        if (this._readonly || !task || !this._visibleColumns.includes(key)) {
             return;
         }
+        this.setState({ editing: { taskId: taskId, key: key, draft: this._editValue(task, key) } });
+    }
 
-        const model = webexpress.webapp.ganttModel;
-        const input = document.createElement("input");
-        input.className = "wx-gantt-cell-input";
-        input.type = column.edit === "date" ? "date" : (column.edit === "number" ? "number" : "text");
-
-        switch (column.key) {
-            case "start": input.value = task.start || ""; break;
-            case "end": input.value = task.end || ""; break;
-            case "duration": input.value = String(task.duration); break;
-            case "progress": input.value = String(task.progress); break;
-            case "resources": input.value = task.resources.join(", "); break;
-            default: input.value = task.label;
+    /**
+     * Gets the value a cell editor starts with.
+     * @param {object} task - The task.
+     * @param {string} key - The column key.
+     * @returns {string} The editor value.
+     */
+    _editValue(task, key) {
+        switch (key) {
+            case "start": return task.start || "";
+            case "end": return task.end || "";
+            case "duration": return String(task.duration);
+            case "progress": return String(task.progress);
+            case "resources": return task.resources.join(", ");
+            default: return task.label;
         }
+    }
 
-        let done = false;
-        const commit = () => {
-            if (done) {
-                return;
+    /**
+     * Ends the cell edit and applies the edited value. A value the column
+     * cannot take, such as an end before the start, ends the edit unchanged.
+     * @returns {void}
+     */
+    _commitEdit() {
+        const editing = this.state.editing;
+        if (!editing) {
+            return;
+        }
+        const task = this._tasks.find((t) => t.id === editing.taskId);
+        const patch = task ? this._editPatch(task, editing.key, editing.draft) : null;
+
+        this.setState({ editing: null });
+        if (patch) {
+            this.updateTask(task.id, patch);
+        }
+    }
+
+    /**
+     * Turns an edited cell value into a task patch.
+     * @param {object} task - The task behind the row.
+     * @param {string} key - The column key.
+     * @param {string} value - The edited value.
+     * @returns {object|null} The patch, or null when the value is not acceptable.
+     */
+    _editPatch(task, key, value) {
+        const model = webexpress.webapp.ganttModel;
+
+        switch (key) {
+            case "label":
+                return { label: value };
+            case "start":
+                return model.parseDate(value) ? { start: value } : null;
+            case "end": {
+                const end = model.parseDate(value);
+                const start = model.parseDate(task.start);
+                return end && start && end > start ? { end: value } : null;
             }
-            done = true;
-
-            const value = input.value;
-            let patch = null;
-
-            switch (column.key) {
-                case "label":
-                    patch = { label: value };
-                    break;
-                case "start": {
-                    const start = model.parseDate(value);
-                    if (start) {
-                        patch = { start: value };
-                    }
-                    break;
-                }
-                case "end": {
-                    const end = model.parseDate(value);
-                    const start = model.parseDate(task.start);
-                    if (end && start && end > start) {
-                        patch = { end: value };
-                    }
-                    break;
-                }
-                case "duration": {
-                    const duration = Math.round(Number(value));
-                    if (Number.isFinite(duration) && value !== "" && duration >= 0) {
-                        patch = { duration: duration };
-                    }
-                    break;
-                }
-                case "progress": {
-                    const progress = Math.round(Number(value));
-                    if (!isNaN(progress)) {
-                        patch = { progress: progress };
-                    }
-                    break;
-                }
-                case "resources":
-                    patch = { resources: value };
-                    break;
+            case "duration": {
+                const duration = Math.round(Number(value));
+                return Number.isFinite(duration) && value !== "" && duration >= 0 ? { duration: duration } : null;
             }
-
-            if (patch) {
-                this.updateTask(task.id, patch);
-            } else {
-                this.render();
+            case "progress": {
+                const progress = Math.round(Number(value));
+                return !isNaN(progress) ? { progress: progress } : null;
             }
+            case "resources":
+                return { resources: value };
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * Describes the scrollable timeline pane: the two tier scale header and
+     * the drawing surface.
+     * @param {object} state - The current state.
+     * @param {object} view - The computed view geometry.
+     * @returns {object} The timeline pane virtual node.
+     */
+    _renderChart(state, view) {
+        const h = webexpress.webui.h;
+
+        return h("div", {
+            key: "chart",
+            class: "wx-gantt-chart",
+            // the timeline scrolls sideways; it has to take the focus for the keyboard to scroll it
+            tabindex: "0",
+            ref: (el) => { this._chartScroll = el; },
+            on: { scroll: this._onChartScroll, wheel: this._onChartWheel }
+        },
+            h("div", { class: "wx-gantt-chart-inner", style: { width: view.width + "px" } },
+                this._renderScaleHead(state, view),
+                this._renderCanvas(state, view)));
+    }
+
+    /**
+     * Describes the two tier timeline header: coarse groups (months or years)
+     * on top of the fine units (days, weeks or months).
+     * @param {object} state - The current state.
+     * @param {object} view - The computed view geometry.
+     * @returns {object} The header virtual node.
+     */
+    _renderScaleHead(state, view) {
+        const h = webexpress.webui.h;
+        const ctor = webexpress.webapp.GanttCtrl;
+        const header = webexpress.webapp.ganttModel.buildScale(state.scale, view.range.start, view.range.end, state.calendar);
+
+        const unitLabel = (unit) => {
+            if (state.scale === "week") {
+                return this._i18n("webexpress.webapp:gantt.week_short", "W") + unit.label;
+            }
+            return state.scale === "month" ? this._formatMonthShort(unit.start) : unit.label;
         };
 
-        input.addEventListener("blur", commit);
-        input.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") {
-                commit();
-            } else if (e.key === "Escape") {
-                done = true;
-                this.render();
-            }
-        });
-
-        cell.replaceChildren(input);
-        input.focus({ preventScroll: true });
+        return h("div", { class: "wx-gantt-chart-head", style: { height: ctor.HEAD_HEIGHT + "px" } },
+            h("div", { class: "wx-gantt-scale-groups" }, header.groups.map((group) => h("div", {
+                class: "wx-gantt-scale-cell",
+                style: { width: (group.days * view.pxDay) + "px" }
+            }, state.scale === "month" ? String(group.start.getUTCFullYear()) : this._formatMonth(group.start)))),
+            h("div", { class: "wx-gantt-scale-units" }, header.units.map((unit) => h("div", {
+                class: ["wx-gantt-scale-cell", unit.nonWorking && "is-weekend", unit.holiday && "is-holiday"],
+                style: { width: (unit.days * view.pxDay) + "px" }
+            }, unitLabel(unit)))));
     }
 
     /**
-     * Builds the scrollable timeline pane: the two tier scale header, the row
-     * stripes, the weekend and today markers, the dependency layer and the
-     * bars.
+     * Describes the drawing surface below the header: row stripes, weekend
+     * columns, the today marker, the dependency layer and the bar layer. A
+     * double-click on a free spot creates a task at that day and row.
+     * @param {object} state - The current state.
      * @param {object} view - The computed view geometry.
-     * @returns {HTMLElement} The timeline pane.
+     * @returns {object} The canvas virtual node.
      */
-    _renderChart(view) {
-        const ctor = webexpress.webapp.GanttCtrl;
-
-        const chart = document.createElement("div");
-        chart.className = "wx-gantt-chart";
-        // the timeline scrolls sideways; it has to take the focus for the keyboard to scroll it
-        chart.setAttribute("tabindex", "0");
-        this._chartScroll = chart;
-        chart.addEventListener("scroll", () => this._syncVerticalScroll());
-        chart.addEventListener("wheel", (e) => {
-            // ctrl+wheel zooms around the timeline like map interfaces do
-            if (e.ctrlKey) {
-                if (typeof e.preventDefault === "function") {
-                    e.preventDefault();
-                }
-                if (e.deltaY < 0) { this.zoomIn(); } else { this.zoomOut(); }
-            }
-        });
-
-        const inner = document.createElement("div");
-        inner.className = "wx-gantt-chart-inner";
-        inner.style.width = view.width + "px";
-
-        inner.appendChild(this._renderScaleHead(view));
-        inner.appendChild(this._renderCanvas(view));
-
-        chart.appendChild(inner);
-        return chart;
-    }
-
-    /**
-     * Builds the two tier timeline header: coarse groups (months or years) on
-     * top of the fine units (days, weeks or months).
-     * @param {object} view - The computed view geometry.
-     * @returns {HTMLElement} The header element.
-     */
-    _renderScaleHead(view) {
+    _renderCanvas(state, view) {
+        const h = webexpress.webui.h;
         const ctor = webexpress.webapp.GanttCtrl;
         const model = webexpress.webapp.ganttModel;
-        const header = model.buildScale(this._scale, view.range.start, view.range.end, this._calendar);
-
-        const head = document.createElement("div");
-        head.className = "wx-gantt-chart-head";
-        head.style.height = ctor.HEAD_HEIGHT + "px";
-
-        const groups = document.createElement("div");
-        groups.className = "wx-gantt-scale-groups";
-        for (const group of header.groups) {
-            const cell = document.createElement("div");
-            cell.className = "wx-gantt-scale-cell";
-            cell.style.width = (group.days * view.pxDay) + "px";
-            cell.textContent = this._scale === "month"
-                ? String(group.start.getUTCFullYear())
-                : this._formatMonth(group.start);
-            groups.appendChild(cell);
-        }
-        head.appendChild(groups);
-
-        const units = document.createElement("div");
-        units.className = "wx-gantt-scale-units";
-        for (const unit of header.units) {
-            const cell = document.createElement("div");
-            cell.className = "wx-gantt-scale-cell" + (unit.nonWorking ? " is-weekend" : "") + (unit.holiday ? " is-holiday" : "");
-            cell.style.width = (unit.days * view.pxDay) + "px";
-            if (this._scale === "week") {
-                cell.textContent = this._i18n("webexpress.webapp:gantt.week_short", "W") + unit.label;
-            } else if (this._scale === "month") {
-                cell.textContent = this._formatMonthShort(unit.start);
-            } else {
-                cell.textContent = unit.label;
-            }
-            units.appendChild(cell);
-        }
-        head.appendChild(units);
-
-        return head;
-    }
-
-    /**
-     * Builds the drawing surface below the header: row stripes, weekend
-     * columns, the today marker, the SVG dependency layer and the bar layer.
-     * A double-click on a free spot creates a task at that day and row.
-     * @param {object} view - The computed view geometry.
-     * @returns {HTMLElement} The canvas element.
-     */
-    _renderCanvas(view) {
-        const ctor = webexpress.webapp.GanttCtrl;
-        const model = webexpress.webapp.ganttModel;
-
-        const canvas = document.createElement("div");
-        canvas.className = "wx-gantt-canvas";
-        canvas.style.height = view.height + "px";
-        canvas.style.width = view.width + "px";
-        this._canvas = canvas;
-
-        canvas.addEventListener("dblclick", (e) => this._onCanvasDblClick(e, view));
-        canvas.addEventListener("click", (e) => {
-            // a pan that actually moved must not be mistaken for a click
-            if (this._skipNextCanvasClick) {
-                this._skipNextCanvasClick = false;
-                return;
-            }
-            // a click on the empty surface clears the selection
-            if (e.target === canvas) {
-                this.select(null, null);
-            }
-        });
-
-        // bars, handles and ports stop propagation, so a mousedown reaching
-        // the canvas targets the free surface and pans the timeline
-        canvas.addEventListener("mousedown", (e) => this._beginPan(e));
-
-        // row stripes give the bars their lanes and carry the selection tint
-        for (let i = 0; i < view.rows.length; i++) {
-            const stripe = document.createElement("div");
-            stripe.className = "wx-gantt-row-stripe"
-                + (view.rows[i].task.id === this.state.selectedTask ? " is-selected" : "");
-            stripe.dataset.taskId = view.rows[i].task.id;
-            stripe.style.top = (i * ctor.ROW_HEIGHT) + "px";
-            stripe.style.height = ctor.ROW_HEIGHT + "px";
-            canvas.appendChild(stripe);
-        }
 
         // weekend shading only reads well when a day has visible width
-        if (this._scale === "day") {
-            const header = model.buildScale("day", view.range.start, view.range.end, this._calendar);
-            for (const unit of header.units) {
-                if (!unit.nonWorking) {
-                    continue;
-                }
-                const column = document.createElement("div");
-                column.className = "wx-gantt-weekend" + (unit.holiday ? " wx-gantt-holiday" : "");
-                column.style.left = model.dateToOffset(unit.start, view.range.start, view.pxDay) + "px";
-                column.style.width = view.pxDay + "px";
-                canvas.appendChild(column);
-            }
-        }
+        const weekends = state.scale !== "day" ? [] : model.buildScale("day", view.range.start, view.range.end, state.calendar).units
+            .filter((unit) => unit.nonWorking)
+            .map((unit) => {
+                const left = model.dateToOffset(unit.start, view.range.start, view.pxDay);
+                return h("div", {
+                    key: "weekend-" + left,
+                    class: ["wx-gantt-weekend", unit.holiday && "wx-gantt-holiday"],
+                    style: { left: left + "px", width: view.pxDay + "px" }
+                });
+            });
 
-        const today = model.parseDate(new Date());
-        const todayOffset = model.dateToOffset(today, view.range.start, view.pxDay);
-        if (todayOffset >= 0 && todayOffset <= view.width) {
-            const line = document.createElement("div");
-            line.className = "wx-gantt-today";
-            line.style.left = todayOffset + "px";
-            canvas.appendChild(line);
-        }
+        const todayOffset = model.dateToOffset(model.parseDate(new Date()), view.range.start, view.pxDay);
 
-        canvas.appendChild(this._renderLinks(view));
-
-        const bars = document.createElement("div");
-        bars.className = "wx-gantt-bars";
-        this._barsLayer = bars;
-        for (let i = 0; i < view.rows.length; i++) {
-            const bar = this._renderBar(view.rows[i], i, view);
-            if (bar) {
-                bars.appendChild(bar);
-            }
-        }
-        canvas.appendChild(bars);
-
-        return canvas;
+        return h("div", {
+            class: "wx-gantt-canvas",
+            style: { height: view.height + "px", width: view.width + "px" },
+            ref: (el) => { this._canvas = el; },
+            on: { dblclick: this._onCanvasDblClickHandler, click: this._onCanvasClick, mousedown: this._onCanvasMouseDown }
+        },
+            // row stripes give the bars their lanes and carry the selection tint
+            view.rows.map((row, i) => h("div", {
+                key: "stripe-" + row.task.id,
+                class: ["wx-gantt-row-stripe", row.task.id === state.selectedTask && "is-selected"],
+                dataset: { taskId: row.task.id },
+                style: { top: (i * ctor.ROW_HEIGHT) + "px", height: ctor.ROW_HEIGHT + "px" }
+            })),
+            weekends,
+            todayOffset >= 0 && todayOffset <= view.width && h("div", { key: "today", class: "wx-gantt-today", style: { left: todayOffset + "px" } }),
+            this._renderLinks(state, view),
+            h("div", { key: "bars", class: "wx-gantt-bars" }, view.rows.map((row, i) => this._renderBar(state, view, row, i))));
     }
 
     /**
-     * Builds the SVG dependency layer with one orthogonal connector per link.
-     * Each connector carries an invisible wide twin that makes the thin line
-     * clickable for selection and double-click deletion.
+     * Describes the SVG dependency layer with one orthogonal connector per
+     * link, and the connector a link gesture is drawing. Each connector
+     * carries an invisible wide twin that makes the thin line clickable for
+     * selection and double-click deletion. A previewed bar moves the ends of
+     * its connectors with it, because the anchors come from the bar geometry
+     * the render draws.
+     * @param {object} state - The current state.
      * @param {object} view - The computed view geometry.
-     * @returns {SVGElement} The SVG layer.
+     * @returns {object} The SVG layer virtual node.
      */
-    _renderLinks(view) {
-        const svgNs = "http://www.w3.org/2000/svg";
-        const svg = document.createElementNS(svgNs, "svg");
-        svg.classList.add("wx-gantt-links");
-        svg.setAttribute("width", String(view.width));
-        svg.setAttribute("height", String(view.height));
-        this._svgLayer = svg;
-        this._linkPaths = new Map();
-
+    _renderLinks(state, view) {
+        const h = webexpress.webui.h;
         const markerId = this._markerId;
-        const defs = document.createElementNS(svgNs, "defs");
-        const marker = document.createElementNS(svgNs, "marker");
-        marker.setAttribute("id", markerId);
-        marker.setAttribute("viewBox", "0 0 10 10");
-        marker.setAttribute("refX", "9");
-        marker.setAttribute("refY", "5");
-        marker.setAttribute("markerWidth", "6");
-        marker.setAttribute("markerHeight", "6");
-        marker.setAttribute("orient", "auto");
-        const arrow = document.createElementNS(svgNs, "path");
-        arrow.setAttribute("d", "M 0 0 L 10 5 L 0 10 z");
-        marker.appendChild(arrow);
-        defs.appendChild(marker);
-        svg.appendChild(defs);
+        const connectors = [];
 
-        const rowIndex = Object.create(null);
-        for (let i = 0; i < view.rows.length; i++) {
-            rowIndex[view.rows[i].task.id] = i;
-        }
-
-        for (const link of this._links) {
-            const fromIdx = rowIndex[link.from];
-            const toIdx = rowIndex[link.to];
+        for (const link of state.links || []) {
+            const fromIdx = view.rowIndex[link.from];
+            const toIdx = view.rowIndex[link.to];
             if (fromIdx === undefined || toIdx === undefined
                 || !view.rows[fromIdx].task.start || !view.rows[toIdx].task.start) {
                 // an endpoint inside a collapsed container has no visible row
@@ -2112,48 +2076,120 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
 
             const fromSide = link.type === "SS" || link.type === "SF" ? "start" : "end";
             const toSide = link.type === "FF" || link.type === "SF" ? "end" : "start";
-            const from = this._anchor(view.rows[fromIdx].task, fromIdx, fromSide, view);
-            const to = this._anchor(view.rows[toIdx].task, toIdx, toSide, view);
+            const from = this._barAnchor(state, view, fromIdx, fromSide);
+            const to = this._barAnchor(state, view, toIdx, toSide);
             const d = this._linkPath(from, fromSide, to, toSide);
-
-            const path = document.createElementNS(svgNs, "path");
-            path.setAttribute("d", d);
-            path.classList.add("wx-gantt-link");
-            if (link.id === this.state.selectedLink) {
-                path.classList.add("is-selected");
-            }
-            path.setAttribute("marker-end", "url(#" + markerId + ")");
-            svg.appendChild(path);
-
-            const hit = document.createElementNS(svgNs, "path");
-            hit.setAttribute("d", d);
-            hit.classList.add("wx-gantt-link-hit");
-            const title = document.createElementNS(svgNs, "title");
-            title.textContent = view.rows[fromIdx].task.label + " → " + view.rows[toIdx].task.label
+            const title = view.rows[fromIdx].task.label + " → " + view.rows[toIdx].task.label
                 + ": " + this._i18n("webexpress.webapp:gantt.link." + link.type, link.type);
-            hit.appendChild(title);
-            hit.setAttribute("tabindex", "0");
-            hit.setAttribute("role", "button");
-            hit.setAttribute("aria-label", title.textContent);
-            hit.addEventListener("mousedown", (event) => event.stopPropagation());
-            hit.addEventListener("keydown", (event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    this.select(null, link.id);
-                }
-            });
-            hit.addEventListener("click", () => this.select(null, link.id));
-            hit.addEventListener("dblclick", () => this.removeLink(link.id));
-            svg.appendChild(hit);
 
-            this._linkPaths.set(link.id, { link: link, path: path, hit: hit });
+            connectors.push(
+                h("path", {
+                    key: "link-" + link.id,
+                    class: ["wx-gantt-link", link.id === state.selectedLink && "is-selected"],
+                    d: d,
+                    "marker-end": "url(#" + markerId + ")"
+                }),
+                h("path", {
+                    key: "hit-" + link.id,
+                    class: "wx-gantt-link-hit",
+                    d: d,
+                    tabindex: "0",
+                    role: "button",
+                    "aria-label": title,
+                    on: this._linkHandlers(link.id)
+                }, h("title", null, title)));
         }
 
-        return svg;
+        const draft = state.linkDraft;
+
+        return h("svg", { key: "links", class: "wx-gantt-links", width: String(view.width), height: String(view.height) },
+            h("defs", { key: "defs" },
+                h("marker", { id: markerId, viewBox: "0 0 10 10", refX: "9", refY: "5", markerWidth: "6", markerHeight: "6", orient: "auto" },
+                    h("path", { d: "M 0 0 L 10 5 L 0 10 z" }))),
+            connectors,
+            draft && h("path", { key: "draft", class: "wx-gantt-link wx-gantt-link--temp", d: this._draftPath(draft, view) }));
     }
 
     /**
-     * Computes the connector anchor point of a task bar side.
+     * Returns the listeners of a connector: it selects on click and on the
+     * keyboard, deletes on double-click and keeps its mousedown from panning.
+     * @param {string} linkId - The link id.
+     * @returns {object} The listener map.
+     */
+    _linkHandlers(linkId) {
+        return this._handler("link", linkId, () => ({
+            mousedown: (e) => e.stopPropagation(),
+            keydown: (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    this.select(null, linkId);
+                }
+            },
+            click: () => this.select(null, linkId),
+            dblclick: () => this.removeLink(linkId)
+        }));
+    }
+
+    /**
+     * Routes the connector of a running link gesture: to the boundary of the
+     * bar it would connect to, or straight to the pointer.
+     * @param {object} draft - The gesture state { from, fromSide, pointer, target }.
+     * @param {object} view - The computed view geometry.
+     * @returns {string} The SVG path data.
+     */
+    _draftPath(draft, view) {
+        const anchor = draft.target ? this._anchorFor(draft.target.taskId, draft.target.side, view) : null;
+        return anchor
+            ? this._linkPath(draft.from, draft.fromSide, anchor, draft.target.side)
+            : "M " + draft.from.x + " " + draft.from.y + " L " + draft.pointer.x + " " + draft.pointer.y;
+    }
+
+    /**
+     * Computes the geometry a bar spans by its dates.
+     * @param {object} task - The task.
+     * @param {object} view - The computed view geometry.
+     * @returns {object} The geometry { left, width } in pixels.
+     */
+    _dateGeometry(task, view) {
+        const model = webexpress.webapp.ganttModel;
+        const start = model.parseDate(task.start);
+
+        return {
+            left: model.dateToOffset(start, view.range.start, view.pxDay),
+            width: model.diffDays(start, model.parseDate(task.end)) * view.pxDay
+        };
+    }
+
+    /**
+     * Computes the geometry a bar is drawn with: the preview of a running
+     * gesture, or the span of its dates.
+     * @param {object} state - The current state.
+     * @param {object} task - The task.
+     * @param {object} view - The computed view geometry.
+     * @returns {object} The geometry { left, width } in pixels.
+     */
+    _barGeometry(state, task, view) {
+        const preview = state.preview;
+        return preview && preview.taskId === task.id
+            ? { left: preview.left, width: preview.width }
+            : this._dateGeometry(task, view);
+    }
+
+    /**
+     * Computes the connector anchor point of a drawn bar side.
+     * @param {object} state - The current state.
+     * @param {object} view - The computed view geometry.
+     * @param {number} rowIndex - The visible row index.
+     * @param {string} side - The side: "start" or "end".
+     * @returns {object} The point { x, y }.
+     */
+    _barAnchor(state, view, rowIndex, side) {
+        const geometry = this._barGeometry(state, view.rows[rowIndex].task, view);
+        return this._anchorAt(geometry.left, geometry.width, rowIndex, side);
+    }
+
+    /**
+     * Computes the connector anchor point of a task bar side from its dates.
      * @param {object} task - The task.
      * @param {number} rowIndex - The visible row index.
      * @param {string} side - The side: "start" or "end".
@@ -2161,16 +2197,13 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
      * @returns {object} The point { x, y }.
      */
     _anchor(task, rowIndex, side, view) {
-        const model = webexpress.webapp.ganttModel;
-        const left = model.dateToOffset(model.parseDate(task.start), view.range.start, view.pxDay);
-        const width = model.diffDays(model.parseDate(task.start), model.parseDate(task.end)) * view.pxDay;
-
-        return this._anchorAt(left, width, rowIndex, side);
+        const geometry = this._dateGeometry(task, view);
+        return this._anchorAt(geometry.left, geometry.width, rowIndex, side);
     }
 
     /**
      * Computes a connector anchor point from an explicit bar geometry, the
-     * shared primitive of the rendered anchors and the drag previews.
+     * shared primitive of the rendered anchors and the gestures.
      * @param {number} left - The bar's left offset in pixels.
      * @param {number} width - The bar's width in pixels.
      * @param {number} rowIndex - The visible row index.
@@ -2187,62 +2220,18 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Computes the rendered anchor point of a task by id, or null when the
-     * task has no visible row.
+     * Computes the anchor point of a visible task by id, or null when the task
+     * has no visible row or no dates.
      * @param {string} taskId - The task id.
      * @param {string} side - The side: "start" or "end".
      * @param {object} view - The computed view geometry.
      * @returns {object|null} The point { x, y }, or null.
      */
     _anchorFor(taskId, side, view) {
-        const rowIndex = this._rowIndexById ? this._rowIndexById[taskId] : undefined;
-        const task = this._tasks.find((t) => t.id === taskId);
+        const rowIndex = view.rowIndex[taskId];
+        const task = rowIndex !== undefined ? view.rows[rowIndex].task : null;
 
-        if (rowIndex === undefined || !task || !task.start) {
-            return null;
-        }
-
-        return this._anchor(task, rowIndex, side, view);
-    }
-
-    /**
-     * Reroutes the connectors that touch the dragged task from its previewed
-     * geometry, so the dependencies follow the bar during the gesture instead
-     * of snapping into place on release.
-     * @param {string} taskId - The dragged task id.
-     * @param {number} left - The previewed left offset in pixels.
-     * @param {number} width - The previewed width in pixels.
-     * @param {number} rowIndex - The visible row index of the dragged task.
-     */
-    _updateLinkPreviews(taskId, left, width, rowIndex) {
-        if (!this._linkPaths || !this._view || rowIndex === undefined) {
-            return;
-        }
-
-        for (const entry of this._linkPaths.values()) {
-            const link = entry.link;
-            if (link.from !== taskId && link.to !== taskId) {
-                continue;
-            }
-
-            const fromSide = link.type === "SS" || link.type === "SF" ? "start" : "end";
-            const toSide = link.type === "FF" || link.type === "SF" ? "end" : "start";
-
-            const from = link.from === taskId
-                ? this._anchorAt(left, width, rowIndex, fromSide)
-                : this._anchorFor(link.from, fromSide, this._view);
-            const to = link.to === taskId
-                ? this._anchorAt(left, width, rowIndex, toSide)
-                : this._anchorFor(link.to, toSide, this._view);
-
-            if (!from || !to) {
-                continue;
-            }
-
-            const d = this._linkPath(from, fromSide, to, toSide);
-            entry.path.setAttribute("d", d);
-            entry.hit.setAttribute("d", d);
-        }
+        return task && task.start ? this._anchor(task, rowIndex, side, view) : null;
     }
 
     /**
@@ -2289,129 +2278,100 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Builds the bar (or milestone diamond, or container bracket) of one row,
-     * including the drag surfaces: resize handles, the progress handle and the
-     * link ports.
+     * Describes the bar (or milestone diamond, or container bracket) of one
+     * row, including the drag surfaces: resize handles, the progress handle
+     * and the link ports. A running gesture draws the bar where it previews
+     * it, and a link gesture marks the bar it would connect to.
+     * @param {object} state - The current state.
+     * @param {object} view - The computed view geometry.
      * @param {object} row - The flattened row { task, depth, hasChildren }.
      * @param {number} rowIndex - The visible row index.
-     * @param {object} view - The computed view geometry.
-     * @returns {HTMLElement|null} The bar element, or null without dates.
+     * @returns {object|null} The bar virtual node, or null without dates.
      */
-    _renderBar(row, rowIndex, view) {
+    _renderBar(state, view, row, rowIndex) {
+        const h = webexpress.webui.h;
         const ctor = webexpress.webapp.GanttCtrl;
-        const model = webexpress.webapp.ganttModel;
         const task = row.task;
-        const start = model.parseDate(task.start);
-        if (!start) {
+        const id = task.id;
+        if (!webexpress.webapp.ganttModel.parseDate(task.start)) {
             return null;
         }
 
-        const left = model.dateToOffset(start, view.range.start, view.pxDay);
+        const readonly = this._readonlyOf(state);
+        const geometry = this._barGeometry(state, task, view);
         const top = rowIndex * ctor.ROW_HEIGHT;
         const isSummary = row.hasChildren;
-        const isMilestone = task.duration === 0;
-        const selected = task.id === this.state.selectedTask;
+        const selected = id === state.selectedTask;
+        const target = state.linkDraft && state.linkDraft.target && state.linkDraft.target.taskId === id
+            ? state.linkDraft.target
+            : null;
+        const dataset = target ? { taskId: id, linkTargetSide: target.side } : { taskId: id };
+        const ports = !readonly && ["start", "end"].map((side) => h("div", {
+            key: "port-" + side,
+            class: "wx-gantt-port wx-gantt-port--" + side,
+            on: { mousedown: this._handler("port-" + side, id, () => (e) => this._beginLinkDrag(e, this._tasks.find((t) => t.id === id), side, this._view)) }
+        }));
 
-        if (isMilestone) {
-            const milestone = document.createElement("div");
-            milestone.className = "wx-gantt-milestone" + (selected ? " is-selected" : "");
-            milestone.dataset.taskId = task.id;
-            milestone.style.left = left + "px";
-            milestone.style.top = (top + ctor.ROW_HEIGHT / 2) + "px";
-            milestone.title = task.label + " · " + this._formatDate(task.start);
-            milestone.addEventListener("mousedown", (e) => this._beginDrag(e, task, "move", milestone, view));
-            this._appendPorts(milestone, task, view);
-            return milestone;
+        if (task.duration === 0) {
+            return h("div", {
+                key: id,
+                class: ["wx-gantt-milestone", selected && "is-selected", target && "is-link-target"],
+                dataset: dataset,
+                style: { left: geometry.left + "px", top: (top + ctor.ROW_HEIGHT / 2) + "px" },
+                title: task.label + " · " + this._formatDate(task.start),
+                on: { mousedown: this._handler("move", id, () => (e) => this._beginDrag(e, id, "move")) }
+            }, ports);
         }
 
-        const width = Math.max(model.diffDays(model.parseDate(task.start), model.parseDate(task.end)) * view.pxDay, 2);
-
-        const bar = document.createElement("div");
-        bar.className = "wx-gantt-bar"
-            + (isSummary ? " wx-gantt-bar--summary" : "")
-            + (selected ? " is-selected" : "");
-        bar.dataset.taskId = task.id;
-        bar.style.left = left + "px";
-        // container bars render as a flat bracket above the lane
-        bar.style.top = (top + (isSummary ? 6 : 5)) + "px";
-        bar.style.width = width + "px";
-        bar.style.height = (isSummary ? 10 : ctor.ROW_HEIGHT - 10) + "px";
-        if (task.color) {
-            bar.style.background = task.color;
-        }
-        bar.title = task.label
-            + " · " + this._formatDate(task.start) + " – " + this._formatDate(task.end)
-            + " · " + task.progress + " %"
-            + (task.resources.length > 0 ? " · " + task.resources.join(", ") : "");
-
-        const progress = document.createElement("div");
-        progress.className = "wx-gantt-bar-progress";
-        progress.style.width = task.progress + "%";
-        bar.appendChild(progress);
-
-        const label = document.createElement("span");
-        label.className = "wx-gantt-bar-label";
-        if (task.icon) {
-            const icon = this._icon(task.icon);
-            if (icon) {
-                icon.classList.add("wx-gantt-bar-icon");
-                label.appendChild(icon);
-            }
-        }
-        label.appendChild(document.createTextNode(task.label));
-        bar.appendChild(label);
-
-        if (task.resources.length > 0) {
-            const resources = document.createElement("span");
-            resources.className = "wx-gantt-bar-resources";
-            resources.style.left = (width + 8) + "px";
-            resources.textContent = task.resources.join(", ");
-            bar.appendChild(resources);
-        }
-
+        const width = Math.max(geometry.width, 2);
+        const progress = state.preview && state.preview.taskId === id && state.preview.progress !== null
+            ? state.preview.progress
+            : task.progress;
         // containers derive their dates from the subtree, so only leaf bars
         // are draggable and resizable
-        if (!isSummary && !this._readonly) {
-            bar.addEventListener("mousedown", (e) => this._beginDrag(e, task, "move", bar, view));
+        const draggable = !isSummary && !readonly;
 
-            for (const edge of ["start", "end"]) {
-                const handle = document.createElement("div");
-                handle.className = "wx-gantt-handle wx-gantt-handle--" + edge;
-                handle.addEventListener("mousedown", (e) => this._beginDrag(e, task, "resize-" + edge, bar, view));
-                bar.appendChild(handle);
+        return h("div", {
+            key: id,
+            class: ["wx-gantt-bar", isSummary && "wx-gantt-bar--summary", selected && "is-selected", target && "is-link-target"],
+            dataset: dataset,
+            style: {
+                left: geometry.left + "px",
+                // container bars render as a flat bracket above the lane
+                top: (top + (isSummary ? 6 : 5)) + "px",
+                width: width + "px",
+                height: (isSummary ? 10 : ctor.ROW_HEIGHT - 10) + "px",
+                background: task.color || ""
+            },
+            title: task.label
+                + " · " + this._formatDate(task.start) + " – " + this._formatDate(task.end)
+                + " · " + task.progress + " %"
+                + (task.resources.length > 0 ? " · " + task.resources.join(", ") : ""),
+            on: {
+                mousedown: draggable
+                    ? this._handler("move", id, () => (e) => this._beginDrag(e, id, "move"))
+                    : this._handler("pick", id, () => () => this.select(id))
             }
-
-            const progressHandle = document.createElement("div");
-            progressHandle.className = "wx-gantt-progress-handle";
-            progressHandle.style.left = "calc(" + task.progress + "% - 4px)";
-            progressHandle.addEventListener("mousedown", (e) => this._beginDrag(e, task, "progress", bar, view));
-            bar.appendChild(progressHandle);
-        } else {
-            bar.addEventListener("mousedown", () => this.select(task.id));
-        }
-
-        this._appendPorts(bar, task, view);
-        return bar;
-    }
-
-    /**
-     * Appends the two link ports to a bar. Dragging a port starts a link
-     * gesture; the entire target bar accepts the drop.
-     * @param {HTMLElement} bar - The bar element.
-     * @param {object} task - The task behind the bar.
-     * @param {object} view - The computed view geometry.
-     */
-    _appendPorts(bar, task, view) {
-        if (this._readonly) {
-            return;
-        }
-
-        for (const side of ["start", "end"]) {
-            const port = document.createElement("div");
-            port.className = "wx-gantt-port wx-gantt-port--" + side;
-            port.addEventListener("mousedown", (e) => this._beginLinkDrag(e, task, side, view));
-            bar.appendChild(port);
-        }
+        },
+            h("div", { key: "progress", class: "wx-gantt-bar-progress", style: { width: progress + "%" } }),
+            h("span", { key: "label", class: "wx-gantt-bar-label" }, this._icon(task.icon, "wx-gantt-bar-icon"), task.label),
+            task.resources.length > 0 && h("span", {
+                key: "resources",
+                class: "wx-gantt-bar-resources",
+                style: { left: (width + 8) + "px" }
+            }, task.resources.join(", ")),
+            draggable && ["start", "end"].map((edge) => h("div", {
+                key: "handle-" + edge,
+                class: "wx-gantt-handle wx-gantt-handle--" + edge,
+                on: { mousedown: this._handler("resize-" + edge, id, () => (e) => this._beginDrag(e, id, "resize-" + edge)) }
+            })),
+            draggable && h("div", {
+                key: "progress-handle",
+                class: "wx-gantt-progress-handle",
+                style: { left: "calc(" + progress + "% - 4px)" },
+                on: { mousedown: this._handler("progress", id, () => (e) => this._beginDrag(e, id, "progress")) }
+            }),
+            ports);
     }
 
     /**
@@ -2420,7 +2380,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
      * pointer's nearest half selects the start or finish boundary.
      * @param {MouseEvent} event - The current pointer event.
      * @param {string} fromId - The predecessor being connected.
-     * @returns {object|null} The valid target task, boundary and bar element.
+     * @returns {object|null} The valid target task and boundary { task, side }.
      */
     _resolveLinkTarget(event, fromId) {
         let element = event.target;
@@ -2437,7 +2397,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
                     }
                     const rect = element.getBoundingClientRect();
                     side = side || (event.clientX < rect.left + rect.width / 2 ? "start" : "end");
-                    return { task: task, side: side, element: element };
+                    return { task: task, side: side };
                 }
             }
             element = element.parentNode;
@@ -2446,61 +2406,57 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Highlights the accepted bar and boundary while removing stale feedback.
-     * @param {object|null} target - The current resolved drop target.
-     * @returns {void}
+     * Describes the inline error panel shown in place of the timeline when the
+     * load failed, with a retry action when an endpoint is configured.
+     * @returns {object} The error virtual node.
      */
-    _setLinkTarget(target) {
-        if (this._linkTarget) {
-            this._linkTarget.element.classList.remove("is-link-target");
-            delete this._linkTarget.element.dataset.linkTargetSide;
-        }
-        this._linkTarget = target;
-        if (target) {
-            target.element.classList.add("is-link-target");
-            target.element.dataset.linkTargetSide = target.side;
-        }
+    _renderError() {
+        const h = webexpress.webui.h;
+
+        return h("div", { key: "error", class: "wx-gantt-error" },
+            h("span", null, this._i18n("webexpress.webapp:gantt.load_failed", "Failed to load the plan.")),
+            this._restUri !== "" && h("button", {
+                type: "button",
+                class: "wx-gantt-btn",
+                on: { click: () => this.refresh() }
+            }, this._i18n("webexpress.webapp:gantt.retry", "Retry")));
     }
 
     /**
-     * Builds the inline error panel shown in place of the timeline when the
-     * load failed, with a retry action when an endpoint is configured.
-     * @returns {HTMLElement} The error element.
+     * Describes an icon the way webexpress.webui.Icon.create builds one: an
+     * image for a spec that points at one, otherwise an i element with the
+     * resolved icon classes.
+     * @param {string} spec - The icon specification.
+     * @param {string} [extraClass] - Extra css classes.
+     * @param {object} [props] - Further props, such as a key or a style.
+     * @returns {object|null} The icon virtual node, or null without a spec.
      */
-    _renderError() {
-        const wrap = document.createElement("div");
-        wrap.className = "wx-gantt-error";
-
-        const message = document.createElement("span");
-        message.textContent = this._i18n("webexpress.webapp:gantt.load_failed", "Failed to load the plan.");
-        wrap.appendChild(message);
-
-        if (this._restUri !== "") {
-            const retry = document.createElement("button");
-            retry.type = "button";
-            retry.className = "wx-gantt-btn";
-            retry.textContent = this._i18n("webexpress.webapp:gantt.retry", "Retry");
-            retry.addEventListener("click", () => this.refresh());
-            wrap.appendChild(retry);
+    _icon(spec, extraClass, props) {
+        const h = webexpress.webui.h;
+        const value = (spec || "").trim();
+        if (!value) {
+            return null;
         }
-
-        return wrap;
+        const extra = (extraClass || "").trim();
+        if (webexpress.webui.Icon._isImage(value)) {
+            return h("img", Object.assign({ class: ("wx-icon-img " + extra).trim(), src: value, alt: "" }, props));
+        }
+        return h("i", Object.assign({ class: (webexpress.webui.IconSet.resolve(value) + " " + extra).trim() }, props));
     }
 
     // --------------------------------------------------------- interactions
 
     /**
-     * Starts a bar gesture (move, resize or progress). The gesture previews by
-     * mutating the bar style directly and only commits a state change on
-     * release, so the store is not flooded during the drag.
+     * Starts a bar gesture (move, resize or progress). The gesture keeps its
+     * starting point here and puts what it shows - the previewed geometry -
+     * into the state, so the bar and its connectors move in the same render.
      * @param {MouseEvent} e - The mousedown event.
-     * @param {object} task - The task behind the bar.
+     * @param {string} taskId - The task behind the bar.
      * @param {string} type - The gesture: move, resize-start, resize-end or progress.
-     * @param {HTMLElement} bar - The bar element.
-     * @param {object} view - The computed view geometry.
      */
-    _beginDrag(e, task, type, bar, view) {
-        if (this._readonly || (e.button !== undefined && e.button !== 0)) {
+    _beginDrag(e, taskId, type) {
+        const task = this._tasks.find((t) => t.id === taskId);
+        if (!task || this._readonly || (e.button !== undefined && e.button !== 0)) {
             return;
         }
         if (typeof e.preventDefault === "function") {
@@ -2512,19 +2468,16 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
 
         this.select(task.id);
 
-        const model = webexpress.webapp.ganttModel;
-        const left = model.dateToOffset(model.parseDate(task.start), view.range.start, view.pxDay);
-        const width = model.diffDays(model.parseDate(task.start), model.parseDate(task.end)) * view.pxDay;
+        const view = this._view;
+        const geometry = this._dateGeometry(task, view);
 
         this._drag = {
             type: type,
             task: task,
             view: view,
-            bar: bar,
             startX: e.clientX || 0,
-            left: left,
-            width: width,
-            rowIndex: this._rowIndexById ? this._rowIndexById[task.id] : undefined,
+            left: geometry.left,
+            width: geometry.width,
             moved: false
         };
 
@@ -2560,15 +2513,15 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Starts a link gesture from a port. A temporary connector follows the
-     * pointer until it is released over another port.
+     * Starts a link gesture from a port. A connector follows the pointer until
+     * it is released over another bar.
      * @param {MouseEvent} e - The mousedown event.
      * @param {object} task - The source task.
      * @param {string} side - The source side: "start" or "end".
      * @param {object} view - The computed view geometry.
      */
     _beginLinkDrag(e, task, side, view) {
-        if (this._readonly || (e.button !== undefined && e.button !== 0)) {
+        if (!task || this._readonly || (e.button !== undefined && e.button !== 0)) {
             return;
         }
         if (typeof e.preventDefault === "function") {
@@ -2578,15 +2531,8 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
             e.stopPropagation();
         }
 
-        const rowIndex = webexpress.webapp.ganttModel.flatten(this._tasks).findIndex((row) => row.task.id === task.id);
-        const from = this._anchor(task, Math.max(0, rowIndex), side, view);
-
-        const temp = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        temp.classList.add("wx-gantt-link");
-        temp.classList.add("wx-gantt-link--temp");
-        if (this._svgLayer) {
-            this._svgLayer.appendChild(temp);
-        }
+        const rowIndex = view.rowIndex[task.id];
+        const from = this._anchor(task, rowIndex === undefined ? 0 : rowIndex, side, view);
 
         this._drag = {
             type: "link",
@@ -2594,11 +2540,10 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
             side: side,
             view: view,
             from: from,
-            temp: temp,
             startX: e.clientX || 0,
             startY: e.clientY || 0
         };
-        this._linkTarget = null;
+        this.setState({ linkDraft: { from: from, fromSide: side, pointer: from, target: null } });
 
         this._element.classList.add("wx-gantt--linking");
         this._attachDragListeners();
@@ -2630,51 +2575,20 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
             drag.moved = true;
         }
 
-        if (this._calendar && ["move", "resize-start", "resize-end"].includes(drag.type)) {
-            const model = webexpress.webapp.ganttModel;
-            const days = Math.round(dx / drag.view.pxDay);
-            const patch = drag.type === "move"
-                ? model.moveTask(drag.task, days, this._calendar)
-                : model.resizeTask(drag.task, drag.type === "resize-start" ? "start" : "end", days, this._calendar);
-            const preview = patch || drag.task;
-            const start = model.parseDate(preview.start);
-            const end = model.parseDate(preview.end);
-            const left = model.dateToOffset(start, drag.view.range.start, drag.view.pxDay);
-            const width = model.diffDays(start, end) * drag.view.pxDay;
-            drag.bar.style.left = left + "px";
-            if (drag.task.duration > 0) {
-                drag.bar.style.width = Math.max(2, width) + "px";
-            }
-            this._updateLinkPreviews(drag.task.id, left, width, drag.rowIndex);
-            return;
-        }
-
-        if (drag.type === "move") {
-            const left = drag.left + dx;
-            drag.bar.style.left = left + "px";
-            this._updateLinkPreviews(drag.task.id, left, drag.width, drag.rowIndex);
-        } else if (drag.type === "resize-end") {
-            const width = Math.max(drag.view.pxDay, drag.width + dx);
-            drag.bar.style.width = width + "px";
-            this._updateLinkPreviews(drag.task.id, drag.left, width, drag.rowIndex);
-        } else if (drag.type === "resize-start") {
-            const width = Math.max(drag.view.pxDay, drag.width - dx);
-            const left = drag.left + drag.width - width;
-            drag.bar.style.left = left + "px";
-            drag.bar.style.width = width + "px";
-            this._updateLinkPreviews(drag.task.id, left, width, drag.rowIndex);
+        if (["move", "resize-start", "resize-end"].includes(drag.type)) {
+            this.setState({ preview: Object.assign({ taskId: drag.task.id, progress: null }, this._previewGeometry(drag, dx)) });
         } else if (drag.type === "progress") {
-            const pct = this._progressFromDx(drag, dx);
-            drag.bar.childNodes[0].style.width = pct + "%";
+            this.setState({ preview: { taskId: drag.task.id, left: drag.left, width: drag.width, progress: this._progressFromDx(drag, dx) } });
         } else if (drag.type === "link") {
             const target = this._resolveLinkTarget(e, drag.task.id);
-            this._setLinkTarget(target);
-            const x = drag.from.x + dx;
-            const y = drag.from.y + dy;
-            const anchor = target ? this._anchorFor(target.task.id, target.side, drag.view) : null;
-            drag.temp.setAttribute("d", anchor
-                ? this._linkPath(drag.from, drag.side, anchor, target.side)
-                : "M " + drag.from.x + " " + drag.from.y + " L " + x + " " + y);
+            this.setState({
+                linkDraft: {
+                    from: drag.from,
+                    fromSide: drag.side,
+                    pointer: { x: drag.from.x + dx, y: drag.from.y + dy },
+                    target: target ? { taskId: target.task.id, side: target.side } : null
+                }
+            });
         } else if (drag.type === "split") {
             this._applySplit(drag.width + dx);
         } else if (drag.type === "pan") {
@@ -2684,6 +2598,32 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
                 this._syncVerticalScroll();
             }
         }
+    }
+
+    /**
+     * Computes where a move or resize gesture draws its bar.
+     * @param {object} drag - The gesture context.
+     * @param {number} dx - The horizontal pointer distance.
+     * @returns {object} The previewed geometry { left, width } in pixels.
+     */
+    _previewGeometry(drag, dx) {
+        const model = webexpress.webapp.ganttModel;
+
+        if (this._calendar) {
+            // a calendar skips non-working days, so the preview snaps to the
+            // dates the release will commit instead of following the pointer
+            const days = Math.round(dx / drag.view.pxDay);
+            const patch = drag.type === "move"
+                ? model.moveTask(drag.task, days, this._calendar)
+                : model.resizeTask(drag.task, drag.type === "resize-start" ? "start" : "end", days, this._calendar);
+            return this._dateGeometry(patch || drag.task, drag.view);
+        }
+
+        if (drag.type === "move") {
+            return { left: drag.left + dx, width: drag.width };
+        }
+        const width = Math.max(drag.view.pxDay, drag.type === "resize-end" ? drag.width + dx : drag.width - dx);
+        return { left: drag.type === "resize-end" ? drag.left : drag.left + drag.width - width, width: width };
     }
 
     /**
@@ -2711,8 +2651,6 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
 
         if (drag.type === "split") {
             this._applySplit(drag.width + dx);
-            // the filler days depend on the pane widths, so recompute them
-            this.render();
             return;
         }
 
@@ -2722,29 +2660,22 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
             return;
         }
 
-        const deltaDays = Math.round(dx / drag.view.pxDay);
-
         if (drag.type === "link") {
-            if (drag.temp && drag.temp.parentNode) {
-                drag.temp.parentNode.removeChild(drag.temp);
-            }
             const target = this._resolveLinkTarget(e, drag.task.id);
-            this._setLinkTarget(null);
+            this.setState({ linkDraft: null });
             if (target && target.task.id !== drag.task.id) {
                 this.addLink(drag.task.id, target.task.id, this._linkTypeFor(drag.side, target.side));
-            } else {
-                // no valid drop target, the preview connector simply vanishes
-                this.render();
             }
             return;
         }
 
+        this.setState({ preview: null });
+        // a plain click only selects, which its mousedown already did
         if (!drag.moved) {
-            // a plain click selects, the render restores the pristine bar
-            this.render();
             return;
         }
 
+        const deltaDays = Math.round(dx / drag.view.pxDay);
         let patch = null;
         if (drag.type === "move") {
             patch = model.moveTask(drag.task, deltaDays, this._calendar);
@@ -2760,8 +2691,6 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
 
         if (patch) {
             this.updateTask(drag.task.id, patch);
-        } else {
-            this.render();
         }
     }
 
@@ -2795,11 +2724,11 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
     /**
      * Creates a task on a double-clicked free spot: the day under the pointer
      * becomes the start, the row under the pointer determines the insertion
-     * position and the parent.
+     * position and the parent. The new task opens for naming when the grid is
+     * there to name it in.
      * @param {MouseEvent} e - The dblclick event.
-     * @param {object} view - The computed view geometry.
      */
-    _onCanvasDblClick(e, view) {
+    _onCanvasDblClick(e) {
         if (this._readonly || !this._canvas || typeof this._canvas.getBoundingClientRect !== "function") {
             return;
         }
@@ -2813,21 +2742,21 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
 
         const ctor = webexpress.webapp.GanttCtrl;
         const model = webexpress.webapp.ganttModel;
+        const view = this._view;
         const rect = this._canvas.getBoundingClientRect();
         const x = (e.clientX || 0) - rect.left;
         const y = (e.clientY || 0) - rect.top;
 
         const start = model.offsetToDate(x, view.range.start, view.pxDay);
-        const rowIndex = Math.floor(y / ctor.ROW_HEIGHT);
-        const anchorRow = view.rows[rowIndex] || null;
+        const anchorRow = view.rows[Math.floor(y / ctor.ROW_HEIGHT)] || null;
 
         const task = this.addTask({
             start: model.formatIso(start),
             parentId: anchorRow ? anchorRow.task.parentId : null
         }, anchorRow ? { afterId: anchorRow.task.id } : {});
 
-        if (task) {
-            this._pendingEditTaskId = task.id;
+        if (task && !this._gridCollapsed) {
+            this._beginCellEdit(task.id, "label");
         }
     }
 
@@ -2936,37 +2865,6 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         } catch (_) {
             return date.toISOString().slice(5, 7);
         }
-    }
-
-    /**
-     * Resolves an icon element through the shared icon factory, tolerating a
-     * runtime without it.
-     * @param {string} spec - The icon specification.
-     * @returns {HTMLElement|null} The icon element or null.
-     */
-    _icon(spec) {
-        return webexpress.webui.Icon && typeof webexpress.webui.Icon.create === "function"
-            ? webexpress.webui.Icon.create(spec)
-            : null;
-    }
-
-    /**
-     * Tears down transient listeners so a running gesture does not leak when
-     * the control is destroyed mid-drag.
-     */
-    destroy() {
-        this._setLinkTarget(null);
-        if (this._resizeObserver) {
-            this._resizeObserver.disconnect();
-        }
-        if (this._onDragMove) {
-            document.removeEventListener("mousemove", this._onDragMove);
-            document.removeEventListener("mouseup", this._onDragUp);
-        }
-        if (this._sandbox) {
-            window.removeEventListener("beforeunload", this._onBeforeUnload);
-        }
-        super.destroy();
     }
 };
 

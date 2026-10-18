@@ -7,18 +7,18 @@ namespace WebExpress.WebApp.Test.WebInclude
 {
     /// <summary>
     /// Verifies that the View, State and Service engine is shipped and registered
-    /// in WebExpress.WebApp. The engine (store, service, renderer, intent and the
-    /// data base) plus the service and intent default registries must be embedded
-    /// as resources and registered through Asset attributes on IncludeJavaScript
-    /// in the correct load order, after the WebApp core and before the controls.
-    /// The engine moved out of WebExpress.WebUI, which carries only static
-    /// controls and has nothing to do with the dynamic data concept.
+    /// in WebExpress.WebApp. The engine (service, template, intent, the data base
+    /// and the ViewState) plus the service and intent default registries must be
+    /// embedded as resources and registered through Asset attributes on
+    /// IncludeJavaScript in the correct load order, after the WebApp core and
+    /// before the controls. The engine is the data concept and stays out of
+    /// WebExpress.WebUI; the renderer and the StateCtrl base the data base extends
+    /// are the view layer and ship with WebExpress.WebUI, which loads before WebApp.
     /// </summary>
     public class UnitTestEngineAssets
     {
         private const string Core = "/assets/js/webexpress.webapp.js";
         private const string Service = "/assets/js/webexpress.webapp.service.js";
-        private const string Renderer = "/assets/js/webexpress.webapp.renderer.js";
         private const string Template = "/assets/js/webexpress.webapp.template.js";
         private const string Intent = "/assets/js/webexpress.webapp.intent.js";
         private const string Data = "/assets/js/webexpress.webapp.data.js";
@@ -58,7 +58,6 @@ namespace WebExpress.WebApp.Test.WebInclude
         /// <param name="assetPath">The expected asset path.</param>
         [Theory]
         [InlineData(Service)]
-        [InlineData(Renderer)]
         [InlineData(Template)]
         [InlineData(Intent)]
         [InlineData(Data)]
@@ -78,7 +77,6 @@ namespace WebExpress.WebApp.Test.WebInclude
         /// <param name="assetPath">The expected asset path.</param>
         [Theory]
         [InlineData(Service)]
-        [InlineData(Renderer)]
         [InlineData(Template)]
         [InlineData(Intent)]
         [InlineData(Data)]
@@ -105,7 +103,6 @@ namespace WebExpress.WebApp.Test.WebInclude
 
             int core = order.IndexOf(Core);
             int service = order.IndexOf(Service);
-            int renderer = order.IndexOf(Renderer);
             int template = order.IndexOf(Template);
             int intent = order.IndexOf(Intent);
             int data = order.IndexOf(Data);
@@ -114,8 +111,7 @@ namespace WebExpress.WebApp.Test.WebInclude
 
             Assert.True(core >= 0, "the webapp core must be registered");
             Assert.True(core < service, "service must load after the webapp core");
-            Assert.True(service < renderer, "renderer must load after service");
-            Assert.True(renderer < template, "template must load after renderer");
+            Assert.True(service < template, "template must load after service");
             Assert.True(template < intent, "intent must load after template");
             Assert.True(intent < data, "the data base must load after intent");
             Assert.True(data < viewState, "the view state must load after the data base it builds on");

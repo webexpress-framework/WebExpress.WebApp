@@ -13,6 +13,11 @@
  * for the links of the object, one named "systems" for the sidebar of the add
  * dialog and one named "targets" for the search of the object a link points at.
  *
+ * The surface is a pure function of the state (render), patched into the host by the keyed
+ * reconciler of the Data base. The view switch, the graph viewer and the server rendered panes are
+ * nested parts: the switch and the panes are placed into the tree as they are, the graph viewer
+ * lives on a node the reconciler keeps.
+ *
  * It is ViewState-capable: when the host carries a data-wx-resource binding the
  * links are a slice of an enclosing ViewState, so the control subscribes to that
  * slice and the ViewState owns the central load. Without a binding the control
@@ -72,7 +77,10 @@ webexpress.webapp.RelationViewCtrl = class extends webexpress.webapp.Data {
         this._dialog = null;
         this._detail = null;
         this._detailTarget = null;
+        // nodes the render captures for imperative work and for the nested graph viewer
         this._graphCtrl = null;
+        this._graphHost = null;
+        this._body = null;
         this._totalBadge = null;
 
         // the panes of the contributed presentations are server rendered children
@@ -88,8 +96,11 @@ webexpress.webapp.RelationViewCtrl = class extends webexpress.webapp.Data {
         element.removeAttribute("data-header-badge");
         element.classList.add("wx-relation-view");
 
-        this._buildDom();
-        this._attachEventHandlers();
+        this._switcher = this._createSwitcher();
+
+        // stable handlers, so a render does not swap the listeners of unchanged nodes
+        this._onAdd = () => this._openDialog();
+        this._onBodyClick = this._onBodyClick.bind(this);
 
         this.mount();
 
@@ -138,37 +149,13 @@ webexpress.webapp.RelationViewCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Builds the static scaffold: the toolbar with the presentation switch and
-     * the add affordance, and the body the groups or the graph are rendered
-     * into.
+     * Creates the shared presentation switch, so the surface offers its views the way every
+     * other one does. The switch is a nested control: its element is placed into the toolbar
+     * by the render, and its selection is mirrored in onUpdate.
+     * @returns {object} The view switcher.
      */
-    _buildDom() {
-        this._toolbar = document.createElement("div");
-        this._toolbar.className = "wx-relation-view-toolbar";
-
-        const heading = document.createElement("span");
-        heading.className = "wx-relation-view-heading";
-
-        if (this._header.icon) {
-            heading.appendChild(webexpress.webui.Icon.create(this._iconClass("link"), "wx-relation-view-heading-icon"));
-        }
-
-        if (this._header.text) {
-            const caption = document.createElement("span");
-            caption.className = "wx-relation-view-caption";
-            caption.textContent = this._i18n("webexpress.webapp:relation.title", "Links");
-            heading.appendChild(caption);
-        }
-
-        if (this._header.badge) {
-            this._totalBadge = document.createElement("span");
-            this._totalBadge.className = "wx-relation-view-total";
-            heading.appendChild(this._totalBadge);
-        }
-
-        // the shared presentation switch, so the surface offers its views the
-        // way every other one does
-        this._switcher = new webexpress.webui.ViewSwitcher({
+    _createSwitcher() {
+        return new webexpress.webui.ViewSwitcher({
             views: [
                 { name: "list", icon: "list", label: this._i18n("webexpress.webapp:relation.view.list", "List") },
                 { name: "graph", icon: "share-nodes", label: this._i18n("webexpress.webapp:relation.view.graph", "Graph") },
@@ -185,60 +172,43 @@ webexpress.webapp.RelationViewCtrl = class extends webexpress.webapp.Data {
             active: this.state.view,
             onSelect: (view) => this.setState({ view: view })
         });
-
-
-        this._addButton = document.createElement("button");
-        this._addButton.type = "button";
-        this._addButton.className = "btn btn-primary wx-relation-view-add";
-        this._addButton.appendChild(webexpress.webui.Icon.create(this._iconClass("plus")));
-        this._addButton.appendChild(document.createTextNode(this._i18n("webexpress.webapp:relation.add", "Link")));
-
-        // an empty heading would still claim the gap of the toolbar, which is
-        // what a page that switched every part off does not want
-        if (heading.childNodes.length > 0) {
-            this._toolbar.appendChild(heading);
-        }
-
-        this._toolbar.appendChild(this._switcher.element);
-
-        if (!this._readonly) {
-            this._toolbar.appendChild(this._addButton);
-        }
-
-        this._body = document.createElement("div");
-        this._body.className = "wx-relation-view-body";
-
-        this._element.appendChild(this._toolbar);
-        this._element.appendChild(this._body);
-
-        for (const pane of this._panes) {
-            this._element.appendChild(pane);
-        }
     }
 
     /**
-     * Wires the toolbar. The rows report through one delegated listener on the
-     * body, so a re-rendered group needs no listeners of its own; the switch
-     * reports through its own callback.
+     * Mirrors the state into what lies outside the rendered tree on the first paint.
+     * @param {object} state - The rendered state.
      */
-    _attachEventHandlers() {
-        this._addButton.addEventListener("click", () => this._openDialog());
-
-        this._body.addEventListener("click", (e) => this._onBodyClick(e));
+    onMount(state) {
+        this._syncNested(state);
     }
 
     /**
-     * Renders the surface on the first paint.
+     * Mirrors the state into what lies outside the rendered tree on every later paint.
+     * @param {object} state - The rendered state.
      */
-    onMount() {
-        this._render();
+    onUpdate(state) {
+        this._syncNested(state);
     }
 
     /**
-     * Renders the surface whenever the state changes.
+     * Applies the state to the parts the render does not own: the loading marker on the host,
+     * the selection of the switch and the model of the nested graph viewer.
+     * @param {object} state - The rendered state.
      */
-    onUpdate() {
-        this._render();
+    _syncNested(state) {
+        const contributed = this._paneOf(state.view);
+
+        this._element.classList.toggle("wx-relation-view-loading", !!state.loading);
+        this._switcher.active = contributed ? state.view : (state.view === "graph" ? "graph" : "list");
+
+        if (!contributed && state.view === "graph" && this._graphCtrl) {
+            // the model is derived from the loaded groups rather than from a second endpoint,
+            // so both presentations always show the same links
+            this._graphCtrl.model = webexpress.webapp.relationViewModel.graph(this._subject, state.groups);
+        } else if (contributed || state.view !== "graph") {
+            this._graphCtrl = null;
+            this._graphHost = null;
+        }
     }
 
     /**
@@ -252,11 +222,9 @@ webexpress.webapp.RelationViewCtrl = class extends webexpress.webapp.Data {
             return;
         }
 
-        this._element.classList.add("wx-relation-view-loading");
+        this.setState({ loading: true });
 
         const result = await this._service.query(webexpress.webapp.relationViewModel.query(this.state));
-
-        this._element.classList.remove("wx-relation-view-loading");
 
         if (!result.ok) {
             // a superseded query arrives as an abort and is not an error
@@ -265,11 +233,11 @@ webexpress.webapp.RelationViewCtrl = class extends webexpress.webapp.Data {
             }
 
             console.warn("RelationViewCtrl: load failed", webexpress.webapp.ServiceResult.describe(result));
-            this.setState({ groups: [], total: 0 });
+            this.setState({ groups: [], total: 0, loading: false });
             return;
         }
 
-        this.setState(webexpress.webapp.relationViewModel.normalizeResult(result.data));
+        this.setState(Object.assign(webexpress.webapp.relationViewModel.normalizeResult(result.data), { loading: false }));
     }
 
     /**
@@ -294,35 +262,71 @@ webexpress.webapp.RelationViewCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Renders the toolbar counters and the body in the selected presentation.
+     * Renders the toolbar, the body in the selected presentation and the server rendered panes
+     * of the contributed presentations, of which only the selected one is shown.
+     * @param {object} state - The current state.
+     * @returns {Array<object>} The virtual node tree of the host.
      */
-    _render() {
-        const state = this.state;
+    render(state) {
+        const h = webexpress.webui.h;
+        const adopt = webexpress.webui.Renderer.adopt;
         const contributed = this._paneOf(state.view);
+        const graph = !contributed && state.view === "graph";
 
-        if (this._totalBadge) {
-            this._totalBadge.textContent = String(state.total || 0);
+        const heading = [
+            this._header.icon && this._icon("link", "wx-relation-view-heading-icon"),
+            this._header.text && h("span", { class: "wx-relation-view-caption" },
+                this._i18n("webexpress.webapp:relation.title", "Links")),
+            this._header.badge && h("span", {
+                class: "wx-relation-view-total",
+                ref: (el) => { this._totalBadge = el; }
+            }, String(state.total || 0))
+        ].filter(Boolean);
+
+        let content = null;
+        if (graph) {
+            content = h("div", { key: "graph", class: "wx-relation-view-graph", keep: true, ref: (el) => this._mountGraph(el) });
+        } else if (!contributed) {
+            content = state.groups.length === 0
+                ? h("div", { key: "empty", class: "wx-relation-view-empty" }, this._i18n("webexpress.webapp:relation.empty", "No links yet"))
+                : state.groups.map((group) => this._renderGroup(group));
         }
 
-        this._switcher.active = contributed ? state.view : (state.view === "graph" ? "graph" : "list");
+        return [
+            h("div", { key: "toolbar", class: "wx-relation-view-toolbar" },
+                // an empty heading would still claim the gap of the toolbar, which is
+                // what a page that switched every part off does not want
+                heading.length > 0 && h("span", { class: "wx-relation-view-heading" }, heading),
+                adopt(this._switcher.element),
+                !this._readonly && h("button", {
+                    type: "button",
+                    class: "btn btn-primary wx-relation-view-add",
+                    on: { click: this._onAdd }
+                }, this._icon("plus"), this._i18n("webexpress.webapp:relation.add", "Link"))),
+            // a contributed presentation is server rendered, so switching to it only
+            // reveals its pane and puts the built-in body aside
+            h("div", {
+                key: "body",
+                class: graph ? "wx-relation-view-body wx-relation-view-body-graph" : "wx-relation-view-body",
+                hidden: contributed ? "hidden" : false,
+                on: { click: this._onBodyClick },
+                ref: (el) => { this._body = el; }
+            }, content),
+            this._panes.map((pane) => adopt(pane, { hidden: pane === contributed ? false : "hidden" }))
+        ];
+    }
 
-        // a contributed presentation is server rendered, so switching to it only
-        // reveals its pane and puts the built-in body aside
-        for (const pane of this._panes) {
-            this._toggle(pane, pane === contributed);
-        }
-
-        this._toggle(this._body, !contributed);
-
-        if (contributed) {
+    /**
+     * Creates the graph viewer in a newly rendered graph host; the host is kept from the
+     * reconciler, so the viewer owns everything inside it.
+     * @param {HTMLElement} host - The graph host.
+     */
+    _mountGraph(host) {
+        if (this._graphHost === host) {
             return;
         }
-
-        if (state.view === "graph") {
-            this._renderGraph(state);
-        } else {
-            this._renderList(state);
-        }
+        this._graphHost = host;
+        this._graphCtrl = new webexpress.webui.GraphViewerCtrl(host);
     }
 
     /**
@@ -336,191 +340,86 @@ webexpress.webapp.RelationViewCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Shows or hides an element through the hidden attribute the server renders
-     * its panes with, so the two agree on one mechanism.
-     * @param {HTMLElement} element - The element.
-     * @param {boolean} visible - Whether it should be shown.
+     * Renders an icon the way webexpress.webui.Icon builds one: an image for an image source,
+     * otherwise an i element carrying the resolved icon classes.
+     * @param {string} spec - The symbolic icon name, class string or image source.
+     * @param {string} [extraClass] - Extra classes for the icon.
+     * @returns {object|null} The icon virtual node, or null without a spec.
      */
-    _toggle(element, visible) {
-        if (visible) {
-            element.removeAttribute("hidden");
-        } else {
-            element.setAttribute("hidden", "hidden");
+    _icon(spec, extraClass) {
+        const h = webexpress.webui.h;
+        const value = (spec || "").trim();
+        if (!value) {
+            return null;
         }
+        if (webexpress.webui.Icon._isImage(value)) {
+            return h("img", { class: ("wx-icon-img " + (extraClass || "")).trim(), src: value, alt: "" });
+        }
+        return h("i", { class: (this._iconClass(value) + " " + (extraClass || "")).trim() });
     }
 
     /**
-     * Renders the groups as the list of relations.
-     * @param {object} state - The current state.
-     */
-    _renderList(state) {
-        this._graphCtrl = null;
-        this._body.classList.remove("wx-relation-view-body-graph");
-        this._body.replaceChildren();
-
-        if (state.groups.length === 0) {
-            this._body.appendChild(this._buildEmpty());
-            return;
-        }
-
-        const fragment = document.createDocumentFragment();
-
-        for (const group of state.groups) {
-            fragment.appendChild(this._buildGroup(group));
-        }
-
-        this._body.appendChild(fragment);
-    }
-
-    /**
-     * Renders the same relations as a graph around the object. The model is
-     * derived from the loaded groups rather than from a second endpoint, so both
-     * presentations always show the same links.
-     * @param {object} state - The current state.
-     */
-    _renderGraph(state) {
-        const model = webexpress.webapp.relationViewModel.graph(this._subject, state.groups);
-
-        this._body.classList.add("wx-relation-view-body-graph");
-
-        if (this._graphCtrl) {
-            this._graphCtrl.model = model;
-            return;
-        }
-
-        this._body.replaceChildren();
-
-        const host = document.createElement("div");
-        host.className = "wx-relation-view-graph";
-        this._body.appendChild(host);
-
-        this._graphCtrl = new webexpress.webui.GraphViewerCtrl(host);
-        this._graphCtrl.model = model;
-    }
-
-    /**
-     * Builds the empty state of the surface.
-     * @returns {HTMLElement} The empty state.
-     */
-    _buildEmpty() {
-        const empty = document.createElement("div");
-        empty.className = "wx-relation-view-empty";
-        empty.textContent = this._i18n("webexpress.webapp:relation.empty", "No links yet");
-
-        return empty;
-    }
-
-    /**
-     * Builds one relation group: the heading that names the relation from both
+     * Renders one relation group: the heading that names the relation from both
      * sides and the rows below it.
      * @param {object} group - The normalised group.
-     * @returns {HTMLElement} The group element.
+     * @returns {object} The group virtual node.
      */
-    _buildGroup(group) {
-        const element = document.createElement("div");
-        element.className = "wx-relation-view-group";
+    _renderGroup(group) {
+        const h = webexpress.webui.h;
 
-        const head = document.createElement("div");
-        head.className = "wx-relation-view-group-head";
-        head.appendChild(webexpress.webui.Icon.create(this._iconClass(group.icon), "wx-relation-view-group-icon"));
-
-        const label = document.createElement("span");
-        label.className = "wx-relation-view-group-label";
-        label.textContent = group.label;
-        head.appendChild(label);
-
-        if (group.counterpart) {
-            const counterpart = document.createElement("span");
-            counterpart.className = "wx-relation-view-group-counterpart";
-            counterpart.textContent = this._i18n("webexpress.webapp:relation.counterpart", "counterpart: {0}").replace("{0}", group.counterpart);
-            head.appendChild(counterpart);
-        }
-
-        const count = document.createElement("span");
-        count.className = "wx-relation-view-group-count";
-        count.textContent = String(group.count);
-        head.appendChild(count);
-
-        element.appendChild(head);
-
-        for (const item of group.items) {
-            element.appendChild(this._buildRow(item, group));
-        }
-
-        return element;
+        return h("div", { key: group.type + (group.inverse ? "/inverse" : ""), class: "wx-relation-view-group" },
+            h("div", { class: "wx-relation-view-group-head" },
+                this._icon(group.icon, "wx-relation-view-group-icon"),
+                h("span", { class: "wx-relation-view-group-label" }, group.label),
+                group.counterpart && h("span", { class: "wx-relation-view-group-counterpart" },
+                    this._i18n("webexpress.webapp:relation.counterpart", "counterpart: {0}").replace("{0}", group.counterpart)),
+                h("span", { class: "wx-relation-view-group-count" }, String(group.count))),
+            group.items.map((item) => this._renderRow(item, group)));
     }
 
     /**
-     * Builds one link row. The row states the linked object and opens the detail
+     * Renders one link row. The row states the linked object and opens the detail
      * dialog when it is picked; the note, the metadata and the actions live
      * there, so the list stays one line per link and stays scannable.
      * @param {object} item - The normalised link.
      * @param {object} group - The group the link is rendered under.
-     * @returns {HTMLElement} The row element.
+     * @returns {object} The row virtual node.
      */
-    _buildRow(item, group) {
+    _renderRow(item, group) {
+        const h = webexpress.webui.h;
         const other = webexpress.webapp.relationViewModel.opposite(item);
+        // a web link without an object key leaves the application, so it opens beside it
+        const external = other.uri && !other.key;
 
-        const row = document.createElement("div");
-        row.className = "wx-relation-view-row";
-        row.dataset.link = item.id;
         // the whole row opens the detail for the pointer; the keyboard reaches the detail
         // through the button at its end, because a row that is itself a button could not
         // hold the link to the object without nesting one control in another
-        row.setAttribute("data-command", "detail");
-
-        if (item.status === "obsolete") {
-            row.classList.add("wx-relation-view-obsolete");
-        }
-
-        // the relation icon opens the row, so a link stays recognisable by what
-        // it says even when the group heading has scrolled out of sight
-        row.appendChild(webexpress.webui.Icon.create(this._iconClass(group.icon), "wx-relation-view-row-icon"));
-
-        const key = document.createElement(other.uri ? "a" : "span");
-        key.className = "wx-relation-view-key";
-        key.textContent = other.key || other.uri;
-        if (other.uri) {
-            key.href = other.uri;
-            if (!other.key) {
-                key.target = "_blank";
-                key.rel = "noopener noreferrer";
-            }
-        }
-        row.appendChild(key);
-
-        if (other.class) {
-            const className = document.createElement("span");
-            className.className = "wx-relation-view-class";
-            className.textContent = other.class;
-            row.appendChild(className);
-        }
-
-        const title = document.createElement("span");
-        title.className = "wx-relation-view-title";
-        title.textContent = other.title;
-        row.appendChild(title);
-
-        if (other.status) {
-            const status = document.createElement("span");
-            status.className = "wx-relation-view-status " + webexpress.webapp.relationViewModel.statusClass(other.statusColor);
-            status.textContent = other.status;
-            row.appendChild(status);
-        }
-
-        const since = document.createElement("span");
-        since.className = "wx-relation-view-since";
-        since.textContent = this._since(item.created);
-        row.appendChild(since);
-
-        const more = document.createElement("button");
-        more.type = "button";
-        more.className = "wx-relation-view-row-more";
-        more.setAttribute("aria-label", this._i18n("webexpress.webapp:relation.detail", "Details") + ": " + (other.title || other.key || other.uri || ""));
-        more.appendChild(webexpress.webui.Icon.create(this._iconClass("chevron-right")));
-        row.appendChild(more);
-
-        return row;
+        return h("div", {
+            key: item.id,
+            class: item.status === "obsolete" ? "wx-relation-view-row wx-relation-view-obsolete" : "wx-relation-view-row",
+            dataset: { link: item.id },
+            "data-command": "detail"
+        },
+            // the relation icon opens the row, so a link stays recognisable by what
+            // it says even when the group heading has scrolled out of sight
+            this._icon(group.icon, "wx-relation-view-row-icon"),
+            h(other.uri ? "a" : "span", {
+                class: "wx-relation-view-key",
+                href: other.uri || null,
+                target: external ? "_blank" : null,
+                rel: external ? "noopener noreferrer" : null
+            }, other.key || other.uri),
+            other.class && h("span", { class: "wx-relation-view-class" }, other.class),
+            h("span", { class: "wx-relation-view-title" }, other.title),
+            other.status && h("span", {
+                class: "wx-relation-view-status " + webexpress.webapp.relationViewModel.statusClass(other.statusColor)
+            }, other.status),
+            h("span", { class: "wx-relation-view-since" }, this._since(item.created)),
+            h("button", {
+                type: "button",
+                class: "wx-relation-view-row-more",
+                "aria-label": this._i18n("webexpress.webapp:relation.detail", "Details") + ": " + (other.title || other.key || other.uri || "")
+            }, this._icon("chevron-right")));
     }
 
     /**
@@ -590,101 +489,57 @@ webexpress.webapp.RelationViewCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Fills the detail dialog with one link.
+     * Fills the detail dialog with one link; body and actions are rendered from the link by
+     * the same reconciler the surface uses.
      * @param {object} item - The normalised link.
      */
     _fillDetail(item) {
+        const h = webexpress.webui.h;
         const other = webexpress.webapp.relationViewModel.opposite(item);
+        const line = (label, value) => h("div", { class: "wx-relation-view-detail-row" },
+            h("span", { class: "wx-relation-view-detail-label" }, label),
+            h("span", { class: "wx-relation-view-detail-value" }, value || ""));
 
         this._detailLink = item.id;
-        this._detailBody.replaceChildren();
-
-        this._detailBody.appendChild(this._detailRow(
-            this._i18n("webexpress.webapp:relation.detail.target", "Linked object"),
-            other.key ? `${other.key} - ${other.title}`.trim() : (other.title || other.uri)));
-
-        if (other.status) {
-            this._detailBody.appendChild(this._detailRow(
-                this._i18n("webexpress.webapp:relation.detail.status", "State"), other.status));
-        }
-
-        this._detailBody.appendChild(this._detailRow(
-            this._i18n("webexpress.webapp:relation.detail.since", "Linked"),
-            this._since(item.created) + (item.createdBy ? ` · ${item.createdBy}` : "")));
-
-        const note = document.createElement("p");
-        note.className = "wx-relation-view-note";
-        note.textContent = item.comment || this._i18n("webexpress.webapp:relation.note.empty", "No note on this link.");
-        this._detailBody.appendChild(note);
-
-        for (const [name, value] of Object.entries(item.metadata || {})) {
-            const entry = document.createElement("span");
-            entry.className = "wx-relation-view-meta";
-            entry.textContent = `${name}: ${value}`;
-            this._detailBody.appendChild(entry);
-        }
-
         this._detailTarget = other;
-        this._detailActions.replaceChildren();
+
+        webexpress.webui.Renderer.patch(this._detailBody, [
+            line(this._i18n("webexpress.webapp:relation.detail.target", "Linked object"),
+                other.key ? `${other.key} - ${other.title}`.trim() : (other.title || other.uri)),
+            other.status && line(this._i18n("webexpress.webapp:relation.detail.status", "State"), other.status),
+            line(this._i18n("webexpress.webapp:relation.detail.since", "Linked"),
+                this._since(item.created) + (item.createdBy ? ` · ${item.createdBy}` : "")),
+            h("p", { class: "wx-relation-view-note" },
+                item.comment || this._i18n("webexpress.webapp:relation.note.empty", "No note on this link.")),
+            Object.entries(item.metadata || {}).map(([name, value]) =>
+                h("span", { class: "wx-relation-view-meta" }, `${name}: ${value}`))
+        ]);
 
         // reading where the link points is what the dialog is for, so it is
         // offered on a read-only surface too
-        if (other.uri) {
-            this._detailActions.appendChild(this._buildAction("navigate", "arrow-up-right-from-square", this._i18n("webexpress.webapp:relation.navigate", "Navigate to")));
-        }
-
-        if (this._readonly) {
-            return;
-        }
-
-        if (item.status === "obsolete") {
-            this._detailActions.appendChild(this._buildAction("reactivate", "link", this._i18n("webexpress.webapp:relation.reactivate", "Reactivate")));
-        }
-
-        this._detailActions.appendChild(this._buildAction("remove", "unlink", this._i18n("webexpress.webapp:relation.remove", "Remove link"), "danger"));
+        webexpress.webui.Renderer.patch(this._detailActions, [
+            other.uri && this._renderAction("navigate", "arrow-up-right-from-square", this._i18n("webexpress.webapp:relation.navigate", "Navigate to")),
+            !this._readonly && item.status === "obsolete"
+                && this._renderAction("reactivate", "link", this._i18n("webexpress.webapp:relation.reactivate", "Reactivate")),
+            !this._readonly && this._renderAction("remove", "unlink", this._i18n("webexpress.webapp:relation.remove", "Remove link"), "danger")
+        ]);
     }
 
     /**
-     * Builds one labelled line of the detail dialog.
-     * @param {string} label - The caption.
-     * @param {string} value - The value.
-     * @returns {HTMLElement} The line.
-     */
-    _detailRow(label, value) {
-        const row = document.createElement("div");
-        row.className = "wx-relation-view-detail-row";
-
-        const caption = document.createElement("span");
-        caption.className = "wx-relation-view-detail-label";
-        caption.textContent = label;
-
-        const text = document.createElement("span");
-        text.className = "wx-relation-view-detail-value";
-        text.textContent = value || "";
-
-        row.appendChild(caption);
-        row.appendChild(text);
-
-        return row;
-    }
-
-    /**
-     * Builds one action button of the detail dialog.
+     * Renders one action button of the detail dialog.
      * @param {string} command - The command the click reports.
      * @param {string} icon - The symbolic icon name.
      * @param {string} label - The caption.
      * @param {string} [variant] - The WebExpress variant, for an action that is not reversible.
-     * @returns {HTMLElement} The button.
+     * @returns {object} The button virtual node.
      */
-    _buildAction(command, icon, label, variant) {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = `btn btn-${variant || "secondary"} wx-relation-view-action`;
-        button.setAttribute("data-command", command);
-        button.appendChild(webexpress.webui.Icon.create(this._iconClass(icon)));
-        button.appendChild(document.createTextNode(label));
-
-        return button;
+    _renderAction(command, icon, label, variant) {
+        return webexpress.webui.h("button", {
+            key: command,
+            type: "button",
+            class: `btn btn-${variant || "secondary"} wx-relation-view-action`,
+            "data-command": command
+        }, this._icon(icon), label);
     }
 
     /**

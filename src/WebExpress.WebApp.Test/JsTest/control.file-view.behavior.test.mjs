@@ -322,6 +322,8 @@ test("an uploaded file is visible before the reload answers", async () => {
     await settle();
 
     ctrl.uploaded({ name: "Photo.jpg", size: 2048 });
+    // the render follows on the next microtask, long before the reload answers
+    ctrl._store.flush();
 
     // asserted before settling on purpose: showing the file only after the
     // server answered is exactly the delay the optimistic entry removes
@@ -341,6 +343,7 @@ test("uploading a file that is already there adds a version instead of a second 
     await settle();
 
     ctrl.uploaded({ name: "TreasureMap.pdf", size: 2048 });
+    ctrl._store.flush();
 
     assert.equal(ctrl.files.length, 1, "the name stays one entry");
     assert.deepEqual(ctrl.files[0].versions.map((version) => version.version), [1],
@@ -380,7 +383,7 @@ test("a card unfolds the earlier versions of its file", async () => {
     });
     const element = host(rt, { service: true });
 
-    construct(rt, element);
+    const ctrl = construct(rt, element);
     await settle();
 
     const toggle = element.querySelector(".wx-file-view-card-versions");
@@ -390,6 +393,7 @@ test("a card unfolds the earlier versions of its file", async () => {
     assert.ok(toggle.textContent.includes("2"), "the toggle counts the file itself among its versions");
 
     toggle.click();
+    ctrl._store.flush();
 
     assert.equal(list.style.display, "", "and unfold when the toggle is pressed");
     assert.ok(list.textContent.includes("v1"), "the earlier version is named and dated");

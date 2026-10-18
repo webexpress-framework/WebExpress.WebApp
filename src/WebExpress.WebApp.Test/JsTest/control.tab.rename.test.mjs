@@ -33,7 +33,8 @@ function setup(options = {}) {
 }
 
 function header(rt, id) {
-    return rt.ctrl._tabs.find(item => item.id === id).headerElement;
+    // the tab models are state, the headers references the control captures while rendering
+    return rt.ctrl._headers.get(id);
 }
 
 function button(rt, id) {
@@ -50,6 +51,7 @@ function field(rt) {
 
 function edit(rt, id) {
     rt.ctrl._startRename(rt.ctrl._tabs.find(item => item.id === id));
+    rt.ctrl.store.flush();
     const input = field(rt);
     assert.ok(input, "renaming opens the field");
     return input;
@@ -67,6 +69,7 @@ test("F2 opens the field in the header row, outside the tab list", () => {
     const rt = setup();
     assert.match(button(rt, "a").getAttribute("aria-keyshortcuts"), /F2/);
     key(button(rt, "a"), "F2");
+    rt.ctrl.store.flush();
     const input = field(rt);
     assert.ok(input);
     assert.equal(input.value, "Alpha");
@@ -81,6 +84,7 @@ test("enter persists the trimmed label once the server accepted it and keeps the
     const input = edit(rt, "b");
     input.value = "  Gamma  ";
     key(input, "Enter");
+    rt.ctrl.store.flush();
     assert.equal(labelOf(rt, "b"), "Beta", "the header waits for the server");
     assert.equal(input.readOnly, true);
     request.resolve({ ok: true });
@@ -222,31 +226,42 @@ test("in a ViewState the label is patched into the slice without rebuilding the 
         },
         load: () => { loads++; }
     };
-    const pane = rt.ctrl._tabs[0].paneElement;
+    const pane = rt.ctrl._panes.get("a");
     assert.equal(await rt.ctrl._renameTab("a", "Delta"), true);
     assert.equal(state.tabs.data.items[0].label, "Delta");
     assert.equal(state.tabs.items[0].label, "Delta");
     assert.equal(loads, 0);
-    assert.equal(rt.ctrl._tabs[0].paneElement, pane, "the pane survives");
+    assert.equal(rt.ctrl._panes.get("a"), pane, "the pane survives");
     assert.equal(labelOf(rt, "a"), "Delta");
 });
 
-test("a refresh during the edit closes the field instead of renaming the replaced tab", async () => {
+test("a refresh keeps the edit of a tab that stays and closes the one of a removed tab", async () => {
     const rt = setup();
-    const input = edit(rt, "a");
+    let input = edit(rt, "a");
+    input.value = "Kept";
+    input.dispatchEvent({ type: "input" });
+    rt.ctrl.updateData([{ id: "a", label: "Alpha" }, { id: "b", label: "Beta" }]);
+    assert.equal(field(rt), input, "a live update does not take the field away while it is typed in");
+    assert.equal(input.value, "Kept");
+    key(input, "Enter");
+    await settle();
+    assert.equal(labelOf(rt, "a"), "Kept", "the rename goes to the tab that carries the id now");
+
+    input = edit(rt, "b");
     input.value = "Stale";
-    rt.ctrl.updateData([{ id: "a", label: "Alpha" }]);
+    rt.ctrl.updateData([{ id: "a", label: "Kept" }]);
+    rt.ctrl.store.flush();
     assert.equal(field(rt), null);
     key(input, "Enter");
     await settle();
-    assert.deepEqual(rt.requests, []);
-    assert.equal(labelOf(rt, "a"), "Alpha");
+    assert.deepEqual(JSON.parse(JSON.stringify(rt.requests)), [{ action: "rename", id: "a", label: "Kept" }], "the removed tab is renamed nowhere");
 });
 
 test("readonly and disabled controls cannot rename", async () => {
     for (const options of [{ readonly: true }, { editable: false }]) {
         const rt = setup(options);
         key(button(rt, "a"), "F2");
+        rt.ctrl.store.flush();
         assert.equal(field(rt), null);
         assert.equal(await rt.ctrl._renameTab("a", "Nope"), false);
         assert.deepEqual(rt.requests, []);

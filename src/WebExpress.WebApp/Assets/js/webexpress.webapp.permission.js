@@ -63,9 +63,9 @@ webexpress.webapp.PermissionCtrl = class extends webexpress.webapp.TableCtrl {
         this._groupsService = services.groups || null;
         this._policiesService = services.policies || null;
 
-        this._groupRecords = [];
-        this._policyRecords = [];
-        this._assignedGroupIds = [];
+        // the directories are unknown until they arrive, which is not the same as empty:
+        // the assign affordance is offered until a loaded directory says otherwise
+        this.setState({ groups: null, policies: null, assigned: [] });
         this._dialog = null;
 
         element.classList.add("wx-permission");
@@ -77,13 +77,26 @@ webexpress.webapp.PermissionCtrl = class extends webexpress.webapp.TableCtrl {
 
         this._directories = this._loadDirectories();
 
-        this._buildToolbar();
+        if (new.target === webexpress.webapp.PermissionCtrl) {
+            this._open();
+        }
     }
+
+    // the directories and the groups that own a row are state, so the toolbar renders
+    // the assign affordance from them
+
+    get _groupRecords() { return this.state.groups || []; }
+    set _groupRecords(value) { this.setState({ groups: value }); }
+
+    get _policyRecords() { return this.state.policies || []; }
+    set _policyRecords(value) { this.setState({ policies: value }); }
+
+    get _assignedGroupIds() { return this.state.assigned; }
+    set _assignedGroupIds(value) { this.setState({ assigned: value || [] }); }
 
     /**
      * Indicates whether the surface only reports the assignments. Read from the
-     * host rather than cached, because the base renders once before this
-     * constructor body runs.
+     * host rather than cached, because the base reads it while it is constructed.
      * @returns {boolean} True when the surface is read-only.
      */
     get _readonly() {
@@ -127,7 +140,7 @@ webexpress.webapp.PermissionCtrl = class extends webexpress.webapp.TableCtrl {
 
         this._toggleProgress(true);
 
-        const state = this._store.getState();
+        const state = this._queryStore.getState();
         const result = await this._service.query({
             search: state.search || "",
             page: state.page || 0,
@@ -141,7 +154,7 @@ webexpress.webapp.PermissionCtrl = class extends webexpress.webapp.TableCtrl {
             }
 
             console.error("PermissionCtrl: load failed", webexpress.webapp.ServiceResult.describe(result, { uri: this._restUri }));
-            this._store.setState({ error: result.error });
+            this._queryStore.setState({ error: result.error });
             this._toggleProgress(false);
             return;
         }
@@ -155,12 +168,12 @@ webexpress.webapp.PermissionCtrl = class extends webexpress.webapp.TableCtrl {
         const clamped = model.clampPage(state.page || 0, model.pageCount(page.total, this._pageSize));
 
         if (clamped !== (state.page || 0) && page.items.length === 0 && page.total > 0) {
-            this._store.setState({ page: clamped });
+            this._queryStore.setState({ page: clamped });
             return this._load();
         }
 
         this._assignedGroupIds = page.assignedGroupIds;
-        this._store.setState({ total: page.total, page: clamped, error: null });
+        this._queryStore.setState({ total: page.total, page: clamped, error: null });
 
         // the directory may have arrived after an earlier page was built, so the
         // columns carrying the chip options are rebuilt with every page
@@ -169,8 +182,6 @@ webexpress.webapp.PermissionCtrl = class extends webexpress.webapp.TableCtrl {
             columns: this._buildColumns(),
             rows: page.items.map((entry) => this._buildRow(entry))
         });
-
-        this._syncAssignButton();
 
         this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, { id: this._element.id, page: this._page });
         this._toggleProgress(false);
@@ -280,47 +291,44 @@ webexpress.webapp.PermissionCtrl = class extends webexpress.webapp.TableCtrl {
     }
 
     /**
-     * Puts the toolbar above the table: the caption and the contributed tools
+     * Describes the toolbar above the table: the caption and the contributed tools
      * at the start, the assign affordance - the one action of the surface that
      * does not belong to a stored assignment - at the end. A read-only surface
      * keeps the caption and the tools, because they help with reading the
      * assignments as well; without any of the three there is no bar.
+     *
+     * Once every group owns a row, the dialog could only offer an empty select, so
+     * the affordance states that instead of opening one. A directory that has not
+     * arrived yet exhausts nothing.
+     * @param {object} state - The state.
+     * @returns {object|null} The toolbar virtual node, or null.
      */
-    _buildToolbar() {
+    _renderToolbar(state) {
+        const h = webexpress.webui.h;
         const title = this._element.dataset.title || "";
+        const readonly = this._readonly;
 
-        if (!title && !this._tools && this._readonly) {
-            return;
+        if (!title && !this._tools && readonly) {
+            return null;
         }
 
-        this._toolbar = document.createElement("div");
-        this._toolbar.className = "wx-permission-toolbar";
+        const exhausted = state.groups !== null && state.groups !== undefined
+            && webexpress.webapp.permissionModel.availableGroups(state.groups, state.assigned).length === 0;
 
-        if (title) {
-            const caption = document.createElement("span");
-            caption.className = "wx-permission-title";
-            caption.textContent = title;
-            this._toolbar.appendChild(caption);
-        }
-
-        if (this._tools) {
-            this._toolbar.appendChild(this._tools);
-        }
-
-        if (!this._readonly) {
-            this._assignButton = document.createElement("button");
-            this._assignButton.type = "button";
-            this._assignButton.className = "btn btn-primary wx-permission-assign";
-            this._assignButton.appendChild(webexpress.webui.Icon.create(this._iconClass("plus"), "me-2"));
-            this._assignButton.appendChild(document.createTextNode(this._i18n("webexpress.webapp:permission.assign.groups", "Assign groups")));
-            this._assignButton.addEventListener("click", () => this._openAssignDialog());
-
-            this._toolbar.appendChild(this._assignButton);
-        }
-
-        // ahead of the progress bar the base put in front of the table, which
-        // reports on the table rather than on the toolbar
-        this._element.prepend(this._toolbar);
+        return h("div", { key: "toolbar", class: "wx-permission-toolbar", ref: (el) => { this._toolbar = el; } },
+            title && h("span", { key: "title", class: "wx-permission-title" }, title),
+            this._tools && webexpress.webui.Renderer.adopt(this._tools),
+            !readonly && h("button", {
+                key: "assign",
+                type: "button",
+                class: "btn btn-primary wx-permission-assign",
+                disabled: exhausted,
+                title: exhausted ? this._i18n("webexpress.webapp:permission.assign.none", "Every group already carries policies.") : null,
+                ref: (el) => { this._assignButton = el; },
+                on: this._handler("assign", "open", () => ({ click: () => this._openAssignDialog() }))
+            },
+                h("i", { class: webexpress.webui.IconSet.resolve(this._iconClass("plus")) + " me-2" }),
+                this._i18n("webexpress.webapp:permission.assign.groups", "Assign groups")));
     }
 
     /**
@@ -474,25 +482,6 @@ webexpress.webapp.PermissionCtrl = class extends webexpress.webapp.TableCtrl {
      */
     _pickedGroupIds() {
         return (this._groupPicker.value || []).map(String).filter((id) => id.length > 0);
-    }
-
-    /**
-     * Keeps the assign affordance in step with the directory: once every group
-     * owns a row, the dialog could only offer an empty select, so the button
-     * states that instead of opening one.
-     */
-    _syncAssignButton() {
-        if (!this._assignButton) {
-            return;
-        }
-
-        const exhausted = webexpress.webapp.permissionModel
-            .availableGroups(this._groupRecords, this._assignedGroupIds).length === 0;
-
-        this._assignButton.disabled = exhausted;
-        this._assignButton.title = exhausted
-            ? this._i18n("webexpress.webapp:permission.assign.none", "Every group already carries policies.")
-            : "";
     }
 
     /**

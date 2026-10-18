@@ -27,8 +27,23 @@ function setup(options = {}) {
     return { ...rt, host, ctrl, requests, closed, placeholder };
 }
 
+/**
+ * Gets the nodes of a tab: the tab models are state, the nodes are references the
+ * control captures while rendering.
+ * @param {object} rt - The runtime with the control.
+ * @param {string} id - The tab id.
+ * @returns {object} The header, menu and pane of the tab.
+ */
+function nodesOf(rt, id) {
+    return {
+        get headerElement() { return rt.ctrl._headers.get(id); },
+        get menuElement() { return rt.ctrl._menus.get(id); },
+        get paneElement() { return rt.ctrl._panes.get(id); }
+    };
+}
+
 function open(rt, id = "a") {
-    const tab = rt.ctrl._tabs.find(item => item.id === id);
+    const tab = nodesOf(rt, id);
     tab.headerElement.querySelector(".wx-webapp-tab-menu").click();
     const entry = Array.from(tab.menuElement.querySelectorAll(".dropdown-item")).find(item => item.textContent === "Delete tab");
     assert.ok(entry, "the tab menu offers the deletion");
@@ -53,7 +68,7 @@ test("successful deletion waits for the server, tears down the owned pane, and s
     const request = deferred();
     const rt = setup({ remove: () => request.promise });
     rt.ctrl.selectTab("b");
-    const pane = rt.ctrl._tabs[1].paneElement;
+    const pane = nodesOf(rt, rt.ctrl._tabs[1].id).paneElement;
     let destroyed = 0;
     pane._wxCleanup = [() => destroyed++];
     const modal = open(rt, "b");
@@ -75,7 +90,7 @@ for (const kind of ["http", "network", "abort"]) {
     test(`a ${kind} failure retains the pane and shows a retryable deletion error`, async () => {
         let ok = false;
         const rt = setup({ remove: () => Promise.resolve({ ok, error: { kind } }) });
-        const pane = rt.ctrl._tabs[0].paneElement;
+        const pane = nodesOf(rt, rt.ctrl._tabs[0].id).paneElement;
         const modal = open(rt);
         await modal._confirmButton.onclick();
         assert.equal(pane.isConnected, true);
@@ -102,7 +117,7 @@ test("deleting a background tab preserves selection and never removes another co
     const foreign = rt.createElement("div");
     foreign.id = "b";
     rt.document.body.insertBefore(foreign, rt.host);
-    const pane = rt.ctrl._tabs[1].paneElement;
+    const pane = nodesOf(rt, rt.ctrl._tabs[1].id).paneElement;
     await open(rt, "b")._confirmButton.onclick();
     assert.equal(foreign.isConnected, true);
     assert.equal(pane.isConnected, false);
@@ -124,13 +139,13 @@ test("a refresh preserves visible selection and disposes replaced child controls
     const rt = setup();
     rt.ctrl.selectTab("b");
     let destroyed = 0;
-    rt.ctrl._tabs[1].paneElement._wxCleanup = [() => destroyed++];
+    nodesOf(rt, rt.ctrl._tabs[1].id).paneElement._wxCleanup = [() => destroyed++];
     rt.ctrl.updateData([{ id: "a" }, { id: "b" }]);
     assert.equal(rt.ctrl._activeTabId, "b");
-    assert.equal(rt.ctrl._tabs[1].paneElement.classList.contains("active"), true);
+    assert.equal(nodesOf(rt, rt.ctrl._tabs[1].id).paneElement.classList.contains("active"), true);
     assert.equal(destroyed, 1);
     rt.ctrl.updateData([{ id: "b" }]);
-    assert.equal(rt.ctrl._tabs[0].paneElement.classList.contains("active"), true);
+    assert.equal(nodesOf(rt, rt.ctrl._tabs[0].id).paneElement.classList.contains("active"), true);
     rt.ctrl.updateData([]);
     assert.equal(rt.ctrl._activeTabId, null);
 });
@@ -153,7 +168,7 @@ test("a successful DELETE racing a refresh emits exactly one closed event", asyn
     await action;
     assert.deepEqual(rt.closed, ["a"]);
     assert.equal(rt.ctrl._activeTabId, "b");
-    assert.equal(rt.ctrl._tabs[0].paneElement.classList.contains("active"), true);
+    assert.equal(nodesOf(rt, rt.ctrl._tabs[0].id).paneElement.classList.contains("active"), true);
 });
 
 test("destroying the tab control removes its confirmation and ignores a late DELETE response", async () => {
@@ -201,7 +216,6 @@ test("deletion updates the central resource and replaces any older resource quer
     viewState.load = name => { reloaded.push(name); return Promise.resolve({ ok: true }); };
     rt.ctrl._resource = "tabs";
     rt.ctrl._viewState = viewState;
-    rt.ctrl._store = viewState;
     await open(rt)._confirmButton.onclick();
     const slice = viewState.getState().tabs;
     assert.deepEqual(Array.from(slice.data.items, item => item.id), ["b"]);
@@ -216,13 +230,14 @@ test("loading flags do not rebuild unchanged ViewState panes or overwrite centra
     const rt = setup();
     const slice = { data: { items: [{ id: "a" }, { id: "b" }] }, loading: false };
     rt.ctrl._applySlice(slice);
-    const pane = rt.ctrl._tabs[0].paneElement;
+    const pane = nodesOf(rt, rt.ctrl._tabs[0].id).paneElement;
     rt.ctrl._store.setState({ loading: true });
     rt.ctrl._applySlice({ ...slice, loading: true });
-    assert.equal(rt.ctrl._tabs[0].paneElement, pane);
+    assert.equal(nodesOf(rt, rt.ctrl._tabs[0].id).paneElement, pane);
     assert.equal(rt.ctrl._store.getState().loading, true);
     assert.equal(rt.host.classList.contains("placeholder-glow"), true);
     rt.ctrl._applySlice({ loading: false });
+    rt.ctrl.store.flush();
     assert.equal(rt.ctrl._tabs.length, 0);
     assert.equal(rt.placeholder.parentNode, rt.ctrl._contentElement);
 });

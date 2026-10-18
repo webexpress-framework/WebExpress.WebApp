@@ -28,6 +28,12 @@ Two things go beyond a plain listing:
    └─────────────────────────────────┘
 ```
 
+## Rendering and State
+
+The control extends the `webexpress.webapp.Data` base and renders from its state: the files, the active presentation and the cards whose earlier versions are unfolded. The file list, the switch, the views the server contributed and the inline editor of a description are controls of their own, which the view places and keeps, so a reload patches the cards rather than rebuilding them - an unfolded card stays unfolded, and an editor is only built anew when its description changed. A switch of the presentation is rendered before `CHANGE_VISIBILITY_EVENT` fires, so a listener finds the pane shown.
+
+The query state (`search`, `wql`, `filter`, `page`, `pageSize`) belongs to the control when it loads itself. Inside a ViewState (`data-wx-resource`) it belongs to the ViewState, whose central query reads it: `store`, the binds and the `fileview/*` intents address the ViewState there, while the view state stays the control's own.
+
 ## Declarative Configuration
 
 The control is bootstrapped from a host element carrying the `wx-webapp-file-view` CSS class, which the C# control `WebExpress.WebApp.WebControl.ControlDataFileView` renders. The control reads its configuration from `data-` attributes, then relocates the children it found into the panes of the switcher.

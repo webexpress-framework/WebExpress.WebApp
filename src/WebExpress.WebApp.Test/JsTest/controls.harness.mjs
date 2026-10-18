@@ -129,11 +129,14 @@ Object.defineProperty(NodeType, Symbol.hasInstance, {
     value: (value) => !!value && typeof value.nodeType === "number"
 });
 
+// the WebUI view layer (the renderer and the StateCtrl base), which WebUI includes
+// right after its core and the Data base of the engine extends
+const WEBUI_VIEW = ["webexpress.webui.renderer.js", "webexpress.webui.state.js"];
+
 // the WebApp engine, in the load order the IncludeJavaScript attributes use
 const WEBAPP_ENGINE = [
     "webexpress.webapp.js",
     "webexpress.webapp.service.js",
-    "webexpress.webapp.renderer.js",
     "webexpress.webapp.template.js",
     "webexpress.webapp.intent.js",
     "webexpress.webapp.data.js",
@@ -319,6 +322,9 @@ export function loadControl(options = {}) {
 
     // 1. the real WebUI runtime and the base controls WebApp derives from
     run(path.join(webuiAssetsJs, "webexpress.webui.js"));
+    for (const file of WEBUI_VIEW) {
+        run(path.join(webuiAssetsJs, file));
+    }
     for (const file of WEBUI_BASE_CONTROLS) {
         run(path.join(webuiAssetsJs, file));
     }

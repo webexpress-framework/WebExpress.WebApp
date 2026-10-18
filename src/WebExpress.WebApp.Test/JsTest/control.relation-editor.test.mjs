@@ -363,7 +363,7 @@ test("a read-only surface offers neither the define affordance nor the row optio
 
     assert.equal(host.querySelectorAll(".wx-relation-editor-new").length, 0);
     assert.equal(host.querySelectorAll(".wx-relation-editor-option").length, 0);
-    assert.equal(host.querySelectorAll(".wx-relation-editor-switch")[0].disabled, true);
+    assert.equal(host.querySelectorAll(".wx-relation-editor-switch")[0].hasAttribute("disabled"), true);
 });
 
 test("the editor is one page of the framework modal and opens large", async () => {
@@ -532,6 +532,18 @@ function dragEvent(type, target, clientY = 0) {
 }
 
 /**
+ * Dispatches a drag event on the rows and lets the drag marks, which are state, render.
+ * @param {object} ctrl - The control.
+ * @param {string} type - The event type.
+ * @param {object} target - The element the event is aimed at.
+ * @param {number} [clientY=0] - The pointer position.
+ */
+function dispatchDrag(ctrl, type, target, clientY = 0) {
+    ctrl._rows.dispatchEvent(dragEvent(type, target, clientY));
+    ctrl.store.flush();
+}
+
+/**
  * Gives a row a box, because the stub reports every dimension as zero and the
  * insertion side is read from the pointer against that box.
  * @param {object} row - The row.
@@ -551,20 +563,20 @@ test("dragging over a row marks where the relation would land", async () => {
     const rows = host.querySelectorAll(".wx-relation-editor-row");
     rows.forEach((row, index) => box(row, index * 40, 40));
 
-    ctrl._rows.dispatchEvent(dragEvent("dragstart", rows[2]));
+    dispatchDrag(ctrl, "dragstart", rows[2]);
 
     // the upper half of a row means the dragged one goes above it
-    ctrl._rows.dispatchEvent(dragEvent("dragover", rows[0], 5));
+    dispatchDrag(ctrl, "dragover", rows[0], 5);
     assert.ok(rows[0].classList.contains("wx-drop-before"));
     assert.ok(rows[0].classList.contains("wx-drop-target"));
 
     // the lower half means below, and the earlier mark is gone
-    ctrl._rows.dispatchEvent(dragEvent("dragover", rows[0], 35));
+    dispatchDrag(ctrl, "dragover", rows[0], 35);
     assert.ok(rows[0].classList.contains("wx-drop-after"));
     assert.ok(!rows[0].classList.contains("wx-drop-before"));
 
     // and the row the pointer left carries no mark any more
-    ctrl._rows.dispatchEvent(dragEvent("dragover", rows[1], 45));
+    dispatchDrag(ctrl, "dragover", rows[1], 45);
     assert.ok(!rows[0].classList.contains("wx-drop-target"));
     assert.ok(rows[1].classList.contains("wx-drop-before"));
 });
@@ -578,10 +590,10 @@ test("the dragged row is marked and never marks itself as a target", async () =>
     const rows = host.querySelectorAll(".wx-relation-editor-row");
     rows.forEach((row, index) => box(row, index * 40, 40));
 
-    ctrl._rows.dispatchEvent(dragEvent("dragstart", rows[0]));
+    dispatchDrag(ctrl, "dragstart", rows[0]);
     assert.ok(rows[0].classList.contains("wx-relation-editor-dragging"));
 
-    ctrl._rows.dispatchEvent(dragEvent("dragover", rows[0], 5));
+    dispatchDrag(ctrl, "dragover", rows[0], 5);
     assert.ok(!rows[0].classList.contains("wx-drop-target"), "a relation is not dropped onto itself");
 });
 
@@ -596,9 +608,9 @@ test("dropping below a row puts the relation after it", async () => {
     requests.length = 0;
 
     // blocks, similar, replaces -> drop replaces below blocks
-    ctrl._rows.dispatchEvent(dragEvent("dragstart", rows[2]));
-    ctrl._rows.dispatchEvent(dragEvent("dragover", rows[0], 35));
-    ctrl._rows.dispatchEvent(dragEvent("drop", rows[0], 35));
+    dispatchDrag(ctrl, "dragstart", rows[2]);
+    dispatchDrag(ctrl, "dragover", rows[0], 35);
+    dispatchDrag(ctrl, "drop", rows[0], 35);
     await settle();
 
     assert.deepEqual(ctrl.value.map((x) => x.id), ["blocks", "replaces", "similar"]);
@@ -615,9 +627,9 @@ test("dropping below the last row puts the relation at the end", async () => {
     rows.forEach((row, index) => box(row, index * 40, 40));
     requests.length = 0;
 
-    ctrl._rows.dispatchEvent(dragEvent("dragstart", rows[0]));
-    ctrl._rows.dispatchEvent(dragEvent("dragover", rows[2], 115));
-    ctrl._rows.dispatchEvent(dragEvent("drop", rows[2], 115));
+    dispatchDrag(ctrl, "dragstart", rows[0]);
+    dispatchDrag(ctrl, "dragover", rows[2], 115);
+    dispatchDrag(ctrl, "drop", rows[2], 115);
     await settle();
 
     assert.deepEqual(ctrl.value.map((x) => x.id), ["similar", "replaces", "blocks"]);
@@ -632,9 +644,9 @@ test("a drop leaves no mark behind", async () => {
     const rows = host.querySelectorAll(".wx-relation-editor-row");
     rows.forEach((row, index) => box(row, index * 40, 40));
 
-    ctrl._rows.dispatchEvent(dragEvent("dragstart", rows[2]));
-    ctrl._rows.dispatchEvent(dragEvent("dragover", rows[0], 5));
-    ctrl._rows.dispatchEvent(dragEvent("drop", rows[0], 5));
+    dispatchDrag(ctrl, "dragstart", rows[2]);
+    dispatchDrag(ctrl, "dragover", rows[0], 5);
+    dispatchDrag(ctrl, "drop", rows[0], 5);
 
     for (const row of rows) {
         assert.ok(!row.classList.contains("wx-drop-target"));
@@ -642,4 +654,49 @@ test("a drop leaves no mark behind", async () => {
         assert.ok(!row.classList.contains("wx-drop-after"));
         assert.ok(!row.classList.contains("wx-relation-editor-dragging"));
     }
+});
+
+// ---------------------------------------------------------------------------
+// the table is a pure function of the state
+// ---------------------------------------------------------------------------
+
+test("render describes the table without touching the DOM", async () => {
+    const { rt, host } = surface();
+    const ctrl = new rt.wxapp.RelationEditorCtrl(host);
+    await settle();
+    const before = host.childNodes.slice();
+    const tree = ctrl.render(Object.assign({}, ctrl.state, { items: [], drag: null }));
+    assert.deepEqual(host.childNodes, before);
+    assert.equal(tree.length, 2);
+});
+
+test("a drag is state: the marks follow it and leaving the target clears its mark only", async () => {
+    const { rt, host } = surface();
+    const ctrl = new rt.wxapp.RelationEditorCtrl(host);
+    await settle();
+    const rows = host.querySelectorAll(".wx-relation-editor-row");
+    rows.forEach((row, index) => box(row, index * 40, 40));
+
+    dispatchDrag(ctrl, "dragstart", rows[2]);
+    dispatchDrag(ctrl, "dragover", rows[0], 5);
+    assert.deepEqual(JSON.parse(JSON.stringify(ctrl.state.drag)), { id: ctrl.value[2].id, target: ctrl.value[0].id, side: "before" });
+
+    dispatchDrag(ctrl, "dragleave", rows[0]);
+    assert.ok(!rows[0].classList.contains("wx-drop-target"));
+    assert.ok(rows[2].classList.contains("wx-relation-editor-dragging"), "the dragged row stays marked");
+
+    dispatchDrag(ctrl, "dragend", rows[2]);
+    assert.equal(ctrl.state.drag, null);
+});
+
+test("a reorder moves the row nodes instead of rebuilding them", async () => {
+    const { rt, host } = surface();
+    const ctrl = new rt.wxapp.RelationEditorCtrl(host);
+    await settle();
+    const rows = host.querySelectorAll(".wx-relation-editor-row");
+    await ctrl._move(ctrl.value[2].id, ctrl.value[0].id);
+    ctrl.store.flush();
+    const after = host.querySelectorAll(".wx-relation-editor-row");
+    assert.equal(after[0], rows[2]);
+    assert.equal(after[1], rows[0]);
 });

@@ -3,26 +3,38 @@
  * Adds context menus, sprint editing/deletion, precise drag & drop ranking,
  * keyboard accessibility, sprint completion/start logic, smart duration selection,
  * configurable icons, WebExpress-based modals and item selection (single & multi).
+ *
+ * The board is a pure function of the state (render), patched into the host by the keyed
+ * reconciler of the Data base. Sprints, items, the selection and a drag in progress are state;
+ * a change works on a copy of the sprints and items and commits it as a whole, so a rendered
+ * state is never changed afterwards. The context menu and the dialogs are overlays on the page
+ * and keep their own markup.
  */
 webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
 
     _restUri = null;
     _viewState = null;
     _title = null;
-    _sprints = [];
-    _items = [];
-    _itemIndex = new Map();
-    _sprintIndex = new Map();
-    _dragItemId = null;
-    _dragItemIds = [];
     _icons = {};
     _selectable = true;
     _readonly = false;
-    _selectedItemId = null;
-    _selectedIds = new Set();
-    _anchorId = null;
 
     _ctxMenuEl = null;
+
+    /**
+     * Normalises raw backlog data and gives every item a rank within its sprint group.
+     * @param {Object} data - { sprints: [], items: [] } as the server or the page delivered it.
+     * @returns {{sprints: Array<Object>, items: Array<Object>}} The normalised data.
+     */
+    static _prepare(data) {
+        const model = webexpress.webapp.scrumBacklogModel;
+        const norm = model.normalizeData(data);
+        const groups = new Set([null, ...norm.sprints.map((s) => s.id)]);
+        for (const sprintId of groups) {
+            model.rewriteRanks(sprintId, model.itemsForSprintSorted(norm.items, sprintId));
+        }
+        return { sprints: norm.sprints, items: norm.items };
+    }
 
     /**
      * Initializes the backlog control.
@@ -33,9 +45,11 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
         // optional wx-state island before super, so the component owns the
         // store and the service map; the model builds the sprint and item
         // paths and the bodies
-        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
-        const services = islandServices;
-        const initialState = Object.assign({ sprints: [], items: [] }, webexpress.webapp.Data.readState(element));
+        const services = webexpress.webapp.ServiceRegistry.fromElement(element);
+        const seeded = webexpress.webapp.Data.readState(element);
+        const initialState = Object.assign({}, seeded,
+            webexpress.webapp.ScrumBacklogCtrl._prepare({ sprints: seeded.sprints || [], items: seeded.items || [] }),
+            { selection: { ids: [], primary: null, anchor: null }, drag: null, dropMark: null, dropSection: null });
 
         super(element, { state: initialState, services: services });
 
@@ -83,6 +97,15 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
             estimate: element.dataset.iconEstimate || "wx-icon-light wx-icon-light-scale-balanced"
         };
 
+        // the row that holds the keyboard focus, so a row that moves into another section
+        // gets it back once the reconciler placed it there
+        this._focusedId = null;
+        this._onFocusIn = (e) => {
+            const row = e.target && e.target.closest ? e.target.closest(".wx-scrum-row") : null;
+            this._focusedId = row ? row.getAttribute("data-item-id") : null;
+        };
+        this._onCreateSprint = () => this.openSprintDialog();
+
         element.removeAttribute("data-rest-uri");
         element.removeAttribute("data-title");
         element.removeAttribute("data-selectable");
@@ -94,32 +117,24 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
             element.classList.add("wx-scrum-selectable");
         }
 
-        // global keyboard shortcuts (Ctrl+A, Escape)
-        element.addEventListener("keydown", this._onRootKeyDown);
+        // an inline configuration is read before the first render replaces the host's children
+        const hasSeed = this._sprints.length > 0 || this._items.length > 0;
+        const inline = !this._resource && !hasSeed && !this._restUri ? this._parseStaticConfig() : null;
+
+        // subscribe to the store, perform the first render and run onMount; the Data base also
+        // wires the live updates, so a change made by another user reloads and flashes the board
+        this.mount();
 
         // when the server seeded the backlog through the data-wx-state island,
-        // render it without a round trip; otherwise load from the endpoint or
-        // parse the inline static configuration
-        const seeded = this.state;
+        // it is rendered without a round trip; otherwise it is loaded from the
+        // endpoint or taken from the inline static configuration
         if (this._resource) {
             // ViewState mode: the enclosing ViewState loads the backlog resource centrally
             this._attachToViewState(element);
-        } else if ((Array.isArray(seeded.sprints) && seeded.sprints.length > 0)
-            || (Array.isArray(seeded.items) && seeded.items.length > 0)) {
-            this.data = { sprints: seeded.sprints || [], items: seeded.items || [] };
-        } else if (this._restUri) {
+        } else if (inline) {
+            this.data = inline;
+        } else if (!hasSeed && this._restUri) {
             this._load();
-        } else {
-            this._parseStaticConfig();
-            this.render();
-        }
-
-        // the backlog does not run the Data mount, so the live update wiring
-        // happens here: an external change of the service's domains re-queries
-        // and flashes, so changes made by other users re-render standalone too
-        if (!this._resource) {
-            this._dataChanges = webexpress.webapp.DataChangeSubscription.attachReload(
-                [this._service], () => this._load(), element);
         }
     }
 
@@ -161,7 +176,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
     /**
      * Renders a backlog resource slice the ViewState loaded centrally. The raw
      * sprints and items response flows through the data setter, which normalises
-     * and renders it; the local selection and drag state are preserved.
+     * it; the local selection and drag state are preserved.
      * @param {object} slice The resource slice { items, total, data, loading, error }.
      */
     _applySlice(slice) {
@@ -172,24 +187,76 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Parses sprints and items from an inline json configuration script.
-     * @returns {void}
+     * Reads sprints and items from an inline json configuration script of the host.
+     * @returns {Object|null} The raw configuration, or null without one.
      */
     _parseStaticConfig() {
-        const cfgEl = this._element.querySelector(":ViewState > script[type='application/json']");
+        const cfgEl = this._element.querySelector(":scope > script[type='application/json']");
         if (!cfgEl) {
-            return;
+            return null;
         }
         try {
-            const parsed = JSON.parse(cfgEl.textContent);
-            const norm = webexpress.webapp.scrumBacklogModel.normalizeData(parsed);
-            this._sprints = norm.sprints;
-            this._items = norm.items;
-            this._rebuildIndexes();
-            this._ensureRanking();
+            return JSON.parse(cfgEl.textContent);
         } catch (e) {
             console.error("ScrumBacklogCtrl: failed to parse static config", e);
+            return null;
         }
+    }
+
+    /**
+     * The sprints of the current state.
+     * @returns {Array<Object>}
+     */
+    get _sprints() {
+        return this.state.sprints || [];
+    }
+
+    /**
+     * The items of the current state.
+     * @returns {Array<Object>}
+     */
+    get _items() {
+        return this.state.items || [];
+    }
+
+    /**
+     * The items of the current state by id; built once per state.
+     * @returns {Map<string, Object>}
+     */
+    get _itemIndex() {
+        return this._indexes().items;
+    }
+
+    /**
+     * The sprints of the current state by id; built once per state.
+     * @returns {Map<string, Object>}
+     */
+    get _sprintIndex() {
+        return this._indexes().sprints;
+    }
+
+    /**
+     * The selected item ids of the current state.
+     * @returns {Set<string>}
+     */
+    get _selectedIds() {
+        return new Set(this.state.selection.ids);
+    }
+
+    /**
+     * Builds the id lookups of the current state, reusing them while the state is the same.
+     * @returns {{items: Map<string, Object>, sprints: Map<string, Object>}} The lookups.
+     */
+    _indexes() {
+        const state = this.state;
+        if (this._indexState !== state) {
+            this._indexState = state;
+            this._index = {
+                items: new Map(this._items.map((i) => [i.id, i])),
+                sprints: new Map(this._sprints.map((s) => [s.id, s]))
+            };
+        }
+        return this._index;
     }
 
     /** @returns {Array<Object>} */
@@ -207,7 +274,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
      * @returns {Array<string>}
      */
     get selectedItemIds() {
-        return Array.from(this._selectedIds);
+        return this.state.selection.ids.slice();
     }
 
     /**
@@ -215,40 +282,43 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
      * @param {Object} data - { sprints: [], items: [] }
      */
     set data(data) {
-        const norm = webexpress.webapp.scrumBacklogModel.normalizeData(data);
-        this._sprints = norm.sprints;
-        this._items = norm.items;
-        this._rebuildIndexes();
-        this._ensureRanking();
-        this._pruneSelection();
-        this.render();
+        const prepared = webexpress.webapp.ScrumBacklogCtrl._prepare(data);
+        this._commit({ sprints: prepared.sprints, items: prepared.items });
     }
 
     /**
-     * Rebuilds id-based lookup maps for sprints and items.
-     * @returns {void}
+     * Copies the sprints and items, so a change can work on them without touching the state
+     * that was rendered.
+     * @returns {{sprints: Array<Object>, items: Array<Object>, sprintIndex: Map, itemIndex: Map}} The copy.
      */
-    _rebuildIndexes() {
-        this._itemIndex = new Map(this._items.map((i) => [i.id, i]));
-        this._sprintIndex = new Map(this._sprints.map((s) => [s.id, s]));
+    _draft() {
+        const sprints = this._sprints.map((s) => Object.assign({}, s));
+        const items = this._items.map((i) => Object.assign({}, i));
+        return {
+            sprints: sprints,
+            items: items,
+            sprintIndex: new Map(sprints.map((s) => [s.id, s])),
+            itemIndex: new Map(items.map((i) => [i.id, i]))
+        };
     }
 
     /**
-     * Removes ids from the selection that no longer exist.
+     * Makes a changed copy the state, dropping selected ids that no longer exist.
+     * @param {{sprints: Array<Object>, items: Array<Object>}} draft - The changed sprints and items.
      * @returns {void}
      */
-    _pruneSelection() {
-        for (const id of Array.from(this._selectedIds)) {
-            if (!this._itemIndex.has(id)) {
-                this._selectedIds.delete(id);
+    _commit(draft) {
+        const known = new Set(draft.items.map((i) => i.id));
+        const selection = this.state.selection;
+        this.setState({
+            sprints: draft.sprints,
+            items: draft.items,
+            selection: {
+                ids: selection.ids.filter((id) => known.has(id)),
+                primary: known.has(selection.primary) ? selection.primary : null,
+                anchor: known.has(selection.anchor) ? selection.anchor : null
             }
-        }
-        if (this._selectedItemId && !this._itemIndex.has(this._selectedItemId)) {
-            this._selectedItemId = null;
-        }
-        if (this._anchorId && !this._itemIndex.has(this._anchorId)) {
-            this._anchorId = null;
-        }
+        });
     }
 
     /**
@@ -277,17 +347,11 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
                 if (!r.ok) {
                     throw new Error(r.error ? r.error.message : ("HTTP " + r.status));
                 }
-                const norm = webexpress.webapp.scrumBacklogModel.normalizeData(r.data);
-                this._sprints = norm.sprints;
-                this._items = norm.items;
-                this._rebuildIndexes();
-                this._ensureRanking();
+                this.data = r.data;
                 this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, { uri: this._restUri });
-                this.render();
             })
             .catch((err) => {
                 console.error("ScrumBacklogCtrl: failed to load data", err);
-                this.render();
             });
     }
 
@@ -433,9 +497,9 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
             return;
         }
         const normalized = webexpress.webapp.scrumBacklogModel.normalizeSprint(sprint);
-        this._sprints.push(normalized);
-        this._sprintIndex.set(normalized.id, normalized);
-        this.render();
+        const draft = this._draft();
+        draft.sprints.push(normalized);
+        this._commit(draft);
         this._dispatch(webexpress.webui.Event.ADD_EVENT, { sprint: normalized });
         this._persistSprint(normalized);
     }
@@ -453,12 +517,13 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
         if (!patch || !patch.id) {
             return;
         }
-        const sprint = this._sprintIndex.get(patch.id);
+        const draft = this._draft();
+        const sprint = draft.sprintIndex.get(patch.id);
         if (!sprint) {
             return;
         }
         Object.assign(sprint, patch);
-        this.render();
+        this._commit(draft);
         this._dispatch(webexpress.webui.Event.UPDATED_EVENT, { sprint: sprint });
         this._updateSprint(sprint);
     }
@@ -477,12 +542,13 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
             return;
         }
 
-        const idx = this._sprints.findIndex((s) => s.id === sprintId);
+        const draft = this._draft();
+        const idx = draft.sprints.findIndex((s) => s.id === sprintId);
         if (idx < 0) {
             return;
         }
 
-        for (const item of this._items) {
+        for (const item of draft.items) {
             if (item.sprintId === sprintId) {
                 item.sprintId = null;
                 item.status = "backlog";
@@ -490,10 +556,9 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
             }
         }
 
-        const removed = this._sprints.splice(idx, 1)[0];
-        this._sprintIndex.delete(sprintId);
-        this._ensureRanking();
-        this.render();
+        const removed = draft.sprints.splice(idx, 1)[0];
+        const prepared = webexpress.webapp.ScrumBacklogCtrl._prepare({ sprints: draft.sprints, items: draft.items });
+        this._commit(prepared);
 
         this._dispatch(webexpress.webui.Event.UPDATED_EVENT, { deletedSprint: removed });
         this._deleteSprintRemote(sprintId);
@@ -574,21 +639,22 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Returns all currently rendered items in display order (active sprint, planned sprints, backlog).
+     * Returns all items in display order (active sprint, planned sprints, backlog).
+     * @param {Object} [state=this.state] - The state to read.
      * @returns {Array<Object>}
      */
-    _visibleItemsInOrder() {
+    _visibleItemsInOrder(state = this.state) {
         const order = [];
-        const active = this._sprints.find((s) => s.status === "active");
+        const active = state.sprints.find((s) => s.status === "active");
         if (active) {
-            order.push(...this._itemsForSprintSorted(active.id));
+            order.push(...this._itemsForSprintSorted(active.id, state.items));
         }
-        for (const s of this._sprints) {
+        for (const s of state.sprints) {
             if (s.status === "planned") {
-                order.push(...this._itemsForSprintSorted(s.id));
+                order.push(...this._itemsForSprintSorted(s.id, state.items));
             }
         }
-        order.push(...this._itemsForSprintSorted(null));
+        order.push(...this._itemsForSprintSorted(null, state.items));
         return order;
     }
 
@@ -605,16 +671,17 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
 
         const additive = e && (e.ctrlKey || e.metaKey);
         const range = e && e.shiftKey;
+        const selection = this.state.selection;
 
-        if (range && this._anchorId && this._anchorId !== item.id) {
-            const ids = this._idsBetween(this._anchorId, item.id);
-            const next = additive ? new Set([...this._selectedIds, ...ids]) : new Set(ids);
-            this._setSelection(Array.from(next), item.id, this._anchorId, true, e);
+        if (range && selection.anchor && selection.anchor !== item.id) {
+            const ids = this._idsBetween(selection.anchor, item.id);
+            const next = additive ? new Set([...selection.ids, ...ids]) : new Set(ids);
+            this._setSelection(Array.from(next), item.id, selection.anchor, true, e);
             return;
         }
 
         if (additive) {
-            const next = new Set(this._selectedIds);
+            const next = new Set(selection.ids);
             if (next.has(item.id)) {
                 next.delete(item.id);
             } else {
@@ -647,7 +714,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Updates internal selection state and patches the DOM directly (no rerender).
+     * Makes a selection the state and announces it; the rows show it with the next render.
      * @param {Array<string>} ids
      * @param {string|null} primaryId
      * @param {string|null} anchorId
@@ -656,31 +723,12 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
      * @returns {void}
      */
     _setSelection(ids, primaryId, anchorId, dispatch, originalEvent = null) {
-        const nextSet = new Set(ids);
-        const prevSet = this._selectedIds;
+        const previous = this.state.selection;
+        const primaryChanged = previous.primary !== primaryId;
+        const unique = Array.from(new Set(ids));
+        const anchor = anchorId !== null ? anchorId : (unique.length === 0 ? null : previous.anchor);
 
-        // diff: remove no-longer-selected
-        for (const id of prevSet) {
-            if (!nextSet.has(id)) {
-                this._applyRowSelectionClass(id, false);
-            }
-        }
-        // diff: add newly selected
-        for (const id of nextSet) {
-            if (!prevSet.has(id)) {
-                this._applyRowSelectionClass(id, true);
-            }
-        }
-
-        const primaryChanged = this._selectedItemId !== primaryId;
-
-        this._selectedIds = nextSet;
-        this._selectedItemId = primaryId;
-        if (anchorId !== null) {
-            this._anchorId = anchorId;
-        } else if (nextSet.size === 0) {
-            this._anchorId = null;
-        }
+        this.setState({ selection: { ids: unique, primary: primaryId, anchor: anchor } });
 
         if (!dispatch) {
             return;
@@ -690,7 +738,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
         if (primaryChanged) {
             const singleEv = webexpress.webui.Event.SELECT_ITEM_EVENT || "wx:select-item";
             this._dispatch(singleEv, {
-                itemId: this._selectedItemId,
+                itemId: primaryId,
                 originalEvent: originalEvent
             });
         }
@@ -698,30 +746,10 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
         // multi-select event - always when called with dispatch=true
         const multiEv = webexpress.webui.Event.SELECT_ITEMS_EVENT || "wx:select-items";
         this._dispatch(multiEv, {
-            itemIds: Array.from(this._selectedIds),
-            primaryId: this._selectedItemId,
+            itemIds: unique.slice(),
+            primaryId: primaryId,
             originalEvent: originalEvent
         });
-    }
-
-    /**
-     * Adds or removes the selection classes on a row.
-     * @param {string} itemId
-     * @param {boolean} selected
-     * @returns {void}
-     */
-    _applyRowSelectionClass(itemId, selected) {
-        const row = this._element.querySelector(`.wx-scrum-row[data-item-id="${CSS.escape(itemId)}"]`);
-        if (!row) {
-            return;
-        }
-        row.classList.toggle("active", selected);
-        row.classList.toggle("wx-scrum-row-active", selected);
-        if (selected) {
-            row.setAttribute("aria-selected", "true");
-        } else {
-            row.removeAttribute("aria-selected");
-        }
     }
 
     /**
@@ -774,8 +802,9 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
     _doMoveItemsToSprint(itemIds, targetSprintId) {
         // resolve and order by current display order
         const order = this._visibleItemsInOrder().map((i) => i.id);
+        const draft = this._draft();
         const movedItems = itemIds
-            .map((id) => this._itemIndex.get(id))
+            .map((id) => draft.itemIndex.get(id))
             .filter(Boolean)
             .sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
 
@@ -791,11 +820,11 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
         }
 
         // place all moved items at the end of the target group, preserving their relative order
-        const targetItems = this._itemsForSprintSorted(targetSprintId).filter((i) => !itemIds.includes(i.id));
+        const targetItems = this._itemsForSprintSorted(targetSprintId, draft.items).filter((i) => !itemIds.includes(i.id));
         targetItems.push(...movedItems);
         this._rewriteRanks(targetSprintId, targetItems);
 
-        this.render();
+        this._commit(draft);
 
         this._dispatch(webexpress.webui.Event.MOVE_EVENT, {
             itemIds: movedItems.map((i) => i.id),
@@ -865,14 +894,15 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
      * @returns {void}
      */
     _doInsertItemsRelative(dragIds, targetId, side) {
-        const targetItem = this._itemIndex.get(targetId);
+        const draft = this._draft();
+        const targetItem = draft.itemIndex.get(targetId);
         if (!targetItem) {
             return;
         }
 
         const order = this._visibleItemsInOrder().map((i) => i.id);
         const dragItems = dragIds
-            .map((id) => this._itemIndex.get(id))
+            .map((id) => draft.itemIndex.get(id))
             .filter((i) => i && i.id !== targetId)
             .sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
 
@@ -889,7 +919,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
             it.status = targetSprintId ? (it.status === "backlog" ? "todo" : it.status) : "backlog";
         }
 
-        const items = this._itemsForSprintSorted(targetSprintId).filter((i) => !dragIdSet.has(i.id));
+        const items = this._itemsForSprintSorted(targetSprintId, draft.items).filter((i) => !dragIdSet.has(i.id));
         const targetIdx = items.findIndex((i) => i.id === targetId);
 
         if (targetIdx >= 0) {
@@ -899,7 +929,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
         }
 
         this._rewriteRanks(targetSprintId, items);
-        this.render();
+        this._commit(draft);
 
         this._dispatch(webexpress.webui.Event.MOVE_EVENT, {
             itemIds: dragItems.map((i) => i.id),
@@ -923,13 +953,14 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
             return;
         }
 
-        const item = this._itemIndex.get(itemId);
+        const draft = this._draft();
+        const item = draft.itemIndex.get(itemId);
         if (!item) {
             return;
         }
 
         const sprintId = item.sprintId || null;
-        const items = this._itemsForSprintSorted(sprintId);
+        const items = this._itemsForSprintSorted(sprintId, draft.items);
         const fromIdx = items.findIndex((i) => i.id === itemId);
         if (fromIdx < 0) {
             return;
@@ -944,26 +975,11 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
         items.splice(toIdx, 0, moved);
 
         this._rewriteRanks(sprintId, items);
+        this._commit(draft);
 
-        this.render();
         this._dispatch(webexpress.webui.Event.UPDATED_EVENT, { ranked: true, sprintId: sprintId, itemId: itemId });
 
         this._persistItemRanksBatch(items);
-    }
-
-    /**
-     * Ensures each item has a numeric rank within its sprint group.
-     * @returns {void}
-     */
-    _ensureRanking() {
-        const sprintIds = new Set();
-        sprintIds.add(null);
-        for (const s of this._sprints) {
-            sprintIds.add(s.id);
-        }
-        for (const sid of sprintIds) {
-            this._rewriteRanks(sid, this._itemsForSprintSorted(sid));
-        }
     }
 
     /**
@@ -979,41 +995,101 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
     /**
      * Returns items for a sprint sorted by rank (fallback: stable by key/title).
      * @param {string|null} sprintId
+     * @param {Array<Object>} [items=this._items] - The items to pick from, such as a draft.
      * @returns {Array<Object>}
      */
-    _itemsForSprintSorted(sprintId) {
-        return webexpress.webapp.scrumBacklogModel.itemsForSprintSorted(this._items, sprintId);
+    _itemsForSprintSorted(sprintId, items = this._items) {
+        return webexpress.webapp.scrumBacklogModel.itemsForSprintSorted(items, sprintId);
     }
 
     /**
-     * Renders the backlog control.
+     * Listens for the root keyboard shortcuts and remembers which row holds the focus, for as
+     * long as the control is mounted.
      * @returns {void}
      */
-    render() {
-        this._rebuildIndexes();
-        this._pruneSelection();
+    onMount() {
+        this._element.addEventListener("keydown", this._onRootKeyDown);
+        this._element.addEventListener("focusin", this._onFocusIn);
+        this._dispatch(webexpress.webui.Event.UPDATED_EVENT, {});
+    }
 
-        const activeElId = document.activeElement ? document.activeElement.dataset?.itemId : null;
+    /**
+     * Gives the focus back to a row the render moved into another section, unless the reader
+     * deliberately put it elsewhere, and announces the render.
+     * @returns {void}
+     */
+    onUpdate() {
+        const focused = this._focusedId;
+        const active = document.activeElement;
+        if (focused && (!active || active === document.body || this._element.contains(active))) {
+            const row = this._rowOf(focused);
+            if (row && row !== active) {
+                row.focus();
+            }
+        }
+        this._dispatch(webexpress.webui.Event.UPDATED_EVENT, {});
+    }
 
-        const el = this._element;
-        const frag = document.createDocumentFragment();
+    /**
+     * Releases the root listeners and an open context menu.
+     * @returns {void}
+     */
+    onUnmount() {
+        this._element.removeEventListener("keydown", this._onRootKeyDown);
+        this._element.removeEventListener("focusin", this._onFocusIn);
+        this._closeContextMenu();
+    }
 
-        frag.appendChild(this._renderToolbar());
+    /**
+     * Finds the rendered row of an item.
+     * @param {string} id - The item id.
+     * @returns {HTMLElement|null} The row.
+     */
+    _rowOf(id) {
+        return Array.from(this._element.querySelectorAll(".wx-scrum-row")).find((row) => row.getAttribute("data-item-id") === id) || null;
+    }
 
-        const active = this._sprints.find((s) => s.status === "active");
+    /**
+     * Renders an icon the way webexpress.webui.Icon builds one: an image for an image source,
+     * otherwise an i element carrying the resolved icon classes.
+     * @param {string} spec - The icon class string, symbolic name or image source.
+     * @param {string} [extraClass] - Extra classes for the icon.
+     * @returns {object|null} The icon virtual node, or null without a spec.
+     */
+    _iconNode(spec, extraClass) {
+        const h = webexpress.webui.h;
+        const value = (spec || "").trim();
+        if (!value) {
+            return null;
+        }
+        const extra = (extraClass || "").trim();
+        if (webexpress.webui.Icon._isImage(value)) {
+            return h("img", { class: ("wx-icon-img " + extra).trim(), src: value, alt: "" });
+        }
+        return h("i", { class: (webexpress.webui.IconSet.resolve(value) + " " + extra).trim() });
+    }
+
+    /**
+     * Renders the backlog: the toolbar, the active sprint, the planned sprints and the backlog.
+     * @param {object} state - The current state.
+     * @returns {Array<object>} The virtual node tree of the host.
+     */
+    render(state) {
+        const active = state.sprints.find((s) => s.status === "active");
+        const planned = state.sprints.filter((s) => s.status === "planned");
+        const firstPlanned = planned.length > 0 ? planned[0] : null;
+        const sections = [this._renderToolbar()];
+
         if (active) {
-            frag.appendChild(this._renderSection(active, this._itemsForSprintSorted(active.id), {
+            sections.push(this._renderSection(state, active, this._itemsForSprintSorted(active.id, state.items), {
                 empty: this._i18n("webexpress.webapp:scrum.empty.sprint", "No items in this sprint."),
                 allowAddToSprint: false,
                 allowSprintMenu: true
             }));
         }
 
-        const planned = this._sprints.filter((s) => s.status === "planned");
-        const firstPlanned = planned.length > 0 ? planned[0] : null;
-
         for (const sprint of planned) {
-            frag.appendChild(this._renderSection(sprint, this._itemsForSprintSorted(sprint.id), {
+            sections.push(this._renderSection(state, sprint, this._itemsForSprintSorted(sprint.id, state.items), {
                 empty: this._i18n("webexpress.webapp:scrum.empty.planned", "No items planned for this sprint."),
                 allowAddToSprint: false,
                 allowSprintMenu: true
@@ -1027,125 +1103,64 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
             goal: ""
         };
 
-        frag.appendChild(this._renderSection(backlogSection, this._itemsForSprintSorted(null), {
+        sections.push(this._renderSection(state, backlogSection, this._itemsForSprintSorted(null, state.items), {
             empty: this._i18n("webexpress.webapp:scrum.empty.backlog", "Backlog is empty."),
             allowAddToSprint: !!firstPlanned,
             allowSprintMenu: false
         }, firstPlanned));
 
-        el.replaceChildren(frag);
-
-        if (activeElId) {
-            const focused = el.querySelector(`.wx-scrum-row[data-item-id="${CSS.escape(activeElId)}"]`);
-            if (focused) {
-                focused.focus();
-            }
-        }
-
-        this._dispatch(webexpress.webui.Event.UPDATED_EVENT, {});
+        return sections;
     }
 
     /**
-     * Builds the toolbar with the title and the "create sprint" button.
-     * @returns {HTMLElement}
+     * Renders the toolbar with the title and the "create sprint" button.
+     * @returns {object} The toolbar virtual node.
      */
     _renderToolbar() {
-        const toolbar = document.createElement("div");
-        toolbar.className = "wx-scrum-backlog-toolbar";
+        const h = webexpress.webui.h;
 
-        const title = document.createElement("h3");
-        title.className = "wx-scrum-title";
-        title.textContent = this._title;
-        toolbar.appendChild(title);
-
-        if (!this._readonly) {
-            const createBtn = document.createElement("button");
-            createBtn.type = "button";
-            createBtn.className = "btn btn-primary btn-sm wx-scrum-create-sprint";
-            createBtn.append(
-                webexpress.webui.Icon.create(this._iconClass("plus")),
-                " " + this._i18n("webexpress.webapp:scrum.create_sprint", "Create sprint")
-            );
-            createBtn.addEventListener("click", () => this.openSprintDialog());
-            toolbar.appendChild(createBtn);
-        }
-
-        return toolbar;
+        return h("div", { key: "toolbar", class: "wx-scrum-backlog-toolbar" },
+            h("h3", { class: "wx-scrum-title" }, this._title),
+            !this._readonly && h("button", {
+                type: "button",
+                class: "btn btn-primary btn-sm wx-scrum-create-sprint",
+                on: { click: this._onCreateSprint }
+            }, this._iconNode(this._iconClass("plus")), " " + this._i18n("webexpress.webapp:scrum.create_sprint", "Create sprint")));
     }
 
     /**
-     * Builds a section for a sprint or the backlog.
+     * Renders a section for a sprint or the backlog. A drop on the section, rather than on one
+     * of its rows, appends the dragged items to it.
+     * @param {object} state - The current state.
      * @param {Object} sprint
      * @param {Array<Object>} items
      * @param {Object} opts
      * @param {Object} [targetSprint]
-     * @returns {HTMLElement}
+     * @returns {object} The section virtual node.
      */
-    _renderSection(sprint, items, opts, targetSprint) {
-        const section = document.createElement("div");
-        section.className = "wx-scrum-section";
-        section.dataset.sprintId = sprint.id;
-
-        const head = document.createElement("div");
-        head.className = "wx-scrum-section-head";
-
-        const status = document.createElement("span");
-        status.className = "wx-scrum-status " + (sprint.status || "");
-
+    _renderSection(state, sprint, items, opts, targetSprint) {
+        const h = webexpress.webui.h;
         const statusKey = (sprint.status || "planned").toLowerCase();
-        status.appendChild(webexpress.webui.Icon.create(this._icons[statusKey] || this._iconClass("circle"), "wx-scrum-status-icon me-1"));
-        status.appendChild(document.createTextNode(sprint.status || ""));
-        head.appendChild(status);
-
-        const name = document.createElement("span");
-        name.className = "wx-scrum-section-name";
-        name.textContent = sprint.name || "";
-        head.appendChild(name);
-
-        const meta = document.createElement("span");
-        meta.className = "wx-scrum-section-meta";
-
         const points = items.reduce((sum, i) => sum + (i.points || 0), 0);
-        meta.appendChild(this._buildMetaSpan(items.length + " " + this._i18n("webexpress.webapp:scrum.items", "items")));
-        meta.appendChild(this._buildMetaSpan(points + " pts"));
-        if (sprint.start && sprint.end) {
-            meta.appendChild(this._buildMetaSpan(sprint.start + " → " + sprint.end));
-        }
-        head.appendChild(meta);
+        const droppable = sprint.status === "active" || sprint.status === "planned" || sprint.status === "backlog";
 
-        if (opts.allowSprintMenu && !this._readonly) {
-            const menuBtn = document.createElement("button");
-            menuBtn.type = "button";
-            menuBtn.className = "btn btn-sm btn-light wx-scrum-sprint-menu";
-            menuBtn.title = this._i18n("webexpress.webui:table.options.label", "Options");
-            menuBtn.setAttribute("aria-label", menuBtn.title);
-            menuBtn.setAttribute("aria-haspopup", "menu");
-            menuBtn.appendChild(webexpress.webui.Icon.create(this._icons.sprintMenu || this._iconClass("more")));
-            menuBtn.addEventListener("click", (e) => {
-                e.stopPropagation();
-                this._openSprintMenu(e, sprint);
-            });
-            head.appendChild(menuBtn);
-        }
-
-        section.appendChild(head);
-
-        // section-level drop handling for empty sections / append-to-end
-        if (!this._readonly) {
-            section.addEventListener("dragover", (e) => {
-                if (sprint.status !== "active" && sprint.status !== "planned" && sprint.status !== "backlog") {
+        const handlers = this._readonly ? {} : {
+            dragover: (e) => {
+                if (!droppable) {
                     return;
                 }
                 e.preventDefault();
-                section.classList.add("wx-scrum-drop-target");
-            });
-
-            section.addEventListener("dragleave", () => {
-                section.classList.remove("wx-scrum-drop-target");
-            });
-
-            section.addEventListener("drop", (e) => {
-                section.classList.remove("wx-scrum-drop-target");
+                if (this.state.dropSection !== sprint.id) {
+                    this.setState({ dropSection: sprint.id });
+                }
+            },
+            dragleave: () => {
+                if (this.state.dropSection === sprint.id) {
+                    this.setState({ dropSection: null });
+                }
+            },
+            drop: (e) => {
+                this.setState({ dropSection: null });
                 if (e.defaultPrevented) {
                     return;
                 }
@@ -1153,224 +1168,221 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
                 if (ids.length === 0) {
                     return;
                 }
-                const targetId = sprint.id === "backlog" ? null : sprint.id;
-                this.moveItemsToSprint(ids, targetId);
-            });
-        }
-
-        if (items.length === 0) {
-            const empty = document.createElement("div");
-            empty.className = "wx-scrum-empty";
-            empty.textContent = opts.empty;
-            section.appendChild(empty);
-        } else {
-            for (const item of items) {
-                section.appendChild(this._renderRow(item, opts.allowAddToSprint, targetSprint));
+                this.moveItemsToSprint(ids, sprint.id === "backlog" ? null : sprint.id);
             }
-        }
+        };
 
-        return section;
+        return h("div", {
+            key: "section-" + sprint.id,
+            class: state.dropSection === sprint.id ? "wx-scrum-section wx-scrum-drop-target" : "wx-scrum-section",
+            dataset: { sprintId: sprint.id },
+            on: handlers
+        },
+            h("div", { class: "wx-scrum-section-head" },
+                h("span", { class: "wx-scrum-status " + (sprint.status || "") },
+                    this._iconNode(this._icons[statusKey] || this._iconClass("circle"), "wx-scrum-status-icon me-1"),
+                    sprint.status || ""),
+                h("span", { class: "wx-scrum-section-name" }, sprint.name || ""),
+                h("span", { class: "wx-scrum-section-meta" },
+                    h("span", null, items.length + " " + this._i18n("webexpress.webapp:scrum.items", "items")),
+                    h("span", null, points + " pts"),
+                    sprint.start && sprint.end && h("span", null, sprint.start + " → " + sprint.end)),
+                opts.allowSprintMenu && !this._readonly && h("button", {
+                    type: "button",
+                    class: "btn btn-sm btn-light wx-scrum-sprint-menu",
+                    title: this._i18n("webexpress.webui:table.options.label", "Options"),
+                    "aria-label": this._i18n("webexpress.webui:table.options.label", "Options"),
+                    "aria-haspopup": "menu",
+                    on: { click: (e) => { e.stopPropagation(); this._openSprintMenu(e, sprint); } }
+                }, this._iconNode(this._icons.sprintMenu || this._iconClass("more")))),
+            items.length === 0
+                ? h("div", { key: "empty", class: "wx-scrum-empty" }, opts.empty)
+                : items.map((item) => this._renderRow(state, item, opts.allowAddToSprint, targetSprint)));
     }
 
     /**
-     * Builds a single backlog row including context menu, keyboard and dnd sorting.
+     * Renders a single backlog row including context menu, keyboard and dnd sorting.
+     * @param {object} state - The current state.
      * @param {Object} item
      * @param {boolean} allowAddToSprint
      * @param {Object} [targetSprint]
-     * @returns {HTMLElement}
+     * @returns {object} The row virtual node.
      */
-    _renderRow(item, allowAddToSprint, targetSprint) {
-        const row = document.createElement("div");
-        row.className = "wx-scrum-row";
-        row.dataset.itemId = item.id;
-        row.draggable = !this._readonly;
-        row.tabIndex = 0;
+    _renderRow(state, item, allowAddToSprint, targetSprint) {
+        const h = webexpress.webui.h;
+        const selected = state.selection.ids.includes(item.id);
+        const classes = ["wx-scrum-row"];
 
-        if (this._selectedIds.has(item.id)) {
-            row.classList.add("active", "wx-scrum-row-active");
-            row.setAttribute("aria-selected", "true");
+        if (selected) {
+            classes.push("active", "wx-scrum-row-active");
+        }
+        if (state.drag && state.drag.ids.includes(item.id)) {
+            classes.push("dragging");
+        }
+        if (state.dropMark && state.dropMark.id === item.id) {
+            classes.push(state.dropMark.side === "before" ? "wx-drop-before" : "wx-drop-after");
         }
 
-        row.addEventListener("click", (e) => {
-            if (e.target.closest("button")) {
-                return;
-            }
-            this._handleRowClick(item, e);
-        });
-
-        row.addEventListener("keydown", (e) => this._handleRowKeyDown(e, item));
+        const handlers = {
+            click: (e) => {
+                if (e.target.closest && e.target.closest("button")) {
+                    return;
+                }
+                this._handleRowClick(item, e);
+            },
+            keydown: (e) => this._handleRowKeyDown(e, item)
+        };
 
         if (!this._readonly) {
-            row.addEventListener("contextmenu", (e) => {
+            Object.assign(handlers, this._rowDragHandlers(item));
+            handlers.contextmenu = (e) => {
                 e.preventDefault();
                 // ensure the right-clicked item is part of the selection
-                if (!this._selectedIds.has(item.id)) {
+                if (!this.state.selection.ids.includes(item.id)) {
                     this._setSelection([item.id], item.id, item.id, true, e);
                 }
                 this._openItemMenu(e, item);
-            });
+            };
         }
 
-        const type = document.createElement("span");
-        // the type is application data and lands in the class list, so it goes through the
-        // token form rather than verbatim - see _typeToken
-        type.className = ("wx-scrum-type " + this._typeToken(item.type)).trim();
-        // the badge carries no label of its own, so the type is readable on hover
-        if (item.type) {
-            type.title = item.type;
-        }
         // the icon is supplied per item by the rest api (item.icon) as either a
         // css class or an image source; fall back to a neutral marker
         const iconSpec = (typeof item.icon === "string" && item.icon.trim()) ? item.icon.trim() : this._iconClass("circle");
-        type.appendChild(webexpress.webui.Icon.create(iconSpec));
-        row.appendChild(type);
 
-        const key = document.createElement("span");
-        key.className = "wx-scrum-key";
-        key.textContent = item.key || "";
-        row.appendChild(key);
+        return h("div", {
+            key: item.id,
+            class: classes.join(" "),
+            "data-item-id": item.id,
+            draggable: this._readonly ? "false" : "true",
+            tabindex: "0",
+            "aria-selected": selected ? "true" : null,
+            on: handlers
+        },
+            // the type is application data and lands in the class list, so it goes through the
+            // token form rather than verbatim - see _typeToken; the badge carries no label of its
+            // own, so the type is readable on hover
+            h("span", { class: ("wx-scrum-type " + this._typeToken(item.type)).trim(), title: item.type || null },
+                this._iconNode(iconSpec)),
+            h("span", { class: "wx-scrum-key" }, item.key || ""),
+            h("span", { class: "wx-scrum-row-title" }, item.title || ""),
+            h("span", { class: "wx-scrum-prio " + (item.priority || "P3") }, item.priority || "P3"),
+            h("span", { class: "wx-scrum-points" }, String(item.points || 0)),
+            this._renderAssignee(item),
+            !this._readonly && allowAddToSprint && targetSprint
+                ? h("button", {
+                    type: "button",
+                    class: "wx-scrum-add-sprint",
+                    on: { click: (e) => {
+                        e.stopPropagation();
+                        // honor multiselect on the quick-add button
+                        const ids = this.state.selection.ids;
+                        if (ids.length > 1 && ids.includes(item.id)) {
+                            this.moveItemsToSprint(ids.slice(), targetSprint.id);
+                        } else {
+                            this.moveItemToSprint(item.id, targetSprint.id);
+                        }
+                    } }
+                }, this._iconNode(this._icons.moveToSprint), " " + (targetSprint.name || this._i18n("webexpress.webapp:scrum.sprint", "Sprint")))
+                : h("span"));
+    }
 
-        const title = document.createElement("span");
-        title.className = "wx-scrum-row-title";
-        title.textContent = item.title || "";
-        row.appendChild(title);
+    /**
+     * Renders the assignee of a row: the picture, the initials on the person's color, or the
+     * empty marker.
+     * @param {Object} item - The item.
+     * @returns {object} The assignee virtual node.
+     */
+    _renderAssignee(item) {
+        const h = webexpress.webui.h;
 
-        const prio = document.createElement("span");
-        prio.className = "wx-scrum-prio " + (item.priority || "P3");
-        prio.textContent = item.priority || "P3";
-        row.appendChild(prio);
-
-        const points = document.createElement("span");
-        points.className = "wx-scrum-points";
-        points.textContent = String(item.points || 0);
-        row.appendChild(points);
-
-        let assignee;
         if (item.assigneeId && item.assigneeImage) {
-            assignee = document.createElement("img");
-            assignee.className = "wx-scrum-assignee";
-            assignee.src = item.assigneeImage;
-            assignee.alt = item.assigneeName || "";
-            assignee.title = item.assigneeName || "";
-        } else {
-            assignee = document.createElement("span");
-            assignee.className = "wx-scrum-assignee";
-            if (item.assigneeId) {
-                assignee.style.background = item.assigneeColor || "#6c757d";
-                assignee.textContent = item.assigneeInitials || (item.assigneeName || "?").slice(0, 2).toUpperCase();
-                assignee.title = item.assigneeName || "";
-            } else {
-                assignee.classList.add("wx-scrum-assignee-empty");
-                assignee.title = this._i18n("webexpress.webapp:scrum.assignee.unassigned", "Unassigned");
-            }
+            return h("img", { class: "wx-scrum-assignee", src: item.assigneeImage, alt: item.assigneeName || "", title: item.assigneeName || "" });
         }
-        row.appendChild(assignee);
-
-        if (!this._readonly && allowAddToSprint && targetSprint) {
-            const add = document.createElement("button");
-            add.type = "button";
-            add.className = "wx-scrum-add-sprint";
-            add.append(
-                webexpress.webui.Icon.create(this._icons.moveToSprint),
-                " " + (targetSprint.name || this._i18n("webexpress.webapp:scrum.sprint", "Sprint"))
-            );
-            add.addEventListener("click", (e) => {
-                e.stopPropagation();
-                // honor multiselect on the quick-add button
-                if (this._selectedIds.size > 1 && this._selectedIds.has(item.id)) {
-                    this.moveItemsToSprint(Array.from(this._selectedIds), targetSprint.id);
-                } else {
-                    this.moveItemToSprint(item.id, targetSprint.id);
-                }
-            });
-            row.appendChild(add);
-        } else {
-            row.appendChild(document.createElement("span"));
+        if (item.assigneeId) {
+            return h("span", {
+                class: "wx-scrum-assignee",
+                style: { background: item.assigneeColor || "#6c757d" },
+                title: item.assigneeName || ""
+            }, item.assigneeInitials || (item.assigneeName || "?").slice(0, 2).toUpperCase());
         }
+        return h("span", {
+            class: "wx-scrum-assignee wx-scrum-assignee-empty",
+            title: this._i18n("webexpress.webapp:scrum.assignee.unassigned", "Unassigned")
+        });
+    }
 
-        // drag sorting logic
-        if (!this._readonly) {
-            row.addEventListener("dragstart", (e) => {
+    /**
+     * Builds the drag handlers of a row. The drag in progress and the drop mark are state, so
+     * the rows render them.
+     * @param {Object} item - The item of the row.
+     * @returns {Object} The handlers by event name.
+     */
+    _rowDragHandlers(item) {
+        return {
+            dragstart: (e) => {
                 // if dragging a row that's part of a multi-selection → drag the whole set
-                const ids = this._selectedIds.has(item.id) && this._selectedIds.size > 1
-                    ? Array.from(this._selectedIds)
-                    : [item.id];
+                const selected = this.state.selection.ids;
+                const ids = selected.includes(item.id) && selected.length > 1 ? selected.slice() : [item.id];
 
-                this._dragItemId = item.id;
-                this._dragItemIds = ids;
-                row.classList.add("dragging");
-
-                // visually mark all rows in the drag set
-                if (ids.length > 1) {
-                    for (const id of ids) {
-                        if (id === item.id) continue;
-                        const r = this._element.querySelector(`.wx-scrum-row[data-item-id="${CSS.escape(id)}"]`);
-                        if (r) r.classList.add("dragging");
-                    }
-                }
+                this.setState({ drag: { id: item.id, ids: ids } });
 
                 try {
                     e.dataTransfer.effectAllowed = "move";
                     e.dataTransfer.setData("text/plain", item.id);
                     e.dataTransfer.setData("application/x-wx-scrum-ids", JSON.stringify(ids));
                 } catch (_) { /* ignore */ }
-            });
-
-            row.addEventListener("dragend", () => {
-                for (const r of this._element.querySelectorAll(".wx-scrum-row.dragging")) {
-                    r.classList.remove("dragging");
-                }
-                this._dragItemId = null;
-                this._dragItemIds = [];
-            });
-
-            row.addEventListener("dragover", (e) => {
-                if (!this._dragItemId || this._dragItemIds.includes(item.id)) {
+            },
+            dragend: () => {
+                this.setState({ drag: null, dropMark: null, dropSection: null });
+            },
+            dragover: (e) => {
+                const drag = this.state.drag;
+                if (!drag || drag.ids.includes(item.id)) {
                     return;
                 }
                 e.preventDefault();
                 e.stopPropagation();
 
-                const rect = row.getBoundingClientRect();
-                const side = e.clientY < (rect.top + rect.height / 2) ? "before" : "after";
-
-                if (row.dataset.dropSide !== side) {
-                    row.dataset.dropSide = side;
-                    row.classList.remove("wx-drop-before", "wx-drop-after");
-                    row.classList.add(side === "before" ? "wx-drop-before" : "wx-drop-after");
+                const side = this._dropSide(e);
+                const mark = this.state.dropMark;
+                if (!mark || mark.id !== item.id || mark.side !== side) {
+                    this.setState({ dropMark: { id: item.id, side: side } });
                 }
-            });
-
-            row.addEventListener("dragleave", (e) => {
-                if (this._dragItemIds.includes(item.id)) {
+            },
+            dragleave: (e) => {
+                const drag = this.state.drag;
+                const mark = this.state.dropMark;
+                if (!mark || mark.id !== item.id || (drag && drag.ids.includes(item.id))) {
                     return;
                 }
-                const rect = row.getBoundingClientRect();
+                const rect = e.currentTarget.getBoundingClientRect();
                 if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
-                    row.classList.remove("wx-drop-before", "wx-drop-after");
-                    row.removeAttribute("data-drop-side");
+                    this.setState({ dropMark: null });
                 }
-            });
-
-            row.addEventListener("drop", (e) => {
+            },
+            drop: (e) => {
                 e.preventDefault();
                 e.stopPropagation();
 
-                row.classList.remove("wx-drop-before", "wx-drop-after");
-                row.removeAttribute("data-drop-side");
+                this.setState({ dropMark: null, dropSection: null });
 
                 const ids = this._readDragIds(e).filter((id) => id !== item.id);
                 if (ids.length === 0) {
                     return;
                 }
+                this.insertItemsRelative(ids, item.id, this._dropSide(e));
+            }
+        };
+    }
 
-                const rect = row.getBoundingClientRect();
-                const side = e.clientY < (rect.top + rect.height / 2) ? "before" : "after";
-                this.insertItemsRelative(ids, item.id, side);
-            });
-        }
-
-        return row;
+    /**
+     * Tells on which side of a row the pointer of a drag event is.
+     * @param {DragEvent} e - The drag event on the row.
+     * @returns {"before"|"after"} The side.
+     */
+    _dropSide(e) {
+        const rect = e.currentTarget.getBoundingClientRect();
+        return e.clientY < (rect.top + rect.height / 2) ? "before" : "after";
     }
 
     /**
@@ -1490,16 +1502,18 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
      * @returns {void}
      */
     _focusAndMaybeExtend(id, e) {
-        const row = this._element.querySelector(`.wx-scrum-row[data-item-id="${CSS.escape(id)}"]`);
+        const row = this._rowOf(id);
         if (row) {
             row.focus();
         }
+        this._focusedId = id;
         if (!this._selectable) {
             return;
         }
-        if (e.shiftKey && this._anchorId) {
-            const ids = this._idsBetween(this._anchorId, id);
-            this._setSelection(ids, id, this._anchorId, true, e);
+        const anchor = this.state.selection.anchor;
+        if (e.shiftKey && anchor) {
+            const ids = this._idsBetween(anchor, id);
+            this._setSelection(ids, id, anchor, true, e);
         } else if (!e.ctrlKey && !e.metaKey) {
             this._setSelection([id], id, id, true, e);
         }
@@ -1521,21 +1535,10 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
             this.selectAll();
             return;
         }
-        if (e.key === "Escape" && this._selectedIds.size > 0 && !this._ctxMenuEl) {
+        if (e.key === "Escape" && this.state.selection.ids.length > 0 && !this._ctxMenuEl) {
             this.clearSelection(true);
         }
     };
-
-    /**
-     * Builds a small text span for the section meta line.
-     * @param {string} text
-     * @returns {HTMLElement}
-     */
-    _buildMetaSpan(text) {
-        const span = document.createElement("span");
-        span.textContent = text;
-        return span;
-    }
 
     /**
      * Opens a context menu for one or more backlog items.
@@ -2593,7 +2596,8 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
      * @returns {Promise<void>}
      */
     updateItem(id, values) {
-        const item = this._itemIndex.get(id);
+        const draft = this._draft();
+        const item = draft.itemIndex.get(id);
         if (!item) {
             return Promise.resolve();
         }
@@ -2609,7 +2613,7 @@ webexpress.webapp.ScrumBacklogCtrl = class extends webexpress.webapp.Data {
         item.assigneeInitials = user ? user.initials : null;
         item.assigneeColor = user ? user.color : null;
         item.assigneeImage = user ? (user.image || null) : null;
-        this.render();
+        this._commit(draft);
 
         if (!this._service) {
             return Promise.resolve();

@@ -188,6 +188,8 @@ On the server side, derive from `RestApiTab<TIndexItem>` and override `RenameVie
 
 The base `webexpress.webui.TabCtrl` offers `setTabLabel(tabId, label)` to relabel a tab programmatically.
 
+The headers, the menus and the rename field are rendered from the state of the control, so a refresh of the tab set - a reload, or a live update after another user's change - patches the headers of the tabs that stay instead of rebuilding them: an open menu and a rename field keep their place and what was typed, and close only when the refresh removed their tab. The panes are built anew from their templates on every refresh. Inside a ViewState the control keeps its view state to itself; the ViewState holds the resource slice it renders.
+
 ### PUT (color tab)
 
 When `data-editable-tab="true"`, the *Color* level of the tab menu offers *None* and a palette of twelve colors. Picking one sends a `PUT` to the `base-uri` of the `data` service; `color` is `null` for *None*:

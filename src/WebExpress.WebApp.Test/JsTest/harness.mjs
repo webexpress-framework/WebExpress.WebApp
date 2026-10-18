@@ -19,6 +19,7 @@ import { createDocument } from "./dom-stub.mjs";
 // loads the shipped engine sources from the sibling WebExpress.WebApp project
 const here = path.dirname(fileURLToPath(import.meta.url));
 const webappAssetsJs = path.resolve(here, "..", "..", "WebExpress.WebApp", "Assets", "js");
+const webuiAssetsJs = path.resolve(here, "..", "..", "..", "..", "WebExpress.WebUI", "src", "WebExpress.WebUI", "Assets", "js");
 
 /**
  * Resolves the absolute path of a WebExpress.WebApp asset by file name, so that
@@ -37,7 +38,6 @@ const ENGINE_FILES = [
     // share, which a control file may reference at construction time
     "webexpress.webapp.js",
     "webexpress.webapp.service.js",
-    "webexpress.webapp.renderer.js",
     "webexpress.webapp.template.js",
     "webexpress.webapp.intent.js",
     "webexpress.webapp.data.js",
@@ -167,6 +167,12 @@ export function loadEngine(options = {}) {
 
     vm.createContext(sandbox);
     vm.runInContext(BOOTSTRAP, sandbox, { filename: "bootstrap" });
+
+    // the WebUI view layer the Data base extends, which a page loads with the WebUI core
+    for (const file of ["webexpress.webui.renderer.js", "webexpress.webui.state.js"]) {
+        const full = path.join(webuiAssetsJs, file);
+        vm.runInContext(fs.readFileSync(full, "utf8"), sandbox, { filename: full });
+    }
 
     for (const file of ENGINE_FILES) {
         const full = path.join(webappAssetsJs, file);

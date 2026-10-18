@@ -49,22 +49,7 @@ async function settle(turns = 12) {
 }
 
 test("a table layout change the server refuses is taken back and reported", async () => {
-    const engine = loadEngine({
-        bootstrap: `
-            webexpress.webui.TableReorderableCtrl = class extends webexpress.webui.Ctrl {
-                constructor(element) {
-                    super(element);
-                    this._table = document.createElement("table");
-                    this._columns = [];
-                    this._rows = [];
-                    this._options = [];
-                    this._hasOptions = false;
-                }
-                render() { }
-            };
-        `,
-        extraFiles: [webappAsset("webexpress.webapp.table.model.js"), webappAsset("webexpress.webapp.table.js")]
-    });
+    const engine = loadControl({ deps: ["webexpress.webapp.table.model.js"], file: "webexpress.webapp.table.js" });
     const net = refusingFetch({ columns: [{ id: "c1", label: "C1" }], rows: [{ id: "r1", cells: [{ content: "A" }] }], total: 1 });
     engine.setFetch(net.fetch);
     const popups = capturePopups(engine.wxapp);

@@ -13,7 +13,6 @@ namespace WebExpress.WebApp.WebInclude
     /// </remarks>
     [Asset("/assets/js/webexpress.webapp.js")]
     [Asset("/assets/js/webexpress.webapp.service.js")]
-    [Asset("/assets/js/webexpress.webapp.renderer.js")]
     [Asset("/assets/js/webexpress.webapp.template.js")]
     [Asset("/assets/js/webexpress.webapp.intent.js")]
     [Asset("/assets/js/webexpress.webapp.data.js")]

@@ -96,5 +96,30 @@ webexpress.webapp.scrumVelocityModel = {
             max = Math.max(max, Number(s && s.committed) || 0, Number(s && s.completed) || 0);
         }
         return max;
+    },
+
+    /**
+     * Keeps a selected window inside the loaded history.
+     *
+     * Untouched, the window is the trailing maxSprints slice, so switching the
+     * filter on does not change what the chart first shows. A history that came
+     * back shorter is clamped rather than reset, because a visitor who narrowed
+     * the chart down to two sprints did not ask to be sent back to the default.
+     *
+     * @param {{min:number, max:number}|null} window - The current window, one based and inclusive.
+     * @param {number} total - The number of loaded sprints.
+     * @param {number} maxSprints - The size of the initial window; zero or less means all.
+     * @returns {{min:number, max:number}|null} The window, or null without sprints.
+     */
+    clampWindow(window, total, maxSprints) {
+        if (total === 0) {
+            return null;
+        }
+        if (!window) {
+            const size = maxSprints > 0 ? Math.min(maxSprints, total) : total;
+            return { min: total - size + 1, max: total };
+        }
+        const min = Math.min(Math.max(1, window.min), total);
+        return { min: min, max: Math.min(Math.max(min, window.max), total) };
     }
 };

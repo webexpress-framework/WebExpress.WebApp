@@ -2,8 +2,8 @@
  * Headless tests for the REST table control in ViewState mode (View, State and
  * Service).
  *
- * They instantiate the real webexpress.webapp.TableCtrl on the DOM stub with a
- * stubbed WebUI reorderable table base, inside an enclosing ViewState, and
+ * They instantiate the real webexpress.webapp.TableCtrl on the DOM stub on its
+ * real WebUI reorderable table base, inside an enclosing ViewState, and
  * assert that the table normalises and renders the raw response the ViewState loads
  * centrally, and that its search re-queries the resource through the shared
  * ViewState state.
@@ -14,33 +14,12 @@
 
 import { test } from "node:test";
 import assert from "node:assert";
-import { loadEngine, webappAsset, appendServiceIsland, appendStateIsland, appendResourceIsland } from "./harness.mjs";
+import { appendServiceIsland, appendStateIsland, appendResourceIsland } from "./harness.mjs";
+import { loadControl } from "./controls.harness.mjs";
 
-// the webapp table extends the static WebUI reorderable table, which the engine
-// harness does not load; the stub carries the members the webapp control calls
-const TABLE_BASE_STUB = `
-    webexpress.webui.TableReorderableCtrl = class extends webexpress.webui.Ctrl {
-        constructor(element) {
-            super(element);
-            this._table = document.createElement("table");
-            this._columns = [];
-            this._rows = [];
-            this._options = [];
-            this._hasOptions = false;
-        }
-        render() { }
-        _loadState() { }
-    };
-`;
-
-function load(options) {
-    return loadEngine(Object.assign({
-        bootstrap: TABLE_BASE_STUB,
-        extraFiles: [
-            webappAsset("webexpress.webapp.table.model.js"),
-            webappAsset("webexpress.webapp.table.js")
-        ]
-    }, options));
+// the webapp table extends the WebUI reorderable table, which the control harness loads
+function load() {
+    return loadControl({ deps: ["webexpress.webapp.table.model.js"], file: "webexpress.webapp.table.js" });
 }
 
 /**
@@ -182,7 +161,7 @@ test("a hidden table defers its query and runs it when the view becomes visible"
     await settle();
 
     assert.equal(urls.length, 1, "a hidden table does not query");
-    assert.equal(table._store.getState().filter, "qf_mine", "but it keeps the filter it was given");
+    assert.equal(table._queryStore.getState().filter, "qf_mine", "but it keeps the filter it was given");
 
     table._isVisible = () => true;
     engine.document.dispatchEvent({ type: engine.wx.Event.CHANGE_VISIBILITY_EVENT, detail: { visible: true } });

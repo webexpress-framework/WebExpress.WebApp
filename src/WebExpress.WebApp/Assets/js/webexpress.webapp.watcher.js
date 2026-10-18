@@ -17,6 +17,9 @@
  * Without a binding the control owns its own islands and loads itself
  * (standalone).
  *
+ * The markup is a pure function of the state (render), patched into the host by the keyed
+ * reconciler of the Data base; handlers only change the state or call a service.
+ *
  * REST contract:
  *   GET  {data}                             → [{ id, name, team, initials, color, image }]
  *   POST {data}           body { userId }   → { id, name, team, initials, color, image }
@@ -37,7 +40,9 @@ webexpress.webapp.WatcherCtrl = class extends webexpress.webapp.Data {
         // Component seeds its store from the optional wx-state island and owns
         // the service map
         const services = webexpress.webapp.ServiceRegistry.fromElement(element);
-        const initialState = Object.assign({ watchers: [] }, webexpress.webapp.Data.readState(element));
+        const initialState = Object.assign(
+            { watchers: [], dropdownOpen: false, query: "", candidates: null },
+            webexpress.webapp.Data.readState(element));
 
         super(element, { state: initialState, services: services });
 
@@ -50,17 +55,40 @@ webexpress.webapp.WatcherCtrl = class extends webexpress.webapp.Data {
         this._service = this.useService("data");
         this._users = this.useService("users");
 
-        this._dropdownOpen = false;
         this._searchTimer = null;
+        // rendered nodes that imperative work needs: focus and the outside-click test
+        this._searchInput = null;
+        this._dropdownEl = null;
+        this._addEl = null;
+
+        // stable handlers, so a render does not swap the listeners of unchanged nodes
+        this._onAddClick = (e) => {
+            e.stopPropagation();
+            this._toggleDropdown();
+        };
+        this._onSearchInput = (e) => {
+            const query = e.target.value;
+            this.setState({ query: query });
+            clearTimeout(this._searchTimer);
+            this._searchTimer = setTimeout(() => this._search(query.trim()), 180);
+        };
+        this._onSearchKeyDown = (e) => {
+            if (e.key === "Escape") {
+                this._closeDropdown();
+            }
+        };
+        this._onDocumentMouseDown = (e) => {
+            if (!this.state.dropdownOpen || this._dropdownEl?.contains(e.target) || this._addEl?.contains(e.target)) {
+                return;
+            }
+            this._closeDropdown();
+        };
 
         // clean host
         element.textContent = "";
         element.removeAttribute("data-max-visible");
         element.removeAttribute("data-readonly");
         element.classList.add("wx-watcher");
-
-        this._buildDom();
-        this._attachEventHandlers();
 
         // subscribe to the store, perform the first render and run onMount
         this.mount();
@@ -131,91 +159,150 @@ webexpress.webapp.WatcherCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Renders the avatar row on the first paint.
+     * Listens for clicks outside the control, which close the dropdown, for as long as the
+     * control is mounted.
      */
     onMount() {
-        this._render();
-    }
-
-    /**
-     * Renders the avatar row whenever the watcher state changes.
-     */
-    onUpdate() {
-        this._render();
-    }
-
-    /**
-     * Builds the static DOM scaffold (avatar row + add button + dropdown).
-     */
-    _buildDom() {
-        this._row = document.createElement("div");
-        // the watchers render as an overlapping avatar group (webexpress.webui)
-        this._row.className = "wx-avatar-group";
-
-        this._addBtn = document.createElement("button");
-        this._addBtn.type = "button";
-        this._addBtn.className = "wx-watcher-add";
-        this._addBtn.title = this._i18n("webexpress.webapp:watcher.add", "Add watcher");
-        this._addBtn.setAttribute("aria-label", this._addBtn.title);
-        this._addBtn.appendChild(webexpress.webui.Icon.create("wx-icon-light wx-icon-light-plus"));
-
-        this._dropdown = document.createElement("div");
-        this._dropdown.className = "wx-watcher-dropdown";
-        this._dropdown.style.display = "none";
-
-        this._searchInput = document.createElement("input");
-        this._searchInput.type = "text";
-        this._searchInput.className = "wx-watcher-search";
-        this._searchInput.placeholder = this._i18n("webexpress.webapp:watcher.search.placeholder", "Search person…");
-        this._searchInput.autocomplete = "off";
-
-        this._resultsList = document.createElement("div");
-        this._resultsList.className = "wx-watcher-results";
-
-        this._dropdown.appendChild(this._searchInput);
-        this._dropdown.appendChild(this._resultsList);
-
-        this._element.appendChild(this._row);
         if (!this._readonly) {
-            this._element.appendChild(this._addBtn);
-            this._element.appendChild(this._dropdown);
+            document.addEventListener("mousedown", this._onDocumentMouseDown);
         }
     }
 
     /**
-     * Wires click/keyboard handlers for the add-button, the dropdown search,
-     * and the outside-click that closes the dropdown.
+     * Moves the focus into the search field once the dropdown has opened; focus is a side
+     * effect of the render, so it is applied after the reconciler placed the field.
+     * @param {object} state - The rendered state.
      */
-    _attachEventHandlers() {
+    onUpdate(state) {
+        if (state.dropdownOpen && !this._wasOpen && this._searchInput) {
+            this._searchInput.focus();
+        }
+        this._wasOpen = state.dropdownOpen;
+    }
+
+    /**
+     * Releases the document listener and a pending search.
+     */
+    onUnmount() {
+        document.removeEventListener("mousedown", this._onDocumentMouseDown);
+        clearTimeout(this._searchTimer);
+        this._searchTimer = null;
+    }
+
+    /**
+     * Renders the avatar row, and for an editable control the add button and the dropdown.
+     * @param {object} state - The current state.
+     * @returns {Array<object>} The virtual node tree of the host.
+     */
+    render(state) {
+        const h = webexpress.webui.h;
+        const watchers = state.watchers || [];
+        const visible = watchers.slice(0, this._maxVisible);
+        const hidden = watchers.slice(this._maxVisible);
+
+        // the watchers render as an overlapping avatar group (webexpress.webui)
+        const row = h("div", { key: "row", class: "wx-avatar-group" },
+            visible.map((user) => this._renderAvatar(user)),
+            hidden.length > 0 && h("span", {
+                key: "more",
+                class: "wx-avatar-group-more wx-watcher-more",
+                title: hidden.map((user) => user.name).join(", ")
+            }, "+" + hidden.length));
+
         if (this._readonly) {
-            return;
+            return [row];
         }
 
-        this._addBtn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            this._toggleDropdown();
-        });
+        const addLabel = this._i18n("webexpress.webapp:watcher.add", "Add watcher");
+        return [
+            row,
+            h("button", {
+                key: "add",
+                type: "button",
+                class: "wx-watcher-add",
+                title: addLabel,
+                "aria-label": addLabel,
+                on: { click: this._onAddClick },
+                ref: (el) => { this._addEl = el; }
+            }, h("i", { class: webexpress.webui.IconSet.resolve("plus") })),
+            h("div", {
+                key: "dropdown",
+                class: "wx-watcher-dropdown",
+                style: { display: state.dropdownOpen ? "block" : "none" },
+                ref: (el) => { this._dropdownEl = el; }
+            },
+                h("input", {
+                    key: "search",
+                    type: "text",
+                    class: "wx-watcher-search",
+                    placeholder: this._i18n("webexpress.webapp:watcher.search.placeholder", "Search person…"),
+                    autocomplete: "off",
+                    value: state.query,
+                    on: { input: this._onSearchInput, keydown: this._onSearchKeyDown },
+                    ref: (el) => { this._searchInput = el; }
+                }),
+                h("div", { key: "results", class: "wx-watcher-results" }, this._renderCandidates(state)))
+        ];
+    }
 
-        this._searchInput.addEventListener("input", () => {
-            clearTimeout(this._searchTimer);
-            this._searchTimer = setTimeout(() => this._search(this._searchInput.value.trim()), 180);
-        });
+    /**
+     * Renders a single avatar; a click removes the watcher unless the control is readonly.
+     * @param {Object} user - The user record.
+     * @returns {object} The avatar virtual node.
+     */
+    _renderAvatar(user) {
+        const h = webexpress.webui.h;
+        const title = user.name + (user.team ? " · " + user.team : "");
+        return h("button", {
+            key: user.id,
+            type: "button",
+            class: "wx-avatar-group-avatar wx-watcher-avatar",
+            title: title,
+            "aria-label": title,
+            disabled: this._readonly,
+            style: user.image ? {} : { background: user.color || "#888" },
+            on: this._readonly ? {} : { click: () => this._remove(user) }
+        }, user.image
+            ? h("img", { class: "wx-avatar-group-img", src: user.image, alt: user.name || "" })
+            : this._initials(user));
+    }
 
-        this._searchInput.addEventListener("keydown", (e) => {
-            if (e.key === "Escape") {
-                this._closeDropdown();
-            }
-        });
+    /**
+     * Renders the answered search: a row per candidate, or a hint when nothing matches. Before
+     * the first answer the list stays empty.
+     * @param {object} state - The current state.
+     * @returns {Array<object>|object|null} The result virtual nodes.
+     */
+    _renderCandidates(state) {
+        const h = webexpress.webui.h;
+        if (state.candidates === null) {
+            return null;
+        }
+        if (state.candidates.length === 0) {
+            return h("div", { class: "wx-watcher-empty" },
+                this._i18n("webexpress.webapp:watcher.no.matches", "No matches"));
+        }
+        return state.candidates.map((user) => h("button", {
+            key: user.id,
+            type: "button",
+            class: "wx-watcher-result",
+            on: { click: () => this._add(user) }
+        },
+            user.image
+                ? h("img", { class: "wx-watcher-result-avatar", src: user.image, alt: "" })
+                : h("span", { class: "wx-watcher-result-avatar", style: { background: user.color || "#888" } }, this._initials(user)),
+            h("span", { class: "wx-watcher-result-body" },
+                h("span", { class: "wx-watcher-result-name" }, user.name),
+                user.team && h("span", { class: "wx-watcher-result-team" }, user.team))));
+    }
 
-        document.addEventListener("mousedown", (e) => {
-            if (!this._dropdownOpen) {
-                return;
-            }
-            if (this._dropdown.contains(e.target) || this._addBtn.contains(e.target)) {
-                return;
-            }
-            this._closeDropdown();
-        });
+    /**
+     * Gets the badge text of a user without a picture.
+     * @param {Object} user - The user record.
+     * @returns {string} The initials.
+     */
+    _initials(user) {
+        return user.initials || (user.name || "?").slice(0, 2).toUpperCase();
     }
 
     /**
@@ -237,60 +324,10 @@ webexpress.webapp.WatcherCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Renders the avatar row from `this._watchers`.
-     */
-    _render() {
-        this._row.replaceChildren();
-        const visible = this._watchers.slice(0, this._maxVisible);
-        const overflow = this._watchers.length - visible.length;
-
-        for (const u of visible) {
-            this._row.appendChild(this._makeAvatar(u));
-        }
-        if (overflow > 0) {
-            const more = document.createElement("span");
-            more.className = "wx-avatar-group-more wx-watcher-more";
-            more.textContent = "+" + overflow;
-            more.title = this._watchers.slice(this._maxVisible).map(u => u.name).join(", ");
-            this._row.appendChild(more);
-        }
-    }
-
-    /**
-     * Builds a single avatar element for a user.
-     * Click on the avatar removes the watcher (unless readonly).
-     * @param {Object} user - The user record.
-     * @returns {HTMLElement}
-     */
-    _makeAvatar(user) {
-        const av = document.createElement("button");
-        av.type = "button";
-        av.className = "wx-avatar-group-avatar wx-watcher-avatar";
-        av.title = user.name + (user.team ? " · " + user.team : "");
-        av.setAttribute("aria-label", av.title);
-        if (user.image) {
-            const img = document.createElement("img");
-            img.className = "wx-avatar-group-img";
-            img.src = user.image;
-            img.alt = user.name || "";
-            av.appendChild(img);
-        } else {
-            av.style.background = user.color || "#888";
-            av.textContent = user.initials || (user.name || "?").slice(0, 2).toUpperCase();
-        }
-        if (!this._readonly) {
-            av.addEventListener("click", () => this._remove(user));
-        } else {
-            av.disabled = true;
-        }
-        return av;
-    }
-
-    /**
      * Toggles the visibility of the dropdown.
      */
     _toggleDropdown() {
-        if (this._dropdownOpen) {
+        if (this.state.dropdownOpen) {
             this._closeDropdown();
         } else {
             this._openDropdown();
@@ -298,13 +335,10 @@ webexpress.webapp.WatcherCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Opens the dropdown and runs an empty-query search.
+     * Opens the dropdown with an empty query and runs an empty-query search.
      */
     _openDropdown() {
-        this._dropdownOpen = true;
-        this._dropdown.style.display = "block";
-        this._searchInput.value = "";
-        this._searchInput.focus();
+        this.setState({ dropdownOpen: true, query: "" });
         this._search("");
     }
 
@@ -312,13 +346,11 @@ webexpress.webapp.WatcherCtrl = class extends webexpress.webapp.Data {
      * Closes the dropdown.
      */
     _closeDropdown() {
-        this._dropdownOpen = false;
-        this._dropdown.style.display = "none";
+        this.setState({ dropdownOpen: false });
     }
 
     /**
-     * Queries the users-URI and renders candidate rows.
-     * Candidates that are already watchers are excluded.
+     * Queries the users service and keeps the candidates that are not watchers yet.
      * @param {string} q - Free-text query.
      */
     async _search(q) {
@@ -334,33 +366,7 @@ webexpress.webapp.WatcherCtrl = class extends webexpress.webapp.Data {
             console.warn("WatcherCtrl: search failed", e);
         }
 
-        const candidates = webexpress.webapp.watcherModel.candidates(this._watchers, users);
-
-        this._resultsList.replaceChildren();
-        if (candidates.length === 0) {
-            const empty = document.createElement("div");
-            empty.className = "wx-watcher-empty";
-            empty.textContent = this._i18n("webexpress.webapp:watcher.no.matches", "No matches");
-            this._resultsList.appendChild(empty);
-            return;
-        }
-        for (const u of candidates) {
-            const row = document.createElement("button");
-            row.type = "button";
-            row.className = "wx-watcher-result";
-            const avatar = u.image
-                ? `<img class="wx-watcher-result-avatar" src="${this._esc(u.image)}" alt="">`
-                : `<span class="wx-watcher-result-avatar" style="background:${u.color || "#888"}">${u.initials || (u.name || "?").slice(0, 2).toUpperCase()}</span>`;
-            row.innerHTML = `
-                ${avatar}
-                <span class="wx-watcher-result-body">
-                    <span class="wx-watcher-result-name">${this._esc(u.name)}</span>
-                    ${u.team ? `<span class="wx-watcher-result-team">${this._esc(u.team)}</span>` : ""}
-                </span>
-            `;
-            row.addEventListener("click", () => this._add(u));
-            this._resultsList.appendChild(row);
-        }
+        this.setState({ candidates: webexpress.webapp.watcherModel.candidates(this._watchers, users) });
     }
 
     /**
@@ -409,15 +415,6 @@ webexpress.webapp.WatcherCtrl = class extends webexpress.webapp.Data {
         } catch (e) {
             console.warn("WatcherCtrl: remove failed", e);
         }
-    }
-
-    /**
-     * Minimal HTML escape.
-     * @param {string} s
-     * @returns {string}
-     */
-    _esc(s) {
-        return String(s ?? "").replace(/[<>"&]/g, c => ({ "<": "&lt;", ">": "&gt;", '"': "&quot;", "&": "&amp;" }[c]));
     }
 
     /**

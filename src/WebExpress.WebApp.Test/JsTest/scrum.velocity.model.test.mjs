@@ -100,3 +100,15 @@ test("model loads the sprints through a service end to end", async () => {
     assert.equal(wxapp.scrumVelocityModel.average(sprints), 25.5);
     assert.equal(wxapp.scrumVelocityModel.maxValue(sprints), 30);
 });
+
+test("clampWindow starts on the trailing slice and clamps rather than resets", () => {
+    const { wxapp } = load();
+    const clamp = (window, total, max) => JSON.parse(JSON.stringify(wxapp.scrumVelocityModel.clampWindow(window, total, max)));
+
+    assert.equal(wxapp.scrumVelocityModel.clampWindow(null, 0, 3), null, "no sprints, no window");
+    assert.deepEqual(clamp(null, 7, 3), { min: 5, max: 7 });
+    assert.deepEqual(clamp(null, 2, 3), { min: 1, max: 2 }, "a short history is shown whole");
+    assert.deepEqual(clamp(null, 4, 0), { min: 1, max: 4 }, "no limit means all");
+    assert.deepEqual(clamp({ min: 2, max: 3 }, 7, 3), { min: 2, max: 3 }, "a chosen window stays");
+    assert.deepEqual(clamp({ min: 5, max: 7 }, 4, 3), { min: 4, max: 4 }, "a shorter history clamps the window");
+});

@@ -31,7 +31,7 @@ The control is bootstrapped from a single host element carrying the `wx-webapp-w
 
 ### Services
 
-The endpoints are named `wx-service` islands, hidden child elements of the host that the control consumes on startup. Rendered from C#, `ControlDataWatcher` emits the islands through `.DataService<TEndpoint>()` and `.UsersService<TEndpoint>()`.
+The endpoints are named `wx-service` islands, hidden child elements of the host that the control consumes on startup. Rendered from C#, `ControlDataWatcher` emits the islands through `.DataService<TEndpoint>()` and `.UsersService<TEndpoint>()`. The users call serves both modes: a standalone watcher gets the `users` island, a watcher bound to a ViewState resource gets the `data-wx-users` binding to the ViewState service of the same type instead.
 
 | Service | Description                                                                                                       | Island
 |---------|-------------------------------------------------------------------------------------------------------------------|----------------------------------------------

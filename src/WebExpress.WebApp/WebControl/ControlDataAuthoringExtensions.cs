@@ -399,6 +399,12 @@ namespace WebExpress.WebApp.WebControl
         /// Declares the users service of the watcher surface, which resolves
         /// the candidate users with GET.
         /// </summary>
+        /// <remarks>
+        /// One call serves both modes, because the author should not have to know which one the
+        /// control ends up in: it declares an owned users island for a standalone watcher and the
+        /// binding to the ViewState users service of the same type. The renderer emits the island
+        /// only standalone and the binding only when the watcher renders a ViewState resource.
+        /// </remarks>
         /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
         /// <param name="control">The watcher control.</param>
         /// <param name="configure">An optional adjustment of the preset.</param>
@@ -406,6 +412,11 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataWatcher UsersService<TEndpoint>(this ControlDataWatcher control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
+            if (control != null)
+            {
+                control.UsersFactory = _ => DataTypeName.Of<TEndpoint>();
+            }
+
             return AddPreset(control, UsersPreset, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
@@ -520,6 +531,11 @@ namespace WebExpress.WebApp.WebControl
         /// Declares the users service of the scrum backlog, which resolves the
         /// candidate assignees with GET when an item is assigned.
         /// </summary>
+        /// <remarks>
+        /// One call serves both modes: an owned users island for a standalone backlog and the
+        /// binding to the ViewState users service of the same type; the renderer emits whichever
+        /// the mode needs.
+        /// </remarks>
         /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
         /// <param name="control">The scrum backlog control.</param>
         /// <param name="configure">An optional adjustment of the preset.</param>
@@ -527,6 +543,11 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataScrumBacklog UsersService<TEndpoint>(this ControlDataScrumBacklog control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
+            if (control != null)
+            {
+                control.UsersFactory = _ => DataTypeName.Of<TEndpoint>();
+            }
+
             return AddPreset(control, UsersPreset, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
         }
 
@@ -1222,42 +1243,6 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>The control for chaining.</returns>
         public static ControlDataAvatarDropdown Resource<TResource>(this ControlDataAvatarDropdown control) where TResource : IDataResource
             => BindResource<ControlDataAvatarDropdown, TResource>(control);
-
-        /// <summary>
-        /// Binds the watcher's users service by endpoint type, fluently and
-        /// preserving the concrete control type. The parameterless overload
-        /// binds the ViewState users service, while the preset overload with the
-        /// configure callback declares an owned users island (standalone).
-        /// </summary>
-        /// <typeparam name="TEndpoint">The users endpoint type.</typeparam>
-        /// <param name="control">The watcher control.</param>
-        /// <returns>The control for chaining.</returns>
-        public static ControlDataWatcher UsersService<TEndpoint>(this ControlDataWatcher control) where TEndpoint : IEndpoint
-        {
-            if (control != null)
-            {
-                control.UsersFactory = _ => DataTypeName.Of<TEndpoint>();
-            }
-
-            return control;
-        }
-
-        /// <summary>
-        /// Binds the scrum backlog's users service by endpoint type, fluently and
-        /// preserving the concrete control type.
-        /// </summary>
-        /// <typeparam name="TEndpoint">The users endpoint type.</typeparam>
-        /// <param name="control">The scrum backlog control.</param>
-        /// <returns>The control for chaining.</returns>
-        public static ControlDataScrumBacklog UsersService<TEndpoint>(this ControlDataScrumBacklog control) where TEndpoint : IEndpoint
-        {
-            if (control != null)
-            {
-                control.UsersFactory = _ => DataTypeName.Of<TEndpoint>();
-            }
-
-            return control;
-        }
 
         /// <summary>
         /// Sets the resource binding on a ViewState-bound control and returns the

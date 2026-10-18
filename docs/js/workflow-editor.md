@@ -99,6 +99,10 @@ guess at it. Both are editable in the properties panel and round-trip through th
 format. `icon` and `image` are distinct: the first is a CSS class rendered as a glyph, the
 second a URL rendered as a picture. A URL in `icon` renders nothing.
 
+## Rendering
+
+The split host is structure the split control owns - it re-parents the two panes and puts its handle between them - so the editor builds it once and renders into the panes: the canvas pane is the render root of the graph editor, and the properties pane is patched from the same state after every render. The save status at the end of the toolbar, the action bar of the panel and the loading mark of the host follow the state. The properties view is built into a kept slot whenever the selection changes or a rule edit asks for a rebuild, so the field the user is typing in, and its focus, survive every render in between.
+
 ## Properties Panel
 
 Selecting a state or a transition renders its properties inline in the right pane; with

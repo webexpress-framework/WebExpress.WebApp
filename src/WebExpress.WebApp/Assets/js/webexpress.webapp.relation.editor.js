@@ -8,6 +8,9 @@
  * immediately available everywhere - the link surface groups by it and the add
  * dialog offers it - because both read the same registry the endpoint writes.
  *
+ * The table is a pure function of the state (render), patched into the host by the keyed
+ * reconciler of the Data base; a drag in progress is state too, so its marks are rendered.
+ *
  * Declarative configuration: the host carries a wx-service island named "data"
  * for the type endpoint.
  *
@@ -34,7 +37,8 @@ webexpress.webapp.RelationEditorCtrl = class extends webexpress.webapp.Data {
             items: [],
             total: 0,
             active: 0,
-            classes: []
+            classes: [],
+            drag: null
         }, webexpress.webapp.Data.readState(element));
 
         super(element, { state: initialState, services: services });
@@ -44,7 +48,9 @@ webexpress.webapp.RelationEditorCtrl = class extends webexpress.webapp.Data {
         this._readonly = element.dataset.readonly === "true";
         this._service = this.useService("data");
         this._dialog = null;
-        this._dragged = null;
+        // nodes the render captures for imperative access
+        this._counts = null;
+        this._rows = null;
 
         element.textContent = "";
         element.removeAttribute("data-class");
@@ -52,126 +58,23 @@ webexpress.webapp.RelationEditorCtrl = class extends webexpress.webapp.Data {
         element.removeAttribute("data-readonly");
         element.classList.add("wx-relation-editor");
 
-        this._buildDom();
-        this._attachEventHandlers();
+        // stable handlers, so a render does not swap the listeners of unchanged nodes
+        this._onNew = () => this._edit(null);
+        this._rowHandlers = {
+            click: (e) => this._onRowClick(e),
+            change: (e) => this._onRowChange(e),
+            dragstart: (e) => this._onDragStart(e),
+            dragover: (e) => this._onDragOver(e),
+            dragleave: (e) => this._onDragLeave(e),
+            dragend: () => this.setState({ drag: null }),
+            drop: (e) => this._onDrop(e)
+        };
 
         this.mount();
 
         if (this.state.items.length === 0) {
             this._load();
         }
-    }
-
-    /**
-     * Builds the static scaffold: the caption with the two counts, the define
-     * affordance and the table the types are rendered into.
-     */
-    _buildDom() {
-        this._toolbar = document.createElement("div");
-        this._toolbar.className = "wx-relation-editor-toolbar";
-
-        this._caption = document.createElement("span");
-        this._caption.className = "wx-relation-editor-caption";
-        this._caption.textContent = this._class
-            ? this._i18n("webexpress.webapp:relation.type.title.class", "Link types of class {0}").replace("{0}", this._class)
-            : this._i18n("webexpress.webapp:relation.type.title", "Link types");
-
-        this._counts = document.createElement("span");
-        this._counts.className = "wx-relation-editor-counts";
-
-        this._newButton = document.createElement("button");
-        this._newButton.type = "button";
-        this._newButton.className = "btn btn-primary wx-relation-editor-new";
-        this._newButton.appendChild(webexpress.webui.Icon.create(this._iconClass("plus")));
-        this._newButton.appendChild(document.createTextNode(this._i18n("webexpress.webapp:relation.type.new", "New type")));
-
-        this._toolbar.appendChild(this._caption);
-        this._toolbar.appendChild(this._counts);
-
-        if (!this._readonly) {
-            this._toolbar.appendChild(this._newButton);
-        }
-
-        this._table = document.createElement("div");
-        this._table.className = "wx-relation-editor-table";
-        this._table.setAttribute("role", "table");
-        this._table.appendChild(this._buildHead());
-
-        this._rows = document.createElement("div");
-        this._rows.className = "wx-relation-editor-rows";
-        this._table.appendChild(this._rows);
-
-        this._element.appendChild(this._toolbar);
-        this._element.appendChild(this._table);
-    }
-
-    /**
-     * Builds the column headings of the table.
-     * @returns {HTMLElement} The heading row.
-     */
-    _buildHead() {
-        const head = document.createElement("div");
-        head.className = "wx-relation-editor-head";
-        head.setAttribute("role", "row");
-
-        // the grip and the menu columns are named too, though the name need not be seen
-        const columns = [
-            ["grip", this._i18n("webexpress.webapp:relation.type.column.move", "Move"), true],
-            ["pair", this._i18n("webexpress.webapp:relation.type.column.relation", "Relation")],
-            ["classes", this._i18n("webexpress.webapp:relation.type.column.target", "Target type")],
-            ["cardinality", this._i18n("webexpress.webapp:relation.type.column.cardinality", "Cardinality")],
-            ["effect", this._i18n("webexpress.webapp:relation.type.column.effect", "Effect")],
-            ["usage", this._i18n("webexpress.webapp:relation.type.column.usage", "Usage")],
-            ["active", this._i18n("webexpress.webapp:relation.type.column.active", "Active")],
-            ["menu", this._i18n("webexpress.webapp:relation.type.column.actions", "Actions"), true]
-        ];
-
-        for (const [name, label, hidden] of columns) {
-            const cell = document.createElement("span");
-            cell.className = `wx-relation-editor-cell wx-relation-editor-${name}`;
-            cell.setAttribute("role", "columnheader");
-            if (hidden) {
-                const caption = document.createElement("span");
-                caption.className = "visually-hidden";
-                caption.textContent = label;
-                cell.appendChild(caption);
-            } else {
-                cell.textContent = label;
-            }
-            head.appendChild(cell);
-        }
-
-        return head;
-    }
-
-    /**
-     * Wires the toolbar and the delegated listeners of the table. The rows are
-     * rebuilt on every state change, so they carry no listeners of their own.
-     */
-    _attachEventHandlers() {
-        this._newButton.addEventListener("click", () => this._edit(null));
-
-        this._rows.addEventListener("click", (e) => this._onRowClick(e));
-        this._rows.addEventListener("change", (e) => this._onRowChange(e));
-        this._rows.addEventListener("dragstart", (e) => this._onDragStart(e));
-        this._rows.addEventListener("dragover", (e) => this._onDragOver(e));
-        this._rows.addEventListener("dragleave", (e) => this._onDragLeave(e));
-        this._rows.addEventListener("dragend", () => this._clearDropMarks());
-        this._rows.addEventListener("drop", (e) => this._onDrop(e));
-    }
-
-    /**
-     * Renders the table on the first paint.
-     */
-    onMount() {
-        this._render();
-    }
-
-    /**
-     * Renders the table whenever the state changes.
-     */
-    onUpdate() {
-        this._render();
     }
 
     /**
@@ -198,210 +101,184 @@ webexpress.webapp.RelationEditorCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Renders the counts and the rows.
+     * Renders the toolbar with the caption, the counts and the define affordance, and the table
+     * of the types. The drag marks are part of the state, so the rows show them like any other
+     * attribute of a type.
+     * @param {object} state - The current state.
+     * @returns {Array<object>} The virtual node tree of the host.
      */
-    _render() {
-        const state = this.state;
+    render(state) {
+        const h = webexpress.webui.h;
 
-        this._counts.textContent = this._i18n("webexpress.webapp:relation.type.counts", "{0} active, {1} defined")
-            .replace("{0}", String(state.active || 0))
-            .replace("{1}", String(state.total || 0));
-
-        this._rows.replaceChildren();
-
-        const fragment = document.createDocumentFragment();
-
-        for (const item of state.items) {
-            fragment.appendChild(this._buildRow(item));
-        }
-
-        this._rows.appendChild(fragment);
+        return [
+            h("div", { key: "toolbar", class: "wx-relation-editor-toolbar" },
+                h("span", { class: "wx-relation-editor-caption" }, this._class
+                    ? this._i18n("webexpress.webapp:relation.type.title.class", "Link types of class {0}").replace("{0}", this._class)
+                    : this._i18n("webexpress.webapp:relation.type.title", "Link types")),
+                h("span", { class: "wx-relation-editor-counts", ref: (el) => { this._counts = el; } },
+                    this._i18n("webexpress.webapp:relation.type.counts", "{0} active, {1} defined")
+                        .replace("{0}", String(state.active || 0))
+                        .replace("{1}", String(state.total || 0))),
+                !this._readonly && h("button", {
+                    type: "button",
+                    class: "btn btn-primary wx-relation-editor-new",
+                    on: { click: this._onNew }
+                }, this._icon("plus"), this._i18n("webexpress.webapp:relation.type.new", "New type"))),
+            h("div", { key: "table", class: "wx-relation-editor-table", role: "table" },
+                this._renderHead(),
+                // the rows report through delegated listeners, so a row needs none of its own
+                h("div", {
+                    class: "wx-relation-editor-rows",
+                    on: this._rowHandlers,
+                    ref: (el) => { this._rows = el; }
+                }, state.items.map((item) => this._renderRow(item, state.drag))))
+        ];
     }
 
     /**
-     * Builds one row of the table.
-     * @param {object} item - The normalised type.
-     * @returns {HTMLElement} The row.
+     * Renders an icon from a symbolic name, the way webexpress.webui.Icon builds a class icon.
+     * @param {string} name - The symbolic icon name.
+     * @returns {object} The icon virtual node.
      */
-    _buildRow(item) {
-        const row = document.createElement("div");
-        row.className = "wx-relation-editor-row";
-        row.setAttribute("role", "row");
-        row.dataset.type = item.id;
+    _icon(name) {
+        return webexpress.webui.h("i", { class: this._iconClass(name) });
+    }
+
+    /**
+     * Renders the column headings of the table.
+     * @returns {object} The heading row virtual node.
+     */
+    _renderHead() {
+        const h = webexpress.webui.h;
+        // the grip and the menu columns are named too, though the name need not be seen
+        const columns = [
+            ["grip", this._i18n("webexpress.webapp:relation.type.column.move", "Move"), true],
+            ["pair", this._i18n("webexpress.webapp:relation.type.column.relation", "Relation")],
+            ["classes", this._i18n("webexpress.webapp:relation.type.column.target", "Target type")],
+            ["cardinality", this._i18n("webexpress.webapp:relation.type.column.cardinality", "Cardinality")],
+            ["effect", this._i18n("webexpress.webapp:relation.type.column.effect", "Effect")],
+            ["usage", this._i18n("webexpress.webapp:relation.type.column.usage", "Usage")],
+            ["active", this._i18n("webexpress.webapp:relation.type.column.active", "Active")],
+            ["menu", this._i18n("webexpress.webapp:relation.type.column.actions", "Actions"), true]
+        ];
+
+        return h("div", { class: "wx-relation-editor-head", role: "row" },
+            columns.map(([name, label, hidden]) => h("span", {
+                class: `wx-relation-editor-cell wx-relation-editor-${name}`,
+                role: "columnheader"
+            }, hidden ? h("span", { class: "visually-hidden" }, label) : label)));
+    }
+
+    /**
+     * Renders one row of the table.
+     * @param {object} item - The normalised type.
+     * @param {object|null} drag - The drag in progress, as { id, target, side }.
+     * @returns {object} The row virtual node.
+     */
+    _renderRow(item, drag) {
+        const h = webexpress.webui.h;
+        const classes = ["wx-relation-editor-row"];
 
         if (!item.active) {
-            row.classList.add("wx-relation-editor-inactive");
+            classes.push("wx-relation-editor-inactive");
+        }
+        if (drag && drag.id === item.id) {
+            classes.push("wx-relation-editor-dragging");
+        }
+        // the marks are the ones the other reorderable controls use, so a drop reads the same everywhere
+        if (drag && drag.target === item.id) {
+            classes.push("wx-drop-target", drag.side === "after" ? "wx-drop-after" : "wx-drop-before");
         }
 
-        if (!this._readonly) {
-            row.draggable = true;
-        }
-
-        row.appendChild(this._buildGrip());
-        row.appendChild(this._buildPair(item));
-        row.appendChild(this._buildClasses(item));
-        row.appendChild(this._buildCell("cardinality", item.cardinality));
-        row.appendChild(this._buildCell("effect", webexpress.webapp.relationEditorModel.effectLabel(item.effect, (key, fallback) => this._i18n(key, fallback))));
-        row.appendChild(this._buildCell("usage", String(item.usage)));
-        row.appendChild(this._buildToggle(item));
-        row.appendChild(this._buildMenu(item));
-
-        return row;
+        return h("div", {
+            key: item.id,
+            class: classes.join(" "),
+            role: "row",
+            dataset: { type: item.id },
+            draggable: this._readonly ? null : "true"
+        },
+            h("span", { class: "wx-relation-editor-cell wx-relation-editor-grip", role: "cell" },
+                !this._readonly && this._icon("grip-vertical")),
+            this._renderPair(item),
+            this._renderClasses(item),
+            this._renderCell("cardinality", item.cardinality),
+            this._renderCell("effect", webexpress.webapp.relationEditorModel.effectLabel(item.effect, (key, fallback) => this._i18n(key, fallback))),
+            this._renderCell("usage", String(item.usage)),
+            h("span", { class: "wx-relation-editor-cell wx-relation-editor-active", role: "cell" },
+                h("input", {
+                    type: "checkbox",
+                    class: "form-check-input wx-relation-editor-switch",
+                    checked: item.active,
+                    disabled: this._readonly,
+                    "data-command": "toggle",
+                    "aria-label": this._i18n("webexpress.webapp:relation.type.column.active", "Active")
+                })),
+            this._renderMenu(item));
     }
 
     /**
-     * Builds the drag handle of a row.
-     * @returns {HTMLElement} The cell.
-     */
-    _buildGrip() {
-        const cell = document.createElement("span");
-        cell.className = "wx-relation-editor-cell wx-relation-editor-grip";
-        cell.setAttribute("role", "cell");
-
-        if (!this._readonly) {
-            cell.appendChild(webexpress.webui.Icon.create(this._iconClass("grip-vertical")));
-        }
-
-        return cell;
-    }
-
-    /**
-     * Builds the type pair cell: the relation as it reads from this object above
+     * Renders the type pair cell: the relation as it reads from this object above
      * the way it reads from the other one, which is the one thing an
      * administrator has to see at a glance.
      * @param {object} item - The normalised type.
-     * @returns {HTMLElement} The cell.
+     * @returns {object} The cell virtual node.
      */
-    _buildPair(item) {
-        const cell = document.createElement("span");
-        cell.className = "wx-relation-editor-cell wx-relation-editor-pair";
-        cell.setAttribute("role", "cell");
-        cell.setAttribute("data-command", "edit");
+    _renderPair(item) {
+        const h = webexpress.webui.h;
 
-        const forward = document.createElement("span");
-        forward.className = "wx-relation-editor-forward";
-        forward.textContent = "→ " + item.label;
-
-        const backward = document.createElement("span");
-        backward.className = "wx-relation-editor-backward";
-        backward.textContent = "← " + (item.inverse || "—");
-
-        cell.appendChild(forward);
-        cell.appendChild(backward);
-
-        if (item.symmetric) {
-            const badge = document.createElement("span");
-            badge.className = "wx-relation-editor-symmetric";
-            badge.textContent = this._i18n("webexpress.webapp:relation.type.symmetric", "symmetric");
-            cell.appendChild(badge);
-        }
-
-        return cell;
+        return h("span", { class: "wx-relation-editor-cell wx-relation-editor-pair", role: "cell", "data-command": "edit" },
+            h("span", { class: "wx-relation-editor-forward" }, "→ " + item.label),
+            h("span", { class: "wx-relation-editor-backward" }, "← " + (item.inverse || "—")),
+            item.symmetric && h("span", { class: "wx-relation-editor-symmetric" },
+                this._i18n("webexpress.webapp:relation.type.symmetric", "symmetric")));
     }
 
     /**
-     * Builds the target class cell, as chips or as the "all classes" marker.
+     * Renders the target class cell, as chips or as the "all classes" marker.
      * @param {object} item - The normalised type.
-     * @returns {HTMLElement} The cell.
+     * @returns {object} The cell virtual node.
      */
-    _buildClasses(item) {
-        const cell = document.createElement("span");
-        cell.className = "wx-relation-editor-cell wx-relation-editor-classes";
-        cell.setAttribute("role", "cell");
+    _renderClasses(item) {
+        const h = webexpress.webui.h;
 
-        if (item.allClasses) {
-            const chip = document.createElement("span");
-            chip.className = "wx-relation-editor-chip wx-relation-editor-chip-all";
-            chip.textContent = this._i18n("webexpress.webapp:relation.type.all.classes", "all classes");
-            cell.appendChild(chip);
-
-            return cell;
-        }
-
-        for (const name of item.targetClasses) {
-            const chip = document.createElement("span");
-            chip.className = "wx-relation-editor-chip";
-            chip.textContent = name;
-            cell.appendChild(chip);
-        }
-
-        return cell;
+        return h("span", { class: "wx-relation-editor-cell wx-relation-editor-classes", role: "cell" }, item.allClasses
+            ? h("span", { class: "wx-relation-editor-chip wx-relation-editor-chip-all" },
+                this._i18n("webexpress.webapp:relation.type.all.classes", "all classes"))
+            : item.targetClasses.map((name) => h("span", { key: name, class: "wx-relation-editor-chip" }, name)));
     }
 
     /**
-     * Builds a plain text cell.
+     * Renders a plain text cell.
      * @param {string} name - The column name.
      * @param {string} text - The content.
-     * @returns {HTMLElement} The cell.
+     * @returns {object} The cell virtual node.
      */
-    _buildCell(name, text) {
-        const cell = document.createElement("span");
-        cell.className = `wx-relation-editor-cell wx-relation-editor-${name}`;
-        cell.setAttribute("role", "cell");
-        cell.textContent = text;
-
-        return cell;
+    _renderCell(name, text) {
+        return webexpress.webui.h("span", { class: `wx-relation-editor-cell wx-relation-editor-${name}`, role: "cell" }, text);
     }
 
     /**
-     * Builds the activation toggle of a row.
-     * @param {object} item - The normalised type.
-     * @returns {HTMLElement} The cell.
-     */
-    _buildToggle(item) {
-        const cell = document.createElement("span");
-        cell.className = "wx-relation-editor-cell wx-relation-editor-active";
-        cell.setAttribute("role", "cell");
-
-        const toggle = document.createElement("input");
-        toggle.type = "checkbox";
-        toggle.className = "form-check-input wx-relation-editor-switch";
-        toggle.checked = item.active;
-        toggle.disabled = this._readonly;
-        toggle.setAttribute("data-command", "toggle");
-        toggle.setAttribute("aria-label", this._i18n("webexpress.webapp:relation.type.column.active", "Active"));
-        cell.appendChild(toggle);
-
-        return cell;
-    }
-
-    /**
-     * Builds the options cell of a row. A type that is shipped by code or still
+     * Renders the options cell of a row. A type that is shipped by code or still
      * carries links offers no removal, because dropping it would strip the
      * meaning from the links that reference it.
      * @param {object} item - The normalised type.
-     * @returns {HTMLElement} The cell.
+     * @returns {object} The cell virtual node.
      */
-    _buildMenu(item) {
-        const cell = document.createElement("span");
-        cell.className = "wx-relation-editor-cell wx-relation-editor-menu";
-        cell.setAttribute("role", "cell");
+    _renderMenu(item) {
+        const h = webexpress.webui.h;
+        const option = (command, icon, title, danger) => h("button", {
+            key: command,
+            type: "button",
+            class: danger ? "wx-relation-editor-option wx-relation-editor-option-danger" : "wx-relation-editor-option",
+            "data-command": command,
+            title: title,
+            "aria-label": title
+        }, this._icon(icon));
 
-        if (this._readonly) {
-            return cell;
-        }
-
-        const edit = document.createElement("button");
-        edit.type = "button";
-        edit.className = "wx-relation-editor-option";
-        edit.setAttribute("data-command", "edit");
-        edit.title = this._i18n("webexpress.webapp:relation.type.edit", "Edit link type");
-        edit.setAttribute("aria-label", edit.title);
-        edit.appendChild(webexpress.webui.Icon.create(this._iconClass("pen")));
-        cell.appendChild(edit);
-
-        if (!item.builtin && item.usage === 0) {
-            const remove = document.createElement("button");
-            remove.type = "button";
-            remove.className = "wx-relation-editor-option wx-relation-editor-option-danger";
-            remove.setAttribute("data-command", "remove");
-            remove.title = this._i18n("webexpress.webapp:relation.type.remove", "Delete link type");
-            remove.setAttribute("aria-label", remove.title);
-            remove.appendChild(webexpress.webui.Icon.create(this._iconClass("trash")));
-            cell.appendChild(remove);
-        }
-
-        return cell;
+        return h("span", { class: "wx-relation-editor-cell wx-relation-editor-menu", role: "cell" },
+            !this._readonly && option("edit", "pen", this._i18n("webexpress.webapp:relation.type.edit", "Edit link type")),
+            !this._readonly && !item.builtin && item.usage === 0
+                && option("remove", "trash", this._i18n("webexpress.webapp:relation.type.remove", "Delete link type"), true));
     }
 
     /**
@@ -445,46 +322,44 @@ webexpress.webapp.RelationEditorCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Remembers which row is being dragged and marks it, so the reader keeps
-     * track of what they picked up.
+     * Remembers which row is being dragged, so the reader keeps track of what they picked up.
      * @param {Event} e - The dragstart event.
      */
     _onDragStart(e) {
         const row = e.target.closest ? e.target.closest(".wx-relation-editor-row") : null;
 
-        this._dragged = row ? row.dataset.type : null;
-
-        if (row) {
-            row.classList.add("wx-relation-editor-dragging");
-        }
+        this.setState({ drag: row ? { id: row.dataset.type, target: null, side: null } : null });
     }
 
     /**
      * Marks where the dragged relation would land: above the row the pointer is
-     * in the upper half of, below it otherwise. The marks are the ones the other
-     * reorderable controls use, so a drop reads the same everywhere.
+     * in the upper half of, below it otherwise.
      * @param {Event} e - The dragover event.
      */
     _onDragOver(e) {
         e.preventDefault();
 
+        const drag = this.state.drag;
         const row = e.target.closest ? e.target.closest(".wx-relation-editor-row") : null;
 
-        if (!row || !this._dragged || row.dataset.type === this._dragged) {
-            this._clearDropMarks();
+        if (!drag) {
+            return;
+        }
+
+        if (!row || row.dataset.type === drag.id) {
+            if (drag.target) {
+                this.setState({ drag: { id: drag.id, target: null, side: null } });
+            }
             return;
         }
 
         const bounds = typeof row.getBoundingClientRect === "function" ? row.getBoundingClientRect() : null;
         const side = bounds && e.clientY > bounds.top + bounds.height / 2 ? "after" : "before";
 
-        if (row.dataset.dropSide === side) {
-            return;
+        // dragover fires continuously; only a new place is a new state
+        if (drag.target !== row.dataset.type || drag.side !== side) {
+            this.setState({ drag: { id: drag.id, target: row.dataset.type, side: side } });
         }
-
-        this._clearDropMarks();
-        row.dataset.dropSide = side;
-        row.classList.add("wx-drop-target", side === "after" ? "wx-drop-after" : "wx-drop-before");
     }
 
     /**
@@ -492,10 +367,11 @@ webexpress.webapp.RelationEditorCtrl = class extends webexpress.webapp.Data {
      * @param {Event} e - The dragleave event.
      */
     _onDragLeave(e) {
+        const drag = this.state.drag;
         const row = e.target.closest ? e.target.closest(".wx-relation-editor-row") : null;
 
-        if (row) {
-            this._unmark(row);
+        if (drag && row && drag.target === row.dataset.type) {
+            this.setState({ drag: { id: drag.id, target: null, side: null } });
         }
     }
 
@@ -506,15 +382,14 @@ webexpress.webapp.RelationEditorCtrl = class extends webexpress.webapp.Data {
     _onDrop(e) {
         e.preventDefault();
 
+        const drag = this.state.drag;
         const row = e.target.closest ? e.target.closest(".wx-relation-editor-row") : null;
-        const side = row && row.dataset ? row.dataset.dropSide : null;
-        const dragged = this._dragged;
 
-        this._clearDropMarks();
-        this._dragged = null;
+        this.setState({ drag: null });
 
-        if (dragged && row) {
-            this._move(dragged, this._insertBefore(row.dataset.type, side, dragged));
+        if (drag && row) {
+            const side = drag.target === row.dataset.type ? drag.side : null;
+            this._move(drag.id, this._insertBefore(row.dataset.type, side, drag.id));
         }
     }
 
@@ -538,32 +413,6 @@ webexpress.webapp.RelationEditorCtrl = class extends webexpress.webapp.Data {
         // the row after the target may be the dragged one itself, which would
         // ask the move to put it in front of where it already is
         return next && next.id !== draggedId ? next.id : null;
-    }
-
-    /**
-     * Removes the drop marks of every row.
-     */
-    _clearDropMarks() {
-        for (const row of this._rows.childNodes) {
-            this._unmark(row);
-        }
-    }
-
-    /**
-     * Removes the drop and drag marks of one row.
-     * @param {HTMLElement} row - The row.
-     */
-    _unmark(row) {
-        if (!row.classList) {
-            return;
-        }
-
-        row.classList.remove("wx-drop-target", "wx-drop-before", "wx-drop-after", "wx-relation-editor-dragging");
-        row.removeAttribute("data-drop-side");
-
-        if (row.dataset) {
-            delete row.dataset.dropSide;
-        }
     }
 
     /**

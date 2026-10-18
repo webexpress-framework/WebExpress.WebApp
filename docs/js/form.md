@@ -35,14 +35,15 @@ The behavior of REST-based forms is defined entirely through declarative configu
 The form controller manages the complete lifecycle of user interactions, from initialization to error handling. Its behavior ensures that forms are consistently prepared, validated, and submitted in a reliable way, while providing meaningful feedback to users. The following points outline the core aspects of how the controller operates, including setup, validation, submission flow, and error management.
 
 - **Initialization & Hydration**
-  - Upon loading, a container for global error messages (`.restform-error-container`) is created if it does not yet exist.
+  - The form decorates the markup the server rendered, which keeps its nodes. What the controller adds is rendered from its state ahead of the fields - in a dialog, at the top of the dialog body: the error list (`.wx-restform-error-container`), the confirmation (`.wx-restform-confirm`), the prolog (`.wx-restform-prolog-container`) and the delete confirmation (`.wx-restform-delete-confirm`). The marks of invalid fields and the lock while a request is out are applied to the server rendered fields after every render.
+  - A server side data change does not reload a form: it holds what the user is typing, which a change made elsewhere must not overwrite.
   - The controller retrieves the data and automatically populates the form fields.
   - In a modal, the field area (`<main>`) is hidden in `delete` mode and otherwise left to the stylesheet: the controller clears its own inline `display` rather than forcing `block`, because an inline value outranks every rule a host might use to lay the fields out — a body reserved for a filling editor, for instance, needs a flex column there.
 
 - **Validation**
   - The controller uses the native HTML5 validation API (`required`, `pattern`, `min`/`max`, `type="email"`, etc.).
   - A control that stores its value in a hidden input — a tile picker, a segmented choice — is barred from native constraint validation, so `required` has no effect on it. Such a control declares `data-wx-required="true"` on its hidden input instead, which is checked in the same pass; `data-wx-required-message` overrides the default wording.
-  - In case of errors, submission is prevented, the first invalid field is focused, and an error message is displayed.
+  - In case of errors, submission is prevented, the first invalid field is focused, and an error message is displayed. `validate()` renders its result before it returns, so a caller finds the marks in place.
   - Specific validations for email patterns are additionally checked to compensate for browser inconsistencies.
   - A validation message may carry `{name}` placeholders, which are filled from the values the rule was checked against (`{minlength}`, `{maxlength}`, `{min}`/`{max}`).
 
@@ -50,7 +51,8 @@ The form controller manages the complete lifecycle of user interactions, from in
   - The browser's standard submit is prevented.
   - All form fields (except `type="file"`) are serialized into a JSON object.
   - Checkbox groups and multi-selects are correctly processed as arrays or booleans.
-  - During the submission process, the form is locked (`disabled`) and receives the CSS class `.restform-submitting`.
+  - During the submission process, the form is locked (`disabled`) and receives the CSS class `.wx-restform-submitting`. Releasing the lock enables only what the lock disabled, so a field the server rendered disabled stays disabled.
+  - A form authored without a `data` service posts to its `action` through the shared route of the service layer (`webexpress.webapp.ServiceRegistry.request`).
 
 - **Error Handling**
   - **Client-side:** Inline error messages are displayed directly at the field (`aria-invalid="true"`).
