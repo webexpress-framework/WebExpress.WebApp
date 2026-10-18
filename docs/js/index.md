@@ -28,6 +28,7 @@ This section documents the JavaScript controllers and client-side behavior used 
 - [SearchSuggestionCtrl](search.suggestion.md)
 - [SlaCtrl](sla.md)
 - [WatcherCtrl](watcher.md)
+- [WqlPromptCtrl](wql.prompt.md)
 - [TabCtrl](tab.md)
 - [TagCtrl](tag.md)
 - [StatusTaskCtrl](status-task.md)

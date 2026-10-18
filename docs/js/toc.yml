@@ -40,6 +40,8 @@
   href: search.suggestion.md
 - name: WatcherCtrl
   href: watcher.md
+- name: WqlPromptCtrl
+  href: wql.prompt.md
 - name: TabCtrl
   href: tab.md
 - name: TagCtrl

@@ -8,5 +8,6 @@ import { contract } from "./controls.contract.mjs";
 contract({
     file: "webexpress.webapp.wql.prompt.js",
     selector: "wx-webapp-wql-prompt",
-    ctrl: "WqlPromptCtrl"
+    ctrl: "WqlPromptCtrl",
+    deps: ["webexpress.webapp.wql.prompt.model.js", "webexpress.webapp.wql.prompt.view.js"]
 });

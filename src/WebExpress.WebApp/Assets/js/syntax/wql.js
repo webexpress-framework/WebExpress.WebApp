@@ -21,7 +21,8 @@ webexpress.webui.Syntax.register("wql", "wql", function(code) {
         "==", "!=", ">=", "<=", ">", "<", "=", "~"
     ];
     const namePattern = "[A-Za-z_][A-Za-z0-9_]*";
-    const stringPattern = `"(?:[^"\\\\]|\\\\.)*"|'(?:[^'\\\\]|\\\\.)*'`;
+    // the service escapes a quote inside a literal by doubling it, as in 'O''Brien'
+    const stringPattern = `"(?:[^"]|"")*"|'(?:[^']|'')*'`;
     const doublePattern = "[+-]?[0-9]*\\.[0-9]+";
     const numberPattern = "[0-9]+";
 
@@ -65,7 +66,7 @@ webexpress.webui.Syntax.register("wql", "wql", function(code) {
      * @returns {string} HTML span for highlighted token
      */
     function tokenToSpan(type, value) {
-        return `<span class="${type}">${value}</span>`;
+        return `<span class="${type}">${webexpress.webui.Syntax.escape(value)}</span>`;
     }
 
     /**
@@ -95,7 +96,7 @@ webexpress.webui.Syntax.register("wql", "wql", function(code) {
             }
             if (!bestToken) {
                 // output single character unhighlighted
-                html += line[pos];
+                html += webexpress.webui.Syntax.escape(line[pos]);
                 pos += 1;
             } else {
                 html += tokenToSpan(bestToken.type, bestToken.value);

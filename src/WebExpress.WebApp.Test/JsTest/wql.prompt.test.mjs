@@ -25,7 +25,7 @@ function loadPrompt(options = {}) {
     const requests = [];
     const requestInits = [];
     const engine = loadEngine({
-        extraFiles: [webappAsset("webexpress.webapp.wql.prompt.js")],
+        extraFiles: [webappAsset("webexpress.webapp.wql.prompt.model.js"), webappAsset("webexpress.webapp.wql.prompt.view.js"), webappAsset("webexpress.webapp.wql.prompt.js")],
         fetch: async (url, init) => {
             requests.push(url);
             requestInits.push(init);
@@ -140,15 +140,47 @@ function lineSpan(document, text) {
     return span;
 }
 
+/**
+ * Dispatches an event object the way the browser would hand it to the prompt's listeners.
+ * @param {object} target - The event target.
+ * @param {string} type - The event type.
+ * @param {object} [init={}] - Additional event properties.
+ * @returns {object} The event, with defaultPrevented recording a preventDefault call.
+ */
+function fire(target, type, init = {}) {
+    const event = { type, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, ...init };
+    target.dispatchEvent(event);
+    return event;
+}
+
+/**
+ * Types text character by character through beforeinput, as a keyboard does.
+ * @param {object} ctrl - The prompt control.
+ * @param {string} text - The typed text.
+ * @returns {object[]} The dispatched events.
+ */
+function type(ctrl, text) {
+    return Array.from(text).map((data) => fire(ctrl._input, "beforeinput", { inputType: "insertText", data }));
+}
+
+/**
+ * Builds a clipboard or drag data stub holding the given flavors.
+ * @param {object} [data={}] - The data per media type.
+ * @returns {object} The DataTransfer stub; setData writes into data.
+ */
+function transfer(data = {}) {
+    return { data, getData: (kind) => data[kind] ?? "", setData(kind, value) { data[kind] = value; } };
+}
+
 // ---------------------------------------------------------------------------
-// text extraction from the highlighted contenteditable
+// reading the surface back (text the browser changed on its own)
 // ---------------------------------------------------------------------------
 
 test("a single highlighted line yields its text without a trailing newline", () => {
     const { ctrl, document } = loadPrompt();
     ctrl._input.appendChild(lineSpan(document, "Text = 1"));
 
-    assert.equal(ctrl._getInputText(), "Text = 1");
+    assert.equal(ctrl._view.map().text, "Text = 1");
 });
 
 test("multiple highlighted lines are separated by exactly one newline", () => {
@@ -156,17 +188,18 @@ test("multiple highlighted lines are separated by exactly one newline", () => {
     ctrl._input.appendChild(lineSpan(document, "Text = 1"));
     ctrl._input.appendChild(lineSpan(document, "order by Text"));
 
-    assert.equal(ctrl._getInputText(), "Text = 1\norder by Text");
+    assert.equal(ctrl._view.map().text, "Text = 1\norder by Text");
 });
 
 test("the text stays stable across repeated highlight cycles", () => {
-    const { ctrl, document } = loadPrompt();
-    ctrl._input.appendChild(lineSpan(document, "Text = 1"));
+    const { ctrl } = loadPrompt();
+    ctrl.value = "Text = 1\n";
 
     // the old implementation grew a trailing newline on every cycle
     for (let i = 0; i < 3; i++) {
-        ctrl._highlightSyntax();
-        assert.equal(ctrl._getInputText(), "Text = 1", `cycle ${i + 1}`);
+        ctrl._render();
+        assert.equal(ctrl.value, "Text = 1\n", `cycle ${i + 1}`);
+        assert.equal(ctrl._view.map().text, ctrl.value, `the surface shows the model text in cycle ${i + 1}`);
     }
 });
 
@@ -176,7 +209,9 @@ test("line breaks and zero-width spaces in raw content are handled", () => {
     ctrl._input.appendChild(document.createElement("br"));
     ctrl._input.appendChild(document.createTextNode("b"));
 
-    assert.equal(ctrl._getInputText(), "a\nb");
+    assert.equal(ctrl._view.map().text, "a\nb");
+    fire(ctrl._input, "input", { inputType: "insertText" });
+    assert.equal(ctrl.value, "a\nb", "a native edit is taken over into the model");
 });
 
 // ---------------------------------------------------------------------------
@@ -192,8 +227,7 @@ test("line breaks and zero-width spaces in raw content are handled", () => {
  */
 function armApply(ctrl, type, quoted) {
     const calls = [];
-    ctrl._getInputText = () => "Text = ";
-    ctrl._getCursorOffset = () => 7;
+    ctrl.value = "Text = ";
     ctrl._insertReplacementAt = (start, end, text) => calls.push([start, end, text]);
     ctrl._currentContext = { type, prefix: "", tokenStart: 7, tokenEnd: 7, quoted: !!quoted };
     return calls;
@@ -229,8 +263,7 @@ test("an open parenthesis suggestion starts a quoted set", () => {
 test("a separator suggestion inserts a comma with a space", () => {
     const { ctrl } = loadPrompt();
     const calls = armApply(ctrl, "separator", false);
-    ctrl._getInputText = () => "Text = ";
-    ctrl._getCursorOffset = () => 6;
+    ctrl._select(6);
     ctrl._currentContext = { type: "separator", prefix: "", tokenStart: 6, tokenEnd: 6, quoted: false };
 
     ctrl._applySuggestion(",");
@@ -247,8 +280,7 @@ test("a separator suggestion inserts a comma with a space", () => {
  */
 function armAfter(ctrl, text, type) {
     const calls = [];
-    ctrl._getInputText = () => text;
-    ctrl._getCursorOffset = () => text.length;
+    ctrl.value = text;
     ctrl._insertReplacementAt = (start, end, insertion) => calls.push([start, end, insertion]);
     ctrl._currentContext = { type, prefix: "", tokenStart: text.length, tokenEnd: text.length, quoted: false, text, cursorPos: text.length };
     return calls;
@@ -303,7 +335,7 @@ test("the live analysis never raises the error state while typing", async () => 
             data: { isValidSoFar: false, errorMessage: "broken query", suggestions: ["~", "="] }
         })
     });
-    ctrl._input.textContent = "id ";
+    ctrl.value = "id ";
 
     await ctrl._refreshContextAndSuggestions();
 
@@ -326,7 +358,7 @@ test("an incomplete statement does not raise the error state", async () => {
             }
         })
     });
-    ctrl._input.textContent = "id ";
+    ctrl.value = "id ";
 
     await ctrl._refreshContextAndSuggestions();
 
@@ -350,8 +382,9 @@ test("a valid analyze response builds the context and clears the error state", a
             }
         })
     });
+    // a new value clears the error state itself, so the stale error is raised after it
+    ctrl.value = "Hel";
     ctrl._setInvalidState("stale error");
-    ctrl._input.textContent = "Hel";
 
     await ctrl._refreshContextAndSuggestions();
 
@@ -383,7 +416,7 @@ test("submitting dispatches the filter event and deduplicates the history", asyn
     const { ctrl } = loadPrompt({
         response: () => ({ ok: true, data: { isValidSoFar: true } })
     });
-    ctrl._input.textContent = "  Text = 'x'  ";
+    ctrl.value = "  Text = 'x'  ";
 
     await ctrl._submitInput();
     await ctrl._submitInput();
@@ -401,7 +434,7 @@ test("submitting an invalid statement shows the error and is not dispatched", as
             data: { isValidSoFar: false, errorMessage: "broken query" }
         })
     });
-    ctrl._input.textContent = "Text !! x";
+    ctrl.value = "Text !! x";
 
     await ctrl._submitInput();
 
@@ -416,7 +449,7 @@ test("a validation outage does not block the submission", async () => {
     const { ctrl } = loadPrompt({
         response: () => { throw new Error("offline"); }
     });
-    ctrl._input.textContent = "Text = 'x'";
+    ctrl.value = "Text = 'x'";
 
     await ctrl._submitInput();
 
@@ -428,30 +461,30 @@ test("history navigation restores entries and keeps the unsent draft", () => {
     const { ctrl } = loadPrompt();
     ctrl._history = ["a = 1", "b = 2"];
     ctrl._historyIndex = 2;
-    ctrl._input.textContent = "draft";
+    ctrl.value = "draft";
 
     ctrl._navigateHistory(-1);
-    assert.equal(ctrl._getInputText(), "b = 2");
+    assert.equal(ctrl.value, "b = 2");
 
     ctrl._navigateHistory(-1);
-    assert.equal(ctrl._getInputText(), "a = 1");
+    assert.equal(ctrl.value, "a = 1");
 
     ctrl._navigateHistory(1);
     ctrl._navigateHistory(1);
-    assert.equal(ctrl._getInputText(), "draft", "the unsent draft returns");
+    assert.equal(ctrl.value, "draft", "the unsent draft returns");
 });
 
 test("the clear button resets the prompt to a fresh input line", () => {
     const { ctrl } = loadPrompt();
     ctrl._history = ["a = 1"];
     ctrl._historyIndex = 0;
-    ctrl._input.textContent = "a = 1";
+    ctrl.value = "a = 1";
     ctrl._setInvalidState("stale");
 
     assert.ok(ctrl._clearBtn, "the clear button exists");
     ctrl._clearBtn.dispatchEvent({ type: "click" });
 
-    assert.equal(ctrl._getInputText(), "");
+    assert.equal(ctrl.value, "");
     assert.equal(ctrl._historyIndex, 1, "the index points behind the history");
     assert.equal(ctrl._lastError, null);
     assert.equal(ctrl._input.classList.contains("is-invalid"), false);
@@ -469,7 +502,7 @@ for (const [text, cursor, prefix, quoted, expected] of [
             ok: true, data: { prefix, quoted, currentExpressionType: "Parameter", suggestions: ["München"] }
         }) });
         ctrl.value = text;
-        ctrl._restoreCursor(cursor);
+        ctrl._select(cursor);
         await ctrl._refreshContextAndSuggestions();
 
         ctrl._applySuggestion("München");
@@ -582,8 +615,9 @@ test("editing a submitted draft invalidates its pending validation", async () =>
     const { ctrl, requestInits } = loadPrompt({ response: () => pending.promise });
     ctrl.value = "submitted";
     const submitted = ctrl._submitInput();
+    // an edit the browser performed itself is taken over through the input event
     ctrl._input.textContent = "new draft";
-    ctrl._onInput();
+    fire(ctrl._input, "input", { inputType: "insertText" });
     assert.equal(requestInits[0].signal.aborted, true);
     pending.resolve({ ok: true, data: { isValidSoFar: true } });
     await submitted;
@@ -591,21 +625,25 @@ test("editing a submitted draft invalidates its pending validation", async () =>
     assert.equal(ctrl.value, "new draft");
 });
 
-for (const change of ["input", "cursor", "unannounced text", "unannounced cursor"]) {
+for (const change of ["input", "cursor", "silent text", "silent cursor"]) {
     test(`analysis discards stale results after ${change} before debounce runs`, async () => {
         const pending = deferred();
-        const { ctrl, requestInits, selection } = loadPrompt({ response: () => pending.promise });
+        const { ctrl, requestInits, selection, document } = loadPrompt({ response: () => pending.promise });
         ctrl.value = "old";
-        ctrl._restoreCursor(3);
+        ctrl._select(3);
         const analysis = ctrl._refreshContextAndSuggestions();
-        if (change.includes("cursor")) {
+        if (change === "cursor") {
             selection.setBaseAndExtent(ctrl._input.firstChild, 0, ctrl._input.firstChild, 0);
-            if (change === "cursor") { ctrl._onCursorMove(); }
+            fire(document, "selectionchange");
+        } else if (change === "input") {
+            type(ctrl, "!");
+        } else if (change === "silent text") {
+            // the model changes without any notification; the response check alone must catch it
+            ctrl._model.replace(0, 3, "new");
         } else {
-            ctrl._input.textContent = "new";
-            if (change === "input") { ctrl._onInput(); }
+            ctrl._model.select(0);
         }
-        if (!change.startsWith("unannounced")) {
+        if (!change.startsWith("silent")) {
             assert.equal(requestInits[0].signal.aborted, true);
         }
         pending.resolve({ ok: true, data: { prefix: "old", suggestions: ["obsolete"] } });
@@ -654,13 +692,14 @@ test("line boundaries and empty lines use the same offsets for extraction and ca
     const { ctrl, document, selection } = loadPrompt();
     const lines = ["one", "", "two", ""].map((text) => lineSpan(document, text));
     ctrl._input.append(...lines);
-    assert.equal(ctrl.value, "one\n\ntwo\n");
-    ctrl._restoreCursor(5);
+    assert.equal(ctrl._view.map().text, "one\n\ntwo\n");
+    ctrl._model.setText("one\n\ntwo\n");
+    ctrl._select(5);
     assert.equal(selection.focusNode, lines[2].firstChild);
     assert.equal(selection.focusOffset, 0, "the third line starts after two newlines");
     for (let offset = 0; offset <= ctrl.value.length; offset++) {
-        ctrl._restoreCursor(offset);
-        assert.equal(ctrl._getCursorOffset(), offset, `round trip at ${offset}`);
+        ctrl._select(offset);
+        assert.equal(ctrl._view.readSelection().focus, offset, `round trip at ${offset}`);
     }
 });
 
@@ -671,10 +710,11 @@ test("nested syntax spans and BR placeholders preserve every visible offset", ()
     token.textContent = "a\u200B";
     line.append(token, document.createElement("br"), document.createTextNode("\u200Bb"));
     ctrl._input.appendChild(line);
-    assert.equal(ctrl.value, "a\nb");
+    assert.equal(ctrl._view.map().text, "a\nb");
+    ctrl._model.setText("a\nb");
     for (let offset = 0; offset <= ctrl.value.length; offset++) {
-        ctrl._restoreCursor(offset);
-        assert.equal(ctrl._getCursorOffset(), offset);
+        ctrl._select(offset);
+        assert.equal(ctrl._view.readSelection().focus, offset);
     }
 });
 
@@ -687,8 +727,11 @@ for (const backward of [false, true]) {
         const anchor = backward ? second.firstChild : first.firstChild;
         const focus = backward ? first.firstChild : second.firstChild;
         selection.setBaseAndExtent(anchor, 1, focus, 1);
-        ctrl._highlightSyntax();
+        // the browser produced these lines; the model takes over text and selection, then renders
+        fire(ctrl._input, "input", { inputType: "insertText" });
         assert.equal(ctrl.value, "first\nsecond");
+        assert.deepEqual(JSON.parse(JSON.stringify(ctrl._model.selection)), { anchor: backward ? 7 : 1, focus: backward ? 1 : 7 });
+        ctrl._render();
         assert.equal(selection.anchorOffset, backward ? 7 : 1);
         assert.equal(selection.focusOffset, backward ? 1 : 7);
     });
@@ -775,7 +818,8 @@ test("destroy cancels requests, timers and listeners and ignores late responses"
     const runtime = loadPrompt({ attributes: binding, response: () => pending.promise });
     const { ctrl, requestInits, timers, document } = runtime;
     const state = attachState(runtime, { query: { wql: "active" } });
-    ctrl._onInput();
+    ctrl._select(6);
+    type(ctrl, "!");
     const submitted = ctrl._submitInput();
     const analysis = ctrl._refreshContextAndSuggestions();
     const history = ctrl._loadHistoryFromApi();
@@ -793,7 +837,7 @@ test("destroy cancels requests, timers and listeners and ignores late responses"
     await Promise.all([submitted, analysis, history]);
     state.setState({ query: { wql: "external" } });
     state.flush();
-    assert.equal(ctrl.value, "active");
+    assert.equal(ctrl.value, "active!");
     assert.equal(ctrl._hint.innerHTML, before);
     assert.equal(ctrl._dispatched.length, 0);
     assert.deepEqual(Array.from(ctrl._history), []);
@@ -815,21 +859,19 @@ test("destroy removes unresolved ViewState registrations and history retry timer
 test("completion uses both supplied context boundaries without expanding them", () => {
     const { ctrl } = loadPrompt({ service: false });
     ctrl.value = "prefixMüsuffix";
-    ctrl._restoreCursor(8);
+    ctrl._select(8);
     ctrl._currentContext = { type: "attribute", tokenStart: 6, tokenEnd: 8 };
     ctrl._applySuggestion("München");
     assert.equal(ctrl.value, "prefixMünchen suffix");
 });
 
 test("Ctrl+Enter replaces a multiline selection with exactly one newline", () => {
-    const { ctrl, document, selection } = loadPrompt({ service: false });
-    const first = lineSpan(document, "first");
-    const second = lineSpan(document, "second");
-    ctrl._input.append(first, second);
-    selection.setBaseAndExtent(first.firstChild, 2, second.firstChild, 2);
-    ctrl._insertLineBreakAtCursor();
+    const { ctrl } = loadPrompt({ service: false });
+    ctrl.value = "first\nsecond";
+    ctrl._select(8, 2);
+    ctrl._onKeyDown({ key: "Enter", ctrlKey: true, preventDefault() { } });
     assert.equal(ctrl.value, "fi\ncond");
-    assert.equal(ctrl._getCursorOffset(), 3);
+    assert.equal(ctrl._model.cursor, 3);
 });
 
 test("repeated Enter for the same draft still applies only the latest validation", async () => {
@@ -866,4 +908,490 @@ test("a superseded history load cannot replace the newest server entries", async
     old.resolve({ ok: true, data: { history: ["obsolete"] } });
     await first;
     assert.deepEqual(Array.from(ctrl._history), ["current"]);
+});
+
+// ---------------------------------------------------------------------------
+// browser input runs through the model
+// ---------------------------------------------------------------------------
+
+/**
+ * Lets the asynchronous tail of a submission run.
+ * @returns {Promise<void>} Resolves after a macrotask.
+ */
+const settle = () => new Promise((resolve) => setImmediate(resolve));
+
+/**
+ * Runs and removes every pending debounce or retry timer.
+ * @param {Map} timers - The timer map of the runtime.
+ */
+function runTimers(timers) {
+    for (const [id, callback] of Array.from(timers)) {
+        timers.delete(id);
+        callback();
+    }
+}
+
+test("typed text goes through the model before the browser can insert it", () => {
+    const { ctrl } = loadPrompt({ attributes: { name: "expression" }, service: false });
+    const events = type(ctrl, "Text");
+    assert.ok(events.every((event) => event.defaultPrevented), "the browser never edits the surface itself");
+    assert.equal(ctrl.value, "Text");
+    assert.equal(ctrl._field.value, "Text", "the form field follows every keystroke");
+    assert.equal(ctrl._model.cursor, 4);
+    assert.equal(ctrl._model.revision, 4);
+    assert.equal(ctrl._view.map().text, "Text", "the surface shows the model text");
+});
+
+test("the browser's target range decides what an input replaces", () => {
+    const { ctrl } = loadPrompt({ service: false });
+    ctrl.value = "Text = 1";
+    const node = ctrl._input.firstChild;
+    fire(ctrl._input, "beforeinput", {
+        inputType: "insertReplacementText",
+        data: "42",
+        getTargetRanges: () => [{ startContainer: node, startOffset: 7, endContainer: node, endOffset: 8 }]
+    });
+    assert.equal(ctrl.value, "Text = 42");
+    assert.equal(ctrl._model.cursor, 9);
+});
+
+test("backspace and delete never split a surrogate pair", () => {
+    const { ctrl } = loadPrompt({ service: false });
+    ctrl.value = "a = \u{1F600}\u{1F600}";
+    fire(ctrl._input, "beforeinput", { inputType: "deleteContentBackward" });
+    assert.equal(ctrl.value, "a = \u{1F600}");
+    ctrl._select(4);
+    fire(ctrl._input, "beforeinput", { inputType: "deleteContentForward" });
+    assert.equal(ctrl.value, "a = ");
+});
+
+test("word deletion and deletion of a selection use the model's units", () => {
+    const { ctrl } = loadPrompt({ service: false });
+    ctrl.value = "Text = Hello";
+    fire(ctrl._input, "beforeinput", { inputType: "deleteWordBackward" });
+    assert.equal(ctrl.value, "Text = ");
+    ctrl._select(0, 4);
+    fire(ctrl._input, "beforeinput", { inputType: "deleteByCut" });
+    assert.equal(ctrl.value, " = ");
+});
+
+test("a line break input inserts a newline while a paragraph input submits", async () => {
+    const { ctrl } = loadPrompt({ service: false });
+    ctrl.value = "a = 1";
+    fire(ctrl._input, "beforeinput", { inputType: "insertLineBreak" });
+    assert.equal(ctrl.value, "a = 1\n");
+    const paragraph = fire(ctrl._input, "beforeinput", { inputType: "insertParagraph" });
+    await settle();
+    assert.equal(paragraph.defaultPrevented, true);
+    assert.equal(ctrl.value, "a = 1\n", "Enter does not add a line");
+    assert.deepEqual(ctrl._dispatched.map((event) => event.detail.value), ["a = 1"]);
+});
+
+test("rich formatting inputs are refused", () => {
+    const { ctrl } = loadPrompt({ service: false });
+    ctrl.value = "a";
+    const event = fire(ctrl._input, "beforeinput", { inputType: "formatBold" });
+    assert.equal(event.defaultPrevented, true);
+    assert.equal(ctrl._model.revision, 1);
+});
+
+test("pasting inserts only plain text with normalized line breaks", () => {
+    const { ctrl } = loadPrompt({ service: false });
+    ctrl.value = "Text = ";
+    const event = fire(ctrl._input, "paste", {
+        clipboardData: transfer({ "text/plain": "'a'\r\nand b = 1", "text/html": "<b>ignored</b>" })
+    });
+    assert.equal(event.defaultPrevented, true);
+    assert.equal(ctrl.value, "Text = 'a'\nand b = 1");
+});
+
+test("copying takes the model text, cutting removes it", () => {
+    const { ctrl } = loadPrompt({ service: false });
+    ctrl.value = "one\n\ntwo";
+    ctrl._select(0, 5);
+    const clipboard = transfer();
+    fire(ctrl._input, "copy", { clipboardData: clipboard });
+    assert.equal(clipboard.data["text/plain"], "one\n\n", "no caret placeholders reach the clipboard");
+    assert.equal(ctrl.value, "one\n\ntwo");
+    fire(ctrl._input, "cut", { clipboardData: clipboard });
+    assert.equal(ctrl.value, "two");
+});
+
+test("a drop inserts plain text at the drop point and a drag inside the prompt moves it", () => {
+    const { ctrl, document } = loadPrompt({ service: false });
+    ctrl.value = "a = 1 and b = 2";
+    document.caretPositionFromPoint = (x) => ({ offsetNode: ctrl._input.firstChild, offset: x });
+    const drop = fire(ctrl._input, "drop", { clientX: 5, clientY: 0, dataTransfer: transfer({ "text/plain": " or c = 3", "text/html": "<i>x</i>" }) });
+    assert.equal(drop.defaultPrevented, true);
+    assert.equal(ctrl.value, "a = 1 or c = 3 and b = 2");
+
+    ctrl._select(5, 14);
+    const drag = transfer();
+    fire(ctrl._input, "dragstart", { dataTransfer: drag });
+    assert.equal(drag.data["text/plain"], " or c = 3");
+    fire(ctrl._input, "drop", { clientX: 24, clientY: 0, dataTransfer: drag });
+    assert.equal(ctrl.value, "a = 1 and b = 2 or c = 3", "the dragged text left its old place");
+});
+
+test("an input method composition leads the surface until it ends and becomes one edit", async () => {
+    const { ctrl, requests, timers, selection } = loadPrompt({ response: () => ({ ok: true, data: { suggestions: ["x"] } }) });
+    ctrl.value = "Text = ";
+    ctrl._select(7);
+    const revision = ctrl._model.revision;
+    timers.clear();
+
+    fire(ctrl._input, "compositionstart");
+    const composing = fire(ctrl._input, "beforeinput", { inputType: "insertCompositionText", data: "に", isComposing: true });
+    ctrl._input.firstChild.data = "Text = に";
+    selection.setBaseAndExtent(ctrl._input.firstChild, 8, ctrl._input.firstChild, 8);
+    fire(ctrl._input, "input", { inputType: "insertCompositionText", isComposing: true });
+    assert.equal(composing.defaultPrevented, false, "the input method edits the surface itself");
+    assert.equal(ctrl.value, "Text = ", "the model waits for the end of the composition");
+    ctrl._render();
+    assert.equal(ctrl._input.firstChild.data, "Text = に", "nothing re-renders over the composition");
+    ctrl._suggestions = ["x"];
+    ctrl._currentContext = { type: "parameter", tokenStart: 7, tokenEnd: 7 };
+    const tab = fire(ctrl._input, "keydown", { key: "Tab", isComposing: true });
+    assert.equal(tab.defaultPrevented, false, "no completion during a composition");
+    await ctrl._refreshContextAndSuggestions();
+    assert.equal(requests.length, 0, "no server request during a composition");
+
+    fire(ctrl._input, "compositionend", { data: "に" });
+    assert.equal(ctrl.value, "Text = に");
+    assert.equal(ctrl._model.revision, revision + 1, "the composition is a single change");
+    runTimers(timers);
+    await settle();
+    const analyze = requests.map((url) => new URL(url)).find((url) => url.pathname.endsWith("/analyze"));
+    assert.equal(analyze.searchParams.get("c"), "8");
+});
+
+test("restoring the selection after a render does not start the cursor work again", () => {
+    const { ctrl, document } = loadPrompt();
+    ctrl._select(0);
+    type(ctrl, "ab");
+    const context = { type: "attribute", tokenStart: 0, tokenEnd: 2 };
+    ctrl._currentContext = context;
+    ctrl._suggestions = ["abc"];
+    const pending = ctrl._debounceTimer;
+    fire(document, "selectionchange");
+    assert.equal(ctrl._currentContext, context, "the restored selection is the model selection");
+    assert.deepEqual(Array.from(ctrl._suggestions), ["abc"]);
+    assert.equal(ctrl._debounceTimer, pending, "the scheduled analysis survives");
+    type(ctrl, "c");
+    ctrl._step(false);
+    assert.equal(ctrl.value, "", "the restored selection did not split the typing transaction");
+});
+
+test("analysis requests carry UTF-16 cursor offsets of the normalized text", async () => {
+    const { ctrl, requests } = loadPrompt({ response: () => ({ ok: true, data: {} }) });
+    ctrl.value = "Name = \u{1F600}\r\nand";
+    ctrl._select(9);
+    await ctrl._refreshContextAndSuggestions();
+    const url = new URL(requests.at(-1));
+    assert.equal(url.searchParams.get("wql"), "Name = \u{1F600}\nand");
+    assert.equal(url.searchParams.get("c"), "9", "the emoji counts two units, as in C#");
+});
+
+test("an incomplete statement stays exactly as typed through analysis and rendering", async () => {
+    const { ctrl } = loadPrompt({ response: () => ({
+        ok: true, data: { isValidSoFar: false, currentExpressionType: "Parameter", prefix: "op", quoted: true, suggestions: ["open"] }
+    }) });
+    ctrl.value = "Text = \"op";
+    await ctrl._refreshContextAndSuggestions();
+    ctrl._render();
+    assert.equal(ctrl.value, "Text = \"op");
+    assert.equal(ctrl._view.map().text, "Text = \"op");
+});
+
+test("a form reset returns the prompt to its programmatic value without an event", () => {
+    const { ctrl, document } = loadPrompt({ attributes: { name: "expression" }, service: false });
+    const form = document.createElement("form");
+    form.appendChild(ctrl._element);
+    ctrl.value = "Text = 'a'";
+    type(ctrl, " and");
+    assert.equal(ctrl._field.value, "Text = 'a' and");
+
+    fire(document, "reset", { target: document.createElement("form") });
+    assert.equal(ctrl.value, "Text = 'a' and", "the reset of another form does not reach this prompt");
+    fire(document, "reset", { target: form });
+    assert.equal(ctrl.value, "Text = 'a'");
+    assert.equal(ctrl._field.value, "Text = 'a'");
+    assert.equal(ctrl._dispatched.length, 0);
+});
+
+// ---------------------------------------------------------------------------
+// combobox semantics of the suggestions
+// ---------------------------------------------------------------------------
+
+test("the prompt is a combobox that owns a listbox of its suggestions", async () => {
+    const { ctrl } = loadPrompt({ response: () => ({
+        ok: true, data: { currentExpressionType: "Operator", suggestions: ["=", "!=", "~"] }
+    }) });
+    const input = ctrl._input;
+    assert.equal(input.getAttribute("role"), "combobox");
+    assert.equal(input.getAttribute("aria-autocomplete"), "list");
+    assert.equal(input.getAttribute("aria-expanded"), "false");
+    assert.equal(input.getAttribute("aria-controls"), ctrl._listbox.id);
+    assert.equal(ctrl._listbox.getAttribute("role"), "listbox");
+
+    ctrl.value = "id ";
+    await ctrl._refreshContextAndSuggestions();
+    const options = ctrl._listbox.childNodes;
+    assert.equal(options.length, 3);
+    assert.ok(options.every((option) => option.getAttribute("role") === "option"));
+    assert.equal(input.getAttribute("aria-expanded"), "true");
+    assert.equal(input.getAttribute("aria-activedescendant"), options[0].id);
+    assert.equal(options[0].getAttribute("aria-selected"), "true");
+
+    fire(input, "keydown", { key: "ArrowDown" });
+    assert.equal(input.getAttribute("aria-activedescendant"), ctrl._listbox.childNodes[1].id, "the active option follows the arrows");
+
+    type(ctrl, "x");
+    assert.equal(input.getAttribute("aria-expanded"), "false");
+    assert.equal(input.getAttribute("aria-activedescendant"), null);
+    assert.equal(ctrl._listbox.childNodes.length, 0);
+});
+
+test("every prompt gets its own listbox id", () => {
+    const { ctrl, document, engine } = loadPrompt({ attributes: { id: "same" } });
+    const twin = document.createElement("div");
+    twin.setAttribute("id", "same");
+    const other = new engine.wxapp.WqlPromptCtrl(twin);
+    assert.notEqual(ctrl._listbox.id, other._listbox.id, "a duplicated host id does not duplicate the listbox id");
+});
+
+// ---------------------------------------------------------------------------
+// string literals follow the service's escape rule
+// ---------------------------------------------------------------------------
+
+test("completion inside a literal skips a doubled quote when it looks for the literal's end", async () => {
+    const { ctrl } = loadPrompt({ response: () => ({
+        ok: true, data: { prefix: "Mü", quoted: true, currentExpressionType: "Parameter", suggestions: ["München"] }
+    }) });
+    ctrl.value = "City = 'Mü''x' and A = 1";
+    ctrl._select(10);
+    await ctrl._refreshContextAndSuggestions();
+    ctrl._applySuggestion("München");
+    assert.equal(ctrl.value, "City = 'München' and A = 1");
+});
+
+for (const [text, cursor, quoted, expected] of [
+    ["Name = ", 7, false, 'Name = "Say ""hi""" '],
+    ["Name = 'O", 9, true, "Name = 'Say \"hi\""],
+    ['Name = "O', 9, true, 'Name = "Say ""hi""']
+]) {
+    test(`a completed value doubles the quote of its literal: ${text}`, async () => {
+        const { ctrl } = loadPrompt({ response: () => ({
+            ok: true, data: { prefix: quoted ? "O" : "", quoted, currentExpressionType: "Parameter", suggestions: ['Say "hi"'] }
+        }) });
+        ctrl.value = text;
+        ctrl._select(cursor);
+        await ctrl._refreshContextAndSuggestions();
+        ctrl._applySuggestion('Say "hi"');
+        assert.equal(ctrl.value, expected);
+    });
+}
+
+// ---------------------------------------------------------------------------
+// undo and redo
+// ---------------------------------------------------------------------------
+
+/**
+ * Presses a key on the prompt.
+ * @param {object} ctrl - The prompt control.
+ * @param {string} key - The key value.
+ * @param {object} [modifiers={}] - ctrlKey, metaKey, shiftKey, altKey.
+ * @returns {object} The keydown event.
+ */
+const press = (ctrl, key, modifiers = {}) => fire(ctrl._input, "keydown", { key, ...modifiers });
+
+test("Ctrl+Z and Ctrl+Y undo and redo text and selection together", () => {
+    const { ctrl } = loadPrompt({ attributes: { name: "expression" }, service: false });
+    ctrl._select(0);
+    type(ctrl, "Text ");
+    ctrl._select(0, 4);
+    type(ctrl, "Name");
+    assert.equal(ctrl.value, "Name ");
+
+    const undo = press(ctrl, "z", { ctrlKey: true });
+    assert.equal(undo.defaultPrevented, true, "the browser's own history does not run");
+    assert.equal(ctrl.value, "Text ");
+    assert.deepEqual(JSON.parse(JSON.stringify(ctrl._model.selection)), { anchor: 0, focus: 4 }, "the replaced selection comes back");
+    assert.equal(ctrl._field.value, "Text ", "the form field follows an undo");
+
+    press(ctrl, "y", { ctrlKey: true });
+    assert.equal(ctrl.value, "Name ");
+    press(ctrl, "z", { ctrlKey: true });
+    press(ctrl, "Z", { ctrlKey: true, shiftKey: true });
+    assert.equal(ctrl.value, "Name ", "Ctrl+Shift+Z redoes as well");
+    press(ctrl, "z", { metaKey: true });
+    assert.equal(ctrl.value, "Text ", "Cmd+Z undoes on macOS");
+});
+
+test("AltGr combinations are typing, not undo", () => {
+    const { ctrl } = loadPrompt({ service: false });
+    type(ctrl, "a");
+    const event = press(ctrl, "z", { ctrlKey: true, altKey: true });
+    assert.equal(event.defaultPrevented, false);
+    assert.equal(ctrl.value, "a");
+});
+
+test("history inputs of the browser are taken over by the prompt's stacks", () => {
+    const { ctrl } = loadPrompt({ service: false });
+    type(ctrl, "abc");
+    const undo = fire(ctrl._input, "beforeinput", { inputType: "historyUndo" });
+    assert.equal(undo.defaultPrevented, true);
+    assert.equal(ctrl.value, "");
+    const redo = fire(ctrl._input, "beforeinput", { inputType: "historyRedo" });
+    assert.equal(redo.defaultPrevented, true);
+    assert.equal(ctrl.value, "abc");
+});
+
+test("typed words, a completion and a paste undo as separate steps", () => {
+    const { ctrl } = loadPrompt({ service: false });
+    type(ctrl, "Na");
+    ctrl._currentContext = { type: "attribute", tokenStart: 0, tokenEnd: 2 };
+    ctrl._suggestions = ["Name"];
+    press(ctrl, "Tab");
+    fire(ctrl._input, "paste", { clipboardData: transfer({ "text/plain": "= 'x'" }) });
+    type(ctrl, " and b");
+    const steps = [];
+    for (let i = 0; i < 6; i++) {
+        press(ctrl, "z", { ctrlKey: true });
+        steps.push(ctrl.value);
+    }
+    assert.deepEqual(steps, ["Name = 'x' and ", "Name = 'x' ", "Name = 'x'", "Name ", "Na", ""]);
+});
+
+test("a caret that leaves and returns still ends the undo group", () => {
+    const { ctrl, document, selection } = loadPrompt({ service: false });
+    ctrl._select(0);
+    type(ctrl, "ab");
+    const node = () => ctrl._input.firstChild;
+    selection.setBaseAndExtent(node(), 0, node(), 0);
+    fire(document, "selectionchange");
+    selection.setBaseAndExtent(node(), 2, node(), 2);
+    fire(document, "selectionchange");
+    type(ctrl, "c");
+    press(ctrl, "z", { ctrlKey: true });
+    assert.equal(ctrl.value, "ab", "the edit after the excursion is a step of its own");
+});
+
+test("a typing pause ends the undo group", () => {
+    const { ctrl } = loadPrompt({ service: false });
+    let now = 0;
+    ctrl._undo._now = () => now;
+    type(ctrl, "ab");
+    now += 5000;
+    type(ctrl, "cd");
+    press(ctrl, "z", { ctrlKey: true });
+    assert.equal(ctrl.value, "ab");
+});
+
+test("a programmatic value, a ViewState change and a form reset clear the undo stack", () => {
+    const runtime = loadPrompt({ attributes: { ...binding, name: "expression" } });
+    const { ctrl, document } = runtime;
+    const state = attachState(runtime, { query: { wql: "initial" } });
+
+    type(ctrl, "!");
+    ctrl.value = "set";
+    press(ctrl, "z", { ctrlKey: true });
+    assert.equal(ctrl.value, "set", "value");
+
+    type(ctrl, "!");
+    state.setState({ query: { wql: "external" } });
+    state.flush();
+    press(ctrl, "z", { ctrlKey: true });
+    assert.equal(ctrl.value, "external", "ViewState");
+
+    const form = document.createElement("form");
+    form.appendChild(ctrl._element);
+    type(ctrl, "!");
+    fire(document, "reset", { target: form });
+    press(ctrl, "z", { ctrlKey: true });
+    assert.equal(ctrl.value, "external", "form reset");
+    assert.equal(ctrl._dispatched.length, 0, "none of them dispatches a filter change");
+});
+
+test("loading a submitted query is an undoable step that keeps the query history apart", async () => {
+    const { ctrl } = loadPrompt({ service: false });
+    ctrl._select(0);
+    type(ctrl, "a = 1");
+    await ctrl._submitInput();
+    type(ctrl, " or");
+    press(ctrl, "PageUp");
+    assert.equal(ctrl.value, "a = 1");
+    assert.equal(ctrl._historyIndex, 0);
+
+    press(ctrl, "z", { ctrlKey: true });
+    assert.equal(ctrl.value, "a = 1 or", "the draft returns");
+    assert.equal(ctrl._historyIndex, 1, "and with it the place behind the newest query");
+    press(ctrl, "y", { ctrlKey: true });
+    assert.equal(ctrl.value, "a = 1");
+    assert.equal(ctrl._historyIndex, 0);
+
+    press(ctrl, "z", { ctrlKey: true });
+    press(ctrl, "z", { ctrlKey: true });
+    assert.equal(ctrl.value, "a = 1 ", "typing after a submit is a step of its own");
+    assert.deepEqual(Array.from(ctrl._history), ["a = 1"], "undo never touches the submitted queries");
+    assert.equal(ctrl._dispatched.length, 1, "undo submits nothing");
+});
+
+test("undo is ignored while an input method composes", () => {
+    const { ctrl } = loadPrompt({ service: false });
+    type(ctrl, "a");
+    fire(ctrl._input, "compositionstart");
+    ctrl._step(false);
+    assert.equal(ctrl.value, "a");
+});
+
+// ---------------------------------------------------------------------------
+// asynchronous results are tied to the text revision and the cursor
+// ---------------------------------------------------------------------------
+
+test("an analysis request carries the revision and the cursor of its state", async () => {
+    const { ctrl } = loadPrompt({ response: () => ({ ok: true, data: { currentExpressionType: "Attribute", suggestions: ["a"] } }) });
+    ctrl.value = "Na";
+    ctrl._select(1);
+    await ctrl._refreshContextAndSuggestions();
+    assert.equal(ctrl._currentContext.revision, ctrl._model.revision);
+    assert.equal(ctrl._currentContext.cursorPos, 1, "the focus is the cursor sent to the server");
+});
+
+test("a response for the same text but an older revision is discarded", async () => {
+    const pending = deferred();
+    const { ctrl } = loadPrompt({ response: () => pending.promise });
+    ctrl._select(0);
+    type(ctrl, "Na");
+    const analysis = ctrl._refreshContextAndSuggestions();
+    // the text returns to what was analysed, but through two newer revisions
+    ctrl._model.insertText("x");
+    ctrl._model.delete(-1);
+    pending.resolve({ ok: true, data: { suggestions: ["obsolete"] } });
+    await analysis;
+    assert.equal(ctrl.value, "Na");
+    assert.deepEqual(Array.from(ctrl._suggestions), []);
+});
+
+test("a suggestion is not applied once the cursor has moved away from its analysis", async () => {
+    const { ctrl } = loadPrompt({ response: () => ({ ok: true, data: { prefix: "Na", currentExpressionType: "Attribute", suggestions: ["Name"] } }) });
+    ctrl.value = "Na = 1";
+    ctrl._select(2);
+    await ctrl._refreshContextAndSuggestions();
+    ctrl._model.select(6);
+    ctrl._applySuggestion("Name");
+    assert.equal(ctrl.value, "Na = 1");
+    assert.equal(ctrl._currentContext, null, "the stale suggestions are dropped");
+});
+
+test("an undo during validation keeps a late verdict from applying", async () => {
+    const pending = deferred();
+    const { ctrl } = loadPrompt({ response: () => pending.promise });
+    type(ctrl, "a = 1");
+    const submitted = ctrl._submitInput();
+    press(ctrl, "z", { ctrlKey: true });
+    pending.resolve({ ok: true, data: { isValidSoFar: true } });
+    await submitted;
+    assert.equal(ctrl._dispatched.length, 0);
+    assert.equal(ctrl.value, "a = ", "the undo took the last word back");
 });

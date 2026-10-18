@@ -17,7 +17,7 @@ contract({
 function runtime(storage) {
     return loadControl({
         file: "webexpress.webapp.search.js",
-        deps: ["webexpress.webapp.wql.prompt.js"],
+        deps: ["webexpress.webapp.wql.prompt.model.js", "webexpress.webapp.wql.prompt.view.js", "webexpress.webapp.wql.prompt.js"],
         extraGlobals: storage ? { localStorage: storage } : {}
     });
 }

@@ -106,6 +106,8 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/js/webexpress.webapp.watcher.js")]
     [Asset("/assets/js/webexpress.webapp.workflow.editor.model.js")]
     [Asset("/assets/js/webexpress.webapp.workflow.editor.js")]
+    [Asset("/assets/js/webexpress.webapp.wql.prompt.model.js")]
+    [Asset("/assets/js/webexpress.webapp.wql.prompt.view.js")]
     [Asset("/assets/js/webexpress.webapp.wql.prompt.js")]
     [Asset("/assets/js/action/default.js")]
     [Asset("/assets/js/i18n/en.js")]
