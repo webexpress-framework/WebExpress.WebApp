@@ -32,6 +32,7 @@ namespace WebExpress.WebApp.WebMessageQueue
         private readonly ChatChannelStore _chatChannelStore;
         private readonly IChatMessageHandler _chatMessageHandler;
         private readonly IDisposable _clusterSubscription;
+        private readonly WebCollaboration.CollaborativeDocumentManager _collaborativeDocuments;
 
         /// <summary>
         /// The topic messages for clients connected to other instances travel on.
@@ -55,6 +56,11 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// replay) over the WebSocket.
         /// </summary>
         public IChatMessageHandler ChatMessageHandler => _chatMessageHandler;
+
+        /// <summary>
+        /// Gets the sequencer of shared documents.
+        /// </summary>
+        public WebCollaboration.ICollaborativeDocumentManager CollaborativeDocuments => _collaborativeDocuments;
 
         /// <summary>
         /// Gets the popup notification dispatcher that bridges the
@@ -92,6 +98,7 @@ namespace WebExpress.WebApp.WebMessageQueue
             _systemMetricsDispatcher = new SystemMetricsDispatcher(this);
             _chatChannelStore = new ChatChannelStore(sharedStore: () => _componentHub?.ClusterManager?.Store is { IsShared: true } store ? store : null);
             _chatMessageHandler = new ChatMessageHandler(this, _chatChannelStore);
+            _collaborativeDocuments = new WebCollaboration.CollaborativeDocumentManager(this, () => _componentHub?.ClusterManager);
             _clusterSubscription = _componentHub?.ClusterManager?.Subscribe(ClusterTopic, OnClusterMessage);
         }
 
@@ -338,6 +345,7 @@ namespace WebExpress.WebApp.WebMessageQueue
         public void Dispose()
         {
             _clusterSubscription?.Dispose();
+            _collaborativeDocuments?.Dispose();
             _systemMetricsDispatcher?.Dispose();
 
             GC.SuppressFinalize(this);

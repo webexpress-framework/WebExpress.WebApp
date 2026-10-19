@@ -8,11 +8,21 @@
  * on the server, webexpress.webapp.MessageQueue on the client) and requires no
  * additional backend logic.
  *
+ * Controls that share a document (the rich text editor, the graph editor, the WQL prompt - every
+ * control implementing the collaboration methods, see webexpress.webui.EditorCtrl) are edited
+ * concurrently through operational transformation when the container names a document scope
+ * and carries the access token the server rendered for it (data-collaborative-document,
+ * data-collaborative-token). Each such control gets a webexpress.webapp.CollaborativeDocument
+ * session that exchanges operations instead of whole contents; the controls stay unaware of
+ * this framework and are coupled only through their collaboration methods and events. Plain
+ * input fields keep being synchronized by value.
+ *
  * Dispatched custom events (CustomEvent on the host element, bubbles):
  * - webexpress.webapp.Event.COLLABORATIVE_USER_JOIN
  * - webexpress.webapp.Event.COLLABORATIVE_USER_LEAVE
  * - webexpress.webapp.Event.COLLABORATIVE_CURSOR
  * - webexpress.webapp.Event.COLLABORATIVE_INPUT
+ * - webexpress.webapp.Event.COLLABORATIVE_CONFLICT
  *
  * Usage:
  * <div id="collaborative1"
@@ -97,6 +107,14 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
         this._remoteCarets = new Map();
         this._suppressInput = new Set();
 
+        // shared documents: the scope and the token the server signed for it; without both the
+        // controls inside keep the value synchronization
+        this._documentScope = element.dataset.collaborativeDocument || "";
+        this._documentToken = element.dataset.collaborativeToken || "";
+        this._sessions = new Map();
+        this._onQueueStatus = (e) => this._onConnectionStatus(e.detail?.status);
+        document.addEventListener(webexpress.webapp.Event.CHANGE_STATUS_EVENT, this._onQueueStatus);
+
         // the rich-text updates waiting for the next coalescing interval, keyed by field
         this._pendingRichInput = new Map();
         this._richInputTimer = 0;
@@ -169,6 +187,7 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
 
         this._active = true;
         this._sendPresence("join");
+        this._attachDocuments();
 
         this._heartbeat = setInterval(() => {
             this._sendPresence("ping");
@@ -191,6 +210,7 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
 
         this._active = false;
         this._sendPresence("leave");
+        this._detachDocuments();
 
         clearInterval(this._heartbeat);
         this._heartbeat = 0;
@@ -236,6 +256,8 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
 
         this._unbindLocalEvents();
         window.removeEventListener("beforeunload", this._beforeUnload);
+        document.removeEventListener(webexpress.webapp.Event.CHANGE_STATUS_EVENT, this._onQueueStatus);
+        this._conflict?.remove();
         clearInterval(this._heartbeat);
         
         if (this._cursorRafId) {
@@ -438,7 +460,7 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
         }
 
         const fieldId = this._fieldIdentifier(target);
-        if (!fieldId) {
+        if (!fieldId || this._sharedField(target)) {
             return;
         }
 
@@ -534,6 +556,12 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
 
+        const shared = this._sharedField(target);
+        if (shared) {
+            this._sendModelCaret(shared);
+            return;
+        }
+
         const isInputField = target.tagName === "INPUT" || target.tagName === "TEXTAREA";
         const isEditable = target.isContentEditable;
         if (!isInputField && !isEditable) {
@@ -586,6 +614,15 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
         }
 
         if (!target || !(target instanceof HTMLElement)) {
+            return;
+        }
+
+        const shared = this._sharedField(target);
+        if (shared) {
+            // focus moving within the shared control is no departure from it
+            if (!shared.element.contains(document.activeElement) || document.activeElement === target) {
+                this._sendCaret(shared.element.id, -1, -1);
+            }
             return;
         }
 
@@ -801,8 +838,10 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
      * @param {string} fieldId - The id of the focused field.
      * @param {number} selectionStart - The caret start, or -1 to clear.
      * @param {number} selectionEnd - The caret end.
+     * @param {object} [model] - The selection of a shared control as model positions and the
+     * version they refer to.
      */
-    _sendCaret(fieldId, selectionStart, selectionEnd) {
+    _sendCaret(fieldId, selectionStart, selectionEnd, model = undefined) {
         if (!this._inputEnabled) {
             return;
         }
@@ -820,6 +859,7 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
             fieldId: fieldId,
             selectionStart: selectionStart,
             selectionEnd: selectionEnd,
+            model: model,
             ts: Date.now()
         });
     }
@@ -833,6 +873,14 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
         
+        // operations of shared documents are addressed to a document, not to the container
+        if (typeof payload.type === "string" && payload.type.startsWith(webexpress.webapp.CollaborativeDocument?.PREFIX ?? "\u0000")) {
+            for (const shared of this._sessions.values()) {
+                shared.session.receive(payload);
+            }
+            return;
+        }
+
         if (payload.containerId !== this._containerId) {
             return;
         }
@@ -864,6 +912,7 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
     _onPresence(msg) {
         if (msg.status === "leave") {
             if (this._remoteUsers.has(msg.userId)) {
+                this._forgetSelections(msg.userId);
                 this._remoteUsers.delete(msg.userId);
                 this._remoteCursors.delete(msg.userId);
                 this._remoteCarets.delete(msg.userId);
@@ -956,6 +1005,10 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
 
+        if (this._sessions.has(msg.fieldId)) {
+            return;
+        }
+
         const field = this._resolveField(msg.fieldId);
         if (!field) {
             // field is no longer available locally - drop any stale caret state
@@ -1028,6 +1081,29 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
 
+        const shared = this._sessions.get(msg.fieldId);
+        if (shared) {
+            for (const other of this._sessions.values()) {
+                if (other !== shared) {
+                    other.session.remoteSelection(msg.userId, null);
+                }
+            }
+            const model = typeof msg.selectionStart === "number" && msg.selectionStart < 0 ? null : msg.model;
+            if (model) {
+                this._remoteCarets.set(msg.userId, {
+                    fieldId: msg.fieldId,
+                    model: true,
+                    color: msg.userColor || this._pickAutoColor(msg.userId),
+                    name: msg.userName || msg.userId
+                });
+            } else {
+                this._remoteCarets.delete(msg.userId);
+            }
+            shared.session.remoteSelection(msg.userId, model ?? null);
+            this._renderCarets();
+            return;
+        }
+
         // a negative selection means the remote user no longer has a caret
         // in this field (lost focus, switched fields)
         if (typeof msg.selectionStart !== "number" || msg.selectionStart < 0) {
@@ -1053,6 +1129,291 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
         });
 
         this._renderCarets();
+    }
+
+    /**
+     * Counts the shared sessions of this page; each gets a client id of its own.
+     */
+    static _sessionCount = 0;
+
+    /**
+     * Returns the identity of this page in shared documents: a client id, the secret that proves
+     * it on reconnection, and the tag that keeps node ids this client creates unique.
+     * @returns {{client: string, secret: string, tag: string}} The identity.
+     */
+    static identity() {
+        if (!webexpress.webapp.CollaborativeCtrl._identity) {
+            const random = (length) => {
+                const values = typeof crypto !== "undefined" && crypto.getRandomValues
+                    ? Array.from(crypto.getRandomValues(new Uint8Array(length)))
+                    : Array.from({ length }, () => Math.floor(Math.random() * 256));
+                return values.map((v) => (v % 36).toString(36)).join("");
+            };
+            webexpress.webapp.CollaborativeCtrl._identity = { client: "c" + random(16), secret: random(32), tag: random(6) };
+        }
+        return webexpress.webapp.CollaborativeCtrl._identity;
+    }
+
+    /**
+     * Connects every shared control inside the container to its document. A control shares a
+     * document when it implements the collaboration methods; it is addressed by the scope of
+     * the container and its own element id.
+     */
+    _attachDocuments() {
+        if (!this._documentScope || !this._documentToken || !webexpress.webapp.CollaborativeDocument || !webexpress.webui.Controller?.instanceMap) {
+            return;
+        }
+
+        for (const [element, ctrl] of webexpress.webui.Controller.instanceMap) {
+            if (element === this._element || !this._element.contains(element) || !element.id || this._sessions.has(element.id)) {
+                continue;
+            }
+            if (typeof ctrl?.collaborationKind !== "string" || typeof ctrl.applyRemoteSteps !== "function" || typeof ctrl.beginCollaboration !== "function") {
+                continue;
+            }
+            this._attachDocument(element, ctrl);
+        }
+    }
+
+    /**
+     * Connects one shared control.
+     * @param {HTMLElement} element - The control's element.
+     * @param {object} ctrl - The control.
+     */
+    _attachDocument(element, ctrl) {
+        const identity = webexpress.webapp.CollaborativeCtrl.identity();
+        const shared = { element, ctrl, session: null, listener: null };
+
+        ctrl.beginCollaboration({ tag: identity.tag });
+
+        // comment anchors travel with the document; their texts stay in the named comment control
+        const comments = this._element.dataset.collaborativeComments;
+        const commentCtrl = comments && webexpress.webui.Controller.getInstanceByElement(document.getElementById(comments));
+        if (commentCtrl?.anchorStore && "commentStore" in ctrl) {
+            ctrl.commentStore = commentCtrl.anchorStore;
+            shared.commentStore = true;
+        }
+
+        shared.session = new webexpress.webapp.CollaborativeDocument({
+            document: this._documentScope + "/" + element.id,
+            token: this._documentToken,
+            // one client per session: two shared controls of a page share the connection, not the sequence
+            client: identity.client + "-" + (++webexpress.webapp.CollaborativeCtrl._sessionCount),
+            secret: identity.secret,
+            target: ctrl,
+            send: (message) => this._queue && this._queue.send(message),
+            onConflict: (conflict) => this._showConflict(shared, conflict),
+            onSelections: () => this._renderCarets(),
+            onStatus: (status) => this._onDocumentStatus(shared, status)
+        });
+
+        shared.listener = (e) => {
+            if (e.detail?.sender !== element) {
+                return;
+            }
+            if (e.detail.resync) {
+                shared.session.resynchronize();
+            } else {
+                shared.session.local(e.detail.steps);
+            }
+            this._sendModelCaret(shared);
+        };
+
+        element.addEventListener(webexpress.webui.Event.COLLABORATION_STEPS_EVENT, shared.listener);
+        this._sessions.set(element.id, shared);
+
+        if (this._canSend()) {
+            shared.session.connect();
+        }
+    }
+
+    /**
+     * Disconnects all shared controls; they continue as unshared controls.
+     */
+    _detachDocuments() {
+        for (const shared of this._sessions.values()) {
+            shared.element.removeEventListener(webexpress.webui.Event.COLLABORATION_STEPS_EVENT, shared.listener);
+            shared.session.disconnect();
+            shared.ctrl.endCollaboration?.();
+            if (shared.commentStore) {
+                shared.ctrl.commentStore = null;
+            }
+            shared.element.removeAttribute("data-wx-collaboration");
+        }
+        this._sessions.clear();
+    }
+
+    /**
+     * Follows the connection: sessions pause while it is down and resume, catching up on what
+     * they missed, once it is back.
+     * @param {string} status - The status of the message queue.
+     */
+    _onConnectionStatus(status) {
+        for (const shared of this._sessions.values()) {
+            if (status === "online") {
+                shared.session.connect();
+            } else if (status === "offline" || status === "error") {
+                shared.session.disconnect();
+            }
+        }
+    }
+
+    /**
+     * Shows the synchronization state on the control and announces the selection once the
+     * positions it refers to are confirmed.
+     * @param {object} shared - The shared control.
+     * @param {string} status - The session status.
+     */
+    _onDocumentStatus(shared, status) {
+        shared.element.setAttribute("data-wx-collaboration", status);
+
+        const label = ["pending", "offline", "error"].includes(status)
+            ? webexpress.webui.I18N.translate("webexpress.webapp:collaborative.status." + status)
+            : "";
+
+        if (label) {
+            shared.element.setAttribute("title", label);
+        } else {
+            shared.element.removeAttribute("title");
+        }
+
+        if (status === "synced") {
+            this._sendModelCaret(shared);
+        }
+    }
+
+    /**
+     * Finds the shared control an element belongs to.
+     * @param {Node} target - The element.
+     * @returns {object|null} The shared control, or null.
+     */
+    _sharedField(target) {
+        for (const shared of this._sessions.values()) {
+            if (shared.element === target || shared.element.contains(target)) {
+                return shared;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Sends the selection of a shared control while it has the focus.
+     * @param {object} shared - The shared control.
+     */
+    _sendModelCaret(shared) {
+        if (!this._inputEnabled || !shared.element.contains(document.activeElement)) {
+            return;
+        }
+
+        const model = shared.session.selection();
+        if (model) {
+            this._sendCaret(shared.element.id, 0, 0, model);
+        }
+    }
+
+    /**
+     * Forgets the selections of a user who left.
+     * @param {string} userId - The user.
+     */
+    _forgetSelections(userId) {
+        for (const shared of this._sessions.values()) {
+            shared.session.remoteSelection(userId, null);
+        }
+    }
+
+    /**
+     * Draws a remote caret and selection in a shared control. The positions were transformed
+     * through every change since they were sent and are converted to coordinates only now.
+     * @param {string} id - The user.
+     * @param {object} caret - The caret state.
+     */
+    _renderModelCaret(id, caret) {
+        const shared = this._sessions.get(caret.fieldId);
+        const selection = shared?.session.selections.get(id);
+        const rect = selection && shared.ctrl.getModelPositionRect?.(selection.focus);
+        const layer = this._caretLayer.getBoundingClientRect();
+
+        let node = this._caretLayer.querySelector(".wx-collaborative-caret[data-user-id=\"" + CSS.escape(id) + "\"]");
+
+        if (!rect) {
+            node?.remove();
+            return;
+        }
+
+        if (!node) {
+            node = document.createElement("div");
+            node.className = "wx-collaborative-caret";
+            node.setAttribute("data-user-id", id);
+            const label = document.createElement("span");
+            label.className = "wx-collaborative-caret-label";
+            node.appendChild(label);
+            this._caretLayer.appendChild(node);
+        }
+
+        node.style.left = (rect.left - layer.left) + "px";
+        node.style.top = (rect.top - layer.top) + "px";
+        node.style.height = (rect.height || 16) + "px";
+        node.style.backgroundColor = caret.color;
+
+        const label = node.querySelector(".wx-collaborative-caret-label");
+        label.style.backgroundColor = caret.color;
+        label.textContent = caret.name;
+
+        for (const box of shared.ctrl.getModelRangeRects?.(selection.anchor, selection.focus) ?? []) {
+            const mark = document.createElement("div");
+            mark.className = "wx-collaborative-selection";
+            mark.setAttribute("data-user-id", id);
+            mark.style.left = (box.left - layer.left) + "px";
+            mark.style.top = (box.top - layer.top) + "px";
+            mark.style.width = box.width + "px";
+            mark.style.height = box.height + "px";
+            mark.style.backgroundColor = caret.color;
+            this._caretLayer.appendChild(mark);
+        }
+    }
+
+    /**
+     * Offers local changes the merge could not keep, instead of dropping them silently. The
+     * user either keeps the shared version or takes over the own one as a new change.
+     * @param {object} shared - The shared control.
+     * @param {object} conflict - The conflict with the local version as packed tokens.
+     */
+    _showConflict(shared, conflict) {
+        this._conflict?.remove();
+
+        const notice = document.createElement("div");
+        notice.className = "wx-collaborative-conflict";
+        notice.setAttribute("role", "alert");
+
+        const text = document.createElement("span");
+        text.textContent = webexpress.webui.I18N.translate("webexpress.webapp:collaborative.conflict.message");
+        notice.appendChild(text);
+
+        const restore = document.createElement("button");
+        restore.type = "button";
+        restore.className = "btn btn-sm btn-primary";
+        restore.textContent = webexpress.webui.I18N.translate("webexpress.webapp:collaborative.conflict.restore");
+        restore.addEventListener("click", () => {
+            shared.session.adopt(conflict.local);
+            notice.remove();
+        });
+        notice.appendChild(restore);
+
+        const dismiss = document.createElement("button");
+        dismiss.type = "button";
+        dismiss.className = "btn btn-sm btn-outline-secondary";
+        dismiss.textContent = webexpress.webui.I18N.translate("webexpress.webapp:collaborative.conflict.dismiss");
+        dismiss.addEventListener("click", () => notice.remove());
+        notice.appendChild(dismiss);
+
+        this._element.appendChild(notice);
+        this._conflict = notice;
+
+        this._dispatch(webexpress.webapp.Event.COLLABORATIVE_CONFLICT, {
+            fieldId: shared.element.id,
+            document: conflict.document,
+            local: conflict.local
+        });
     }
 
     /**
@@ -1171,7 +1532,16 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
             }
         }
 
+        for (const node of Array.from(this._caretLayer.querySelectorAll(".wx-collaborative-selection"))) {
+            node.remove();
+        }
+
         for (const [id, caret] of this._remoteCarets) {
+            if (caret.model) {
+                this._renderModelCaret(id, caret);
+                continue;
+            }
+
             const field = this._resolveField(caret.fieldId);
             if (!field) {
                 continue;
@@ -1368,6 +1738,7 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
         
         for (const [id, user] of this._remoteUsers) {
             if (user.lastSeen < cutoff) {
+                this._forgetSelections(id);
                 this._remoteUsers.delete(id);
                 this._remoteCursors.delete(id);
                 this._remoteCarets.delete(id);

@@ -393,6 +393,8 @@ webexpress.webapp.Event = class {
     static COLLABORATIVE_CURSOR = "webexpress.webapp.collaborative.cursor";
     // Event triggered when a remote input value update is received.
     static COLLABORATIVE_INPUT = "webexpress.webapp.collaborative.input";
+    // Event triggered when local changes of a shared document could not be merged and are offered back
+    static COLLABORATIVE_CONFLICT = "webexpress.webapp.collaborative.conflict";
     // Event triggered when a comment is added
     static COMMENT_ADDED_EVENT = "webexpress.webapp.comment.added";
     // Event triggered when a comment is updated

@@ -185,6 +185,8 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
 
             public IChatMessageHandler ChatMessageHandler => null;
 
+            public WebExpress.WebApp.WebCollaboration.ICollaborativeDocumentManager CollaborativeDocuments => null;
+
             public void Dispose()
             {
             }

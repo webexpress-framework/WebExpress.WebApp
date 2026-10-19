@@ -357,7 +357,9 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         operation();
         const after = this._model.state;
         if (after.revision !== before.revision) {
-            if (kind) {
+            if (this._collab) {
+                this._announceText(kind, Math.min(before.selection.anchor, before.selection.focus));
+            } else if (kind) {
                 this._undo.record(before, after, kind, extra);
             }
             this._invalidateInput();
@@ -368,6 +370,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
             this._render();
         } else if (after !== before) {
             this._undo.seal();
+            this._collab?.history.seal();
             this._invalidateAnalysis();
             this._updateHint();
             this._renderSelection(true);
@@ -393,6 +396,8 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         this._model.setText(value);
         this._render();
         this._syncField();
+        // a program setting the value of a shared prompt changes it for everyone
+        this._announceText(null);
     }
 
     /**
@@ -584,6 +589,10 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
      */
     _step(redo) {
         if (this._destroyed || this._composing) {
+            return;
+        }
+        if (this._collab) {
+            this._collabStep(redo);
             return;
         }
         const step = redo ? this._undo.redo() : this._undo.undo();
@@ -1251,6 +1260,254 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         this._input.setAttribute("aria-invalid", "true");
         this._input.classList.add("is-invalid");
         this._updateHint();
+    }
+
+    /**
+     * Names the document kind this control shares: unformatted text (see
+     * webexpress.webui.OtSchema.checkText).
+     * @returns {string} The kind.
+     */
+    get collaborationKind() {
+        return "text";
+    }
+
+    /**
+     * Starts sharing the query text. Every edit is announced as steps on characters, so two
+     * users typing at different places never overwrite each other, and undo inverts only the
+     * user's own edits.
+     */
+    beginCollaboration() {
+        this._collab = { history: new webexpress.webui.OtHistory(), tokens: this._textTokens(this._model.text) };
+    }
+
+    /**
+     * Stops sharing the query text; the prompt's own undo starts afresh.
+     */
+    endCollaboration() {
+        this._collab = null;
+        this._undo.clear();
+    }
+
+    /**
+     * Returns the text as packed tokens, as it was last announced.
+     * @returns {Array<object>} The packed tokens.
+     */
+    getCollaborationTokens() {
+        return webexpress.webui.Ot.compact(this._collab?.tokens ?? this._textTokens(this._model.text));
+    }
+
+    /**
+     * Replaces the text with the shared state.
+     * @param {Array<object>} tokens - The packed tokens.
+     * @returns {boolean} True if they form valid text.
+     */
+    loadCollaborationTokens(tokens) {
+        let expanded;
+        try {
+            expanded = webexpress.webui.Ot.expand(tokens);
+        } catch {
+            return false;
+        }
+        if (!webexpress.webui.OtSchema.checkText(expanded)) {
+            return false;
+        }
+        const selection = this._model.selection;
+        const clamp = (n) => Math.min(n, expanded.length);
+        this._showShared(expanded, { anchor: clamp(selection.anchor), focus: clamp(selection.focus) });
+        this._collab?.history.reset();
+        return true;
+    }
+
+    /**
+     * Checks packed tokens against the plain text schema.
+     * @param {Array<object>} tokens - The tokens.
+     * @returns {boolean} True if valid.
+     */
+    checkCollaborationTokens(tokens) {
+        try {
+            return webexpress.webui.OtSchema.checkText(webexpress.webui.Ot.expand(tokens));
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Repairs text by dropping everything that is not an unformatted character.
+     * @param {Array<object>} tokens - The broken tokens.
+     * @returns {Array<object>|null} The repaired packed tokens.
+     */
+    repairCollaborationTokens(tokens) {
+        try {
+            return webexpress.webui.Ot.compact(webexpress.webui.OtSchema.repairText(webexpress.webui.Ot.expand(tokens)));
+        } catch {
+            return null;
+        }
+    }
+
+    /**
+     * Applies steps another user made, moving the local selection along with the text.
+     * @param {Array<object>} steps - The steps.
+     * @returns {boolean} True if they applied to valid text.
+     */
+    applyRemoteSteps(steps) {
+        if (!this._collab || this._destroyed) {
+            return false;
+        }
+        let result;
+        try {
+            result = webexpress.webui.Ot.apply(this._collab.tokens, steps);
+        } catch {
+            return false;
+        }
+        if (!webexpress.webui.OtSchema.checkText(result.tokens)) {
+            return false;
+        }
+        const selection = webexpress.webui.Ot.mapSelection(this._model.selection, result.steps, 1);
+        this._showShared(result.tokens, selection);
+        this._collab.history.remote(result.steps);
+        return true;
+    }
+
+    /**
+     * Gets the selection as model positions; in plain text they are the character offsets.
+     * @returns {{anchor: number, focus: number}} The selection.
+     */
+    getModelSelection() {
+        const selection = this._model.selection;
+        return { anchor: selection.anchor, focus: selection.focus };
+    }
+
+    /**
+     * Measures where a text position is shown, for another user's caret.
+     * @param {number} pos - The position.
+     * @returns {{left: number, top: number, height: number}|null} The viewport rectangle, or null.
+     */
+    getModelPositionRect(pos) {
+        const range = this._rangeOf(pos, pos);
+        const rect = range?.getClientRects?.()[0] ?? range?.getBoundingClientRect?.();
+        return rect ? { left: rect.left, top: rect.top, height: rect.height || 16 } : null;
+    }
+
+    /**
+     * Measures the lines a text range covers, for another user's selection.
+     * @param {number} from - One end.
+     * @param {number} to - The other end.
+     * @returns {Array<object>} The viewport rectangles.
+     */
+    getModelRangeRects(from, to) {
+        const range = from === to ? null : this._rangeOf(Math.min(from, to), Math.max(from, to));
+        return Array.from(range?.getClientRects?.() ?? []).filter((r) => r.width > 0)
+            .map((r) => ({ left: r.left, top: r.top, width: r.width, height: r.height }));
+    }
+
+    /**
+     * Builds a DOM range between two text positions of the surface.
+     * @param {number} from - The start.
+     * @param {number} to - The end.
+     * @returns {Range|null} The range, or null when the surface cannot map the positions.
+     */
+    _rangeOf(from, to) {
+        if (this._destroyed || !this._view) {
+            return null;
+        }
+        const map = this._view.map();
+        const last = map.positions.length - 1;
+        const start = map.positions[Math.min(from, last)], end = map.positions[Math.min(to, last)];
+        if (!start || !end) {
+            return null;
+        }
+        const range = document.createRange();
+        try {
+            range.setStart(start.node, start.offset);
+            range.setEnd(end.node, end.offset);
+        } catch {
+            return null;
+        }
+        return range;
+    }
+
+    /**
+     * Converts text to character tokens.
+     * @param {string} text - The text.
+     * @returns {Array<object>} The tokens.
+     */
+    _textTokens(text) {
+        return text ? webexpress.webui.Ot.expand([{ t: "s", v: text, m: {} }]) : [];
+    }
+
+    /**
+     * Shows shared text without announcing it again and without an undo step.
+     * @param {Array<object>} tokens - The tokens.
+     * @param {{anchor: number, focus: number}} selection - The selection to keep.
+     */
+    _showShared(tokens, selection) {
+        if (this._collab) {
+            this._collab.tokens = tokens;
+        }
+        const text = tokens.map((t) => t.v).join("");
+        this._remote = true;
+        try {
+            this._edit(null, () => this._model.setText(text, selection));
+        } finally {
+            this._remote = false;
+        }
+    }
+
+    /**
+     * Announces what changed since the last announcement as steps. Typing and deleting merge
+     * into word-sized undo steps; a programmatic change is shared but not undoable.
+     * @param {string|null} kind - The edit kind of _edit, or null for a programmatic change.
+     * @param {number} [hint] - Where the edit began, which places an insertion between equal
+     * characters at the caret.
+     */
+    _announceText(kind, hint) {
+        if (!this._collab || this._remote) {
+            return;
+        }
+        const before = this._collab.tokens;
+        const after = this._textTokens(this._model.text);
+        const steps = webexpress.webui.Ot.diff(before, after, hint);
+        if (!steps.length) {
+            return;
+        }
+        const applied = webexpress.webui.Ot.apply(before, steps).steps;
+        this._collab.tokens = after;
+        if (kind) {
+            const inserted = applied.map((step) => (step.slice ?? []).map((t) => t.v ?? "").join("")).join("");
+            this._collab.history.record(applied, { kind: kind === "type" ? "typing" : kind === "delete" ? "delete" : null, text: inserted });
+        } else {
+            this._collab.history.remote(applied);
+        }
+        this._dispatch(webexpress.webui.Event.COLLABORATION_STEPS_EVENT, { steps: applied });
+    }
+
+    /**
+     * Undoes or redoes an own edit while the text is shared.
+     * @param {boolean} redo - True to redo.
+     */
+    _collabStep(redo) {
+        let applied = null;
+        const apply = (steps) => {
+            let result;
+            try {
+                result = webexpress.webui.Ot.apply(this._collab.tokens, steps);
+            } catch {
+                return null;
+            }
+            if (!webexpress.webui.OtSchema.checkText(result.tokens) || webexpress.webui.Ot.equal(result.tokens, this._collab.tokens)) {
+                return null;
+            }
+            // the caret goes to the end of what the step changed
+            const last = [...result.steps].reverse().find((step) => step.type === "replace");
+            const caret = last ? webexpress.webui.Ot.map(last.from + webexpress.webui.Ot.size(last.slice), result.steps.slice(result.steps.indexOf(last) + 1)) : this._model.selection.focus;
+            this._showShared(result.tokens, { anchor: caret, focus: caret });
+            applied = result.steps;
+            return applied;
+        };
+        const history = this._collab.history;
+        if (redo ? history.redo(apply) : history.undo(apply)) {
+            this._dispatch(webexpress.webui.Event.COLLABORATION_STEPS_EVENT, { steps: applied });
+        }
     }
 
     /**

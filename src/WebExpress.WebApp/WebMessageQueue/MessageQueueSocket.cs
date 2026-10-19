@@ -148,6 +148,7 @@ namespace WebExpress.WebApp.WebMessageQueue
         private void OnDisconnected(SocketCloseInfo obj)
         {
             _messageQueueManager?.Unregister(_connectionId);
+            _messageQueueManager?.CollaborativeDocuments?.Disconnect(_connectionId);
         }
 
         /// <summary>

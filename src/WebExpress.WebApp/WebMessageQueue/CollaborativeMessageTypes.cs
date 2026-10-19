@@ -54,6 +54,29 @@ namespace WebExpress.WebApp.WebMessageQueue
         public const string Draft = Prefix + "draft";
 
         /// <summary>
+        /// The common prefix of the operation protocol of shared documents (protocol version 1):
+        /// <c>join</c>, <c>resume</c> and <c>submit</c> from the client; <c>state</c>,
+        /// <c>operations</c>, <c>ack</c> and <c>reject</c> from the server.
+        /// </summary>
+        /// <remarks>
+        /// Unlike the other collaborative messages, these are not broadcast to the peers but
+        /// handed to the sequencer (<see cref="WebCollaboration.ICollaborativeDocumentManager"/>),
+        /// which decides the order of all changes and answers each client individually.
+        /// </remarks>
+        public const string OperationPrefix = Prefix + "ot.";
+
+        /// <summary>
+        /// Determines whether the specified message type belongs to the operation protocol.
+        /// </summary>
+        /// <param name="messageType">The raw message type; may be <c>null</c>.</param>
+        /// <returns><c>true</c> for an operation message; otherwise <c>false</c>.</returns>
+        public static bool IsOperation(string messageType)
+        {
+            return !string.IsNullOrEmpty(messageType)
+                && messageType.StartsWith(OperationPrefix, System.StringComparison.Ordinal);
+        }
+
+        /// <summary>
         /// Determines whether the specified message type belongs to the
         /// collaborative family and should therefore be routed to the
         /// dedicated handler.

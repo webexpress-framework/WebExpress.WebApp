@@ -205,6 +205,61 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
     set _editingId(value) { this._store.setState({ editingId: value }); }
 
     /**
+     * Returns this control as the comment store of a rich text editor (EditorCtrl.commentStore).
+     *
+     * The editor then keeps only an anchor mark with the comment id in its document, and the
+     * comment itself - text, author, replies, reactions - lives here, in the backend of this
+     * control. That is what lets a comment anchor travel through a shared document like any
+     * formatting while nobody's comment text is part of the document everyone edits. A comment
+     * belongs to its anchor through the label "anchor:{id}", so no backend change is needed.
+     * @returns {{load: Function, save: Function, remove: Function}} The store.
+     */
+    get anchorStore() {
+        const label = (id) => "anchor:" + id;
+        const find = (id) => this._comments.find((c) => Array.isArray(c.labels) && c.labels.includes(label(id)));
+        const text = (html) => {
+            const template = document.createElement("template");
+            template.innerHTML = html || "";
+            return (template.content || template).textContent.trim();
+        };
+        const body = (value) => {
+            const p = document.createElement("p");
+            p.textContent = value;
+            return p.outerHTML;
+        };
+
+        return {
+            load: async (id) => {
+                if (!find(id) && this._service) {
+                    await this._load();
+                }
+                const comment = find(id);
+                return comment ? text(comment.body) : null;
+            },
+            save: async (id, value) => {
+                if (!this._service) {
+                    return;
+                }
+                const comment = find(id);
+                if (comment) {
+                    await this._saveEdit(comment, { body: body(value), category: comment.category, labels: comment.labels });
+                    return;
+                }
+                const result = await this._service.create({ body: body(value), category: "general", labels: [label(id)] });
+                if (result.ok) {
+                    this._handleCommentAdded({ detail: { comment: result.data } });
+                }
+            },
+            remove: async (id) => {
+                const comment = find(id);
+                if (comment) {
+                    await this._delete(comment);
+                }
+            }
+        };
+    }
+
+    /**
      * The comments, backed by the store so a change re-renders.
      * @returns {Array<object>} The comments.
      */

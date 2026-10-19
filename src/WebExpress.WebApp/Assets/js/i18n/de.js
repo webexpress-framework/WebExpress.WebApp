@@ -550,5 +550,11 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "editor.image.invalid": "Diese Bildadresse wird nicht unterstützt.",
     "editor.link.library.title": "Aus der Anwendung",
     "editor.link.library.select": "Bitte wählen Sie ein Linkziel aus.",
-    "editor.link.invalid": "Diese Linkadresse wird nicht unterstützt."
+    "editor.link.invalid": "Diese Linkadresse wird nicht unterstützt.",
+    "collaborative.conflict.message": "Einige Ihrer Änderungen konnten nicht mit den Änderungen anderer Benutzer zusammengeführt werden.",
+    "collaborative.conflict.restore": "Meine Fassung wiederherstellen",
+    "collaborative.conflict.dismiss": "Gemeinsame Fassung behalten",
+    "collaborative.status.pending": "Änderungen werden gespeichert",
+    "collaborative.status.offline": "Offline - Änderungen bleiben erhalten und werden bei Wiederverbindung gesendet",
+    "collaborative.status.error": "Gemeinsames Bearbeiten ist nicht verfügbar"
 });

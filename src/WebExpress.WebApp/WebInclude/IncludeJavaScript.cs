@@ -22,6 +22,7 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/js/bind/default.js")]
     [Asset("/assets/js/webexpress.webapp.avatar.dropdown.js")]
     [Asset("/assets/js/webexpress.webapp.chat.js")]
+    [Asset("/assets/js/webexpress.webapp.collaborative.document.js")]
     [Asset("/assets/js/webexpress.webapp.collaborative.js")]
     [Asset("/assets/js/webexpress.webapp.comment.model.js")]
     [Asset("/assets/js/webexpress.webapp.comment.js")]

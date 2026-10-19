@@ -104,6 +104,15 @@ State, as `model.state` (frozen) or `model.toJSON()`:
 * The editing history is separate from the history of submitted queries: undo never submits and
   never changes that list.
 
+## Shared editing
+
+Inside a `ControlCollaborative` with a document scope the prompt is shared: it implements the
+collaboration interface with the kind `"text"` (unformatted characters, no carriage returns), so
+several users can write the same query at once. Every edit becomes character steps; remote
+steps move the caret along with the text and stay out of the prompt's undo, and undo takes back
+only the own edits, grouped by words. A value set by a program is shared like an edit but cannot
+be undone. See *Real-time collaboration* for the protocol.
+
 ## Asynchronous processing
 
 * Analysis is debounced (200 ms after an edit, 100 ms after a cursor move, at once after a

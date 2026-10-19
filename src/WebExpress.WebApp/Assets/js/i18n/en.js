@@ -550,5 +550,11 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "editor.image.invalid": "This image address is not supported.",
     "editor.link.library.title": "From the application",
     "editor.link.library.select": "Please choose a link target.",
-    "editor.link.invalid": "This link address is not supported."
+    "editor.link.invalid": "This link address is not supported.",
+    "collaborative.conflict.message": "Some of your changes could not be merged with the changes of other users.",
+    "collaborative.conflict.restore": "Restore my version",
+    "collaborative.conflict.dismiss": "Keep the shared version",
+    "collaborative.status.pending": "Saving changes",
+    "collaborative.status.offline": "Offline - changes are kept and sent on reconnection",
+    "collaborative.status.error": "Shared editing is not available"
 });

@@ -15,8 +15,8 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the id property of the collaborative control.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div class=""wx-webapp-collaborative""></div>")]
-        [InlineData("id", @"<div id=""id"" class=""wx-webapp-collaborative""></div>")]
+        [InlineData(null, @"<div class=""wx-webapp-collaborative"" data-collaborative-document=""*"" data-collaborative-token=""*""></div>")]
+        [InlineData("id", @"<div id=""id"" class=""wx-webapp-collaborative"" data-collaborative-document=""*"" data-collaborative-token=""*""></div>")]
         public void Id(string id, string expected)
         {
             // arrange
@@ -38,10 +38,10 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests collaborative feature flags.
         /// </summary>
         [Theory]
-        [InlineData(true, true, true, @"<div class=""wx-webapp-collaborative""></div>")]
-        [InlineData(false, true, true, @"<div class=""wx-webapp-collaborative"" data-collaborative-presence=""false""></div>")]
-        [InlineData(true, false, true, @"<div class=""wx-webapp-collaborative"" data-collaborative-cursor=""false""></div>")]
-        [InlineData(true, true, false, @"<div class=""wx-webapp-collaborative"" data-collaborative-input=""false""></div>")]
+        [InlineData(true, true, true, @"<div class=""wx-webapp-collaborative"" data-collaborative-document=""*"" data-collaborative-token=""*""></div>")]
+        [InlineData(false, true, true, @"<div class=""wx-webapp-collaborative"" data-collaborative-presence=""false"" data-collaborative-document=""*"" data-collaborative-token=""*""></div>")]
+        [InlineData(true, false, true, @"<div class=""wx-webapp-collaborative"" data-collaborative-cursor=""false"" data-collaborative-document=""*"" data-collaborative-token=""*""></div>")]
+        [InlineData(true, true, false, @"<div class=""wx-webapp-collaborative"" data-collaborative-input=""false"" data-collaborative-document=""*"" data-collaborative-token=""*""></div>")]
         public void FeatureFlags(bool presence, bool cursor, bool input, string expected)
         {
             // arrange
@@ -84,7 +84,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var html = control.Render(context, visualTree);
 
             // validation
-            AssertExtensions.EqualWithPlaceholders(@"<div id=""collab"" class=""wx-webapp-collaborative"" data-collaborative-color-mode=""auto"" data-collaborative-user-id=""u-alice"" data-collaborative-user-name=""Alice"" data-collaborative-color=""#3B82F6""></div>", html);
+            AssertExtensions.EqualWithPlaceholders(@"<div id=""collab"" class=""wx-webapp-collaborative"" data-collaborative-color-mode=""auto"" data-collaborative-user-id=""u-alice"" data-collaborative-user-name=""Alice"" data-collaborative-color=""#3B82F6"" data-collaborative-document=""*"" data-collaborative-token=""*""></div>", html);
         }
 
         /// <summary>
@@ -103,7 +103,56 @@ namespace WebExpress.WebApp.Test.WebControl
             var html = control.Render(context, visualTree);
 
             // validation
-            AssertExtensions.EqualWithPlaceholders(@"<div id=""collab"" class=""wx-webapp-collaborative""><div>Hello</div></div>", html);
+            AssertExtensions.EqualWithPlaceholders(@"<div id=""collab"" class=""wx-webapp-collaborative"" data-collaborative-document=""*"" data-collaborative-token=""*""><div>Hello</div></div>", html);
+        }
+
+        /// <summary>
+        /// The container names the scope of its shared documents and carries a token the server
+        /// accepts for exactly that scope and access mode.
+        /// </summary>
+        [Theory]
+        [InlineData(false, true)]
+        [InlineData(true, false)]
+        public void DocumentScopeAndToken(bool readOnly, bool writable)
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlCollaborative("collab")
+            {
+                Document = _ => "ticket-42",
+                ReadOnly = _ => readOnly
+            };
+
+            // act
+            var html = control.Render(context, visualTree).ToString();
+            var token = System.Text.RegularExpressions.Regex.Match(html, "data-collaborative-token=\"([^\"]+)\"").Groups[1].Value;
+
+            // validation
+            Assert.Contains("data-collaborative-document=\"ticket-42\"", html);
+            Assert.True(WebExpress.WebApp.WebCollaboration.CollaborativeAccess.TryValidate(token, "ticket-42/body", out var write));
+            Assert.Equal(writable, write);
+            Assert.False(WebExpress.WebApp.WebCollaboration.CollaborativeAccess.TryValidate(token, "ticket-43/body", out _));
+        }
+
+        /// <summary>
+        /// Without an explicit scope the documents belong to the page and the container.
+        /// </summary>
+        [Fact]
+        public void DocumentScopeDefaultsToPageAndContainer()
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlCollaborative("collab");
+
+            // act
+            var html = control.Render(context, visualTree).ToString();
+
+            // validation
+            Assert.Matches("data-collaborative-document=\"[^\"]*#collab\"", html);
         }
 
         /// <summary>
@@ -137,7 +186,7 @@ namespace WebExpress.WebApp.Test.WebControl
             // validation
             AssertExtensions.EqualWithPlaceholders
             (
-                @"<div id=""collab"" class=""wx-webapp-collaborative""><div id=""body"" class=""wx-webui-editor form-control"" name=""Body"" data-fill=""true""></div></div>",
+                @"<div id=""collab"" class=""wx-webapp-collaborative"" data-collaborative-document=""*"" data-collaborative-token=""*""><div id=""body"" class=""wx-webui-editor form-control"" name=""Body"" data-fill=""true""></div></div>",
                 html
             );
         }

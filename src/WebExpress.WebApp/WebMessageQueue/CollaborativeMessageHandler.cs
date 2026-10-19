@@ -78,6 +78,17 @@ namespace WebExpress.WebApp.WebMessageQueue
                 return;
             }
 
+            // operations of shared documents are sequenced, not broadcast
+            if (TryReadType(rawPayload, out var type) && CollaborativeMessageTypes.IsOperation(type))
+            {
+                if (_messageQueueManager.CollaborativeDocuments is { } documents)
+                {
+                    await documents.HandleAsync(source, rawPayload, cancellationToken);
+                }
+
+                return;
+            }
+
             if (!TryBuildMessage(rawPayload, source, out var message))
             {
                 return;
@@ -190,6 +201,28 @@ namespace WebExpress.WebApp.WebMessageQueue
                 };
 
                 return true;
+            }
+        }
+
+        /// <summary>
+        /// Reads the message type without building the message.
+        /// </summary>
+        /// <param name="rawPayload">The raw JSON string.</param>
+        /// <param name="type">The type on success.</param>
+        /// <returns><c>true</c> if the payload carries a type.</returns>
+        private static bool TryReadType(string rawPayload, out string type)
+        {
+            type = null;
+
+            try
+            {
+                using var document = JsonDocument.Parse(rawPayload);
+
+                return document.RootElement.ValueKind == JsonValueKind.Object && TryGetString(document.RootElement, "type", out type);
+            }
+            catch (JsonException)
+            {
+                return false;
             }
         }
 
