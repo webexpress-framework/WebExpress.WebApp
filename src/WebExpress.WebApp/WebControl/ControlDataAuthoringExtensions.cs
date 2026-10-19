@@ -1227,6 +1227,15 @@ namespace WebExpress.WebApp.WebControl
             => BindResource<ControlDataWorkflow, TResource>(control);
 
         /// <summary>
+        /// Binds the form editor to a ViewState resource by type.
+        /// </summary>
+        /// <typeparam name="TResource">The resource type.</typeparam>
+        /// <param name="control">The form editor control.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataFormEditor Resource<TResource>(this ControlDataFormEditor control) where TResource : IDataResource
+            => BindResource<ControlDataFormEditor, TResource>(control);
+
+        /// <summary>
         /// Binds the remote dropdown to a ViewState resource by type.
         /// </summary>
         /// <typeparam name="TResource">The resource type.</typeparam>

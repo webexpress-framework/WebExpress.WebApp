@@ -255,6 +255,7 @@ form.wx-webapp-restwizard > .wx-wizard-page {
 }
 
 .wx-form-editor.wx-fill > .wx-form-editor-head,
+.wx-form-editor.wx-fill > .wx-form-editor-notices,
 .wx-form-editor.wx-fill > .wx-form-editor-foot {
     flex: 0 0 auto;
 }
@@ -1261,8 +1262,92 @@ form.wx-webapp-restwizard > .wx-wizard-page {
     color: var(--wx-warning-text-emphasis, var(--wx-secondary-color));
 }
 
-.wx-form-editor-foot-status[data-wx-state="error"] {
-    color: var(--wx-danger);
+.wx-form-editor-foot-status[data-wx-state="error"],
+.wx-form-editor-foot-status[data-wx-state="conflict"],
+.wx-form-editor-foot-status[data-wx-phase="error"] {
+    color: var(--wx-danger-text-emphasis, var(--wx-danger));
+}
+
+/* notices: what went wrong and the way out, between the head and the body so
+   they stay in view while the panes scroll */
+.wx-form-editor-notices[hidden] {
+    display: none;
+}
+
+.wx-form-editor-notice {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    padding: 0.5rem 0.875rem;
+    border-bottom: 1px solid var(--wx-danger-border-subtle, var(--wx-border-color));
+    background: var(--wx-danger-bg-subtle, var(--wx-tertiary-bg));
+    color: var(--wx-danger-text-emphasis, var(--wx-body-color));
+    font-size: 12.5px;
+}
+
+    /* a conflict, a discarded draft and kept changes lose nothing yet; they wait for a decision */
+    .wx-form-editor-notice--conflict,
+    .wx-form-editor-notice--stale,
+    .wx-form-editor-notice--recovery {
+        border-bottom-color: var(--wx-warning-border-subtle, var(--wx-border-color));
+        background: var(--wx-warning-bg-subtle, var(--wx-tertiary-bg));
+        color: var(--wx-warning-text-emphasis, var(--wx-body-color));
+    }
+
+.wx-form-editor-notice-text {
+    flex: 1 1 18rem;
+}
+
+.wx-form-editor-notice-details {
+    flex: 1 1 100%;
+    order: 2;
+    margin: 0;
+    padding-left: 1.25rem;
+}
+
+.wx-form-editor-notice-actions {
+    display: inline-flex;
+    gap: 0.5rem;
+}
+
+.wx-form-editor-notice-action,
+.wx-form-editor-retry {
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    background: transparent;
+    color: inherit;
+    padding: 1px 8px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+/* the body without a definition: loading, or the reason it could not be loaded */
+.wx-form-editor-loading,
+.wx-form-editor-load-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    min-height: 8rem;
+    padding: 1.5rem;
+    color: var(--wx-secondary-color, var(--wx-body-color));
+}
+
+.wx-form-editor-load-error {
+    color: var(--wx-danger-text-emphasis, var(--wx-body-color));
+}
+
+/* a row the server named when it refused the definition */
+.wx-form-editor-tree-row.invalid {
+    border-left-color: var(--wx-danger, #dc3545);
+    background: var(--wx-danger-bg-subtle, transparent);
+}
+
+/* the tree takes the focus so its keys apply; the ring says which tree that is */
+.wx-form-editor-tree:focus-visible {
+    outline: 2px solid var(--wx-primary, #0d6efd);
+    outline-offset: -2px;
 }
 
 /* discard reads as a link beside the state it acts on, far from the publish

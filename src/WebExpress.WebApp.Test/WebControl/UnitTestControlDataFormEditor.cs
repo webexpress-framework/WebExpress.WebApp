@@ -213,6 +213,99 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
+        /// Tests that the initial state reaches the client as the wx-state island,
+        /// which the editor reads before it replaces the children of the host.
+        /// </summary>
+        [Fact]
+        public void StateFactory()
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlDataFormEditor()
+            {
+                ServiceFactory = _ => DataServiceDescriptor.FormData("/api/1/FormStructure"),
+                StateFactory = _ => DataState.Create().Set("create", true)
+            };
+
+            // act
+            var html = control.Render(context, visualTree).ToString();
+
+            // validation
+            Assert.Contains("<wx-state", html);
+            Assert.Contains(@"name=""create""", html);
+            Assert.Contains(@"name=""data""", html);
+        }
+
+        /// <summary>
+        /// Tests that a template reference is not emitted: a template would replace
+        /// the whole designer on the client, which the editor does not support.
+        /// </summary>
+        [Fact]
+        public void TemplateIsNotEmitted()
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlDataFormEditor()
+            {
+                TemplateFactory = _ => "my-template"
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(@"<div class=""wx-webapp-restform-editor""></div>", html);
+        }
+
+        /// <summary>
+        /// Tests that a ViewState-bound editor emits the resource binding instead of
+        /// its own data island, while the draft island stays its own.
+        /// </summary>
+        [Fact]
+        public void ViewStateBound()
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlDataFormEditor()
+            {
+                // even with a data service declared, the resource binding wins
+                ServiceFactory = _ => DataServiceDescriptor.FormData("/api/1/FormStructure"),
+                DraftServiceFactory = _ => DataServiceDescriptor.DraftData("/api/1/FormDraft"),
+                ResourceFactory = _ => "form",
+                ViewState = _ => "designer"
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(
+                @"<div class=""wx-webapp-restform-editor"" data-wx-resource=""form"" data-wx-viewstate=""designer""><wx-service hidden name=""draft"" kind=""rest"" base-uri=""/api/1/FormDraft"" method=""GET"" update-method=""PUT""></wx-service></div>",
+                html);
+        }
+
+        /// <summary>
+        /// Tests that the typed resource binding sets the resource factory to the
+        /// resource type name and keeps the concrete control type for chaining.
+        /// </summary>
+        [Fact]
+        public void ResourceBindsByType()
+        {
+            // arrange & act: the assignment compiles only because the typed overload
+            // returns the concrete control type
+            ControlDataFormEditor control = new ControlDataFormEditor("editor").Resource<FormEditorTestResource>();
+
+            // validation
+            Assert.Equal(DataTypeName.Of<FormEditorTestResource>(), control.ResourceFactory(null));
+        }
+
+        /// <summary>
         /// Tests that the default values match the constants exposed on the control.
         /// </summary>
         [Fact]
@@ -228,6 +321,14 @@ namespace WebExpress.WebApp.Test.WebControl
             Assert.Null(control.ServiceFactory);
             Assert.Null(control.DraftServiceFactory);
             Assert.True(control.Draft?.Invoke(null));
+            Assert.Null(control.ResourceFactory);
+        }
+
+        /// <summary>
+        /// A resource identity used only by the binding test.
+        /// </summary>
+        private sealed class FormEditorTestResource : IDataResource
+        {
         }
     }
 }

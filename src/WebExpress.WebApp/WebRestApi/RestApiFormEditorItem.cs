@@ -41,6 +41,22 @@ namespace WebExpress.WebApp.WebRestApi
         public int Version { get; set; }
 
         /// <summary>
+        /// Gets or sets the revision of the unpublished draft the structure was
+        /// edited on top of, sent by the editor with every draft save.
+        /// </summary>
+        /// <remarks>
+        /// Draft saves do not move <see cref="Version"/> - nothing the forms in use
+        /// see changes - so two editors drafting the same form could not tell each
+        /// other's saves apart by it. The draft endpoint answers its own revision,
+        /// and <see cref="RestApiFormEditorDraft{TIndexItem}"/> refuses a save that
+        /// presents another one. Zero means the editor knew of no draft. It is not
+        /// written when zero, so the structure the data endpoint answers is unchanged.
+        /// </remarks>
+        [JsonPropertyName("draftRevision")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public int DraftRevision { get; set; }
+
+        /// <summary>
         /// Gets or sets the ordered list of tabs that compose the form.
         /// </summary>
         [JsonPropertyName("tabs")]

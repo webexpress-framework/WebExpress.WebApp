@@ -36,10 +36,31 @@ namespace WebExpress.WebApp.WebControl
     /// discard action and no draft state: the editor then autosaves into the form
     /// itself.
     /// </para>
+    /// <para>
+    /// The editor is ViewState-capable: bound to a resource of an enclosing
+    /// ViewState through <c>Resource&lt;TResource&gt;()</c> it renders the
+    /// resource slice the ViewState loads centrally and writes through the
+    /// ViewState's service, while the draft service stays its own; left unbound it
+    /// owns its <c>wx-service</c> islands and loads itself.
+    /// </para>
     /// </remarks>
-    public class ControlDataFormEditor : Control, IControlDataFormEditor, IDataIsland
+    public class ControlDataFormEditor : Control, IControlDataFormEditor, IDataIsland, IViewStateBound
     {
         public const int _defaultIndent = 18;
+
+        /// <summary>
+        /// Gets or sets the resolver of the ViewState resource the editor renders.
+        /// When set, the ViewState owns the load of the form definition and the
+        /// service it is written through; when null, the editor owns its islands
+        /// and loads itself.
+        /// </summary>
+        public Func<IRenderControlContext, string> ResourceFactory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional ViewState id the editor binds to. When null, the
+        /// editor resolves its ViewState by the resource it binds to.
+        /// </summary>
+        public Func<IRenderControlContext, string> ViewState { get; set; }
 
         /// <summary>
         /// Gets the data service descriptors of the control, emitted as
@@ -94,14 +115,30 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
-        /// Gets or sets the optional template reference, emitted as the
-        /// data-wx-template attribute.
+        /// Gets or sets the template reference of the data island contract. The
+        /// form editor does not support it and emits no data-wx-template attribute.
         /// </summary>
+        /// <remarks>
+        /// A template replaces the whole view of a data control, which for the
+        /// designer would drop every editing affordance it has; the editor renders
+        /// its fixed authoring surface instead. The member stays because
+        /// <see cref="IDataIsland"/> declares it; a value assigned to it is ignored.
+        /// </remarks>
         public Func<IRenderControlContext, string> TemplateFactory { get; set; }
 
         /// <summary>
         /// Gets or sets the optional initial state, emitted as the wx-state island.
         /// </summary>
+        /// <remarks>
+        /// The editor reads these keys: <c>create</c> (true opens a new form instead
+        /// of loading one, so a missing form is never mistaken for a new one),
+        /// <c>structure</c> (the definition a new or offline form starts with),
+        /// <c>catalog</c> (the fields the QuickAdd picker offers where nothing is
+        /// loaded), <c>activeTab</c> (the id of the tab shown first),
+        /// <c>collapsed</c> (the ids of the collapsed groups) and <c>preview</c>
+        /// (whether the preview is shown, overriding <see cref="Preview"/>). A
+        /// ViewState-bound editor carries no state island; its ViewState owns the state.
+        /// </remarks>
         public Func<IRenderControlContext, DataState> StateFactory { get; set; }
 
         /// <summary>
@@ -174,6 +211,7 @@ namespace WebExpress.WebApp.WebControl
             };
 
             html.EmitDataIslands(this, renderContext)
+                .RemoveUserAttribute("data-wx-template")
                 .AddUserAttribute("data-preview", !preview ? "false" : null)
                 .AddUserAttribute("data-indent", indent != 18 ? indent.ToString(CultureInfo.InvariantCulture) : null)
                 .AddUserAttribute("data-readonly", @readonly ? "true" : null);

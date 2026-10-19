@@ -85,6 +85,17 @@ namespace WebExpress.WebApp.WebRestApi
         /// incoming JSON body into a <see cref="RestApiFormEditorItem"/> and
         /// hands it to <see cref="UpdateItem"/> for persistence.
         /// </summary>
+        /// <remarks>
+        /// The editor autosaves, so two open editors on the same form would
+        /// overwrite each other without either user noticing. A structure that
+        /// presents a version other than the stored one is therefore answered with
+        /// 409 and the stored version as <c>{ "message", "version" }</c> instead of
+        /// being applied; the editor keeps its changes and lets the user decide. A
+        /// form that is not stored yet, or a store or client that does not version
+        /// (version 0), is unaffected. The stored version comes from
+        /// <see cref="RetrieveVersion"/>; an endpoint that serves a draft through
+        /// <see cref="RetrieveItem"/> overrides it with the published version.
+        /// </remarks>
         /// <param name="request">The request.</param>
         /// <returns>The response carrying the saved (typically version-incremented) form structure.</returns>
         [Method(RequestMethod.PUT)]
@@ -112,6 +123,13 @@ namespace WebExpress.WebApp.WebRestApi
                 }
 
                 using var context = CreateContext();
+
+                var current = RetrieveVersion(id, context, request) ?? 0;
+                if (current > 0 && incoming.Version > 0 && current != incoming.Version)
+                {
+                    return Conflict(id, current);
+                }
+
                 var saved = UpdateItem(id, incoming, context, request);
 
                 var result = new RestApiFormEditorResult
@@ -125,6 +143,30 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 return RestApiFault.BadRequest(request, ex, "Error processing request.");
             }
+        }
+
+        /// <summary>
+        /// Answers a structure that was edited on top of an outdated version. The
+        /// body is json, because the client service layer keeps a json body of a
+        /// failed write, and it names the stored version, so the editor can write on
+        /// top of it once the user decided to keep their own changes.
+        /// </summary>
+        /// <param name="formId">The id of the form.</param>
+        /// <param name="version">The version currently stored.</param>
+        /// <returns>The conflict response.</returns>
+        private static IResponse Conflict(string formId, int version)
+        {
+            var json = JsonSerializer.Serialize(new
+            {
+                message = $"The form '{formId}' has been modified by someone else.",
+                version
+            });
+
+            return new ResponseConflict
+            {
+                Content = Encoding.UTF8.GetBytes(json)
+            }
+                .AddHeaderContentType("application/json");
         }
 
         /// <summary>
@@ -173,6 +215,25 @@ namespace WebExpress.WebApp.WebRestApi
         /// The form structure, or <c>null</c> if no form with the given id exists.
         /// </returns>
         protected abstract RestApiFormEditorItem RetrieveItem(string formId, IQueryContext context, IRequest request);
+
+        /// <summary>
+        /// Retrieves the stored version a saved structure is checked against.
+        /// </summary>
+        /// <remarks>
+        /// By default it is the version of what <see cref="RetrieveItem"/> answers.
+        /// An endpoint whose <see cref="RetrieveItem"/> answers the unpublished draft
+        /// where one exists overrides it with the version of the published form:
+        /// a publication has to be refused when someone else published on top of
+        /// the version the draft was started from, which the draft cannot tell.
+        /// </remarks>
+        /// <param name="formId">The id of the form. Never null or whitespace.</param>
+        /// <param name="context">The context in which the query is executed.</param>
+        /// <param name="request">The request that provides the operational context.</param>
+        /// <returns>The stored version, or <c>null</c> when the form is not stored yet.</returns>
+        protected virtual int? RetrieveVersion(string formId, IQueryContext context, IRequest request)
+        {
+            return RetrieveItem(formId, context, request)?.Version;
+        }
 
         /// <summary>
         /// Persists the supplied form structure under the given form id.
