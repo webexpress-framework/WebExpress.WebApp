@@ -14,6 +14,13 @@ namespace WebExpress.WebApp.WebControl
         string Title { get; set; }
 
         /// <summary>
+        /// Gets or sets the inline editor that makes the title editable in place. Without one
+        /// the title is read-only. The editor takes the place of the title, so its input
+        /// carries the value shown and its process handler stores the edited one.
+        /// </summary>
+        IControlSmartEdit TitleEditor { get; set; }
+
+        /// <summary>
         /// Gets the prologue area.
         /// </summary>
         IEnumerable<IControl> Prologue { get; }

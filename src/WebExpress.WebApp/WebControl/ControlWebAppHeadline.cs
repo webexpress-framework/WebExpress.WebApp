@@ -27,6 +27,13 @@ namespace WebExpress.WebApp.WebControl
         public string Title { get; set; }
 
         /// <summary>
+        /// Gets or sets the inline editor that makes the title editable in place. Without one
+        /// the title is read-only. The editor takes the place of the title, so its input
+        /// carries the value shown and its process handler stores the edited one.
+        /// </summary>
+        public IControlSmartEdit TitleEditor { get; set; }
+
+        /// <summary>
         /// Gets the prologue area.
         /// </summary>
         public IEnumerable<IControl> Prologue => _prologue;
@@ -232,7 +239,14 @@ namespace WebExpress.WebApp.WebControl
                         Align = _ => TypeAlignFlex.Center,
                         Justify = _ => TypeJustifiedFlex.Start
                     } : null,
-                    new ControlText()
+                    TitleEditor is not null ? new ControlPanel(null, TitleEditor)
+                    {
+                        // an h2 may only hold phrasing content, but the editor swaps its read view
+                        // for a form; the heading role keeps the page title in the outline, at the
+                        // level 2 the role implies
+                        Role = _ => "heading",
+                        Classes = ["h2", "me-2", "mb-0", "wx-webapp-headline-title"]
+                    } : new ControlText()
                     {
                         Text = _ => I18N.Translate
                         (

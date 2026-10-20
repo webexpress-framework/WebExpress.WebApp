@@ -152,12 +152,47 @@ html[data-wx-theme="dark"] #wx-content {
 #wx-content-main-headline {
 }
 
-#wx-content-main-headline h2 {
-    flex: 1;
+#wx-content-main-headline h2,
+#wx-content-main-headline .wx-webapp-headline-title {
+    /* the title claims its own width before it grows: with a zero basis it only got what
+       the headline sections left over and was the first to break in a crowded headline */
+    flex: 1 1 auto;
     text-align: left;
     /* the prose rule for a heading inside running text does not apply to the page
        title: it opens the region and has nothing above it to be separated from */
     margin-top: 0;
+}
+
+/* the editable title keeps the size of the title it replaces, while the pen and the
+   save and cancel buttons stay at the size they have everywhere else */
+#wx-content-main-headline .wx-webapp-headline-title .wx-smart-edit {
+    align-items: center;
+    color: inherit;
+    /* room for the pen, which would otherwise cover the end of a title that fills
+       the slot */
+    padding-right: 2.5rem;
+}
+
+#wx-content-main-headline .wx-webapp-headline-title .wx-smart-edit .pencil {
+    right: 0;
+}
+
+/* the input claims no width of its own, so in a crowded headline the slot would
+   collapse to nothing the moment the title turns into an input */
+#wx-content-main-headline .wx-webapp-headline-title .wx-smart-edit > form {
+    min-width: 15rem;
+}
+
+/* the input inherits its font, which inside the slot is the heading's; editing happens
+   at body size like every other smart edit. it grows with the title instead of cutting
+   it off at a default width; browsers without field-sizing keep the form's minimum */
+#wx-content-main-headline .wx-webapp-headline-title .form-control {
+    font: var(--wx-body-font-weight) var(--wx-body-font-size)/var(--wx-body-line-height) var(--wx-body-font-family);
+    field-sizing: content;
+}
+
+#wx-content-main-headline .wx-webapp-headline-title .wx-smart-edit button {
+    font-size: 1rem;
 }
 
 #wx-content-main-headline-more {
