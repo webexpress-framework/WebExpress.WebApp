@@ -8,7 +8,8 @@
  * - Smart formatting (auto-quoting, auto-parenthesis).
  * - Clear button and multi-line support (Ctrl+Enter).
  * - Unified hint/error display with styled keyboard shortcuts.
- * - Triggers webexpress.webui.Event.CHANGE_FILTER_EVENT.
+ * - Triggers webexpress.webui.Event.CHANGE_FILTER_EVENT when a query is sent, and
+ *   webexpress.webui.Event.CHANGE_VALUE_EVENT whenever the text changes.
  *
  * The text and the selection belong to a webexpress.webapp.WqlPromptModel, and a
  * webexpress.webapp.WqlPromptView only displays them: this controller turns browser input into
@@ -34,6 +35,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
 
         // the authoritative text and selection; the surface mirrors them
         this._model = new webexpress.webapp.WqlPromptModel();
+        this._announcedText = this._model.text;
         this._undo = new webexpress.webapp.WqlPromptUndo();
         this._defaultValue = "";
         this._composing = false;
@@ -118,6 +120,19 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         if (this._field) {
             this._field.value = this._model.text;
         }
+    }
+
+    /**
+     * Announces the text as the value of the prompt when it differs from the one announced
+     * last. Every path that changes the text - typing, a program, a form reset, the edits of
+     * another author - passes here, while a send only announces the filter.
+     */
+    _announceValue() {
+        if (this._model.text === this._announcedText) {
+            return;
+        }
+        this._announcedText = this._model.text;
+        this._dispatch(webexpress.webui.Event.CHANGE_VALUE_EVENT, { value: this._model.text });
     }
 
     /**
@@ -364,6 +379,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
             }
             this._invalidateInput();
             this._syncField();
+            this._announceValue();
             if (this._historyIndex === this._history.length) {
                 this._unsentInput = after.text;
             }
@@ -396,6 +412,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         this._model.setText(value);
         this._render();
         this._syncField();
+        this._announceValue();
         // a program setting the value of a shared prompt changes it for everyone
         this._announceText(null);
     }

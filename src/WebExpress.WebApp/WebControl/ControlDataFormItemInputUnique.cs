@@ -133,6 +133,11 @@ namespace WebExpress.WebApp.WebApiControl
         }
 
         /// <summary>
+        /// Gets the i18n key of the message the required rule reports.
+        /// </summary>
+        protected override string RequiredMessage => "webexpress.webui:form.inputtextbox.validation.required";
+
+        /// <summary>
         /// Validates the input elements within a form for correctness of the data.
         /// </summary>
         /// <param name="renderContext">The context in which the inputs are validated, containing form data and state.</param>
@@ -144,7 +149,6 @@ namespace WebExpress.WebApp.WebApiControl
             var validationResults = new List<ValidationResult>(base.Validate(renderContext));
             var value = renderContext.GetValue<ControlFormInputValueString>(this)?.Text;
             var disabled = Disabled?.Invoke(renderContext) ?? false;
-            var required = Required?.Invoke(renderContext) ?? false;
             var minLength = MinLength?.Invoke(renderContext);
             var maxLength = MaxLength?.Invoke(renderContext);
 
@@ -153,10 +157,9 @@ namespace WebExpress.WebApp.WebApiControl
                 return [];
             }
 
-            if (required && string.IsNullOrWhiteSpace(value))
+            // the base has reported the missing value already
+            if (IsMissing(renderContext))
             {
-                validationResults.AddRange(new ValidationResult(TypeInputValidity.Error, "webexpress.webui:form.inputtextbox.validation.required"));
-
                 return validationResults;
             }
 

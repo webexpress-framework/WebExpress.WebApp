@@ -6,6 +6,7 @@
  * following events on the host element:
  * - webexpress.webui.Event.DATA_REQUESTED_EVENT
  * - webexpress.webui.Event.DATA_ARRIVED_EVENT
+ * - webexpress.webui.Event.CHANGE_VALUE_EVENT
  */
 webexpress.webapp.InputUniqueCtrl = class extends webexpress.webui.Ctrl {
     /**
@@ -154,6 +155,7 @@ webexpress.webapp.InputUniqueCtrl = class extends webexpress.webui.Ctrl {
         // input listeners
         this._onInputListener = () => {
             this._currentValue = this._input.value;
+            this._dispatch(webexpress.webui.Event.CHANGE_VALUE_EVENT, { value: this._currentValue });
             // schedule check (debounced if configured)
             this._scheduleCheck(false);
         };
@@ -437,6 +439,15 @@ webexpress.webapp.InputUniqueCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
+     * Tells whether the server marked the field required. The mark is taken off the host when
+     * the control is built, so the control answers for it.
+     * @returns {boolean} True when a value is required.
+     */
+    get required() {
+        return this._required;
+    }
+
+    /**
      * Gets the current visible input value.
      * @returns {string} The current input value.
      */
@@ -465,6 +476,7 @@ webexpress.webapp.InputUniqueCtrl = class extends webexpress.webui.Ctrl {
         
         this._input.value = newVal;
         this._currentValue = newVal;
+        this._dispatch(webexpress.webui.Event.CHANGE_VALUE_EVENT, { value: newVal });
 
         if (this._currentValue !== this._initialValue) {
             // force scheduling to respect debounce logic
@@ -480,8 +492,12 @@ webexpress.webapp.InputUniqueCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
         // restore initial value
+        const changed = this._currentValue !== this._initialValue;
         this._input.value = this._initialValue;
         this._currentValue = this._initialValue;
+        if (changed) {
+            this._dispatch(webexpress.webui.Event.CHANGE_VALUE_EVENT, { value: this._currentValue });
+        }
 
         // cancel pending timers and requests
         if (this._pendingTimer) {

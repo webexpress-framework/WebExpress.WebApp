@@ -819,13 +819,14 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
         if (!this._restUri || !this._service) {
             return;
         }
-        this._service.update(stateObj).then((result) => {
+        const action = stateObj.c ? "columns" : "rows";
+        this._saveAction(action, stateObj, (sent) => this._service.update(sent), () => this._takeBack()).then((result) => {
             if (result.ok) {
                 if (typeof onConfirm === "function") {
                     onConfirm();
                 }
             } else if (result.error.kind !== "abort") {
-                this._reject(stateObj.c ? "columns" : "rows", result);
+                this._reject(action, result);
             }
         });
     }
@@ -853,7 +854,15 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
         });
 
         this._dispatch(webexpress.webui.Event.DATA_ERROR_EVENT, { action: action, error: result.error });
+        this._takeBack();
+    }
 
+    /**
+     * Goes back to the layout the server confirmed last - the order, visibility and width of
+     * the columns and the arrangement of the rows - after a change was refused or vetoed; only
+     * without a confirmed state is the table loaded anew.
+     */
+    _takeBack() {
         if (!this._confirmedLayout && !this._confirmedRows) {
             this.update();
             return;

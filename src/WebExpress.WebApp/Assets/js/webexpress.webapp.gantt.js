@@ -562,6 +562,14 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
 
         const model = webexpress.webapp.ganttModel;
         const plan = this._sandboxPlan();
+
+        // a vetoed save keeps the sandbox open as it is, so nothing has to be taken back
+        const before = this._dispatch(webexpress.webui.Event.BEFORE_SAVE_EVENT,
+            { action: "sandbox", payload: plan }, { cancelable: true });
+        if (before && before.defaultPrevented) {
+            return false;
+        }
+
         const task = (id) => this._tasks.find((t) => t.id === id);
         const link = (id) => this._links.find((l) => l.id === id);
         const steps = [
@@ -597,6 +605,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         }
 
         this._closeSandbox(true);
+        this._dispatch(webexpress.webui.Event.SAVED_EVENT, { action: "sandbox" });
         return true;
     }
 
@@ -964,7 +973,8 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         if (this._recordInSandbox("tasks", task.id) || !this._service) {
             return;
         }
-        this._service.create(webexpress.webapp.ganttModel.taskToWire(task), { path: "/tasks" }).then((result) => {
+        this._saveAction("create task", webexpress.webapp.ganttModel.taskToWire(task),
+            (sent) => this._service.create(sent, { path: "/tasks" }), () => this.refresh()).then((result) => {
             if (!result.ok) {
                 if (result.error.kind !== "abort") {
                     this._rejectWrite("create task", result);
@@ -987,7 +997,8 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         if (this._recordInSandbox("tasks", task.id) || !this._service) {
             return;
         }
-        this._service.update(webexpress.webapp.ganttModel.taskToWire(task), { path: "/tasks/" + encodeURIComponent(task.id) })
+        this._saveAction("update task", webexpress.webapp.ganttModel.taskToWire(task),
+            (sent) => this._service.update(sent, { path: "/tasks/" + encodeURIComponent(task.id) }), () => this.refresh())
             .then((result) => {
                 if (!result.ok && result.error.kind !== "abort") {
                     this._rejectWrite("update task", result);
@@ -1004,7 +1015,8 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         if (this._recordInSandbox("tasks", id) || !this._service) {
             return;
         }
-        this._service.remove({ path: "/tasks/" + encodeURIComponent(id) }).then((result) => {
+        this._saveAction("delete task", { id: id },
+            () => this._service.remove({ path: "/tasks/" + encodeURIComponent(id) }), () => this.refresh()).then((result) => {
             if (!result.ok && result.error.kind !== "abort" && !webexpress.webapp.GanttCtrl._alreadyGone(result)) {
                 this._rejectWrite("delete task", result);
                 this.refresh();
@@ -1022,13 +1034,15 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         if (this._recordInSandbox("links", link.id) || !this._service) {
             return;
         }
-        this._service.create(webexpress.webapp.ganttModel.linkToWire(link), { path: "/links" }).then((result) => {
+        const withdraw = () => this.setState({
+            links: this._links.filter((l) => l.id !== link.id),
+            selectedLink: this.state.selectedLink === link.id ? null : this.state.selectedLink
+        });
+        this._saveAction("create link", webexpress.webapp.ganttModel.linkToWire(link),
+            (sent) => this._service.create(sent, { path: "/links" }), withdraw).then((result) => {
             if (!result.ok) {
                 if (result.error.kind !== "abort") {
-                    this.setState({
-                        links: this._links.filter((l) => l.id !== link.id),
-                        selectedLink: this.state.selectedLink === link.id ? null : this.state.selectedLink
-                    });
+                    withdraw();
                     this._rejectWrite("create link", result);
                 }
                 return;
@@ -1051,9 +1065,11 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         if (this._recordInSandbox("links", link.id) || !this._service) {
             return;
         }
-        this._service.update(webexpress.webapp.ganttModel.linkToWire(link), { path: "/links/" + encodeURIComponent(link.id) }).then((result) => {
+        const restore = () => this.setState({ links: this._links.map((item) => item === link ? previous : item) });
+        this._saveAction("update link", webexpress.webapp.ganttModel.linkToWire(link),
+            (sent) => this._service.update(sent, { path: "/links/" + encodeURIComponent(link.id) }), restore).then((result) => {
             if (!result.ok && result.error.kind !== "abort") {
-                this.setState({ links: this._links.map((item) => item === link ? previous : item) });
+                restore();
                 this._rejectWrite("update link", result);
             }
         });
@@ -1067,7 +1083,8 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
         if (this._recordInSandbox("links", id) || !this._service) {
             return;
         }
-        this._service.remove({ path: "/links/" + encodeURIComponent(id) }).then((result) => {
+        this._saveAction("delete link", { id: id },
+            () => this._service.remove({ path: "/links/" + encodeURIComponent(id) }), () => this.refresh()).then((result) => {
             if (!result.ok && result.error.kind !== "abort" && !webexpress.webapp.GanttCtrl._alreadyGone(result)) {
                 this._rejectWrite("delete link", result);
                 this.refresh();
@@ -1352,6 +1369,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
             }
         }
         this._syncHost(state);
+        this._announceValue(state);
     }
 
     /**
@@ -1363,6 +1381,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
     onUpdate(state) {
         this._syncHost(state);
         this._syncVerticalScroll();
+        this._announceValue(state);
 
         const edit = state.editing ? state.editing.taskId + "/" + state.editing.key : null;
         if (edit !== this._focusedEdit) {
@@ -1370,6 +1389,25 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
             if (edit && this._editInput && this._editInput.isConnected !== false) {
                 this._editInput.focus({ preventScroll: true });
             }
+        }
+    }
+
+    /**
+     * Announces the project as the value of the chart when a render shows another one than
+     * the last announced - an edit of the user, a load or a write in code alike. The parts of
+     * the state are replaced, never changed, so only a replaced part is compared by content;
+     * a project written back unchanged is not announced.
+     * @param {object} state - The rendered state.
+     */
+    _announceValue(state) {
+        const last = this._announced;
+        if (last && last.tasks === state.tasks && last.links === state.links && last.calendar === state.calendar) {
+            return;
+        }
+        const key = JSON.stringify(this.value);
+        this._announced = { tasks: state.tasks, links: state.links, calendar: state.calendar, key: key };
+        if (last && last.key !== key) {
+            this._dispatch(webexpress.webui.Event.CHANGE_VALUE_EVENT, { value: this.value });
         }
     }
 

@@ -100,13 +100,14 @@ test("a field without a declared minimum length does not inherit the check thres
 /**
  * Runs the real REST form validator against one input, with only the translation
  * lookup stubbed so an assertion reads the message key rather than a catalogue entry.
+ * The validator also asks the control that owns the input, as the form does.
  * @param {object} rt - The loaded runtime.
  * @param {object} input - The input to validate.
  * @returns {string|null} The message key, or null when the input passes.
  */
 function validateField(rt, input) {
     const prototype = rt.wxapp.RestFormCtrl.prototype;
-    const form = { _i18n: (key) => key, _applyParams: prototype._applyParams };
+    const form = { _i18n: (key) => key, _applyParams: prototype._applyParams, _fieldOwner: prototype._fieldOwner };
 
     return prototype._validateField.call(form, input);
 }

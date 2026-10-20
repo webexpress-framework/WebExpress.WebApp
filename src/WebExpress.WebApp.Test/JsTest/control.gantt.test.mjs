@@ -1230,3 +1230,21 @@ test("teardown releases the keyboard of the host", () => {
     ctrl._element.dispatchEvent({ type: "keydown", key: "Delete", preventDefault() {} });
     assert.equal(ctrl.value.tasks.length, 3);
 });
+
+test("a project written in code is announced as the value once; writing it back is not", async () => {
+    const engine = load();
+    engine.setFetch(async () => ({ ok: true, status: 200, json: async () => ({}) }));
+    // the engine harness carries no event names
+    engine.wx.Event.CHANGE_VALUE_EVENT = "wx-change-value";
+    const ctrl = seededControl(engine);
+    const announced = [];
+    ctrl._element.addEventListener("wx-change-value", (e) => announced.push(e.detail.value.tasks.length));
+
+    ctrl.value = ctrl.value;
+    await settle();
+    assert.deepEqual(announced, [], "the same project is no change");
+
+    ctrl.value = { tasks: [{ id: "n", label: "New", start: "2026-07-01", duration: 1 }], links: [] };
+    await settle();
+    assert.deepEqual(announced, [1]);
+});

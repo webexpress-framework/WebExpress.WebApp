@@ -178,8 +178,13 @@ webexpress.webapp.StatusTaskCtrl = class extends webexpress.webui.Ctrl {
      * @param {string} status - The new status token.
      */
     set value(status) {
-        this._status = this._normalizeStatus(status);
+        const next = this._normalizeStatus(status);
+        const changed = next !== this._status;
+        this._status = next;
         this._render();
+        if (changed) {
+            this._dispatch(webexpress.webui.Event.CHANGE_VALUE_EVENT, { value: this.value });
+        }
     }
 
     /**

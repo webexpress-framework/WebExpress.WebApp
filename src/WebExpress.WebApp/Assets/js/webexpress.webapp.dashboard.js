@@ -205,9 +205,11 @@ webexpress.webapp.DashboardCtrl = class extends webexpress.webui.DashboardCtrl {
 
         this._pendingSaves++;
         this._saveQueue = this._saveQueue
-            .then(() => this._service.update(payload))
+            // a vetoed change is taken back the way a refused one is: once the queue is through
+            .then(() => this._saveAction(payload.action, payload, (sent) => this._service.update(sent),
+                () => { this._reloadDeferred = true; }))
             .then((r) => {
-                if (!r.ok) {
+                if (!r.ok && r.error.kind !== "abort") {
                     this._reject(payload.action, r);
                 }
             })

@@ -74,6 +74,9 @@ const BOOTSTRAP = `
         _i18n(key, fallback) { return fallback; }
         _isVisible() { return true; }
         _iconClass(icon) { return icon || ""; }
+        // the announcements and the veto of a save are covered by the WebUI tests; here a
+        // change is simply sent
+        _saveAction(action, payload, send) { return Promise.resolve(send(payload)); }
     };
     // a minimal Controller registry so that application control files, which
     // register their class at the end, can be loaded into the harness alongside

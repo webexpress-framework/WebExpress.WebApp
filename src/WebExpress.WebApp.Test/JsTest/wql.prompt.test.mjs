@@ -1395,3 +1395,18 @@ test("an undo during validation keeps a late verdict from applying", async () =>
     assert.equal(ctrl._dispatched.length, 0);
     assert.equal(ctrl.value, "a = ", "the undo took the last word back");
 });
+
+test("every change of the text is announced as the value, while only a send announces the filter", () => {
+    const { ctrl, engine } = loadPrompt();
+    // the engine harness carries no event names
+    engine.wx.Event.CHANGE_VALUE_EVENT = "wx-change-value";
+    const announced = [];
+    ctrl._element.addEventListener("wx-change-value", (e) => announced.push(e.detail.value));
+
+    type(ctrl, "ab");
+    ctrl.value = "x = 1";
+    ctrl.value = "x = 1";
+
+    assert.deepEqual(announced, ["a", "ab", "x = 1"], "typing and a program change the value alike, a repeat does not");
+    assert.equal(ctrl._dispatched.length, 0, "nothing was sent");
+});

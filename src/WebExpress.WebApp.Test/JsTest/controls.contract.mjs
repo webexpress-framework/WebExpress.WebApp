@@ -13,6 +13,12 @@
  *                       consumed and the instance is tracked) and can tear it
  *                       down again without the controller swallowing a
  *                       constructor, destroy or cleanup error.
+ *   3. value          - a control that exposes a writable value keeps the field
+ *                       side of the control contract (WebExpress.WebUI/docs/js/contract.md):
+ *                       it is pristine when it appears, writing back the value it
+ *                       reports changes and announces nothing, and the field
+ *                       contract can validate it. A value without a setter is a
+ *                       report and only has to be readable.
  *
  * The controller deliberately catches and logs construction and teardown
  * failures so that one broken control cannot abort a page; the lifecycle test
@@ -121,5 +127,58 @@ export function contract(control) {
         } finally {
             console.error = realError;
         }
+    });
+
+    test(`${control.selector} keeps the value contract when it exposes a value`, (t) => {
+        const rt = loadControl({ deps: control.deps, file: control.file });
+        const host = control.host ? control.host(rt, control.selector) : defaultHost(rt, control.selector);
+
+        rt.wx.Controller.createInstances(host);
+        const instance = rt.wx.Controller.getInstanceByElement(host);
+
+        if (!instance || !("value" in instance)) {
+            t.skip("the control exposes no value");
+            return;
+        }
+
+        const Field = rt.wx.Field;
+        if (!Field.isField(instance)) {
+            // a value without a setter reports what the control loads and stores itself
+            assert.doesNotThrow(() => instance.value, "a reported value can be read");
+            return;
+        }
+
+        assert.equal(Field.isDirty(instance), false, "a control is pristine when it appears");
+
+        const announced = [];
+        host.addEventListener(rt.wx.Event.CHANGE_VALUE_EVENT, (e) => announced.push(e.detail));
+        instance.value = instance.value;
+
+        assert.equal(announced.length, 0, "writing back the reported value announces no change");
+        assert.equal(Field.isDirty(instance), false, "writing back the reported value leaves the control pristine");
+
+        const results = Field.validate(instance);
+        assert.ok(Array.isArray(results), "the field contract validates the control");
+        for (const result of results) {
+            assert.ok(["error", "warning"].includes(result.type), `a result is an error or a warning, not "${result.type}"`);
+            assert.equal(typeof result.text, "string");
+        }
+    });
+
+    test(`${control.selector} stays required when the server marks its host required`, (t) => {
+        const rt = loadControl({ deps: control.deps, file: control.file });
+        const host = control.host ? control.host(rt, control.selector) : defaultHost(rt, control.selector);
+        // the mark ControlFormItemInput.Required renders on the host of a custom input
+        host.setAttribute("data-required", "true");
+
+        rt.wx.Controller.createInstances(host);
+        const instance = rt.wx.Controller.getInstanceByElement(host);
+
+        if (!instance || !rt.wx.Field.isField(instance)) {
+            t.skip("the control is no field");
+            return;
+        }
+
+        assert.equal(rt.wx.Field.isRequired(instance), true, "the required mark survives the construction");
     });
 }

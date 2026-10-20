@@ -361,7 +361,8 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
             return;
         }
 
-        this._service.update(payload).then((result) => {
+        // a vetoed change is taken back the way a refused one is: the stored board is loaded
+        this._saveAction(payload.action || "move", payload, (sent) => this._service.update(sent), () => this.update()).then((result) => {
             // a new filter is applied by reloading, but only once it is stored: a
             // load without wql falls back to the stored filter, so a reload that
             // overtook the write would bring the old one back

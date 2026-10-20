@@ -408,10 +408,13 @@ webexpress.webapp.ScheduleCtrl = class extends webexpress.webui.ScheduleCtrl {
             return false;
         }
 
-        const result = await this._service.remove({ params: { id: id } });
+        // the item leaves the calendar only once it is deleted, so a veto has nothing to take back
+        const result = await this._saveAction("delete", { id: id }, (sent) => this._service.remove({ params: sent }));
 
         if (!result.ok) {
-            this._fail("delete", result.error, { id: id });
+            if (result.error.kind !== "abort") {
+                this._fail("delete", result.error, { id: id });
+            }
             return false;
         }
 
@@ -419,7 +422,7 @@ webexpress.webapp.ScheduleCtrl = class extends webexpress.webui.ScheduleCtrl {
             items: this._wireItems().filter((item) => item.id !== id),
             holidays: this.model.holidays
         };
-        this._dispatch(webexpress.webui.Event.CHANGE_VALUE_EVENT, { action: "delete", id: id });
+        this._dispatch(webexpress.webui.Event.CHANGE_VALUE_EVENT, { value: this.value, action: "delete", id: id });
 
         return true;
     }
@@ -438,15 +441,17 @@ webexpress.webapp.ScheduleCtrl = class extends webexpress.webui.ScheduleCtrl {
         }
 
         const payload = webexpress.webapp.scheduleModel.toPayload(item);
-        const result = action === "create"
-            ? await this._service.create(payload)
-            : await this._service.update(payload);
+        // the optimistic move is rolled back by reloading the shown period, so the calendar
+        // never keeps a change the server refused or a listener vetoed
+        const result = await this._saveAction(action, payload,
+            (sent) => action === "create" ? this._service.create(sent) : this._service.update(sent),
+            () => this._reload(true));
 
         if (!result.ok) {
-            this._fail(action, result.error, { item: payload });
-            // the optimistic move is rolled back by reloading the shown period,
-            // so the calendar never keeps a change the server refused
-            this._reload(true);
+            if (result.error.kind !== "abort") {
+                this._fail(action, result.error, { item: payload });
+                this._reload(true);
+            }
             return null;
         }
 
@@ -460,7 +465,7 @@ webexpress.webapp.ScheduleCtrl = class extends webexpress.webui.ScheduleCtrl {
         this.model = { items: others.concat([saved]), holidays: this.model.holidays };
         this._suppressPersist = false;
 
-        this._dispatch(webexpress.webui.Event.CHANGE_VALUE_EVENT, { action: action, id: saved.id, item: saved });
+        this._dispatch(webexpress.webui.Event.CHANGE_VALUE_EVENT, { value: this.value, action: action, id: saved.id, item: saved });
 
         return saved;
     }

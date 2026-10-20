@@ -2,6 +2,13 @@
  * REST form controller. Replaces a traditional form POST with a JSON REST request, performs
  * client-side validation.
  *
+ * The form is the reference of the saving side of the control contract (see
+ * WebExpress.WebUI/docs/js/contract.md): it tells whether its fields hold unsaved changes
+ * (dirty, markPristine, reset), validates every field in the shape of the field contract -
+ * a control inside it adds its own rules to the native ones - and saves through save(),
+ * which announces the save beforehand, resolves with the normalized result and reports a
+ * failure on the data error event.
+ *
  * The form decorates the markup the server rendered: its fields, its header and its buttons
  * stay where they are. What the control adds is rendered from the state - the error list,
  * the confirmation, the prolog and the delete confirmation at the top of the form body - and
@@ -15,6 +22,10 @@
  * - webexpress.webui.Event.TASK_FINISH_EVENT
  * - webexpress.webui.Event.DATA_ARRIVED_EVENT
  * - webexpress.webui.Event.CHANGE_VALUE_EVENT
+ * - webexpress.webui.Event.CHANGE_VALIDITY_EVENT
+ * - webexpress.webui.Event.BEFORE_SAVE_EVENT
+ * - webexpress.webui.Event.SAVED_EVENT
+ * - webexpress.webui.Event.DATA_ERROR_EVENT
  * - webexpress.webui.Event.UPLOAD_SUCCESS_EVENT
  * - webexpress.webui.Event.UPLOAD_ERROR_EVENT
  */
@@ -110,10 +121,17 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
         this._gated = null;
         this._confirmInput = null;
 
+        // the validity of the fields last announced; a form starts out valid
+        this._valid = true;
+        // what the fields held when the form was rendered, loaded or saved
+        this._pristinePayload = null;
+        this._pristineKey = null;
+
         this._onSubmitBound = this._onSubmit.bind(this);
 
         if (this._init() !== false) {
             this.mount();
+            this.markPristine();
             this.load();
         }
     }
@@ -344,6 +362,25 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
         this._element.classList.toggle("wx-restform-submitting", state.submitting === true);
         this._syncLock(state);
         this._syncFieldMarks(state);
+        this._announceValidity(state);
+    }
+
+    /**
+     * Announces when the fields turned invalid or valid again, whichever path marked them -
+     * a validation on the client or a refusal of the server - so a page can follow the
+     * validity of the form without knowing those paths.
+     * @param {object} state The rendered state.
+     */
+    _announceValidity(state) {
+        const valid = state.fieldErrors.length === 0;
+        if (valid === this._valid) {
+            return;
+        }
+        this._valid = valid;
+        this._dispatch(webexpress.webui.Event.CHANGE_VALIDITY_EVENT, {
+            valid: valid,
+            errors: state.fieldErrors.map((error) => error.message)
+        });
     }
 
     /**
@@ -494,7 +531,13 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
             });
 
             if (!result.ok) {
-                throw new Error(this._i18n("webexpress.webapp:error.load_failed", { status: result.status }));
+                // a load a newer one or the teardown cancelled is no failure to show
+                if (result.error && result.error.kind === "abort") {
+                    return;
+                }
+                const failure = new Error(this._i18n("webexpress.webapp:error.load_failed", { status: result.status }));
+                failure.result = result;
+                throw failure;
             }
 
             const json = result.data;
@@ -511,6 +554,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
             if (formData && typeof formData === "object") {
                 this._populate(formData);
             }
+            this.markPristine();
 
             if (typeof this.options.onLoadSuccess === "function") {
                 this.options.onLoadSuccess(json, result.response);
@@ -520,7 +564,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
             this._dispatch(webexpress.webui.Event.CHANGE_VALUE_EVENT, { source: "load", data: json });
 
         } catch (error) {
-            this._dispatchError(error);
+            this._dispatchError(error, "load");
         } finally {
             this._loading = false;
             this._setSubmitting(false);
@@ -544,7 +588,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
             }
 
             // handle nodelist (radio/checkbox groups)
-            if (fieldOrList instanceof RadioNodeList) {
+            if (typeof RadioNodeList !== "undefined" && fieldOrList instanceof RadioNodeList) {
                 const first = fieldOrList[0];
                 if (first.type === "radio") {
                     fieldOrList.value = String(value);
@@ -559,10 +603,9 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
 
             // handle elements
             const el = fieldOrList;
-            const ctrl = webexpress.webui.Controller.getClosestInstance(el);
+            const ctrl = this._fieldOwner(el);
 
-            // ensure the controller is not the form itself and supports value assignment
-            if (ctrl && ctrl !== this && typeof ctrl.value !== "undefined") {
+            if (ctrl) {
                 ctrl.value = value;
                 continue;
             }
@@ -574,7 +617,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
                     ? (Array.isArray(value) ? value.join(";") : String(value))
                     : "";
                 el.dispatchEvent(new Event("change", { bubbles: true }));
-            } else if (el instanceof HTMLSelectElement && el.multiple) {
+            } else if (el.tagName === "SELECT" && el.multiple) {
                 const values = (Array.isArray(value) ? value : [value]).map(String);
                 Array.from(el.options).forEach((opt) => {
                     opt.selected = values.includes(opt.value);
@@ -597,11 +640,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
             return;
         }
 
-        if (this.options.validateOnSubmit && !this.validate()) {
-            this._focusFirstInvalid();
-            return;
-        }
-        this.submit();
+        this.save();
     }
 
     /**
@@ -689,7 +728,41 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
             }
         }
 
+        // a control knows rules the markup cannot carry (a range whose bounds are inverted, a
+        // value the server refused), so its own validation joins the native one
+        const owner = msg ? null : this._fieldOwner(el);
+        if (owner) {
+            const error = webexpress.webui.Field.validate(owner).find((result) => result.type === "error");
+            msg = error ? error.text : null;
+        }
+
         return msg;
+    }
+
+    /**
+     * Gets the field control an element of the form carries the value of: the control whose
+     * host contains the element, when that control is a field and not the form itself.
+     * @param {HTMLElement} el The element of the form.
+     * @returns {webexpress.webui.Ctrl|null} The field control, or null for a native field.
+     */
+    _fieldOwner(el) {
+        const ctrl = webexpress.webui.Controller.getClosestInstance(el);
+        return ctrl && ctrl !== this && webexpress.webui.Field.isField(ctrl) ? ctrl : null;
+    }
+
+    /**
+     * Gets the field controls of the form, each once.
+     * @returns {Set<webexpress.webui.Ctrl>} The field controls.
+     */
+    _fieldControls() {
+        const controls = new Set();
+        for (const el of Array.from(this._element.elements || [])) {
+            const owner = this._fieldOwner(el);
+            if (owner) {
+                controls.add(owner);
+            }
+        }
+        return controls;
     }
 
     /**
@@ -701,11 +774,22 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
      */
     _validateFields(elements) {
         const fieldErrors = [];
+        // a control submitting through several inputs is one field and reports one error
+        const reported = new Set();
 
         for (const el of elements) {
+            const owner = this._fieldOwner(el);
+            // a disabled field is not validated, as on the server; its hidden input does not
+            // tell that it is disabled
+            if (owner && (reported.has(owner) || webexpress.webui.Field.isDisabled(owner))) {
+                continue;
+            }
             const msg = this._validateField(el);
             if (msg) {
                 fieldErrors.push({ field: el, message: msg });
+                if (owner) {
+                    reported.add(owner);
+                }
             }
         }
 
@@ -740,13 +824,75 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
+     * Tells whether the fields hold something else than what the form was rendered with, last
+     * loaded or last saved. The form compares what a submit would send, so every field counts
+     * the same way however it is built.
+     * @returns {boolean} True when there are unsaved changes.
+     */
+    get dirty() {
+        return this._payloadKey(this._buildPayload()) !== this._pristineKey;
+    }
+
+    /**
+     * Takes what the fields hold now as the saved state. The field controls of the form take
+     * their value as baseline as well, so each of them answers dirty in the sense of the form.
+     */
+    markPristine() {
+        this._pristinePayload = this._buildPayload();
+        this._pristineKey = this._payloadKey(this._pristinePayload);
+        for (const ctrl of this._fieldControls()) {
+            webexpress.webui.Field.markPristine(ctrl);
+        }
+    }
+
+    /**
+     * Sets the fields back to the saved state and drops the errors shown.
+     */
+    reset() {
+        if (this._pristinePayload) {
+            this._populate(this._pristinePayload);
+        }
+        this.clearErrors();
+    }
+
+    /**
+     * Saves the form: it validates the fields when the form asks for it, lets the listeners of
+     * the before save event veto the save or replace the payload, and submits. Every outcome
+     * of the request is answered with its normalized result, so a caller has one path to write;
+     * a refused validation answers with the kind "validation".
+     * @returns {Promise<object>} The result { ok, status, data, error }.
+     */
+    async save() {
+        if (this.options.validateOnSubmit && !this.validate()) {
+            this._focusFirstInvalid();
+            return webexpress.webui.Transport.fail("validation", 0, this._i18n("webexpress.webapp:validation.failed"), false);
+        }
+        return this.submit();
+    }
+
+    /**
+     * Serializes a payload for comparison.
+     * @param {Object} payload The payload.
+     * @returns {string|null} The comparison key, or null when the payload cannot be serialized.
+     */
+    _payloadKey(payload) {
+        try {
+            return JSON.stringify(payload);
+        } catch (error) {
+            return null;
+        }
+    }
+
+    /**
      * Builds a plain JavaScript object representing the form payload.
      * @returns {Object} Payload object.
      */
     _buildPayload() {
         const data = {};
+        // a field the lock disabled while a request is out still belongs to the form; the
+        // baseline a load or a save takes in that moment would otherwise miss it
         const elements = Array.from(this._element.elements || []).filter((el) => {
-            return el.name && !el.disabled && ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName) && el.type !== "file";
+            return el.name && (!el.disabled || this._locked.has(el)) && ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName) && el.type !== "file";
         });
 
         for (const el of elements) {
@@ -774,7 +920,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
                 }
                 continue;
             }
-            if (el instanceof HTMLSelectElement && el.multiple) {
+            if (el.tagName === "SELECT" && el.multiple) {
                 data[name] = Array.from(el.selectedOptions).map((o) => {
                     return o.value;
                 });
@@ -787,12 +933,18 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Submits the form payload to the configured REST API.
-     * @returns {Promise<void>} Promise resolving when done.
+     * Submits the form payload to the configured REST API without validating it first; save
+     * is the entry that validates. The before save event is dispatched cancelable, and a
+     * listener may replace detail.payload. A form without any endpoint is an authoring error
+     * and throws; every outcome of a request is answered with its result.
+     * @returns {Promise<object>} The normalized result { ok, status, data, error }.
      */
     async submit() {
+        const Transport = webexpress.webui.Transport;
+
         if (this._submitting) {
-            return;
+            // a second save while the first is out would store twice
+            return Transport.fail("abort", 0, "a save is already in progress", false);
         }
 
         const endpoint = this.options.api || this._element.action;
@@ -807,16 +959,23 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
             try {
                 const res = this.options.beforeSend(payload, this._element);
                 if (res === false) {
-                    return;
+                    return Transport.fail("abort", 0, "the save was cancelled", false);
                 }
                 if (res && typeof res === "object") {
                     payload = res;
                 }
             } catch (e) {
                 this._dispatchError(e);
-                return;
+                return Transport.fail("abort", 0, e && e.message ? e.message : "the save was cancelled", false);
             }
         }
+
+        const before = this._dispatch(webexpress.webui.Event.BEFORE_SAVE_EVENT,
+            { payload: payload, form: this._element }, { cancelable: true });
+        if (before && before.defaultPrevented) {
+            return Transport.fail("abort", 0, "the save was cancelled", false);
+        }
+        payload = before && before.detail && before.detail.payload ? before.detail.payload : payload;
 
         const { url, init } = webexpress.webapp.restFormModel.buildRequest(
             endpoint, this.options, payload, window.location.origin);
@@ -825,18 +984,22 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
         this._dispatch(webexpress.webui.Event.TASK_START_EVENT, { name: "submitting" });
         this._dispatch(webexpress.webui.Event.DATA_REQUESTED_EVENT, { type: "submit", url: url });
 
+        let result = null;
         try {
-            const result = await this._transport().request(url, init);
+            result = await this._transport().request(url, init);
             this._handleResult(result);
         } catch (error) {
             if (typeof this.options.onError === "function") {
                 this.options.onError(error);
             }
             this._dispatchError(error);
+            result = result || Transport.fail("network", 0, error && error.message ? error.message : "", true);
         } finally {
             this._setSubmitting(false);
             this._dispatch(webexpress.webui.Event.TASK_FINISH_EVENT, { name: "submitting" });
         }
+
+        return result;
     }
 
     /**
@@ -868,14 +1031,22 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
      * @param {object} result - The normalised service result.
      */
     _handleResult(result) {
+        // a request a newer one or the teardown cancelled is no failure to show
+        if (!result.ok && result.error && result.error.kind === "abort") {
+            return;
+        }
+
         const json = result.data;
         const classification = webexpress.webapp.restFormModel.classifyResponse(result.ok, result.status, json);
 
         if (classification.kind === "success") {
             this.clearErrors();
+            this.markPristine();
             if (typeof this.options.onSuccess === "function") {
                 this.options.onSuccess(json, result.response);
             }
+
+            this._dispatch(webexpress.webui.Event.SAVED_EVENT, { data: json, status: result.status, form: this._element });
 
             // the endpoint travels with the event so a surface that reads the same
             // service can tell that its data changed and reload; without it a
@@ -919,6 +1090,12 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
                 this.options.onError(json, result.response);
             }
             this._dispatch(webexpress.webui.Event.UPLOAD_ERROR_EVENT, { type: "validation", response: json, status: result.status, form: this._element });
+            this._dispatch(webexpress.webui.Event.DATA_ERROR_EVENT, {
+                action: "save",
+                error: { kind: "validation", status: result.status, message: messages[0], retriable: false },
+                fields: fieldErrors.map((error) => ({ field: error.field, message: error.message })),
+                form: this._element
+            });
         } else {
             // handle system errors
             const message = this._i18n("webexpress.webapp:error.request_failed")
@@ -927,6 +1104,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
             err.status = result.status;
             err.response = result.response;
             err.payload = json;
+            err.result = result;
             throw err;
         }
     }
@@ -1026,13 +1204,24 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Handles an error by displaying a message and dispatching an error event.
+     * Handles an error by displaying a message and dispatching an error event. An error that
+     * carries the result of a failed request is reported on the data error event as well, in
+     * the normalized shape every control reports a failed load or save in.
      * @param {Error} error The error that occurred.
+     * @param {string} [action="save"] The action that failed: "load" or "save".
      */
-    _dispatchError(error) {
+    _dispatchError(error, action = "save") {
         const msg = (error && error.message) ? error.message : this._i18n("webexpress.webapp:error.generic");
         this._displayAggregatedErrors([msg]);
         this._dispatch(webexpress.webui.Event.UPLOAD_ERROR_EVENT, { error: error, form: this._element });
+
+        if (error && error.result && error.result.error) {
+            this._dispatch(webexpress.webui.Event.DATA_ERROR_EVENT, {
+                action: action,
+                error: Object.assign({}, error.result.error, { message: msg }),
+                form: this._element
+            });
+        }
     }
 
     /**
@@ -1077,10 +1266,12 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Dispose the control and remove listeners.
+     * Tears the form down: the submit listener goes with it, then the data base aborts the
+     * services and stops rendering.
      */
-    dispose() {
+    destroy() {
         this._element.removeEventListener("submit", this._onSubmitBound, true);
+        super.destroy();
     }
 
     /**

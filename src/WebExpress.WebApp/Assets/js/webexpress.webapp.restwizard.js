@@ -584,13 +584,8 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
             return;
         }
 
-        if (this.options.validateOnSubmit && !this.validate()) {
-            this._focusFirstInvalid();
-            return;
-        }
-
-        // delegate to base class submit method for final REST request
-        this.submit();
+        // the save of the base validates the whole wizard through the validate override
+        this.save();
     }
 
     /**
