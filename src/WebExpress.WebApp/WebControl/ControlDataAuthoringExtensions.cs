@@ -776,9 +776,59 @@ namespace WebExpress.WebApp.WebControl
         public static ControlDataModalEditor DraftService<TEndpoint>(this ControlDataModalEditor control, Action<DataServiceDescriptor> configure = null)
             where TEndpoint : IEndpoint
         {
-            var endpoint = Endpoint<TEndpoint>();
-            var domains = Domains<TEndpoint>();
+            return SetDraftPreset(control, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
+        }
 
+        /// <summary>
+        /// Declares the record service of the workbook dialog, which loads the
+        /// workbook the dialog opens on and publishes it on submit. It is the
+        /// first of the two endpoints such a dialog declares; the second is the
+        /// draft below.
+        /// </summary>
+        /// <remarks>
+        /// An overload of its own for the same reason as the document form's:
+        /// the inherited one answers the base type, and the draft cannot be
+        /// declared on that.
+        /// </remarks>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The workbook dialog.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataModalSpreadsheet DataService<TEndpoint>(this ControlDataModalSpreadsheet control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, DataServiceDescriptor.FormData, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
+        }
+
+        /// <summary>
+        /// Declares the draft service of the workbook dialog, which stores the
+        /// unpublished workbook with PUT, answers it with GET and drops it with
+        /// DELETE - what "do not lose what I have entered" means, while the
+        /// record service declared with DataService is what "let the readers see
+        /// this" means.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The workbook dialog.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataModalSpreadsheet DraftService<TEndpoint>(this ControlDataModalSpreadsheet control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return SetDraftPreset(control, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
+        }
+
+        /// <summary>
+        /// Sets the draft service of a document dialog.
+        /// </summary>
+        /// <typeparam name="T">The control type.</typeparam>
+        /// <param name="control">The document dialog.</param>
+        /// <param name="endpoint">The endpoint resolver.</param>
+        /// <param name="domains">The wire names of the domains the endpoint serves.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        private static T SetDraftPreset<T>(T control, Func<IRenderControlContext, string> endpoint, IEnumerable<string> domains, Action<DataServiceDescriptor> configure)
+            where T : ControlDataModalDocument
+        {
             // the draft is declared apart from the ServiceFactories the presets add
             // to, because assigning the single ServiceFactory replaces all of them -
             // a record service declared after the draft would otherwise drop the

@@ -138,6 +138,7 @@ namespace WebExpress.WebApp.WebCollaboration
             RegisterSchema(new RichTextSchema());
             RegisterSchema(new PlainTextSchema());
             RegisterSchema(new GraphSchema());
+            RegisterSchema(new SpreadsheetSchema());
 
             _subscription = _cluster()?.Subscribe(ClusterTopic, OnClusterMessage);
         }

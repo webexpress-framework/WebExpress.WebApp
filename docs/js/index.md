@@ -18,6 +18,7 @@ This section documents the JavaScript controllers and client-side behavior used 
 - [InputCascadingCtrl](cascading.md)
 - [LikeCtrl](like.md)
 - [ModalEditorCtrl](modal.editor.md)
+- [ModalSpreadsheetCtrl](modal.spreadsheet.md)
 - [RelationViewCtrl](relation.view.md)
 - [RelationEditorCtrl](relation.editor.md)
 - [RestFormCtrl](form.md)

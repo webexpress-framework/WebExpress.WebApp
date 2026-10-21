@@ -15,7 +15,7 @@ namespace WebExpress.WebApp.WebCollaboration
     public interface ICollaborativeSchema
     {
         /// <summary>
-        /// Returns the document kind, as the shared controls name it ("richtext", "text", "graph").
+        /// Returns the document kind, as the shared controls name it ("richtext", "text", "graph", "spreadsheet").
         /// </summary>
         string Kind { get; }
 

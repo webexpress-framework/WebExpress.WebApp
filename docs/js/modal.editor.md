@@ -162,6 +162,10 @@ ctrl.refresh();
 
 `destroy()` removes every listener and clears the pending timer.
 
+## Other Kinds of Documents
+
+Drafting, publishing, sharing and the bar do not depend on what the body is, so a dialog for another kind of document derives from this class and changes two things: `_value()` returns what its surface holds, and `_createPreview()` returns the host of its reading view, which goes through the registry and is filled with `value`. `_createPreview()` runs from this class's constructor, before a derived constructor, so it may not rely on fields of its own. [`ModalSpreadsheetCtrl`](modal.spreadsheet.md) is the workbook kind; on the server, both derive from `ControlDataModalDocument`.
+
 ## Use Case Examples
 
 The control is authored in C#; the markup below is what it renders, and what the controller expects to find.

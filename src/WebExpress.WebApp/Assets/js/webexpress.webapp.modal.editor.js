@@ -276,10 +276,7 @@ webexpress.webapp.ModalEditorCtrl = class extends webexpress.webui.ModalCtrl {
     _initPreview() {
         this._surface = this._box.firstElementChild;
 
-        this._preview = document.createElement("div");
-        this._preview.className = "wx-webui-content wx-editor-form-preview";
-        this._preview.setAttribute("data-fill", "true");
-        this._preview.setAttribute("data-placeholder", this._i18n("webexpress.webapp:editorform.preview.empty", ""));
+        this._preview = this._createPreview();
         this._preview.setAttribute("hidden", "");
         this._box.appendChild(this._preview);
 
@@ -320,6 +317,23 @@ webexpress.webapp.ModalEditorCtrl = class extends webexpress.webui.ModalCtrl {
         // whoever comes back to a document comes to write, and a reading view left open would
         // greet them with a text they cannot type into
         this._listen(this._element, webexpress.webui.Event.MODAL_HIDE_EVENT, () => { this.view = webexpress.webapp.ModalEditorCtrl.WRITE; });
+    }
+
+    /**
+     * Creates the host of the reading view, the content control that renders the editor's value
+     * the way the readers get it. A dialog for another kind of document overrides this with the
+     * control that reads its kind; the host takes its value through the registry either way.
+     *
+     * It is called from the constructor of this class, before a derived constructor has run, so
+     * an override may not rely on fields of its own.
+     * @returns {HTMLElement} The host, not yet in the document.
+     */
+    _createPreview() {
+        const preview = document.createElement("div");
+        preview.className = "wx-webui-content wx-editor-form-preview";
+        preview.setAttribute("data-fill", "true");
+        preview.setAttribute("data-placeholder", this._i18n("webexpress.webapp:editorform.preview.empty", ""));
+        return preview;
     }
 
     /**

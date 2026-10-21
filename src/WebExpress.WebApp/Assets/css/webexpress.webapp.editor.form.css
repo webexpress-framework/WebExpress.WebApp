@@ -192,3 +192,23 @@
     overflow: auto;
     padding: 1rem 1.25rem;
 }
+
+/* ------------------------------------------------------------ workbook */
+
+/* A workbook in the dialog goes edge to edge like a text: the dialog is its frame, so the
+   spreadsheet's own border and rounding would draw a second one inside it. The height is the
+   fill contract's, which the viewport-based height of a filling spreadsheet must not fight. */
+.wx-spreadsheet-form .wx-spreadsheet {
+    border-width: 0;
+    border-radius: 0;
+}
+
+.wx-spreadsheet-form .wx-spreadsheet.wx-spreadsheet-fill {
+    height: auto;
+}
+
+/* the reading view is a grid that scrolls itself; the margin a text gets would only take cells */
+.wx-spreadsheet-form .wx-editor-form-preview {
+    overflow: hidden;
+    padding: 0;
+}
