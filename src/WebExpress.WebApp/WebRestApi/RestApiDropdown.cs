@@ -120,6 +120,14 @@ namespace WebExpress.WebApp.WebRestApi
         protected abstract IEnumerable<RestApiDropdownItem> RetrieveItems(IQuery<TIndexItem> query, IQueryContext context, IRequest request);
 
         /// <summary>
+        /// Returns how a WQL statement is turned into a query. The default evaluates the text
+        /// conditions as the index does, which only a provider running in memory can execute;
+        /// an endpoint backed by a database returns <see cref="WqlQueryMode.Translatable"/>,
+        /// so that its query provider can translate the filter into SQL.
+        /// </summary>
+        protected virtual WqlQueryMode QueryMode => WqlQueryMode.Exact;
+
+        /// <summary>
         /// Applies filtering criteria to the specified query based on the provided WQL statement.
         /// </summary>
         /// <param name="wqlStatement">
@@ -145,7 +153,7 @@ namespace WebExpress.WebApp.WebRestApi
                 return query;
             }
 
-            return wqlStatement.ToQuery();
+            return wqlStatement.ToQuery(QueryMode);
         }
 
         /// <summary>
