@@ -270,6 +270,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
             this._templates.set(id, {
                 id: id,
                 html: tpl.innerHTML,
+                bind: this._copyBinding(tpl),
                 icon: icon,
                 name: name,
                 description: description,
@@ -285,6 +286,30 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
                 tpl.parentNode.removeChild(tpl);
             }
         }
+    }
+
+    /**
+     * Copies the binding attributes of an element onto a detached one. It keeps the binding
+     * a template declares on itself (ControlDataTabTemplate.Bind), which filling the pane
+     * from the inner html alone would drop. The copy stays detached rather than going onto
+     * the live pane, where the controller would take a data-wx-bind for a WebUI bind of that
+     * name.
+     * @param {HTMLElement} el - The element declaring the binding.
+     * @returns {HTMLElement|null} The detached copy, or null without a binding.
+     */
+    _copyBinding(el) {
+        if (!el.hasAttribute("data-wx-bind")) {
+            return null;
+        }
+
+        const source = document.createElement("div");
+        for (const attr of Array.from(el.attributes || [])) {
+            if (attr.name === "data-wx-bind" || attr.name.startsWith("data-wx-bind-")) {
+                source.setAttribute(attr.name, attr.value);
+            }
+        }
+
+        return source;
     }
 
     /**
@@ -953,20 +978,22 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
     }
 
     /**
-     * Resolves target elements for a binding and always includes source element.
+     * Resolves target elements for a binding and always includes source element. The
+     * selector is resolved within the bound element rather than the whole pane, so a plain
+     * selector such as wx-service:first-of-type cannot reach into the controls next to it.
      * @param {HTMLElement} rootElement - Current bound element.
-     * @param {HTMLElement} pane - Pane root.
      * @param {string} targetSelector - Optional selector.
+     * @param {boolean} [includeRoot=true] - False keeps the bound element out of a selector's targets.
      * @returns {HTMLElement[]} Target elements.
      */
-    _resolveBindingTargets(rootElement, pane, targetSelector) {
-        const targets = [rootElement];
-
+    _resolveBindingTargets(rootElement, targetSelector, includeRoot = true) {
         if (!targetSelector || targetSelector === "self") {
-            return targets;
+            return [rootElement];
         }
 
-        const nodes = Array.from(pane.querySelectorAll(targetSelector));
+        const targets = includeRoot ? [rootElement] : [];
+
+        const nodes = Array.from(rootElement.querySelectorAll(targetSelector));
         for (let i = 0; i < nodes.length; i++) {
             if (!targets.includes(nodes[i])) {
                 targets.push(nodes[i]);
@@ -1027,13 +1054,15 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
      * - data-wx-bind-<key>-name
      * - data-wx-bind-<key>-target
      * @param {HTMLElement} el - Bound element.
-     * @param {HTMLElement} pane - Pane root.
      * @param {Object} item - Data item.
      * @param {Object} bindingMap - Binding map.
+     * @param {HTMLElement} [source=el] - The element declaring the binding; a template
+     *     declares it apart from the pane it binds, whose content a selector then targets
+     *     without the pane itself.
      * @returns {boolean} True if at least one binding was applied.
      */
-    _applyBindings(el, pane, item, bindingMap) {
-        const bindAttr = el.getAttribute("data-wx-bind");
+    _applyBindings(el, item, bindingMap, source = el) {
+        const bindAttr = source.getAttribute("data-wx-bind");
         if (bindAttr === null) {
             return false;
         }
@@ -1054,16 +1083,16 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
             // paging, show, ...); a bare WebUI bind key carries no item data, so
             // writing its empty value would wipe the host's children including
             // its wx-service/wx-state islands. only bind keys that carry data.
-            if (!this._isItemBindingKey(el, item, bindingMap, key)) {
+            if (!this._isItemBindingKey(source, item, bindingMap, key)) {
                 continue;
             }
 
-            const mode = (el.getAttribute("data-wx-bind-" + key + "-mode") || "text").trim().toLowerCase();
-            const name = (el.getAttribute("data-wx-bind-" + key + "-name") || "").trim();
-            const targetSelector = (el.getAttribute("data-wx-bind-" + key + "-target") || "self").trim();
+            const mode = (source.getAttribute("data-wx-bind-" + key + "-mode") || "text").trim().toLowerCase();
+            const name = (source.getAttribute("data-wx-bind-" + key + "-name") || "").trim();
+            const targetSelector = (source.getAttribute("data-wx-bind-" + key + "-target") || "self").trim();
 
             const value = this._resolveBindingValue(item, bindingMap, key);
-            const targets = this._resolveBindingTargets(el, pane, targetSelector);
+            const targets = this._resolveBindingTargets(el, targetSelector, source === el);
 
             this._applyBindingToTargets(targets, mode, name, value);
             applied = true;
@@ -1141,14 +1170,22 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         // a template renders once on the server, so instantiating it into more
         // than one pane repeats its baked-in ids; uniquify them before the
         // bindings resolve any #id targets and before the controls mount.
-        this._uniquifyIds(pane, item.id);
+        const rename = this._uniquifyIds(pane, item.id);
 
         const bindingMap = (item.binding && typeof item.binding === "object") ? item.binding : {};
         const boundElements = Array.from(pane.querySelectorAll("[data-wx-bind]"));
 
+        if (template && template.bind) {
+            // the template's #id targets point into this pane, whose ids were just renamed;
+            // a copy is rewritten so the stored template serves the next pane unchanged
+            const source = this._copyBinding(template.bind);
+            this._rewriteIdReferences(source, rename);
+            this._applyBindings(pane, item, bindingMap, source);
+        }
+
         // apply all bindings first
         for (let i = 0; i < boundElements.length; i++) {
-            this._applyBindings(boundElements[i], pane, item, bindingMap);
+            this._applyBindings(boundElements[i], item, bindingMap);
         }
 
         // cleanup after all binding writes
@@ -1169,6 +1206,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
      * pointing there.
      * @param {HTMLElement} pane - The pane whose subtree was just built.
      * @param {string} suffix - A per-pane unique suffix; the pane id is unique per tab.
+     * @returns {Map<string, string>} The old id to new id map, for references held outside the pane.
      */
     _uniquifyIds(pane, suffix) {
         const safeSuffix = (suffix != null && String(suffix) !== "")
@@ -1187,7 +1225,7 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         }
 
         if (rename.size === 0) {
-            return;
+            return rename;
         }
 
         for (let i = 0; i < owned.length; i++) {
@@ -1201,6 +1239,8 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
         for (let i = 0; i < all.length; i++) {
             this._rewriteIdReferences(all[i], rename);
         }
+
+        return rename;
     }
 
     /**
