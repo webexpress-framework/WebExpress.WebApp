@@ -367,6 +367,11 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
                 try {
                     data = contentType.includes("application/json") ? await response.json() : { text: await response.text() };
                 } catch (parseError) {
+                    // the body stream fails as well when the request is aborted after the
+                    // headers arrived; that is a cancellation, not an unreadable answer
+                    if (this._isAbort(init.signal, parseError)) {
+                        return this._abortResult();
+                    }
                     const result = webexpress.webapp.ServiceResult.fail("parse", response.status, "response was not valid json", false);
                     result.response = response;
                     result.contentType = contentType;
@@ -393,7 +398,7 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
 
             return { ok: true, data: data, error: null, status: response.status, response: response, contentType: contentType };
         } catch (networkError) {
-            const kind = (networkError && networkError.name === "AbortError") ? "abort" : "network";
+            const kind = this._isAbort(init.signal, networkError) ? "abort" : "network";
             const result = webexpress.webapp.ServiceResult.fail(kind, 0, networkError ? networkError.message : "network error", kind === "network");
             result.response = null;
             result.contentType = "";
@@ -470,6 +475,29 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
         }
 
         return base.startsWith("http") ? url.href : url.pathname + url.search;
+    }
+
+    /**
+     * Tells whether a request ended because it was aborted. The signal is the authority on
+     * why it ended: a controller aborted with a reason rejects with that reason rather than
+     * with an AbortError.
+     * @param {AbortSignal|null|undefined} signal - The signal of the request.
+     * @param {*} error - The rejection.
+     * @returns {boolean} True for an abort.
+     */
+    _isAbort(signal, error) {
+        return !!((signal && signal.aborted) || (error && error.name === "AbortError"));
+    }
+
+    /**
+     * Builds the result of an aborted request, which is never reported.
+     * @returns {object} The abort result.
+     */
+    _abortResult() {
+        const result = webexpress.webapp.ServiceResult.fail("abort", 0, "request was aborted", false);
+        result.response = null;
+        result.contentType = "";
+        return result;
     }
 
     /**
@@ -599,7 +627,8 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
                 // which is what the request path already does
                 result.data = await this._readFault(response);
 
-                return result;
+                // _readFault swallows a body cut off by an abort; the abort still decides
+                return abort && abort.signal.aborted ? this._abortResult() : result;
             }
 
             // a write the endpoint confirms without a body - 204, or 200 with a length of
@@ -615,15 +644,17 @@ webexpress.webapp.RestService = class extends webexpress.webapp.Service {
                 const data = await response.json();
                 return webexpress.webapp.ServiceResult.ok(data, response.status);
             } catch (parseError) {
+                // an abort while the body streams in is a cancellation, not an unreadable answer
+                if (this._isAbort(abort && abort.signal, parseError)) {
+                    return this._abortResult();
+                }
                 return webexpress.webapp.ServiceResult.fail("parse", response.status, "response was not valid json", false);
             }
         } catch (networkError) {
-            // the signal is the authority on why the request ended: a controller aborted
-            // with a reason rejects with that reason rather than with an AbortError, and
             // taking the rejection alone would report a cancellation as a network failure
             // — which is retriable, so a superseded request would be sent again and logged
-            if ((abort && abort.signal.aborted) || (networkError && networkError.name === "AbortError")) {
-                return webexpress.webapp.ServiceResult.fail("abort", 0, "request was aborted", false);
+            if (this._isAbort(abort && abort.signal, networkError)) {
+                return this._abortResult();
             }
             return webexpress.webapp.ServiceResult.fail("network", 0, networkError ? networkError.message : "network error", true);
         } finally {

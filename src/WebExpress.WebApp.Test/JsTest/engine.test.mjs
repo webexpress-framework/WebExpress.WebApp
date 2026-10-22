@@ -485,6 +485,38 @@ test("error channel stays silent on success and on abort", async () => {
     assert.equal(reported.length, 0);
 });
 
+test("an abort while the body is read is an abort, not a parse failure", async () => {
+    const { wxapp, setFetch, document } = loadEngine();
+    const reported = [];
+    document.addEventListener("webexpress.webapp.service.error", (event) => reported.push(event.detail));
+
+    // the headers arrived; the body stream then fails with the reason of the abort
+    const answer = (signal, abort) => ({
+        ok: true,
+        status: 200,
+        headers: { get: (name) => (name.toLowerCase() === "content-type" ? "application/json" : null) },
+        json: async () => { abort(); throw signal.reason; }
+    });
+
+    const controller = new AbortController();
+    setFetch(async (url, init) => answer(init.signal, () => controller.abort(new Error("superseded"))));
+    const service = new wxapp.RestService({ name: "data", baseUri: "/api/orders" });
+    const direct = await service.request("/api/orders", { signal: controller.signal });
+
+    assert.equal(direct.error.kind, "abort", "request: the signal decides, not the rejection of the body");
+
+    // a query is aborted by the next query on the same channel while its body streams in
+    let pending = null;
+    setFetch(async (url, init) => answer(init.signal, () => { pending = service.query({}); }));
+    const first = await service.query({});
+    setFetch(async () => ({ ok: true, status: 200, json: async () => ({}) }));
+    await pending;
+
+    assert.equal(first.error.kind, "abort", "query: a superseded body read is an abort");
+    assert.equal(first.error.retriable, false, "a superseded request is not sent again");
+    assert.equal(reported.length, 0, "an abort is not reported");
+});
+
 // Templates
 
 test("component without a render uses the referenced registered template", () => {
