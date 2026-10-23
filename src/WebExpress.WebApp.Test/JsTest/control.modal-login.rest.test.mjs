@@ -59,6 +59,27 @@ function renderHost(rt) {
     return { host, login };
 }
 
+test("the REST login submits the selected persistence choice from the shared switch", async () => {
+    const rt = loadControl({ file: "webexpress.webapp.login.js" });
+    const { host } = renderHost(rt);
+    rt.wx.Controller.createInstances(host);
+    const ctrl = rt.wx.Controller.instanceMap.get(host).login;
+    assert.equal(ctrl._rememberMeInput.checked, true);
+    let payload;
+    ctrl._service.request = async (url, options) => {
+        payload = JSON.parse(options.body);
+        return { data: { success: false, message: "Rejected" } };
+    };
+    ctrl._usernameInput.value = "alice";
+    ctrl._passwordInput.value = "secret";
+    for (const checked of [true, false]) {
+        ctrl._rememberMeInput.checked = checked;
+        ctrl._form.dispatchEvent({ type: "submit", preventDefault() { } });
+        await new Promise(resolve => setImmediate(resolve));
+        assert.deepEqual(payload, { username: "alice", password: "secret", rememberMe: checked });
+    }
+});
+
 test("the login dialog frames the REST login with its service and its error container", () => {
     const rt = loadControl({ file: "webexpress.webapp.login.js" });
     const { host, login } = renderHost(rt);

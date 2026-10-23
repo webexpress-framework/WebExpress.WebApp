@@ -74,6 +74,7 @@ namespace WebExpress.WebApp.WebRestApi
         {
             string username = null;
             string password = null;
+            var rememberMe = true;
 
             try
             {
@@ -90,10 +91,13 @@ namespace WebExpress.WebApp.WebRestApi
                     // covered by the catch below
                     if (root.ValueKind != JsonValueKind.Object
                         || !TryReadString(root, "username", out username)
-                        || !TryReadString(root, "password", out password))
+                        || !TryReadString(root, "password", out password)
+                        || (root.TryGetProperty("rememberMe", out var persistence)
+                            && persistence.ValueKind is not (JsonValueKind.True or JsonValueKind.False)))
                     {
                         return FormatError(request);
                     }
+                    rememberMe = !root.TryGetProperty("rememberMe", out var choice) || choice.GetBoolean();
                 }
             }
             catch (JsonException)
@@ -143,7 +147,7 @@ namespace WebExpress.WebApp.WebRestApi
                 // clear failed attempts on successful login
                 ResetFailedAttempts(request, normalizedUser);
 
-                var tokens = EstablishIdentity(identity, request);
+                var tokens = EstablishIdentity(identity, request, rememberMe);
 
                 // valid credentials are not enough: if credentials could not be issued the
                 // client has nothing to authenticate later requests with, so this is a login
@@ -278,10 +282,11 @@ namespace WebExpress.WebApp.WebRestApi
         /// </remarks>
         /// <param name="identity">The authenticated identity.</param>
         /// <param name="request">The original request.</param>
+        /// <param name="rememberMe">Whether browser credentials persist beyond the browser session.</param>
         /// <returns>The issued credentials, or null if authentication could not be established.</returns>
-        protected virtual IdentityTokenPair EstablishIdentity(IIdentity identity, IRequest request)
+        protected virtual IdentityTokenPair EstablishIdentity(IIdentity identity, IRequest request, bool rememberMe = true)
         {
-            return WebEx.ComponentHub.IdentityManager.Login(identity, request);
+            return WebEx.ComponentHub.IdentityManager.Login(identity, request, rememberMe);
         }
 
         /// <summary>

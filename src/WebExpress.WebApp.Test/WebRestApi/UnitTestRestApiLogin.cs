@@ -41,6 +41,56 @@ namespace WebExpress.WebApp.Test.WebRestApi
             if (Directory.Exists(_tokenDirectory)) { Directory.Delete(_tokenDirectory, true); }
         }
         /// <summary>
+        /// Carries the form preference into the shared protected cookie writer.
+        /// </summary>
+        /// <param name="rememberMe">Whether browser cookies should persist.</param>
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void AuthenticateHonorsPersistence(bool rememberMe)
+        {
+            // arrange
+            var hub = CreateAuthenticationHub();
+            var user = UniqueUser();
+            var api = new TestRestApiLogin(user, "correct");
+            var request = CreateLoginRequest(user, "correct", rememberMe: rememberMe);
+
+            // act
+            var result = api.Authenticate(request);
+            hub.IdentityManager.ApplyAuthenticationCookies(request, result);
+
+            // validation
+            Assert.True(ParseResponseJson(result).GetProperty("success").GetBoolean());
+            Assert.Equal(2, result.Header.Cookies.Count);
+            Assert.All(result.Header.Cookies.Cast<System.Net.Cookie>(), cookie =>
+                Assert.Equal(rememberMe, cookie.Expires != DateTime.MinValue));
+        }
+
+        /// <summary>
+        /// Rejects nonboolean persistence values without issuing cookies.
+        /// </summary>
+        /// <param name="choice">The malformed JSON persistence value.</param>
+        [Theory]
+        [InlineData("null")]
+        [InlineData("0")]
+        [InlineData("\"false\"")]
+        public void AuthenticateRejectsInvalidPersistence(string choice)
+        {
+            // arrange
+            var hub = CreateAuthenticationHub();
+            var api = new TestRestApiLogin("alice", "correct");
+            var request = CreateRawLoginRequest("{\"username\":\"alice\",\"password\":\"correct\",\"rememberMe\":" + choice + "}");
+
+            // act
+            var result = api.Authenticate(request);
+            hub.IdentityManager.ApplyAuthenticationCookies(request, result);
+
+            // validation
+            Assert.False(ParseResponseJson(result).GetProperty("success").GetBoolean());
+            Assert.Empty(result.Header.Cookies.Cast<System.Net.Cookie>());
+        }
+
+        /// <summary>
         /// Tests successful authentication.
         /// </summary>
         [Fact]
@@ -573,10 +623,14 @@ namespace WebExpress.WebApp.Test.WebRestApi
         /// <param name="password">The password to verify before returning an authenticated identity.</param>
         /// <param name="applicationId">The application identifier that scopes token audiences and authentication.</param>
         /// <param name="language">The browser language used to select response messages.</param>
+        /// <param name="rememberMe">The optional persistence choice included in the credential body.</param>
         /// <returns>The request carrying credentials for the selected application.</returns>
-        private static IRequest CreateLoginRequest(string username, string password, string applicationId = "login-tests", string language = "en")
+        private static IRequest CreateLoginRequest(string username, string password, string applicationId = "login-tests", string language = "en", bool? rememberMe = null)
         {
-            var request = CreateRawLoginRequest(JsonSerializer.Serialize(new { username, password }), language);
+            var body = rememberMe.HasValue
+                ? JsonSerializer.Serialize(new { username, password, rememberMe = rememberMe.Value })
+                : JsonSerializer.Serialize(new { username, password });
+            var request = CreateRawLoginRequest(body, language);
 
             if (applicationId is not null)
             {
@@ -672,10 +726,11 @@ namespace WebExpress.WebApp.Test.WebRestApi
             /// </summary>
             /// <param name="identity">The verified identity whose authorization snapshot is being processed.</param>
             /// <param name="request">The HTTP request whose authentication context is being evaluated.</param>
+            /// <param name="rememberMe">Whether browser credentials persist beyond the browser session.</param>
             /// <returns>The issued token pair, or null when the test simulates issuance failure.</returns>
-            protected override IdentityTokenPair EstablishIdentity(IIdentity identity, IRequest request)
+            protected override IdentityTokenPair EstablishIdentity(IIdentity identity, IRequest request, bool rememberMe = true)
             {
-                return FailSessionCreation ? null : base.EstablishIdentity(identity, request);
+                return FailSessionCreation ? null : base.EstablishIdentity(identity, request, rememberMe);
             }
 
             /// <summary>

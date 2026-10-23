@@ -50,7 +50,7 @@ webexpress.webapp.LoginCtrl = class extends webexpress.webui.LoginCtrl {
 
     /**
      * Override the base event handlers to use REST-based authentication
-     * instead of the basic auth approach in the base class.
+     * instead of the framework authentication endpoint in the base class.
      */
     _attachEventHandlers() {
         this._form.addEventListener("submit", async (e) => {
@@ -92,7 +92,7 @@ webexpress.webapp.LoginCtrl = class extends webexpress.webui.LoginCtrl {
                 headers: {
                     "Content-Type": "application/json; charset=utf-8"
                 },
-                body: JSON.stringify({ username, password })
+                body: JSON.stringify({ username, password, rememberMe: this._rememberMeInput.checked })
             });
 
             const data = result.data;

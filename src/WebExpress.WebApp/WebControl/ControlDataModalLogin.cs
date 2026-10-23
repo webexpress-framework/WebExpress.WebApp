@@ -1,9 +1,8 @@
-using System;
 using System.Collections.Generic;
+using System;
 using WebExpress.WebApp.WebApiControl;
 using WebExpress.WebApp.WebData;
 using WebExpress.WebCore.WebHtml;
-using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
@@ -46,13 +45,6 @@ namespace WebExpress.WebApp.WebControl
         /// Gets or sets the optional initial state of the framed login.
         /// </summary>
         public Func<IRenderControlContext, DataState> StateFactory { get => _login.StateFactory; set => _login.StateFactory = value; }
-
-        /// <summary>
-        /// Gets or sets the URI the page moves on to after a successful login. Without
-        /// one the page is reloaded, which is what a dialog opened on the page to stay
-        /// on usually wants.
-        /// </summary>
-        public Func<IRenderControlContext, IUri> RedirectUri { get => _login.RedirectUri; set => _login.RedirectUri = value; }
 
         /// <summary>
         /// Initializes a new instance of the class.

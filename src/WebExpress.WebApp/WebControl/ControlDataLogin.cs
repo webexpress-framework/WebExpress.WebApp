@@ -1,9 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System;
 using WebExpress.WebApp.WebControl;
 using WebExpress.WebApp.WebData;
 using WebExpress.WebCore.WebHtml;
-using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
@@ -52,11 +51,6 @@ namespace WebExpress.WebApp.WebApiControl
         /// Gets or sets the optional initial state, emitted as the wx-state island.
         /// </summary>
         public Func<IRenderControlContext, DataState> StateFactory { get; set; }
-
-        /// <summary>
-        /// Gets or sets the URI to redirect to after a successful login.
-        /// </summary>
-        public Func<IRenderControlContext, IUri> RedirectUri { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class.
