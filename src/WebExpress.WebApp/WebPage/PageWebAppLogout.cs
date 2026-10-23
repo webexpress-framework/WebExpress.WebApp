@@ -56,7 +56,7 @@ namespace WebExpress.WebApp.WebPage
                 Uri = _ => loginUri
             };
 
-            var card = new ControlPanelCard("wx-logout-card", title, message, loginLink)
+            var card = new ControlCard("wx-logout-card", title, message, loginLink)
             {
                 Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Three)
             };

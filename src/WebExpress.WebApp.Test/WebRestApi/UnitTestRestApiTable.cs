@@ -2,7 +2,11 @@
 using System.Text.Json;
 using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.Test.Model;
+using WebExpress.WebApp.WebRestApi;
+using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebParameter;
+using WebExpress.WebIndex.Queries;
+using WebExpress.WebIndex.Wql;
 
 namespace WebExpress.WebApp.Test.WebRestApi
 {
@@ -107,7 +111,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             Assert.Equal("item", option.GetProperty("type").GetString());
             Assert.Equal("edit", option.GetProperty("command").GetString());
             Assert.Equal("Edit", option.GetProperty("text").GetString());
-            Assert.Equal("fas fa-pen", option.GetProperty("icon").GetString());
+            Assert.Equal("wx-icon-light wx-icon-light-pen", option.GetProperty("icon").GetString());
             Assert.Equal("text-primary", option.GetProperty("color").GetString());
             Assert.NotNull(option.GetProperty("id").GetString());
 
@@ -326,6 +330,76 @@ Content-Type: application/json
             Assert.False(options.GetProperty("editable").GetBoolean());
             Assert.Equal("", options.GetProperty("colorCss").GetString());
             Assert.Equal("hello webexpress", options.GetProperty("placeholder").GetString());
+        }
+
+        /// <summary>
+        /// Tests that the query mode an endpoint chooses decides how a WQL statement becomes a
+        /// query: by default the text matcher of the index, translatable for a database only
+        /// ToLower and Contains.
+        /// </summary>
+        [Theory]
+        [InlineData(null, true)]
+        [InlineData(WqlQueryMode.Exact, true)]
+        [InlineData(WqlQueryMode.Translatable, false)]
+        public void QueryMode(WqlQueryMode? mode, bool matcher)
+        {
+            // arrange
+            var table = new ModeTable(mode);
+            var statement = new WqlParser<TestIndexItem>().Parse("Description ~ 'alpha'");
+
+            // act
+            var query = table.FilterWql(statement);
+
+            // validation
+            var tree = string.Join(" ", query.Filters.Select(x => x.ToString()));
+            Assert.False(statement.HasErrors);
+            Assert.Equal(matcher, tree.Contains(nameof(WqlTextMatcher)));
+            Assert.Equal(!matcher, tree.Contains(".ToLower().Contains(\"alpha\")"));
+        }
+
+        /// <summary>
+        /// A table that keeps the default query mode or chooses one, and opens its WQL filter
+        /// to the test.
+        /// </summary>
+        private sealed class ModeTable(WqlQueryMode? mode) : RestApiTable<TestIndexItem>
+        {
+            /// <summary>
+            /// Returns the chosen mode, or the default of the base class.
+            /// </summary>
+            protected override WqlQueryMode QueryMode => mode ?? base.QueryMode;
+
+            /// <summary>
+            /// Applies the WQL filter of the base class to an empty query.
+            /// </summary>
+            /// <param name="statement">The parsed statement.</param>
+            /// <returns>The filtered query.</returns>
+            public IQuery<TestIndexItem> FilterWql(IWqlStatement<TestIndexItem> statement)
+            {
+                return Filter(statement, new Query<TestIndexItem>(), null);
+            }
+
+            /// <summary>
+            /// Returns no columns, which the test does not need.
+            /// </summary>
+            /// <param name="request">The request.</param>
+            /// <returns>An empty sequence.</returns>
+            protected override IEnumerable<RestApiTableColumn> RetrieveColums(IRequest request)
+            {
+                return [];
+            }
+
+            /// <summary>
+            /// Returns no rows, which the test does not need.
+            /// </summary>
+            /// <param name="query">The query.</param>
+            /// <param name="context">The query context.</param>
+            /// <param name="columns">The columns.</param>
+            /// <param name="request">The request.</param>
+            /// <returns>An empty sequence.</returns>
+            protected override IEnumerable<RestApiTableRow> RetrieveRows(IQuery<TestIndexItem> query, IQueryContext context, IEnumerable<RestApiTableColumn> columns, IRequest request)
+            {
+                return [];
+            }
         }
     }
 }

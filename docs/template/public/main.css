@@ -3,8 +3,5 @@
  * The .NET Foundation licenses this file to you under the MIT license.
  */
 
-/* Checkout https://getbootstrap.com/docs/5.3/customize/color/ for more customization options */
-body {
-  --bs-link-color-rgb: 66, 184, 131 !important;
-  --bs-link-hover-color-rgb: 64, 180, 128 !important;
-}
+a { color: rgb(66, 184, 131); }
+a:hover { color: rgb(64, 180, 128); }

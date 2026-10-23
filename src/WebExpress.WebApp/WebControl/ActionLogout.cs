@@ -15,7 +15,7 @@ namespace WebExpress.WebApp.WebApiControl
         /// Gets or sets the URI of the REST API endpoint that handles
         /// session invalidation (i.e. the RestApiSession route).
         /// </summary>
-        public IUri RestUri { get; set; }
+        public IUri RestEndpoint { get; set; }
 
         /// <summary>
         /// Gets or sets the target URI associated with this instance.
@@ -25,23 +25,23 @@ namespace WebExpress.WebApp.WebApiControl
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
-        /// <param name="restUri">
+        /// <param name="restEndpoint">
         /// The URI of the REST API endpoint that corresponds to RestApiSession.
         /// </param>
-        public ActionLogout(IUri restUri)
+        public ActionLogout(IUri restEndpoint)
         {
-            RestUri = restUri;
+            RestEndpoint = restEndpoint;
         }
 
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
-        /// <param name="restUri">
+        /// <param name="restEndpoint">
         /// The URI of the REST API endpoint that corresponds to RestApiSession.
         /// </param>
-        public ActionLogout(IUri restUri, IUri targetUri)
+        public ActionLogout(IUri restEndpoint, IUri targetUri)
         {
-            RestUri = restUri;
+            RestEndpoint = restEndpoint;
             TargetUri = targetUri;
         }
 
@@ -57,7 +57,7 @@ namespace WebExpress.WebApp.WebApiControl
         /// <returns>The current instance for method chaining.</returns>
         public IAction ApplyUserAttributes(IHtmlNode htmlNode, TypeAction typeAction)
         {
-            var uri = RestUri?.ToString();
+            var uri = RestEndpoint?.ToString();
             var target = TargetUri?.ToString();
 
             switch (typeAction)
@@ -94,9 +94,9 @@ namespace WebExpress.WebApp.WebApiControl
                 ["action"] = "logout"
             };
 
-            if (RestUri is not null)
+            if (RestEndpoint is not null)
             {
-                dict["uri"] = RestUri.ToString();
+                dict["uri"] = RestEndpoint.ToString();
             }
             if (TargetUri is not null)
             {

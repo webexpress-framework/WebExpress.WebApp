@@ -3,7 +3,7 @@
 namespace WebExpress.WebApp.WebScope
 {
     /// <summary>
-    /// A general scope.
+    /// Marks a page or element as belonging to the general (default) scope of a WebApp.
     /// </summary>
     public interface IScopeGeneral : IScope
     {

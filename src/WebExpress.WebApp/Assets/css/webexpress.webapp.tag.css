@@ -1,0 +1,79 @@
+/* Styles for the REST-backed tag control.
+   The chip / list styling is inherited from the WebUI .wx-tag rules
+   (webexpress.webui.tag.css). This file adds the "+" affordance on the
+   read-only surface and the autocomplete dropdown of the editable surface
+   shown inside the modal. */
+
+/* read-only tag surface with a "+" affordance; wx-tag-surface is the hook
+   TagCtrl re-adds after the wx-webapp-tag boot selector is consumed */
+.wx-tag-surface {
+    align-items: center;
+}
+
+.wx-tag-surface > .wx-tag-add {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5em;
+    height: 1.5em;
+    padding: 0;
+    margin-left: 0.2em;
+    font-size: inherit;
+    line-height: 1;
+    border: 1px dashed var(--wx-border-color, #ced4da);
+    border-radius: 0.2em;
+    background: transparent;
+    color: var(--wx-secondary-color, #6c757d);
+    cursor: pointer;
+}
+
+.wx-tag-surface > .wx-tag-add:hover {
+    color: var(--wx-body-color);
+    border-color: var(--wx-body-color);
+    background-color: var(--wx-secondary-bg, rgba(0, 0, 0, 0.05));
+}
+
+/* editable tag surface inside the modal: autocomplete dropdown
+   (display is set explicitly so it overrides the inherited WebUI
+   ".wx-tag > ul { display: inline-flex }" rule; the JS toggles visibility via
+   the inline style display:none). The host modal is opened non-scrollable (see
+   TagCtrl._openEditor / ModalCtrl data-scrollable) so the modal body does not
+   clip this absolutely positioned overlay. */
+.wx-webapp-tag-editor {
+    position: relative;
+}
+
+.wx-webapp-tag-editor > ul.wx-tag-suggestions {
+    display: block;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    z-index: 1080; /* above sibling modal content */
+    margin: 0.125rem 0 0 0;
+    padding: 0.25rem 0;
+    list-style: none;
+    max-height: 16rem;
+    overflow-y: auto;
+    background-color: var(--wx-body-bg);
+    border: 1px solid var(--wx-border-color);
+    border-radius: var(--wx-border-radius, 0.375rem);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.wx-webapp-tag-editor > ul.wx-tag-suggestions > li.wx-tag-suggestion {
+    display: block;
+    height: auto;
+    padding: 0.35rem 0.75rem;
+    cursor: pointer;
+    color: var(--wx-body-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.wx-webapp-tag-editor > ul.wx-tag-suggestions > li.wx-tag-suggestion:hover,
+.wx-webapp-tag-editor > ul.wx-tag-suggestions > li.wx-tag-suggestion.active {
+    background-color: var(--wx-primary);
+    color: var(--wx-white);
+}

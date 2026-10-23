@@ -41,6 +41,42 @@ namespace WebExpress.WebApp.WebMessageQueue
         public const string Caret = Prefix + "caret";
 
         /// <summary>
+        /// An announcement that the shared draft of a document was stored, so the peers editing
+        /// it can pick the new text up.
+        /// </summary>
+        /// <remarks>
+        /// It travels with the collaborative family rather than as a data change of its own,
+        /// because it means the same thing those messages mean: something one author did has to
+        /// reach the others looking at the same thing. What it carries is only the fact and the
+        /// channel - the text itself stays with the endpoint that stored it, so a peer picks up
+        /// exactly what was saved rather than a second copy that could disagree with it.
+        /// </remarks>
+        public const string Draft = Prefix + "draft";
+
+        /// <summary>
+        /// The common prefix of the operation protocol of shared documents (protocol version 1):
+        /// <c>join</c>, <c>resume</c> and <c>submit</c> from the client; <c>state</c>,
+        /// <c>operations</c>, <c>ack</c> and <c>reject</c> from the server.
+        /// </summary>
+        /// <remarks>
+        /// Unlike the other collaborative messages, these are not broadcast to the peers but
+        /// handed to the sequencer (<see cref="WebCollaboration.ICollaborativeDocumentManager"/>),
+        /// which decides the order of all changes and answers each client individually.
+        /// </remarks>
+        public const string OperationPrefix = Prefix + "ot.";
+
+        /// <summary>
+        /// Determines whether the specified message type belongs to the operation protocol.
+        /// </summary>
+        /// <param name="messageType">The raw message type; may be <c>null</c>.</param>
+        /// <returns><c>true</c> for an operation message; otherwise <c>false</c>.</returns>
+        public static bool IsOperation(string messageType)
+        {
+            return !string.IsNullOrEmpty(messageType)
+                && messageType.StartsWith(OperationPrefix, System.StringComparison.Ordinal);
+        }
+
+        /// <summary>
         /// Determines whether the specified message type belongs to the
         /// collaborative family and should therefore be routed to the
         /// dedicated handler.

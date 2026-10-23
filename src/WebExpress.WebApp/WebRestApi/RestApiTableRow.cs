@@ -71,6 +71,27 @@ namespace WebExpress.WebApp.WebRestApi
         public IDictionary<string, object> Bind { get; set; }
 
         /// <summary>
+        /// Gets or sets the rows nested beneath this one.
+        /// </summary>
+        /// <remarks>
+        /// The table renders a row that owns children as a tree node: its leading cell carries
+        /// the expander and the children are drawn indented beneath it. Without this property
+        /// the tree the control implements is unreachable over REST, because an endpoint has
+        /// nowhere to put the nesting - a hierarchy that exists in the data then arrives as a
+        /// flat list and no expander is ever drawn. An absent or empty collection is a leaf.
+        /// </remarks>
+        [JsonPropertyName("children")]
+        public IEnumerable<RestApiTableRow> Children { get; set; }
+
+        /// <summary>
+        /// Gets or sets whether a row that owns children starts expanded. The default is
+        /// <see langword="true"/>, which is what the control assumes for a row that says
+        /// nothing about it.
+        /// </summary>
+        [JsonPropertyName("expanded")]
+        public bool Expanded { get; set; } = true;
+
+        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         public RestApiTableRow()

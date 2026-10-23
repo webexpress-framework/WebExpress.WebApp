@@ -3,7 +3,7 @@
 namespace WebExpress.WebApp.WebSection
 {
     /// <summary>
-    /// Represents the section toolbar.preferences.
+    /// Names the 'toolbar.preferences' slot of the WebApp page layout: a placeholder section into which fragments can be inserted to place content at that position.
     /// </summary>
     public class SectionToolbarPreferences : ISection
     {

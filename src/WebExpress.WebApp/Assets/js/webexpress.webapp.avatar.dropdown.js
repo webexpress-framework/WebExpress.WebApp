@@ -1,6 +1,12 @@
 /**
  * AvatarDropdownCtrl extends WebUI.AvatarDropdownCtrl to fetch items from a REST API.
  *
+ * It is ViewState-capable: when the host carries a data-wx-resource binding the
+ * avatar and the items are a slice of an enclosing ViewState, so the
+ * control subscribes to that slice and the ViewState owns the central load;
+ * without a binding it owns its own wx-service island and loads itself
+ * (standalone).
+ *
  * The following events are triggered:
  * - webexpress.webui.Event.CLICK_EVENT
  * - webexpress.webui.Event.CHANGE_VISIBILITY_EVENT
@@ -14,15 +20,29 @@ webexpress.webapp.AvatarDropdownCtrl = class extends webexpress.webui.AvatarDrop
      * @param {HTMLElement} element - The DOM element associated with the instance.
      */
     constructor(element) {
+        // consume the islands before the base constructor parses the children
+        // as menu items; the read caches on the element
+        webexpress.webapp.ServiceRegistry.fromElement(element);
+
         super(element);
 
         // capture static items parsed by base class to append later
         this._staticItems = Array.isArray(this._items) ? this._items.slice(0) : [];
 
         // read configuration from data-attributes
-        this._apiEndpoint = element.dataset.uri || null;
         this._httpMethod = (element.dataset.method || "GET").toUpperCase();
         this._maxItems = Number.isFinite(parseInt(element.dataset.maxitems, 10)) ? parseInt(element.dataset.maxitems, 10) : 25;
+
+        // data service used to fetch the dropdown items through the service
+        // layer; the endpoint is authored in C# through the wx-service island
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+        this._service = islandServices.data || null;
+        this._apiEndpoint = this._service ? this._service.baseUri : null;
+
+        // the resource a ViewState renders; when present the avatar and the items
+        // are a pure view of a central resource the enclosing ViewState owns, when
+        // absent the control loads itself (standalone)
+        this._resource = (element.dataset && element.dataset.wxResource) || null;
 
         // dynamic items storage
         this._allItems = [];
@@ -35,10 +55,15 @@ webexpress.webapp.AvatarDropdownCtrl = class extends webexpress.webui.AvatarDrop
         this._currentDynamicNodes = [];
         this._staticNodes = [];
         this._dynamicStaticDivider = null;
+        this._dynamicList = null;
         this._dynamicAnchor = null;
 
         // initial fetch or initial render (for static-only)
-        if (this._apiEndpoint) {
+        if (this._resource) {
+            this._ensureStructure();
+            this._updateDynamicItems([]);
+            this._attachToViewState(element);
+        } else if (this._apiEndpoint) {
             this._fetchData().catch((err) => {
                 console.error("failed to fetch dropdown data:", err);
                 this._ensureStructure();
@@ -48,6 +73,53 @@ webexpress.webapp.AvatarDropdownCtrl = class extends webexpress.webui.AvatarDrop
             this._ensureStructure();
             this._updateDynamicItems([]);
         }
+    }
+
+    /**
+     * Attaches the dropdown to the enclosing ViewState and renders its
+     * resource slice. The ViewState owns the central load and the service; this
+     * control becomes a pure view that re-renders whenever the ViewState re-queries
+     * the resource.
+     * @param {HTMLElement} element - The host element.
+     */
+    _attachToViewState(element) {
+        const viewStateId = (element.dataset && element.dataset.wxViewstate) || null;
+
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
+            this._viewState = viewState;
+
+            const service = viewState.serviceForResource(this._resource);
+            if (service) {
+                this._service = service;
+                this._apiEndpoint = service.baseUri;
+            }
+
+            const unsubscribe = viewState.watch((state) => viewState.slice(this._resource, state), (slice) => this._applySlice(slice));
+            (element._wxCleanup = element._wxCleanup || []).push(unsubscribe);
+
+            this._applySlice(viewState.slice(this._resource));
+        });
+    }
+
+    /**
+     * Renders a resource slice the ViewState loaded centrally. The raw response
+     * carries the avatar identity beside the items, so both are applied.
+     * @param {object} slice - The resource slice { items, total, data, loading, error }.
+     */
+    _applySlice(slice) {
+        slice = slice || {};
+        if (!slice.data) {
+            return;
+        }
+
+        this._ensureStructure();
+
+        const json = slice.data;
+        this._updateAvatarDom(json.username || null, json.image || null);
+
+        const rawItems = Array.isArray(json) ? json : (json.items || []);
+        this._allItems = rawItems.map((x) => this._mapApiItem(x));
+        this._applyLimit();
     }
 
     /**
@@ -183,11 +255,23 @@ webexpress.webapp.AvatarDropdownCtrl = class extends webexpress.webui.AvatarDrop
 
         const fragment = document.createDocumentFragment();
 
+        // the loaded items are the part of the menu that grows; they get a scroll region of
+        // their own, so the static entries below stay in place instead of scrolling out of
+        // sight with a long list
+        const liScroll = document.createElement("li");
+        liScroll.className = "wx-dropdown-scroll";
+        liScroll.setAttribute("role", "none");
+        const dynamicList = document.createElement("ul");
+        dynamicList.setAttribute("role", "group");
+        liScroll.appendChild(dynamicList);
+        fragment.appendChild(liScroll);
+        this._dynamicList = dynamicList;
+
         // dynamic region anchor (invisible marker)
         const anchor = document.createElement("li");
         anchor.className = "wx-dynamic-anchor d-none";
         anchor.setAttribute("aria-hidden", "true");
-        fragment.appendChild(anchor);
+        dynamicList.appendChild(anchor);
         this._dynamicAnchor = anchor;
 
         // divider between dynamic and static (created now, toggled later)
@@ -318,13 +402,13 @@ webexpress.webapp.AvatarDropdownCtrl = class extends webexpress.webui.AvatarDrop
                 }
             }
 
-            const res = await fetch(url, init);
+            const res = await this._service.request(url, init);
 
             if (!res.ok) {
                 throw new Error("http error " + res.status);
             }
 
-            const json = await res.json();
+            const json = res.data;
             const username = json.username || null;
             const image = json.image || null;
             const rawItems = json.items;
@@ -452,12 +536,12 @@ webexpress.webapp.AvatarDropdownCtrl = class extends webexpress.webui.AvatarDrop
     }
 
     /**
-     * Replaces the dynamic items between the dynamic anchor and the dynamic-static divider
-     * without re-rendering the entire dropdown structure.
+     * Replaces the dynamic items inside the scroll region without re-rendering the entire
+     * dropdown structure.
      * @param {Array<any>} items - The dynamic items to render.
      */
     _updateDynamicItems(items) {
-        const ul = this._element.querySelector("ul.dropdown-menu");
+        const ul = this._dynamicList;
 
         if (!ul || !this._dynamicAnchor || !this._dynamicStaticDivider) {
             return;
@@ -484,7 +568,7 @@ webexpress.webapp.AvatarDropdownCtrl = class extends webexpress.webui.AvatarDrop
             this._currentDynamicNodes.push(li);
         }
 
-        ul.insertBefore(fragment, this._dynamicStaticDivider);
+        ul.appendChild(fragment);
 
         // toggle divider visibility depending on presence of dynamic and static
         const hasDynamic = this._currentDynamicNodes.length > 0;

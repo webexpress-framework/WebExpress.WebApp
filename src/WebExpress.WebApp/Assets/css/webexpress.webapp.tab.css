@@ -1,0 +1,206 @@
+/* Header affordances of ControlDataTab (MovableTab, EditableTab, DeletableTab).
+   The classes below are applied by webexpress.webapp.TabCtrl at runtime to the
+   individual tab headers, so they are scoped directly (not under the host
+   element's registered class, which the controller removes on init). */
+
+.wx-webapp-tab-grip {
+    cursor: grab;
+    user-select: none;
+    margin-right: 0.35rem;
+    vertical-align: middle;
+    color: var(--wx-secondary-color, #6c757d);
+    line-height: 1;
+}
+
+.wx-webapp-tab-grip:hover {
+    color: var(--wx-body-color);
+}
+
+.wx-webapp-tab-grip:active {
+    cursor: grabbing;
+}
+
+/* show the grip only while hovering the tab button; visibility (not display)
+   keeps the layout stable so the tab does not jump */
+.nav-link .wx-webapp-tab-grip {
+    visibility: hidden;
+}
+
+.nav-link:hover .wx-webapp-tab-grip,
+.nav-link:focus-visible .wx-webapp-tab-grip {
+    visibility: visible;
+}
+
+/* the "…" glyph is centered on the header item, so the item must not stretch
+   to a taller neighbour in the flex row (a toolbar, for example), or the glyph
+   ends up below the tab instead of on it */
+.wx-webapp-tab-has-menu {
+    position: relative;
+    align-self: flex-start;
+}
+
+.wx-webapp-tab-has-menu > .nav-link {
+    padding-inline-end: 2.25rem;
+}
+
+.wx-webapp-tab-menu {
+    position: absolute;
+    inset-inline-end: 0.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--wx-secondary-color);
+    transition: color 0.2s ease-in-out;
+    padding: 0.25rem;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* the glyph stays while its menu is open, even once the pointer has left the tab */
+.wx-webapp-tab-has-menu:hover > .wx-webapp-tab-menu,
+.wx-webapp-tab-has-menu:focus-within > .wx-webapp-tab-menu,
+.wx-webapp-tab-has-menu.wx-menu-open > .wx-webapp-tab-menu {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.wx-webapp-tab-menu:hover {
+    color: var(--wx-body-color);
+}
+
+@media (hover: none) {
+    .wx-webapp-tab-menu {
+        opacity: 1;
+        pointer-events: auto;
+    }
+}
+
+/* entries without an icon keep the indent of those with one */
+.wx-webapp-tab-menu-icon {
+    display: inline-block;
+    width: 1.25em;
+}
+
+/* the tab color (EditableTab) underlines the tab the way the underline layout marks
+   its active tab. inactive tabs carry it muted, so a colored tab is never mistaken
+   for the active one; the active tab shows it in full */
+.wx-webapp-tab-colored > .nav-link {
+    box-shadow: inset 0 -2px 0 0 color-mix(in srgb, var(--wx-webapp-tab-color) 45%, transparent);
+}
+
+.wx-webapp-tab-colored > .nav-link.active {
+    box-shadow: inset 0 -2px 0 0 var(--wx-webapp-tab-color);
+}
+
+/* the underline layout already draws its active marker as a border, which the
+   tab color takes over instead of stacking a second line onto it */
+.nav-underline > .wx-webapp-tab-colored > .nav-link.active {
+    box-shadow: none;
+    border-bottom-color: var(--wx-webapp-tab-color);
+}
+
+.wx-webapp-tab-color-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
+    padding: 0.25rem 1rem 0.5rem;
+}
+
+.wx-webapp-tab-swatch {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.wx-webapp-tab-swatch.active,
+.wx-webapp-tab-swatch:focus-visible {
+    outline: 2px solid var(--wx-body-color);
+    outline-offset: 1px;
+}
+
+/* the error of a menu action that has already closed */
+.wx-webapp-tab-status {
+    position: absolute;
+    inset-inline-end: 0;
+    top: 100%;
+    z-index: 1;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875em;
+    color: var(--wx-danger);
+    background-color: var(--wx-body-bg);
+    border: 1px solid var(--wx-danger);
+    border-radius: var(--wx-border-radius, 0.375rem);
+}
+
+.wx-webapp-tab-status[hidden] {
+    display: none;
+}
+
+/* in-place rename (EditableTab): the field is no tab, so it lives in the header
+   row outside the tab list and is laid over the header it renames, which keeps
+   its place (visibility, not display) so the row does not jump */
+.wx-webapp-tab-header {
+    position: relative;
+}
+
+.wx-webapp-tab-renaming > .nav-link,
+.wx-webapp-tab-renaming > .wx-webapp-tab-menu {
+    visibility: hidden;
+}
+
+.wx-webapp-tab-rename {
+    position: absolute;
+    z-index: 1;
+}
+
+.wx-webapp-tab-rename-input {
+    width: 100%;
+    min-width: 8rem;
+    font: inherit;
+    color: var(--wx-body-color);
+    background-color: var(--wx-body-bg);
+    border: 1px solid var(--wx-primary);
+    border-radius: var(--wx-border-radius, 0.375rem);
+    padding: 0.25rem 0.5rem;
+}
+
+.wx-webapp-tab-rename-input:focus {
+    outline: 2px solid var(--wx-primary);
+    outline-offset: 1px;
+}
+
+.wx-webapp-tab-rename-input[aria-invalid="true"] {
+    border-color: var(--wx-danger);
+}
+
+.wx-webapp-tab-rename-error {
+    margin-top: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875em;
+    color: var(--wx-danger);
+    background-color: var(--wx-body-bg);
+    border: 1px solid var(--wx-danger);
+    border-radius: var(--wx-border-radius, 0.375rem);
+    white-space: nowrap;
+}
+
+.wx-webapp-tab-rename-error[hidden] {
+    display: none;
+}
+
+.nav-item.wx-webapp-tab-movable.wx-webapp-tab-dragging {
+    opacity: 0.5;
+}
+
+/* drop indicators on the side where the dragged tab would be inserted */
+.nav-item.wx-webapp-tab-movable.wx-webapp-tab-drop-before {
+    box-shadow: inset 2px 0 0 0 var(--wx-primary);
+}
+
+.nav-item.wx-webapp-tab-movable.wx-webapp-tab-drop-after {
+    box-shadow: inset -2px 0 0 0 var(--wx-primary);
+}

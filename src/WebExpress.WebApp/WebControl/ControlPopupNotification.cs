@@ -34,8 +34,8 @@ namespace WebExpress.WebApp.WebControl
             return new HtmlElementTextContentDiv()
             {
                 Id = Id,
-                Class = Css.Concatenate("wx-webapp-popupnotification", GetClasses()),
-                Style = GetStyles()
+                Class = Css.Concatenate("wx-webapp-popupnotification", GetClasses(renderContext)),
+                Style = GetStyles(renderContext)
             };
         }
     }

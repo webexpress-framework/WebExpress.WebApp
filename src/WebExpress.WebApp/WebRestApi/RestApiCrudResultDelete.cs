@@ -6,7 +6,7 @@ using WebExpress.WebCore.WebMessage;
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Represents the delete result of a REST API CRUD operation.
+    /// The result returned after a REST API delete operation.
     /// </summary>
     public class RestApiCrudResultDelete : RestApiCrudResult, IRestApiCrudResultDelete
     {

@@ -19,7 +19,7 @@
  * - webexpress.webui.Event.HIDE_EVENT with the notification id when the
  *   alert is closed or expires.
  */
-class PopupNotificationCtrl extends webexpress.webui.Ctrl {
+webexpress.webapp.PopupNotificationCtrl = class extends webexpress.webui.Ctrl {
     static SHOW_TYPE = "webexpress.webapp.popup.show";
     static DISMISS_TYPE = "webexpress.webapp.popup.dismiss";
 
@@ -35,7 +35,6 @@ class PopupNotificationCtrl extends webexpress.webui.Ctrl {
         // clean up the host element so it can host the alert stack
         element.innerHTML = "";
         element.removeAttribute("data-interval");
-        element.removeAttribute("data-uri");
         element.classList.add("wx-popupnotification");
         this._element = element;
 
@@ -78,7 +77,7 @@ class PopupNotificationCtrl extends webexpress.webui.Ctrl {
             return;
         }
 
-        if (payload.type === PopupNotificationCtrl.SHOW_TYPE && payload.notification) {
+        if (payload.type === webexpress.webapp.PopupNotificationCtrl.SHOW_TYPE && payload.notification) {
             this._showNotification(payload.notification);
         }
     }
@@ -108,21 +107,21 @@ class PopupNotificationCtrl extends webexpress.webui.Ctrl {
         const typeClass = notification.type || "alert-primary";
 
         const alert = document.createElement("div");
-        // intentionally no "alert-dismissible" / "data-bs-dismiss" so Bootstrap
+        // intentionally no "alert-dismissible" / "data-wx-dismiss" so WebExpress
         // never gets a chance to remove the element on its own - every
         // lifecycle decision is owned by this control.
         alert.className = "alert wx-popup-alert " + typeClass + " fade show";
         alert.setAttribute("role", "alert");
         alert.dataset.notificationId = id;
 
-        // close button - Font Awesome "times" icon, anchored top-right via
+        // close button - the "xmark" icon, anchored top-right via
         // the wx-popup-close CSS class
         const closeButton = document.createElement("button");
         closeButton.type = "button";
         closeButton.className = "wx-popup-close";
         closeButton.setAttribute("aria-label", "Close");
         closeButton.setAttribute("title", "Close");
-        closeButton.innerHTML = `<i class="${this._iconClass("fas fa-times", "wx-icon-light-xmark")}" aria-hidden="true"></i>`;
+        closeButton.innerHTML = `<i class="${this._iconClass("xmark")}" aria-hidden="true"></i>`;
         closeButton.addEventListener("click", (e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -135,8 +134,20 @@ class PopupNotificationCtrl extends webexpress.webui.Ctrl {
         heading.textContent = notification.heading || "";
         alert.appendChild(heading);
 
-        const content = document.createElement("div");
+        // A notification says that something changed; the reader's next move is almost always
+        // to go and look at it. When the server named an address, the icon and the message
+        // become the way there - a link around the content rather than a caption beside it,
+        // so nothing has to be translated on this side and the whole notification reads as
+        // the one thing it is about. The close button stays outside it.
+        const link = typeof notification.link === "string" && notification.link ? notification.link : null;
+
+        const content = document.createElement(link ? "a" : "div");
         content.className = "wx-popup-content d-flex justify-content-start";
+
+        if (link) {
+            content.href = link;
+            content.classList.add("wx-popup-content-link");
+        }
 
         let icon;
         if (notification.icon) {
@@ -225,6 +236,22 @@ class PopupNotificationCtrl extends webexpress.webui.Ctrl {
         if (notification.message !== previous.message) {
             data.message.innerHTML = notification.message || "";
         }
+        if (notification.icon !== previous.icon && data.icon && data.icon.tagName === "IMG") {
+            data.icon.src = notification.icon || "";
+        }
+
+        // the address may be replayed with the record, so it is kept in step. An alert that
+        // was built without one is not turned into a link here: that would mean rebuilding
+        // the content element under a notification the reader is already looking at.
+        if (notification.link !== previous.link && data.content && data.content.tagName === "A") {
+            if (notification.link) {
+                data.content.href = notification.link;
+            } else {
+                data.content.removeAttribute("href");
+                data.content.classList.remove("wx-popup-content-link");
+            }
+        }
+
         if (typeof notification.progress === "number"
             && notification.progress !== previous.progress
             && data.progressbar) {
@@ -311,7 +338,7 @@ class PopupNotificationCtrl extends webexpress.webui.Ctrl {
 
         if (this._queue) {
             this._queue.send({
-                type: PopupNotificationCtrl.DISMISS_TYPE,
+                type: webexpress.webapp.PopupNotificationCtrl.DISMISS_TYPE,
                 notificationId: id
             });
         }
@@ -384,7 +411,7 @@ class PopupNotificationCtrl extends webexpress.webui.Ctrl {
         // trigger the keyframes
         alert.classList.add("wx-popup-hiding");
     }
-}
+};
 
 // register the class in the controller
-webexpress.webui.Controller.registerClass("wx-webapp-popupnotification", PopupNotificationCtrl);
+webexpress.webui.Controller.registerClass("wx-webapp-popupnotification", webexpress.webapp.PopupNotificationCtrl);

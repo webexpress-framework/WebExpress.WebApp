@@ -1,6 +1,12 @@
 /**
- * DropdownCtrl extends WebUI.DropdownCtrl to fetch items from a REST API and adds a 
+ * DropdownCtrl extends WebUI.DropdownCtrl to fetch items from a REST API and adds a
  * search field at the top of the menu.
+ *
+ * It is ViewState-capable: when the host carries a data-wx-resource binding the
+ * items are a slice of an enclosing ViewState, so the control subscribes
+ * to that slice and the ViewState owns the central load; a remote search still
+ * queries directly through the ViewState's data service. Without a binding the
+ * control owns its own wx-service island and loads itself (standalone).
  *
  * The following events are triggered:
  * - webexpress.webui.Event.CLICK_EVENT
@@ -15,18 +21,32 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
      * @param {HTMLElement} element - The DOM element associated with the instance.
      */
     constructor(element) {
+        // consume the islands before the base constructor parses the children
+        // as menu items; the read caches on the element
+        webexpress.webapp.ServiceRegistry.fromElement(element);
+
         super(element);
 
         // capture static items parsed by base class to append later without filtering
         this._staticItems = Array.isArray(this._items) ? this._items.slice(0) : [];
 
         // read configuration from data-attributes
-        this._apiEndpoint = element.dataset.uri || null;
         this._httpMethod = (element.dataset.method || "GET").toUpperCase();
         this._queryParam = element.dataset.queryparam || "q";
         this._maxItems = Number.isFinite(parseInt(element.dataset.maxitems, 10)) ? parseInt(element.dataset.maxitems, 10) : 25;
         this._searchPlaceholder = element.dataset.searchplaceholder || this._i18n(
             "webexpress.webapp:dropdown.search.placeholder", "");
+
+        // data service used to fetch the dropdown items through the service
+        // layer; the endpoint is authored in C# through the wx-service island
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+        this._service = islandServices.data || null;
+        this._apiEndpoint = this._service ? this._service.baseUri : null;
+
+        // the resource a ViewState renders; when present the items are a pure view
+        // of a central resource the enclosing ViewState owns, when absent the
+        // control loads itself (standalone)
+        this._resource = (element.dataset && element.dataset.wxResource) || null;
 
         // dynamic items storage
         this._allItems = [];
@@ -40,6 +60,7 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
         this._currentDynamicNodes = [];
         this._staticNodes = [];
         this._dynamicStaticDivider = null;
+        this._dynamicList = null; // list inside the scroll region that holds the dynamic items
         this._dynamicAnchor = null; // marker li before dynamic region
         this._searchInput = null;
 
@@ -51,16 +72,84 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
         }, 180);
 
         // initial fetch or initial render (for static-only)
-        if (this._apiEndpoint) {
+        if (this._resource) {
+            this._ensureStructure();
+            this._updateDynamicItems([]);
+            this._attachToViewState(element);
+        } else if (this._apiEndpoint) {
             this._fetchData("").catch((err) => {
                 console.error("failed to fetch dropdown data:", err);
                 this._ensureStructure(); // still ensure search exists even on error
                 this._updateDynamicItems([]);
             });
+
+            // A standalone dropdown loads once, at construction. Its items are data like any
+            // other control's - a workspace list, a tenant list, a saved search - and a record
+            // created elsewhere on the page (a dialog, another user) would otherwise not be in
+            // the menu until the page was reloaded, which is exactly the case a dropdown of
+            // recently used things is opened for. So it joins the live update channel the way
+            // the table, list, tile and sidebar do; a control whose service declares no domain
+            // stays detached and keeps loading once, as before.
+            //
+            // The reload repeats the term the menu is currently showing rather than the empty
+            // one, so a refresh arriving while the user is filtering does not throw the search
+            // result away.
+            const dataChanges = webexpress.webapp.DataChangeSubscription.attachReload(
+                [this._service], () => this._fetchData(this._searchTerm || ""), element);
+            if (dataChanges) {
+                (element._wxCleanup = element._wxCleanup || []).push(() => dataChanges.detach());
+            }
         } else {
             this._ensureStructure();
             this._updateDynamicItems([]);
         }
+    }
+
+    /**
+     * Attaches the dropdown to the enclosing ViewState and renders its
+     * resource slice. The ViewState owns the central load and the service; a
+     * remote search still queries directly through the ViewState's data service,
+     * because the search term is local to this dropdown and not part of the
+     * central slice.
+     * @param {HTMLElement} element - The host element.
+     */
+    _attachToViewState(element) {
+        const viewStateId = (element.dataset && element.dataset.wxViewstate) || null;
+
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
+            this._viewState = viewState;
+
+            const service = viewState.serviceForResource(this._resource);
+            if (service) {
+                this._service = service;
+                this._apiEndpoint = service.baseUri;
+            }
+
+            const unsubscribe = viewState.watch((state) => viewState.slice(this._resource, state), (slice) => this._applySlice(slice));
+            (element._wxCleanup = element._wxCleanup || []).push(unsubscribe);
+
+            this._applySlice(viewState.slice(this._resource));
+        });
+    }
+
+    /**
+     * Renders a resource slice the ViewState loaded centrally. A slice arriving
+     * while the user is filtering is not applied over the search result,
+     * because the remote search owns the dynamic region until the term is
+     * cleared.
+     * @param {object} slice - The resource slice { items, total, data, loading, error }.
+     */
+    _applySlice(slice) {
+        slice = slice || {};
+        if (!slice.data || this._searchTerm) {
+            return;
+        }
+
+        this._ensureStructure();
+
+        const rawItems = Array.isArray(slice.data) ? slice.data : (slice.data.items || []);
+        this._allItems = rawItems.map((x) => this._mapApiItem(x));
+        this._applyFilter(this._searchTerm);
     }
 
     /**
@@ -222,11 +311,23 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
         liAfterSearchDivider.className = "dropdown-divider";
         fragment.appendChild(liAfterSearchDivider);
 
+        // the loaded items are the part of the menu that grows; they get a scroll region of
+        // their own, so the search field above and the static entries below stay in place
+        // instead of scrolling out of sight with a long list
+        const liScroll = document.createElement("li");
+        liScroll.className = "wx-dropdown-scroll";
+        liScroll.setAttribute("role", "none");
+        const dynamicList = document.createElement("ul");
+        dynamicList.setAttribute("role", "group");
+        liScroll.appendChild(dynamicList);
+        fragment.appendChild(liScroll);
+        this._dynamicList = dynamicList;
+
         // dynamic region anchor (invisible marker)
         const anchor = document.createElement("li");
         anchor.className = "wx-dynamic-anchor d-none";
         anchor.setAttribute("aria-hidden", "true");
-        fragment.appendChild(anchor);
+        dynamicList.appendChild(anchor);
         this._dynamicAnchor = anchor;
 
         // divider between dynamic and static (created now, toggled later)
@@ -332,12 +433,12 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
                 init.body = JSON.stringify(body);
             }
 
-            const res = await fetch(url, init);
+            const res = await this._service.request(url, init);
             if (!res.ok) {
                 throw new Error("http error " + res.status);
             }
 
-            const json = await res.json();
+            const json = res.data;
             const rawItems = json.items;
 
             this._allItems = rawItems.map((x) => { return this._mapApiItem(x); });
@@ -390,6 +491,9 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
      * @returns {Object} A normalized item compatible with DropdownCtrl._createMenuItem.
      */
     _mapApiItem(apiItem) {
+        // structural entries (header/divider) ride in the same stream as items;
+        // the type must survive mapping or _createMenuItem renders them as links
+        const type = apiItem.type || "item";
         const id = apiItem.id || null;
         const uri = apiItem.uri || apiItem.url || "javascript:void(0);";
         const text = apiItem.text || apiItem.name || apiItem.label || apiItem.title || "";
@@ -416,6 +520,7 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
         }
 
         return {
+            type: type,
             id: id,
             uri: uri,
             image: image,
@@ -444,12 +549,22 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
 
         const limited = [];
         let remaining = this._maxItems;
-        
+
         for (let i = 0; i < this._allItems.length; i++) {
+            const item = this._allItems[i];
+
+            // headers and dividers are structural; only selectable items count
+            // against the cap so a prepended title never steals an item's slot
+            if (item.type === "header" || item.type === "divider") {
+                limited.push(item);
+                continue;
+            }
+
             if (remaining <= 0) {
                 break;
             }
-            limited.push(this._allItems[i]);
+
+            limited.push(item);
             remaining--;
         }
 
@@ -457,12 +572,12 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
     }
 
     /**
-     * Replaces the dynamic items between the dynamic anchor and the dynamic-static divider
-     * without re-rendering the entire dropdown structure.
+     * Replaces the dynamic items inside the scroll region without re-rendering the entire
+     * dropdown structure.
      * @param {Array<any>} items - The dynamic items to render.
      */
     _updateDynamicItems(items) {
-        const ul = this._element.querySelector("ul.dropdown-menu");
+        const ul = this._dynamicList;
         if (!ul || !this._dynamicAnchor || !this._dynamicStaticDivider) {
             return;
         }
@@ -485,8 +600,8 @@ webexpress.webapp.DropdownCtrl = class extends webexpress.webui.DropdownCtrl {
             fragment.appendChild(li);
             this._currentDynamicNodes.push(li);
         }
-        
-        ul.insertBefore(fragment, this._dynamicStaticDivider);
+
+        ul.appendChild(fragment);
 
         // toggle divider visibility depending on presence of dynamic and static
         const hasDynamic = this._currentDynamicNodes.length > 0;

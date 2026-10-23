@@ -117,5 +117,12 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// requests. May be <c>null</c> when chat is not configured.
         /// </summary>
         IChatMessageHandler ChatMessageHandler { get; }
+
+        /// <summary>
+        /// Gets the sequencer of shared documents, which orders, validates and distributes the
+        /// operations of collaboratively edited controls. May be <c>null</c> when it is not
+        /// configured.
+        /// </summary>
+        WebCollaboration.ICollaborativeDocumentManager CollaborativeDocuments { get; }
     }
 }

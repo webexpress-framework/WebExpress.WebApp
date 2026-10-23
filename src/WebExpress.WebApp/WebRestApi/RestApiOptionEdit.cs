@@ -9,7 +9,7 @@ using WebExpress.WebUI.WebIcon;
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Represents an edit option in a REST API.
+    /// An 'edit' entry in the options menu a REST API offers for a data item.
     /// </summary>
     public class RestApiOptionEdit : RestApiOption
     {

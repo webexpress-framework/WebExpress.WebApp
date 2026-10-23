@@ -30,6 +30,13 @@ namespace WebExpress.WebApp.WebRestApi
         public IEnumerable<RestApiDashboardColumn> Columns { get; set; }
 
         /// <summary>
+        /// Gets or sets the widget types the board may add. When null or empty
+        /// the board offers no add-widget entries.
+        /// </summary>
+        [JsonPropertyName("availableWidgets")]
+        public IEnumerable<RestApiDashboardAvailableWidget> AvailableWidgets { get; set; }
+
+        /// <summary>
         /// Converts the current instance into a <see cref="IResponse"/> object.
         /// </summary>
         /// <returns>
@@ -40,7 +47,8 @@ namespace WebExpress.WebApp.WebRestApi
             var data = new
             {
                 title = Title,
-                columns = Columns
+                columns = Columns,
+                availableWidgets = AvailableWidgets
             };
 
             var jsonData = JsonSerializer.Serialize(data, _jsonOptions);

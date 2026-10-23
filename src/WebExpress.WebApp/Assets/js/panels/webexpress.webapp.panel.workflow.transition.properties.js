@@ -2,7 +2,7 @@
 webexpress.webui.DialogPanels.register("workflow-transition-properties", {
     id: "workflow-transition-properties-page",
     title: "General",
-    iconClass: "fas fa-sliders-h",
+    iconClass: "wx-icon-light wx-icon-light-sliders-h",
     render: function(container, modal) {
         container.innerHTML = `
             <div class="p-3">

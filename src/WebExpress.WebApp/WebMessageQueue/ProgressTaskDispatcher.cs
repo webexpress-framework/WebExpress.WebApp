@@ -1,5 +1,9 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json;
 using System.Threading;
+using WebExpress.WebCore.WebCluster;
 using WebExpress.WebCore.WebComponent;
 using WebExpress.WebCore.WebTask;
 
@@ -11,10 +15,30 @@ namespace WebExpress.WebApp.WebMessageQueue
     /// (start, progress change, message change, finish) is pushed live to
     /// all connected clients; on (re)connect, every still-active task is
     /// replayed so a freshly arriving client immediately sees the current
-    /// state of every long-running operation.
+    /// state of every long-running operation. A task runs on the instance
+    /// that started it; in a cluster its last state is also kept in the
+    /// shared store, so a client connected to another instance sees it on
+    /// (re)connect too.
     /// </summary>
     public sealed class ProgressTaskDispatcher
     {
+        /// <summary>
+        /// The scope task states are kept under in the cluster store.
+        /// </summary>
+        internal const string StoreScope = "task";
+
+        // a task nobody reported on for an hour is either finished long ago or dead with its instance
+        private static readonly TimeSpan SnapshotLifetime = TimeSpan.FromHours(1);
+
+        /// <summary>
+        /// The state of a task as recorded for the other instances.
+        /// </summary>
+        /// <param name="TaskId">The task id.</param>
+        /// <param name="State">The numeric task state.</param>
+        /// <param name="Progress">The progress as a percentage.</param>
+        /// <param name="Message">The status message.</param>
+        private sealed record Snapshot(string TaskId, int State, int Progress, string Message);
+
         private readonly IMessageQueueManager _messageQueueManager;
         private readonly IComponentHub _componentHub;
         private ITaskManager _taskManager;
@@ -66,9 +90,15 @@ namespace WebExpress.WebApp.WebMessageQueue
 
             var applicationId = socket.ClientSession?.ApplicationContext?.ApplicationId;
 
-            foreach (var task in _taskManager.Tasks)
+            var messages = _taskManager.Tasks.Select(x => new ProgressTaskMessage(x, applicationId)).ToList();
+            var local = messages.Select(x => x.TaskId).ToHashSet(StringComparer.Ordinal);
+
+            messages.AddRange(ReadShared()
+                .Where(x => !local.Contains(x.TaskId))
+                .Select(x => new ProgressTaskMessage(x.TaskId, x.State, x.Progress, x.Message, applicationId)));
+
+            foreach (var message in messages)
             {
-                var message = new ProgressTaskMessage(task, applicationId);
 
                 try
                 {
@@ -118,6 +148,8 @@ namespace WebExpress.WebApp.WebMessageQueue
 
             try
             {
+                Record(args.Task);
+
                 var address = new AddressApplication(null);
                 var message = new ProgressTaskMessage(args.Task);
                 await _messageQueueManager.SendAsync(address, message);
@@ -127,6 +159,58 @@ namespace WebExpress.WebApp.WebMessageQueue
                 // swallow - never let a transport error tear down the task
                 // manager event pipeline
             }
+        }
+
+        /// <summary>
+        /// Returns the cluster store while instances share one.
+        /// </summary>
+        private IClusterStore SharedStore => _componentHub?.ClusterManager?.Store is { IsShared: true } store ? store : null;
+
+        /// <summary>
+        /// Records the state of a task for clients that connect to another instance.
+        /// </summary>
+        /// <param name="task">The task.</param>
+        private void Record(ITask task)
+        {
+            if (SharedStore is not { } store || string.IsNullOrEmpty(task.Id))
+            {
+                return;
+            }
+
+            var snapshot = new Snapshot(task.Id, (int)task.State, task.Progress, task.Message);
+
+            store.Set(StoreScope, task.Id, JsonSerializer.SerializeToUtf8Bytes(snapshot), SnapshotLifetime);
+        }
+
+        /// <summary>
+        /// Reads the task states every instance recorded.
+        /// </summary>
+        /// <returns>The recorded states.</returns>
+        private IEnumerable<Snapshot> ReadShared()
+        {
+            if (SharedStore is not { } store)
+            {
+                return [];
+            }
+
+            var result = new List<Snapshot>();
+
+            foreach (var item in store.List(StoreScope))
+            {
+                try
+                {
+                    if (JsonSerializer.Deserialize<Snapshot>(item.Value) is { TaskId: not null } snapshot)
+                    {
+                        result.Add(snapshot);
+                    }
+                }
+                catch (JsonException)
+                {
+                    // an unreadable record costs one task its replay, not the whole replay
+                }
+            }
+
+            return result;
         }
     }
 }

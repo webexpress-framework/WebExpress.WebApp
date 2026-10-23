@@ -1,6 +1,6 @@
 /*
  * Scrum styles for the backlog and active sprint controls.
- * Aligned with the bootstrap variables and the existing WebUI controls.
+ * Aligned with the WebExpress variables and the existing WebUI controls.
  */
 
 /* --------------------------------------------------------------- backlog */
@@ -22,12 +22,12 @@
     font-weight: 600;
     margin: 0;
     flex-grow: 1;
-    color: var(--bs-heading-color, #212529);
+    color: var(--wx-heading-color, #212529);
 }
 
 .wx-scrum-section {
-    background: var(--bs-body-bg, #fff);
-    border: 1px solid var(--bs-border-color, #dee2e6);
+    background: var(--wx-body-bg, #fff);
+    border: 1px solid var(--wx-border-color, #dee2e6);
     border-radius: 0.375rem;
     overflow: hidden;
 }
@@ -37,8 +37,8 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 0.875rem;
-    background: var(--bs-tertiary-bg, #f8f9fa);
-    border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+    background: var(--wx-tertiary-bg, #f8f9fa);
+    border-bottom: 1px solid var(--wx-border-color, #dee2e6);
     font-weight: 600;
     font-size: 0.825rem;
 }
@@ -51,38 +51,38 @@
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    color: var(--bs-secondary-color, #6c757d);
+    color: var(--wx-secondary-color, #6c757d);
     font-weight: 400;
     font-size: 0.75rem;
 }
 
 .wx-scrum-sprint-menu {
-    border: 1px solid var(--bs-border-color, #dee2e6);
-    background: var(--bs-body-bg, #fff);
-    color: var(--bs-body-color, #212529);
+    border: 1px solid var(--wx-border-color, #dee2e6);
+    background: var(--wx-body-bg, #fff);
+    color: var(--wx-body-color, #212529);
 }
 
 .wx-scrum-sprint-menu:hover,
 .wx-scrum-sprint-menu:focus-visible {
-    background: var(--bs-tertiary-bg, #f8f9fa);
-    color: var(--bs-body-color, #212529);
-    border-color: var(--bs-border-color, #dee2e6);
+    background: var(--wx-tertiary-bg, #f8f9fa);
+    color: var(--wx-body-color, #212529);
+    border-color: var(--wx-border-color, #dee2e6);
 }
 
 .wx-scrum-ctx-item {
-    color: var(--bs-body-color, #212529);
+    color: var(--wx-body-color, #212529);
     border: 1px solid transparent;
 }
 
 .wx-scrum-ctx-item:hover,
 .wx-scrum-ctx-item:focus-visible {
-    background: var(--bs-tertiary-bg, #f8f9fa);
-    color: var(--bs-body-color, #212529);
-    border-color: var(--bs-border-color, #dee2e6);
+    background: var(--wx-tertiary-bg, #f8f9fa);
+    color: var(--wx-body-color, #212529);
+    border-color: var(--wx-border-color, #dee2e6);
 }
 
 .wx-scrum-ctx-item:disabled {
-    color: var(--bs-secondary-color, #6c757d);
+    color: var(--wx-secondary-color, #6c757d);
     opacity: 0.65;
 }
 
@@ -95,28 +95,30 @@
     letter-spacing: 0.04em;
 }
 
+/* the tinted chips take the emphasis shade of their color, not the raw one: small text in
+   the raw tint on a tinted ground falls short of the contrast a chip needs, on either theme */
 .wx-scrum-status.active {
     background: rgba(25, 135, 84, 0.12);
-    color: #198754;
+    color: var(--wx-success-text-emphasis, #0a3622);
 }
 
 .wx-scrum-status.planned {
     background: rgba(13, 110, 253, 0.12);
-    color: #0d6efd;
+    color: var(--wx-primary-text-emphasis, #052c65);
 }
 
 .wx-scrum-status.closed {
     background: rgba(108, 117, 125, 0.12);
-    color: #6c757d;
+    color: var(--wx-secondary-text-emphasis, #2b2f32);
 }
 
 .wx-scrum-row {
     display: grid;
-    grid-template-columns: 24px 90px 1fr auto auto auto;
+    grid-template-columns: 24px 90px 1fr auto auto auto auto;
     gap: 0.75rem;
     align-items: center;
     padding: 0.5rem 0.875rem;
-    border-bottom: 1px solid var(--bs-border-color-translucent, #e9ecef);
+    border-bottom: 1px solid var(--wx-border-color-translucent, #e9ecef);
     cursor: pointer;
     transition: background-color 0.1s ease-in-out;
     font-size: 0.85rem;
@@ -131,21 +133,21 @@
 }
 
 .wx-scrum-row:hover {
-    background: var(--bs-tertiary-bg, #f8f9fa);
+    background: var(--wx-tertiary-bg, #f8f9fa);
 }
 
 /* focus style for keyboard rank adjustments */
 .wx-scrum-row:focus-visible {
-    outline: 2px solid var(--bs-primary, #0d6efd);
+    outline: 2px solid var(--wx-primary, #0d6efd);
     outline-offset: -2px;
-    background: var(--bs-tertiary-bg, #f8f9fa);
+    background: var(--wx-tertiary-bg, #f8f9fa);
 }
 
 /* selected state */
 .wx-scrum-row.wx-scrum-row-active,
 .wx-scrum-row.active {
     background: rgba(13, 110, 253, 0.10);
-    box-shadow: inset 3px 0 0 var(--bs-primary, #0d6efd);
+    box-shadow: inset 3px 0 0 var(--wx-primary, #0d6efd);
 }
 
 .wx-scrum-row.wx-scrum-row-active:hover,
@@ -159,13 +161,19 @@
 
 /* precise drop indicators for row reordering */
 .wx-scrum-row.wx-drop-before {
-    box-shadow: inset 0 2px 0 var(--bs-primary, #0d6efd);
+    box-shadow: inset 0 2px 0 var(--wx-primary, #0d6efd);
 }
 
 .wx-scrum-row.wx-drop-after {
-    box-shadow: inset 0 -2px 0 var(--bs-primary, #0d6efd);
+    box-shadow: inset 0 -2px 0 var(--wx-primary, #0d6efd);
 }
 
+/* The badge is the backing the type icon is drawn on: a drawn icon is painted by masking
+   background-color, so the white below is the ink and the chip underneath is the only thing
+   that makes it readable. The item types are configured per application, so a deployment
+   names types this sheet has never heard of - without a colour of its own such a badge would
+   stay transparent and paint white ink onto the white row, which reads as a missing icon.
+   The neutral chip is therefore the default and the known types override it. */
 .wx-scrum-row .wx-scrum-type {
     display: inline-flex;
     align-items: center;
@@ -176,6 +184,7 @@
     font-size: 0.65rem;
     font-weight: 700;
     color: #fff;
+    background: var(--wx-secondary, #6c757d);
     flex-shrink: 0;
 }
 
@@ -195,10 +204,26 @@
     background: #6f42c1;
 }
 
+/* An icon that arrives as a picture rather than as a drawn glyph brings its own colour - the
+   class avatars an application hands over are full-bleed marks, not white ink. Such a picture
+   *is* the badge, so the chip backing is dropped and the image fills the box; only a masked
+   glyph still needs something to be read against. Without this the picture would be painted
+   at glyph size in the middle of a grey chip and read as a decoration on an empty badge. */
+.wx-scrum-row .wx-scrum-type:has(> .wx-icon-img) {
+    background: none;
+}
+
+.wx-scrum-row .wx-scrum-type > .wx-icon-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 0.2rem;
+    object-fit: cover;
+}
+
 .wx-scrum-row .wx-scrum-key {
-    font-family: var(--bs-font-monospace, monospace);
+    font-family: var(--wx-font-monospace, monospace);
     font-size: 0.75rem;
-    color: var(--bs-secondary-color, #6c757d);
+    color: var(--wx-secondary-color, #6c757d);
 }
 
 .wx-scrum-row .wx-scrum-row-title {
@@ -210,7 +235,7 @@
 }
 
 .wx-scrum-row .wx-scrum-prio {
-    font-family: var(--bs-font-monospace, monospace);
+    font-family: var(--wx-font-monospace, monospace);
     font-size: 0.7rem;
     font-weight: 600;
     padding: 0 0.25rem;
@@ -219,39 +244,58 @@
 
 .wx-scrum-prio.P1 {
     background: rgba(220, 53, 69, 0.12);
-    color: #dc3545;
+    color: var(--wx-danger-text-emphasis, #58151c);
 }
 
 .wx-scrum-prio.P2 {
     background: rgba(255, 193, 7, 0.18);
-    color: #b45309;
+    color: var(--wx-warning-text-emphasis, #664d03);
 }
 
 .wx-scrum-prio.P3 {
     background: rgba(13, 110, 253, 0.10);
-    color: #0d6efd;
+    color: var(--wx-primary-text-emphasis, #052c65);
 }
 
 .wx-scrum-prio.P4 {
     background: rgba(108, 117, 125, 0.10);
-    color: #6c757d;
+    color: var(--wx-secondary-text-emphasis, #2b2f32);
 }
 
 .wx-scrum-row .wx-scrum-points {
-    font-family: var(--bs-font-monospace, monospace);
+    font-family: var(--wx-font-monospace, monospace);
     font-size: 0.75rem;
     font-weight: 600;
-    background: var(--bs-tertiary-bg, #f8f9fa);
+    background: var(--wx-tertiary-bg, #f8f9fa);
     border-radius: 999px;
     padding: 0.05rem 0.45rem;
     min-width: 28px;
     text-align: center;
 }
 
+.wx-scrum-row .wx-scrum-assignee {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 9999px;
+    font-size: 0.62rem;
+    font-weight: 700;
+    color: #fff;
+    background: var(--wx-secondary, #6c757d);
+    object-fit: cover;
+}
+
+.wx-scrum-row .wx-scrum-assignee-empty {
+    background: transparent;
+    border: 1px dashed var(--wx-border-color, #dee2e6);
+}
+
 .wx-scrum-row .wx-scrum-add-sprint {
-    border: 1px solid var(--bs-border-color, #dee2e6);
-    background: var(--bs-body-bg, #fff);
-    color: var(--bs-primary, #0d6efd);
+    border: 1px solid var(--wx-border-color, #dee2e6);
+    background: var(--wx-body-bg, #fff);
+    color: var(--wx-primary-text-emphasis, #052c65);
     font-size: 0.75rem;
     font-weight: 500;
     border-radius: 0.25rem;
@@ -265,7 +309,7 @@
 .wx-scrum-empty {
     padding: 1rem;
     text-align: center;
-    color: var(--bs-secondary-color, #6c757d);
+    color: var(--wx-secondary-color, #6c757d);
     font-size: 0.85rem;
 }
 
@@ -276,51 +320,180 @@
 }
 
 /* dark mode */
-[data-bs-theme="dark"] .wx-scrum-row:hover {
+[data-wx-theme="dark"] .wx-scrum-row:hover {
     background: rgba(255, 255, 255, 0.04);
 }
-
-[data-bs-theme="dark"] .wx-scrum-row.wx-scrum-row-active,
-[data-bs-theme="dark"] .wx-scrum-row.active {
+@scope ([data-wx-theme="dark"]) to ([data-wx-theme="light"]) {
+:scope .wx-scrum-row.wx-scrum-row-active,
+:scope .wx-scrum-row.active {
     background: rgba(13, 110, 253, 0.18);
 }
-
-[data-bs-theme="dark"] .wx-scrum-row.wx-scrum-row-active:hover,
-[data-bs-theme="dark"] .wx-scrum-row.active:hover {
+}
+@scope ([data-wx-theme="dark"]) to ([data-wx-theme="light"]) {
+:scope .wx-scrum-row.wx-scrum-row-active:hover,
+:scope .wx-scrum-row.active:hover {
     background: rgba(13, 110, 253, 0.24);
 }
-
-[data-bs-theme="dark"] .wx-scrum-section {
-    background: var(--bs-body-bg, #1d1f23);
 }
-
-[data-bs-theme="dark"] .wx-scrum-sprint-menu {
-    background: var(--bs-tertiary-bg, #2b3035);
-    color: var(--bs-body-color, #dee2e6);
-    border-color: var(--bs-border-color, #495057);
+@scope ([data-wx-theme="dark"]) to ([data-wx-theme="light"]) {
+:scope .wx-scrum-section {
+    background: var(--wx-body-bg, #1d1f23);
 }
-
-[data-bs-theme="dark"] .wx-scrum-sprint-menu:hover,
-[data-bs-theme="dark"] .wx-scrum-sprint-menu:focus-visible {
-    background: color-mix(in srgb, var(--bs-tertiary-bg, #2b3035) 80%, white 20%);
-    color: var(--bs-body-color, #dee2e6);
-    border-color: var(--bs-primary, #0d6efd);
 }
-
-[data-bs-theme="dark"] .wx-scrum-ctx-item {
-    color: var(--bs-body-color, #dee2e6);
+@scope ([data-wx-theme="dark"]) to ([data-wx-theme="light"]) {
+:scope .wx-scrum-sprint-menu {
+    background: var(--wx-tertiary-bg, #2b3035);
+    color: var(--wx-body-color, #dee2e6);
+    border-color: var(--wx-border-color, #495057);
 }
-
-[data-bs-theme="dark"] .wx-scrum-ctx-item:hover,
-[data-bs-theme="dark"] .wx-scrum-ctx-item:focus-visible {
-    background: color-mix(in srgb, var(--bs-tertiary-bg, #2b3035) 80%, white 20%);
-    color: var(--bs-body-color, #dee2e6);
-    border-color: var(--bs-primary, #0d6efd);
 }
-
-[data-bs-theme="dark"] .wx-scrum-ctx-item:disabled {
-    color: var(--bs-secondary-color, #adb5bd);
+@scope ([data-wx-theme="dark"]) to ([data-wx-theme="light"]) {
+:scope .wx-scrum-sprint-menu:hover,
+:scope .wx-scrum-sprint-menu:focus-visible {
+    background: color-mix(in srgb, var(--wx-tertiary-bg, #2b3035) 80%, white 20%);
+    color: var(--wx-body-color, #dee2e6);
+    border-color: var(--wx-primary, #0d6efd);
+}
+}
+@scope ([data-wx-theme="dark"]) to ([data-wx-theme="light"]) {
+:scope .wx-scrum-ctx-item {
+    color: var(--wx-body-color, #dee2e6);
+}
+}
+@scope ([data-wx-theme="dark"]) to ([data-wx-theme="light"]) {
+:scope .wx-scrum-ctx-item:hover,
+:scope .wx-scrum-ctx-item:focus-visible {
+    background: color-mix(in srgb, var(--wx-tertiary-bg, #2b3035) 80%, white 20%);
+    color: var(--wx-body-color, #dee2e6);
+    border-color: var(--wx-primary, #0d6efd);
+}
+}
+@scope ([data-wx-theme="dark"]) to ([data-wx-theme="light"]) {
+:scope .wx-scrum-ctx-item:disabled {
+    color: var(--wx-secondary-color, #adb5bd);
     opacity: 0.6;
+}
+}
+
+/* --------------------------------------------------------------- assign & estimate dialog */
+/* the modal host is appended to the document body, so these selectors are not
+   nested under .wx-scrum-backlog */
+.wx-scrum-assignee-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.wx-scrum-assignee-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    border-radius: 9999px;
+    color: #fff;
+    font-weight: 700;
+    object-fit: cover;
+    background: var(--wx-secondary, #6c757d);
+}
+
+.wx-scrum-assignee-selected {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 40px;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--wx-border-color, #dee2e6);
+    border-radius: 0.375rem;
+    background: var(--wx-tertiary-bg, #f8f9fa);
+}
+
+.wx-scrum-assignee-selected-empty {
+    color: var(--wx-secondary-color, #6c757d);
+    font-size: 0.85rem;
+}
+
+.wx-scrum-assignee-selected-avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 0.72rem;
+}
+
+.wx-scrum-assignee-selected-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.wx-scrum-assignee-clear {
+    margin-left: auto;
+    border: none;
+    background: transparent;
+    color: var(--wx-secondary-color, #6c757d);
+    line-height: 1;
+    padding: 0.2rem 0.35rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+}
+
+.wx-scrum-assignee-clear:hover {
+    color: var(--wx-danger, #dc3545);
+    background: rgba(220, 53, 69, 0.08);
+}
+
+.wx-scrum-assignee-results {
+    max-height: 220px;
+    overflow-y: auto;
+    border: 1px solid var(--wx-border-color, #dee2e6);
+    border-radius: 0.375rem;
+}
+
+.wx-scrum-assignee-result {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    text-align: left;
+    border: none;
+    border-bottom: 1px solid var(--wx-border-color, #dee2e6);
+    background: var(--wx-body-bg, #fff);
+    padding: 0.35rem 0.5rem;
+    cursor: pointer;
+}
+
+.wx-scrum-assignee-result:last-child {
+    border-bottom: none;
+}
+
+.wx-scrum-assignee-result:hover,
+.wx-scrum-assignee-result:focus-visible {
+    background: rgba(13, 110, 253, 0.08);
+}
+
+.wx-scrum-assignee-result-avatar {
+    width: 26px;
+    height: 26px;
+    font-size: 0.68rem;
+}
+
+.wx-scrum-assignee-result-body {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+    min-width: 0;
+}
+
+.wx-scrum-assignee-result-name {
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.wx-scrum-assignee-result-team {
+    font-size: 0.72rem;
+    color: var(--wx-secondary-color, #6c757d);
+}
+@scope ([data-wx-theme="dark"]) to ([data-wx-theme="light"]) {
+:scope .wx-scrum-assignee-result {
+    background: var(--wx-body-bg, #1d1f23);
+}
 }
 
 /* --------------------------------------------------------------- sprint overview */
@@ -328,8 +501,8 @@
     display: grid;
     grid-template-columns: 1.6fr 1fr 1fr 1fr;
     gap: 1rem;
-    background: var(--bs-body-bg, #fff);
-    border: 1px solid var(--bs-border-color, #dee2e6);
+    background: var(--wx-body-bg, #fff);
+    border: 1px solid var(--wx-border-color, #dee2e6);
     border-radius: 0.375rem;
     padding: 0.875rem 1rem;
     cursor: pointer;
@@ -338,7 +511,7 @@
 
 .wx-scrum-sprint:hover {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-    border-color: var(--bs-primary, #0d6efd);
+    border-color: var(--wx-primary, #0d6efd);
 }
 
 /* loading / error states span the full card */
@@ -348,7 +521,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 0.25rem;
-    color: var(--bs-secondary-color, #6c757d);
+    color: var(--wx-secondary-color, #6c757d);
     font-size: 0.875rem;
 }
 
@@ -371,7 +544,7 @@
     font-size: 0.65rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--bs-secondary-color, #6c757d);
+    color: var(--wx-secondary-color, #6c757d);
     font-weight: 600;
 }
 
@@ -387,15 +560,15 @@
 .wx-scrum-sprint-day {
     font-size: 0.7rem;
     font-weight: 500;
-    color: var(--bs-secondary-color, #6c757d);
-    background: var(--bs-tertiary-bg, #f8f9fa);
+    color: var(--wx-secondary-color, #6c757d);
+    background: var(--wx-tertiary-bg, #f8f9fa);
     padding: 0.05rem 0.4rem;
     border-radius: 0.2rem;
 }
 
 .wx-scrum-sprint-goal {
     font-size: 0.825rem;
-    color: var(--bs-secondary-color, #6c757d);
+    color: var(--wx-secondary-color, #6c757d);
     line-height: 1.45;
     overflow: hidden;
 }
@@ -414,12 +587,12 @@
 
 .wx-scrum-sprint-metric .denom {
     font-size: 0.8rem;
-    color: var(--bs-secondary-color, #6c757d);
+    color: var(--wx-secondary-color, #6c757d);
 }
 
 .wx-scrum-sprint-bar {
     height: 6px;
-    background: var(--bs-tertiary-bg, #f0f1f3);
+    background: var(--wx-tertiary-bg, #f0f1f3);
     border-radius: 999px;
     overflow: hidden;
     margin-top: 0.25rem;
@@ -438,7 +611,7 @@
 
 .wx-scrum-sprint-caption {
     font-size: 0.72rem;
-    color: var(--bs-secondary-color, #6c757d);
+    color: var(--wx-secondary-color, #6c757d);
 }
 
 .wx-scrum-sprint-chips {
@@ -452,12 +625,12 @@
     display: inline-flex;
     align-items: center;
     font-size: 0.7rem;
-    background: var(--bs-tertiary-bg, #f8f9fa);
-    color: var(--bs-secondary-color, #6c757d);
-    border: 1px solid var(--bs-border-color, #dee2e6);
+    background: var(--wx-tertiary-bg, #f8f9fa);
+    color: var(--wx-secondary-color, #6c757d);
+    border: 1px solid var(--wx-border-color, #dee2e6);
     padding: 0.05rem 0.35rem;
     border-radius: 0.2rem;
-    font-family: var(--bs-font-monospace, monospace);
+    font-family: var(--wx-font-monospace, monospace);
 }
 
 .wx-scrum-sprint-burndown {
@@ -468,14 +641,14 @@
 }
 
 .wx-scrum-sprint-burndown .ideal {
-    stroke: var(--bs-border-color, #dee2e6);
+    stroke: var(--wx-border-color, #dee2e6);
     stroke-width: 1;
     stroke-dasharray: 3 3;
     fill: none;
 }
 
 .wx-scrum-sprint-burndown .actual {
-    stroke: var(--bs-primary, #0d6efd);
+    stroke: var(--wx-primary, #0d6efd);
     stroke-width: 1.75;
     fill: none;
     stroke-linecap: round;
@@ -483,11 +656,11 @@
 }
 
 .wx-scrum-sprint-burndown .marker {
-    fill: var(--bs-primary, #0d6efd);
+    fill: var(--wx-primary, #0d6efd);
 }
 
 .wx-scrum-sprint-burndown .point {
-    fill: var(--bs-primary, #0d6efd);
+    fill: var(--wx-primary, #0d6efd);
     opacity: 0.55;
     transition: opacity 0.1s ease-in-out, r 0.1s ease-in-out;
     cursor: help;
@@ -499,7 +672,7 @@
 }
 
 .wx-scrum-sprint-burndown .today {
-    stroke: var(--bs-secondary-color, #6c757d);
+    stroke: var(--wx-secondary-color, #6c757d);
     stroke-width: 1;
     stroke-dasharray: 2 2;
     opacity: 0.55;
@@ -541,18 +714,18 @@
 }
 
 .wx-scrum-dialog {
-    background: var(--bs-body-bg, #fff);
+    background: var(--wx-body-bg, #fff);
     border-radius: 0.5rem;
     box-shadow: 0 12px 48px rgba(0, 0, 0, 0.18);
     width: min(480px, 92vw);
     display: flex;
     flex-direction: column;
-    color: var(--bs-body-color, #212529);
+    color: var(--wx-body-color, #212529);
 }
 
 .wx-scrum-dialog-head {
     padding: 0.875rem 1.125rem 0.75rem;
-    border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+    border-bottom: 1px solid var(--wx-border-color, #dee2e6);
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -570,7 +743,7 @@
     background: transparent;
     font-size: 1.1rem;
     line-height: 1;
-    color: var(--bs-secondary-color, #6c757d);
+    color: var(--wx-secondary-color, #6c757d);
     cursor: pointer;
 }
 
@@ -584,7 +757,7 @@
 .wx-scrum-dialog-body label {
     font-size: 0.8rem;
     font-weight: 500;
-    color: var(--bs-secondary-color, #6c757d);
+    color: var(--wx-secondary-color, #6c757d);
     margin-bottom: 0.15rem;
     display: block;
 }
@@ -602,7 +775,7 @@
 
 .wx-scrum-dialog-foot {
     padding: 0.75rem 1.125rem 0.875rem;
-    border-top: 1px solid var(--bs-border-color, #dee2e6);
+    border-top: 1px solid var(--wx-border-color, #dee2e6);
     display: flex;
     gap: 0.5rem;
     justify-content: flex-end;

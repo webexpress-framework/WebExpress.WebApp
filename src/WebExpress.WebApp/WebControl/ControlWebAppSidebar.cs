@@ -10,7 +10,7 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Represents a sidebar control for the web application.
+    /// Renders the sidebar of a WebApp page, typically holding navigation or contextual content.
     /// </summary>
     public class ControlWebAppSidebar : Control, IControlWebAppSidebar
     {
@@ -248,7 +248,9 @@ namespace WebExpress.WebApp.WebControl
             var sidebarCtlr = items.Any()
                 ? new ControlSidebar(Id)
                 {
-                    Breakpoint = _ => 80
+                    Breakpoint = _ => 80,
+                    ScrollActiveIntoView = _ => true,
+                    HoverExpanded = _ => true
                 }
                     .Add(items)
                     .Add(tools)

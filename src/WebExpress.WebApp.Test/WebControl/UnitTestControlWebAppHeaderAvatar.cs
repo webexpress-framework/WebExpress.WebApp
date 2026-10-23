@@ -16,8 +16,8 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the id property of the web app header avatar control.
         /// </summary>
         [Theory]
-        [InlineData(null, false, "<div class=\"wx-webui-avatar-dropdown ms-2\" role=\"button\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">User</div><div class=\"wx-dropdown-item\"></div></div>")]
-        [InlineData("id", false, "<div id=\"id\" class=\"wx-webui-avatar-dropdown ms-2\" role=\"button\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">User</div><div class=\"wx-dropdown-item\"></div></div>")]
+        [InlineData(null, false, "<div class=\"wx-webui-avatar-dropdown ms-2\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">User</div><div class=\"wx-dropdown-item\"></div></div>")]
+        [InlineData("id", false, "<div id=\"id\" class=\"wx-webui-avatar-dropdown ms-2\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">User</div><div class=\"wx-dropdown-item\"></div></div>")]
         [InlineData("id", true, "")]
         public void Id(string id, bool empty, string expected)
         {
@@ -46,8 +46,8 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the username property of the web app header avatar control.
         /// </summary>
         [Theory]
-        [InlineData(null, "<div id=\"id\" class=\"wx-webui-avatar-dropdown ms-2\" role=\"button\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">User</div><div class=\"wx-dropdown-item\"></div></div>")]
-        [InlineData("bob", "<div id=\"id\" class=\"wx-webui-avatar-dropdown ms-2\" role=\"button\" data-name=\"bob\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">User</div><div class=\"wx-dropdown-item\"></div></div>")]
+        [InlineData(null, "<div id=\"id\" class=\"wx-webui-avatar-dropdown ms-2\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">User</div><div class=\"wx-dropdown-item\"></div></div>")]
+        [InlineData("bob", "<div id=\"id\" class=\"wx-webui-avatar-dropdown ms-2\" data-name=\"bob\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">User</div><div class=\"wx-dropdown-item\"></div></div>")]
         public void Username(string username, string expected)
         {
             // arrange
@@ -73,8 +73,8 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests the Iamge property of the web app header avatar control.
         /// </summary>
         [Theory]
-        [InlineData(null, "<div id=\"id\" class=\"wx-webui-avatar-dropdown ms-2\" role=\"button\" data-src=\"/\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">User</div><div class=\"wx-dropdown-item\"></div></div>")]
-        [InlineData("/abc.svg", "<div id=\"id\" class=\"wx-webui-avatar-dropdown ms-2\" role=\"button\" data-src=\"/abc.svg\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">User</div><div class=\"wx-dropdown-item\"></div></div>")]
+        [InlineData(null, "<div id=\"id\" class=\"wx-webui-avatar-dropdown ms-2\" data-src=\"/\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">User</div><div class=\"wx-dropdown-item\"></div></div>")]
+        [InlineData("/abc.svg", "<div id=\"id\" class=\"wx-webui-avatar-dropdown ms-2\" data-src=\"/abc.svg\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">User</div><div class=\"wx-dropdown-item\"></div></div>")]
         public void Iamge(string image, string expected)
         {
             // arrange
@@ -119,7 +119,7 @@ namespace WebExpress.WebApp.Test.WebControl
             // validation - verify the avatar dropdown class is present
             AssertExtensions.EqualWithPlaceholders
             (
-                "<div id=\"id\" class=\"wx-webui-avatar-dropdown ms-2\" role=\"button\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">User</div><div class=\"wx-dropdown-item\"></div></div>",
+                "<div id=\"id\" class=\"wx-webui-avatar-dropdown ms-2\" data-menuCss=\"dropdown-menu-end\"><div class=\"wx-dropdown-header\" role=\"heading\">User</div><div class=\"wx-dropdown-item\"></div></div>",
                 html
             );
         }

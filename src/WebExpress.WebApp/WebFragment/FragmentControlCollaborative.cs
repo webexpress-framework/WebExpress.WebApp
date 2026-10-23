@@ -7,7 +7,7 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebFragment
 {
     /// <summary>
-    /// Represents a fragment control the collaborative control.
+    /// A collaborative (real-time) control made available as a fragment, so the framework can insert it into a WebApp page section.
     /// </summary>
     public abstract class FragmentControlCollaborative : ControlCollaborative, IFragmentControl<ControlCollaborative>
     {
@@ -38,7 +38,7 @@ namespace WebExpress.WebApp.WebFragment
         /// <returns>An HTML node representing the rendered fragments. Can be null if no nodes are present.</returns>
         public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
         {
-            if (!FragmentContext.Conditions.Check(renderContext?.Request))
+            if (!FragmentContext.Check(renderContext?.Request))
             {
                 return null;
             }

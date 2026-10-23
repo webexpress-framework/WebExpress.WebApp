@@ -51,8 +51,8 @@ namespace WebExpress.WebApp.WebRestApi
         public IResponse Retrieve(IRequest request)
         {
             // (o)rderby column id, (d)irection, (p)age, (limit) page size, (q)uery string for filter, (wql) advanced query
-            var pageNumber = Convert.ToInt32(request.GetParameter("p")?.Value ?? "0");
-            var pageSize = Convert.ToInt32(request.GetParameter("l")?.Value ?? "50");
+            var pageNumber = request.ParseIntParameter("p", 0);
+            var pageSize = request.ParseIntParameter("l", 50);
             var search = request.GetParameter("q")?.Value ?? string.Empty;
             var wql = request.GetParameter("wql")?.Value ?? null;
             var filters = request.GetParameter("f")?.Value?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries) ?? [];
@@ -103,10 +103,15 @@ namespace WebExpress.WebApp.WebRestApi
                     }
                 }
 
-                // paging 
+                using var context = CreateContext();
+
+                // the size of the whole result is asked for before paging narrows the query,
+                // because that is the only point at which it can still be counted
+                var total = RetrieveTotal(query, context, request);
+
+                // paging
                 query = query.WithPaging(pageNumber * pageSize, pageSize);
 
-                using var context = CreateContext();
                 var rows = RetrieveRows(query, context, columns, request) ?? [];
 
                 var result = new RestApiTableResult()
@@ -118,7 +123,10 @@ namespace WebExpress.WebApp.WebRestApi
                     {
                         PageNumber = pageNumber,
                         PageSize = pageSize,
-                        TotalCount = rows.Count()
+
+                        // an endpoint that cannot count its result reports the size of the page
+                        // it returned, which is what every endpoint did before the hook existed
+                        TotalCount = total >= 0 ? total : rows.Count()
                     }
                 };
 
@@ -126,7 +134,7 @@ namespace WebExpress.WebApp.WebRestApi
             }
             catch (Exception ex)
             {
-                return new ResponseBadRequest(new StatusMessage($"Error processing request.{ex}"));
+                return RestApiFault.BadRequest(request, ex, "Error processing request.");
             }
         }
 
@@ -209,7 +217,7 @@ namespace WebExpress.WebApp.WebRestApi
             }
             catch (Exception ex)
             {
-                return new ResponseBadRequest(new StatusMessage($"Error in configuration: {ex}"));
+                return RestApiFault.BadRequest(request, ex, "Error in configuration.");
             }
         }
 
@@ -352,17 +360,59 @@ namespace WebExpress.WebApp.WebRestApi
         /// for the retrieval operation. Cannot be null.
         /// </param>
         /// <param name="columns">
-        /// The collection of columns available for the specified REST API request.
+        /// The collection of columns available for the specified REST API request, in the
+        /// order the response sends them. The cells of every row must follow this order:
+        /// a cell carries no column id, so the client assigns it to a column by its
+        /// position. An endpoint that returns a stored, reordered layout from
+        /// <see cref="RetrieveColums"/> therefore builds its cells from these columns
+        /// rather than in a fixed order.
         /// </param>
         /// <param name="request">
         /// The request that provides the operational context for resolving
         /// the appropriate REST API URI.
         /// </param>
         /// <returns>
-        /// An enumerable collection of table rows that satisfy the query and 
+        /// An enumerable collection of table rows that satisfy the query and
         /// context. The collection may be empty if no rows match the criteria.
         /// </returns>
         protected abstract IEnumerable<RestApiTableRow> RetrieveRows(IQuery<TIndexItem> query, IQueryContext context, IEnumerable<RestApiTableColumn> columns, IRequest request);
+
+        /// <summary>
+        /// Returns how many rows the filtered result holds in total, before paging narrows it.
+        /// </summary>
+        /// <remarks>
+        /// The client derives the number of pages from this figure, so an endpoint that leaves it
+        /// unknown gets a pager offering a single page no matter how much there is to walk
+        /// through. It is opt-in rather than computed here because only the endpoint knows how to
+        /// count its source cheaply; the base cannot do better than mapping every row through
+        /// <see cref="RetrieveRows"/> a second time, which is a price no endpoint should pay
+        /// without asking.
+        /// </remarks>
+        /// <param name="query">
+        /// The filtered and sorted query, without paging applied.
+        /// </param>
+        /// <param name="context">
+        /// The context in which the query is executed.
+        /// </param>
+        /// <param name="request">
+        /// The request that provides the operational context.
+        /// </param>
+        /// <returns>
+        /// The number of rows in the whole result, or a negative value when the endpoint does
+        /// not count it.
+        /// </returns>
+        protected virtual int RetrieveTotal(IQuery<TIndexItem> query, IQueryContext context, IRequest request)
+        {
+            return -1;
+        }
+
+        /// <summary>
+        /// Returns how a WQL statement is turned into a query. The default evaluates the text
+        /// conditions as the index does, which only a provider running in memory can execute;
+        /// an endpoint backed by a database returns <see cref="WqlQueryMode.Translatable"/>,
+        /// so that its query provider can translate the filter into SQL.
+        /// </summary>
+        protected virtual WqlQueryMode QueryMode => WqlQueryMode.Exact;
 
         /// <summary>
         /// Applies filtering criteria to the specified query based on the provided WQL statement.
@@ -389,7 +439,7 @@ namespace WebExpress.WebApp.WebRestApi
                 return query;
             }
 
-            return wqlStatement.ToQuery();
+            return wqlStatement.ToQuery(QueryMode);
         }
 
         /// <summary>

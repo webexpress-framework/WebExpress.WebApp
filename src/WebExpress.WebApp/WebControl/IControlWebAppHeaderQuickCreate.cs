@@ -4,7 +4,7 @@ using WebExpress.WebUI.WebControl;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Quick create control element for a WebApp.
+    /// Contract for the quick-create control in the WebApp header.
     /// </summary>
     public interface IControlWebAppHeaderQuickCreate : IControl
     {

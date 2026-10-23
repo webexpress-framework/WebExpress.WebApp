@@ -3,6 +3,12 @@
  * Transforms a standard HTML form into a multi-step wizard.
  * Supports static and dynamically loaded steps via AJAX.
  * Handles validation, server-side skipping via 204 No Content, caching, and final submission.
+ *
+ * The steps are state: which one is shown, which were skipped, failed or loaded, and what
+ * the user chose on each. The step indicator, the step counter and the navigation are
+ * rendered from it; the pages keep the content the server rendered or delivered and are
+ * only shown and hidden. In a dialog the navigation joins the footer the dialog already
+ * has, ahead of its dismiss button.
  */
 webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl {
 
@@ -14,155 +20,257 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
         super(element);
     }
 
+    // wizard step state accessors backed by the store inherited from the form
+    // control, so the single source of truth is the store
+
+    get _currentIndex() { return this._store.getState().currentIndex || 0; }
+    set _currentIndex(value) { this._store.setState({ currentIndex: value }); }
+
+    get _wizardLoading() { return this._store.getState().wizardLoading || false; }
+    set _wizardLoading(value) { this._store.setState({ wizardLoading: value }); }
+
     /**
-     * Initialize the wizard, parse pages and build the layout.
-     * Overrides the base _init method.
+     * Gets the steps, in their order.
+     * @returns {Array<object>} The step models.
+     */
+    get _pages() {
+        return this._store.getState().pages || [];
+    }
+
+    /**
+     * Reads the wizard on top of the form: its pages, the content that stays above
+     * them, and the footer a dialog gives it.
+     * @returns {boolean} False when the form already carries a wizard.
      */
     _init() {
         // Guard against multiple initializations by the framework
         if (this._element.dataset.wxRestwizardInit === "true") {
-            return;
+            return false;
         }
         this._element.dataset.wxRestwizardInit = "true";
 
-        this._pages = [];
-        this._currentIndex = 0;
-        this._wizardLoading = false;
+        this._finishLabel = this._element.dataset.finishLabel || null;
+        this._finishIcon = this._element.dataset.finishIcon || null;
 
         // call base class initialization
         super._init();
 
-        this._discoverPages();
-        this._buildWizardLayout();
-        
-        // start wizard at the first step
-        this._renderState();
-    }
+        this._pageElements = Array.from(this._element.querySelectorAll(".wx-wizard-page"));
 
-    /**
-     * Parses the DOM for wizard pages and initializes the internal state array.
-     */
-    _discoverPages() {
-        const pageElements = Array.from(this._element.querySelectorAll(".wx-wizard-page"));
-        
-        for (let i = 0; i < pageElements.length; i++) {
-            const el = pageElements[i];
-            this._pages.push({
+        // the content beside the pages stays above them
+        this._staticElements = this._bodyChildren.filter((child) => !child.classList.contains("wx-wizard-page"));
+
+        this._footer = this._hostChildren.find((child) => child !== this._body && child.classList.contains("modal-footer")) || null;
+        this._footerChildren = this._footer
+            ? Array.from(this._footer.childNodes).filter((child) => child.nodeType === 1)
+            : [];
+
+        this.setState({
+            currentIndex: 0,
+            wizardLoading: false,
+            // the step whose dynamic content is being loaded, shown while it loads
+            loadingIndex: null,
+            pages: this._pageElements.map((el, i) => ({
                 index: i,
-                element: el,
                 title: el.getAttribute("data-title") || `Step ${i + 1}`,
+                subtitle: el.getAttribute("data-subtitle") || null,
+                summarySource: el.getAttribute("data-summary-source") || null,
                 uri: el.getAttribute("data-uri") || null,
                 isLoaded: !el.hasAttribute("data-uri"),
                 skipped: false,
                 hasError: false,
                 payloadHash: null
-            });
-        }
+            })),
+            // what the user chose on each step, read back for the step indicator
+            summaries: this._pageElements.map(() => null)
+        });
+
+        // a step summary changes with the choice the user makes in it, so it is read
+        // again whenever any control reports a new value
+        this._element.addEventListener(webexpress.webui.Event.CHANGE_VALUE_EVENT, () => this._refreshSummaries());
+        this._element.addEventListener("change", () => this._refreshSummaries());
+
+        return true;
     }
 
     /**
-     * Builds the surrounding UI layout for the wizard including progress bar and buttons.
+     * Describes the wizard below the banners: the content that stays above the pages,
+     * the step indicator, the pages and - outside a dialog - the navigation.
+     * @param {object} state The current state.
+     * @returns {object} The wizard virtual node.
      */
-    _buildWizardLayout() {
-        const root = document.createElement("div");
-        root.className = "wx-restwizard-root";
+    _renderContent(state) {
+        const h = webexpress.webui.h;
+        const adopt = webexpress.webui.Renderer.adopt;
+        const shown = state.loadingIndex !== null ? state.loadingIndex : state.currentIndex;
 
-        const container = this._element.querySelector(".modal-body") || this._element;
+        return h("div", { key: "wizard", class: "wx-restwizard-root" },
+            h("div", { key: "static", class: "wx-restwizard-static-container mb-3" },
+                this._staticElements.map((el) => adopt(this._slotOf(el)))),
+            this._renderProgress(state),
+            h("div", { key: "pages", class: "wx-restwizard-pages-container" },
+                this._pageElements.map((el, i) => adopt(el, {
+                    style: { display: i === shown ? "block" : "none" },
+                    "aria-hidden": i === shown ? "false" : "true"
+                }))),
+            this._footer === null && h("div", { key: "actions", class: "wx-restwizard-actions d-flex gap-2 justify-content-between" },
+                this._renderNav(state),
+                h("div", { class: "d-flex gap-2" }, this._renderNext(state), this._renderFinish(state))));
+    }
 
-        // extract non-page elements to keep them in the form
-        const staticElements = Array.from(container.children).filter((child) => {
-            if (child === this._formErrorContainer || child === this._confirmContainer || child === this._formPrologContainer) {
-                return false;
-            }
-            if (child.classList && child.classList.contains("wx-wizard-page")) {
-                return false;
-            }
-            if (child.tagName === "CONFIRM") {
-                return false;
-            }
-            // Prevent nesting if a root container somehow already exists
-            if (child.classList && child.classList.contains("wx-restwizard-root")) {
-                return false;
-            }
-            return true;
-        });
-
-        // create static container
-        const staticContainer = document.createElement("div");
-        staticContainer.className = "wx-restwizard-static-container mb-3";
-        for (let i = 0; i < staticElements.length; i++) {
-            staticContainer.appendChild(staticElements[i]);
-        }
-        root.appendChild(staticContainer);
-
-        // progress indicator
-        this._wizardProgressContainer = document.createElement("div");
-        this._wizardProgressContainer.className = "wx-restwizard-progress mb-4";
-        root.appendChild(this._wizardProgressContainer);
-
-        // pages container
-        this._pagesContainer = document.createElement("div");
-        this._pagesContainer.className = "wx-restwizard-pages-container mb-4";
-        
-        for (let i = 0; i < this._pages.length; i++) {
-            this._pagesContainer.appendChild(this._pages[i].element);
-        }
-        root.appendChild(this._pagesContainer);
-
-        const modalFooter = this._element.querySelector(".modal-footer");
-
-        // action buttons
-        this._btnPrev = document.createElement("button");
-        this._btnPrev.type = "button";
-        this._btnPrev.className = "btn btn-outline-secondary";
-        this._btnPrev.textContent = this._i18n("webexpress.webapp:wizard.previous") || "Zurück";
-        this._btnPrev.addEventListener("click", () => {
-            this._navigate(-1);
-        });
-
-        this._btnNext = document.createElement("button");
-        this._btnNext.type = "button";
-        this._btnNext.className = "btn btn-primary";
-        this._btnNext.textContent = this._i18n("webexpress.webapp:wizard.next") || "Weiter";
-        this._btnNext.addEventListener("click", () => {
-            this._navigate(1);
-        });
-
-        this._btnFinish = document.createElement("button");
-        this._btnFinish.type = "submit";
-        this._btnFinish.className = "btn btn-success";
-        this._btnFinish.textContent = this._i18n("webexpress.webapp:wizard.finish") || "Abschließen";
-
-        if (modalFooter) {
-            // hide original submit button
-            const existingSubmit = modalFooter.querySelector('[type="submit"], button[name="submit"]');
-            if (existingSubmit) {
-                existingSubmit.style.display = "none";
-            }
-            
-            this._btnPrev.classList.add("me-auto"); // push to the left in flex layout
-            modalFooter.insertBefore(this._btnPrev, modalFooter.firstChild);
-            
-            modalFooter.appendChild(this._btnNext);
-            modalFooter.appendChild(this._btnFinish);
-        } else {
-            const actionsContainer = document.createElement("div");
-            actionsContainer.className = "wx-restwizard-actions d-flex gap-2 justify-content-between";
-
-            const leftGroup = document.createElement("div");
-            const rightGroup = document.createElement("div");
-            rightGroup.className = "d-flex gap-2";
-
-            leftGroup.appendChild(this._btnPrev);
-            rightGroup.appendChild(this._btnNext);
-            rightGroup.appendChild(this._btnFinish);
-
-            actionsContainer.appendChild(leftGroup);
-            actionsContainer.appendChild(rightGroup);
-            root.appendChild(actionsContainer);
+    /**
+     * Describes the footer of a dialog with the navigation added: back and the counter
+     * lead it, the primary actions go ahead of the dismiss button - the order every other
+     * dialog gets from ControlModalForm - and the form's own submit button is hidden.
+     * @param {object} state The current state.
+     * @param {HTMLElement} child The child of the form.
+     * @returns {object} The adopting virtual node.
+     */
+    _renderHostChild(state, child) {
+        if (child !== this._footer) {
+            return super._renderHostChild(state, child);
         }
 
-        container.appendChild(root);
+        const adopt = webexpress.webui.Renderer.adopt;
+        const dismiss = this._footerChildren.find((el) => el.getAttribute("data-wx-dismiss") === "modal") || null;
+        const submit = this._footerChildren.find((el) => el.matches('[type="submit"], button[name="submit"]')) || null;
+        const children = [this._renderNav(state)];
+
+        for (const el of this._footerChildren) {
+            if (el === dismiss) {
+                children.push(this._renderNext(state), this._renderFinish(state));
+            }
+            children.push(el === submit ? adopt(el, { style: { display: "none" } }) : adopt(el));
+        }
+        if (dismiss === null) {
+            // a footer without a dismiss button receives the primary actions at its end
+            children.push(this._renderNext(state), this._renderFinish(state));
+        }
+
+        return adopt(child, null, children);
+    }
+
+    /**
+     * Describes back and the step counter.
+     * @param {object} state The current state.
+     * @returns {object} The navigation virtual node.
+     */
+    _renderNav(state) {
+        const h = webexpress.webui.h;
+        const position = webexpress.webapp.restWizardModel.describePosition(state.pages, state.currentIndex);
+
+        return h("div", { key: "nav", class: "wx-restwizard-nav d-flex align-items-center gap-2 me-auto" },
+            h("button", {
+                key: "prev",
+                type: "button",
+                class: "btn btn-link wx-restwizard-prev",
+                style: { display: state.currentIndex > 0 ? "" : "none" },
+                disabled: this._busy(state),
+                on: { click: this._handler("navigate", "back", () => () => this._navigate(-1)) }
+            }, h("i", { class: this._iconClass("chevron-left") + " me-2" }), this._i18n("webexpress.webapp:wizard.previous") || "Previous"),
+            // the position among the active steps, so the user knows how far the
+            // dialog still goes
+            h("span", { key: "counter", class: "wx-restwizard-counter" }, this._applyParams(
+                this._i18n("webexpress.webapp:wizard.step") || "Step {0} of {1}",
+                { 0: position.position, 1: position.total })));
+    }
+
+    /**
+     * Describes the button to the next step, shown until the last active step.
+     * @param {object} state The current state.
+     * @returns {object} The button virtual node.
+     */
+    _renderNext(state) {
+        const isLast = webexpress.webapp.restWizardModel.isLastPage(state.pages, state.currentIndex);
+
+        return webexpress.webui.h("button", {
+            key: "next",
+            type: "button",
+            class: "btn btn-primary wx-restwizard-next",
+            style: { display: isLast ? "none" : "" },
+            disabled: this._busy(state),
+            on: { click: this._handler("navigate", "next", () => () => this._navigate(1)) }
+        }, this._i18n("webexpress.webapp:wizard.next") || "Next", webexpress.webui.h("i", { class: this._iconClass("chevron-right") + " ms-2" }));
+    }
+
+    /**
+     * Describes the button that submits the wizard, shown on the last active step.
+     * @param {object} state The current state.
+     * @returns {object} The button virtual node.
+     */
+    _renderFinish(state) {
+        const isLast = webexpress.webapp.restWizardModel.isLastPage(state.pages, state.currentIndex);
+
+        return webexpress.webui.h("button", {
+            key: "finish",
+            type: "submit",
+            class: "btn btn-primary wx-restwizard-finish",
+            style: { display: isLast ? "" : "none" },
+            disabled: this._busy(state)
+        }, this._finishIcon && webexpress.webui.h("i", { class: this._finishIcon + " me-2" }),
+            this._finishLabel || this._i18n("webexpress.webapp:wizard.finish") || "Finish");
+    }
+
+    /**
+     * Tells whether the wizard refuses to move: while it submits or loads a step.
+     * @param {object} state The current state.
+     * @returns {boolean} True while busy.
+     */
+    _busy(state) {
+        return state.submitting === true || state.wizardLoading === true;
+    }
+
+    /**
+     * Describes the step indicator, laid out as the shared step indicator so a wizard
+     * header reads like every other stepper in the application. A step shows the choice
+     * made on it in place of its subtitle, and a step already passed can be clicked to
+     * return to it.
+     * @param {object} state The current state.
+     * @returns {object} The indicator virtual node.
+     */
+    _renderProgress(state) {
+        const h = webexpress.webui.h;
+        let number = 0;
+
+        return h("div", { key: "progress", class: "wx-restwizard-progress wx-steps wx-steps-inline" },
+            state.pages.map((page, i) => {
+                if (page.skipped) {
+                    return null;
+                }
+                number++;
+
+                const step = webexpress.webapp.restWizardModel.stateOf(i, state.currentIndex);
+                const completed = step === "completed";
+                const description = state.summaries[i] || page.subtitle;
+
+                return h("div", {
+                    key: "step-" + i,
+                    class: ["wx-steps-item", "wx-steps-item-" + step, completed && "wx-steps-item-clickable"],
+                    role: completed ? "button" : null,
+                    tabindex: completed ? "0" : null,
+                    on: completed ? {
+                        click: this._handler("goto", String(i), () => () => this._goTo(i)),
+                        keyup: this._handler("goto-key", String(i), () => (e) => {
+                            if (e.key === " " || e.key === "Enter") {
+                                this._goTo(i);
+                            }
+                        })
+                    } : {}
+                },
+                    h("span", { class: "wx-steps-marker" }, completed ? "✓" : String(number)),
+                    h("div", { class: "wx-steps-text" },
+                        h("span", { class: "wx-steps-label" }, page.title),
+                        description && h("span", { class: "wx-steps-description", title: description }, description)));
+            }));
+    }
+
+    /**
+     * Changes fields of one step model.
+     * @param {number} index - The step index.
+     * @param {object} fields - The changed fields.
+     */
+    _patchPage(index, fields) {
+        this.setState({ pages: this._pages.map((page, i) => i === index ? Object.assign({}, page, fields) : page) });
     }
 
     /**
@@ -176,6 +284,7 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
 
         if (stepOffset > 0) {
             if (!this.validateCurrentPage()) {
+                this._focusFirstInvalid();
                 return;
             }
         }
@@ -198,33 +307,32 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
                 const payloadStr = JSON.stringify(this._buildPayload());
 
                 // check cache: if already loaded successfully and payload did not change
-                if (page.isLoaded && page.payloadHash === payloadStr && !page.hasError) {
+                if (webexpress.webapp.restWizardModel.shouldUseCache(page, payloadStr)) {
                     targetFound = true;
                     break;
                 }
 
-                const status = await this._loadDynamicPage(page, payloadStr);
-                
+                const status = await this._loadDynamicPage(nextIndex, payloadStr);
+
                 if (status === 204) {
                     // mark as skipped and continue moving in the same direction
-                    page.skipped = true;
+                    this._patchPage(nextIndex, { skipped: true });
                     nextIndex += stepOffset;
                     continue;
                 } else if (status === 200) {
-                    page.skipped = false;
-                    page.payloadHash = payloadStr;
+                    this._patchPage(nextIndex, { skipped: false, payloadHash: payloadStr });
                     targetFound = true;
                     break;
                 } else {
                     // loading failed, navigate to this step to show the error
-                    page.skipped = false;
+                    this._patchPage(nextIndex, { skipped: false });
                     targetFound = true;
                     break;
                 }
             } else {
                 // static page
                 if (stepOffset > 0) {
-                    page.skipped = false;
+                    this._patchPage(nextIndex, { skipped: false });
                 }
                 targetFound = true;
                 break;
@@ -233,69 +341,76 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
 
         if (targetFound) {
             this._currentIndex = nextIndex;
-            this._renderState();
+            this._refreshSummaries();
         }
     }
 
     /**
-     * Asynchronously loads a dynamic step from the server.
-     * @param {Object} page - The page object to load.
+     * Moves directly to a step the user has already passed. Steps ahead of the
+     * current one stay out of reach, because they may not have been validated yet.
+     * @param {number} index - The index of the step to go to.
+     */
+    _goTo(index) {
+        if (this._wizardLoading || this._submitting) {
+            return;
+        }
+        if (index < 0 || index >= this._currentIndex || this._pages[index].skipped) {
+            return;
+        }
+
+        this._currentIndex = index;
+    }
+
+    /**
+     * Asynchronously loads a dynamic step from the server. The step is shown with a
+     * spinner while it loads.
+     * @param {number} index - The index of the step to load.
      * @param {string} payloadStr - The serialized form payload to send.
      * @returns {Promise<number>} The HTTP status code.
      */
-    async _loadDynamicPage(page, payloadStr) {
-        this._setWizardLoading(true);
-        page.hasError = false;
-        
-        // render a placeholder while loading
-        page.element.innerHTML = `
+    async _loadDynamicPage(index, payloadStr) {
+        const page = this._pages[index];
+        const element = this._pageElements[index];
+
+        this.setState({ wizardLoading: true, loadingIndex: index });
+        this._patchPage(index, { hasError: false });
+
+        // the content of a step belongs to the step, so its placeholder is written into it
+        element.innerHTML = `
             <div class="d-flex justify-content-center py-4">
                 <div class="spinner-border text-secondary" role="status">
                     <span class="visually-hidden">Loading...</span>
                 </div>
             </div>
         `;
-        
-        // temporarily show it if we are switching to it directly
-        if (this._currentIndex !== page.index) {
-            for (let i = 0; i < this._pages.length; i++) {
-                this._pages[i].element.style.display = "none";
-            }
-        }
-        page.element.style.display = "block";
 
-        try {
-            const response = await fetch(page.uri, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json; charset=utf-8",
-                    "Accept": "text/html"
-                },
-                body: payloadStr
-            });
+        const result = await this._transport().request(
+            page.uri, webexpress.webapp.restWizardModel.buildStepRequestInit(payloadStr));
 
-            if (response.status === 204) {
-                this._setWizardLoading(false);
-                return 204;
-            }
-
-            if (!response.ok) {
-                throw new Error(this._i18n("webexpress.webapp:error.load_failed") || `Fehler beim Laden des Schritts (HTTP ${response.status})`);
-            }
-
-            const html = await response.text();
-            this._injectHtml(page.element, html);
-            page.isLoaded = true;
+        // a 204 No Content signals that the step is skipped
+        if (result.status === 204) {
             this._setWizardLoading(false);
-            
-            return 200;
+            return 204;
+        }
 
-        } catch (error) {
-            page.hasError = true;
-            page.element.innerHTML = `<div class="alert alert-danger wx-restwizard-page-error my-3">${error.message}</div>`;
+        // any failure (http or network) renders the step error and stops here
+        if (!result.ok) {
+            const message = this._i18n("webexpress.webapp:error.load_failed") ||
+                (result.error && result.error.message) ||
+                `Failed to load the step (HTTP ${result.status})`;
+            this._patchPage(index, { hasError: true });
+            element.innerHTML = `<div class="alert alert-danger wx-restwizard-page-error my-3">${message}</div>`;
             this._setWizardLoading(false);
             return 500;
         }
+
+        // the step content is delivered as html text (parsed by the service)
+        const html = (result.data && typeof result.data.text === "string") ? result.data.text : "";
+        this._injectHtml(element, html);
+        this._patchPage(index, { isLoaded: true });
+        this._setWizardLoading(false);
+
+        return 200;
     }
 
     /**
@@ -305,7 +420,7 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
      */
     _injectHtml(container, html) {
         container.innerHTML = "";
-        
+
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, "text/html");
         const fragment = document.createDocumentFragment();
@@ -327,7 +442,7 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
         for (let i = 0; i < scripts.length; i++) {
             const oldScript = scripts[i];
             const newScript = document.createElement("script");
-            
+
             Array.from(oldScript.attributes).forEach((attr) => {
                 newScript.setAttribute(attr.name, attr.value);
             });
@@ -337,66 +452,73 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
     }
 
     /**
-     * Updates the user interface based on the current wizard state.
+     * Reads back what the user chose on every step, so the step indicator shows the
+     * answer in place of the question.
      */
-    _renderState() {
-        if (!this._wizardProgressContainer) {
-            return;
+    _refreshSummaries() {
+        const summaries = this._pages.map((page, i) => this._resolveSummary(page, this._pageElements[i]));
+        const current = this._store.getState().summaries || [];
+
+        if (summaries.some((summary, i) => summary !== current[i])) {
+            this.setState({ summaries: summaries });
         }
-        this._wizardProgressContainer.innerHTML = "";
+    }
 
-        // evaluate visibility of buttons and progress
-        for (let i = 0; i < this._pages.length; i++) {
-            const page = this._pages[i];
-            
-            // build progress step for active/non-skipped pages
-            if (!page.skipped) {
-                const stepEl = document.createElement("div");
-                stepEl.className = "wx-restwizard-step";
-                
-                if (i === this._currentIndex) {
-                    stepEl.classList.add("active");
-                } else if (i < this._currentIndex) {
-                    stepEl.classList.add("completed");
-                }
-                
-                stepEl.textContent = page.title;
-                this._wizardProgressContainer.appendChild(stepEl);
-            }
-
-            // toggle page visibility
-            if (i === this._currentIndex) {
-                page.element.style.display = "block";
-                page.element.setAttribute("aria-hidden", "false");
-            } else {
-                page.element.style.display = "none";
-                page.element.setAttribute("aria-hidden", "true");
-            }
+    /**
+     * Reads back what the user chose on a step. The value is resolved to the label of
+     * the control that carries it — a tile, an option of a segmented choice or of a
+     * select — and falls back to the raw value.
+     * @param {Object} page - The step to summarise.
+     * @param {HTMLElement} element - The page of the step.
+     * @returns {string|null} The label of the choice, or null when the step is open.
+     */
+    _resolveSummary(page, element) {
+        if (!page.summarySource) {
+            return null;
         }
 
-        // prev button is visible if we are not on the first page
-        if (this._btnPrev) {
-            this._btnPrev.style.display = this._currentIndex > 0 ? "" : "none";
-        }
-        
-        // determine if current page is the last non-skipped page
-        let isLastPage = true;
-        for (let j = this._currentIndex + 1; j < this._pages.length; j++) {
-            if (!this._pages[j].skipped) {
-                isLastPage = false;
-                break;
-            }
+        const input = this._element.querySelector(`[name="${page.summarySource}"]`);
+        if (!input) {
+            return null;
         }
 
-        if (this._btnNext && this._btnFinish) {
-            if (isLastPage) {
-                this._btnNext.style.display = "none";
-                this._btnFinish.style.display = "";
-            } else {
-                this._btnNext.style.display = "";
-                this._btnFinish.style.display = "none";
-            }
+        // a control is registered against its root element, not against the hidden
+        // input it submits through, so the lookup walks up from the input
+        const ctrl = webexpress.webui.Controller.getClosestInstance(input);
+        const value = ((ctrl && typeof ctrl.value !== "undefined") ? ctrl.value : input.value) || "";
+        if (!value) {
+            return null;
         }
+
+        const escaped = (window.CSS && CSS.escape) ? CSS.escape(value) : value.replace(/"/g, '\\"');
+
+        const card = element.querySelector(`[data-tile-id="${escaped}"]`);
+        if (card) {
+            const title = card.querySelector(".card-title");
+            return (title ? title.textContent : card.textContent).trim();
+        }
+
+        const option = element.querySelector(`[data-value="${escaped}"]`);
+        if (option) {
+            return option.textContent.trim();
+        }
+
+        if (input.tagName === "SELECT" && input.selectedOptions.length) {
+            return input.selectedOptions[0].textContent.trim();
+        }
+
+        return value;
+    }
+
+    /**
+     * Collects the fields of a step that take part in the validation.
+     * @param {number} index - The step index.
+     * @returns {Array<HTMLElement>} The fields.
+     */
+    _fieldsOf(index) {
+        return Array.from(this._pageElements[index].querySelectorAll("input, textarea, select")).filter((el) => {
+            return el.name && !el.disabled;
+        });
     }
 
     /**
@@ -404,37 +526,13 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
      * @returns {boolean} True if the page is valid.
      */
     validateCurrentPage() {
-        this.clearErrors();
-
-        const page = this._pages[this._currentIndex];
-        
-        if (page.hasError) {
+        if (this._pages[this._currentIndex].hasError) {
+            this.clearErrors();
             return false;
         }
 
-        let pageIsValid = true;
-        const messages = [];
-        const elements = Array.from(page.element.querySelectorAll("input, textarea, select")).filter((el) => {
-            return el.name && !el.disabled;
-        });
-
-        for (let i = 0; i < elements.length; i++) {
-            const el = elements[i];
-            // use inherited validation method from RestFormCtrl
-            const msg = this._validateField(el);
-            
-            if (msg) {
-                pageIsValid = false;
-                this._showFieldError(el, msg);
-                messages.push(msg);
-            }
-        }
-
-        if (!pageIsValid) {
-            this._displayAggregatedErrors(messages);
-        }
-
-        return pageIsValid;
+        // use inherited validation method from RestFormCtrl
+        return this._validateFields(this._fieldsOf(this._currentIndex));
     }
 
     /**
@@ -443,15 +541,12 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
      * @returns {boolean} True if valid.
      */
     validate() {
-        this.clearErrors();
-
-        let formIsValid = true;
         let firstInvalidIndex = -1;
-        const messages = [];
+        const fields = [];
 
         for (let i = 0; i < this._pages.length; i++) {
             const page = this._pages[i];
-            
+
             if (page.skipped) {
                 continue;
             }
@@ -460,39 +555,21 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
                 if (firstInvalidIndex === -1) {
                     firstInvalidIndex = i;
                 }
-                formIsValid = false;
                 continue;
             }
 
-            const elements = Array.from(page.element.querySelectorAll("input, textarea, select")).filter((el) => {
-                return el.name && !el.disabled;
-            });
-
-            for (let j = 0; j < elements.length; j++) {
-                const el = elements[j];
-                const msg = this._validateField(el);
-                
-                if (msg) {
-                    formIsValid = false;
-                    this._showFieldError(el, msg);
-                    messages.push(msg);
-                    
-                    if (firstInvalidIndex === -1) {
-                        firstInvalidIndex = i;
-                    }
-                }
+            const pageFields = this._fieldsOf(i);
+            if (firstInvalidIndex === -1 && pageFields.some((el) => this._validateField(el))) {
+                firstInvalidIndex = i;
             }
+            fields.push(...pageFields);
         }
 
-        if (!formIsValid) {
-            if (firstInvalidIndex !== -1 && firstInvalidIndex !== this._currentIndex) {
-                this._currentIndex = firstInvalidIndex;
-                this._renderState();
-            }
-            this._displayAggregatedErrors(messages);
+        if (firstInvalidIndex !== -1 && firstInvalidIndex !== this._currentIndex) {
+            this._currentIndex = firstInvalidIndex;
         }
 
-        return formIsValid;
+        return this._validateFields(fields) && firstInvalidIndex === -1;
     }
 
     /**
@@ -507,28 +584,8 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
             return;
         }
 
-        if (this.options.validateOnSubmit && !this.validate()) {
-            const firstInvalid = this._element.querySelector("[aria-invalid='true']");
-            if (firstInvalid) {
-                firstInvalid.focus();
-            }
-            return;
-        }
-
-        // delegate to base class submit method for final REST request
-        this.submit();
-    }
-
-    /**
-     * Overrides base class to also disable wizard-specific buttons.
-     * @param {boolean} state True to activate submitting mode.
-     */
-    _setSubmitting(state) {
-        super._setSubmitting(state);
-        
-        if (this._btnPrev) this._btnPrev.disabled = state;
-        if (this._btnNext) this._btnNext.disabled = state;
-        if (this._btnFinish) this._btnFinish.disabled = state;
+        // the save of the base validates the whole wizard through the validate override
+        this.save();
     }
 
     /**
@@ -536,11 +593,7 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
      * @param {boolean} state True when loading.
      */
     _setWizardLoading(state) {
-        this._wizardLoading = !!state;
-        
-        if (this._btnPrev) this._btnPrev.disabled = state;
-        if (this._btnNext) this._btnNext.disabled = state;
-        if (this._btnFinish) this._btnFinish.disabled = state;
+        this.setState(state ? { wizardLoading: true } : { wizardLoading: false, loadingIndex: null });
     }
 };
 

@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using WebExpress.WebApp.WebData;
 using WebExpress.WebCore.WebHtml;
-using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
@@ -16,19 +16,80 @@ namespace WebExpress.WebApp.WebControl
     /// prompt, normalizes their payloads and re-emits a unified
     /// webexpress.webui.Event.CHANGE_FILTER_EVENT.
     /// </summary>
-    public class ControlAdvancedSearch : Control, IControlSearch
+    public class ControlAdvancedSearch : Control, IControlSearch, IDataIsland, IViewStateModelBound
     {
         private readonly List<IControl> _content = [];
 
         /// <summary>
-        /// Gets or sets the uri that determines the data.
+        /// Gets or sets the resolver of the ViewState resource the search drives.
+        /// When set through Resource&lt;TResource&gt;(), a search or WQL change
+        /// writes the search and wql state keys and re-queries this resource; when
+        /// null, the search is standalone and coordinates through the change filter
+        /// event and the BindSearch bind.
         /// </summary>
-        public Func<IRenderControlContext, IUri> RestUri { get; set; }
+        public Func<IRenderControlContext, string> ResourceFactory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional ViewState id the search binds to. When null, the
+        /// search resolves its ViewState by the resource it drives.
+        /// </summary>
+        public Func<IRenderControlContext, string> ViewState { get; set; }
+
+        /// <summary>
+        /// Gets or sets the resolver of the state path a basic search writes into,
+        /// set through Model(...) and defaulting to "search" on the client; a WQL
+        /// change always writes the "wql" key, mirroring the query state contract.
+        /// </summary>
+        public Func<IRenderControlContext, string> ModelFactory { get; set; }
+
+        /// <summary>
+        /// Gets the data service descriptors of the control, emitted as
+        /// wx-service island elements. The data service backs the embedded WQL
+        /// prompt.
+        /// </summary>
+        public IList<Func<IRenderControlContext, DataServiceDescriptor>> ServiceFactories { get; } = [];
+
+        /// <summary>
+        /// Gets or sets the single data service descriptor, as a convenience for
+        /// the common control with exactly one service. Reading returns the
+        /// first declared service, assigning replaces all declared services.
+        /// </summary>
+        public Func<IRenderControlContext, DataServiceDescriptor> ServiceFactory
+        {
+            get => ServiceFactories.Count > 0 ? ServiceFactories[0] : null;
+            set
+            {
+                ServiceFactories.Clear();
+
+                if (value != null)
+                {
+                    ServiceFactories.Add(value);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the optional template reference, emitted as the
+        /// data-wx-template attribute.
+        /// </summary>
+        public Func<IRenderControlContext, string> TemplateFactory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the optional initial state, emitted as the wx-state island.
+        /// </summary>
+        public Func<IRenderControlContext, DataState> StateFactory { get; set; }
 
         /// <summary>
         /// Gets the content of the control (e.g., save button).
         /// </summary>
         public IEnumerable<IControl> Content => _content;
+
+        /// <summary>
+        /// Gets or sets the initial search term the box opens with, so a page reached with a term
+        /// already in hand shows it rather than an empty box. The controls the search drives read
+        /// their own initial term from their state, so the term is authored on both.
+        /// </summary>
+        public Func<IRenderControlContext, string> Value { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the class.
@@ -95,17 +156,17 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>An HTML node representing the rendered control.</returns>
         public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, params IControl[] controls)
         {
-            var uri = RestUri?.Invoke(renderContext);
-            var resultUri = uri?.BindParameters(renderContext.Request);
+            var value = Value?.Invoke(renderContext);
 
             var html = new HtmlElementTextContentDiv()
             {
                 Id = Id,
-                Class = Css.Concatenate("wx-webapp-search", GetClasses()),
-                Style = GetStyles()
+                Class = Css.Concatenate("wx-webapp-search", GetClasses(renderContext)),
+                Style = GetStyles(renderContext)
             }
-                .AddUserAttribute("data-uri", resultUri?.ToString())
-                .Add(controls.Select(x => x.Render(renderContext, visualTree)));
+                .Add(controls.Select(x => x.Render(renderContext, visualTree)))
+                .EmitDataIslands(this, renderContext)
+                .AddUserAttribute("data-value", !string.IsNullOrEmpty(value) ? value : null);
 
             return html;
         }

@@ -28,11 +28,15 @@ webexpress.webapp.InputTileCtrl = class extends webexpress.webui.InputTileCtrl {
      * @param {HTMLElement} element The root element.
      */
     constructor(element) {
+        // consume the island before the base constructor reshapes the
+        // children; the read caches on the element
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+
         super(element);
 
-        // read rest uri and remove attribute
-        this._restUri = element.dataset.uri || "";
-        element.removeAttribute("data-uri");
+        // the endpoint is configured through the wx-service island
+        this._service = islandServices.data || null;
+        this._restUri = this._service ? this._service.baseUri : "";
 
         // toolbar with search button
         const toolbarDiv = document.createElement("div");
@@ -40,7 +44,7 @@ webexpress.webapp.InputTileCtrl = class extends webexpress.webui.InputTileCtrl {
         this._searchBtn = document.createElement("button");
         this._searchBtn.type = "button";
         this._searchBtn.className = "btn btn-outline-secondary btn-sm position-relative";
-        this._searchBtn.innerHTML = '<i class="fas fa-search"></i>';
+        this._searchBtn.innerHTML = '<i class="wx-icon-light wx-icon-light-search"></i>';
         this._searchBtn.setAttribute("aria-label", "Show search field");
         toolbarDiv.appendChild(this._searchBtn);
         element.insertBefore(toolbarDiv, this._tileList);
@@ -174,12 +178,12 @@ webexpress.webapp.InputTileCtrl = class extends webexpress.webui.InputTileCtrl {
             url += separator + "q=" + encodeURIComponent(filter);
         }
 
-        fetch(url)
+        webexpress.webapp.ServiceRegistry.request(url)
             .then((res) => {
                 if (!res.ok) {
                     throw new Error("Request failed");
                 }
-                return res.json();
+                return res.data;
             })
             .then((response) => {
                 let tiles = [];

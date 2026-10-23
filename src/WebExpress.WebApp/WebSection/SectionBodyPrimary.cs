@@ -3,7 +3,7 @@
 namespace WebExpress.WebApp.WebSection
 {
     /// <summary>
-    /// Represents the section body.primary.
+    /// Names the 'body.primary' slot of the WebApp page layout: a placeholder section into which fragments can be inserted to place content at that position.
     /// </summary>
     public class SectionBodyPrimary : ISection
     {

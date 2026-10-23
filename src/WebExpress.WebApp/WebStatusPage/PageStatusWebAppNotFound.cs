@@ -5,7 +5,7 @@ using WebExpress.WebCore.WebStatusPage;
 namespace WebExpress.WebApp.WebStatusPage
 {
     /// <summary>
-    /// The status page 404.
+    /// The WebApp status page shown for HTTP 404 (Not Found).
     /// </summary>
     [Title("webexpress.webapp:status.404.title")]
     [Description("webexpress.webapp:status.404.description")]

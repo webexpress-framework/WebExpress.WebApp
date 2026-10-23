@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Reflection;
 using WebExpress.WebApp.WebScope;
 using WebExpress.WebApp.WebSettingPage;
+using WebExpress.WebCore.WebPolicies;
 using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebAttribute;
@@ -21,6 +22,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
     [SettingGroup<SettingGroupSystemGeneral>()]
     [SettingSection(SettingSection.Secondary)]
     [Scope<IScopeAdmin>]
+    [Policy<SystemAccessPolicy>]
     public sealed class Information : ISettingPage<VisualTreeWebAppSetting>, IScopeAdmin
     {
         /// <summary>

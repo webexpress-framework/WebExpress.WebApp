@@ -1,7 +1,7 @@
 ﻿namespace WebExpress.WebApp.WebScope
 {
     /// <summary>
-    /// A scope for setting pages.
+    /// Marks a page or element as belonging to the settings scope of a WebApp.
     /// </summary>
     public interface IScopeSetting : IScopeGeneral
     {
