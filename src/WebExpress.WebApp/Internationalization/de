@@ -130,13 +130,14 @@ setting.title.restapi.label=REST-Schnittstellen
 
 setting.title.theme.label=Designs
 
-setting.theme.description=Ein Design wird von der Anwendung festgelegt, nicht vom Betreiber. Diese Seite zeigt, welche Designs eine Anwendung mitbringt und welches davon wirkt.
+setting.theme.description=Wähle ein Design für diese Anwendung. Die Übersicht zeigt die verfügbaren Farbschemata und Stylesheets.
 setting.theme.name.label=Design
 setting.theme.mode.label=Farbschema
 setting.theme.mode.light=Hell
 setting.theme.mode.dark=Dunkel
 setting.theme.application.label=Anwendung
 setting.theme.state.label=Status
+setting.theme.state.selected=Ausgewählt
 setting.theme.state.default=Standard
 setting.theme.state.fallback=Wirksam
 setting.theme.state.stylesheet=Eigenes CSS

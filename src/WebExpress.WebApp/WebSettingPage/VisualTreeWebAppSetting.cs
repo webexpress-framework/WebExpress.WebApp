@@ -2,6 +2,7 @@ using System.Linq;
 using WebExpress.WebApp.WebControl;
 using WebExpress.WebApp.WebPage;
 using WebExpress.WebApp.WebSection;
+using WebExpress.WebApp.WebTheme;
 using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebComponent;
@@ -49,6 +50,8 @@ namespace WebExpress.WebApp.WebSettingPage
         /// <returns>The page as an html tree.</returns>
         public override IHtmlNode Render(IVisualTreeContext context)
         {
+            UseTheme(ThemePreferences.Resolve(context.RenderContext));
+
             var html = new HtmlElementRootHtml();
             var body = new HtmlElementSectionBody();
             var renderContext = new RenderControlContext(context.RenderContext);

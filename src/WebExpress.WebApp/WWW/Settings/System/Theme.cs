@@ -2,6 +2,7 @@
 using System.Linq;
 using WebExpress.WebApp.WebScope;
 using WebExpress.WebApp.WebSettingPage;
+using WebExpress.WebApp.WebTheme;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebComponent;
@@ -19,9 +20,8 @@ namespace WebExpress.WebApp.WWW.Settings.System
     /// Settings page listing the themes registered for the applications of the server.
     /// </summary>
     /// <remarks>
-    /// A theme is chosen by the application rather than by the operator, so the page reports
-    /// rather than configures: which themes an application brings, which of them is in effect,
-    /// and what each one changes - the colour scheme, the icon set, the stylesheet.
+    /// Applications can provide a preference selector while the shared catalog describes
+    /// the registered color schemes and stylesheets. Persistence remains application-owned.
     /// </remarks>
     [WebIcon<IconPalette>]
     [Title("webexpress.webapp:setting.title.theme.label")]
@@ -49,7 +49,13 @@ namespace WebExpress.WebApp.WWW.Settings.System
         /// <param name="visualTree">The visual tree of the web application.</param>
         public void Process(IRenderContext renderContext, VisualTreeWebAppSetting visualTree)
         {
+            visualTree.UseTheme(ThemePreferences.Resolve(renderContext));
             var panel = visualTree.Content.MainPanel;
+            var selector = ThemePreferences.CreateSelector(renderContext.PageContext.ApplicationContext);
+            if (selector is not null)
+            {
+                panel.AddPrimary(selector);
+            }
 
             // the registration order decides which theme wins when an application declares no
             // default, so the enumeration is kept as it comes and only a copy is sorted
@@ -162,6 +168,11 @@ namespace WebExpress.WebApp.WWW.Settings.System
         {
             var application = themeContext.ApplicationContext;
             var declared = application?.DefaultTheme;
+            var selected = ThemePreferences.Resolve(renderContext);
+            if (selected == themeContext)
+            {
+                yield return CreateBadge(renderContext, "webexpress.webapp:setting.theme.state.selected", TypeColorBackgroundBadge.Primary);
+            }
 
             if (declared is not null && declared.ThemeId?.ToString() == themeContext.ThemeId?.ToString())
             {
