@@ -48,16 +48,19 @@ namespace WebExpress.WebApp.WebPage
         }
 
         /// <summary>
-        /// Marks the document for the independent landing palette and continuous document scrolling.
+        /// Marks the document for the landing layout and continuous document scrolling.
         /// </summary>
+        /// <remarks>
+        /// The theme, its light or dark scheme and the icon set are applied by the base tree as
+        /// on every other page; the landing palette derives from them, so the public page looks
+        /// like the application the visitor chose.
+        /// </remarks>
         /// <param name="context">The context used to render the complete page.</param>
         /// <returns>The landing document without application navigation or splitters.</returns>
         public override IHtmlNode Render(IVisualTreeContext context)
         {
             var html = (HtmlElementRootHtml)base.Render(context);
-            html.AddUserAttribute("data-wx-theme", "light");
             html.Body.AddUserAttribute("class", "wx-landing");
-            html.Body.AddUserAttribute("data-wx-theme", "light");
             return html;
         }
 

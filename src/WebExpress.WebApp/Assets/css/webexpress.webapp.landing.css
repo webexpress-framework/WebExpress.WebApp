@@ -1,15 +1,21 @@
 /* adapted from webexpress-framework.github.io under the MIT license; see docs/landing-pages.md */
 
+/* the palette is drawn from the framework variables, so the landing page follows the visitor's
+   theme and its light or dark scheme like every other page instead of a fixed light look */
 body.wx-landing {
-    --color-primary: #2563eb;
-    --color-primary-dark: #1e40af;
-    --color-accent: #0ea5e9;
-    --color-bg: #ffffff;
-    --color-surface: #f8fafc;
-    --color-surface-2: #eef2f7;
-    --color-text: #0f172a;
-    --color-text-muted: #475569;
-    --color-border: #e2e8f0;
+    --color-primary: var(--wx-primary);
+    --color-primary-dark: color-mix(in srgb, var(--wx-primary) 75%, #000);
+    /* text in the brand color: the primary fill is too dark to read on a dark page, the
+       framework's link colors are tuned for both schemes */
+    --color-link: var(--wx-link-color);
+    --color-link-hover: var(--wx-link-hover-color);
+    --color-accent: var(--wx-info);
+    --color-bg: var(--wx-body-bg);
+    --color-surface: var(--wx-tertiary-bg);
+    --color-surface-2: var(--wx-secondary-bg);
+    --color-text: var(--wx-body-color);
+    --color-text-muted: var(--wx-secondary-color);
+    --color-border: var(--wx-border-color);
     --color-code-bg: #0f172a;
     --color-code-text: #e2e8f0;
 
@@ -52,13 +58,13 @@ body.wx-landing svg {
     max-width: 100%;
 }
 body.wx-landing a {
-    color: var(--color-primary);
+    color: var(--color-link);
     text-decoration: none;
     transition: color var(--transition);
 }
 body.wx-landing a:hover,
 body.wx-landing a:focus-visible {
-    color: var(--color-primary-dark);
+    color: var(--color-link-hover);
     text-decoration: underline;
 }
 body.wx-landing :focus-visible {
@@ -141,7 +147,7 @@ body.wx-landing .wx-landing-eyebrow {
     letter-spacing: 0.08em;
     font-size: 0.78rem;
     font-weight: 600;
-    color: var(--color-primary);
+    color: var(--color-link);
     margin: 0 0 0.5rem;
 }
 body.wx-landing .wx-landing-site-header {
@@ -201,7 +207,7 @@ body.wx-landing .wx-landing-site-nav-list a {
 body.wx-landing .wx-landing-site-nav-list a:hover,
 body.wx-landing .wx-landing-site-nav-list a:focus-visible {
     background: var(--color-surface);
-    color: var(--color-primary-dark);
+    color: var(--color-link-hover);
     text-decoration: none;
 }
 body.wx-landing .wx-landing-btn {
@@ -246,7 +252,7 @@ body.wx-landing .wx-landing-btn-ghost {
 body.wx-landing .wx-landing-btn-ghost:hover,
 body.wx-landing .wx-landing-btn-ghost:focus-visible {
     border-color: var(--color-primary);
-    color: var(--color-primary-dark);
+    color: var(--color-link-hover);
     background: var(--color-surface);
 }
 body.wx-landing .wx-landing-hero {
@@ -432,7 +438,7 @@ body.wx-landing .wx-landing-site-footer-col a {
 }
 body.wx-landing .wx-landing-site-footer-col a:hover,
 body.wx-landing .wx-landing-site-footer-col a:focus-visible {
-    color: var(--color-primary-dark);
+    color: var(--color-link-hover);
 }
 body.wx-landing .wx-landing-site-footer-meta {
     border-top: 1px solid var(--color-border);
@@ -463,10 +469,6 @@ body.wx-landing {
     min-height: 100dvh;
     overflow: visible;
     display: block;
-    color-scheme: light;
-    --wx-body-bg: var(--color-bg);
-    --wx-body-color: var(--color-text);
-    --wx-link-color: var(--color-primary);
 }
 body.wx-landing #wx-landing-main { display: block; }
 body.wx-landing #wx-landing-hero {

@@ -1,6 +1,6 @@
 # Landing pages
 
-The public website layout uses `IPage<VisualTreeWebAppLanding>`. It has an independent header, hero, continuous main content, and footer. It omits the application avatar, application menu, breadcrumb, headline, sidebar, toolbar, and property splitters. Its dedicated light palette and document scrolling are scoped to landing pages and do not change normal application pages.
+The public website layout uses `IPage<VisualTreeWebAppLanding>`. It has an independent header, hero, continuous main content, and footer. It omits the application avatar, application menu, breadcrumb, headline, sidebar, toolbar, and property splitters. Its layout and document scrolling are scoped to landing pages and do not change normal application pages. The landing palette derives from the framework variables, so the page follows the theme, the light or dark scheme and the icon set the visitor chose; a page applies the theme in `Process` (`visualTree.UseTheme(...)`) as any other page does.
 
 The header accepts controls through `LandingHeader.Add(...)` and fragments registered with `[Section<SectionLandingHeader>]`. The hero accepts controls through `Hero.Add(...)` and `[Section<SectionLandingHero>]`. Both appear before the reused content slots. The hero belongs to the main landmark.
 
