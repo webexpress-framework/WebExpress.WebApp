@@ -5,6 +5,7 @@ using System.Net.Http;
 using WebExpress.WebApp.WebApiControl;
 using WebExpress.WebApp.WebControl;
 using WebExpress.WebApp.WebData;
+using WebExpress.WebApp.WebTheme;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebComponent;
 using WebExpress.WebCore.WebEndpoint;
@@ -141,10 +142,7 @@ namespace WebExpress.WebApp.WebPage
 
             // the marker goes on the root, as on every other page: the client's dark mode
             // switch only ever rewrites the root, and a marker on the body would outrank it
-            if (Theme?.ThemeMode == ThemeMode.Dark)
-            {
-                html.AddUserAttribute("data-wx-theme", "dark");
-            }
+            ThemePreferences.ApplyColorScheme(context.RenderContext, html, Theme);
             html.Body.Add(MessageQueueUri);
             html.Body.Add(Header.Render(renderContext, this));
             html.Body.Add(Toast.Render(renderContext, this));

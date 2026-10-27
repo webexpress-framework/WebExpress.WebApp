@@ -34,6 +34,8 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/js/webexpress.webapp.dropdown.js")]
     [Asset("/assets/js/webexpress.webapp.dropdown.theme.model.js")]
     [Asset("/assets/js/webexpress.webapp.dropdown.theme.js")]
+    [Asset("/assets/js/webexpress.webapp.dropdown.iconset.js")]
+    [Asset("/assets/js/webexpress.webapp.colorscheme.js")]
     [Asset("/assets/js/webexpress.webapp.modal.editor.js")]
     [Asset("/assets/js/webexpress.webapp.modal.spreadsheet.js")]
     [Asset("/assets/js/webexpress.webapp.file.view.model.js")]

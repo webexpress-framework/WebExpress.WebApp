@@ -107,6 +107,54 @@ The visual tree picks the active theme in the following order:
 
 The framework does NOT inspect cookies, sessions, or identities - persistence and theme activation are owned by the application.
 
+## Appearance
+
+The button reads as a choice: `ControlDataSelectionTheme` defaults to an outlined secondary button with a caret and a hover text. The menu is a single choice - every entry is a `menuitemradio`, the one in use carries `aria-checked="true"` and the `active` highlight. A pick the server refuses (non-2xx or network failure) restores the previous caption and mark instead of showing the refused value as the one in use.
+
+## Icon Sets
+
+The same dropdown picks an icon set. An icon set (`IconSet`) is a stylesheet of mask rules, linked after the framework rules it overrides; `IconSet.Default` stands for the framework drawings and should be offered first, because the dropdown shows the first entry while nothing is stored.
+
+```csharp
+// 1. offer the sets next to the themes (once, in the application constructor)
+ThemePreferences.RegisterIconSets(applicationContext,
+    [IconSet.Default, new IconSet("pirates", "myapp:iconset.pirates", null, "assets/css/pirates.icons.css")],
+    ctx => MyStore.GetIconSet(ctx.Request),
+    () => new ControlDataSelectionIconSet("iconSetSelector").DataService<IconSetApi>());
+
+// 2. the endpoint: RestApiIconSet already refuses ids that are not offered
+public sealed class IconSetApi : RestApiIconSet
+{
+    protected override string GetActiveIconSetId(IQueryContext c, IRequest r) => MyStore.GetIconSet(r);
+    protected override void PersistSelection(string id, IQueryContext c, IRequest r) => MyStore.SetIconSet(r, id);
+}
+```
+
+`VisualTreeWebApp` and the settings tree link the chosen set on render (`ThemePreferences.ApplyIconSet`), so no page has to do it. The icon set picker (`DropdownIconSetCtrl`, class `wx-webapp-dropdown-iconset`) applies a stored pick by swapping the stylesheet link - no reload - and announces it with `webexpress.webapp.iconset.change` on the document.
+
+## Mode (light or dark)
+
+A theme is a colour scheme that comes in a light and a dark variant (its stylesheet defines tokens under `[data-wx-theme="light"]` and `[data-wx-theme="dark"]`); light or dark is the visitor's decision, independent of the theme. `[ThemeMode]` on a theme only sets the default for a visitor who has not chosen. `RestApiColorScheme` offers `light` and `dark` and refuses anything else; an empty value clears the choice. Without a stored choice the endpoint answers `selected: null`, and the picker (`ControlDataSelectionColorScheme`) shows the mode the page is rendered in, which it receives as `data-default` - only the page knows the theme's default.
+
+```csharp
+ThemePreferences.RegisterColorScheme<ColorSchemeApi>(applicationContext, ctx => MyStore.GetColorScheme(ctx.Request));
+```
+
+Every WebApp page then renders the root with `data-wx-theme` (the visitor's mode, else the theme's default) and `data-wx-theme-service` (the storing endpoint). The service attribute makes the client's `webexpress.webui.DarkMode` follow the server instead of its `localStorage` copy, and `webexpress.webapp.colorscheme.js` stores every toggle of the dark mode switch there - the switch in a menu and the picker on the Designs page are one preference. Without a registration pages behave as before: only a dark theme marks the root, and the switch stays a browser preference.
+
+The Designs settings page shows the pickers that are registered: colour scheme (the theme), mode (light or dark) and icons.
+
+## Persisting in a Database
+
+Both endpoints only call hooks, so a database is a matter of the store behind them:
+
+- **Key** the record by the signed-in identity (`IdentityManager.GetCurrentIdentity(request).Id`), so the choice follows the person across browsers; fall back to a session or client key for anonymous visitors.
+- **Row** one record per owner with one nullable column per choice, e.g. `Appearance(Owner PK, ThemeId NULL, IconSetId NULL, ChangedAt)`. A null id means the default applies; a record without any choice can be deleted.
+- **Transaction** override `CreateContext` on `RestApiTheme` / `RestApiIconSet` to hand a unit of work to the hooks; read and write of one request share it.
+- **Validation** store ids, not names, and resolve them against the registered themes and sets on render - an id that is no longer offered falls back to the default instead of failing.
+
+The tutorial shows the prepared shape with an in-memory store: `IAppearanceStore` (`Get(owner)` / `Save(owner, AppearancePreference)`), `MemoryAppearanceStore`, and `ThemeStore` as the facade the endpoints and pages use. A database implementation replaces `ThemeStore.Store` at startup.
+
 ## Events
 
 The control reuses the events of the underlying `webexpress.webui.DropdownCtrl`:

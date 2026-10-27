@@ -4,6 +4,7 @@ using System.Linq;
 using WebExpress.WebApp.WebControl;
 using WebExpress.WebApp.WebFragment;
 using WebExpress.WebApp.WebSection;
+using WebExpress.WebApp.WebTheme;
 using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebComponent;
@@ -160,6 +161,11 @@ namespace WebExpress.WebApp.WebPage
             var body = new HtmlElementSectionBody();
             var renderContext = new RenderControlContext(context.RenderContext);
 
+            // the icon set is a preference of the whole application rather than of a page, so
+            // it is linked here instead of in every page's Process; it comes after the theme
+            // stylesheet a page may have chosen there, because its masks override that one
+            ThemePreferences.ApplyIconSet(context.RenderContext, this);
+
             // head
             // assistive technology picks pronunciation rules from the document language
             html.AddUserAttribute("lang", context.Request?.Culture?.Name);
@@ -174,10 +180,7 @@ namespace WebExpress.WebApp.WebPage
 
             // body
             Header.AppTitle.SetTitle(html.Head.Title);
-            if (Theme?.ThemeMode == ThemeMode.Dark)
-            {
-                html.AddUserAttribute("data-wx-theme", "dark");
-            }
+            ThemePreferences.ApplyColorScheme(context.RenderContext, html, Theme);
 
             var preferences = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionBodyPreferences>
             (

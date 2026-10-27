@@ -86,6 +86,12 @@ namespace WebExpress.WebApp.WebControl
         public ControlDataSelectionTheme(string id)
             : base(id)
         {
+            // the caption is the current value, so the button has to read as a choice (frame
+            // and caret) and say what it chooses when hovered or announced
+            Color = _ => new PropertyColorButton(TypeColorButton.Secondary);
+            Outline = _ => true;
+            Toggle = _ => TypeToggleDropdown.Toggle;
+            Tooltip = _ => "webexpress.webapp:setting.theme.selection.tooltip";
         }
 
         /// <summary>

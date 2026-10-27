@@ -18,7 +18,9 @@ namespace WebExpress.WebApp.Test.WebControl
     {
         /// <summary>
         /// Without an explicit id the control auto-generates one and still
-        /// emits the theme-specific class on the dropdown shell.
+        /// emits the theme-specific class on the dropdown shell. The button reads as a choice
+        /// by default - framed, with a caret and a hover text naming what it chooses - because
+        /// its caption is the current value.
         /// </summary>
         [Fact]
         public void AutoId_RendersThemeClass()
@@ -34,7 +36,7 @@ namespace WebExpress.WebApp.Test.WebControl
 
             // validation
             AssertExtensions.EqualWithPlaceholders(
-                @"<div class=""wx-webapp-dropdown-theme""></div>",
+                @"<div class=""wx-webapp-dropdown-theme"" title=""Choose a color scheme"" data-buttonCss=""dropdown-toggle btn-outline-secondary""></div>",
                 html);
         }
 
@@ -55,7 +57,7 @@ namespace WebExpress.WebApp.Test.WebControl
 
             // validation
             AssertExtensions.EqualWithPlaceholders(
-                @"<div id=""themePicker"" class=""wx-webapp-dropdown-theme""></div>",
+                @"<div id=""themePicker"" class=""wx-webapp-dropdown-theme"" title=""Choose a color scheme"" data-buttonCss=""dropdown-toggle btn-outline-secondary""></div>",
                 html);
         }
 
@@ -63,8 +65,8 @@ namespace WebExpress.WebApp.Test.WebControl
         /// Tests that the service factory of the theme selection control emits the wx-service island.
         /// </summary>
         [Theory]
-        [InlineData(null, @"<div id=""themePicker"" class=""wx-webapp-dropdown-theme""></div>")]
-        [InlineData("https://example.com/api/themes", @"<div id=""themePicker"" class=""wx-webapp-dropdown-theme""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/themes"" method=""GET"" update-method=""PUT""></wx-service></div>")]
+        [InlineData(null, @"<div id=""themePicker"" class=""wx-webapp-dropdown-theme"" title=""Choose a color scheme"" data-buttonCss=""dropdown-toggle btn-outline-secondary""></div>")]
+        [InlineData("https://example.com/api/themes", @"<div id=""themePicker"" class=""wx-webapp-dropdown-theme"" title=""Choose a color scheme"" data-buttonCss=""dropdown-toggle btn-outline-secondary""><wx-service hidden name=""data"" kind=""rest"" base-uri=""https://example.com/api/themes"" method=""GET"" update-method=""PUT""></wx-service></div>")]
         public void Service(string uri, string expected)
         {
             // arrange

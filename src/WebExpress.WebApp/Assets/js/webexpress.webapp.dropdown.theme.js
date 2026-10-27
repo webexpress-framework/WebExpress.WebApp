@@ -23,8 +23,11 @@ webexpress.webapp.DropdownThemeCtrl = class extends webexpress.webui.DropdownCtr
         // consume the island before the base constructor parses the children
         // as menu items; the read caches on the element
         const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+        // the value in use when nothing is stored, which only the rendering page knows
+        const preset = element.getAttribute("data-default");
 
         super(element);
+        this._defaultId = preset || null;
 
         // configuration: the endpoint is authored in C# through the wx-service island
         this._service = islandServices.data || null;
@@ -77,15 +80,24 @@ webexpress.webapp.DropdownThemeCtrl = class extends webexpress.webui.DropdownCtr
         const themes = webexpress.webapp.dropdownThemeModel.normalizeThemes(json);
         const items = themes.items;
 
-        // pick the active theme: server selection wins, otherwise the first
-        // item is chosen so the dropdown is never blank.
+        // pick the active theme: server selection wins, then the preset of the page,
+        // otherwise the first item is chosen so the dropdown is never blank.
         const fallback = items.length > 0 ? items[0].id : null;
-        this._activeId = themes.selected || fallback;
+        const preset = items.some((it) => it.id === this._defaultId) ? this._defaultId : null;
+        this._activeId = themes.selected || preset || fallback;
 
         // re-render with the live items and the active theme as the label.
         const activeItem = items.find((it) => it.id === this._activeId) || null;
         this._items = items;
         this._label = (activeItem && activeItem.text) ? activeItem.text : this._label;
+        this._showActive();
+    }
+
+    /**
+     * Re-renders the menu with the active entry checked.
+     */
+    _showActive() {
+        this._items = webexpress.webapp.dropdownThemeModel.markActive(this._items || [], this._activeId);
         this.render();
     }
 
@@ -115,8 +127,17 @@ webexpress.webapp.DropdownThemeCtrl = class extends webexpress.webui.DropdownCtr
 
         // optimistically update the dropdown label so the click feels
         // responsive even before the reload finishes.
+        const previous = { id: this._activeId, label: this._label };
         this._activeId = themeId;
-        this.label = themeLabel || this._label;
+        this._label = themeLabel || this._label;
+        this._showActive();
+
+        // a choice the server did not store must not stay on display as the one in use
+        const restore = () => {
+            this._activeId = previous.id;
+            this._label = previous.label;
+            this._showActive();
+        };
 
         const body = new URLSearchParams();
         body.set("v", themeId);
@@ -132,14 +153,25 @@ webexpress.webapp.DropdownThemeCtrl = class extends webexpress.webui.DropdownCtr
         }).then((res) => {
             if (!res.ok) {
                 console.error(`theme persistence failed: http ${res.status}`);
+                restore();
                 return;
             }
-            if (this._reloadOnChange && typeof window !== "undefined") {
-                window.location.reload();
-            }
+            this._afterPersist(themeId);
         }).catch((err) => {
             console.error("the theme could not be persisted:", err);
+            restore();
         });
+    }
+
+    /**
+     * Makes a stored choice visible. A theme is resolved by the server, so the page reloads;
+     * a picker whose choice the page can apply itself overrides this.
+     * @param {string} themeId - The stored id.
+     */
+    _afterPersist(themeId) {
+        if (this._reloadOnChange && typeof window !== "undefined") {
+            window.location.reload();
+        }
     }
 };
 
