@@ -61,9 +61,11 @@ namespace WebExpress.WebApp.Test.WebRestApi
 
             // validation
             Assert.True(ParseResponseJson(result).GetProperty("success").GetBoolean());
-            Assert.Equal(2, result.Header.Cookies.Count);
+            // access, refresh and the renewal hint, which shares the lifetime of the refresh cookie
+            Assert.Equal(3, result.Header.Cookies.Count);
             Assert.All(result.Header.Cookies.Cast<System.Net.Cookie>(), cookie =>
                 Assert.Equal(rememberMe, cookie.Expires != DateTime.MinValue));
+            Assert.Single(result.Header.Cookies.Cast<System.Net.Cookie>(), cookie => !cookie.HttpOnly);
         }
 
         /// <summary>
