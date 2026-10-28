@@ -76,13 +76,13 @@ test("a real item text binding is applied and its attribute is cleaned up", () =
     title.setAttribute("data-wx-bind", "title");
     pane.appendChild(title);
 
-    const item = { id: "t1", title: "Sea Monkey" };
+    const item = { id: "t1", title: "Northwind" };
     const bindingMap = {};
 
     ctrl._applyBindings(title, item, bindingMap);
     ctrl._cleanupBindingAttributes(title, item, bindingMap);
 
-    assert.equal(title.textContent, "Sea Monkey", "the item value is written into the placeholder");
+    assert.equal(title.textContent, "Northwind", "the item value is written into the placeholder");
     assert.equal(title.getAttribute("data-wx-bind"), null, "the consumed item binding is removed");
 });
 
@@ -117,7 +117,7 @@ test("an element carrying both an item key and a WebUI key keeps only the WebUI 
     el.setAttribute("data-wx-source-show", "#list");
     pane.appendChild(el);
 
-    const item = { id: "t1", title: "Guybrush" };
+    const item = { id: "t1", title: "Grace" };
     const bindingMap = {};
 
     ctrl._applyBindings(el, item, bindingMap);

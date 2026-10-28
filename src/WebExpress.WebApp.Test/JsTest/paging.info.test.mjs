@@ -64,7 +64,7 @@ test("the paged data controls render the shared caption", async () => {
         status: 200,
         json: async () => ({
             columns: [{ id: "name", label: "Name", visible: true }],
-            rows: [{ id: "r1", cells: [{ content: "Guybrush" }] }],
+            rows: [{ id: "r1", cells: [{ content: "Grace" }] }],
             total: 25
         })
     }));

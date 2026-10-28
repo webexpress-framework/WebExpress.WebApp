@@ -98,13 +98,13 @@ test("tile search dispatches the tile/search intent and reloads the first page",
     const tile = new engine.wxapp.TileCtrl(element);
     await settle();
 
-    tile.search("guybrush");
+    tile.search("grace");
     await settle();
 
     assert.equal(urls.length, 2);
-    assert.match(urls[1], /q=guybrush/);
+    assert.match(urls[1], /q=grace/);
     assert.match(urls[1], /p=0/);
-    assert.equal(tile._search, "guybrush");
+    assert.equal(tile._search, "grace");
     assert.equal(tile._page, 0);
 });
 
@@ -125,11 +125,11 @@ test("tile paging and filter dispatch their intents through the store", async ()
     assert.match(urls[1], /p=3/);
     assert.equal(tile._page, 3);
 
-    tile.filter("insult");
+    tile.filter("urgent");
     await settle();
-    assert.match(urls[2], /f=insult/);
+    assert.match(urls[2], /f=urgent/);
     assert.match(urls[2], /p=0/);
-    assert.equal(tile._filter, "insult");
+    assert.equal(tile._filter, "urgent");
 });
 
 test("tile in a ViewState renders the central resource slice the ViewState loads", async () => {

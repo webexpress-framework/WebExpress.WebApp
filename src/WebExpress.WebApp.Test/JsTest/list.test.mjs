@@ -113,11 +113,11 @@ test("list search re-queries the resource through the shared ViewState state", a
     const list = new engine.wxapp.ListCtrl(listHost);
     await settle();
 
-    list.search("guybrush");
+    list.search("grace");
     await settle();
 
     assert.equal(urls.length, 2, "the search triggers a central re-query, not a private load");
-    assert.match(urls[1], /q=guybrush/);
+    assert.match(urls[1], /q=grace/);
     assert.match(urls[1], /p=0/);
-    assert.equal(viewState.getState().search, "guybrush", "the search lives in the shared ViewState state");
+    assert.equal(viewState.getState().search, "grace", "the search lives in the shared ViewState state");
 });

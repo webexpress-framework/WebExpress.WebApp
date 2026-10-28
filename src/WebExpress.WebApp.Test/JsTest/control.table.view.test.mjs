@@ -13,8 +13,8 @@ import { appendServiceIsland, appendStateIsland, appendResourceIsland } from "./
 const RESPONSE = {
     columns: [{ id: "name", label: "Name", visible: true }, { id: "role", label: "Role", visible: true }],
     rows: [
-        { id: "r1", cells: [{ content: "Guybrush" }, { content: "Pirate" }] },
-        { id: "r2", cells: [{ content: "Elaine" }, { content: "Governor" }] }
+        { id: "r1", cells: [{ content: "Grace" }, { content: "Developer" }] },
+        { id: "r2", cells: [{ content: "Emma" }, { content: "Manager" }] }
     ],
     total: 2
 };
@@ -110,7 +110,7 @@ test("a reload patches the rows: they keep their nodes and a changed one flashes
     const nodes = table._rows.map((row) => row._anchorTr);
 
     net.response = JSON.parse(JSON.stringify(RESPONSE));
-    net.response.rows[1].cells[1].content = "Pirate Queen";
+    net.response.rows[1].cells[1].content = "Senior Manager";
     const reload = table._load();
     net.release();
     await reload;
@@ -184,12 +184,12 @@ test("the permission toolbar renders from the directories and survives a reload"
     rt.setFetch(async (url) => {
         if (url.includes("/api/groups")) {
             await new Promise((resolve) => directories.push(resolve));
-            return { ok: true, status: 200, json: async () => [{ id: "g1", name: "Pirates" }] };
+            return { ok: true, status: 200, json: async () => [{ id: "g1", name: "Developers" }] };
         }
         if (url.includes("/api/policies")) {
             return { ok: true, status: 200, json: async () => [] };
         }
-        return { ok: true, status: 200, json: async () => ({ items: [{ groupId: "g1", groupName: "Pirates", policyIds: [] }], total: 1, assignedGroupIds: ["g1"] }) };
+        return { ok: true, status: 200, json: async () => ({ items: [{ groupId: "g1", groupName: "Developers", policyIds: [] }], total: 1, assignedGroupIds: ["g1"] }) };
     });
 
     const element = rt.createElement("div");

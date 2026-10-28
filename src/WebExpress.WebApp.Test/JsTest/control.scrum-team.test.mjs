@@ -16,9 +16,9 @@ const DEPS = ["webexpress.webapp.scrum.team.model.js"];
 const FILE = "webexpress.webapp.scrum.team.js";
 
 const TEAM = [
-    { id: "u1", name: "Guybrush", initials: "GT", color: "#36c", points: 8, completed: 5 },
-    { id: "u2", name: "Elaine", team: "Governor", image: "/img/elaine.png", points: 13, completed: 13 },
-    { id: "u3", name: "Stan", initials: "ST", points: 3, completed: 0 }
+    { id: "u1", name: "Grace", initials: "GT", color: "#36c", points: 8, completed: 5 },
+    { id: "u2", name: "Emma", team: "Manager", image: "/img/emma.png", points: 13, completed: 13 },
+    { id: "u3", name: "Steve", initials: "ST", points: 3, completed: 0 }
 ];
 
 contract({
@@ -79,8 +79,8 @@ test("each member is an avatar badged with their points, followed by the total c
     assert.equal(avatars.length, 3);
     assert.equal(avatars[0].childNodes[0].textContent, "GT");
     assert.equal(avatars[0].querySelector(".wx-scrum-team-badge").textContent, "8");
-    assert.equal(avatars[1].querySelector("img").getAttribute("src"), "/img/elaine.png");
-    assert.match(avatars[1].getAttribute("title"), /Elaine · Governor · 13\/13/);
+    assert.equal(avatars[1].querySelector("img").getAttribute("src"), "/img/emma.png");
+    assert.match(avatars[1].getAttribute("title"), /Emma · Manager · 13\/13/);
     assert.match(row.querySelector(".wx-scrum-team-total-pill").textContent, /^Σ 24 /);
 });
 
@@ -90,7 +90,7 @@ test("members beyond the visible count collapse into an overflow chip", () => {
     const more = host.querySelector(".wx-scrum-team-more");
     assert.equal(host.querySelectorAll(".wx-scrum-team-avatar").length, 1);
     assert.equal(more.textContent, "+2");
-    assert.equal(more.getAttribute("title"), "Elaine, Stan");
+    assert.equal(more.getAttribute("title"), "Emma, Steve");
 });
 
 test("an empty sprint says so instead of drawing chips", () => {
@@ -109,10 +109,10 @@ test("a class color becomes a class, an inline color joins the element's own sty
 test("a re-render keeps the avatar nodes of members that stay", () => {
     const rt = loadControl({ deps: DEPS, file: FILE });
     const { ctrl, host } = build(rt, TEAM);
-    const stan = host.querySelectorAll(".wx-scrum-team-avatar")[2];
+    const steve = host.querySelectorAll(".wx-scrum-team-avatar")[2];
     ctrl.setState({ members: [TEAM[2]] });
     ctrl.store.flush();
-    assert.equal(host.querySelectorAll(".wx-scrum-team-avatar")[0], stan);
+    assert.equal(host.querySelectorAll(".wx-scrum-team-avatar")[0], steve);
 });
 
 test("an avatar opens the table sorted by load and closed by the totals", () => {
@@ -125,7 +125,7 @@ test("an avatar opens the table sorted by load and closed by the totals", () => 
     assert.equal(shown.length, 1);
     const table = shown[0].querySelector(".wx-scrum-team-table");
     const rows = table.querySelector("tbody").childNodes;
-    assert.deepEqual(rows.map((row) => row.querySelector(".wx-scrum-team-person-name").textContent), ["Elaine", "Guybrush", "Stan"]);
+    assert.deepEqual(rows.map((row) => row.querySelector(".wx-scrum-team-person-name").textContent), ["Emma", "Grace", "Steve"]);
     const fill = rows[1].querySelector(".wx-scrum-team-progress").childNodes[0];
     assert.equal(fill.style.cssText, "width:63%;background:#0a0", "the completed share, colored by the user color");
     const totals = table.querySelector("tfoot").querySelectorAll(".wx-scrum-team-points-badge").map((badge) => badge.textContent);

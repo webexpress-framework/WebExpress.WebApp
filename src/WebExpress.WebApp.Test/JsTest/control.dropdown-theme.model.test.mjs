@@ -13,11 +13,11 @@ function load() {
 test("the entry in use is the one checked radio item, so the menu shows the current value", () => {
     const { wxapp } = load();
     const items = wxapp.dropdownThemeModel.normalizeThemes({
-        items: [{ id: "default", name: "Standard" }, { id: "monkeyisland", name: "Pirates" }],
-        selected: "monkeyisland"
+        items: [{ id: "default", name: "Standard" }, { id: "ocean", name: "Ocean" }],
+        selected: "ocean"
     }).items;
 
-    const marked = JSON.parse(JSON.stringify(wxapp.dropdownThemeModel.markActive(items, "monkeyisland")));
+    const marked = JSON.parse(JSON.stringify(wxapp.dropdownThemeModel.markActive(items, "ocean")));
 
     assert.deepStrictEqual(marked.map((x) => x.role), ["menuitemradio", "menuitemradio"]);
     assert.deepStrictEqual(marked.map((x) => x.aria), [[["aria-checked", "false"]], [["aria-checked", "true"]]]);

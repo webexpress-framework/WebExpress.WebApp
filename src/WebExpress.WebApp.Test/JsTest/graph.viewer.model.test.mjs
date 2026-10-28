@@ -25,14 +25,14 @@ test("normalize graph maps nodes and edges with defaults", () => {
     const { wxapp } = load();
     const graph = wxapp.graphViewerModel.normalizeGraph({
         nodes: [
-            { id: "a", label: "Scumm Bar", x: 100, y: 120, icon: "fas fa-beer" },
+            { id: "a", label: "Cafeteria", x: 100, y: 120, icon: "fas fa-beer" },
             { id: "b" }
         ],
         edges: [{ id: "e1", from: "a", to: "b", label: "walk" }]
     });
 
     assert.equal(graph.nodes.length, 2);
-    assert.equal(graph.nodes[0].label, "Scumm Bar");
+    assert.equal(graph.nodes[0].label, "Cafeteria");
     assert.equal(graph.nodes[0].x, 100);
     assert.equal(graph.nodes[0].y, 120);
     assert.equal(graph.nodes[0].icon, "fas fa-beer");
@@ -133,8 +133,8 @@ test("model loads a graph through a service", async () => {
         calls.push({ url: url, method: (init && init.method) || "GET" });
         return {
             ok: true, status: 200, json: async () => ({
-                nodes: [{ id: "melee", label: "Mêlée Island", x: 0, y: 0 }, { id: "monkey", label: "Monkey Island" }],
-                edges: [{ id: "voyage", from: "melee", to: "monkey", waypoints: [{ x: 120, y: 40 }] }]
+                nodes: [{ id: "geneva", label: "Genève", x: 0, y: 0 }, { id: "zurich", label: "Zürich" }],
+                edges: [{ id: "voyage", from: "geneva", to: "zurich", waypoints: [{ x: 120, y: 40 }] }]
             })
         };
     });
@@ -145,7 +145,7 @@ test("model loads a graph through a service", async () => {
     assert.equal(calls[0].method, "GET");
 
     const graph = wxapp.graphViewerModel.normalizeGraph(loaded.data);
-    assert.deepEqual(graph.nodes.map((n) => n.label), ["Mêlée Island", "Monkey Island"]);
+    assert.deepEqual(graph.nodes.map((n) => n.label), ["Genève", "Zürich"]);
     assert.equal("x" in graph.nodes[1], false);
     assert.deepEqual(graph.edges[0].waypoints, [{ x: 120, y: 40 }]);
 });

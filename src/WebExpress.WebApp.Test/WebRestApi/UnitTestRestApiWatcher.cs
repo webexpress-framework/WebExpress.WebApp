@@ -24,8 +24,8 @@ namespace WebExpress.WebApp.Test.WebRestApi
             _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var seed = new List<RestApiWatcherItem>
             {
-                new() { Id = "u1", Name = "Guybrush",   Team = "Pirate", Initials = "GT", Color = "#1d4ed8" },
-                new() { Id = "u2", Name = "Elaine",     Team = "Governor", Initials = "EM", Color = "#7c3aed" }
+                new() { Id = "u1", Name = "Grace",   Team = "Developer", Initials = "GT", Color = "#1d4ed8" },
+                new() { Id = "u2", Name = "Emma",     Team = "Manager", Initials = "EM", Color = "#7c3aed" }
             };
             var api = new TestRestApiWatcher(seed);
             var request = UnitTestControlFixture.CreateRequestMock("", "https://example.com/");
@@ -42,8 +42,8 @@ namespace WebExpress.WebApp.Test.WebRestApi
             var items = doc.RootElement.EnumerateArray().ToList();
             Assert.Equal(2, items.Count);
             Assert.Equal("u1", items[0].GetProperty("id").GetString());
-            Assert.Equal("Guybrush", items[0].GetProperty("name").GetString());
-            Assert.Equal("Pirate", items[0].GetProperty("team").GetString());
+            Assert.Equal("Grace", items[0].GetProperty("name").GetString());
+            Assert.Equal("Developer", items[0].GetProperty("team").GetString());
             Assert.Equal("EM", items[1].GetProperty("initials").GetString());
         }
 
@@ -78,7 +78,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var directory = new Dictionary<string, RestApiWatcherItem>
             {
-                ["u1"] = new() { Id = "u1", Name = "Guybrush", Team = "Pirate", Initials = "GT", Color = "#1d4ed8" }
+                ["u1"] = new() { Id = "u1", Name = "Grace", Team = "Developer", Initials = "GT", Color = "#1d4ed8" }
             };
             var api = new TestRestApiWatcher(directory: directory);
             var request = UnitTestControlFixture.CreateRequestMock
@@ -102,7 +102,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
             Assert.Equal("u1", root.GetProperty("id").GetString());
-            Assert.Equal("Guybrush", root.GetProperty("name").GetString());
+            Assert.Equal("Grace", root.GetProperty("name").GetString());
 
             Assert.Single(api.Watchers);
         }
@@ -164,7 +164,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var seed = new List<RestApiWatcherItem>
             {
-                new() { Id = "u1", Name = "Guybrush", Team = "Pirate", Initials = "GT", Color = "#1d4ed8" }
+                new() { Id = "u1", Name = "Grace", Team = "Developer", Initials = "GT", Color = "#1d4ed8" }
             };
             var api = new TestRestApiWatcher(seed);
             var request = UnitTestControlFixture.CreateRequestMock("", "https://example.com/u1");
@@ -189,7 +189,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var seed = new List<RestApiWatcherItem>
             {
-                new() { Id = "u1", Name = "Guybrush", Team = "Pirate", Initials = "GT", Color = "#1d4ed8" }
+                new() { Id = "u1", Name = "Grace", Team = "Developer", Initials = "GT", Color = "#1d4ed8" }
             };
             var api = new TestRestApiWatcher(seed);
             var request = UnitTestControlFixture.CreateRequestMock("", "https://example.com/ghost");

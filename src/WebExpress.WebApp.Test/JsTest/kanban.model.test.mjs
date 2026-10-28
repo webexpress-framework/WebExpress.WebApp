@@ -27,7 +27,7 @@ test("normalize board maps columns, swimlanes and cards with defaults", () => {
         swimlanes: [{ id: "s1", label: "Lane", expanded: false }],
         items: [
             { id: "i1", columnId: "c1", swimlaneId: "s1", label: "Card" },
-            { id: "i2", columnId: "c1", label: "Assigned", assigneeId: "u1", assigneeName: "Guybrush Threepwood", assigneeInitials: "GT", assigneeColor: "#6f42c1", assigneeImage: "/img/guybrush.png" }
+            { id: "i2", columnId: "c1", label: "Assigned", assigneeId: "u1", assigneeName: "Grace Turner", assigneeInitials: "GT", assigneeColor: "#6f42c1", assigneeImage: "/img/grace.png" }
         ]
     });
 
@@ -42,10 +42,10 @@ test("normalize board maps columns, swimlanes and cards with defaults", () => {
     assert.equal(board.cards[0].assigneeId, null);
     assert.equal(board.cards[0].assigneeImage, null);
     assert.equal(board.cards[1].assigneeId, "u1");
-    assert.equal(board.cards[1].assigneeName, "Guybrush Threepwood");
+    assert.equal(board.cards[1].assigneeName, "Grace Turner");
     assert.equal(board.cards[1].assigneeInitials, "GT");
     assert.equal(board.cards[1].assigneeColor, "#6f42c1");
-    assert.equal(board.cards[1].assigneeImage, "/img/guybrush.png");
+    assert.equal(board.cards[1].assigneeImage, "/img/grace.png");
 });
 
 test("normalize board completes the footer chips and drops empty entries", () => {

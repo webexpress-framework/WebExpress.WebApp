@@ -128,7 +128,7 @@ test("a validation marks the invalid field and lists the error; clearing puts th
     assert.equal(title.getAttribute("aria-invalid"), "true");
     assert.equal(host.querySelector(".wx-restform-error").querySelectorAll("li").map((li) => li.textContent).join(), "required");
 
-    title.value = "Monkey Island";
+    title.value = "Zürich";
     assert.equal(ctrl.validate(), true);
     assert.equal(title.parentNode, main, "the field leaves the wrapper again");
     assert.equal(title.hasAttribute("aria-invalid"), false);
@@ -167,10 +167,10 @@ test("the lock enables only what it disabled, so a field the server disabled sta
 test("a delete confirmation holds the submit back until the item is typed", () => {
     const { host, submit, ctrl } = form();
 
-    ctrl._displayDeletePrompt("Guybrush");
+    ctrl._displayDeletePrompt("Grace");
     ctrl.store.flush();
     const field = host.querySelector(".wx-restform-delete-confirm input");
-    assert.ok(field.getAttribute("aria-label").includes("Guybrush"));
+    assert.ok(field.getAttribute("aria-label").includes("Grace"));
     assert.equal(submit.disabled, true);
 
     field.value = "Guy";
@@ -179,7 +179,7 @@ test("a delete confirmation holds the submit back until the item is typed", () =
     assert.equal(host.querySelector(".wx-restform-delete-confirm .text-danger").style.display, "", "a mismatch is told");
     assert.equal(submit.disabled, true);
 
-    field.value = "Guybrush";
+    field.value = "Grace";
     field.dispatchEvent({ type: "input" });
     ctrl.store.flush();
     assert.equal(submit.disabled, false);
@@ -254,7 +254,7 @@ test("next validates the step, moves on, and a passed step can be clicked to ret
     assert.equal(shown(pages), 0, "an invalid step is not left");
     assert.equal(ship.getAttribute("aria-invalid"), "true");
 
-    ship.value = "Sea Monkey";
+    ship.value = "Northwind";
     next.dispatchEvent({ type: "click" });
     await Promise.resolve();
     ctrl.store.flush();
@@ -274,7 +274,7 @@ test("a dynamic step the server answers with 204 is skipped and leaves the indic
     pages[1].setAttribute("data-uri", "/api/wizard/crew");
     ctrl._patchPage(1, { uri: "/api/wizard/crew", isLoaded: false });
     ctrl._service = { request: async () => ({ ok: true, status: 204, data: null }) };
-    ship.value = "Sea Monkey";
+    ship.value = "Northwind";
 
     await ctrl._navigate(1);
     ctrl.store.flush();

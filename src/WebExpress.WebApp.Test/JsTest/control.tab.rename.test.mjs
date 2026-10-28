@@ -134,11 +134,11 @@ test("leaving the window keeps the edit open, leaving the field commits it", asy
     assert.ok(field(rt), "a window switch is no end of the edit");
     assert.deepEqual(rt.requests, []);
     rt.setWindowFocus(true);
-    input.value = "Pirates";
+    input.value = "Archive";
     blur(input);
     await settle();
     assert.equal(field(rt), null);
-    assert.equal(labelOf(rt, "a"), "Pirates");
+    assert.equal(labelOf(rt, "a"), "Archive");
 });
 
 test("a blur commit does not pull focus back to the tab", async () => {

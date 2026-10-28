@@ -9,8 +9,8 @@ import assert from "node:assert";
 import { loadControl } from "./controls.harness.mjs";
 
 const ITEMS = [
-    { id: "A1", text: "Mêlée Island" },
-    { id: "B2", text: "Monkey Island" }
+    { id: "A1", text: "Genève" },
+    { id: "B2", text: "Zürich" }
 ];
 
 /**
@@ -79,32 +79,32 @@ test("rest_combo read-only resolves the value to its label after the async load"
     const c = render(rt, "rest_combo", "A1", { uri: "/api/loc" });
     await settle();
     assert.equal(c.querySelectorAll("li").length, 1, "the single chosen value is shown");
-    assert.equal(c.textContent, "Mêlée Island", "the value resolves to its label");
+    assert.equal(c.textContent, "Genève", "the value resolves to its label");
 });
 
 test("rest_combo editable shows the selection once the options arrive", async () => {
     const rt = loadRuntime();
     const c = render(rt, "rest_combo", "A1", { uri: "/api/loc", editable: "true" });
     await settle();
-    assert.equal(c.textContent, "Mêlée Island", "the SmartEdit read view shows the chosen label");
+    assert.equal(c.textContent, "Genève", "the SmartEdit read view shows the chosen label");
 });
 
 test("rest_tag read-only shows the tags of the value without a service", () => {
     const rt = loadRuntime();
-    const c = render(rt, "rest_tag", "pirate;grog", {});
+    const c = render(rt, "rest_tag", "urgent;review", {});
     const text = c.textContent;
-    assert.ok(text.includes("pirate") && text.includes("grog"), "both tags are shown");
+    assert.ok(text.includes("urgent") && text.includes("review"), "both tags are shown");
     assert.equal(render(rt, "rest_tag", "", {}), "", "an empty value renders nothing");
 });
 
 test("rest_tag editable renders the tags in the SmartEdit read view", async () => {
     const rt = loadRuntime();
-    const c = render(rt, "rest_tag", "pirate;grog", { uri: "/api/tags", editable: "true" });
+    const c = render(rt, "rest_tag", "urgent;review", { uri: "/api/tags", editable: "true" });
     await settle();
     // the SmartEdit read view is a synchronous TagCtrl snapshot of the value;
     // constructing the editable cell must not throw and must show the tags
     const text = c.textContent;
-    assert.ok(text.includes("pirate") && text.includes("grog"), "the read view shows the tags");
+    assert.ok(text.includes("urgent") && text.includes("review"), "the read view shows the tags");
 });
 
 test("rest_tag reads editable false as read-only and keeps the editor of an empty editable cell", () => {

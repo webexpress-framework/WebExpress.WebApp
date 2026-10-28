@@ -105,7 +105,7 @@ test("a peer's caret arrives at the field it belongs to", async () => {
     for (const surface of [a, b]) {
         const field = rt.createElement("input");
         field.id = "title";
-        field.value = "Monkey Island";
+        field.value = "Zürich";
         surface.element.appendChild(field);
     }
 
@@ -132,11 +132,11 @@ test("what a peer types arrives in the local field", async () => {
 
     const source = a.element.querySelector("input");
 
-    source.value = "The Secret of Monkey Island";
+    source.value = "The Story of Lake Geneva";
     a.element.dispatchEvent({ type: "input", target: source });
     await settle();
 
-    assert.equal(b.element.querySelector("input").value, "The Secret of Monkey Island");
+    assert.equal(b.element.querySelector("input").value, "The Story of Lake Geneva");
 });
 
 test("nothing crosses between two surfaces on different channels", async () => {

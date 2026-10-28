@@ -27,7 +27,7 @@ test("normalize period maps the items and holidays with defaults", () => {
     const period = wxapp.scheduleModel.normalizePeriod({
         items: [
             { id: 7, title: "Standup", start: "2026-08-12T09:00:00", end: "2026-08-12T09:15:00" },
-            { id: "v", title: "Voyage", start: "2026-08-14T00:00:00", allDay: "true", meta: { ship: "Sea Monkey" } }
+            { id: "v", title: "Voyage", start: "2026-08-14T00:00:00", allDay: "true", meta: { ship: "Northwind" } }
         ],
         holidays: [{ date: "2026-08-15T00:00:00", name: "Assumption", region: "BY", type: "PUBLIC" }]
     });
@@ -35,7 +35,7 @@ test("normalize period maps the items and holidays with defaults", () => {
     assert.equal(period.items[0].id, "7", "a numeric id is coerced to text");
     assert.equal(period.items[0].allDay, false);
     assert.equal(period.items[1].allDay, true, "the stringified flag is accepted");
-    assert.deepEqual(period.items[1].meta, { ship: "Sea Monkey" });
+    assert.deepEqual(period.items[1].meta, { ship: "Northwind" });
     assert.equal(period.items[1].end, "");
 
     // a holiday is keyed by its day, so a full timestamp is trimmed
@@ -140,13 +140,13 @@ test("the write payload carries the full item shape", () => {
     const { wxapp } = load();
     const payload = wxapp.scheduleModel.toPayload({
         id: 12, title: "Standup", start: "2026-08-12T09:00:00", end: "2026-08-12T09:15:00",
-        allDay: false, category: "crew", icon: "fas fa-users", meta: { room: "Scumm Bar" }
+        allDay: false, category: "crew", icon: "fas fa-users", meta: { room: "Cafeteria" }
     });
 
     assert.deepEqual(payload, {
         id: "12", title: "Standup", start: "2026-08-12T09:00:00", end: "2026-08-12T09:15:00",
         allDay: false, category: "crew", colorCss: "", colorStyle: "", icon: "fas fa-users",
-        uri: "", meta: { room: "Scumm Bar" }
+        uri: "", meta: { room: "Cafeteria" }
     });
 });
 

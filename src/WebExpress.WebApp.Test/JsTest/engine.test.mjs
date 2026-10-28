@@ -292,7 +292,7 @@ test("component readState coerces the typed wx-prop values", () => {
     appendStateIsland(document, element, {
         page: 0,
         loading: false,
-        search: "treasure",
+        search: "invoice",
         items: [{ id: "a" }]
     });
 
@@ -300,7 +300,7 @@ test("component readState coerces the typed wx-prop values", () => {
 
     assert.strictEqual(state.page, 0);
     assert.strictEqual(state.loading, false);
-    assert.strictEqual(state.search, "treasure");
+    assert.strictEqual(state.search, "invoice");
     assert.deepEqual(state.items, [{ id: "a" }]);
     // the island is consumed on the first read, later reads serve the cache
     assert.equal(element.childNodes.length, 0);
@@ -591,7 +591,7 @@ test("model bind patches the store on input and reflects store changes", () => {
     const host = createElement("div");
     host.id = "form";
     document.body.appendChild(host);
-    const component = new Probe(host, { state: { model: { name: "Guybrush" } } });
+    const component = new Probe(host, { state: { model: { name: "Grace" } } });
     wx.Controller.getInstanceByElement = (el) => (el === host ? component : null);
 
     const input = createElement("input");
@@ -601,16 +601,16 @@ test("model bind patches the store on input and reflects store changes", () => {
     document.body.appendChild(input);
 
     wx.Binds.get("model").bind(input);
-    assert.equal(input.value, "Guybrush");
+    assert.equal(input.value, "Grace");
 
-    input.value = "LeChuck";
+    input.value = "Leo";
     input.dispatchEvent({ type: "input" });
     component.store.flush();
-    assert.equal(component.state.model.name, "LeChuck");
+    assert.equal(component.state.model.name, "Leo");
 
-    component.setState({ model: { name: "Elaine" } });
+    component.setState({ model: { name: "Emma" } });
     component.store.flush();
-    assert.equal(input.value, "Elaine");
+    assert.equal(input.value, "Emma");
 });
 
 test("binds resolve a component that mounts after the bind", () => {
@@ -654,23 +654,23 @@ test("query intents reduce state and trigger the load for list, table and tile",
         let loads = 0;
         const component = { load() { loads += 1; } };
 
-        wxapp.Intents.dispatch(domain + "/search", { store, payload: { pattern: "guybrush", searchType: "basic" }, component });
-        assert.equal(store.getState().search, "guybrush", domain);
+        wxapp.Intents.dispatch(domain + "/search", { store, payload: { pattern: "grace", searchType: "basic" }, component });
+        assert.equal(store.getState().search, "grace", domain);
         assert.equal(store.getState().wql, null, domain);
         assert.equal(store.getState().page, 0, domain);
         assert.equal(loads, 1, domain);
 
-        wxapp.Intents.dispatch(domain + "/search", { store, payload: { pattern: "monkey", searchType: "wql" }, component });
+        wxapp.Intents.dispatch(domain + "/search", { store, payload: { pattern: "zurich", searchType: "wql" }, component });
         assert.equal(store.getState().search, null, domain);
-        assert.equal(store.getState().wql, "monkey", domain);
+        assert.equal(store.getState().wql, "zurich", domain);
         assert.equal(loads, 2, domain);
 
         wxapp.Intents.dispatch(domain + "/page", { store, payload: { page: 2 }, component });
         assert.equal(store.getState().page, 2, domain);
         assert.equal(loads, 3, domain);
 
-        wxapp.Intents.dispatch(domain + "/filter", { store, payload: { pattern: "insult" }, component });
-        assert.equal(store.getState().filter, "insult", domain);
+        wxapp.Intents.dispatch(domain + "/filter", { store, payload: { pattern: "urgent" }, component });
+        assert.equal(store.getState().filter, "urgent", domain);
         assert.equal(store.getState().page, 0, domain);
         assert.equal(loads, 4, domain);
     }

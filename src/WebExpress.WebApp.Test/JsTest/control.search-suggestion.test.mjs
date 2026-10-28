@@ -115,7 +115,7 @@ function makeSearch(options = {}) {
 test("the term and the entry cap travel in the query string", async () => {
     const search = makeSearch({
         maxItems: 5,
-        answer: () => jsonResponse({ items: [{ id: "1", text: "Guybrush", uri: "/crew/1" }] })
+        answer: () => jsonResponse({ items: [{ id: "1", text: "Grace", uri: "/crew/1" }] })
     });
 
     await search.ctrl._fetch("guy");
@@ -137,12 +137,12 @@ test("a custom query parameter is sent alongside the canonical one", async () =>
         answer: () => jsonResponse({ items: [] })
     });
 
-    await search.ctrl._fetch("grog");
+    await search.ctrl._fetch("report");
 
     // an endpoint that reads only the convention still has to receive the term,
     // so the canonical q travels next to the configured name rather than instead
-    assert.match(search.urls[0], /[?&]term=grog(&|$)/, "the configured parameter carries the term");
-    assert.match(search.urls[0], /[?&]q=grog(&|$)/, "and so does the canonical one");
+    assert.match(search.urls[0], /[?&]term=report(&|$)/, "the configured parameter carries the term");
+    assert.match(search.urls[0], /[?&]q=report(&|$)/, "and so does the canonical one");
 });
 
 test("headers and dividers ride in the item stream and do not count against the cap", async () => {
@@ -151,10 +151,10 @@ test("headers and dividers ride in the item stream and do not count against the 
         answer: () => jsonResponse({
             items: [
                 { type: "header", text: "Recently opened" },
-                { id: "1", text: "Guybrush", uri: "/crew/1" },
+                { id: "1", text: "Grace", uri: "/crew/1" },
                 { type: "divider" },
-                { id: "2", text: "LeChuck", uri: "/crew/2" },
-                { id: "3", text: "Elaine", uri: "/crew/3" }
+                { id: "2", text: "Leo", uri: "/crew/2" },
+                { id: "3", text: "Emma", uri: "/crew/3" }
             ]
         })
     });
@@ -177,7 +177,7 @@ test("an answer without a single suggestion renders the empty state", async () =
         answer: () => jsonResponse({ items: [] })
     });
 
-    await search.ctrl._fetch("kraken");
+    await search.ctrl._fetch("nothing");
 
     const entries = search.entries();
     assert.equal(entries.length, 1);
@@ -199,7 +199,7 @@ test("a stale answer never overwrites the suggestions of a newer term", async ()
     });
 
     const slow = search.ctrl._fetch("gu");
-    const fast = search.ctrl._fetch("guybrush");
+    const fast = search.ctrl._fetch("grace");
 
     // the first request answers last, which is the race the request id guards
     gates[1]();
@@ -208,8 +208,8 @@ test("a stale answer never overwrites the suggestions of a newer term", async ()
     await slow;
 
     const labels = Array.from(search.entries()).map((x) => x.textContent);
-    assert.deepEqual(labels, ["guybrush"], "the newest term owns the menu");
-    assert.equal(search.ctrl._loadedTerm, "guybrush", "and the loaded term is not rolled back");
+    assert.deepEqual(labels, ["grace"], "the newest term owns the menu");
+    assert.equal(search.ctrl._loadedTerm, "grace", "and the loaded term is not rolled back");
 });
 
 test("a failed request falls back to the empty state and reports the error", async () => {
@@ -243,7 +243,7 @@ test("a failed request falls back to the empty state and reports the error", asy
 
 test("the data lifecycle events carry the endpoint and the term", async () => {
     const search = makeSearch({
-        answer: () => jsonResponse({ items: [{ id: "1", text: "Guybrush", uri: "/crew/1" }] })
+        answer: () => jsonResponse({ items: [{ id: "1", text: "Grace", uri: "/crew/1" }] })
     });
 
     const events = [];
@@ -263,8 +263,8 @@ test("the arrow keys walk the suggestions and stop at both ends", async () => {
     const search = makeSearch({
         answer: () => jsonResponse({
             items: [
-                { id: "1", text: "Guybrush", uri: "/crew/1" },
-                { id: "2", text: "LeChuck", uri: "/crew/2" }
+                { id: "1", text: "Grace", uri: "/crew/1" },
+                { id: "2", text: "Leo", uri: "/crew/2" }
             ]
         })
     });
@@ -289,7 +289,7 @@ test("the arrow keys walk the suggestions and stop at both ends", async () => {
 
 test("enter opens the highlighted suggestion", async () => {
     const search = makeSearch({
-        answer: () => jsonResponse({ items: [{ id: "1", text: "Guybrush", uri: "/crew/1" }] })
+        answer: () => jsonResponse({ items: [{ id: "1", text: "Grace", uri: "/crew/1" }] })
     });
 
     await search.ctrl._fetch("guy");
@@ -306,12 +306,12 @@ test("enter without a highlight submits the term to the declared page", async ()
         answer: () => jsonResponse({ items: [] })
     });
 
-    search.ctrl.value = "grog";
+    search.ctrl.value = "report";
     search.key("Enter");
 
     assert.equal(
         search.rt.sandbox.window.location.href,
-        "/search?q=grog",
+        "/search?q=report",
         "the term reaches the full results page in the configured parameter");
 });
 
@@ -341,7 +341,7 @@ test("a suggestion without a target adopts the term instead of navigating", asyn
 });
 
 test("an asynchronous result keeps its menu anchored without measuring the control", async () => {
-    const search = makeSearch({ answer: () => jsonResponse({ items: [{ id: "1", text: "Guybrush", uri: "/crew/1" }] }) });
+    const search = makeSearch({ answer: () => jsonResponse({ items: [{ id: "1", text: "Grace", uri: "/crew/1" }] }) });
     await search.ctrl._fetch("guy");
     assert.equal(search.menu.matches(":popover-open"), true);
     assert.match(search.menu.style.getPropertyValue("position-anchor"), /^--wx-menu-/);
@@ -350,7 +350,7 @@ test("an asynchronous result keeps its menu anchored without measuring the contr
 
 test("escape closes the menu", async () => {
     const search = makeSearch({
-        answer: () => jsonResponse({ items: [{ id: "1", text: "Guybrush", uri: "/crew/1" }] })
+        answer: () => jsonResponse({ items: [{ id: "1", text: "Grace", uri: "/crew/1" }] })
     });
 
     await search.ctrl._fetch("guy");

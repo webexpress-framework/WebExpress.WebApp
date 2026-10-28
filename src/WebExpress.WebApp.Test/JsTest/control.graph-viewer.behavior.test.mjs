@@ -19,12 +19,12 @@ const FILE = "webexpress.webapp.graph.viewer.js";
 
 const GRAPH = {
     nodes: [
-        { id: "melee", label: "Mêlée Island", x: 80, y: 180 },
-        { id: "monkey", label: "Monkey Island" }
+        { id: "geneva", label: "Genève", x: 80, y: 180 },
+        { id: "zurich", label: "Zürich" }
     ],
     edges: [
-        { id: "voyage", from: "melee", to: "monkey", label: "sets sail" },
-        { id: "ghost", from: "melee", to: "lechuck" }
+        { id: "voyage", from: "geneva", to: "zurich", label: "connects" },
+        { id: "ghost", from: "geneva", to: "leo" }
     ]
 };
 
@@ -64,7 +64,7 @@ test("a standalone graph viewer loads its graph from the service island", async 
 
     assert.equal(urls.length, 1, "the graph is loaded exactly once");
     assert.ok(urls[0].includes("/api/graph"), "the load hits the service endpoint");
-    assert.deepEqual(ctrl.value.nodes.map((n) => n.id), ["melee", "monkey"]);
+    assert.deepEqual(ctrl.value.nodes.map((n) => n.id), ["geneva", "zurich"]);
 
     // the second edge points at a node the payload does not carry, so it would
     // never be drawn; the model must not report it either
@@ -94,7 +94,7 @@ test("a seeded graph viewer paints without a round trip", async () => {
     await settle();
 
     assert.equal(urls.length, 0, "the seeded graph costs no request");
-    assert.deepEqual(ctrl.value.nodes.map((n) => n.label), ["Mêlée Island", "Monkey Island"]);
+    assert.deepEqual(ctrl.value.nodes.map((n) => n.label), ["Genève", "Zürich"]);
 
     // an explicit refresh still goes to the endpoint
     await ctrl.refresh();
@@ -157,7 +157,7 @@ test("a ViewState-bound graph viewer renders the resource slice", async () => {
     vs.flush();
 
     assert.equal(urls.length, 1, "the ViewState owns the single central load");
-    assert.deepEqual(ctrl.value.nodes.map((n) => n.id), ["melee", "monkey"], "the viewer renders the resource slice");
+    assert.deepEqual(ctrl.value.nodes.map((n) => n.id), ["geneva", "zurich"], "the viewer renders the resource slice");
     assert.deepEqual(ctrl.value.edges.map((e) => e.id), ["voyage"]);
 });
 

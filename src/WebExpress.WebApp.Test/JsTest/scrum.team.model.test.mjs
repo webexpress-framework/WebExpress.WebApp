@@ -25,10 +25,10 @@ function load(options) {
 test("normalize list completes each member and defaults to empty", () => {
     const { wxapp } = load();
 
-    const normalized = wxapp.scrumTeamModel.normalizeList([{ id: 1, name: "Guybrush Threepwood", points: 8, completed: 3 }]);
+    const normalized = wxapp.scrumTeamModel.normalizeList([{ id: 1, name: "Grace Turner", points: 8, completed: 3 }]);
     assert.deepEqual(normalized, [{
         id: "1",
-        name: "Guybrush Threepwood",
+        name: "Grace Turner",
         team: "",
         initials: "GT",
         color: "#888",
@@ -44,10 +44,10 @@ test("normalize list completes each member and defaults to empty", () => {
 test("normalize member keeps explicit fields and clamps invalid points", () => {
     const { wxapp } = load();
 
-    const explicit = wxapp.scrumTeamModel.normalizeMember({ id: "elaine", name: "Elaine Marley", team: "Gov", initials: "EM", color: "#7c3aed", image: "/img/elaine.png", points: 13, completed: 8 });
+    const explicit = wxapp.scrumTeamModel.normalizeMember({ id: "emma", name: "Emma Miller", team: "Mgmt", initials: "EM", color: "#7c3aed", image: "/img/emma.png", points: 13, completed: 8 });
     assert.equal(explicit.initials, "EM");
     assert.equal(explicit.color, "#7c3aed");
-    assert.equal(explicit.image, "/img/elaine.png");
+    assert.equal(explicit.image, "/img/emma.png");
     assert.equal(explicit.points, 13);
     assert.equal(explicit.completed, 8);
 
@@ -71,9 +71,9 @@ test("normalize member clamps completed to the planned load", () => {
 
 test("derive initials uses the first and last word", () => {
     const { wxapp } = load();
-    assert.equal(wxapp.scrumTeamModel.deriveInitials("Guybrush Threepwood"), "GT");
-    assert.equal(wxapp.scrumTeamModel.deriveInitials("Murray, the Demonic Skull"), "MS");
-    assert.equal(wxapp.scrumTeamModel.deriveInitials("Stan"), "ST");
+    assert.equal(wxapp.scrumTeamModel.deriveInitials("Grace Turner"), "GT");
+    assert.equal(wxapp.scrumTeamModel.deriveInitials("Mia, the Night Shift"), "MS");
+    assert.equal(wxapp.scrumTeamModel.deriveInitials("Steve"), "ST");
     assert.equal(wxapp.scrumTeamModel.deriveInitials("   "), "?");
 });
 
@@ -94,16 +94,16 @@ test("completed points sums the completed field independently", () => {
 test("sort by points orders descending, breaking ties on name", () => {
     const { wxapp } = load();
     const members = [
-        { name: "Elaine", points: 8 },
-        { name: "Guybrush", points: 13 },
+        { name: "Emma", points: 8 },
+        { name: "Grace", points: 13 },
         { name: "Adam", points: 8 }
     ];
 
     const sorted = wxapp.scrumTeamModel.sortByPoints(members);
-    assert.deepEqual(sorted.map(m => m.name), ["Guybrush", "Adam", "Elaine"]);
+    assert.deepEqual(sorted.map(m => m.name), ["Grace", "Adam", "Emma"]);
 
     // the input list is not mutated
-    assert.deepEqual(members.map(m => m.name), ["Elaine", "Guybrush", "Adam"]);
+    assert.deepEqual(members.map(m => m.name), ["Emma", "Grace", "Adam"]);
 });
 
 test("model loads the members through a service end to end", async () => {
@@ -116,8 +116,8 @@ test("model loads the members through a service end to end", async () => {
             ok: true,
             status: 200,
             json: async () => [
-                { id: "guybrush", name: "Guybrush Threepwood", points: 13, completed: 5 },
-                { id: "elaine", name: "Elaine Marley", points: 8, completed: 8 }
+                { id: "grace", name: "Grace Turner", points: 13, completed: 5 },
+                { id: "emma", name: "Emma Miller", points: 8, completed: 8 }
             ]
         };
     });
@@ -128,7 +128,7 @@ test("model loads the members through a service end to end", async () => {
     assert.equal(calls[0].method, "GET");
 
     const members = wxapp.scrumTeamModel.normalizeList(loaded.data);
-    assert.deepEqual(members.map(m => m.id), ["guybrush", "elaine"]);
+    assert.deepEqual(members.map(m => m.id), ["grace", "emma"]);
     assert.equal(wxapp.scrumTeamModel.totalPoints(members), 21);
     assert.equal(wxapp.scrumTeamModel.completedPoints(members), 13);
 });

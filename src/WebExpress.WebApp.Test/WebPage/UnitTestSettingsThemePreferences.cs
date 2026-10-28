@@ -194,24 +194,24 @@ namespace WebExpress.WebApp.Test.WebPage
             var application = hub.ApplicationManager.GetApplications(typeof(TestApplication)).First();
             var context = UnitTestControlFixture.CreateRenderContextMock(application);
             var tree = new VisualTreeWebAppSetting(hub, context.PageContext);
-            var chosen = "PIRATES";
-            ThemePreferences.RegisterIconSets(application, [IconSet.Default, new IconSet("pirates", "Pirates", null, "assets/css/pirates.css")],
+            var chosen = "OUTLINE";
+            ThemePreferences.RegisterIconSets(application, [IconSet.Default, new IconSet("outline", "Outline", null, "assets/css/outline.css")],
                 _ => chosen, () => new ControlText());
             try
             {
                 // act
                 ThemePreferences.ApplyIconSet(context, tree);
                 ThemePreferences.ApplyIconSet(context, tree);
-                var linked = tree.CssLinks.Count(x => x.EndsWith("assets/css/pirates.css"));
+                var linked = tree.CssLinks.Count(x => x.EndsWith("assets/css/outline.css"));
                 var resolved = ThemePreferences.ResolveIconSet(context)?.Id;
                 chosen = "removed-set";
                 ThemePreferences.ApplyIconSet(context, tree);
 
                 // validation
                 Assert.Equal(1, linked);
-                Assert.Equal("pirates", resolved);
+                Assert.Equal("outline", resolved);
                 Assert.Null(ThemePreferences.ResolveIconSet(context));
-                Assert.DoesNotContain(tree.CssLinks, x => x.EndsWith("assets/css/pirates.css"));
+                Assert.DoesNotContain(tree.CssLinks, x => x.EndsWith("assets/css/outline.css"));
             }
             finally
             {

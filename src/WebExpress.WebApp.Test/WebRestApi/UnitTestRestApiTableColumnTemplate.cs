@@ -127,7 +127,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
         {
             var root = Parse(new RestApiTableColumnTemplateCombo(true)
             {
-                Items = [new RestApiTableColumnTemplateItem() { Id = "pirate", Text = "Pirate" }]
+                Items = [new RestApiTableColumnTemplateItem() { Id = "developer", Text = "Developer" }]
             });
             var options = root.GetProperty("options");
 
@@ -136,8 +136,8 @@ namespace WebExpress.WebApp.Test.WebRestApi
             using var items = JsonDocument.Parse(options.GetProperty("options").GetString());
             var list = items.RootElement.EnumerateArray().ToList();
             Assert.Single(list);
-            Assert.Equal("pirate", list[0].GetProperty("value").GetString());
-            Assert.Equal("Pirate", list[0].GetProperty("text").GetString());
+            Assert.Equal("developer", list[0].GetProperty("value").GetString());
+            Assert.Equal("Developer", list[0].GetProperty("text").GetString());
         }
 
         /// <summary>

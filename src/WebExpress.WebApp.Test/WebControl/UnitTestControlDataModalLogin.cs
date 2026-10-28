@@ -72,7 +72,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlDataModalLogin(null)
             {
-                Username = _ => "guybrush",
+                Username = _ => "grace",
                 RedirectUri = _ => new UriEndpoint("https://example.com/home")
             };
 
@@ -81,7 +81,7 @@ namespace WebExpress.WebApp.Test.WebControl
 
             // validation
             AssertExtensions.EqualWithPlaceholders(
-                @"<dialog class=""wx-webui-modal-login"" *><div class=""wx-modal-content""><div class=""wx-webapp-login"" data-username=""guybrush"" data-redirect=""https://example.com/home""></div></div>*</dialog>",
+                @"<dialog class=""wx-webui-modal-login"" *><div class=""wx-modal-content""><div class=""wx-webapp-login"" data-username=""grace"" data-redirect=""https://example.com/home""></div></div>*</dialog>",
                 html);
         }
     }

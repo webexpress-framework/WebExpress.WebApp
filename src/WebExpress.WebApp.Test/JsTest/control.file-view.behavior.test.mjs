@@ -158,14 +158,14 @@ test("a view that offers the tile board alone still shows the files the server r
     const rt = loadRuntime();
     const element = host(rt, {
         views: "tile",
-        files: [{ id: "1", name: "TreasureMap.pdf" }, { id: "2", name: "GrogRecipe.txt" }]
+        files: [{ id: "1", name: "Timetable.pdf" }, { id: "2", name: "Guidelines.txt" }]
     });
 
     const ctrl = construct(rt, element);
 
     // the server renders the files as a file list; that list is the seed of the
     // whole control, not only of the list presentation
-    assert.deepEqual(ctrl.files.map((file) => file.name), ["TreasureMap.pdf", "GrogRecipe.txt"]);
+    assert.deepEqual(ctrl.files.map((file) => file.name), ["Timetable.pdf", "Guidelines.txt"]);
     assert.equal(element.querySelectorAll(".wx-file-view-card").length, 2, "the tile board shows them");
     assert.ok(element.querySelector(".wx-file-view-statusbar").textContent.includes("2"),
         "and the count line counts them");
@@ -173,7 +173,7 @@ test("a view that offers the tile board alone still shows the files the server r
 
 test("the list the seed came from does not stay behind when it is not a presentation", () => {
     const rt = loadRuntime();
-    const element = host(rt, { views: "tile", files: [{ id: "1", name: "TreasureMap.pdf" }] });
+    const element = host(rt, { views: "tile", files: [{ id: "1", name: "Timetable.pdf" }] });
 
     construct(rt, element);
 
@@ -336,13 +336,13 @@ test("an uploaded file is visible before the reload answers", async () => {
 });
 
 test("uploading a file that is already there adds a version instead of a second entry", async () => {
-    const rt = loadRuntime({ items: [{ id: "1", name: "TreasureMap.pdf", version: 1 }], total: 1 });
+    const rt = loadRuntime({ items: [{ id: "1", name: "Timetable.pdf", version: 1 }], total: 1 });
     const element = host(rt, { service: true });
 
     const ctrl = construct(rt, element);
     await settle();
 
-    ctrl.uploaded({ name: "TreasureMap.pdf", size: 2048 });
+    ctrl.uploaded({ name: "Timetable.pdf", size: 2048 });
     ctrl._store.flush();
 
     assert.equal(ctrl.files.length, 1, "the name stays one entry");
@@ -356,9 +356,9 @@ test("uploading a file that is already there adds a version instead of a second 
 test("the versions a response carries are folded into one entry per file", async () => {
     const rt = loadRuntime({
         items: [
-            { id: "a", name: "TreasureMap.pdf", version: 1 },
-            { id: "b", name: "TreasureMap.pdf", version: 2 },
-            { id: "c", name: "GrogRecipe.txt", version: 1 }
+            { id: "a", name: "Timetable.pdf", version: 1 },
+            { id: "b", name: "Timetable.pdf", version: 2 },
+            { id: "c", name: "Guidelines.txt", version: 1 }
         ],
         total: 3
     });
@@ -367,7 +367,7 @@ test("the versions a response carries are folded into one entry per file", async
     const ctrl = construct(rt, element);
     await settle();
 
-    assert.deepEqual(ctrl.files.map((file) => file.name), ["TreasureMap.pdf", "GrogRecipe.txt"]);
+    assert.deepEqual(ctrl.files.map((file) => file.name), ["Timetable.pdf", "Guidelines.txt"]);
     assert.equal(ctrl.files[0].id, "b", "the newest version is the entry");
     assert.equal(element.querySelectorAll("tr").length, 3, "the list shows two files and one folded version");
     assert.equal(element.querySelectorAll("tr.wx-file-version").length, 1);
@@ -376,8 +376,8 @@ test("the versions a response carries are folded into one entry per file", async
 test("a card unfolds the earlier versions of its file", async () => {
     const rt = loadRuntime({
         items: [
-            { id: "a", name: "TreasureMap.pdf", version: 1, date: "14.03.2026" },
-            { id: "b", name: "TreasureMap.pdf", version: 2, date: "30.07.2026" }
+            { id: "a", name: "Timetable.pdf", version: 1, date: "14.03.2026" },
+            { id: "b", name: "Timetable.pdf", version: 2, date: "30.07.2026" }
         ],
         total: 2
     });

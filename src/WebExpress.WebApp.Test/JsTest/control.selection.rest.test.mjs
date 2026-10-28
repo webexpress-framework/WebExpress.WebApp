@@ -14,8 +14,8 @@ import assert from "node:assert";
 import { loadControl } from "./controls.harness.mjs";
 
 const ITEMS = [
-    { id: "28DF7324-0DDE-40B3-B6E4-0CDD107D324A", text: "Mêlée Island" },
-    { id: "64D99FDF-9828-40EB-92CA-D55DDA6BD9F4", text: "Monkey Island" }
+    { id: "28DF7324-0DDE-40B3-B6E4-0CDD107D324A", text: "Genève" },
+    { id: "64D99FDF-9828-40EB-92CA-D55DDA6BD9F4", text: "Zürich" }
 ];
 
 /**
@@ -72,7 +72,7 @@ test("read-only rest_selection renders the selected items after the async load",
     await settle();
 
     assert.equal(container.querySelectorAll("li").length, 2, "both selected values are shown as tags");
-    assert.equal(container.textContent, "Mêlée IslandMonkey Island", "the tags carry the item text, not an empty label");
+    assert.equal(container.textContent, "GenèveZürich", "the tags carry the item text, not an empty label");
 });
 
 test("editable rest_selection shows the selection once the options arrive", async () => {
@@ -83,5 +83,5 @@ test("editable rest_selection shows the selection once the options arrive", asyn
     await settle();
 
     assert.equal(container.querySelectorAll("li").length, 1, "the selected value is shown in the SmartEdit read view");
-    assert.equal(container.textContent, "Mêlée Island", "the tag carries the item text");
+    assert.equal(container.textContent, "Genève", "the tag carries the item text");
 });

@@ -34,13 +34,13 @@ namespace WebExpress.WebApp.Test.WebData
         public void SupportsStringsBooleansAndArrays()
         {
             var island = DataState.Create()
-                .Set("search", "treasure")
+                .Set("search", "invoice")
                 .Set("loading", false)
                 .Set("items", new[] { "a", "b" })
                 .ToIslandElement()
                 .ToString();
 
-            Assert.Contains("<wx-prop name=\"search\">treasure</wx-prop>", island);
+            Assert.Contains("<wx-prop name=\"search\">invoice</wx-prop>", island);
             Assert.Contains("<wx-prop name=\"loading\" type=\"boolean\">false</wx-prop>", island);
             Assert.Contains("<wx-prop name=\"items\" type=\"json\">[&quot;a&quot;,&quot;b&quot;]</wx-prop>", island);
         }

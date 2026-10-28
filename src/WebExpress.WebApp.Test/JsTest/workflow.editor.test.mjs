@@ -60,9 +60,9 @@ function createHost(engine, state) {
 function workflowResponse() {
     return {
         id: "wf1",
-        name: "Monkey Island Quest",
+        name: "Onboarding Process",
         version: "1",
-        description: "A pirate's journey.",
+        description: "A new hire's first weeks.",
         states: [
             { id: "todo", label: "Quest Board", x: 100, y: 120 },
             { id: "done", label: "Legendary Status", x: 850, y: 200 }
@@ -93,16 +93,16 @@ test("workflow editor loads with the workflow id from the state island", async (
         return { ok: true, status: 200, json: async () => workflowResponse() };
     });
 
-    const element = createHost(engine, { id: "monkeyisland" });
+    const element = createHost(engine, { id: "onboarding" });
     const editor = new engine.wxapp.WorkflowEditorCtrl(element);
     await settle();
 
     assert.equal(requests.length, 1);
     assert.equal(requests[0].method, "GET");
-    assert.equal(requests[0].url, "/api/workflow?id=monkeyisland");
-    assert.equal(editor._workflowId, "monkeyisland");
+    assert.equal(requests[0].url, "/api/workflow?id=onboarding");
+    assert.equal(editor._workflowId, "onboarding");
     assert.equal(editor._meta.id, "wf1");
-    assert.equal(editor._meta.name, "Monkey Island Quest");
+    assert.equal(editor._meta.name, "Onboarding Process");
     assert.equal(editor._model.nodes.length, 2);
     assert.equal(editor._model.edges.length, 1);
     assert.equal(editor._isLoading, false);
@@ -136,7 +136,7 @@ test("workflow editor autosave puts the wire payload keyed by the authored id", 
         return { ok: true, status: 200, json: async () => workflowResponse() };
     });
 
-    const element = createHost(engine, { id: "monkeyisland" });
+    const element = createHost(engine, { id: "onboarding" });
     const editor = new engine.wxapp.WorkflowEditorCtrl(element);
     await settle();
 
@@ -147,7 +147,7 @@ test("workflow editor autosave puts the wire payload keyed by the authored id", 
 
     assert.equal(requests.length, 2);
     assert.equal(requests[1].method, "PUT");
-    assert.equal(requests[1].url, "/api/workflow?id=monkeyisland");
+    assert.equal(requests[1].url, "/api/workflow?id=onboarding");
 
     const body = JSON.parse(requests[1].body);
     // the body id is the server-issued meta id, the query id stays the authored one
@@ -168,7 +168,7 @@ test("workflow editor ignores a load that resolves after destroy", async () => {
         return { ok: true, status: 200, json: async () => workflowResponse() };
     });
 
-    const element = createHost(engine, { id: "monkeyisland" });
+    const element = createHost(engine, { id: "onboarding" });
     const editor = new engine.wxapp.WorkflowEditorCtrl(element);
 
     editor.destroy();

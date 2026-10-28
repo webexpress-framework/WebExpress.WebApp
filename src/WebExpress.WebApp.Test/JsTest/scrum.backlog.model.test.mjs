@@ -74,12 +74,12 @@ test("request bodies carry the rank payloads", () => {
 
 test("item body carries the assignment and clamps the estimate", () => {
     const { wxapp } = load();
-    assert.deepEqual(wxapp.scrumBacklogModel.itemBody({ assigneeId: "guybrush", points: 8 }), { assigneeId: "guybrush", points: 8 });
+    assert.deepEqual(wxapp.scrumBacklogModel.itemBody({ assigneeId: "grace", points: 8 }), { assigneeId: "grace", points: 8 });
     // an empty assignee unassigns; a missing estimate is dropped so the server keeps it
     assert.deepEqual(wxapp.scrumBacklogModel.itemBody({ assigneeId: "", points: null }), { assigneeId: null, points: undefined });
     // negative or malformed estimates are dropped
-    assert.deepEqual(wxapp.scrumBacklogModel.itemBody({ assigneeId: "elaine", points: -3 }), { assigneeId: "elaine", points: undefined });
-    assert.deepEqual(wxapp.scrumBacklogModel.itemBody({ assigneeId: "elaine", points: "x" }), { assigneeId: "elaine", points: undefined });
+    assert.deepEqual(wxapp.scrumBacklogModel.itemBody({ assigneeId: "emma", points: -3 }), { assigneeId: "emma", points: undefined });
+    assert.deepEqual(wxapp.scrumBacklogModel.itemBody({ assigneeId: "emma", points: "x" }), { assigneeId: "emma", points: undefined });
     assert.deepEqual(wxapp.scrumBacklogModel.itemBody(null), { assigneeId: null, points: undefined });
 });
 

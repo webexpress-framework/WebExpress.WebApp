@@ -217,7 +217,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
                 "Host: localhost\r\n" +
                 "Content-Type: application/json\r\n" +
                 "\r\n" +
-                "{\"action\":\"swimlanes\",\"swimlanes\":[{\"id\":\"melee\",\"title\":\"Mêlée\",\"filter\":\"team = 'a'\",\"color\":\"#198754\"},{\"id\":\"new\",\"title\":\"New lane\"}]}",
+                "{\"action\":\"swimlanes\",\"swimlanes\":[{\"id\":\"geneva\",\"title\":\"Genf\",\"filter\":\"team = 'a'\",\"color\":\"#198754\"},{\"id\":\"new\",\"title\":\"New lane\"}]}",
                 "https://example.com/"
             );
 
@@ -230,8 +230,8 @@ namespace WebExpress.WebApp.Test.WebRestApi
             Assert.Equal("swimlanes", api.LastAction);
             Assert.NotNull(api.LastSwimlanes);
             Assert.Equal(2, api.LastSwimlanes.Count);
-            Assert.Equal("melee", api.LastSwimlanes[0].Id);
-            Assert.Equal("Mêlée", api.LastSwimlanes[0].Title);
+            Assert.Equal("geneva", api.LastSwimlanes[0].Id);
+            Assert.Equal("Genf", api.LastSwimlanes[0].Title);
             Assert.Equal("team = 'a'", api.LastSwimlanes[0].Filter);
             Assert.Equal("#198754", api.LastSwimlanes[0].Color);
             Assert.Equal("new", api.LastSwimlanes[1].Id);

@@ -199,7 +199,7 @@ test("a move into the active sprint waits for the confirmation", () => {
 test("assigning an item renders its initials without changing the rendered item", () => {
     const { ctrl, host } = board();
     const before = ctrl.items.find((i) => i.id === "c");
-    ctrl.updateItem("c", { assigneeId: "gt", points: 13, assignee: { id: "gt", name: "Guybrush Threepwood", initials: "GT", color: "#36c" } });
+    ctrl.updateItem("c", { assigneeId: "gt", points: 13, assignee: { id: "gt", name: "Grace Turner", initials: "GT", color: "#36c" } });
     ctrl.store.flush();
     assert.equal(before.assigneeId, undefined);
     const assignee = row(host, "c").querySelector(".wx-scrum-assignee");

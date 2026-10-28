@@ -46,7 +46,7 @@ test("normalize label trims and rejects a blank label", () => {
 
     assert.equal(wxapp.tabModel.normalizeLabel("  Alpha "), "Alpha");
     assert.equal(wxapp.tabModel.normalizeLabel("   "), null);
-    assert.equal(wxapp.tabModel.normalizeLabel("Pirate\tcrews\u0007"), "Pirate crews", "control characters turn into gaps");
+    assert.equal(wxapp.tabModel.normalizeLabel("Project\tteams\u0007"), "Project teams", "control characters turn into gaps");
     assert.equal(wxapp.tabModel.normalizeLabel(null), null);
 });
 

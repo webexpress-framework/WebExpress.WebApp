@@ -105,7 +105,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
                 "Host: localhost\r\n" +
                 "Content-Type: application/json\r\n" +
                 "\r\n" +
-                "{\"action\":\"create\",\"templateId\":\"monkeyTemplate\"}",
+                "{\"action\":\"create\",\"templateId\":\"projectTemplate\"}",
                 ""
             );
 
@@ -115,7 +115,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
             // validation
             Assert.NotNull(result);
             Assert.Equal(201, result.Status);
-            Assert.Equal("monkeyTemplate", tab.LastCreateTemplateId);
+            Assert.Equal("projectTemplate", tab.LastCreateTemplateId);
 
             var json = Encoding.UTF8.GetString((byte[])result.Content);
             using var doc = JsonDocument.Parse(json);
@@ -127,7 +127,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
                 ? labelProperty.GetString()
                 : newTab.GetProperty("title").GetString();
             Assert.Equal("New Tab", newTabTitle);
-            Assert.Equal("monkeyTemplate", newTab.GetProperty("templateId").GetString());
+            Assert.Equal("projectTemplate", newTab.GetProperty("templateId").GetString());
 
             // the badge survives the create path, where the interface is
             // serialized instead of the concrete view

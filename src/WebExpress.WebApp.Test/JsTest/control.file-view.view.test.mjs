@@ -30,8 +30,8 @@ function view(options = {}) {
     (options.parent || rt.document.body).appendChild(element);
     const ctrl = new rt.wxapp.FileViewCtrl(element);
     ctrl.files = [
-        { id: "1", name: "TreasureMap.pdf", description: "x marks the spot", versions: [{ version: 1, date: "14.03.2026" }] },
-        { id: "2", name: "GrogRecipe.txt", description: "" }
+        { id: "1", name: "Timetable.pdf", description: "the current plan", versions: [{ version: 1, date: "14.03.2026" }] },
+        { id: "2", name: "Guidelines.txt", description: "" }
     ];
     ctrl._store.flush();
     return { rt, element, ctrl };
@@ -54,32 +54,32 @@ test("the file view renders on the Data base and describes itself without touchi
 
 test("a card keeps its node across a reload, and so does its inline editor while the description stays", () => {
     const { element, ctrl } = view({ editable: true });
-    const map = card(element, "TreasureMap.pdf");
+    const map = card(element, "Timetable.pdf");
     const editor = map.querySelector(".wx-file-view-description");
 
     // a reload delivers new file objects with the same content
     ctrl.files = ctrl.files.map((file) => Object.assign({}, file));
     ctrl._store.flush();
-    assert.equal(card(element, "TreasureMap.pdf"), map, "the card is patched, not rebuilt");
+    assert.equal(card(element, "Timetable.pdf"), map, "the card is patched, not rebuilt");
     assert.equal(map.querySelector(".wx-file-view-description"), editor, "the editor is not rebuilt under the hands of the user");
 
-    ctrl.files = ctrl.files.map((file) => file.name === "TreasureMap.pdf" ? Object.assign({}, file, { description: "dig here" }) : file);
+    ctrl.files = ctrl.files.map((file) => file.name === "Timetable.pdf" ? Object.assign({}, file, { description: "updated plan" }) : file);
     ctrl._store.flush();
     assert.notEqual(map.querySelector(".wx-file-view-description"), editor, "a changed description is shown anew");
 });
 
 test("the versions of a card unfold from the state and stay unfolded across a reload", () => {
     const { element, ctrl } = view();
-    const toggle = card(element, "TreasureMap.pdf").querySelector(".wx-file-view-card-versions");
+    const toggle = card(element, "Timetable.pdf").querySelector(".wx-file-view-card-versions");
 
     toggle.dispatchEvent({ type: "click", preventDefault() { } });
     ctrl._store.flush();
     assert.equal(toggle.getAttribute("aria-expanded"), "true");
-    assert.deepEqual(Array.from(ctrl.state.expanded), ["TreasureMap.pdf"]);
+    assert.deepEqual(Array.from(ctrl.state.expanded), ["Timetable.pdf"]);
 
     ctrl.files = ctrl.files.map((file) => Object.assign({}, file));
     ctrl._store.flush();
-    assert.equal(card(element, "TreasureMap.pdf").querySelector(".wx-file-view-card-version-list").style.display, "");
+    assert.equal(card(element, "Timetable.pdf").querySelector(".wx-file-view-card-version-list").style.display, "");
 });
 
 test("a switch of the presentation is rendered before it is announced", () => {
@@ -112,10 +112,10 @@ test("inside a ViewState the query goes to the ViewState and the view state stay
 
     const { ctrl } = view({ rt, resource: "files", parent: host });
     ctrl._activate("tile");
-    ctrl.search("grog");
+    ctrl.search("report");
 
     assert.equal(ctrl.store, viewState, "binds and intents address the ViewState");
-    assert.equal(viewState.getState().search, "grog", "the central query reads the search from there");
+    assert.equal(viewState.getState().search, "report", "the central query reads the search from there");
     assert.ok(reloads >= 1, "and the ViewState re-queries");
     for (const key of ["files", "activePane", "expanded"]) {
         assert.equal(key in viewState.getState(), false, `the ViewState holds no ${key} of the control`);

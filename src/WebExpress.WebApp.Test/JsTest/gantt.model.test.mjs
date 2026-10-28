@@ -41,8 +41,8 @@ test("normalize task derives end, duration, progress and resources", () => {
     const resources = model.normalizeTask({ id: "d", start: "2026-07-06", resources: "Anna, Bob" });
     assert.deepEqual(resources.resources, ["Anna", "Bob"]);
 
-    const objects = model.normalizeTask({ id: "e", start: "2026-07-06", resources: [{ name: "Carla" }] });
-    assert.deepEqual(objects.resources, ["Carla"]);
+    const objects = model.normalizeTask({ id: "e", start: "2026-07-06", resources: [{ name: "Chloe" }] });
+    assert.deepEqual(objects.resources, ["Chloe"]);
 
     const milestone = model.normalizeTask({ id: "m", start: "2026-07-06", duration: 0 });
     assert.equal(milestone.type, "milestone");

@@ -129,13 +129,13 @@ test("a file that was already loaded is not carried over a second time", () => {
 test("files that share a name fold into one entry, the newest version at the head", () => {
     const files = model().groupVersions([
         { name: "Map.pdf", version: 1, id: "a" },
-        { name: "Grog.txt", version: 1, id: "b" },
+        { name: "Glossary.txt", version: 1, id: "b" },
         { name: "Map.pdf", version: 3, id: "c" },
         { name: "Map.pdf", version: 2, id: "d" }
     ]);
 
     // uploading a file again is a new version of it, not a second file
-    assert.deepEqual(files.map((file) => file.name), ["Map.pdf", "Grog.txt"], "each name appears once");
+    assert.deepEqual(files.map((file) => file.name), ["Map.pdf", "Glossary.txt"], "each name appears once");
     assert.equal(files[0].id, "c", "the newest version is the entry");
     assert.deepEqual(files[0].versions.map((v) => v.version), [2, 1], "the earlier ones follow it, newest first");
     assert.deepEqual(files[1].versions, [], "a file with one version carries no history");
@@ -143,12 +143,12 @@ test("files that share a name fold into one entry, the newest version at the hea
 
 test("grouping keeps the order the response listed the names in", () => {
     const files = model().groupVersions([
-        { name: "Grog.txt", version: 1 },
+        { name: "Glossary.txt", version: 1 },
         { name: "Map.pdf", version: 1 },
-        { name: "Grog.txt", version: 2 }
+        { name: "Glossary.txt", version: 2 }
     ]);
 
-    assert.deepEqual(files.map((file) => file.name), ["Grog.txt", "Map.pdf"],
+    assert.deepEqual(files.map((file) => file.name), ["Glossary.txt", "Map.pdf"],
         "an endpoint that sorts its files keeps that sorting");
 });
 
@@ -171,9 +171,9 @@ test("uploading a name that is already there becomes its newest version", () => 
 test("uploading a name nobody has seen opens a new entry", () => {
     const fileView = model();
 
-    const files = fileView.addUpload([{ name: "Map.pdf", version: 1 }], fileView.fromUpload({ name: "Grog.txt", size: 12 }));
+    const files = fileView.addUpload([{ name: "Map.pdf", version: 1 }], fileView.fromUpload({ name: "Glossary.txt", size: 12 }));
 
-    assert.deepEqual(files.map((file) => file.name), ["Map.pdf", "Grog.txt"]);
+    assert.deepEqual(files.map((file) => file.name), ["Map.pdf", "Glossary.txt"]);
     assert.deepEqual(files[1].versions, [], "a first upload has no history");
 });
 

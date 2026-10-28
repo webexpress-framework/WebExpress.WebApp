@@ -14,9 +14,9 @@ import { appendServiceIsland } from "./harness.mjs";
 const RESPONSE = {
     columns: [{ id: "name", label: "Name" }, { id: "role", label: "Role" }, { id: "ship", label: "Ship" }],
     rows: [
-        { id: "r1", cells: [{ content: "Guybrush" }, { content: "Pirate" }, { content: "Sea Monkey" }] },
-        { id: "r2", cells: [{ content: "Elaine" }, { content: "Governor" }, { content: "Unicorn" }] },
-        { id: "r3", cells: [{ content: "LeChuck" }, { content: "Ghost" }, { content: "Flying Dutchman" }] }
+        { id: "r1", cells: [{ content: "Grace" }, { content: "Developer" }, { content: "Northwind" }] },
+        { id: "r2", cells: [{ content: "Emma" }, { content: "Manager" }, { content: "Unicorn" }] },
+        { id: "r3", cells: [{ content: "Leo" }, { content: "Designer" }, { content: "Polaris" }] }
     ],
     total: 3
 };
@@ -119,26 +119,26 @@ test("reorder, sort, edit, reload and a refused change leave footer and selectio
     const nameHeader = table._head.querySelectorAll(".wx-col-header").find((el) => el.dataset.columnId === "name");
     table._onHeadClick({ target: nameHeader });
     table._store.flush();
-    assert.deepEqual(table._rows.map((r) => r.id), ["r2", "r1", "r3"], "Elaine, Guybrush, LeChuck");
+    assert.deepEqual(table._rows.map((r) => r.id), ["r2", "r1", "r3"], "Emma, Grace, Leo");
     assert.equal(table._orderBy, "name");
     assert.equal(table._orderDir, "asc");
     await settle();
 
     // an edit in the role of the selected row changes that cell only
     table.selectRow("r2");
-    const elaine = table.getSelectedRow();
-    const roleCell = elaine._anchorTr.children.find((el) => el.dataset.columnId === "role");
+    const emma = table.getSelectedRow();
+    const roleCell = emma._anchorTr.children.find((el) => el.dataset.columnId === "role");
     const input = rt.document.createElement("input");
     roleCell.appendChild(input);
-    input.value = "Captain";
+    input.value = "Director";
     table._onBodyInput({ target: input });
-    assert.deepEqual(elaine.cells.map((c) => c.content), ["Unicorn", "Elaine", "Captain"]);
+    assert.deepEqual(emma.cells.map((c) => c.content), ["Unicorn", "Emma", "Director"]);
 
     // the table is loaded anew: the order holds and the selection follows its row
     await table._load();
     await settle();
     assert.deepEqual(columnIds(table), ["ship", "name", "role"]);
-    assert.deepEqual(table._rows[1].cells.map((c) => c.content), ["Unicorn", "Elaine", "Governor"], "the cells follow the columns");
+    assert.deepEqual(table._rows[1].cells.map((c) => c.content), ["Unicorn", "Emma", "Manager"], "the cells follow the columns");
     assertSelected(table, "r2");
     assertFooterUnderHeaders(table);
 
@@ -191,5 +191,5 @@ test("a hidden column keeps the footer and the cells of the others under their h
     assertFooterUnderHeaders(table);
     const cells = table._rows[0]._anchorTr.children.filter((el) => el.dataset.columnId);
     assert.deepEqual(cells.map((el) => el.dataset.columnId), ["role", "name"]);
-    assert.deepEqual(cells.map((el) => el.textContent), ["Pirate", "Guybrush"]);
+    assert.deepEqual(cells.map((el) => el.textContent), ["Developer", "Grace"]);
 });

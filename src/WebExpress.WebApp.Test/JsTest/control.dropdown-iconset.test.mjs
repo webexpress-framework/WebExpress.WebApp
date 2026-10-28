@@ -44,10 +44,10 @@ function sheets(rt) {
 test("a stored icon set replaces the sheet of the previous one instead of reloading the page", () => {
     const rt = loadPicker();
     link(rt, "/app/theme.css");
-    link(rt, "/app/pirates.css");
+    link(rt, "/app/outline.css");
     const events = [];
     rt.document.addEventListener("webexpress.webapp.iconset.change", (e) => events.push(e.detail.id));
-    const picker = { _items: [{ id: "default", stylesheet: null }, { id: "pirates", stylesheet: "/app/pirates.css" }, { id: "ninjas", stylesheet: "/app/ninjas.css" }] };
+    const picker = { _items: [{ id: "default", stylesheet: null }, { id: "outline", stylesheet: "/app/outline.css" }, { id: "ninjas", stylesheet: "/app/ninjas.css" }] };
 
     rt.wxapp.DropdownIconSetCtrl.prototype._afterPersist.call(picker, "ninjas");
     assert.deepStrictEqual(sheets(rt), ["/app/theme.css", "/app/ninjas.css"], "the theme sheet stays, the sets are swapped");

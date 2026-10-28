@@ -84,8 +84,8 @@ test("model loads the sprints through a service end to end", async () => {
             ok: true,
             status: 200,
             json: async () => [
-                { id: "s1", name: "Sprint Mêlée 1", committed: 30, completed: 24 },
-                { id: "s2", name: "Sprint Monkey 2", committed: 28, completed: 27 }
+                { id: "s1", name: "Sprint Genf 1", committed: 30, completed: 24 },
+                { id: "s2", name: "Sprint Zürich 2", committed: 28, completed: 27 }
             ]
         };
     });

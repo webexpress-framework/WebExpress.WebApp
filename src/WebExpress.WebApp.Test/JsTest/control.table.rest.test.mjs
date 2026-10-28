@@ -13,8 +13,8 @@ import { appendServiceIsland } from "./harness.mjs";
 const RESPONSE = {
     columns: [{ id: "name", label: "Name" }, { id: "role", label: "Role" }],
     rows: [
-        { id: "r1", cells: [{ content: "Guybrush" }, { content: "Pirate" }] },
-        { id: "r2", cells: [{ content: "Elaine" }, { content: "Governor" }] }
+        { id: "r1", cells: [{ content: "Grace" }, { content: "Developer" }] },
+        { id: "r2", cells: [{ content: "Emma" }, { content: "Manager" }] }
     ],
     total: 2
 };
@@ -116,7 +116,7 @@ test("a column the server adds and a heading it changes appear, after a local re
     table.updateData(responseWith((r) => {
         r.columns[0].label = "Full name";
         r.columns.push({ id: "ship", label: "Ship" });
-        r.rows[0].cells.push({ content: "Sea Monkey" });
+        r.rows[0].cells.push({ content: "Northwind" });
         r.rows[1].cells.push({ content: "Unicorn" });
     }));
     table._store.flush();
@@ -125,7 +125,7 @@ test("a column the server adds and a heading it changes appear, after a local re
     assert.equal(table._columns[1].label, "Full name");
     const headers = table._head.querySelectorAll(".wx-col-header");
     assert.deepEqual(headers.map((h) => h.textContent), ["Role", "Full name", "Ship"]);
-    assert.deepEqual(table._rows[0].cells.map((c) => c.content), ["Pirate", "Guybrush", "Sea Monkey"]);
+    assert.deepEqual(table._rows[0].cells.map((c) => c.content), ["Developer", "Grace", "Northwind"]);
 });
 
 test("a column the server no longer sends is dropped", async () => {
@@ -138,7 +138,7 @@ test("a column the server no longer sends is dropped", async () => {
     table._store.flush();
 
     assert.deepEqual(table._columns.map((c) => c.id), ["role"]);
-    assert.deepEqual(table._rows[0].cells.map((c) => c.content), ["Pirate"]);
+    assert.deepEqual(table._rows[0].cells.map((c) => c.content), ["Developer"]);
 });
 
 test("a column reorder the server refuses is taken back on screen and in the local store", async () => {
@@ -156,7 +156,7 @@ test("a column reorder the server refuses is taken back on screen and in the loc
 
     assert.equal(net.writes.length, 1, "the change was sent");
     assert.deepEqual(table._columns.map((c) => c.id), ["name", "role"], "the refused order is taken back");
-    assert.deepEqual(table._rows[0].cells.map((c) => c.content), ["Guybrush", "Pirate"], "with the cells");
+    assert.deepEqual(table._rows[0].cells.map((c) => c.content), ["Grace", "Developer"], "with the cells");
     assert.deepEqual(table._head.querySelectorAll(".wx-col-header").map((h) => h.dataset.columnId), ["name", "role"]);
     const stored = rt.wx.LocalStorage.getJson("crew");
     assert.deepEqual(stored && stored.order, ["name", "role"], "the local store holds the confirmed order");
@@ -175,7 +175,7 @@ test("a column reorder the server accepts is kept and stored locally", async () 
 
     assert.deepEqual(net.writes.map((w) => w.c && w.c.map((c) => c.id)), [["role", "name"]]);
     assert.deepEqual(table._columns.map((c) => c.id), ["role", "name"], "a reload keeps the confirmed order");
-    assert.deepEqual(table._rows[0].cells.map((c) => c.content), ["Pirate", "Guybrush"]);
+    assert.deepEqual(table._rows[0].cells.map((c) => c.content), ["Developer", "Grace"]);
     assert.deepEqual(rt.wx.LocalStorage.getJson("crew").order, ["role", "name"]);
 });
 
@@ -251,7 +251,7 @@ test("a column reorder the server stores with an empty answer is kept, not taken
     table._store.flush();
 
     assert.deepEqual(table._columns.map((c) => c.id), ["role", "name"], "the stored order stays");
-    assert.deepEqual(table._rows[0].cells.map((c) => c.content), ["Pirate", "Guybrush"]);
+    assert.deepEqual(table._rows[0].cells.map((c) => c.content), ["Developer", "Grace"]);
     assert.equal(popups.length, 0, "no refusal is reported for a write that succeeded");
     assert.deepEqual(rt.wx.LocalStorage.getJson("crew").order, ["role", "name"]);
 });
