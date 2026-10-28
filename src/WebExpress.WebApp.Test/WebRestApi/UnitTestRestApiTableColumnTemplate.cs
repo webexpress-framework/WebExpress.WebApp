@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Text.Json;
+using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebRestApi;
 using WebExpress.WebCore.WebUri;
 using WebExpress.WebUI.WebControl;
@@ -173,6 +175,66 @@ namespace WebExpress.WebApp.Test.WebRestApi
             Assert.Equal("color", root.GetProperty("type").GetString());
             Assert.True(options.GetProperty("editable").GetBoolean());
             Assert.Equal("The favorite color", options.GetProperty("tooltip").GetString());
+        }
+
+        /// <summary>
+        /// Verifies the wire contract of the country template: the restricted countries
+        /// travel as codes, named in the culture of the request when one is given.
+        /// </summary>
+        [Theory]
+        [InlineData(null, null)]
+        [InlineData("de-DE", "Frankreich")]
+        public void Country(string culture, string label)
+        {
+            UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var root = Parse(new RestApiTableColumnTemplateCountry(true, true, culture is null ? null : CultureInfo.GetCultureInfo(culture))
+            {
+                Countries = ["fr", "XY"],
+                ShowName = false
+            });
+            var options = root.GetProperty("options");
+
+            Assert.Equal("country", root.GetProperty("type").GetString());
+            Assert.True(options.GetProperty("editable").GetBoolean());
+            Assert.True(options.GetProperty("multiselection").GetBoolean());
+            Assert.False(options.GetProperty("showName").GetBoolean());
+
+            using var items = JsonDocument.Parse(options.GetProperty("options").GetString());
+            var item = Assert.Single(items.RootElement.EnumerateArray());
+            Assert.Equal("FR", item.GetProperty("id").GetString());
+            Assert.Equal(label, item.GetProperty("label").GetString());
+
+            // only the picker needs the list
+            var readOnly = Parse(new RestApiTableColumnTemplateCountry()).GetProperty("options");
+            Assert.False(readOnly.TryGetProperty("options", out _));
+        }
+
+        /// <summary>
+        /// Verifies the wire contract of the e-mail template.
+        /// </summary>
+        [Fact]
+        public void Email()
+        {
+            var root = Parse(new RestApiTableColumnTemplateEmail(true, "name@example.com"));
+            var options = root.GetProperty("options");
+
+            Assert.Equal("email", root.GetProperty("type").GetString());
+            Assert.True(options.GetProperty("editable").GetBoolean());
+            Assert.Equal("name@example.com", options.GetProperty("placeholder").GetString());
+        }
+
+        /// <summary>
+        /// Verifies the wire contract of the phone template; the start country is normalized.
+        /// </summary>
+        [Fact]
+        public void Phone()
+        {
+            var root = Parse(new RestApiTableColumnTemplatePhone(true, "de"));
+            var options = root.GetProperty("options");
+
+            Assert.Equal("phone", root.GetProperty("type").GetString());
+            Assert.True(options.GetProperty("editable").GetBoolean());
+            Assert.Equal("DE", options.GetProperty("country").GetString());
         }
 
         /// <summary>
