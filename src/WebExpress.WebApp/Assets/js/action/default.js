@@ -44,7 +44,9 @@ webexpress.webui.Actions.register("plugin-package", {
         const requireFile = (element.getAttribute("data-wx-" + prefix + "-require-file") || "") === "true";
         const confirmText = element.getAttribute("data-wx-" + prefix + "-confirm");
 
-        if (confirmText && !window.confirm(confirmText)) {
+        // an upload is confirmed once the file is chosen, so the question can name it and a
+        // cancelled file dialog does not follow an answered question
+        if (!requireFile && confirmText && !window.confirm(confirmText)) {
             return;
         }
 
@@ -87,6 +89,11 @@ webexpress.webui.Actions.register("plugin-package", {
 
             input.addEventListener("change", () => {
                 if (!input.files || input.files.length === 0) {
+                    cleanup();
+                    return;
+                }
+
+                if (confirmText && !window.confirm(confirmText.replace("{file}", input.files[0].name))) {
                     cleanup();
                     return;
                 }
