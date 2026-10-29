@@ -9,7 +9,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests action serialization and html attributes for the request action.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestActionRequest
     {
         /// <summary>

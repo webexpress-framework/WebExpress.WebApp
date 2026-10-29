@@ -7,7 +7,6 @@ namespace WebExpress.WebApp.Test.WebAttribute
     /// Unit tests for the minimum items validation attribute.
     /// Ensures that collections with too few items are rejected.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestValidationMinItems
     {
         /// <summary>

@@ -12,7 +12,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// webexpress.webapp.Data.readState. These tests assert both the emission
     /// and the default (an absent or empty state emits no island).
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataListData
     {
         /// <summary>

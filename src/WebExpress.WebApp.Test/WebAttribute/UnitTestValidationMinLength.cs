@@ -7,7 +7,6 @@ namespace WebExpress.WebApp.Test.WebAttribute
     /// Unit tests for the min length validation attribute.
     /// Ensures that strings shorter than the minimum length are rejected.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestValidationMinLength
     {
         /// <summary>

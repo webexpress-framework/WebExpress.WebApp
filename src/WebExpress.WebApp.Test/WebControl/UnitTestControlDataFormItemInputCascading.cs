@@ -9,7 +9,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the REST cascading control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataFormItemInputCascading
     {
         /// <summary>

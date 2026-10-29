@@ -8,7 +8,6 @@ namespace WebExpress.WebApp.Test.WebRestApi
     /// <summary>
     /// Provides unit tests for verifying the behavior of the RestApiSelection class.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestRestApiSelection
     {
         /// <summary>

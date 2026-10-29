@@ -9,7 +9,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the scrum sprint control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataScrumSprint
     {
         /// <summary>

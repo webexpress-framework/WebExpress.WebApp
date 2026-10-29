@@ -14,7 +14,6 @@ namespace WebExpress.WebApp.Test.WebData
     /// state, service and resource islands at the start of the element, so the
     /// JavaScript ViewState seeds, configures and loads from a single host.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlViewState
     {
         /// <summary>

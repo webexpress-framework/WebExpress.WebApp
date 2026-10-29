@@ -9,7 +9,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the api schedule control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataSchedule
     {
         /// <summary>

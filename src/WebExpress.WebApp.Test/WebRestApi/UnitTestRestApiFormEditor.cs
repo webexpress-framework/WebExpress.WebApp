@@ -15,7 +15,6 @@ namespace WebExpress.WebApp.Test.WebRestApi
     /// presents lets them overwrite each other silently; the conflict has to be
     /// detected where the stored version is known, which is the endpoint.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestRestApiFormEditor
     {
         /// <summary>

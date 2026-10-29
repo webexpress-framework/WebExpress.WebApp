@@ -8,7 +8,6 @@ namespace WebExpress.WebApp.Test.WebPage
     /// <summary>
     /// Verifies landing composition and the shared scoped cookie banner slot.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestVisualTreeWebAppLanding
     {
         /// <summary>

@@ -7,7 +7,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the message queue.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlMessageQueueStatus
     {
         /// <summary>

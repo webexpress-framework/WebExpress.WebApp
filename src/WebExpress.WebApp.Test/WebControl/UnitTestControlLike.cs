@@ -9,7 +9,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the like figure control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlLike
     {
         /// <summary>

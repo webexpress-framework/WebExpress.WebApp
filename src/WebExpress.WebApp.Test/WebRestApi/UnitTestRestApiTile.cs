@@ -8,7 +8,6 @@ namespace WebExpress.WebApp.Test.WebRestApi
     /// <summary>
     /// Provides unit tests for verifying the behavior of the RestApiTile class.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestRestApiTile
     {
         /// <summary>

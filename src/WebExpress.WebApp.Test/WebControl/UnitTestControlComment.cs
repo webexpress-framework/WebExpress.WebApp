@@ -11,7 +11,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// host element; the actual rendering happens in the JS controller
     /// <c>webexpress.webapp.CommentCtrl</c>.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlComment
     {
         /// <summary>

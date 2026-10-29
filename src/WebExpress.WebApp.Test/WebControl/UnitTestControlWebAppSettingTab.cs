@@ -9,7 +9,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the setting tab control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlWebAppSettingTab
     {
         /// <summary>

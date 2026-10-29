@@ -9,7 +9,6 @@ namespace WebExpress.WebApp.Test.WebRestApi
     /// <summary>
     /// Provides unit tests for RestApiTab.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestRestApiTab
     {
         /// <summary>

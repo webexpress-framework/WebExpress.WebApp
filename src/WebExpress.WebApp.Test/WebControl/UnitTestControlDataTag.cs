@@ -12,7 +12,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// element; the actual rendering happens in the JS controller
     /// <c>webexpress.webapp.TagCtrl</c>.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataTag
     {
         /// <summary>

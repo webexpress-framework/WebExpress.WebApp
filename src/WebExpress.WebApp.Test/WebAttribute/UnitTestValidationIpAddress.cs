@@ -7,7 +7,6 @@ namespace WebExpress.WebApp.Test.WebAttribute
     /// Unit tests for the IP address validation attribute.
     /// Ensures that invalid IPv4 and IPv6 addresses are rejected.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestValidationIpAddress
     {
         /// <summary>

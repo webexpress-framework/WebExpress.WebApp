@@ -10,7 +10,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the REST-backed check control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataFormItemInputCheck
     {
         /// <summary>

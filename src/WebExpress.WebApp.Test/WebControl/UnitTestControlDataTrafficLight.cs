@@ -11,7 +11,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// host element and its data islands; the actual rendering happens in the JS
     /// controller <c>webexpress.webapp.TrafficLightCtrl</c>.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataTrafficLight
     {
         /// <summary>

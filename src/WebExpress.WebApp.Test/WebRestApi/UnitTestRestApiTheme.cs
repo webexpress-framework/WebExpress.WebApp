@@ -18,7 +18,6 @@ namespace WebExpress.WebApp.Test.WebRestApi
     /// framework itself does NOT store the choice - user code overrides the
     /// hooks and plugs in whatever persistence fits the application.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestRestApiTheme
     {
         /// <summary>

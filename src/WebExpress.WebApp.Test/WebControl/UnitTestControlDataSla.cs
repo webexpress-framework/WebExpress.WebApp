@@ -12,7 +12,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// endpoint answers - and adds the data islands the JS controller
     /// <c>webexpress.webapp.SlaCtrl</c> resolves its service from.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataSla
     {
         /// <summary>

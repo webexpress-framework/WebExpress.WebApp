@@ -18,7 +18,6 @@ namespace WebExpress.WebApp.Test.WebPage
     /// <summary>
     /// Verifies email diagnostics, credential redaction and activation-aware settings navigation.
     /// </summary>
-    [Collection("NonParallelTests")]
     public sealed class UnitTestPageEmail
     {
         /// <summary>

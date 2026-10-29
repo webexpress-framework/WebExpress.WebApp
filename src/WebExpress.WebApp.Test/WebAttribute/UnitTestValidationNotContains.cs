@@ -7,7 +7,6 @@ namespace WebExpress.WebApp.Test.WebAttribute
     /// Unit tests for the not contains validation attribute.
     /// Ensures that strings containing the forbidden substring are rejected.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestValidationNotContains
     {
         /// <summary>

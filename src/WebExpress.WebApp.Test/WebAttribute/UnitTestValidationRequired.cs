@@ -7,7 +7,6 @@ namespace WebExpress.WebApp.Test.WebAttribute
     /// Unit tests for the required validation attribute. 
     /// Ensures that null, empty and whitespace values are rejected. 
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestValidationRequired
     {
         /// <summary> 

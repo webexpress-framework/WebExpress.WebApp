@@ -9,7 +9,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the WebSocket-driven status task (dot) control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlStatusTask
     {
         /// <summary>

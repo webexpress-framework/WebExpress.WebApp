@@ -7,7 +7,6 @@ namespace WebExpress.WebApp.Test.WebAttribute
     /// Unit tests for the email validation attribute.
     /// Ensures that invalid email formats are rejected.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestValidationEmail
     {
         /// <summary>

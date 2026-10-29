@@ -8,7 +8,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the web app header quick create control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlWebAppHeaderQuickCreate
     {
         /// <summary>

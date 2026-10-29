@@ -20,7 +20,6 @@ namespace WebExpress.WebApp.Test.WebPage
     /// <summary>
     /// Exercises the certificate overview with real manager validation and registered administrative routing.
     /// </summary>
-    [Collection("NonParallelTests")]
     public sealed class UnitTestPageCertificates
     {
         /// <summary>

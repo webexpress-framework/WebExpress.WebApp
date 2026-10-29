@@ -13,7 +13,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the search control with endpoint backed suggestions.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataSearch
     {
         /// <summary>

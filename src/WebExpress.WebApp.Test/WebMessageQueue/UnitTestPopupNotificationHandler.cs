@@ -18,7 +18,6 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
     /// Tests that a popup dismissed in the browser is removed on the server, so the next
     /// reconnect does not replay it.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestPopupNotificationHandler
     {
         /// <summary>

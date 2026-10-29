@@ -7,7 +7,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the REST tag table template control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlTableTemplateRestTag
     {
         /// <summary>

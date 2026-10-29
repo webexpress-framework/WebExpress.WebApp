@@ -9,7 +9,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the read only REST disjunctive normal form control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataDnf
     {
         /// <summary>

@@ -8,7 +8,6 @@ namespace WebExpress.WebApp.Test.WebLink
     /// tests run in the non parallel collection and restore the shipped catalog
     /// afterwards.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestRelationRegistry : IDisposable
     {
         /// <summary>

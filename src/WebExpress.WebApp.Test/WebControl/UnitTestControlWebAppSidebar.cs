@@ -7,7 +7,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the web app sidebar control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlWebAppSidebar
     {
         /// <summary>

@@ -11,7 +11,6 @@ namespace WebExpress.WebApp.Test.WebPage
     /// application and keep it through a full render, including the
     /// per-request override via <c>UseTheme&lt;T&gt;()</c>.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestVisualTreeWebAppTheme
     {
         /// <summary>

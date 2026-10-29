@@ -8,7 +8,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the api graph viewer control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataGraphViewer
     {
         /// <summary>

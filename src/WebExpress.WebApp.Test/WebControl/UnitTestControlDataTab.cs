@@ -9,7 +9,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the api tab control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataTab
     {
         /// <summary>

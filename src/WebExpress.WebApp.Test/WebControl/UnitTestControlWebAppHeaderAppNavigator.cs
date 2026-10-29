@@ -7,7 +7,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the web app header app navigator control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlWebAppHeaderAppNavigator
     {
         /// <summary>

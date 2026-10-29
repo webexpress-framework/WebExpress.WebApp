@@ -6,7 +6,6 @@ namespace WebExpress.WebApp.Test.WebRestApi
     /// <summary>
     /// Test the rest api manager.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestRestApiManager
     {
         /// <summary>

@@ -11,7 +11,6 @@ namespace WebExpress.WebApp.Test.WebPage
     /// <summary>
     /// Guards preference propagation to shared settings and the combined Designs page.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestSettingsThemePreferences
     {
         /// <summary>

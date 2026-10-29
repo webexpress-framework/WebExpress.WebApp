@@ -7,7 +7,6 @@ namespace WebExpress.WebApp.Test.WebRestApi
     /// <summary>
     /// Provides unit tests for verifying the behavior of the RestApiScrum class.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestRestApiScrum
     {
         /// <summary>

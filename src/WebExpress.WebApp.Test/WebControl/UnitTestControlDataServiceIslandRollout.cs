@@ -17,7 +17,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// control render tests, which would fail if the emission were
     /// unconditional.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataServiceIslandRollout
     {
         /// <summary>

@@ -10,7 +10,6 @@ namespace WebExpress.WebApp.Test.WebRestApi
     /// <see cref="RestApiWatcher"/> abstract endpoint, exercised through
     /// the in-memory <see cref="TestRestApiWatcher"/> implementation.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestRestApiWatcher
     {
         /// <summary>

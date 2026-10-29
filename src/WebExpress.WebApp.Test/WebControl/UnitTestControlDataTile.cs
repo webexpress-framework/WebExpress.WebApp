@@ -8,7 +8,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the api tile control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataTile
     {
         /// <summary>

@@ -10,7 +10,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the REST selection control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataFormItemInputSelection
     {
         /// <summary>

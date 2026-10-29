@@ -7,7 +7,6 @@ namespace WebExpress.WebApp.Test.WebAttribute
     /// Unit tests for the range validation attribute.
     /// Ensures that numeric values outside the allowed range are rejected.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestValidationRange
     {
         /// <summary>

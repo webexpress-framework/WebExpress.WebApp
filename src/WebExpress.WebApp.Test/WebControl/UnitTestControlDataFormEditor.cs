@@ -8,7 +8,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the form editor control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataFormEditor
     {
         /// <summary>

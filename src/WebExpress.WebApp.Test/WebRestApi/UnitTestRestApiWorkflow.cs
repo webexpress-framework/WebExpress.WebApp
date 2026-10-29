@@ -16,7 +16,6 @@ namespace WebExpress.WebApp.Test.WebRestApi
     /// presents lets two open editors overwrite each other silently, which is the
     /// normal case for a control that autosaves after every drag.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestRestApiWorkflow
     {
         /// <summary>

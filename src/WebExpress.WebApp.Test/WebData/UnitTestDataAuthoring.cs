@@ -15,7 +15,6 @@ namespace WebExpress.WebApp.Test.WebData
     /// endpoint resolution through the sitemap is exercised by the tutorial pages;
     /// these tests cover the builder shape and that the chain emits the islands.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestDataAuthoring
     {
         /// <summary>

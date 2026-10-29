@@ -9,7 +9,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the api list control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataWqlPrompt
     {
         /// <summary>

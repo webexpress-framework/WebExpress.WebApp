@@ -11,7 +11,6 @@ namespace WebExpress.WebApp.Test.WebRestApi
     /// <see cref="RestApiComment"/> abstract endpoint, exercised through
     /// the in-memory <see cref="TestRestApiComment"/> implementation.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestRestApiComment
     {
         /// <summary>

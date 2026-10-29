@@ -17,7 +17,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// around the two things rendered here. Every one of those is a placement or an attribute, and
     /// every one of them costs a debugging cycle when it moves.
     /// </remarks>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataModalEditor
     {
         /// <summary>

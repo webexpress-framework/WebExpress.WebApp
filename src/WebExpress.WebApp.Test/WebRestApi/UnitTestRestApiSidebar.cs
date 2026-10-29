@@ -12,7 +12,6 @@ namespace WebExpress.WebApp.Test.WebRestApi
     /// Provides unit tests for the REST sidebar endpoint, verifying the json
     /// contract the client sidebar model consumes.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestRestApiSidebar
     {
         /// <summary>

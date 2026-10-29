@@ -12,7 +12,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// itself is rendered by the JS controller
     /// <c>webexpress.webapp.PermissionCtrl</c>.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlPermission
     {
         /// <summary>

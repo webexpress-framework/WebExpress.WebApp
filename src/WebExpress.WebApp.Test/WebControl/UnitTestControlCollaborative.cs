@@ -8,7 +8,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the collaborative control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlCollaborative
     {
         /// <summary>

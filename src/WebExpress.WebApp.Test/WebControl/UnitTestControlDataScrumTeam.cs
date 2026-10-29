@@ -12,7 +12,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// element; the avatar row, the overflow chip and the modal table are built
     /// by the JS controller <c>webexpress.webapp.ScrumTeamCtrl</c>.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataScrumTeam
     {
         /// <summary>

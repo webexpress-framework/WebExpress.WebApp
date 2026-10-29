@@ -7,7 +7,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the api wizard page control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataWizardPage
     {
         /// <summary>

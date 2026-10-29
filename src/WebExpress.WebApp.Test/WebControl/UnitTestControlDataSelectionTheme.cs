@@ -13,7 +13,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// the <c>data-uri</c> attribute so the JS layer can fetch the theme
     /// list and PUT the user's selection. No surrounding form is required.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataSelectionTheme
     {
         /// <summary>

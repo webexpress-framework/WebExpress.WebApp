@@ -10,7 +10,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// Tests the REST login dialog: the login dialog of WebUI framing the REST login
     /// form, whose service and redirect are emitted on the framed login's host.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataModalLogin
     {
         /// <summary>

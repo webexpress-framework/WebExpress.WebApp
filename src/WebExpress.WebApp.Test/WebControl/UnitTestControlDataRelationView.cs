@@ -11,7 +11,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// and its islands; the surface itself is built by the JS controller
     /// <c>webexpress.webapp.RelationViewCtrl</c>.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataRelationView
     {
         /// <summary>

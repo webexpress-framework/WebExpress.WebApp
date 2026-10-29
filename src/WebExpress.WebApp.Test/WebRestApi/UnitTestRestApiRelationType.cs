@@ -13,7 +13,6 @@ namespace WebExpress.WebApp.Test.WebRestApi
     /// a definition has to satisfy, the reordering and the guard that keeps a
     /// relation in use from being dropped.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestRestApiRelationType
     {
         /// <summary>

@@ -9,7 +9,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the REST login form control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataLoginForm
     {
         /// <summary>

@@ -6,7 +6,6 @@ namespace WebExpress.WebApp.Test.WebPage
     /// <summary>
     /// Tests the logout page.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestPageWebAppLogout
     {
         /// <summary>

@@ -16,7 +16,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// contract: the controller the dialog is picked up by, the spreadsheet as the filling body
     /// under the field name both endpoints read, and the declarations that bind the two endpoints.
     /// </remarks>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataModalSpreadsheet
     {
         /// <summary>

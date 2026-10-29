@@ -8,7 +8,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the scrum backlog control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataScrumBacklog
     {
         /// <summary>

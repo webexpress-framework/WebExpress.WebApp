@@ -8,7 +8,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the data file view control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataFileView
     {
         /// <summary>

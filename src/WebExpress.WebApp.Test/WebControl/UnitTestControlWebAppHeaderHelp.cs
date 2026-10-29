@@ -7,7 +7,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the web app header help control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlWebAppHeaderHelp
     {
         /// <summary>

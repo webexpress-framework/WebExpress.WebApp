@@ -8,7 +8,6 @@ namespace WebExpress.WebApp.Test.WebRestApi
     /// Provides unit tests for verifying the behavior of
     /// <see cref="RestApiParameterExtensions.ParseIntParameter"/>.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestRestApiParameterExtensions
     {
         /// <summary>

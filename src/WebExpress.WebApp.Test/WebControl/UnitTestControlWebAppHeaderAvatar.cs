@@ -9,7 +9,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the web app header avatar control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlWebAppHeaderAvatar
     {
         /// <summary>

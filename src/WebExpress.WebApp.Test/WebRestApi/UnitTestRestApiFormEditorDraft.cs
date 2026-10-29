@@ -14,7 +14,6 @@ namespace WebExpress.WebApp.Test.WebRestApi
     /// one form can only be kept from overwriting each other by a revision of the
     /// draft itself, checked where the stored revision is known.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestRestApiFormEditorDraft
     {
         /// <summary>

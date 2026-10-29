@@ -11,7 +11,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// ServiceRegistry.fromElement, so these tests assert both the default
     /// (no declared service emits no island) and the emission shape.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataListService
     {
         /// <summary>

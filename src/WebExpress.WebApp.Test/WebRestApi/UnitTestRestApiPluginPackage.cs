@@ -12,7 +12,6 @@ namespace WebExpress.WebApp.Test.WebRestApi
     /// <summary>
     /// Tests the plugin package REST API, which hands every change to the package manager.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestRestApiPluginPackage
     {
         /// <summary>

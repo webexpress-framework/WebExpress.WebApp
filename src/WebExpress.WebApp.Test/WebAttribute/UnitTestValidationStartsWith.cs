@@ -7,7 +7,6 @@ namespace WebExpress.WebApp.Test.WebAttribute
     /// Unit tests for the starts with validation attribute.
     /// Ensures that strings not starting with the prefix are rejected.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestValidationStartsWith
     {
         /// <summary>

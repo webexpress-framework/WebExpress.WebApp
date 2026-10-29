@@ -10,7 +10,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// the host element and its island; the table and its editor are built by
     /// the JS controller <c>webexpress.webapp.RelationEditorCtrl</c>.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataRelationEditor
     {
         /// <summary>

@@ -1,4 +1,7 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
+using Xunit.Sdk;
+using Xunit.v3;
 
 namespace WebExpress.WebApp.Test.JsTest
 {
@@ -13,6 +16,7 @@ namespace WebExpress.WebApp.Test.JsTest
     /// locations (including the Node.js bundled with Visual Studio) are
     /// probed in that order.
     /// </summary>
+    [TestCaseOrderer(typeof(SelectionOrderer))]
     public class UnitTestJavaScript
     {
         /// <summary>
@@ -38,6 +42,49 @@ namespace WebExpress.WebApp.Test.JsTest
             return (path, major);
         });
 
+        /// <summary>
+        /// The most Node.js processes running at once. xUnit runs the cases of a
+        /// theory one after the other, so the files are run ahead of the case
+        /// that asks for them; otherwise the processes, which spend most of
+        /// their time starting up, would never overlap.
+        /// </summary>
+        private static readonly int _maxRunning = Environment.ProcessorCount;
+
+        /// <summary>
+        /// Guards the run bookkeeping.
+        /// </summary>
+        private static readonly Lock _gate = new();
+
+        /// <summary>
+        /// The run of every file that was asked for or run ahead, by file name.
+        /// </summary>
+        private static readonly Dictionary<string, TaskCompletionSource<(int ExitCode, string Log)>> _runs = [];
+
+        /// <summary>
+        /// The files not started yet, in the order the theory enumerates them,
+        /// which is the order its cases run in. A file a case asks for before
+        /// its turn moves to the front, so that case never waits behind files
+        /// queued ahead of it.
+        /// </summary>
+        private static readonly LinkedList<string> _pending = new();
+
+        /// <summary>
+        /// The files whose cases the current run selected. Only these are run
+        /// ahead: a filtered run must not execute files it left out, whose
+        /// failures would never reach the result.
+        /// </summary>
+        private static readonly HashSet<string> _selected = [];
+
+        /// <summary>
+        /// The Node.js processes still running. A run ahead of its case outlives
+        /// a test run that is cancelled, and is ended with the host instead of
+        /// being left behind.
+        /// </summary>
+        private static readonly ConcurrentDictionary<Process, byte> _processes = new();
+
+        private static bool _queued;
+        private static int _running;
+
         private readonly ITestOutputHelper _output;
 
         /// <summary>
@@ -59,12 +106,19 @@ namespace WebExpress.WebApp.Test.JsTest
         /// <returns>The file name (without path) of every *.test.mjs file.</returns>
         public static TheoryData<string> JavaScriptTestFiles()
         {
-            var data = new TheoryData<string>();
-            foreach (var file in Directory.GetFiles(GetJsTestDirectory(), "*.test.mjs").OrderBy(f => f))
-            {
-                data.Add(Path.GetFileName(file));
-            }
-            return data;
+            return [.. GetTestFileNames()];
+        }
+
+        /// <summary>
+        /// Returns the names of the JsTest/*.test.mjs files in the order the
+        /// theory enumerates them.
+        /// </summary>
+        /// <returns>The file name (without path) of every *.test.mjs file.</returns>
+        private static IEnumerable<string> GetTestFileNames()
+        {
+            return Directory.GetFiles(GetJsTestDirectory(), "*.test.mjs")
+                .OrderBy(f => f)
+                .Select(Path.GetFileName);
         }
 
         /// <summary>
@@ -78,7 +132,7 @@ namespace WebExpress.WebApp.Test.JsTest
         /// <param name="fileName">The *.test.mjs file to run, relative to JsTest.</param>
         [Theory]
         [MemberData(nameof(JavaScriptTestFiles))]
-        public void RunJavaScriptTest(string fileName)
+        public async Task RunJavaScriptTest(string fileName)
         {
             var (node, major) = _node.Value;
             if (node == null)
@@ -98,7 +152,7 @@ namespace WebExpress.WebApp.Test.JsTest
             var file = Path.Combine(directory, fileName);
             Assert.True(File.Exists(file), $"The JavaScript test file '{file}' was not found.");
 
-            var (exitCode, log) = RunNode(node, directory, ["--test", file]);
+            var (exitCode, log) = await RunAhead(node, directory, fileName);
 
             _output.WriteLine($"node: {node}");
             _output.WriteLine(log);
@@ -233,6 +287,104 @@ namespace WebExpress.WebApp.Test.JsTest
         }
 
         /// <summary>
+        /// Returns the run of a test file, starting it ahead of the other files
+        /// when it has not started yet. The first call queues every selected
+        /// file, so the cases that follow find their run under way or done.
+        /// </summary>
+        /// <param name="node">The path of the executable.</param>
+        /// <param name="directory">The JsTest folder.</param>
+        /// <param name="fileName">The *.test.mjs file the case runs.</param>
+        /// <returns>The exit code and the combined stdout/stderr log.</returns>
+        private static Task<(int ExitCode, string Log)> RunAhead(string node, string directory, string fileName)
+        {
+            lock (_gate)
+            {
+                if (!_queued)
+                {
+                    _queued = true;
+                    foreach (var file in GetTestFileNames().Where(_selected.Contains))
+                    {
+                        _pending.AddLast(file);
+                    }
+                    AppDomain.CurrentDomain.ProcessExit += (_, _) => EndRunning();
+                }
+
+                if (!_runs.TryGetValue(fileName, out var run))
+                {
+                    run = new TaskCompletionSource<(int ExitCode, string Log)>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    _runs[fileName] = run;
+                    _pending.Remove(fileName);
+                    _pending.AddFirst(fileName);
+                }
+
+                StartPending(node, directory);
+
+                return run.Task;
+            }
+        }
+
+        /// <summary>
+        /// Starts pending files until the limit of running processes is reached.
+        /// Must be called while holding the gate.
+        /// </summary>
+        /// <param name="node">The path of the executable.</param>
+        /// <param name="directory">The JsTest folder.</param>
+        private static void StartPending(string node, string directory)
+        {
+            while (_running < _maxRunning && _pending.First is { } next)
+            {
+                var fileName = next.Value;
+                _pending.RemoveFirst();
+
+                if (!_runs.TryGetValue(fileName, out var run))
+                {
+                    run = new TaskCompletionSource<(int ExitCode, string Log)>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    _runs[fileName] = run;
+                }
+
+                _running++;
+
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        run.SetResult(await RunNode(node, directory, ["--test", Path.Combine(directory, fileName)]));
+                    }
+                    catch (Exception ex)
+                    {
+                        run.SetException(ex);
+                    }
+                    finally
+                    {
+                        lock (_gate)
+                        {
+                            _running--;
+                            StartPending(node, directory);
+                        }
+                    }
+                });
+            }
+        }
+
+        /// <summary>
+        /// Ends the Node.js processes that are still running when the host exits.
+        /// </summary>
+        private static void EndRunning()
+        {
+            foreach (var process in _processes.Keys)
+            {
+                try
+                {
+                    process.Kill(entireProcessTree: true);
+                }
+                catch
+                {
+                    // the process ended on its own in the meantime
+                }
+            }
+        }
+
+        /// <summary>
         /// Runs the Node.js executable with the given arguments and captures
         /// the combined output.
         /// </summary>
@@ -240,7 +392,7 @@ namespace WebExpress.WebApp.Test.JsTest
         /// <param name="workingDirectory">The working directory of the run.</param>
         /// <param name="arguments">The command line arguments.</param>
         /// <returns>The exit code and the combined stdout/stderr log.</returns>
-        private static (int ExitCode, string Log) RunNode(string node, string workingDirectory, IEnumerable<string> arguments)
+        private static async Task<(int ExitCode, string Log)> RunNode(string node, string workingDirectory, IEnumerable<string> arguments)
         {
             var info = new ProcessStartInfo
             {
@@ -257,29 +409,83 @@ namespace WebExpress.WebApp.Test.JsTest
             }
 
             using var process = Process.Start(info);
-            // drain both streams concurrently so neither pipe can fill up and
-            // deadlock the runner
-            var stdout = process.StandardOutput.ReadToEndAsync();
-            var stderr = process.StandardError.ReadToEndAsync();
+            _processes.TryAdd(process, 0);
 
-            if (!process.WaitForExit((int)_timeout.TotalMilliseconds))
+            try
             {
+                // drain both streams concurrently so neither pipe can fill up and
+                // deadlock the runner
+                var stdout = process.StandardOutput.ReadToEndAsync();
+                var stderr = process.StandardError.ReadToEndAsync();
+
+                using var timeout = new CancellationTokenSource(_timeout);
                 try
                 {
-                    process.Kill(entireProcessTree: true);
+                    await process.WaitForExitAsync(timeout.Token);
                 }
-                catch
+                catch (OperationCanceledException)
                 {
-                    // the process ended between the timeout and the kill
+                    try
+                    {
+                        process.Kill(entireProcessTree: true);
+                    }
+                    catch
+                    {
+                        // the process ended between the timeout and the kill
+                    }
+                    return (-1, $"The Node.js test runner timed out after {_timeout.TotalSeconds:0} seconds.");
                 }
-                return (-1, $"The Node.js test runner timed out after {_timeout.TotalSeconds:0} seconds.");
-            }
-            process.WaitForExit();
 
-            var log = string.Join(Environment.NewLine,
-                new[] { stdout.GetAwaiter().GetResult(), stderr.GetAwaiter().GetResult() }
-                    .Where(part => !string.IsNullOrWhiteSpace(part)));
-            return (process.ExitCode, log);
+                var log = string.Join(Environment.NewLine,
+                    new[] { await stdout, await stderr }
+                        .Where(part => !string.IsNullOrWhiteSpace(part)));
+                return (process.ExitCode, log);
+            }
+            finally
+            {
+                _processes.TryRemove(process, out _);
+            }
+        }
+
+        /// <summary>
+        /// Notes which files the selected cases run and keeps xUnit's default
+        /// order. xUnit hands an orderer exactly the cases a filter left, before
+        /// any of them runs, which is the only place the selection is known.
+        /// </summary>
+        public sealed class SelectionOrderer : ITestCaseOrderer
+        {
+            /// <summary>
+            /// Records the files of the given cases and returns them in the
+            /// default order.
+            /// </summary>
+            /// <remarks>
+            /// A theory whose data is enumerated at run time - the default - is a
+            /// single case that runs every file; a pre-enumerated theory is a
+            /// case per file, carrying the file as its argument.
+            /// </remarks>
+            /// <typeparam name="TTestCase">The type of the test cases.</typeparam>
+            /// <param name="testCases">The selected test cases.</param>
+            /// <returns>The test cases in the order to be run.</returns>
+            public IReadOnlyCollection<TTestCase> OrderTestCases<TTestCase>(IReadOnlyCollection<TTestCase> testCases)
+                where TTestCase : notnull, ITestCase
+            {
+                lock (_gate)
+                {
+                    foreach (var testCase in testCases)
+                    {
+                        if (testCase is IXunitDelayEnumeratedTestCase)
+                        {
+                            _selected.UnionWith(GetTestFileNames());
+                        }
+                        else if (testCase is XunitTestCase { TestMethodArguments: [string fileName] })
+                        {
+                            _selected.Add(fileName);
+                        }
+                    }
+                }
+
+                return DefaultTestCaseOrderer.Instance.OrderTestCases(testCases);
+            }
         }
     }
 }

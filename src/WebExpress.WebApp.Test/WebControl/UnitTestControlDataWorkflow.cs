@@ -9,7 +9,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the api workflow control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataWorkflow
     {
         /// <summary>

@@ -11,7 +11,6 @@ namespace WebExpress.WebApp.Test.WebRestApi
     /// <summary>
     /// Provides unit tests for verifying the behavior of the RestApiKanban class.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestRestApiKanban
     {
         /// <summary>

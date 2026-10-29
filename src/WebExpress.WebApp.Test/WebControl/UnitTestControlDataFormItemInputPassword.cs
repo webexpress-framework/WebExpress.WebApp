@@ -9,7 +9,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the REST password input control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataFormItemInputPassword
     {
         /// <summary>

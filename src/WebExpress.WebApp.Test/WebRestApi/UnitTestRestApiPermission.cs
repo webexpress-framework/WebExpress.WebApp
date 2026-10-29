@@ -13,7 +13,6 @@ namespace WebExpress.WebApp.Test.WebRestApi
     /// store holds the pair (group, policy) while the wire surface is one entry
     /// per group, so the tests assert both sides of that projection.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestRestApiPermission
     {
         /// <summary>

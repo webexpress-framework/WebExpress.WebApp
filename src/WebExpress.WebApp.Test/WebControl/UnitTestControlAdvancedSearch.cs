@@ -9,7 +9,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the api advanced search control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlAdvancedSearch
     {
         /// <summary>

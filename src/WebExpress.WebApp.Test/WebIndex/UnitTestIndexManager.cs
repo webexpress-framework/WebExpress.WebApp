@@ -6,7 +6,6 @@ namespace WebExpress.WebApp.Test.WebIndex
     /// <summary>
     /// Provides unit tests for the index manager of the web application.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestIndexManager
     {
         /// <summary>

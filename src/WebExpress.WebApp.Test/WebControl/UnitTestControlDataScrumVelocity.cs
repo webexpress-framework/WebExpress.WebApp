@@ -12,7 +12,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// the bar chart is built by the JS controller
     /// <c>webexpress.webapp.ScrumVelocityCtrl</c>.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataScrumVelocity
     {
         /// <summary>

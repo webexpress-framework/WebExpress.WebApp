@@ -13,7 +13,6 @@ namespace WebExpress.WebApp.Test.WebRestApi
     /// which of the two labels applies, the counts of the two categories and the
     /// validation a refused link is answered with.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestRestApiRelation : IDisposable
     {
         /// <summary>

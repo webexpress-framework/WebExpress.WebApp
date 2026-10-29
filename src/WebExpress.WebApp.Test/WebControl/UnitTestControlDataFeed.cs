@@ -7,7 +7,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the api feed control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataFeed
     {
         /// <summary>

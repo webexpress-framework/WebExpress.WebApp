@@ -11,7 +11,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the REST unique control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataFormItemInputUnique
     {
         /// <summary>

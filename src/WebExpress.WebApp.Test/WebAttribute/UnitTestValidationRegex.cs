@@ -7,7 +7,6 @@ namespace WebExpress.WebApp.Test.WebAttribute
     /// Unit tests for the regex validation attribute.
     /// Ensures that strings not matching the pattern are rejected.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestValidationRegex
     {
         /// <summary>

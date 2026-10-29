@@ -8,7 +8,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the api kanban control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataKanban
     {
         /// <summary>

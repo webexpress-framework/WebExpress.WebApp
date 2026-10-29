@@ -7,7 +7,6 @@ namespace WebExpress.WebApp.Test.WebIdentity
     /// <summary>
     /// Tests the abstract identity provider base class.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestIdentityProvider
     {
         /// <summary>

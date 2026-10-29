@@ -11,7 +11,6 @@ namespace WebExpress.WebApp.Test.WebRestApi
     /// namely the GET project load and the sub-path routing of the task and link
     /// mutations.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestRestApiGantt
     {
         /// <summary>

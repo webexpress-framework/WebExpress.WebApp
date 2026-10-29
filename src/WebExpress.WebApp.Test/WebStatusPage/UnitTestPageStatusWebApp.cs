@@ -12,7 +12,6 @@ namespace WebExpress.WebApp.Test.WebStatusPage
     /// <summary>
     /// Tests the WebApp status page base class.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestPageStatusWebApp
     {
         /// <summary>

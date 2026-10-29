@@ -12,7 +12,6 @@ namespace WebExpress.WebApp.Test.WebRestApi
     /// <see cref="RestApiTag"/> abstract endpoint, exercised through the
     /// in-memory <see cref="TestRestApiTag"/> implementation.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestRestApiTag
     {
         /// <summary>

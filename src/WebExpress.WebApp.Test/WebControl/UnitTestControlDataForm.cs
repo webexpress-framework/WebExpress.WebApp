@@ -11,7 +11,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the rest form control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataForm
     {
         /// <summary>

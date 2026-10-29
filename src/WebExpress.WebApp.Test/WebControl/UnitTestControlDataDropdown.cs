@@ -10,7 +10,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the REST dropdown control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataDropdown
     {
         /// <summary>

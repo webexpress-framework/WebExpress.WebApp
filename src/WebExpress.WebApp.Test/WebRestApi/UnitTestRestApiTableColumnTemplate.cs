@@ -13,7 +13,6 @@ namespace WebExpress.WebApp.Test.WebRestApi
     /// names must match what the client-side renderer of the same type reads,
     /// so these tests pin the wire contract of every template.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestRestApiTableColumnTemplate
     {
         /// <summary>

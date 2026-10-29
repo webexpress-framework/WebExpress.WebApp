@@ -10,7 +10,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the api quickfilter control.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlDataQuickfilter
     {
         /// <summary>

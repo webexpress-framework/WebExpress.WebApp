@@ -8,7 +8,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the page toolbar of a WebApp page.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestControlWebAppToolbar
     {
         /// <summary>

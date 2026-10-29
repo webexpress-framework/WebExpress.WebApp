@@ -12,7 +12,6 @@ namespace WebExpress.WebApp.Test.WebRestApi
     /// <summary>
     /// Tests the login REST API endpoint.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestRestApiLogin : IDisposable
     {
         private readonly string _tokenDirectory = Path.Combine(Path.GetTempPath(), "webexpress-login-" + Guid.NewGuid().ToString("N"));
