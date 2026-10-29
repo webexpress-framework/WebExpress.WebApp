@@ -17,7 +17,7 @@ namespace WebExpress.WebApp.WebMessageQueue
     {
         private readonly IMessageQueueManager _messageQueueManager;
         private readonly IComponentHub _componentHub;
-        private NotificationManager _notificationManager;
+        private INotificationManager _notificationManager;
         private bool _subscribed;
 
         /// <summary>
@@ -86,7 +86,7 @@ namespace WebExpress.WebApp.WebMessageQueue
 
             foreach (var notification in _notificationManager.GetNotifications(applicationContext, request))
             {
-                if (!IsStillValid(notification))
+                if (notification.IsExpired(DateTime.UtcNow))
                 {
                     continue;
                 }
@@ -159,20 +159,6 @@ namespace WebExpress.WebApp.WebMessageQueue
                 // swallow - never let a transport error tear down the
                 // notification manager event pipeline
             }
-        }
-
-        /// <summary>
-        /// Returns <c>true</c> if the notification has not yet expired.
-        /// A negative <see cref="INotification.Durability"/> means
-        /// indefinite lifetime.
-        /// </summary>
-        private static bool IsStillValid(INotification notification)
-        {
-            if (notification.Durability < 0)
-            {
-                return true;
-            }
-            return notification.Created.AddMilliseconds(notification.Durability) >= DateTime.Now;
         }
     }
 }
