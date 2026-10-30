@@ -22,6 +22,11 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, uint> PageSize { get; set; }
 
         /// <summary>
+        /// Gets or sets the localized message for successfully loaded empty results.
+        /// </summary>
+        public Func<IRenderControlContext, string> EmptyText { get; set; }
+
+        /// <summary>
         /// Gets or sets the name of the enclosing ViewState resource the table
         /// renders. When set, the table is a pure view of a central resource the
         /// ViewState owns; when null, the table owns its state and service
@@ -135,6 +140,7 @@ namespace WebExpress.WebApp.WebControl
                 Class = Css.Concatenate("wx-webapp-table", fill ? "wx-fill" : null, GetClasses(renderContext)),
                 Style = GetStyles(renderContext)
             }
+                .AddUserAttribute("data-empty-text", WebExpress.WebCore.Internationalization.I18N.Translate(renderContext, EmptyText?.Invoke(renderContext)))
                 .AddUserAttribute("data-page-size", pageSize > 0 ? pageSize.ToString() : null)
                 .AddUserAttribute("data-movable-row", MovableRow?.Invoke(renderContext) == true ? "true" : null)
                 .EmitDataIslands(this, renderContext);

@@ -16,6 +16,32 @@ namespace WebExpress.WebApp.WebRestApi
         public object Id { get; set; }
 
         /// <summary>
+        /// Gets or sets the row class presentation value.
+        /// </summary>
+        [JsonPropertyName("class")]
+        public string Class { get; set; }
+
+        /// <summary>
+        /// Gets or sets the row style presentation value.
+        /// </summary>
+        [JsonPropertyName("style")]
+        public string Style { get; set; }
+
+        /// <summary>
+        /// Gets or sets the row color presentation value.
+        /// </summary>
+        [JsonPropertyName("color")]
+        public string Color { get; set; }
+
+        /// <summary>
+        /// Gets or sets the row target presentation value.
+        /// </summary>
+        [JsonPropertyName("target")]
+        public string Target { get; set; }
+
+
+
+        /// <summary>
         /// Gets or sets the cells.
         /// </summary>
         [JsonPropertyName("cells")]

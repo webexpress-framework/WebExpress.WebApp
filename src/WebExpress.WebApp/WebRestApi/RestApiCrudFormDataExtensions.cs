@@ -207,7 +207,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// True if the value could be converted and should be assigned, false if the property
         /// is to keep the value it has.
         /// </returns>
-        private static bool TryConvertValue(object value, Type targetType, out object converted)
+        internal static bool TryConvertValue(object value, Type targetType, out object converted)
         {
             converted = null;
 
@@ -269,7 +269,7 @@ namespace WebExpress.WebApp.WebRestApi
         {
             if (targetType == typeof(string))
             {
-                return value;
+                return Convert.ToString(value, CultureInfo.InvariantCulture);
             }
             else if (targetType.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>)))
             {

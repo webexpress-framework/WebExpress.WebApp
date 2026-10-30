@@ -170,7 +170,7 @@ webexpress.webapp.tableModel = {
             if (typeof entry.visible === "boolean") {
                 column.visible = entry.visible;
             }
-            if (entry.width !== null && entry.width !== undefined && entry.width !== "") {
+            if (entry.width !== undefined && entry.width !== "") {
                 column.width = entry.width;
             }
             merged.push(column);

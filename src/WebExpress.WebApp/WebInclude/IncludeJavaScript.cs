@@ -113,6 +113,7 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/js/webexpress.webapp.wql.prompt.view.js")]
     [Asset("/assets/js/webexpress.webapp.wql.prompt.js")]
     [Asset("/assets/js/action/default.js")]
+    [Asset("/assets/js/webexpress.webapp.table.inlineedit.js")]
     [Asset("/assets/js/i18n/en.js")]
     [Asset("/assets/js/i18n/de.js")]
     [Asset("/assets/js/webexpress.webapp.editor.library.js")]

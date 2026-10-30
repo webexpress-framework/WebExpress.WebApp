@@ -17,6 +17,11 @@ namespace WebExpress.WebApp.WebControl
         Func<IRenderControlContext, uint> PageSize { get; }
 
         /// <summary>
+        /// Gets the localized message for successfully loaded empty results.
+        /// </summary>
+        Func<IRenderControlContext, string> EmptyText { get; }
+
+        /// <summary>
         /// Gets the binding.
         /// </summary>
         Func<IRenderControlContext, IBinding> Bind { get; }

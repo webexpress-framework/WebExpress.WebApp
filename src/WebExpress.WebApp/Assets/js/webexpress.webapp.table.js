@@ -34,6 +34,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
     // the layout of the columns and the arrangement of the rows the server confirmed
     // last, which a refused change goes back to
     _confirmedLayout = null;
+    _importedLayout = null;
     _confirmedRows = null;
 
     // the pagination control the table reports its page count to, and what it reported
@@ -78,6 +79,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
         // the host is the render root: the table element is placed among the progress
         // bar and the info line, with the classes the base gave it
         this._tableClass = this._table.className;
+        this._emptyText = element.getAttribute("data-empty-text");
         this._renderRoot = element;
 
         // the table's own state, seeded from the optional wx-state island
@@ -194,7 +196,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
      */
     _applySlice(slice) {
         slice = slice || {};
-        this.setState({ total: Number(slice.total) || 0, page: this._page || 0 });
+        this.setState({ total: Number(slice.total) || 0, page: this._page || 0, error: slice.error || null });
 
         if (slice.data) {
             this.updateData(slice.data);
@@ -203,6 +205,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
         // the slice is the record of the central load: the progress shows while it says
         // a query is in flight, not only until the next notification arrives
         this._toggleProgress(!!slice.loading);
+        this.setState({ error: slice.error || null });
 
         if (slice.error) {
             console.error("TableCtrl Request failed:", webexpress.webapp.ServiceResult.describe({ error: slice.error }, { resource: this._resource }));
@@ -283,6 +286,10 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
             webexpress.webui.Renderer.adopt(this._table, {
                 class: glow ? this._tableClass + " placeholder-glow" : this._tableClass
             }, super._viewTree(state)),
+            !state.loading && state.error ? h("div", { key: "error", role: "alert" },
+                this._i18n("webexpress.webui:table.load.error", "The table could not be loaded.")) :
+                !preview && !state.loading && state.rows.length === 0 ? h("div", { key: "empty", role: "status" },
+                    this._emptyText ?? this._i18n("webexpress.webui:table.empty", "No entries.")) : null,
             h("div", {
                 key: "info",
                 class: "text-muted small",
@@ -646,7 +653,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
      */
     _currentLayout() {
         return this._hasPlaceholderColumns()
-            ? webexpress.webapp.tableModel.storedLayout(this._readStoredState())
+            ? this._importedLayout || webexpress.webapp.tableModel.storedLayout(this._readStoredState())
             : this._layoutOf(this._columns);
     }
 
@@ -657,6 +664,34 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
      */
     _layoutOf(columns) {
         return columns.map((column) => ({ id: column.id, visible: column.visible !== false, width: column.width ?? null }));
+    }
+
+    /**
+     * Serializes order, visibility and width without writing application storage.
+     * @returns {string} The versioned layout JSON.
+     */
+    serializeLayout() {
+        return JSON.stringify({ version: 1, columns: this._hasPlaceholderColumns() ? this._importedLayout || [] : this._layoutOf(this._columns) });
+    }
+
+    /**
+     * Applies a stored layout while retaining new columns and dropping removed ones.
+     * @param {string|object} value The versioned layout JSON or parsed layout.
+     */
+    applyLayout(value) {
+        const layout = typeof value === "string" ? JSON.parse(value) : value;
+        if (!layout || layout.version !== 1 || !Array.isArray(layout.columns) || layout.columns.some(entry =>
+            !entry || typeof entry.id !== "string" || entry.id.length === 0 ||
+            (entry.visible != null && typeof entry.visible !== "boolean") ||
+            (entry.width != null && (!Number.isFinite(entry.width) || entry.width <= 0)))) {
+            throw new TypeError("Invalid table layout.");
+        }
+        this._importedLayout = layout.columns.map(entry => ({ ...entry }));
+        if (this._hasPlaceholderColumns()) return;
+        const columns = webexpress.webapp.tableModel.mergeColumns(this._columns.map(column => ({ ...column })), this._importedLayout);
+        this._restoreLayout(this._layoutOf(columns));
+        this._confirmedLayout = this._layoutOf(columns);
+        this.render();
     }
 
     /**
