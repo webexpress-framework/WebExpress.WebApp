@@ -81,6 +81,8 @@ webexpress.webui.TableTemplates.register("inline-edit", (value, table, row, cell
             cancel.disabled = true;
             input.disabled = true;
             const submitted = input.value;
+            error.textContent = "";
+            input.removeAttribute("aria-invalid");
             try {
                 const url = new URL(endpoint, document.baseURI);
                 if (row?.id != null) url.searchParams.set(options.idParameter || "id", String(row.id));
@@ -90,9 +92,20 @@ webexpress.webui.TableTemplates.register("inline-edit", (value, table, row, cell
                     body: JSON.stringify({ [field]: submitted })
                 });
                 if (!result.ok) {
-                    const errors = result.data?.errors;
-                    error.textContent = (Array.isArray(errors) ? errors.filter(item => !item.field || item.field.toLowerCase() === field.toLowerCase())
-                        .map(item => item.message).join(" ") : "") || result.error?.message || ui.I18N.translate("webexpress.webui:table.edit.error");
+                    // a request the teardown cancelled is no failure to show
+                    if (result.error?.kind === "abort") return;
+                    // RestApiCrud answers a refused value as a bare error array; the rest form
+                    // classification reads that and the map shape alike
+                    const classified = webexpress.webapp.restFormModel.classifyResponse(false, result.status, result.data);
+                    const errors = classified.errors || [];
+                    const own = errors.filter(item => item.field && String(item.field).toLowerCase() === field.toLowerCase());
+                    const general = errors.filter(item => !item.field);
+                    // an error on another field still explains the refusal better than a generic text
+                    const shown = own.length + general.length > 0 ? own.concat(general) : errors;
+                    input.setAttribute("aria-invalid", String(own.length > 0));
+                    error.textContent = shown.map(item => String(item.message)).join(" ")
+                        || (classified.message == null ? "" : String(classified.message))
+                        || result.error?.message || ui.I18N.translate("webexpress.webui:table.edit.error");
                     return;
                 }
                 value = submitted;

@@ -4,7 +4,29 @@ import { loadControl } from "./controls.harness.mjs";
 
 /** @returns {object} A runtime containing the shipped table extensions. */
 function runtime() {
-    return loadControl({ deps: ["webexpress.webapp.table.model.js", "webexpress.webapp.table.inlineedit.js"], file: "webexpress.webapp.table.js" });
+    return loadControl({ deps: ["webexpress.webapp.restform.model.js", "webexpress.webapp.table.model.js", "webexpress.webapp.table.inlineedit.js"], file: "webexpress.webapp.table.js" });
+}
+/**
+ * Builds the result the service layer reports for a refused RestApiCrud write: the body is
+ * the bare array RestApiValidationResult.ToJson writes, the message the generic http text.
+ * @param {Array<object>} errors The validation errors.
+ * @returns {object} The normalised failure result.
+ */
+function refused(errors) {
+    return { ok: false, status: 400, data: errors, error: { kind: "http", status: 400, message: "request failed with status 400", retriable: false } };
+}
+/**
+ * Opens the inline editor of a fresh body cell.
+ * @param {object} rt The runtime.
+ * @param {object} table The owning table stub.
+ * @param {object} cell The cell model.
+ * @returns {{host: HTMLElement, input: HTMLElement, save: HTMLButtonElement}} The open editor.
+ */
+function openEditor(rt, table, cell) {
+    const host = rt.wx.TableTemplates.get("inline-edit").fn(cell.content, table, { id: "a&b", restApi: "/api/item" }, cell, "body", { editor: "textarea" });
+    rt.document.body.appendChild(host);
+    host.querySelector("button").dispatchEvent(click());
+    return { host, input: host.querySelector("textarea"), save: host.querySelectorAll("button")[1] };
 }
 /** @returns {Promise<void>} Resolves after queued renders complete. */
 async function settle() {
@@ -63,17 +85,12 @@ test("inline editing sends exact JSON values, retains failures and refreshes aft
     let refresh = 0;
     rt.wxapp.ServiceRegistry.request = async (url, init) => {
         request = { url, init };
-        return success ? { ok: true } : { ok: false, data: { errors: [{ field: "body", message: "Rejected value" }] } };
+        return success ? { ok: true } : refused([{ code: null, message: "Rejected value", field: "body" }]);
     };
     const cell = { content: "old" };
-    const renderer = rt.wx.TableTemplates.get("inline-edit");
-    const host = renderer.fn("old", { update() { refresh++; } }, { id: "a&b", restApi: "/api/item" }, cell, "body", { editor: "textarea" });
-    rt.document.body.appendChild(host);
-    host.querySelector("button").dispatchEvent(click());
-    const input = host.querySelector("textarea");
+    const { host, input, save } = openEditor(rt, { update() { refresh++; } }, cell);
     const value = 'a;b & c + \"quoted\"\n<text> 😀';
     input.value = value;
-    let save = host.querySelectorAll("button")[1];
     save.dispatchEvent(click());
     await settle();
     assert.equal(JSON.parse(request.init.body).body, value);
@@ -87,6 +104,42 @@ test("inline editing sends exact JSON values, retains failures and refreshes aft
     assert.equal(refresh, 1);
     assert.equal(cell.content, value);
     assert.equal(host.querySelector("textarea"), null);
+});
+
+test("inline editing shows the field and general messages of a RestApiCrud 400 and keeps the entry", async () => {
+    const rt = runtime();
+    rt.document.baseURI = "https://example.test/";
+    let refresh = 0;
+    rt.wxapp.ServiceRegistry.request = async () => refused([
+        { code: "length", message: "Body is too long", field: "Body" },
+        { code: null, message: "The item is locked.", field: null },
+        { code: "range", message: "Due date is in the past", field: "due" }
+    ]);
+    const cell = { content: "old" };
+    const { host, input, save } = openEditor(rt, { update() { refresh++; } }, cell);
+    input.value = "x".repeat(300);
+    save.dispatchEvent(click());
+    await settle();
+    const alert = host.querySelector('[role="alert"]');
+    assert.equal(alert.textContent, "Body is too long The item is locked.", "the field's own and the general messages, not another field's");
+    assert.doesNotMatch(alert.textContent, /status 400/);
+    assert.equal(input.getAttribute("aria-invalid"), "true");
+    assert.equal(input.value, "x".repeat(300), "the refused entry stays editable");
+    assert.equal(cell.content, "old");
+    assert.equal(refresh, 0);
+});
+
+test("inline editing shows a general-only refusal without marking the field invalid", async () => {
+    const rt = runtime();
+    rt.document.baseURI = "https://example.test/";
+    rt.wxapp.ServiceRegistry.request = async () => refused([{ code: null, message: "The item is locked.", field: null }]);
+    const { host, input, save } = openEditor(rt, { update() {} }, { content: "old" });
+    input.value = "new";
+    save.dispatchEvent(click());
+    await settle();
+    assert.equal(host.querySelector('[role="alert"]').textContent, "The item is locked.");
+    assert.equal(input.getAttribute("aria-invalid"), "false");
+    assert.equal(input.value, "new");
 });
 
 test("layout can be restored before the first response and null width restores automatic sizing", () => {
