@@ -723,7 +723,10 @@ webexpress.webapp.CollaborativeCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
 
-        field.innerHTML = markup;
+        // the markup comes from a peer, so it is parsed inert and cleaned before it goes live
+        const template = document.createElement("template");
+        template.innerHTML = markup;
+        field.replaceChildren(webexpress.webui.EditorHtml.clean(template.content || template));
         field.dispatchEvent(new Event("input", { bubbles: true }));
     }
 

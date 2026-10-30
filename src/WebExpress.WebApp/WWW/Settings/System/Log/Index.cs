@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Net;
 using WebExpress.WebApp.WebScope;
 using WebExpress.WebApp.WebSettingPage;
 using WebExpress.WebCore;
@@ -267,7 +268,8 @@ namespace WebExpress.WebApp.WWW.Settings.System.Log
                     })
                     .AddPrimary(new ControlText()
                     {
-                        Text = _ => string.Join("<br/>", content.Reverse()),
+                        // the log records request lines as the client sent them, markup included
+                        Text = _ => string.Join("<br/>", content.Reverse().Select(WebUtility.HtmlEncode)),
                         Format = _ => TypeFormatText.Code
                     });
             }
