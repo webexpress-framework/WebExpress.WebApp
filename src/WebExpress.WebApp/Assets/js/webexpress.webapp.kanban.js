@@ -256,6 +256,21 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
     }
 
     /**
+     * Refuses a column in which the card has no status it may enter, so the board shows the
+     * refusal while dragging instead of offering an empty choice after the drop.
+     * @param {object} card - The dragged card.
+     * @param {string} colId - The column under the pointer.
+     * @returns {boolean} Whether the drop is accepted.
+     */
+    _canDrop(card, colId) {
+        if (card.columnId === colId || this._statuses == null) {
+            return true;
+        }
+        const column = this._columns.find((item) => item.id === colId);
+        return column != null && this._availableStatuses(card, column).length > 0;
+    }
+
+    /**
      * Defers cross-column moves until a valid destination status has been chosen.
      * @param {object} card - The current card instance.
      * @param {string} colId - The destination column identifier.

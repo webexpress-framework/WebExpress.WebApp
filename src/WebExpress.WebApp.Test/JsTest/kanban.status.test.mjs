@@ -118,6 +118,57 @@ test("one permitted status moves immediately and an empty permission list blocks
     assert.equal(blocked.board._statusDialog._footerDiv.querySelector(".btn-primary").disabled, true);
 });
 
+/**
+ * Drags over an element and reports whether the board accepted the drop there.
+ * @param {HTMLElement} element - The cell or card under the pointer.
+ * @returns {boolean} True when the dragover was handled, which lets the browser drop.
+ */
+function dragOver(element) {
+    let handled = false;
+    element.dispatchEvent({ type: "dragover", target: element, preventDefault() { handled = true; }, stopPropagation() {} });
+    return handled;
+}
+
+/**
+ * Finds the rendered cell of a column.
+ * @param {HTMLElement} host - The board host.
+ * @param {string} colId - The column identifier.
+ * @returns {HTMLElement} The cell.
+ */
+function cellOf(host, colId) {
+    return Array.from(host.querySelectorAll(".wx-kanban-cell")).find((cell) => cell.dataset.colId === colId);
+}
+
+test("dragging over a column without a status open to the card shows it red and refuses the drop", () => {
+    const { board, card, host } = setup([]);
+    const work = cellOf(host, "work");
+    const todo = cellOf(host, "todo");
+    board._dragCard = card;
+
+    assert.equal(dragOver(work), false, "the browser keeps the no-drop cursor and fires no drop");
+    assert.ok(work.classList.contains("wx-drag-blocked"));
+    const other = Array.from(host.querySelectorAll(".wx-kanban-card")).find((item) => item.dataset.cardId === "b");
+    assert.equal(dragOver(other), false, "a card inside the refused column refuses as well");
+
+    assert.equal(dragOver(todo), true, "the card's own column still takes a reorder");
+    assert.ok(!todo.classList.contains("wx-drag-blocked"));
+
+    board._clearDropTargets();
+    assert.ok(!work.classList.contains("wx-drag-blocked"), "the mark ends with the drag");
+});
+
+test("a column with a status open to the card stays an ordinary drop target", () => {
+    const { board, card, host } = setup(["review"]);
+    const work = cellOf(host, "work");
+    board._dragCard = card;
+    assert.equal(dragOver(work), true);
+    assert.ok(!work.classList.contains("wx-drag-blocked"));
+    board.updateData({ statuses: null });
+    board._dragCard = board._cards[0];
+    const cell = cellOf(host, "work");
+    assert.equal(dragOver(cell), true, "a board without status catalog never refuses");
+});
+
 test("keyboard column moves obey status selection while same-column reordering preserves status", () => {
     const { board, card, host, updates } = setup();
     const element = host.querySelector(".wx-kanban-card");
