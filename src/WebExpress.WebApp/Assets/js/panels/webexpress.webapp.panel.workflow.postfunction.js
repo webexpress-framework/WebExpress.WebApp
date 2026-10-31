@@ -5,8 +5,8 @@ webexpress.webui.DialogPanels.register("workflow-postfunction-management", {
         container.innerHTML = `
             <div class="border rounded p-2 mb-3 bg-light" id="list-container" style="min-height:150px; max-height:300px; overflow-y:auto;"></div>
             <div class="d-flex gap-2">
-                <select class="form-select form-select-sm" id="item-select" disabled><option>loading...</option></select>
-                <button class="btn btn-sm btn-outline-secondary" id="add-btn" disabled type="button">Add Postfunction</button>
+                <select class="form-select form-select-sm" id="item-select" disabled><option>${this._t("picker.loading")}</option></select>
+                <button class="btn btn-sm btn-outline-secondary" id="add-btn" disabled type="button">${this._t("transition.postfunctions.add")}</button>
             </div>
         `;
     },
@@ -23,7 +23,7 @@ webexpress.webui.DialogPanels.register("workflow-postfunction-management", {
             listContainer.innerHTML = "";
             
             if (modal.localData.length === 0) {
-                listContainer.innerHTML = `<span class="text-muted small">no postfunctions configured.</span>`;
+                listContainer.innerHTML = `<span class="text-muted small">${this._t("transition.postfunctions.empty")}</span>`;
                 return;
             }
 
@@ -32,12 +32,14 @@ webexpress.webui.DialogPanels.register("workflow-postfunction-management", {
                 const row = document.createElement("div");
                 row.className = "d-flex align-items-center mb-1";
                 
-                row.innerHTML = `<i class="wx-icon-light wx-icon-light-bolt text-info me-2"></i><span class="flex-grow-1 small">${node.label}</span>`;
+                row.innerHTML = `<i class="wx-icon-light wx-icon-light-bolt text-info me-2"></i><span class="flex-grow-1 small"></span>`;
+                row.lastChild.textContent = node.label;
                 
                 const del = document.createElement("span");
                 del.className = "text-danger ms-2 fw-bold";
                 del.style.cursor = "pointer";
                 del.textContent = "x";
+                del.title = webexpress.webui.I18N.translate("webexpress.webui:remove");
                 
                 const currentIndex = i;
                 del.onclick = () => {
@@ -83,7 +85,7 @@ webexpress.webui.DialogPanels.register("workflow-postfunction-management", {
                     newAddBtn.disabled = false;
                     
                     if (modal.availableTemplates.length === 0) {
-                        select.innerHTML = "<option>no postfunctions available</option>";
+                        select.innerHTML = `<option>${this._t("picker.empty")}</option>`;
                         newAddBtn.disabled = true;
                     } else {
                         for (let i = 0; i < modal.availableTemplates.length; i++) {
@@ -96,7 +98,7 @@ webexpress.webui.DialogPanels.register("workflow-postfunction-management", {
                     }
                 }).catch((err) => {
                     console.error("failed to load postfunctions:", err);
-                    select.innerHTML = "<option>error loading</option>";
+                    select.innerHTML = `<option>${this._t("picker.error")}</option>`;
                 });
         }
 
@@ -109,6 +111,9 @@ webexpress.webui.DialogPanels.register("workflow-postfunction-management", {
                 }
             });
         }
+    },
+    _t: function(key) {
+        return webexpress.webui.I18N.translate("webexpress.webui:workflow.editor." + key);
     },
     validate: function(modal) { 
         return true; 

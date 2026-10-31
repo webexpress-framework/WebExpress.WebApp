@@ -284,7 +284,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
         // tell a stale success from a fresh one
         let text = current.key ? this._i18n("webexpress.webui:" + current.key) : "";
         if (status.state === "saved" && status.savedAt) {
-            text += " " + new Date(status.savedAt).toLocaleTimeString();
+            text += " " + new Date(status.savedAt).toLocaleTimeString(webexpress.webui.I18N.language);
         }
         if (status.state === "error" && status.message) {
             text += " (" + status.message + ")";

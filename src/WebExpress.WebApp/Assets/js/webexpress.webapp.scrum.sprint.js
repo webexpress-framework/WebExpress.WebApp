@@ -378,7 +378,7 @@ webexpress.webapp.ScrumSprintCtrl = class extends webexpress.webapp.Data {
         if (v.daysTotal > 0) {
             const day = document.createElement("span");
             day.className = "wx-scrum-sprint-day";
-            day.textContent = "Day " + v.daysElapsed + "/" + v.daysTotal;
+            day.textContent = this._i18n("webexpress.webapp:scrum.day_short", "Day") + " " + v.daysElapsed + "/" + v.daysTotal;
             name.appendChild(day);
         }
         sec.appendChild(name);
@@ -708,7 +708,7 @@ webexpress.webapp.ScrumSprintCtrl = class extends webexpress.webapp.Data {
         const d = new Date(startDate);
         d.setDate(d.getDate() + dayIndex);
         try {
-            return d.toLocaleDateString();
+            return d.toLocaleDateString(webexpress.webui.I18N.language);
         } catch (_) {
             return d.toISOString().split("T")[0];
         }

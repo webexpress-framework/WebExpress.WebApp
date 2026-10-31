@@ -119,8 +119,9 @@ webexpress.webapp.PopupNotificationCtrl = class extends webexpress.webui.Ctrl {
         const closeButton = document.createElement("button");
         closeButton.type = "button";
         closeButton.className = "wx-popup-close";
-        closeButton.setAttribute("aria-label", "Close");
-        closeButton.setAttribute("title", "Close");
+        const closeLabel = this._i18n("webexpress.webapp:close", "Close");
+        closeButton.setAttribute("aria-label", closeLabel);
+        closeButton.setAttribute("title", closeLabel);
         closeButton.innerHTML = `<i class="${this._iconClass("xmark")}" aria-hidden="true"></i>`;
         closeButton.addEventListener("click", (e) => {
             e.preventDefault();

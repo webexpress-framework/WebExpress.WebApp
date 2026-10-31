@@ -811,7 +811,7 @@ webexpress.webapp.RelationViewCtrl = class extends webexpress.webapp.Data {
             return "";
         }
 
-        return this._i18n("webexpress.webapp:relation.since", "since {0}").replace("{0}", date.toLocaleDateString());
+        return this._i18n("webexpress.webapp:relation.since", "since {0}").replace("{0}", date.toLocaleDateString(webexpress.webui.I18N.language));
     }
 
     /**

@@ -789,7 +789,7 @@ webexpress.webapp.ModalEditorCtrl = class extends webexpress.webui.ModalCtrl {
         const template = this._i18n("webexpress.webapp:editorform.state." + state, "");
         const time = this._updated || new Date();
 
-        return String(template ?? "").replace("{0}", time.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }));
+        return String(template ?? "").replace("{0}", time.toLocaleTimeString(webexpress.webui.I18N.language, { hour: "2-digit", minute: "2-digit" }));
     }
 
     /**

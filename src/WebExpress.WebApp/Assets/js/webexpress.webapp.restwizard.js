@@ -167,11 +167,11 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
                 style: { display: state.currentIndex > 0 ? "" : "none" },
                 disabled: this._busy(state),
                 on: { click: this._handler("navigate", "back", () => () => this._navigate(-1)) }
-            }, h("i", { class: this._iconClass("chevron-left") + " me-2" }), this._i18n("webexpress.webapp:wizard.previous") || "Previous"),
+            }, h("i", { class: this._iconClass("chevron-left") + " me-2" }), this._i18n("webexpress.webapp:wizard.previous", "Previous")),
             // the position among the active steps, so the user knows how far the
             // dialog still goes
             h("span", { key: "counter", class: "wx-restwizard-counter" }, this._applyParams(
-                this._i18n("webexpress.webapp:wizard.step") || "Step {0} of {1}",
+                this._i18n("webexpress.webapp:wizard.step", "Step {0} of {1}"),
                 { 0: position.position, 1: position.total })));
     }
 
@@ -190,7 +190,7 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
             style: { display: isLast ? "none" : "" },
             disabled: this._busy(state),
             on: { click: this._handler("navigate", "next", () => () => this._navigate(1)) }
-        }, this._i18n("webexpress.webapp:wizard.next") || "Next", webexpress.webui.h("i", { class: this._iconClass("chevron-right") + " ms-2" }));
+        }, this._i18n("webexpress.webapp:wizard.next", "Next"), webexpress.webui.h("i", { class: this._iconClass("chevron-right") + " ms-2" }));
     }
 
     /**
@@ -208,7 +208,7 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
             style: { display: isLast ? "" : "none" },
             disabled: this._busy(state)
         }, this._finishIcon && webexpress.webui.h("i", { class: this._finishIcon + " me-2" }),
-            this._finishLabel || this._i18n("webexpress.webapp:wizard.finish") || "Finish");
+            this._finishLabel || this._i18n("webexpress.webapp:wizard.finish", "Finish"));
     }
 
     /**
@@ -395,9 +395,9 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
 
         // any failure (http or network) renders the step error and stops here
         if (!result.ok) {
-            const message = this._i18n("webexpress.webapp:error.load_failed") ||
-                (result.error && result.error.message) ||
-                `Failed to load the step (HTTP ${result.status})`;
+            const message = this._applyParams(this._i18n("webexpress.webapp:error.load_failed",
+                (result.error && result.error.message) || "Failed to load the step (HTTP {status})"),
+                { status: result.status });
             this._patchPage(index, { hasError: true });
             element.innerHTML = `<div class="alert alert-danger wx-restwizard-page-error my-3">${message}</div>`;
             this._setWizardLoading(false);

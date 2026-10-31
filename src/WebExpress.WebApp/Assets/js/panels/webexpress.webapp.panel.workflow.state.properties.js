@@ -1,17 +1,20 @@
 // State Properties Panel
 webexpress.webui.DialogPanels.register("workflow-state-properties", {
     id: "workflow-state-properties-page",
-    title: "General",
+    title: webexpress.webui.I18N.translate("webexpress.webui:workflow.editor.properties.general"),
     iconClass: "wx-icon-light wx-icon-light-sliders-h",
     render: function(container, modal) {
         container.innerHTML = `
             <div class="p-3">
-                <div class="mb-2"><label class="form-label small fw-bold">State ID (Readonly)</label><input type="text" id="inp-id" class="form-control form-control-sm bg-light" readonly></div>
-                <div class="mb-2"><label class="form-label small fw-bold">Label</label><input type="text" id="inp-label" class="form-control form-control-sm"></div>
-                <div class="mb-2"><label class="form-label small fw-bold">Background</label><input type="color" id="inp-bgcolor" class="form-control form-control-sm form-control-color"></div>
-                <div class="mb-2"><label class="form-label small fw-bold">Text Color</label><input type="color" id="inp-fgcolor" class="form-control form-control-sm form-control-color"></div>
+                <div class="mb-2"><label class="form-label small fw-bold">${this._t("state.id")}</label><input type="text" id="inp-id" class="form-control form-control-sm bg-light" readonly></div>
+                <div class="mb-2"><label class="form-label small fw-bold">${this._t("state.label")}</label><input type="text" id="inp-label" class="form-control form-control-sm"></div>
+                <div class="mb-2"><label class="form-label small fw-bold">${this._t("state.background")}</label><input type="color" id="inp-bgcolor" class="form-control form-control-sm form-control-color"></div>
+                <div class="mb-2"><label class="form-label small fw-bold">${this._t("state.foreground")}</label><input type="color" id="inp-fgcolor" class="form-control form-control-sm form-control-color"></div>
             </div>
         `;
+    },
+    _t: function(key) {
+        return webexpress.webui.I18N.translate("webexpress.webui:workflow.editor." + key);
     },
     onShow: function(modal) {
         const node = modal.context.node;

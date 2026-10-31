@@ -2873,7 +2873,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
             return "";
         }
         try {
-            return date.toLocaleDateString(undefined, { timeZone: "UTC" });
+            return date.toLocaleDateString(webexpress.webui.I18N.language, { timeZone: "UTC" });
         } catch (_) {
             return iso;
         }
@@ -2886,7 +2886,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
      */
     _formatMonth(date) {
         try {
-            return date.toLocaleDateString(undefined, { month: "short", year: "numeric", timeZone: "UTC" });
+            return date.toLocaleDateString(webexpress.webui.I18N.language, { month: "short", year: "numeric", timeZone: "UTC" });
         } catch (_) {
             return date.toISOString().slice(0, 7);
         }
@@ -2899,7 +2899,7 @@ webexpress.webapp.GanttCtrl = class extends webexpress.webapp.Data {
      */
     _formatMonthShort(date) {
         try {
-            return date.toLocaleDateString(undefined, { month: "short", timeZone: "UTC" });
+            return date.toLocaleDateString(webexpress.webui.I18N.language, { month: "short", timeZone: "UTC" });
         } catch (_) {
             return date.toISOString().slice(5, 7);
         }

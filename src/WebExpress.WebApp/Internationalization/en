@@ -128,7 +128,7 @@ setting.logfile.container=The application runs in a container. The log is writte
 setting.category.general.name=General settings
 setting.category.general.description=General settings for the web application.
 setting.category.system.name=System
-settimg.category.system.description=System-related settings for the web application.
+setting.category.system.description=System-related settings for the web application.
 
 setting.group.general.name=General
 setting.group.general.description=General settings for the web application.
@@ -268,7 +268,7 @@ setting.usermanager.user.edit.lastname.label=Surname:
 setting.usermanager.user.edit.lastname.error.empty=No last name was given!
 setting.usermanager.user.edit.email.label=Email:
 setting.usermanager.user.edit.email.error.empty=No e-mail address was provided!
-setting.usermanager.user.delete.label=Löschen
+setting.usermanager.user.delete.label=Delete
 setting.usermanager.user.delete.header=Delete user
 setting.usermanager.user.delete.description=Are you sure you want to delete the {0} user?
 
@@ -313,7 +313,6 @@ setting.sitemap.kind.resource=Resource
 setting.sitemap.kind.asset=File
 setting.sitemap.empty.title=No routes
 setting.sitemap.empty.message=Neither a page nor an interface is mounted.
-setting.sitemap.notavailable=The sitemap is not available. Please make sure that the sitemap module is installed and activated.
 setting.sitemap.description=The sitemap provides an overview of the structure of the web application. It lists all available pages and their relationships to each other. This allows users to quickly navigate to the desired page and get an overview of the content offered by the web application.
 
 setting.monitor.title.label=Monitor

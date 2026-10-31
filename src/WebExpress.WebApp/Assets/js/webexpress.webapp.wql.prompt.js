@@ -83,7 +83,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
             // standalone (no wx-service): the prompt is a syntax-highlighting WQL
             // editor only, with no server suggestions, history or validation. it
             // is used this way inside dialogs (e.g. the kanban filter settings).
-            this._setHintHtml(this._i18n("webexpress.webapp:wql.status.ready") || "Ready.");
+            this._setHintHtml(this._i18n("webexpress.webapp:wql.status.ready", "Ready."));
         }
     }
 
@@ -247,7 +247,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         this._clearBtn = document.createElement("button");
         this._clearBtn.type = "button";
         this._clearBtn.className = "btn wx-wql-clear";
-        this._clearBtn.title = this._i18n("webexpress.webapp:wql.clear") || "Clear";
+        this._clearBtn.title = this._i18n("webexpress.webapp:wql.clear", "Clear");
         this._clearBtn.setAttribute("aria-label", this._clearBtn.title);
         // resolve through the icon set when available; a lean runtime without the
         // helper falls back to the class pair the set would have produced
@@ -265,7 +265,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         this._listbox.id = listId;
         this._listbox.className = "visually-hidden wx-wql-suggestions";
         this._listbox.setAttribute("role", "listbox");
-        this._listbox.setAttribute("aria-label", this._i18n("webexpress.webapp:wql.suggestions.label") || "WQL suggestions");
+        this._listbox.setAttribute("aria-label", this._i18n("webexpress.webapp:wql.suggestions.label", "WQL suggestions"));
         formGroup.appendChild(this._listbox);
         this._view = new webexpress.webapp.WqlPromptView(this._input, this._listbox);
 
@@ -746,7 +746,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
                 this._loadHistoryFromApi(retryCount + 1);
             }, 500);
         } else {
-            this._historyError = this._i18n("webexpress.webapp:wql.error.history.unavailable") || "History unavailable.";
+            this._historyError = this._i18n("webexpress.webapp:wql.error.history.unavailable", "History unavailable.");
             this._updateHint();
         }
     }
@@ -1071,7 +1071,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         if (this._lastError) {
             this._hint.classList.remove("text-muted");
             this._hint.classList.add("text-danger");
-            const errLabel = this._i18n("webexpress.webapp:wql.error.label") || "Error";
+            const errLabel = this._i18n("webexpress.webapp:wql.error.label", "Error");
             this._setHintHtml(`<b>${errLabel}:</b> ${this._escapeHtml(this._lastError)}`);
             return;
         }
@@ -1106,11 +1106,11 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
             let label = this._i18n(typeKeys[type]);
 
             if (!label) {
-                label = type || this._i18n("webexpress.webapp:wql.type.input") || "Input";
+                label = type || this._i18n("webexpress.webapp:wql.type.input", "Input");
             }
 
             if (this._suggestions.length === 0) {
-                const noSuggestions = this._i18n("webexpress.webapp:wql.no.suggestions") || "No suggestions.";
+                const noSuggestions = this._i18n("webexpress.webapp:wql.no.suggestions", "No suggestions.");
                 this._setHintHtml(`${label}: ${noSuggestions}`);
                 return;
             }

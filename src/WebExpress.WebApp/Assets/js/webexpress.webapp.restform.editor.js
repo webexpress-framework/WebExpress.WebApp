@@ -74,15 +74,8 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webapp.Data {
         "col-mix":        "FormGroupColumnMix"
     };
 
-    // catalog of group layouts offered to the user (palette + QuickAdd)
-    static GROUP_LAYOUTS = [
-        { id: "vertical",       label: "Vertical" },
-        { id: "horizontal",     label: "Horizontal" },
-        { id: "mix",            label: "Mix" },
-        { id: "col-vertical",   label: "Two columns · vertical" },
-        { id: "col-horizontal", label: "Two columns · horizontal" },
-        { id: "col-mix",        label: "Two columns · mix" }
-    ];
+    // catalog of group layouts offered to the user (palette + QuickAdd), labelled by formeditor.layout.<id>
+    static GROUP_LAYOUTS = ["vertical", "horizontal", "mix", "col-vertical", "col-horizontal", "col-mix"];
 
     // logical field types accepted by the editor. They are coarser than the field types an
     // application models: several of those share a shape and are previewed alike — a
@@ -2455,7 +2448,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webapp.Data {
         }
 
         const format = (time) => (time ? new Date(time) : new Date())
-            .toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+            .toLocaleTimeString(webexpress.webui.I18N.language, { hour: "2-digit", minute: "2-digit" });
 
         if (this.drafting) {
             return this._t("formeditor.state." + p.status, format(p.updated));
@@ -2508,7 +2501,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webapp.Data {
 
         if (p.recovery) {
             const time = p.recovery.savedAt
-                ? new Date(p.recovery.savedAt).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" })
+                ? new Date(p.recovery.savedAt).toLocaleString(webexpress.webui.I18N.language, { dateStyle: "short", timeStyle: "short" })
                 : "";
             return {
                 kind: "recovery",
@@ -3234,7 +3227,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webapp.Data {
             const used = this._collectFieldLabels(tab.children);
 
             const fieldMatches = this._s.catalog.filter(f => f.id.toLowerCase().includes(q));
-            const groupMatches = webexpress.webapp.RestFormEditorCtrl.GROUP_LAYOUTS
+            const groupMatches = this._groupLayouts()
                 .filter(g => g.label.toLowerCase().includes(q));
 
             const total = fieldMatches.length + groupMatches.length;
@@ -3368,11 +3361,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webapp.Data {
         btn.appendChild(meta);
 
         btn.addEventListener("click", () => {
-            this.addNode({
-                kind: "group",
-                layout: g.id,
-                label: g.label.split(" ")[0]
-            });
+            this.addNode({ kind: "group", layout: g.id });
             input.value = "";
             this._pickerOpen = false;
             btn.parentElement.style.display = "none";
@@ -3390,7 +3379,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webapp.Data {
         const tab = this._getActiveTab();
         const q = input.value.toLowerCase();
         const fieldMatches = this._s.catalog.filter(f => f.id.toLowerCase().includes(q));
-        const groupMatches = webexpress.webapp.RestFormEditorCtrl.GROUP_LAYOUTS
+        const groupMatches = this._groupLayouts()
             .filter(g => g.label.toLowerCase().includes(q));
 
         if (e.key === "ArrowDown") {
@@ -3422,7 +3411,7 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webapp.Data {
             } else {
                 const g = groupMatches[this._pickerHi - fieldMatches.length];
                 if (g) {
-                    this.addNode({ kind: "group", layout: g.id, label: g.label.split(" ")[0] });
+                    this.addNode({ kind: "group", layout: g.id });
                     input.value = "";
                     closePicker();
                 }
@@ -4073,6 +4062,16 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webapp.Data {
             str = str.split("{" + i + "}").join(String(args[i]));
         }
         return str;
+    }
+
+    /**
+     * Pairs the offered group layouts with their labels in the page language; the labels
+     * double as the QuickAdd search text, so they are matched the way the user reads them.
+     * @returns {{id: string, label: string}[]}
+     */
+    _groupLayouts() {
+        return webexpress.webapp.RestFormEditorCtrl.GROUP_LAYOUTS
+            .map(id => ({ id, label: this._t("formeditor.layout." + id) }));
     }
 
     /**
