@@ -73,12 +73,9 @@ namespace WebExpress.WebApp.WebMessageQueue
                 return;
             }
 
-            // The request stored on the socket carries both the session and
-            // the application context, which is exactly what
-            // NotificationManager.GetNotifications expects. The notification
-            // manager API takes the concrete Request type; for any other
-            // implementation we skip the session-scoped replay.
-            var request = (socket as MessageQueueSocket)?.Request as WebCore.WebMessage.Request;
+            // the socket carries the upgrade request (a RequestWebSocket, not a Request), whose
+            // session is the one the page's notifications were stored under
+            var request = (socket as MessageQueueSocket)?.Request;
             if (request == null)
             {
                 return;
