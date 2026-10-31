@@ -3075,7 +3075,11 @@ webexpress.webapp.RestFormEditorCtrl = class extends webexpress.webapp.Data {
             const chev = document.createElement("button");
             chev.type = "button";
             chev.className = "wx-form-editor-chev" + (collapsed ? " collapsed" : "");
+            // the chevron is drawn only, so its purpose and state are spoken instead
+            chev.setAttribute("aria-label", this._t("formeditor.hints.collapse"));
+            chev.setAttribute("aria-expanded", collapsed ? "false" : "true");
             const drawing = webexpress.webui.Icon.create("angle-down");
+            drawing.setAttribute("aria-hidden", "true");
             drawing.style.transform = collapsed ? "rotate(-90deg)" : "none";
             chev.appendChild(drawing);
             chev.addEventListener("click", (e) => { e.stopPropagation(); this._toggleCollapse(node.id); });

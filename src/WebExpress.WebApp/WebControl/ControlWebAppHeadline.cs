@@ -239,12 +239,8 @@ namespace WebExpress.WebApp.WebControl
                         Align = _ => TypeAlignFlex.Center,
                         Justify = _ => TypeJustifiedFlex.Start
                     } : null,
-                    TitleEditor is not null ? new ControlPanel(null, TitleEditor)
+                    TitleEditor is not null ? new ControlHeadlineTitle(TitleEditor)
                     {
-                        // an h2 may only hold phrasing content, but the editor swaps its read view
-                        // for a form; the heading role keeps the page title in the outline, at the
-                        // level 2 the role implies
-                        Role = _ => "heading",
                         Classes = ["h2", "me-2", "mb-0", "wx-webapp-headline-title"]
                     } : new ControlText()
                     {
@@ -300,6 +296,40 @@ namespace WebExpress.WebApp.WebControl
                 Style = Style.Concatenate("display: block;", GetStyles(renderContext)),
                 Role = role
             };
+        }
+
+        /// <summary>
+        /// Holds an editable page title. An h2 may only hold phrasing content, but the editor
+        /// swaps its read view for a form, so the title keeps its place in the outline through
+        /// the heading role instead. The level is stated, because assistive technology does not
+        /// agree on the level a bare heading role implies.
+        /// </summary>
+        private sealed class ControlHeadlineTitle : ControlPanel
+        {
+            /// <summary>
+            /// Initializes a new instance of the class.
+            /// </summary>
+            /// <param name="editor">The inline editor that shows and edits the title.</param>
+            public ControlHeadlineTitle(IControlSmartEdit editor)
+                : base(null, editor)
+            {
+                Role = _ => "heading";
+            }
+
+            /// <summary>
+            /// Converts the control to an HTML representation.
+            /// </summary>
+            /// <param name="renderContext">The context in which the control is rendered.</param>
+            /// <param name="visualTree">The visual tree representing the control's structure.</param>
+            /// <param name="content">The controls rendered within the panel.</param>
+            /// <returns>An HTML node representing the rendered control.</returns>
+            public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IEnumerable<IControl> content)
+            {
+                var html = base.Render(renderContext, visualTree, content);
+                (html as HtmlElement)?.AddUserAttribute("aria-level", "2");
+
+                return html;
+            }
         }
     }
 }

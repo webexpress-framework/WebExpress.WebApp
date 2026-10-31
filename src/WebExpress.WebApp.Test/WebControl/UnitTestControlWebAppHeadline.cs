@@ -81,7 +81,7 @@ namespace WebExpress.WebApp.Test.WebControl
             var html = control.Render(context, visualTree).ToString();
 
             // assert
-            AssertExtensions.EqualWithPlaceholders(@"<header style=""display: block;"">*<div class=""h2 me-2 mb-0 wx-webapp-headline-title"" role=""heading""><div id=""edit"" class=""wx-webui-smart-edit""*<input*value=""edited""*</div></div>*</header>", html);
+            AssertExtensions.EqualWithPlaceholders(@"<header style=""display: block;"">*<div class=""h2 me-2 mb-0 wx-webapp-headline-title"" role=""heading"" aria-level=""2""><div id=""edit"" class=""wx-webui-smart-edit""*<input*value=""edited""*</div></div>*</header>", html);
             Assert.DoesNotContain("<h2", html);
         }
     }

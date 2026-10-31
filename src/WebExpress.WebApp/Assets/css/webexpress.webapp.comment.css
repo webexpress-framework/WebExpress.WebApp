@@ -167,9 +167,10 @@
     opacity: 0.8;
 }
  
+/* the warning fill is a surface color; as text it needs the emphasis variant to reach 4.5:1 */
 .wx-comment-pinned {
     font-size: 10.5px;
-    color: var(--wx-webapp-warn);
+    color: var(--wx-warning-text-emphasis);
     font-weight: 600;
 }
  
@@ -238,7 +239,7 @@
 }
  
 .wx-comment-action-pinned {
-    color: var(--wx-webapp-warn);
+    color: var(--wx-warning-text-emphasis);
 }
  
 .wx-comment-like-count {

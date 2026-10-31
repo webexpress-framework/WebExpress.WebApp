@@ -74,10 +74,14 @@ webexpress.webapp.InputSelectionCtrl = class extends webexpress.webui.InputSelec
             this._cleanupDataAttributes(element);
         }
 
-        // create spinner element once
-        this._spinner = document.createElement("div");
-        this._spinner.className = "spinner-border spinner-border-sm text-secondary ms-2";
-        this._spinner.setAttribute("role", "status");
+        // create spinner element once; it is shown inside the list of chosen entries, which
+        // may hold nothing but entries, so it is wrapped in one
+        const spinner = document.createElement("div");
+        spinner.className = "spinner-border spinner-border-sm text-secondary ms-2";
+        spinner.setAttribute("role", "status");
+        this._spinner = document.createElement("li");
+        this._spinner.className = "wx-selection-loading";
+        this._spinner.appendChild(spinner);
 
         // fetch when dropdown menu is shown (base control dispatches a 'show' dom event on the menu)
         this._dropdownmenu.addEventListener("show", () => {

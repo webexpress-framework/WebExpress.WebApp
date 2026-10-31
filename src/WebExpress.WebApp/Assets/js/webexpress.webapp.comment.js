@@ -537,6 +537,18 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
+     * Returns the fill of an avatar together with the text color that reads on it. The fill is
+     * the user's own color, known only from data, so no fixed text color holds on every one.
+     * @param {object} user - The user the avatar stands for.
+     * @returns {object} The style declarations of the avatar.
+     */
+    _avatarStyle(user) {
+        const fill = user.color || "#888";
+        const text = webexpress.webui.ContrastColor?.on(fill);
+        return text ? { background: fill, color: text } : { background: fill };
+    }
+
+    /**
      * Returns the comments the list shows: the selected category, pinned comments first, then
      * in the selected order.
      * @param {object} state - The state.
@@ -582,16 +594,21 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
         const counts = this._counts(state);
         const comments = this._visibleComments(state);
 
+        // the captions beside the selects are plain text, since the toolbar may appear more than
+        // once on a page and has no ids to point a label at; the selects carry the same words
+        const filterLabel = this._i18n("webexpress.webapp:comment.filter", "Filter");
+        const sortLabel = this._i18n("webexpress.webapp:comment.sort", "Sort");
+
         return [
             h("div", { key: "toolbar", class: "wx-comment-toolbar" },
-                h("span", { class: "wx-comment-toolbar-label" }, this._i18n("webexpress.webapp:comment.filter", "Filter") + ":"),
-                h("select", { class: "wx-comment-filter", value: state.filterCat, on: { change: this._onFilter } },
+                h("span", { class: "wx-comment-toolbar-label", "aria-hidden": "true" }, filterLabel + ":"),
+                h("select", { class: "wx-comment-filter", "aria-label": filterLabel, value: state.filterCat, on: { change: this._onFilter } },
                     h("option", { key: "all", value: "all" },
                         this._i18n("webexpress.webapp:comment.filter.all", "All categories") + ` (${counts.all})`),
                     Object.values(state.categories).map((cat) => h("option", { key: cat.id, value: cat.id },
                         `${this._i18n(cat.i18n, cat.id)} (${counts[cat.id] || 0})`))),
-                h("span", { class: "wx-comment-toolbar-label" }, this._i18n("webexpress.webapp:comment.sort", "Sort") + ":"),
-                h("select", { class: "wx-comment-sort", value: state.sortBy, on: { change: this._onSort } },
+                h("span", { class: "wx-comment-toolbar-label", "aria-hidden": "true" }, sortLabel + ":"),
+                h("select", { class: "wx-comment-sort", "aria-label": sortLabel, value: state.sortBy, on: { change: this._onSort } },
                     h("option", { value: "date" }, this._i18n("webexpress.webapp:comment.sort.date", "Date")),
                     h("option", { value: "likes" }, this._i18n("webexpress.webapp:comment.sort.likes", "Likes"))),
                 h("button", {
@@ -639,7 +656,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
             h("header", { class: "wx-comment-head" },
                 h("span", {
                     class: "wx-comment-avatar wx-comment-avatar-lg",
-                    style: { background: author.color || "#888" },
+                    style: this._avatarStyle(author),
                     title: author.name
                 }, author.initials || "?"),
                 h("div", { class: "wx-comment-head-main" },
@@ -865,7 +882,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
         const user = this._user(reply.author, state.users);
 
         return h("div", { key: reply.id || "r" + index, class: "wx-comment-reply" },
-            h("span", { class: "wx-comment-avatar wx-comment-avatar-sm", style: { background: user.color || "#888" } }, user.initials || "?"),
+            h("span", { class: "wx-comment-avatar wx-comment-avatar-sm", style: this._avatarStyle(user) }, user.initials || "?"),
             h("div", null,
                 h("div", { class: "wx-comment-reply-head" },
                     h("span", { class: "wx-comment-reply-author" }, user.name),

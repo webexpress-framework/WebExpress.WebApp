@@ -62,6 +62,10 @@ body.wx-landing a {
     text-decoration: none;
     transition: color var(--transition);
 }
+/* inside running text the color alone does not set a link apart from the words around it */
+body.wx-landing p a {
+    text-decoration: underline;
+}
 body.wx-landing a:hover,
 body.wx-landing a:focus-visible {
     color: var(--color-link-hover);
@@ -147,7 +151,8 @@ body.wx-landing .wx-landing-eyebrow {
     letter-spacing: 0.08em;
     font-size: 0.78rem;
     font-weight: 600;
-    color: var(--color-link);
+    /* the eyebrow also sits on the surface sections, where the link color falls below 4.5:1 */
+    color: var(--wx-primary-text-emphasis);
     margin: 0 0 0.5rem;
 }
 body.wx-landing .wx-landing-site-header {

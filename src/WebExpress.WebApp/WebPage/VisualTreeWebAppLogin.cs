@@ -128,7 +128,9 @@ namespace WebExpress.WebApp.WebPage
             // head
             // assistive technology picks pronunciation rules from the document language
             html.AddUserAttribute("lang", context.Request?.Culture?.Name);
-            html.Head.Title = I18N.Translate(context.Request, Title);
+            // the login stands in for whatever page was asked for, which usually leaves no title
+            // of its own; the tab and the history still have to say what is shown
+            html.Head.Title = I18N.Translate(context.Request, string.IsNullOrWhiteSpace(Title) ? "webexpress.webapp:login.title" : Title);
             html.Head.Favicons = Favicons;
             html.Head.Base = Base?.ToString();
             html.Head.Styles = Styles;
@@ -146,7 +148,8 @@ namespace WebExpress.WebApp.WebPage
             html.Body.Add(MessageQueueUri);
             html.Body.Add(Header.Render(renderContext, this));
             html.Body.Add(Toast.Render(renderContext, this));
-            html.Body.Add(new HtmlElementTextContentDiv(login.Render(renderContext, this))
+            // the form is the content of the page, so it is the main landmark a reader jumps to
+            html.Body.Add(new HtmlElementSectionMain(login.Render(renderContext, this))
             {
                 Id = "login",
                 Class = "d-flex h-100"

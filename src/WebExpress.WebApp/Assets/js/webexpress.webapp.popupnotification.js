@@ -130,7 +130,9 @@ webexpress.webapp.PopupNotificationCtrl = class extends webexpress.webui.Ctrl {
         });
         alert.appendChild(closeButton);
 
-        const heading = document.createElement("h5");
+        // the popup floats over whatever page is open, so a real heading would cut into that
+        // page's outline at an arbitrary level; the alert role already announces the title
+        const heading = document.createElement("p");
         heading.className = "wx-popup-heading";
         heading.textContent = notification.heading || "";
         alert.appendChild(heading);

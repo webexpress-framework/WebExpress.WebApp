@@ -130,6 +130,8 @@ namespace WebExpress.WebApp.WebControl
             new ControlDropdown(Id, [.. items])
             {
                 Icon = _ => new IconEllipsisHorizontal(),
+                // the button shows only the ellipsis, so the tooltip is also its accessible name
+                Tooltip = _ => "webexpress.webapp:headline.more.title",
                 AlignmentMenu = _ => TypeAlignmentDropdownMenu.Right,
                 //BackgroundColor = new PropertyColorButton(TypeColorButton.Dark),
                 Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.None, PropertySpacing.Space.None)
