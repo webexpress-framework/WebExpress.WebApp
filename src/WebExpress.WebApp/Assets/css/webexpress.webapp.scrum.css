@@ -161,11 +161,11 @@
 
 /* precise drop indicators for row reordering */
 .wx-scrum-row.wx-drop-before {
-    box-shadow: inset 0 2px 0 var(--wx-primary, #0d6efd);
+    box-shadow: inset 0 var(--wx-drop-line-width) 0 var(--wx-drop-line-color);
 }
 
 .wx-scrum-row.wx-drop-after {
-    box-shadow: inset 0 -2px 0 var(--wx-primary, #0d6efd);
+    box-shadow: inset 0 calc(-1 * var(--wx-drop-line-width)) 0 var(--wx-drop-line-color);
 }
 
 /* The badge is the backing the type icon is drawn on: a drawn icon is painted by masking
@@ -314,8 +314,8 @@
 }
 
 .wx-scrum-drop-target {
-    background: rgba(13, 110, 253, 0.05);
-    outline: 2px dashed rgba(13, 110, 253, 0.4);
+    background: var(--wx-drop-bg);
+    outline: 2px dashed var(--wx-drop-border-color);
     outline-offset: -2px;
 }
 

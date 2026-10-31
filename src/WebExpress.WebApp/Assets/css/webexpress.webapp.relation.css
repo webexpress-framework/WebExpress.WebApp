@@ -596,18 +596,19 @@
     position: absolute;
     left: 0;
     right: 0;
-    height: 2px;
-    background: var(--wx-relation-accent);
+    height: var(--wx-drop-line-width);
+    border-radius: 2px;
+    background: var(--wx-drop-line-color);
     pointer-events: none;
     z-index: 3;
 }
 
 .wx-relation-editor-row.wx-drop-before::after {
-    top: -1px;
+    top: calc(var(--wx-drop-line-width) / -2);
 }
 
 .wx-relation-editor-row.wx-drop-after::after {
-    bottom: -1px;
+    bottom: calc(var(--wx-drop-line-width) / -2);
 }
 
 .wx-relation-editor-row.wx-relation-editor-dragging {

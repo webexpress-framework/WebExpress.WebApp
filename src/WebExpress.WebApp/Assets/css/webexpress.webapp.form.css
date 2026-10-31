@@ -556,23 +556,24 @@ form.wx-webapp-restwizard > .wx-wizard-page {
         position: absolute;
         left: 0;
         right: 0;
-        height: 2px;
-        background: var(--wx-primary, #0d6efd);
+        height: var(--wx-drop-line-width);
+        border-radius: 2px;
+        background: var(--wx-drop-line-color);
         z-index: 1;
     }
 
     .wx-form-editor-tree-row.drop-before::before {
-        top: -1px;
+        top: calc(var(--wx-drop-line-width) / -2);
     }
 
     .wx-form-editor-tree-row.drop-after::after {
-        bottom: -1px;
+        bottom: calc(var(--wx-drop-line-width) / -2);
     }
 
     .wx-form-editor-tree-row.drop-into {
-        outline: 2px solid var(--wx-primary, #0d6efd);
+        outline: 2px dashed var(--wx-drop-border-color);
         outline-offset: -2px;
-        background: var(--wx-fe-primary-soft);
+        background: var(--wx-drop-bg);
     }
 
 .wx-form-editor-chev {

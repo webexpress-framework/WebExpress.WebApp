@@ -198,9 +198,9 @@
 
 /* drop indicators on the side where the dragged tab would be inserted */
 .nav-item.wx-webapp-tab-movable.wx-webapp-tab-drop-before {
-    box-shadow: inset 2px 0 0 0 var(--wx-primary);
+    box-shadow: inset var(--wx-drop-line-width) 0 0 0 var(--wx-drop-line-color);
 }
 
 .nav-item.wx-webapp-tab-movable.wx-webapp-tab-drop-after {
-    box-shadow: inset -2px 0 0 0 var(--wx-primary);
+    box-shadow: inset calc(-1 * var(--wx-drop-line-width)) 0 0 0 var(--wx-drop-line-color);
 }
