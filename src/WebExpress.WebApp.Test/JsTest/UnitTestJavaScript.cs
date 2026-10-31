@@ -26,9 +26,12 @@ namespace WebExpress.WebApp.Test.JsTest
 
         /// <summary>
         /// The maximum time the Node.js test runner may take before the run
-        /// is treated as failed.
+        /// is treated as failed. It only catches a run that hangs: the limit is
+        /// wall-clock time, which a busy machine stretches many times over (one
+        /// process per core in every test assembly, beside the xUnit tests), so a
+        /// performance budget belongs in the test itself.
         /// </summary>
-        private static readonly TimeSpan _timeout = TimeSpan.FromMinutes(2);
+        private static readonly TimeSpan _timeout = TimeSpan.FromMinutes(10);
 
         /// <summary>
         /// The Node.js executable and its major version, probed once for the
