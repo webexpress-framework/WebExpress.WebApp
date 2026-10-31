@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
+using System.Text.Json;
 using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebParameter;
@@ -15,6 +17,11 @@ namespace WebExpress.WebApp.WebRestApi
     /// </summary>
     public abstract class RestApiWorkflow : IRestApi
     {
+        private static readonly JsonSerializerOptions _jsonOptions = new()
+        {
+            WriteIndented = true
+        };
+
         /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
@@ -43,12 +50,21 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 var workflow = Retrieve(id, context, request);
 
+                // a miss must not look like an empty workflow: the editor would
+                // render a blank canvas and the user would have no way to tell
+                // an unknown id from a workflow without states
+                if (workflow is null)
+                {
+                    return new ResponseNotFound(new StatusMessage($"No workflow found for id '{id}'."));
+                }
+
                 return new RestApiWorkflowResult()
                 {
-                    Id = workflow?.Id,
-                    Name = workflow?.Name,
-                    Description = workflow?.Description,
-                    Version = workflow?.Version,
+                    Id = workflow.Id,
+                    Name = workflow.Name,
+                    State = workflow.State,
+                    Description = workflow.Description,
+                    Version = workflow.Version,
                     States = RetrieveStates(id, context, request),
                     Transitions = RetrieveTransitions(id, context, request),
                     Guards = RetrieveGuards(id, context, request),
@@ -59,7 +75,73 @@ namespace WebExpress.WebApp.WebRestApi
             }
             catch (Exception ex)
             {
-                return new ResponseBadRequest(new StatusMessage($"Error processing request.{ex}"));
+                return RestApiFault.BadRequest(request, ex, "Error processing request.");
+            }
+        }
+
+        /// <summary>
+        /// Processing of the resource that was called via the put request. The
+        /// workflow editor autosaves its whole definition through this handler,
+        /// so the payload mirrors the GET shape and the workflow id arrives as
+        /// the same query parameter as on load.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns>The response containing the result of the operation.</returns>
+        [Method(RequestMethod.PUT)]
+        public virtual IResponse Update(IRequest request)
+        {
+            var id = request.GetParameter<ParameterId>()?.Value;
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                return new ResponseBadRequest(new StatusMessage("Missing workflow id."));
+            }
+
+            if (request is not Request requestData || requestData.Content is null || requestData.Content.Length == 0)
+            {
+                return new ResponseBadRequest(new StatusMessage("Missing request body."));
+            }
+
+            using var context = CreateContext();
+
+            try
+            {
+                var bodyString = Encoding.UTF8.GetString(requestData.Content);
+                var workflow = JsonSerializer.Deserialize<RestApiWorkflowResult>(bodyString, _jsonOptions);
+
+                var current = Retrieve(id, context, request);
+                if (current is null)
+                {
+                    return new ResponseNotFound(new StatusMessage($"No workflow found for id '{id}'."));
+                }
+
+                // optimistic concurrency: the editor autosaves, so two open
+                // editors on the same workflow would otherwise overwrite each
+                // other without either user noticing. A source that does not
+                // version its workflows leaves Version empty and is unaffected.
+                if (!string.IsNullOrEmpty(current.Version)
+                    && !string.IsNullOrEmpty(workflow?.Version)
+                    && !string.Equals(current.Version, workflow.Version, StringComparison.Ordinal))
+                {
+                    return new ResponseConflict(new StatusMessage
+                        ($"The workflow '{id}' has been modified by someone else. Expected version '{workflow.Version}', found '{current.Version}'."));
+                }
+
+                Update(id, workflow, context, request);
+
+                // the caller needs the version its next save has to present, so
+                // the header is read back once the write went through
+                var saved = Retrieve(id, context, request);
+                var responseJson = JsonSerializer.Serialize(new { success = true, version = saved?.Version }, _jsonOptions);
+
+                return new ResponseOK
+                {
+                    Content = Encoding.UTF8.GetBytes(responseJson)
+                }
+                    .AddHeaderContentType("application/json");
+            }
+            catch (Exception ex)
+            {
+                return RestApiFault.BadRequest(request, ex, "Error processing request.");
             }
         }
 
@@ -89,11 +171,40 @@ namespace WebExpress.WebApp.WebRestApi
         /// </param>
         /// <returns>
         /// A <see cref="RestApiWorkflowResult"/> representing the workflow, or <c>null</c>
-        /// when no matching workflow exists.
+        /// when no matching workflow exists. Returning <c>null</c> makes the request
+        /// answer with 404; it must not be used to express an empty workflow, which is
+        /// a result with no states.
         /// </returns>
+        /// <remarks>
+        /// Set <see cref="RestApiWorkflowResult.Version"/> to opt the workflow into
+        /// optimistic concurrency. The update handler then rejects a save that presents
+        /// a stale version with 409 instead of letting it overwrite newer changes.
+        /// </remarks>
         protected virtual RestApiWorkflowResult Retrieve(string workflowId, IQueryContext context, IRequest request)
         {
             return new RestApiWorkflowResult();
+        }
+
+        /// <summary>
+        /// Persists the workflow definition delivered by the editor's autosave.
+        /// The default implementation discards the payload, so a read-only
+        /// workflow source needs no override.
+        /// </summary>
+        /// <param name="workflowId">
+        /// The unique identifier of the workflow to update.
+        /// </param>
+        /// <param name="workflow">
+        /// The workflow definition to persist, carrying the states and
+        /// transitions in the same shape the GET request delivers.
+        /// </param>
+        /// <param name="context">
+        /// The query context providing access to the underlying data store. Cannot be null.
+        /// </param>
+        /// <param name="request">
+        /// The current API request. Cannot be null.
+        /// </param>
+        protected virtual void Update(string workflowId, RestApiWorkflowResult workflow, IQueryContext context, IRequest request)
+        {
         }
 
         /// <summary>

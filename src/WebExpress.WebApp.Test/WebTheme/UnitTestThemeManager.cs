@@ -6,7 +6,6 @@ namespace WebExpress.WebApp.Test.WebTheme
     /// <summary>
     /// Test the theme manager.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestThemeManager
     {
         /// <summary>

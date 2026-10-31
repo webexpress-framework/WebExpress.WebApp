@@ -91,7 +91,7 @@ namespace WebExpress.WebApp.WebRestApi
             }
             catch (Exception ex)
             {
-                return new ResponseBadRequest(new StatusMessage($"error processing get request: {ex.Message}"));
+                return RestApiFault.BadRequest(request, ex, "error processing get request.");
             }
         }
 
@@ -178,7 +178,7 @@ namespace WebExpress.WebApp.WebRestApi
             }
             catch (Exception ex)
             {
-                return new ResponseBadRequest(new StatusMessage($"error processing post request: {ex.Message}"));
+                return RestApiFault.BadRequest(request, ex, "error processing post request.");
             }
         }
 
@@ -213,7 +213,7 @@ namespace WebExpress.WebApp.WebRestApi
             }
             catch (Exception ex)
             {
-                return new ResponseBadRequest(new StatusMessage($"error processing put request: {ex.Message}"));
+                return RestApiFault.BadRequest(request, ex, "error processing put request.");
             }
         }
 
@@ -241,7 +241,7 @@ namespace WebExpress.WebApp.WebRestApi
             }
             catch (Exception ex)
             {
-                return new ResponseBadRequest(new StatusMessage($"error processing delete request: {ex.Message}"));
+                return RestApiFault.BadRequest(request, ex, "error processing delete request.");
             }
         }
 
@@ -429,6 +429,14 @@ namespace WebExpress.WebApp.WebRestApi
         protected virtual string ResolveCurrentUser(IQueryContext context, IRequest request) => null;
 
         /// <summary>
+        /// Returns how a WQL statement is turned into a query. The default evaluates the text
+        /// conditions as the index does, which only a provider running in memory can execute;
+        /// an endpoint backed by a database returns <see cref="WqlQueryMode.Translatable"/>,
+        /// so that its query provider can translate the filter into SQL.
+        /// </summary>
+        protected virtual WqlQueryMode QueryMode => WqlQueryMode.Exact;
+
+        /// <summary>
         /// Applies filtering criteria to the specified query based on the provided 
         /// WQL statement.
         /// </summary>
@@ -456,7 +464,7 @@ namespace WebExpress.WebApp.WebRestApi
                 return query;
             }
 
-            return wqlStatement.ToQuery();
+            return wqlStatement.ToQuery(QueryMode);
         }
 
         /// <summary>

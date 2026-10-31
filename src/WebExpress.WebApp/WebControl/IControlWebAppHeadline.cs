@@ -4,7 +4,7 @@ using WebExpress.WebUI.WebControl;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Headline for an web app.
+    /// Contract for the headline area of a WebApp page.
     /// </summary>
     public interface IControlWebAppHeadline : IControl
     {
@@ -12,6 +12,13 @@ namespace WebExpress.WebApp.WebControl
         /// Gets or set the title.
         /// </summary>
         string Title { get; set; }
+
+        /// <summary>
+        /// Gets or sets the inline editor that makes the title editable in place. Without one
+        /// the title is read-only. The editor takes the place of the title, so its input
+        /// carries the value shown and its process handler stores the edited one.
+        /// </summary>
+        IControlSmartEdit TitleEditor { get; set; }
 
         /// <summary>
         /// Gets the prologue area.

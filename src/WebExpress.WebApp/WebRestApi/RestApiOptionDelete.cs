@@ -9,7 +9,7 @@ using WebExpress.WebUI.WebIcon;
 namespace WebExpress.WebApp.WebRestApi
 {
     /// <summary>
-    /// Represents a delete option in a REST API.
+    /// A 'delete' entry in the options menu a REST API offers for a data item.
     /// </summary>
     public class RestApiOptionDelete : RestApiOption
     {

@@ -1,7 +1,7 @@
 /**
  * A REST-backed list control extending the base flat ListCtrl.
  * - simple list view without toolbar or pagination controls
- * - shows bootstrap placeholders while loading
+ * - shows WebExpress placeholders while loading
  * - queries a REST endpoint
  * - dispatches a data-arrived event on successful retrieval
  * - supports per-item edit and delete actions bound from server-provided options
@@ -9,30 +9,54 @@
  * - webexpress.webui.Event.DATA_ARRIVED_EVENT
  */
 webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
-    _search = "";
-    _wql = "";
-    _filter = "";
-    _page = 0;
-    _pageSize = 50;
-    _items = {};
-
-    _orderBy = null;
-    _orderDir = null;
-
     _restUri = "";
+    _viewState = null;
+    _sliceTotal = 0;
+
+    // a query that was asked for while the control was hidden and still has to run
+    _pendingLoad = false;
     _progressDiv = this._createProgressDiv();
-    
+
     /**
      * Constructor for the REST ListCtrl.
      * @param {HTMLElement} element The host element.
      */
     constructor(element) {
+        // consume the islands before the base constructor reshapes the
+        // children; later reads are served from the element cache
+        webexpress.webapp.Data.readState(element);
+        webexpress.webapp.ServiceRegistry.fromElement(element);
+
         super(element);
 
-        // read rest uri and clean attribute
-        this._restUri = element.dataset.uri || "";
-        element.removeAttribute("data-uri");
-        
+        // the resource a ViewState renders. when present, the list is a pure view of
+        // a central resource owned by the enclosing ViewState; when absent,
+        // the list owns its state and loads itself (standalone).
+        this._resource = (element.dataset && element.dataset.wxResource) || null;
+
+        // canonical state for the list: a single source of truth that the
+        // accessors below read from and write to. seeded from the optional
+        // wx-state island. in ViewState mode this is replaced by the ViewState
+        // once it resolves, so the search and paging keys live in the shared
+        // ViewState state.
+        this._store = new webexpress.webapp.ViewState(element, { standalone: true, state: Object.assign({
+            search: "",
+            wql: "",
+            filter: "",
+            page: 0,
+            pageSize: 50,
+            orderBy: null,
+            orderDir: null,
+            total: 0,
+            loading: false,
+            error: null
+        }, webexpress.webapp.Data.readState(element)) });
+
+        // data service: the configured island authored in C# through .Service().
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+        this._service = islandServices.data;
+        this._restUri = this._service ? this._service.baseUri : "";
+
         element.className = "wx-list";
 
         // insert progress at top
@@ -56,103 +80,187 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
         });
 
         this._initPager(element);
-        
-        // initial data load
-        this._receiveData();
+        this._initVisibilityReload(element);
+
+        if (this._resource) {
+            // ViewState mode: the enclosing ViewState loads the resource centrally; this
+            // list only subscribes to its slice and renders it
+            this._attachToViewState(element);
+        } else {
+            // standalone: load through the control's own service
+            this._load();
+
+            // an external change of the service's domains re-queries and
+            // flashes, so changes made by other users re-render standalone too
+            const dataChanges = webexpress.webapp.DataChangeSubscription.attachReload(
+                [this._service], () => this._load(), element);
+            if (dataChanges) {
+                (element._wxCleanup = element._wxCleanup || []).push(() => dataChanges.detach());
+            }
+        }
     }
 
     /**
-     * Retrieves data from the REST endpoint and updates the list.
+     * Attaches the list to the enclosing ViewState and renders its
+     * resource slice. The ViewState owns the state, the service and the central
+     * load, so the list becomes a pure view: it subscribes to the slice and
+     * re-renders whenever the ViewState re-queries the resource. The shared ViewState
+     * state also becomes the list's store, so the search and paging binds drive
+     * the same keys every control in the ViewState reads.
+     * @param {HTMLElement} element The host element.
      */
-    _receiveData() {
-        this._progressDiv.style.display = "none";
+    _attachToViewState(element) {
+        const viewStateId = (element.dataset && element.dataset.wxViewstate) || null;
 
-        // abort previous request if present
-        if (this._abortController) {
-            this._abortController.abort("search replaced");
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
+            this._viewState = viewState;
+            this._store = viewState;
+
+            // the data service is the one the bound resource declares, so it is
+            // identified by the resource rather than by a hard-coded name
+            const service = viewState.serviceForResource(this._resource);
+            if (service) {
+                this._service = service;
+                this._restUri = service.baseUri;
+            }
+
+            const unsubscribe = viewState.watch((state) => viewState.slice(this._resource, state), (slice) => this._applySlice(slice));
+            (element._wxCleanup = element._wxCleanup || []).push(unsubscribe);
+
+            // render whatever the ViewState has already loaded for this resource
+            this._applySlice(viewState.slice(this._resource));
+        });
+    }
+
+    /**
+     * Renders a resource slice the ViewState loaded centrally. The slice carries the
+     * items and the total, which the list maps into its rows and its pager,
+     * mirroring the tail of the standalone load.
+     * @param {object} slice The resource slice { items, total, loading, error }.
+     */
+    _applySlice(slice) {
+        slice = slice || {};
+        this._sliceTotal = Number(slice.total) || 0;
+
+        const listUl = this._element.querySelector("ul.wx-list");
+        if (listUl) {
+            listUl.classList.remove("placeholder-glow");
         }
-        this._abortController = new AbortController();
 
-        // safely construct url using document base uri
-        const urlObj = new URL(this._restUri, document.baseURI);
+        const newItems = webexpress.webapp.listModel.mapItems({ items: slice.items || [] });
+        this.setItems(newItems);
 
-        // set query parameters
-        urlObj.searchParams.set("q", this._search || "");
-        urlObj.searchParams.set("wql", this._wql || "");
-        urlObj.searchParams.set("f", this._filter || "");
-        urlObj.searchParams.set("p", String(this._page));
-        urlObj.searchParams.set("l", String(this._pageSize));
-
-        if (this._orderBy) {
-            urlObj.searchParams.set("o", this._orderBy);
-            if (this._orderDir) {
-                urlObj.searchParams.set("d", this._orderDir);
+        if (this._selectable) {
+            let selected = this._items.find((i) => i.id === this._selectedItem?.id) || null;
+            if (!selected && this._items.length > 0) {
+                selected = this._items[0];
+                this._handleSelectionChange(selected, null, true);
+                this._triggerPrimaryAction(selected);
             }
         }
 
-        const fetchUrl = this._restUri.startsWith("http") ? urlObj.href : (urlObj.pathname + urlObj.search);
+        this._syncPagerAndInfo();
+        this._progressDiv.style.visibility = "hidden";
+    }
 
-        fetch(fetchUrl, { signal: this._abortController.signal })
-            .then(res => {
-                if (!res.ok) {
-                    throw new Error("request failed");
-                }
-                return res.json();
-            })
-            .then(response => {
-                // extract paging information from server response
-                this._totalRecords = Number(response.total ?? response.totalCount ?? response.count ?? 0) || 0;
-                this._page = Number(response.page ?? this._page ?? 0) || 0;
-                this._pageSize = Number(response.pageSize ?? this._pageSize ?? 50) || 50;
+    // state accessors backed by the store, so the single source of truth is the
+    // store while the inherited pager and selection logic keeps reading fields
 
-                // emit data arrived event
-                const evt = new CustomEvent(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
-                    detail: { response: response }
-                });
-                this._element.dispatchEvent(evt);
+    get _search() { return this._store.getState().search; }
+    set _search(value) { this._store.setState({ search: value }); }
 
-                // remove placeholder state
-                const listUl = this._element.querySelector("ul.wx-list");
-                if (listUl) {
-                    listUl.classList.remove("placeholder-glow");
-                }
+    get _wql() { return this._store.getState().wql; }
+    set _wql(value) { this._store.setState({ wql: value }); }
 
-                // map response into list items
-                const newItems = this._mapResponseToItems(response);
+    get _filter() { return this._store.getState().filter; }
+    set _filter(value) { this._store.setState({ filter: value }); }
 
-                // update list via base class
-                this.setItems(newItems);
+    get _page() { return this._store.getState().page; }
+    set _page(value) { this._store.setState({ page: value }); }
 
-                if (this._selectable) {
-                    let selected = this._items.find((i) => i.id === this._selectedItem?.id) || null;
-                    if (!selected && this._items.length > 0) {
-                        selected = this._items[0];
-                        this._handleSelectionChange(selected, null, true);
-                        this._triggerPrimaryAction(selected);
-                    }
-                }
+    get _pageSize() { return this._store.getState().pageSize; }
+    set _pageSize(value) { this._store.setState({ pageSize: value }); }
 
-                // update paging display
-                this._syncPagerAndInfo();
-                
-                // notify listeners that data arrived
-                this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
-                    response: response,
-                    page: this._page
-                });
+    get _orderBy() { return this._store.getState().orderBy; }
+    set _orderBy(value) { this._store.setState({ orderBy: value }); }
 
-                // hide progress
-                this._progressDiv.style.visibility = "hidden";
-                this._abortController = null;
-            })
-            .catch(error => {
-                // ignore abort errors, log others
-                if (error.name !== "AbortError") {
-                    console.error("the request could not be completed successfully:", error);
-                }
-                this._progressDiv.style.visibility = "hidden";
-                this._abortController = null;
-            });
+    get _orderDir() { return this._store.getState().orderDir; }
+    set _orderDir(value) { this._store.setState({ orderDir: value }); }
+
+    // in ViewState mode the total comes from the resource slice, not from a top
+    // level state key, so several resources in one ViewState keep separate totals
+    get _totalRecords() { return this._viewState ? this._sliceTotal : this._store.getState().total; }
+    set _totalRecords(value) { this._store.setState({ total: value }); }
+
+    /**
+     * Retrieves data from the REST endpoint through the data service and updates
+     * the list. A superseded query is cancelled by the service, so a stale
+     * response arrives as an abort result and is ignored here.
+     * @returns {Promise<void>} Resolves when the load completes.
+     */
+    async _load() {
+        this._progressDiv.style.display = "none";
+
+        if (!this._service) {
+            return;
+        }
+
+        this._store.setState({ loading: true, error: null });
+
+        const params = webexpress.webapp.listModel.queryParams(this._store.getState());
+        const result = await this._service.query(params);
+
+        if (!result.ok) {
+            // ignore aborts (a newer query replaced this one); report the rest
+            if (result.error.kind !== "abort") {
+                console.error("the request could not be completed successfully:", webexpress.webapp.ServiceResult.describe(result));
+                this._store.setState({ loading: false, error: result.error });
+            }
+            this._progressDiv.style.visibility = "hidden";
+            return;
+        }
+
+        const response = result.data;
+
+        // reduce paging information into the store (single source of truth)
+        this._store.setState(webexpress.webapp.listModel.reduceResponse(this._store.getState(), response));
+
+        // emit data arrived event (kept identical for existing listeners)
+        const evt = new CustomEvent(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
+            detail: { response: response }
+        });
+        this._element.dispatchEvent(evt);
+
+        // remove placeholder state
+        const listUl = this._element.querySelector("ul.wx-list");
+        if (listUl) {
+            listUl.classList.remove("placeholder-glow");
+        }
+
+        // map response into list items and update the view
+        const newItems = webexpress.webapp.listModel.mapItems(response);
+        this.setItems(newItems);
+
+        if (this._selectable) {
+            let selected = this._items.find((i) => i.id === this._selectedItem?.id) || null;
+            if (!selected && this._items.length > 0) {
+                selected = this._items[0];
+                this._handleSelectionChange(selected, null, true);
+                this._triggerPrimaryAction(selected);
+            }
+        }
+
+        // update paging display
+        this._syncPagerAndInfo();
+
+        // notify listeners that data arrived
+        this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, {
+            response: response,
+            page: this._page
+        });
+
+        // hide progress
+        this._progressDiv.style.visibility = "hidden";
     }
 
     /**
@@ -161,50 +269,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
      * @returns {Array<Object>} Normalized items for ListCtrl.
      */
     _mapResponseToItems(response) {
-        const result = [];
-
-        // handle response.items array
-        if (Array.isArray(response?.items)) {
-            for (const it of response.items) {
-                if (typeof it === "string") {
-                    result.push({
-                        id: null,
-                        content: { content: it }
-                    });
-                } else if (it !== null && typeof it === "object") {
-                    // detect optional html template
-                    let htmlEl = null;
-                    if (it.html instanceof Element) {
-                        htmlEl = it.html.cloneNode(true);
-                    } else if (typeof it.html === "string") {
-                        const tmp = document.createElement("span");
-                        tmp.innerHTML = it.html;
-                        htmlEl = tmp.firstElementChild ? tmp : null;
-                    }
-
-                    result.push({
-                        id: it.id || null,
-                        class: it.class || null,
-                        style: it.style || null,
-                        color: it.color || null,
-                        image: it.image || null,
-                        icon: it.icon || null,
-                        uri: it.uri || null,
-                        target: it.target || null,
-                        editable: !!it.editable,
-                        rendererType: it.rendererType || it.type || null,
-                        rendererOptions: it.rendererOptions || {},
-                        content: it.text ?? it.label ?? it.name ?? "",
-                        primaryAction: it.primaryAction || null,
-                        secondaryAction: it.secondaryAction || null,
-                        bind: it.bind || null,
-                        options: Array.isArray(it.options) ? it.options : null
-                    });
-                }
-            }
-        }
-
-        return result;
+        return webexpress.webapp.listModel.mapItems(response);
     }
 
     /**
@@ -213,9 +278,83 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
      * Derived classes can override this method to implement specific behavior.
      */
     update() {
-        if (this._restUri && this._isVisible()) {
-            this._receiveData();
+        if (this._viewState) {
+            this._viewState.reload(this._resource);
+            return;
         }
+        if (this._restUri && this._isVisible()) {
+            this._load();
+        }
+    }
+
+    /**
+     * Dispatches an intent against the list's store and service, mirroring the
+     * dispatch surface of the Data base, so that the search, paging and filter
+     * binds and the dispatch action all feed the same unidirectional loop.
+     * @param {string} name The intent name.
+     * @param {*} payload The intent payload.
+     * @returns {*} The return value of the intent effect, when present.
+     */
+    dispatch(name, payload) {
+        return webexpress.webapp.Intents.dispatch(name, {
+            store: this._store,
+            payload: payload,
+            services: { data: this._service },
+            component: this,
+            viewState: this._viewState,
+            element: this._element
+        });
+    }
+
+    /**
+     * Subscribes to the visibility changes of the enclosing view, so a query that
+     * was deferred while the control was hidden runs when it is shown.
+     * @param {HTMLElement} element - The host element.
+     */
+    _initVisibilityReload(element) {
+        const handler = () => {
+            if (!this._pendingLoad || !this._isVisible()) {
+                return;
+            }
+
+            this._pendingLoad = false;
+            this._load();
+        };
+
+        document.addEventListener(webexpress.webui.Event.CHANGE_VISIBILITY_EVENT, handler);
+        (element._wxCleanup = element._wxCleanup || []).push(
+            () => document.removeEventListener(webexpress.webui.Event.CHANGE_VISIBILITY_EVENT, handler));
+    }
+
+    /**
+     * Loads the list when it is backed by a service and visible. Intent
+     * effects call this after their reducer updated the store.
+     * @remarks
+     * A hidden list is not queried, but the query it would have run is
+     * remembered and issued the moment it is shown. The presentations of one
+     * view - table, list, tile - share a search box and a quickfilter bar, so a
+     * term entered while this one was hidden belongs to it as well; without the
+     * deferral, switching the presentation answers with whatever was on screen
+     * before the filter was typed.
+     * @returns {Promise<void>|undefined} Resolves when the load completes.
+     */
+    load() {
+        if (this._viewState) {
+            return this._viewState.reload(this._resource);
+        }
+
+        if (!this._restUri) {
+            return undefined;
+        }
+
+        if (!this._isVisible()) {
+            this._pendingLoad = true;
+            return undefined;
+        }
+
+        this._pendingLoad = false;
+
+        return this._load();
     }
 
     /**
@@ -224,12 +363,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
      * @param {string} searchType The filter type ("basic" or "wql").
      */
     search(pattern = "", searchType = "basic") {
-        this._search = searchType === "basic" ? pattern : null;
-        this._wql = searchType === "wql" ? pattern : null;
-        this._page = 0;
-        if (this._restUri && this._isVisible()) {
-            this._receiveData();
-        }
+        this.dispatch("list/search", { pattern: pattern, searchType: searchType });
     }
 
     /**
@@ -237,28 +371,19 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
      * @param {string} pattern The filter pattern.
      */
     filter(pattern = "") {
-        this._filter = pattern;
-        this._page = 0;
-
-        if (this._restUri && this._isVisible()) {
-            this._receiveData();
-        }
+        this.dispatch("list/filter", { pattern: pattern });
     }
-    
+
     /**
      * Sets and loads the page.
      * @param {number} page The current page index.
      */
     paging(page = 0) {
-        this._page = page;
-
-        if (this._restUri && this._isVisible()) {
-            this._receiveData();
-        }
+        this.dispatch("list/page", { page: page });
     }
 
     /**
-     * Creates an element and assigns bootstrap classes.
+     * Creates an element and assigns WebExpress classes.
      * @param {string} tag The html tag name.
      * @param {Array<string>} classList The classes to add.
      * @returns {HTMLElement} The created element.
@@ -290,24 +415,13 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
         div.appendChild(bar);
         return div;
     }
-    
+
     /**
      * Initializes or binds a pagination control and an information area.
      * @param {HTMLElement} host The host element to search or attach the pager to.
      */
     _initPager(host) {
-        // find existing pager element based on dataset
-        const paginationId = host.dataset.wxSourcePaging || null;
-        
-        const init = () => {
-            if (paginationId) {
-                this._pagerElement = document.querySelector(paginationId);
-                if (this._pagerElement) {
-                    this._pagerCtrl = webexpress.webui.Controller.getInstanceByElement(this._pagerElement);
-                }
-            }
-            this._syncPagerAndInfo();
-        };
+        const init = () => this._syncPagerAndInfo();
 
         if (document.readyState === "loading") {
             document.addEventListener("DOMContentLoaded", () => {
@@ -316,14 +430,46 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
         } else {
             init();
         }
-        
+
         // create info div to show totals and current page details
         this._infoDiv = document.createElement("div");
         this._infoDiv.className = "text-muted small";
         this._infoDiv.style.marginTop = "0.25rem";
         this._infoDiv.textContent = "";
-        
+
         host.appendChild(this._infoDiv);
+    }
+
+    /**
+     * Resolves the pagination control the list reports its page count to, and
+     * remembers it once it exists.
+     * @remarks
+     * The pager is a sibling control rather than a child, and the controller
+     * builds a view's controls in document order - the pager sits below the
+     * list, so its instance does not exist yet while the list is being
+     * constructed. Resolving once therefore left the reference empty for good:
+     * the list wrote its page count into the pager's dataset, nothing read it,
+     * and the pager kept offering the single page it had rendered at startup.
+     * @returns {object|null} The pagination control, or null while there is none.
+     */
+    _resolvePager() {
+        const selector = (this._element && this._element.dataset)
+            ? (this._element.dataset.wxSourcePaging || null)
+            : null;
+
+        if (!selector) {
+            return null;
+        }
+
+        if (!this._pagerElement) {
+            this._pagerElement = document.querySelector(selector);
+        }
+
+        if (this._pagerElement && !this._pagerCtrl) {
+            this._pagerCtrl = webexpress.webui.Controller.getInstanceByElement(this._pagerElement);
+        }
+
+        return this._pagerCtrl;
     }
 
     /**
@@ -331,18 +477,22 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
      * Falls back to native rendering if external control is not available.
      */
     _syncPagerAndInfo() {
+        this._resolvePager();
+
         const total = Number(this._totalRecords) || 0;
         let totalPages = 1;
-        
+
         if (this._pageSize > 0) {
             totalPages = Math.max(1, Math.ceil(total / this._pageSize));
         }
 
-        // clamp current page to available range
+        // clamp current page to available range. the upper bound only applies
+        // when the total is known, so a page seeded through the data-wx-state
+        // island survives until the first response reports the real total
         if (this._page < 0) {
             this._page = 0;
         }
-        if (this._page >= totalPages) {
+        if (total > 0 && this._page >= totalPages) {
             this._page = totalPages - 1;
         }
 
@@ -376,12 +526,12 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
             }
         }
 
-        // update textual info using template literals
+        // update textual info
         if (this._infoDiv) {
-            this._infoDiv.textContent = `Page ${currentPage + 1} of ${totalPages} / ${itemsOnPage} of ${total} items`;
+            this._infoDiv.textContent = webexpress.webapp.pagingInfo(this, currentPage, totalPages, itemsOnPage, total);
         }
     }
-    
+
     /**
      * Handles page changes coming from external or internal pagination controls.
      * @param {number} targetPage Zero-based page index.
@@ -393,7 +543,7 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
         if (page < 0) {
             page = 0;
         }
-        
+
         if (page >= totalPages) {
             page = totalPages - 1;
         }
@@ -401,10 +551,10 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
         this._page = page;
 
         if (this._infoDiv) {
-            this._infoDiv.textContent = `Page ${this._page + 1} of ${totalPages} - loading…`;
+            this._infoDiv.textContent = webexpress.webapp.pagingInfoLoading(this, this._page, totalPages);
         }
 
-        this._receiveData();
+        this.load();
     }
 };
 

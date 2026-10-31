@@ -8,7 +8,6 @@ namespace WebExpress.WebApp.Test.WebRestApi
     /// <summary>
     /// Provides unit tests for verifying the behavior of the RestApiAvatarDropdown class.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestRestApiAvatarDropdown
     {
         /// <summary>

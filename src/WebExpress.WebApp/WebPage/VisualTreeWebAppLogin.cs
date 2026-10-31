@@ -1,13 +1,15 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using WebExpress.WebApp.WebApiControl;
 using WebExpress.WebApp.WebControl;
+using WebExpress.WebApp.WebData;
+using WebExpress.WebApp.WebTheme;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebComponent;
 using WebExpress.WebCore.WebEndpoint;
 using WebExpress.WebCore.WebHtml;
-using WebExpress.WebCore.WebIcon;
 using WebExpress.WebCore.WebPage;
 using WebExpress.WebCore.WebTheme;
 using WebExpress.WebCore.WebUri;
@@ -17,7 +19,7 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebPage
 {
     /// <summary>
-    /// Represents the visual tree for login of the web application.
+    /// The page layout (visual tree) used for the WebApp's login screen, a reduced arrangement without the usual navigation.
     /// </summary>
     public class VisualTreeWebAppLogin : VisualTreeControl, IVisualTreeWebApp
     {
@@ -46,23 +48,27 @@ namespace WebExpress.WebApp.WebPage
 
         /// <summary>
         /// Gets the range for the path specification.
+        /// The login view does not show a breadcrumb, so this is always <c>null</c>.
         /// </summary>
-        public ControlBreadcrumb Breadcrumb => throw new NotImplementedException();
+        public ControlBreadcrumb Breadcrumb => null;
 
         /// <summary>
         /// Gets the area for prologue.
+        /// The login view does not show a prologue, so this is always <c>null</c>.
         /// </summary>
-        public ControlWebAppPrologue Prologue => throw new NotImplementedException();
+        public ControlWebAppPrologue Prologue => null;
 
         /// <summary>
         /// Gets the sidebar control.
+        /// The login view does not show a sidebar, so this is always <c>null</c>.
         /// </summary>
-        public IControlWebAppSidebar Sidebar => throw new NotImplementedException();
+        public IControlWebAppSidebar Sidebar => null;
 
         /// <summary>
         /// Gets the content control.
+        /// The login view renders its content directly in <see cref="Render"/>; this is always <c>null</c>.
         /// </summary>
-        public new IControlWebAppContent Content => throw new NotImplementedException();
+        public new IControlWebAppContent Content => null;
 
         /// <summary>
         /// Gets the footer control.
@@ -76,7 +82,7 @@ namespace WebExpress.WebApp.WebPage
         public ControlPopupNotification NotificationPopup { get; protected set; } = new ControlPopupNotification("wx-notificationpopup");
 
         /// <summary>
-        /// Gets or sets a delegate that returns the collection of domain names associated with 
+        /// Gets or sets a delegate that returns the collection of domain names associated with
         /// the current context.
         /// </summary>
         public Func<IEnumerable<string>> Domains { get; set; }
@@ -113,14 +119,18 @@ namespace WebExpress.WebApp.WebPage
             var html = new HtmlElementRootHtml();
             var body = new HtmlElementSectionBody();
             var renderContext = new RenderControlContext(context.RenderContext);
-            var login = new ControlRestLogin()
+            var login = new ControlDataLogin()
             {
-                RestUri = _ => LoginUri,
                 Padding = _ => new PropertySpacingPadding(PropertySpacing.Space.Five)
-            };
+            }
+                .Service("data", svc => svc.Uri(_ => LoginUri).Method(HttpMethod.Post));
 
             // head
-            html.Head.Title = I18N.Translate(context.Request, Title);
+            // assistive technology picks pronunciation rules from the document language
+            html.AddUserAttribute("lang", context.Request?.Culture?.Name);
+            // the login stands in for whatever page was asked for, which usually leaves no title
+            // of its own; the tab and the history still have to say what is shown
+            html.Head.Title = I18N.Translate(context.Request, string.IsNullOrWhiteSpace(Title) ? "webexpress.webapp:login.title" : Title);
             html.Head.Favicons = Favicons;
             html.Head.Base = Base?.ToString();
             html.Head.Styles = Styles;
@@ -131,18 +141,15 @@ namespace WebExpress.WebApp.WebPage
 
             // body
             Header.AppTitle.SetTitle(html.Head.Title);
-            if (Theme?.ThemeMode == ThemeMode.Dark)
-            {
-                html.Body.AddUserAttribute("data-bs-theme", "dark");
-            }
-            if (IconTheme == TypeIconTheme.Light)
-            {
-                html.AddUserAttribute("data-icon-theme", "light");
-            }
+
+            // the marker goes on the root, as on every other page: the client's dark mode
+            // switch only ever rewrites the root, and a marker on the body would outrank it
+            ThemePreferences.ApplyColorScheme(context.RenderContext, html, Theme);
             html.Body.Add(MessageQueueUri);
             html.Body.Add(Header.Render(renderContext, this));
             html.Body.Add(Toast.Render(renderContext, this));
-            html.Body.Add(new HtmlElementTextContentDiv(login.Render(renderContext, this))
+            // the form is the content of the page, so it is the main landmark a reader jumps to
+            html.Body.Add(new HtmlElementSectionMain(login.Render(renderContext, this))
             {
                 Id = "login",
                 Class = "d-flex h-100"

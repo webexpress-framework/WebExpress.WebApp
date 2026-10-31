@@ -13,6 +13,16 @@
     pointer-events: auto;
 }
 
+/* Docked into a host of its own - a dialog footer bar, say. Who is here is a fact about the
+   whole surface, so the bar is laid out by what it was docked into rather than floating over
+   the shared area. */
+.wx-collaborative-presence.wx-collaborative-presence-docked {
+    position: static;
+    top: auto;
+    right: auto;
+    z-index: auto;
+}
+
 .wx-collaborative-chip {
     display: inline-flex;
     align-items: center;
@@ -90,6 +100,43 @@
     color: #fff;
     white-space: nowrap;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+/* Another user's selection in a shared document, laid under the text it covers. */
+.wx-collaborative-selection {
+    position: absolute;
+    opacity: 0.2;
+    pointer-events: none;
+    border-radius: 2px;
+}
+
+/* Local changes the merge could not keep are offered back rather than dropped. */
+.wx-collaborative-conflict {
+    position: absolute;
+    left: 0.5rem;
+    right: 0.5rem;
+    bottom: 0.5rem;
+    z-index: 12;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--wx-warning-border-subtle);
+    border-radius: var(--wx-border-radius);
+    background: var(--wx-warning-bg-subtle);
+    color: var(--wx-warning-text-emphasis);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.wx-collaborative-conflict > span {
+    flex: 1 1 12rem;
+}
+
+/* Changes wait for the connection; the control stays fully usable meanwhile. */
+[data-wx-collaboration="offline"] {
+    outline: 1px dashed var(--wx-warning);
+    outline-offset: 2px;
 }
 
 @keyframes wx-collaborative-caret-blink {

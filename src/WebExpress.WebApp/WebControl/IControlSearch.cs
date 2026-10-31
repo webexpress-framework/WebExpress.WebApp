@@ -11,7 +11,7 @@ namespace WebExpress.WebApp.WebControl
     /// prompt, normalizes their payloads and re-emits a unified
     /// webexpress.webui.Event.CHANGE_FILTER_EVENT.
     /// </summary>
-    public interface IControlSearch : IControl, IControlRest
+    public interface IControlSearch : IControl, IControlData
     {
         /// <summary>
         /// Gets the content of the control (e.g., save button).

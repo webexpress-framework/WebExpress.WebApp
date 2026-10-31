@@ -6,7 +6,7 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Header for a web app.
+    /// Renders the header bar at the top of a WebApp page, holding the title, navigation, help, and more.
     /// </summary>
     public class ControlWebAppHeader : Control, IControlWebAppHeader
     {
@@ -16,7 +16,7 @@ namespace WebExpress.WebApp.WebControl
         public new virtual PropertyColorNavbar TextColor
         {
             get => (PropertyColorNavbar)GetPropertyObject();
-            set => SetProperty(value, () => value?.ToClass(), () => value?.ToStyle());
+            set => SetProperty(value, (renderContext) => value?.ToClass(), (renderContext) => value?.ToStyle());
         }
 
         /// <summary>
@@ -25,7 +25,7 @@ namespace WebExpress.WebApp.WebControl
         public virtual TypeFixed Fixed
         {
             get => (TypeFixed)GetProperty(TypeFixed.None);
-            set => SetProperty(value, () => value.ToClass());
+            set => SetProperty(value, (renderContext) => value.ToClass());
         }
 
         /// <summary>
@@ -34,7 +34,7 @@ namespace WebExpress.WebApp.WebControl
         public virtual TypeSticky Sticky
         {
             get => (TypeSticky)GetProperty(TypeSticky.None);
-            set => SetProperty(value, () => value.ToClass());
+            set => SetProperty(value, (renderContext) => value.ToClass());
         }
 
         /// <summary>
@@ -62,6 +62,13 @@ namespace WebExpress.WebApp.WebControl
         /// Gets or sets the quick create.
         /// </summary>
         public IControlWebAppHeaderQuickCreate QuickCreate { get; } = new ControlWebAppHeaderQuickCreate("wx-header-quickcreate")
+        {
+        };
+
+        /// <summary>
+        /// Gets or sets the search of the application.
+        /// </summary>
+        public IControlWebAppHeaderSearch Search { get; } = new ControlWebAppHeaderSearch("wx-header-search")
         {
         };
 
@@ -115,7 +122,7 @@ namespace WebExpress.WebApp.WebControl
         {
             var role = Role?.Invoke(renderContext);
 
-            var content = new ControlPanelFlex()
+            var content = new ControlFlex()
             {
                 Layout = _ => TypeLayoutFlex.Default,
                 Align = _ => TypeAlignFlex.Center
@@ -124,6 +131,7 @@ namespace WebExpress.WebApp.WebControl
              .Add(AppTitle)
              .Add(AppNavigation)
              .Add(QuickCreate)
+             .Add(Search)
              .Add(new ControlPanel() { Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Auto, PropertySpacing.Space.None) })
              .Add(Help)
              .Add(Notifications)
@@ -133,8 +141,8 @@ namespace WebExpress.WebApp.WebControl
             return new HtmlElementSectionHeader(content.Render(renderContext, visualTree))
             {
                 Id = Id,
-                Class = Css.Concatenate("navbar", GetClasses()),
-                Style = Style.Concatenate("display: block;", GetStyles()),
+                Class = Css.Concatenate("navbar", GetClasses(renderContext)),
+                Style = Style.Concatenate("display: block;", GetStyles(renderContext)),
                 Role = role
             };
         }

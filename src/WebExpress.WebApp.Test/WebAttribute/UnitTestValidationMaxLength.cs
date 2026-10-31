@@ -7,7 +7,6 @@ namespace WebExpress.WebApp.Test.WebAttribute
     /// Unit tests for the max length validation attribute.
     /// Ensures that strings exceeding the maximum length are rejected.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestValidationMaxLength
     {
         /// <summary>

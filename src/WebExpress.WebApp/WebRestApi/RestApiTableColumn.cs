@@ -38,7 +38,7 @@ namespace WebExpress.WebApp.WebRestApi
         public string Icon { get; set; }
 
         /// <summary>
-        /// Gets or sets the width of the table column in percentage, null for auto.
+        /// Gets or sets the width of the table column in pixels, null for auto.
         /// </summary>
         [JsonPropertyName("width")]
         public uint? Width { get; set; }

@@ -5,8 +5,8 @@ webexpress.webui.DialogPanels.register("workflow-guard-management", {
         container.innerHTML = `
             <div class="border rounded p-2 mb-3 bg-light" id="list-container" style="min-height:150px; max-height:300px; overflow-y:auto;"></div>
             <div class="d-flex gap-2">
-                <select class="form-select form-select-sm" id="item-select" disabled><option>loading...</option></select>
-                <button class="btn btn-sm btn-outline-secondary" id="add-btn" disabled type="button">Add Guard</button>
+                <select class="form-select form-select-sm" id="item-select" disabled><option>${this._t("picker.loading")}</option></select>
+                <button class="btn btn-sm btn-outline-secondary" id="add-btn" disabled type="button">${this._t("transition.guards.add")}</button>
             </div>
         `;
     },
@@ -23,7 +23,7 @@ webexpress.webui.DialogPanels.register("workflow-guard-management", {
             listContainer.innerHTML = "";
             
             if (modal.localData.length === 0) {
-                listContainer.innerHTML = `<span class="text-muted small">no guards configured.</span>`;
+                listContainer.innerHTML = `<span class="text-muted small">${this._t("transition.guards.empty")}</span>`;
                 return;
             }
 
@@ -31,13 +31,15 @@ webexpress.webui.DialogPanels.register("workflow-guard-management", {
                 const row = document.createElement("div");
                 row.className = "d-flex align-items-center mb-1 ms-3";
                 
-                const iconClass = (node.type === "AND" || node.type === "OR") ? "fas fa-folder text-warning" : "fas fa-shield-alt text-secondary";
-                row.innerHTML = `<i class="${iconClass} me-2"></i><span class="flex-grow-1 small">${node.label}</span>`;
+                const iconClass = (node.type === "AND" || node.type === "OR") ? "wx-icon-light wx-icon-light-folder text-warning" : "wx-icon-light wx-icon-light-shield text-secondary";
+                row.innerHTML = `<i class="${iconClass} me-2"></i><span class="flex-grow-1 small"></span>`;
+                row.lastChild.textContent = node.label;
                 
                 const del = document.createElement("span");
                 del.className = "text-danger ms-2 fw-bold";
                 del.style.cursor = "pointer";
                 del.textContent = "x";
+                del.title = webexpress.webui.I18N.translate("webexpress.webui:remove");
                 del.onclick = () => {
                     const idx = parentArr.indexOf(node);
                     if (idx !== -1) {
@@ -84,9 +86,9 @@ webexpress.webui.DialogPanels.register("workflow-guard-management", {
         renderList();
 
         if (ctx.fetchUri !== "") {
-            fetch(ctx.fetchUri)
+            webexpress.webapp.ServiceRegistry.request(ctx.fetchUri)
                 .then((res) => { 
-                    return res.json(); 
+                    return res.data;
                 })
                 .then((data) => {
                     modal.availableTemplates = Array.isArray(data.items) ? data.items : data;
@@ -95,7 +97,7 @@ webexpress.webui.DialogPanels.register("workflow-guard-management", {
                     newAddBtn.disabled = false;
                     
                     if (modal.availableTemplates.length === 0) {
-                        select.innerHTML = "<option>no guards available</option>";
+                        select.innerHTML = `<option>${this._t("picker.empty")}</option>`;
                         newAddBtn.disabled = true;
                     } else {
                         for (let i = 0; i < modal.availableTemplates.length; i++) {
@@ -108,7 +110,7 @@ webexpress.webui.DialogPanels.register("workflow-guard-management", {
                     }
                 }).catch((err) => {
                     console.error("failed to load guards:", err);
-                    select.innerHTML = "<option>error loading</option>";
+                    select.innerHTML = `<option>${this._t("picker.error")}</option>`;
                 });
         }
 
@@ -121,6 +123,9 @@ webexpress.webui.DialogPanels.register("workflow-guard-management", {
                 }
             });
         }
+    },
+    _t: function(key) {
+        return webexpress.webui.I18N.translate("webexpress.webui:workflow.editor." + key);
     },
     validate: function(modal) { 
         return true; 

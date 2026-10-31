@@ -320,11 +320,11 @@ namespace WebExpress.WebApp.Test
         {
             return (type ?? string.Empty).ToLowerInvariant() switch
             {
-                "story" => "fas fa-bookmark",
-                "task" => "fas fa-check",
-                "bug" => "fas fa-bug",
-                "spike" => "fas fa-bolt",
-                _ => "fas fa-circle"
+                "story" => "wx-icon-light wx-icon-light-bookmark",
+                "task" => "wx-icon-light wx-icon-light-check",
+                "bug" => "wx-icon-light wx-icon-light-bug",
+                "spike" => "wx-icon-light wx-icon-light-bolt",
+                _ => "wx-icon-light wx-icon-light-circle"
             };
         }
 

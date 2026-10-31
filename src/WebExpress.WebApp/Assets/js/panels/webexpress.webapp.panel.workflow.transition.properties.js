@@ -1,18 +1,21 @@
 // Transition Properties Panel
 webexpress.webui.DialogPanels.register("workflow-transition-properties", {
     id: "workflow-transition-properties-page",
-    title: "General",
-    iconClass: "fas fa-sliders-h",
+    title: webexpress.webui.I18N.translate("webexpress.webui:workflow.editor.properties.general"),
+    iconClass: "wx-icon-light wx-icon-light-sliders-h",
     render: function(container, modal) {
         container.innerHTML = `
             <div class="p-3">
-                <div class="mb-2"><label class="form-label small fw-bold">Label*</label><input type="text" id="inp-label" class="form-control form-control-sm"></div>
-                <div class="mb-2"><label class="form-label small fw-bold">Form</label><input type="text" id="inp-form" class="form-control form-control-sm"></div>
-                <div class="mb-2"><label class="form-label small fw-bold">Description</label><input type="text" id="inp-desc" class="form-control form-control-sm"></div>
-                <div class="mb-2"><label class="form-label small fw-bold">Color</label><input type="color" id="inp-color" class="form-control form-control-sm form-control-color"></div>
-                <div class="mb-2"><label class="form-label small fw-bold">Dash Array</label><input type="text" id="inp-dash" class="form-control form-control-sm"></div>
+                <div class="mb-2"><label class="form-label small fw-bold">${this._t("transition.label")}*</label><input type="text" id="inp-label" class="form-control form-control-sm"></div>
+                <div class="mb-2"><label class="form-label small fw-bold">${this._t("transition.form")}</label><input type="text" id="inp-form" class="form-control form-control-sm"></div>
+                <div class="mb-2"><label class="form-label small fw-bold">${this._t("transition.description")}</label><input type="text" id="inp-desc" class="form-control form-control-sm"></div>
+                <div class="mb-2"><label class="form-label small fw-bold">${this._t("transition.color")}</label><input type="color" id="inp-color" class="form-control form-control-sm form-control-color"></div>
+                <div class="mb-2"><label class="form-label small fw-bold">${this._t("transition.dasharray")}</label><input type="text" id="inp-dash" class="form-control form-control-sm"></div>
             </div>
         `;
+    },
+    _t: function(key) {
+        return webexpress.webui.I18N.translate("webexpress.webui:workflow.editor." + key);
     },
     onShow: function(modal) {
         const edge = modal.context.edge;

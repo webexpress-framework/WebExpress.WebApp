@@ -2,16 +2,34 @@
  * REST form controller. Replaces a traditional form POST with a JSON REST request, performs
  * client-side validation.
  *
+ * The form is the reference of the saving side of the control contract (see
+ * WebExpress.WebUI/docs/js/contract.md): it tells whether its fields hold unsaved changes
+ * (dirty, markPristine, reset), validates every field in the shape of the field contract -
+ * a control inside it adds its own rules to the native ones - and saves through save(),
+ * which announces the save beforehand, resolves with the normalized result and reports a
+ * failure on the data error event.
+ *
+ * The form decorates the markup the server rendered: its fields, its header and its buttons
+ * stay where they are. What the control adds is rendered from the state - the error list,
+ * the confirmation, the prolog and the delete confirmation at the top of the form body - and
+ * the server rendered children are placed around it unchanged. The marks of invalid fields
+ * and the lock of the fields while a request is out are applied to that markup after every
+ * render, since a tree of its own cannot describe them.
+ *
  * The following events are triggered:
  * - webexpress.webui.Event.DATA_REQUESTED_EVENT
  * - webexpress.webui.Event.TASK_START_EVENT
  * - webexpress.webui.Event.TASK_FINISH_EVENT
  * - webexpress.webui.Event.DATA_ARRIVED_EVENT
  * - webexpress.webui.Event.CHANGE_VALUE_EVENT
+ * - webexpress.webui.Event.CHANGE_VALIDITY_EVENT
+ * - webexpress.webui.Event.BEFORE_SAVE_EVENT
+ * - webexpress.webui.Event.SAVED_EVENT
+ * - webexpress.webui.Event.DATA_ERROR_EVENT
  * - webexpress.webui.Event.UPLOAD_SUCCESS_EVENT
  * - webexpress.webui.Event.UPLOAD_ERROR_EVENT
  */
-webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
+webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
     /**
      * Create a new RestFormCtrl instance.
      * Configuration is read strictly from data-attributes on the form element.
@@ -19,17 +37,50 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
      * @param {HTMLFormElement} element The form element to enhance.
      */
     constructor(element) {
-        super(element);
+        const ds = element.dataset;
 
-        const ds = this._element.dataset;
+        // data service used for the load and the submit; the form shapes its own
+        // requests (see restFormModel) and routes them through the service. the
+        // endpoint is authored in C# through the wx-service island, and the Data
+        // base aborts the service on teardown.
+        const services = webexpress.webapp.ServiceRegistry.fromElement(element);
+
+        // canonical ui state: a single source of truth for the transient flags and
+        // for what the form shows above its fields, seeded from the optional
+        // wx-state island.
+        const initialState = Object.assign({
+            loading: false,
+            submitting: false,
+            mode: "new",
+            // the messages of the form-level error list
+            errors: [],
+            // the invalid fields { field, message }; a field is its element, or the
+            // name the server reported
+            fieldErrors: [],
+            // the confirmation and the prolog, as html the server authored
+            confirm: null,
+            prolog: null,
+            // the pending delete confirmation { item, value }
+            deleteConfirm: null
+        }, webexpress.webapp.Data.readState(element));
+
+        super(element, { state: initialState, services });
+
+        this._service = this.useService("data");
+
+        this._attachViewState(element);
+
         const parseBool = (val, defaultVal) => {
             return val === "true" ? true : (val === "false" ? false : defaultVal);
         };
 
         this.options = {
             id: ds.id || null,
-            api: ds.uri || ds.url || ds.api || null,
-            method: (ds.method || this._element.method || "POST").toUpperCase(),
+            api: this._service ? this._service.baseUri : null,
+            // read the method attribute rather than the idl property, which reports
+            // the html default of "get" when the attribute is absent and would make
+            // the post fallback unreachable
+            method: (ds.method || element.getAttribute("method") || "POST").toUpperCase(),
             headers: {},
             json: parseBool(ds.json, true),
             validateOnSubmit: parseBool(ds.validateOnSubmit, true),
@@ -44,7 +95,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
         this.mode = ["new", "edit", "delete"].includes(mode) ? mode : (this.options.id ? "edit" : "new");
 
         // cleanup attributes
-        ["data-api", "data-method", "data-json", "data-validate-on-submit", "data-show-inline-errors", "data-mode"]
+        ["data-method", "data-json", "data-validate-on-submit", "data-show-inline-errors", "data-mode"]
             .forEach((attr) => {
                 this._element.removeAttribute(attr);
             });
@@ -57,112 +108,109 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
                 this.options.headers["Content-Type"] = "application/json; charset=utf-8";
             }
         }
-        
+
         this._element.classList.add("wx-restform");
 
-        this._submitting = false;
-        this._loading = false;
-        this._fieldErrorMap = new Map();
         this._confirmHtml = null;
 
-        // structural references
-        this._formErrorContainer = null;
-        this._confirmContainer = null;
-        this._formPrologContainer = null;
-        this._deleteConfirmContainer = null;
-
-        // confirmation state
-        this._confirmItem = null;
+        // the marks applied to invalid fields, by field element
+        this._markers = new Map();
+        // the elements the lock disabled, which are the only ones it enables again
+        this._locked = new Set();
+        // the submit button a pending delete confirmation holds back
+        this._gated = null;
         this._confirmInput = null;
 
-        this._confirmTimer = null;
+        // the validity of the fields last announced; a form starts out valid
+        this._valid = true;
+        // what the fields held when the form was rendered, loaded or saved
+        this._pristinePayload = null;
+        this._pristineKey = null;
+
         this._onSubmitBound = this._onSubmit.bind(this);
 
-        this._init();
+        if (this._init() !== false) {
+            this.mount();
+            this.markPristine();
+            this.load();
+        }
     }
 
     /**
-     * Initialize control: attach event listeners and trigger data loading if configured.
-     * Ensures the correct DOM order of structural elements.
+     * Wires the form to an enclosing ViewState when it was authored with
+     * Resource<T>(). A successful submit then re-queries the bound resource so a
+     * ViewState-bound list or table re-renders with the created or edited record,
+     * rather than relying only on the upload success and data arrived events. A
+     * form without a resource binding stays standalone.
+     * @param {HTMLElement} element - the host element carrying the binding.
+     */
+    _attachViewState(element) {
+        this._viewState = null;
+        this._viewStateResource = element.getAttribute("data-wx-model-query")
+            || element.getAttribute("data-wx-resource")
+            || null;
+
+        if (!this._viewStateResource) {
+            return;
+        }
+
+        const viewStateId = element.getAttribute("data-wx-viewstate") || null;
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
+            this._viewState = viewState;
+        });
+    }
+
+    // transient ui state accessors backed by the store, so the single source of
+    // truth is the store while the existing logic keeps reading fields
+
+    get _loading() { return this._store.getState().loading; }
+    set _loading(value) { this._store.setState({ loading: value }); }
+
+    get _submitting() { return this._store.getState().submitting; }
+    set _submitting(value) { this._store.setState({ submitting: value }); }
+
+    get mode() { return this._store.getState().mode; }
+    set mode(value) { this._store.setState({ mode: value }); }
+
+    /**
+     * A form holds what the user is typing, so a change made elsewhere does not reload
+     * it; the user sees it on the next opening of the form.
+     * @returns {boolean} Always false.
+     */
+    _reloadsOnDataChange() {
+        return false;
+    }
+
+    /**
+     * Reads the structure of the server rendered form: the body the banners lead (the
+     * dialog body of a form in a dialog, the form itself otherwise) and the children
+     * the view places unchanged. A subclass reads its own structure on top.
+     * @returns {boolean} False when the form must not be set up, true otherwise.
      */
     _init() {
         this._element.addEventListener("submit", this._onSubmitBound, true);
         this._initConfirm();
 
-        // ensure strict order: error -> confirm -> prolog.
-        this._ensureContainer("wx-restform-error-container", "_formErrorContainer");
-        this._ensureContainer("wx-restform-confirm", "_confirmContainer", ["alert", "alert-success"], this._formErrorContainer);
-        this._ensureContainer("wx-restform-prolog-container", "_formPrologContainer", [], this._confirmContainer);
+        const elementChildren = (node) => Array.from(node.childNodes || []).filter((child) => child.nodeType === 1);
 
-        const headerEl = this._element.querySelector(".modal-body");
-        const main = headerEl ? headerEl.querySelector("main") : null;
+        this._hostChildren = elementChildren(this._element);
+        this._body = this._hostChildren.find((child) => child.classList.contains("modal-body")) || this._element;
+        this._bodyChildren = this._body === this._element ? this._hostChildren : elementChildren(this._body);
+
+        const main = this._body !== this._element ? this._body.querySelector(".wx-form-main") : null;
         if (main) {
-            main.style.display = this.mode === "delete" ? "none" : "block";
-        }
-        this.load();
-    }
-
-    /**
-     * Helper to create or get a container and place it correctly in the DOM sequence.
-     * @param {string} className CSS class for the container.
-     * @param {string} propertyName Name of the property on 'this' to store the reference.
-     * @param {string[]} additionalClasses Optional additional CSS classes.
-     * @param {HTMLElement} previousSiblingRef The element after which this container should be placed.
-     */
-    _ensureContainer(className, propertyName, additionalClasses = [], previousSiblingRef = null) {
-        let el = this._element.querySelector(`.${className}`);
-        if (!el) {
-            el = document.createElement("div");
-            el.className = className;
-            if (additionalClasses.length) {
-                el.classList.add(...additionalClasses);
-            }
-            if (className.includes("confirm") || className.includes("prolog")) {
-                el.style.display = "none";
-            }
-        }
-
-        const container = this._element.querySelector(".modal-body") || this._element;
-
-        // logic to ensure correct position
-        const needsMove = el.parentNode !== container ||
-            (previousSiblingRef && el.previousElementSibling !== previousSiblingRef) ||
-            (!previousSiblingRef && container.firstChild !== el);
-
-        if (needsMove) {
-            if (el.parentNode) {
-                el.parentNode.removeChild(el);
-            }
-            this._insertAfter(container, el, previousSiblingRef);
-        }
-
-        this[propertyName] = el;
-    }
-
-    /**
-     * Helper to insert an element after a reference element.
-     * @param {HTMLElement} parent The container element.
-     * @param {HTMLElement} newNode The new node to insert.
-     * @param {HTMLElement} referenceNode The node to insert after. If null, inserts at start.
-     */
-    _insertAfter(parent, newNode, referenceNode) {
-        if (!parent || !newNode) {
-            return;
-        }
-
-        if (referenceNode && referenceNode.parentNode === parent) {
-            if (referenceNode.nextSibling) {
-                parent.insertBefore(newNode, referenceNode.nextSibling);
+            if (this.mode === "delete") {
+                main.style.display = "none";
             } else {
-                parent.appendChild(newNode);
-            }
-        } else {
-            if (parent.firstChild) {
-                parent.insertBefore(newNode, parent.firstChild);
-            } else {
-                parent.appendChild(newNode);
+                // the inline value is cleared rather than set to "block", so how the fields are
+                // laid out stays the stylesheet's decision - a form whose body is one filling
+                // surface needs a flex column here, and an inline display outranks every rule
+                // that could say so
+                main.style.removeProperty("display");
             }
         }
+
+        return true;
     }
 
     /**
@@ -177,21 +225,264 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
+     * Describes the form: the banners at the top of its body, ahead of the server
+     * rendered content, which keeps its nodes.
+     * @param {object} state The current state.
+     * @returns {Array<object>} The virtual node tree of the form.
+     */
+    render(state) {
+        const body = [this._renderBanners(state), this._renderContent(state)];
+
+        if (this._body === this._element) {
+            return body;
+        }
+
+        return this._hostChildren.map((child) => child === this._body
+            ? webexpress.webui.Renderer.adopt(child, null, body)
+            : this._renderHostChild(state, child));
+    }
+
+    /**
+     * Describes the banners in their order: error, confirmation, prolog and the delete
+     * confirmation.
+     * @param {object} state The current state.
+     * @returns {Array<object>} The banner virtual nodes.
+     */
+    _renderBanners(state) {
+        const h = webexpress.webui.h;
+        const errors = Array.from(new Set(state.errors.filter(Boolean)));
+
+        return [
+            h("div", { key: "error", class: "wx-restform-error-container" },
+                errors.length > 0 && h("div", { class: "wx-restform-error alert alert-danger" },
+                    h("p", null, this._i18n("webexpress.webapp:form.validation.errors")),
+                    h("ul", null, errors.map((message) => h("li", null, String(message)))))),
+            h("div", {
+                key: "confirm",
+                class: "wx-restform-confirm alert alert-success",
+                style: { display: state.confirm ? "block" : "none" },
+                html: state.confirm || ""
+            }),
+            h("div", {
+                key: "prolog",
+                class: "wx-restform-prolog-container",
+                style: { display: state.prolog ? "" : "none" },
+                html: state.prolog || ""
+            }),
+            state.deleteConfirm !== null && this._renderDeleteConfirm(state.deleteConfirm)
+        ];
+    }
+
+    /**
+     * Describes the delete confirmation: the item to type and the field that holds back
+     * the submit until it matches.
+     * @param {object} confirm The pending confirmation { item, value }.
+     * @returns {object} The confirmation virtual node.
+     */
+    _renderDeleteConfirm(confirm) {
+        const h = webexpress.webui.h;
+        const typed = confirm.value.trim();
+        const mismatch = typed.length > 0 && typed !== confirm.item;
+
+        return h("div", { key: "delete", class: "wx-restform-delete-confirm" },
+            h("div", {
+                role: "status",
+                html: this._i18n("webexpress.webapp:delete.confirmation.prompt")
+                    .replace("{item}", `<strong>${this._escapeHtml(confirm.item)}</strong>`)
+            }),
+            h("input", {
+                type: "text",
+                class: "form-control",
+                placeholder: confirm.item,
+                autocomplete: "off",
+                "aria-label": this._i18n("webexpress.webapp:delete.confirmation.input.aria-label", "Type {item} to confirm deletion.")
+                    .replace("{item}", confirm.item),
+                value: confirm.value,
+                ref: (el) => { this._confirmInput = el; },
+                on: { input: this._onConfirmInput }
+            }),
+            h("div", { class: "text-danger", style: { display: mismatch ? "" : "none" } },
+                mismatch ? this._i18n("webexpress.webapp:delete.confirmation.mismatch") : ""));
+    }
+
+    _onConfirmInput = () => {
+        const confirm = this.state.deleteConfirm;
+        if (confirm !== null && this._confirmInput) {
+            this.setState({ deleteConfirm: Object.assign({}, confirm, { value: this._confirmInput.value }) });
+        }
+    };
+
+    /**
+     * Describes the server rendered content of the body, which keeps its nodes. A field
+     * that carries an error mark sits in the wrapper of the mark.
+     * @param {object} state The current state.
+     * @returns {Array<object>} The adopting virtual nodes.
+     */
+    _renderContent(state) {
+        return this._bodyChildren.map((child) => webexpress.webui.Renderer.adopt(this._slotOf(child)));
+    }
+
+    /**
+     * Describes a child of a form in a dialog other than its body, such as the header or
+     * the footer; it keeps its node and its content.
+     * @param {object} state The current state.
+     * @param {HTMLElement} child The child of the form.
+     * @returns {object} The adopting virtual node.
+     */
+    _renderHostChild(state, child) {
+        return webexpress.webui.Renderer.adopt(this._slotOf(child));
+    }
+
+    /**
+     * Gets the node that stands in the place of a server rendered node: the node itself,
+     * or the wrapper of the error mark it carries.
+     * @param {HTMLElement} node The server rendered node.
+     * @returns {HTMLElement} The node to place.
+     */
+    _slotOf(node) {
+        const marker = this._markers.get(node);
+        return marker && marker.wrapper ? marker.wrapper : node;
+    }
+
+    /**
+     * Follows the first render as any other.
+     * @param {object} state The rendered state.
+     */
+    onMount(state) {
+        this.onUpdate(state);
+    }
+
+    /**
+     * Applies to the server rendered markup what the state says about it: the lock of
+     * the fields while a request is out, the submit a delete confirmation holds back,
+     * and the marks of the invalid fields.
+     * @param {object} state The rendered state.
+     */
+    onUpdate(state) {
+        this._element.classList.toggle("wx-restform-submitting", state.submitting === true);
+        this._syncLock(state);
+        this._syncFieldMarks(state);
+        this._announceValidity(state);
+    }
+
+    /**
+     * Announces when the fields turned invalid or valid again, whichever path marked them -
+     * a validation on the client or a refusal of the server - so a page can follow the
+     * validity of the form without knowing those paths.
+     * @param {object} state The rendered state.
+     */
+    _announceValidity(state) {
+        const valid = state.fieldErrors.length === 0;
+        if (valid === this._valid) {
+            return;
+        }
+        this._valid = valid;
+        this._dispatch(webexpress.webui.Event.CHANGE_VALIDITY_EVENT, {
+            valid: valid,
+            errors: state.fieldErrors.map((error) => error.message)
+        });
+    }
+
+    /**
+     * Locks the fields and buttons while a request is out. Only the elements the lock
+     * disabled are enabled again, so a field the server rendered disabled stays so.
+     * @param {object} state The rendered state.
+     */
+    _syncLock(state) {
+        const elements = Array.from(this._element.elements || []);
+
+        if (state.submitting) {
+            for (const el of elements) {
+                if (!el.hasAttribute("disabled")) {
+                    el.setAttribute("disabled", "disabled");
+                    this._locked.add(el);
+                }
+            }
+        } else {
+            for (const el of this._locked) {
+                el.removeAttribute("disabled");
+            }
+            this._locked.clear();
+        }
+
+        const confirm = state.deleteConfirm;
+        const pending = confirm !== null && confirm.value.trim() !== confirm.item;
+        const gate = Array.from(this._element.querySelectorAll('[type="submit"], button[name="submit"]'))
+            .find((button) => !button.hasAttribute("data-noconfirm")) || null;
+
+        if (gate && pending && !gate.hasAttribute("disabled")) {
+            gate.setAttribute("disabled", "disabled");
+            this._gated = gate;
+        } else if (gate && !pending && this._gated === gate && !state.submitting) {
+            gate.removeAttribute("disabled");
+            this._gated = null;
+        }
+    }
+
+    /**
+     * Marks the invalid fields and unmarks the ones that became valid. A mark wraps
+     * the field beside a bar, so it is placed into the markup rather than rendered.
+     * @param {object} state The rendered state.
+     */
+    _syncFieldMarks(state) {
+        const wanted = new Map();
+        for (const error of state.fieldErrors) {
+            const field = typeof error.field === "string" ? this._findFieldByName(error.field) : error.field;
+            if (field && field.nodeType === 1 && !wanted.has(field)) {
+                wanted.set(field, error.message);
+            }
+        }
+
+        for (const [field, info] of Array.from(this._markers)) {
+            if (wanted.has(field)) {
+                info.message = wanted.get(field);
+                continue;
+            }
+            field.removeAttribute("aria-invalid");
+            if (info.wrapper && info.wrapper.parentNode) {
+                const parent = info.wrapper.parentNode;
+                parent.insertBefore(field, info.wrapper);
+                parent.removeChild(info.wrapper);
+            } else if (!info.wrapper) {
+                field.style.borderLeft = "";
+            }
+            this._markers.delete(field);
+        }
+
+        for (const [field, message] of wanted) {
+            if (this._markers.has(field)) {
+                continue;
+            }
+
+            field.setAttribute("aria-invalid", "true");
+
+            if (field.parentNode) {
+                const marker = document.createElement("div");
+                marker.className = "wx-restform-field-marker";
+                const wrapper = document.createElement("div");
+                wrapper.className = "wx-restform-field-wrapper";
+                field.parentNode.insertBefore(wrapper, field);
+                wrapper.appendChild(marker);
+                wrapper.appendChild(field);
+                this._markers.set(field, { marker: marker, wrapper: wrapper, message: message });
+            } else {
+                // fallback for detached elements
+                field.style.boxSizing = "border-box";
+                field.style.borderLeft = "4px solid #dc3545";
+                this._markers.set(field, { marker: null, wrapper: null, message: message });
+            }
+        }
+    }
+
+    /**
      * Displays the confirmation message inside the form.
      * @param {string|null} message The message to display. If null, uses the default confirm HTML.
      */
     _showConfirm(message) {
         const html = (typeof message === "string" && message) ? message : this._confirmHtml;
-        if (!html || !this._confirmContainer) {
-            return;
+        if (html) {
+            this.setState({ confirm: String(html) });
         }
-
-        if (this._confirmTimer) {
-            clearTimeout(this._confirmTimer);
-            this._confirmTimer = null;
-        }
-        this._confirmContainer.innerHTML = String(html);
-        this._confirmContainer.style.display = "block";
     }
 
     /**
@@ -202,24 +493,8 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
         const modal = this._element.closest(".modal");
-        if (!modal || !window.bootstrap) {
-            return;
-        }
-
-        try {
-            const Modal = window.bootstrap.Modal;
-            let inst = null;
-            if (typeof Modal.getInstance === "function") {
-                inst = Modal.getInstance(modal);
-            }
-            if (!inst) {
-                inst = new Modal(modal);
-            }
-            if (inst) {
-                inst.hide();
-            }
-        } catch (e) {
-            // ignore bootstrap errors
+        if (modal?.open) {
+            modal.close();
         }
     }
 
@@ -228,11 +503,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
      * @param {string|null} prologHtml The HTML content to display.
      */
     _displayProlog(prologHtml) {
-        if (!this._formPrologContainer) {
-            return;
-        }
-        this._formPrologContainer.innerHTML = prologHtml ? String(prologHtml) : "";
-        this._formPrologContainer.style.display = prologHtml ? "" : "none";
+        this.setState({ prolog: prologHtml ? String(prologHtml) : null });
     }
 
     /**
@@ -250,23 +521,26 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
         this._dispatch(webexpress.webui.Event.TASK_START_EVENT, { name: "loading" });
 
         try {
-            let url = new URL(this.options.api, window.location.origin);
-            if (this.options.id) {
-                url.searchParams.append("id", String(this.options.id || ""));
-            }
-            url.searchParams.append("mode", this.mode);
+            const url = webexpress.webapp.restFormModel.buildLoadUrl(
+                this.options.api, this.options.id, this.mode, window.location.origin);
 
-            const resp = await fetch(url.toString(), {
+            const result = await this._service.request(url, {
                 method: "GET",
                 headers: { "Accept": "application/json" },
                 credentials: this.options.credentials || "same-origin"
             });
 
-            if (!resp.ok) {
-                throw new Error(this._i18n("webexpress.webapp:error.load_failed", { status: resp.status }));
+            if (!result.ok) {
+                // a load a newer one or the teardown cancelled is no failure to show
+                if (result.error && result.error.kind === "abort") {
+                    return;
+                }
+                const failure = new Error(this._i18n("webexpress.webapp:error.load_failed", { status: result.status }));
+                failure.result = result;
+                throw failure;
             }
 
-            const json = await resp.json();
+            const json = result.data;
             const dataObj = (json && typeof json === "object") ? json : {};
             const formData = dataObj.data || (Object.keys(dataObj).length ? dataObj : null);
 
@@ -280,19 +554,19 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
             if (formData && typeof formData === "object") {
                 this._populate(formData);
             }
+            this.markPristine();
 
             if (typeof this.options.onLoadSuccess === "function") {
-                this.options.onLoadSuccess(json, resp);
+                this.options.onLoadSuccess(json, result.response);
             }
 
-            this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, { data: json, status: resp.status });
+            this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, { data: json, status: result.status });
             this._dispatch(webexpress.webui.Event.CHANGE_VALUE_EVENT, { source: "load", data: json });
 
         } catch (error) {
-            this._dispatchError(error);
+            this._dispatchError(error, "load");
         } finally {
             this._loading = false;
-            // setSubmitting(false) must not override the disabled state if confirmItem is pending
             this._setSubmitting(false);
             this._dispatch(webexpress.webui.Event.TASK_FINISH_EVENT, { name: "loading" });
         }
@@ -314,7 +588,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
             }
 
             // handle nodelist (radio/checkbox groups)
-            if (fieldOrList instanceof RadioNodeList) {
+            if (typeof RadioNodeList !== "undefined" && fieldOrList instanceof RadioNodeList) {
                 const first = fieldOrList[0];
                 if (first.type === "radio") {
                     fieldOrList.value = String(value);
@@ -329,10 +603,9 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
 
             // handle elements
             const el = fieldOrList;
-            const ctrl = webexpress.webui.Controller.getClosestInstance(el);
+            const ctrl = this._fieldOwner(el);
 
-            // ensure the controller is not the form itself and supports value assignment
-            if (ctrl && ctrl !== this && typeof ctrl.value !== "undefined") {
+            if (ctrl) {
                 ctrl.value = value;
                 continue;
             }
@@ -344,7 +617,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
                     ? (Array.isArray(value) ? value.join(";") : String(value))
                     : "";
                 el.dispatchEvent(new Event("change", { bubbles: true }));
-            } else if (el instanceof HTMLSelectElement && el.multiple) {
+            } else if (el.tagName === "SELECT" && el.multiple) {
                 const values = (Array.isArray(value) ? value : [value]).map(String);
                 Array.from(el.options).forEach((opt) => {
                     opt.selected = values.includes(opt.value);
@@ -367,14 +640,36 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
 
-        if (this.options.validateOnSubmit && !this.validate()) {
-            const firstInvalid = this._element.querySelector("[aria-invalid='true']");
-            if (firstInvalid) {
-                firstInvalid.focus();
-            }
-            return;
+        this.save();
+    }
+
+    /**
+     * Moves the focus to the first field the validation marked.
+     */
+    _focusFirstInvalid() {
+        const firstInvalid = this._element.querySelector("[aria-invalid='true']");
+        if (firstInvalid) {
+            firstInvalid.focus();
         }
-        this.submit();
+    }
+
+    /**
+     * Substitutes the named and positional placeholders of a message with the
+     * supplied values, so a translated message can carry the numbers it talks
+     * about. A placeholder without a value is left untouched.
+     * @param {string} message The message carrying {name} placeholders.
+     * @param {Object} params The values, keyed by placeholder name.
+     * @returns {string} The message with the placeholders replaced.
+     */
+    _applyParams(message, params) {
+        if (!message || !params) {
+            return message || "";
+        }
+
+        return String(message).replace(/\{(\w+)\}/g, (match, name) => {
+            const value = params[name];
+            return (value === undefined || value === null) ? match : String(value);
+        });
     }
 
     /**
@@ -389,6 +684,13 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
         }
 
         let msg = null;
+
+        // a control that stores its value in a hidden input (a picker, a segmented
+        // choice) is barred from native constraint validation, so it declares a
+        // required value through data-wx-required instead
+        if (el.dataset && el.dataset.wxRequired === "true" && !String(el.value || "").trim()) {
+            return el.dataset.wxRequiredMessage || this._i18n("webexpress.webapp:validation.required");
+        }
 
         if (!el.validity.valid) {
             msg = el.validationMessage || this._i18n("webexpress.webapp:validation.invalid");
@@ -426,7 +728,75 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
             }
         }
 
+        // a control knows rules the markup cannot carry (a range whose bounds are inverted, a
+        // value the server refused), so its own validation joins the native one
+        const owner = msg ? null : this._fieldOwner(el);
+        if (owner) {
+            const error = webexpress.webui.Field.validate(owner).find((result) => result.type === "error");
+            msg = error ? error.text : null;
+        }
+
         return msg;
+    }
+
+    /**
+     * Gets the field control an element of the form carries the value of: the control whose
+     * host contains the element, when that control is a field and not the form itself.
+     * @param {HTMLElement} el The element of the form.
+     * @returns {webexpress.webui.Ctrl|null} The field control, or null for a native field.
+     */
+    _fieldOwner(el) {
+        const ctrl = webexpress.webui.Controller.getClosestInstance(el);
+        return ctrl && ctrl !== this && webexpress.webui.Field.isField(ctrl) ? ctrl : null;
+    }
+
+    /**
+     * Gets the field controls of the form, each once.
+     * @returns {Set<webexpress.webui.Ctrl>} The field controls.
+     */
+    _fieldControls() {
+        const controls = new Set();
+        for (const el of Array.from(this._element.elements || [])) {
+            const owner = this._fieldOwner(el);
+            if (owner) {
+                controls.add(owner);
+            }
+        }
+        return controls;
+    }
+
+    /**
+     * Validates a list of fields and shows the result: the marks of the invalid fields
+     * and the error list, or nothing when all are valid. The result is rendered before
+     * the method returns, so a caller can focus the first marked field.
+     * @param {Array<HTMLElement>} elements The fields to validate.
+     * @returns {boolean} True if all fields are valid.
+     */
+    _validateFields(elements) {
+        const fieldErrors = [];
+        // a control submitting through several inputs is one field and reports one error
+        const reported = new Set();
+
+        for (const el of elements) {
+            const owner = this._fieldOwner(el);
+            // a disabled field is not validated, as on the server; its hidden input does not
+            // tell that it is disabled
+            if (owner && (reported.has(owner) || webexpress.webui.Field.isDisabled(owner))) {
+                continue;
+            }
+            const msg = this._validateField(el);
+            if (msg) {
+                fieldErrors.push({ field: el, message: msg });
+                if (owner) {
+                    reported.add(owner);
+                }
+            }
+        }
+
+        this.setState({ fieldErrors: fieldErrors, errors: fieldErrors.map((error) => error.message) });
+        this._store.flush();
+
+        return fieldErrors.length === 0;
     }
 
     /**
@@ -434,28 +804,83 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
      * @returns {boolean} True if valid, false otherwise.
      */
     validate() {
-        this.clearErrors();
-        let formIsValid = true;
-        const messages = [];
-
-        const elements = Array.from(this._element.elements).filter((el) => {
+        return this._validateFields(Array.from(this._element.elements || []).filter((el) => {
             return el.name && !el.disabled && ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName);
-        });
+        }));
+    }
 
-        for (const el of elements) {
-            const msg = this._validateField(el);
+    /**
+     * Returns what a submit would send, without sending it.
+     *
+     * A surface that writes the same fields somewhere else - the document form saves the
+     * unpublished draft while the author types - has to send the shape the publish sends, or
+     * the endpoint behind it reads two contracts instead of one. Reading the form a second time
+     * would let the two drift apart on the next controlled input, so the payload is built here,
+     * once, for both.
+     * @returns {Object} The payload a submit would send.
+     */
+    serialize() {
+        return this._buildPayload();
+    }
 
-            if (msg) {
-                formIsValid = false;
-                this._showFieldError(el, msg);
-                messages.push(msg);
-            }
+    /**
+     * Tells whether the fields hold something else than what the form was rendered with, last
+     * loaded or last saved. The form compares what a submit would send, so every field counts
+     * the same way however it is built.
+     * @returns {boolean} True when there are unsaved changes.
+     */
+    get dirty() {
+        return this._payloadKey(this._buildPayload()) !== this._pristineKey;
+    }
+
+    /**
+     * Takes what the fields hold now as the saved state. The field controls of the form take
+     * their value as baseline as well, so each of them answers dirty in the sense of the form.
+     */
+    markPristine() {
+        this._pristinePayload = this._buildPayload();
+        this._pristineKey = this._payloadKey(this._pristinePayload);
+        for (const ctrl of this._fieldControls()) {
+            webexpress.webui.Field.markPristine(ctrl);
         }
+    }
 
-        if (!formIsValid) {
-            this._displayAggregatedErrors(messages);
+    /**
+     * Sets the fields back to the saved state and drops the errors shown.
+     */
+    reset() {
+        if (this._pristinePayload) {
+            this._populate(this._pristinePayload);
         }
-        return formIsValid;
+        this.clearErrors();
+    }
+
+    /**
+     * Saves the form: it validates the fields when the form asks for it, lets the listeners of
+     * the before save event veto the save or replace the payload, and submits. Every outcome
+     * of the request is answered with its normalized result, so a caller has one path to write;
+     * a refused validation answers with the kind "validation".
+     * @returns {Promise<object>} The result { ok, status, data, error }.
+     */
+    async save() {
+        if (this.options.validateOnSubmit && !this.validate()) {
+            this._focusFirstInvalid();
+            return webexpress.webui.Transport.fail("validation", 0, this._i18n("webexpress.webapp:validation.failed"), false);
+        }
+        return this.submit();
+    }
+
+    /**
+     * Serializes a payload for comparison.
+     * @param {Object} payload The payload.
+     * @returns {string|null} The comparison key, or null when the payload cannot be serialized.
+     */
+    _payloadKey(payload) {
+        try {
+            return JSON.stringify(payload);
+        } catch (error) {
+            return null;
+        }
     }
 
     /**
@@ -464,8 +889,10 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
      */
     _buildPayload() {
         const data = {};
-        const elements = Array.from(this._element.elements).filter((el) => {
-            return el.name && !el.disabled && ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName) && el.type !== "file";
+        // a field the lock disabled while a request is out still belongs to the form; the
+        // baseline a load or a save takes in that moment would otherwise miss it
+        const elements = Array.from(this._element.elements || []).filter((el) => {
+            return el.name && (!el.disabled || this._locked.has(el)) && ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName) && el.type !== "file";
         });
 
         for (const el of elements) {
@@ -493,7 +920,7 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
                 }
                 continue;
             }
-            if (el instanceof HTMLSelectElement && el.multiple) {
+            if (el.tagName === "SELECT" && el.multiple) {
                 data[name] = Array.from(el.selectedOptions).map((o) => {
                     return o.value;
                 });
@@ -506,12 +933,18 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Submits the form payload to the configured REST API.
-     * @returns {Promise<void>} Promise resolving when done.
+     * Submits the form payload to the configured REST API without validating it first; save
+     * is the entry that validates. The before save event is dispatched cancelable, and a
+     * listener may replace detail.payload. A form without any endpoint is an authoring error
+     * and throws; every outcome of a request is answered with its result.
+     * @returns {Promise<object>} The normalized result { ok, status, data, error }.
      */
     async submit() {
+        const Transport = webexpress.webui.Transport;
+
         if (this._submitting) {
-            return;
+            // a second save while the first is out would store twice
+            return Transport.fail("abort", 0, "a save is already in progress", false);
         }
 
         const endpoint = this.options.api || this._element.action;
@@ -526,35 +959,57 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
             try {
                 const res = this.options.beforeSend(payload, this._element);
                 if (res === false) {
-                    return;
+                    return Transport.fail("abort", 0, "the save was cancelled", false);
                 }
                 if (res && typeof res === "object") {
                     payload = res;
                 }
             } catch (e) {
                 this._dispatchError(e);
-                return;
+                return Transport.fail("abort", 0, e && e.message ? e.message : "the save was cancelled", false);
             }
         }
 
-        const { url, init } = this._prepareRequest(endpoint, payload);
+        const before = this._dispatch(webexpress.webui.Event.BEFORE_SAVE_EVENT,
+            { payload: payload, form: this._element }, { cancelable: true });
+        if (before && before.defaultPrevented) {
+            return Transport.fail("abort", 0, "the save was cancelled", false);
+        }
+        payload = before && before.detail && before.detail.payload ? before.detail.payload : payload;
+
+        const { url, init } = webexpress.webapp.restFormModel.buildRequest(
+            endpoint, this.options, payload, window.location.origin);
 
         this._setSubmitting(true);
         this._dispatch(webexpress.webui.Event.TASK_START_EVENT, { name: "submitting" });
         this._dispatch(webexpress.webui.Event.DATA_REQUESTED_EVENT, { type: "submit", url: url });
 
+        let result = null;
         try {
-            const resp = await fetch(url, init);
-            await this._handleResponse(resp);
+            result = await this._transport().request(url, init);
+            this._handleResult(result);
         } catch (error) {
             if (typeof this.options.onError === "function") {
                 this.options.onError(error);
             }
             this._dispatchError(error);
+            result = result || Transport.fail("network", 0, error && error.message ? error.message : "", true);
         } finally {
             this._setSubmitting(false);
             this._dispatch(webexpress.webui.Event.TASK_FINISH_EVENT, { name: "submitting" });
         }
+
+        return result;
+    }
+
+    /**
+     * Gets what carries the requests of the form: its data service, or - for a form
+     * authored without one, which posts to its action - the shared route of the service
+     * layer for one-off requests.
+     * @returns {object} An object with a request(url, init) method.
+     */
+    _transport() {
+        return this._service || webexpress.webapp.ServiceRegistry;
     }
 
     /**
@@ -564,230 +1019,103 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
      * @returns {{url: string, init: Object}} Request configuration.
      */
     _prepareRequest(endpoint, payload) {
-        const method = this.options.method;
-        const init = {
-            method: method,
-            headers: Object.assign({}, this.options.headers),
-            credentials: this.options.credentials || "same-origin"
-        };
-
-        const urlObj = new URL(endpoint, window.location.origin);
-        let requestUrl = endpoint;
-
-        const appendParams = (target, data) => {
-            for (const [k, v] of Object.entries(data)) {
-                const values = Array.isArray(v) ? v : [v];
-                values.forEach((val) => {
-                    target.searchParams.append(k, val == null ? "" : String(val));
-                });
-            }
-        };
-
-        if (["GET", "HEAD", "DELETE"].includes(method)) {
-            // remove content-type for these methods
-            Object.keys(init.headers).forEach((h) => {
-                if (h.toLowerCase() === "content-type") {
-                    delete init.headers[h];
-                }
-            });
-
-            if (method === "DELETE") {
-                const idParam = this.options.id || payload.id || payload.Id;
-                if (idParam) {
-                    urlObj.searchParams.append("id", String(idParam));
-                }
-            } else {
-                appendParams(urlObj, payload);
-            }
-            requestUrl = urlObj.toString();
-        } else {
-            // post/put/patch
-            if (this.options.json) {
-                init.body = JSON.stringify(payload);
-                if (!Object.keys(init.headers).some((k) => {
-                    return k.toLowerCase() === "content-type";
-                })) {
-                    init.headers["Content-Type"] = "application/json; charset=utf-8";
-                }
-            } else {
-                const params = new URLSearchParams();
-                for (const [k, v] of Object.entries(payload)) {
-                    const values = Array.isArray(v) ? v : [v];
-                    values.forEach((val) => {
-                        params.append(k, val == null ? "" : String(val));
-                    });
-                }
-                init.body = params.toString();
-                if (!Object.keys(init.headers).some((k) => {
-                    return k.toLowerCase() === "content-type";
-                })) {
-                    init.headers["Content-Type"] = "application/x-www-form-urlencoded; charset=utf-8";
-                }
-            }
-
-            if (this.options.id) {
-                if (!urlObj.searchParams.has("id")) {
-                    urlObj.searchParams.append("id", String(this.options.id));
-                    requestUrl = urlObj.toString();
-                }
-            }
-        }
-
-        return { url: requestUrl, init: init };
+        return webexpress.webapp.restFormModel.buildRequest(endpoint, this.options, payload, window.location.origin);
     }
 
     /**
-     * Handles the fetch response parsing and UI updates.
-     * @param {Response} resp The fetch response object.
+     * Handles a normalised service result by classifying it into a success, a
+     * validation or a system error outcome and updating the UI accordingly. The
+     * classification and the server error normalisation are pure and live in
+     * restFormModel. A system error is thrown so the submit caller reports it
+     * through its catch.
+     * @param {object} result - The normalised service result.
      */
-    async _handleResponse(resp) {
-        let json = null;
-        const contentType = resp.headers.get("content-type") || "";
-
-        if (contentType.includes("application/json")) {
-            try {
-                json = await resp.json();
-            } catch (e) {
-                // ignore json parse error on empty body
-            }
-        } else {
-            try {
-                json = { text: await resp.text() };
-            } catch (e) {
-                // ignore
-            }
+    _handleResult(result) {
+        // a request a newer one or the teardown cancelled is no failure to show
+        if (!result.ok && result.error && result.error.kind === "abort") {
+            return;
         }
 
-        if (resp.ok) {
+        const json = result.data;
+        const classification = webexpress.webapp.restFormModel.classifyResponse(result.ok, result.status, json);
+
+        if (classification.kind === "success") {
             this.clearErrors();
+            this.markPristine();
             if (typeof this.options.onSuccess === "function") {
-                this.options.onSuccess(json, resp);
+                this.options.onSuccess(json, result.response);
             }
 
-            this._dispatch(webexpress.webui.Event.UPLOAD_SUCCESS_EVENT, { response: json, status: resp.status, form: this._element });
+            this._dispatch(webexpress.webui.Event.SAVED_EVENT, { data: json, status: result.status, form: this._element });
+
+            // the endpoint travels with the event so a surface that reads the same
+            // service can tell that its data changed and reload; without it a
+            // listener cannot distinguish a write to its own service from any other
+            this._dispatch(webexpress.webui.Event.UPLOAD_SUCCESS_EVENT, { response: json, status: result.status, form: this._element, endpoint: this.options.api });
             this._dispatch(webexpress.webui.Event.DATA_ARRIVED_EVENT, { type: "submit", data: json });
 
-            const dataBlock = (json && json.data) ? json.data : json;
-            const confirmHtml = (dataBlock && dataBlock.confirmHtml) || (json && json.confirmHtml);
-            const message = (dataBlock && dataBlock.message) || (json && (json.confirmMessage || json.message));
+            // when bound to a ViewState, re-query the resource so a ViewState-bound
+            // list or table re-renders with the created or edited record
+            if (this._viewState) {
+                this._viewState.dispatch("viewstate/reload", { resource: this._viewStateResource });
+            }
 
-            if (json && (!json.message || json.hideForm === true)) {
+            if (classification.closeModal) {
                 this._closeEnclosingModal();
-            } else {
-                if (confirmHtml) {
-                    this._showConfirm(String(confirmHtml));
-                } else if (message) {
-                    this._showConfirm(String(message));
-                } else if (this._confirmHtml) {
-                    this._showConfirm(null);
+            } else if (classification.confirmHtml) {
+                this._showConfirm(String(classification.confirmHtml));
+            } else if (classification.message) {
+                this._showConfirm(String(classification.message));
+            } else if (this._confirmHtml) {
+                this._showConfirm(null);
+            }
+        } else if (classification.kind === "validation") {
+            const fieldErrors = [];
+            const messages = [];
+            for (const e of (classification.errors || [])) {
+                if (e.field) {
+                    fieldErrors.push({ field: String(e.field), message: e.message });
                 }
+                messages.push(e.message);
             }
-        } else if (resp.status === 400) {
-            // handle validation errors
-            if (Array.isArray(json)) {
-                this._applyServerArrayErrors(json);
-            } else if (json && json.errors) {
-                this._applyServerFieldErrors(json.errors);
-            } else {
-                const msg = (json && (json.message || json.error)) || this._i18n("webexpress.webapp:validation.failed");
-                this._displayAggregatedErrors([typeof msg === "object" ? JSON.stringify(msg) : msg]);
+
+            if (messages.length === 0) {
+                const fallback = classification.message || this._i18n("webexpress.webapp:validation.failed");
+                messages.push(typeof fallback === "object" ? JSON.stringify(fallback) : fallback);
             }
+
+            this.setState({ fieldErrors: fieldErrors, errors: messages });
 
             if (typeof this.options.onError === "function") {
-                this.options.onError(json, resp);
+                this.options.onError(json, result.response);
             }
-            this._dispatch(webexpress.webui.Event.UPLOAD_ERROR_EVENT, { type: "validation", response: json, status: resp.status, form: this._element });
+            this._dispatch(webexpress.webui.Event.UPLOAD_ERROR_EVENT, { type: "validation", response: json, status: result.status, form: this._element });
+            this._dispatch(webexpress.webui.Event.DATA_ERROR_EVENT, {
+                action: "save",
+                error: { kind: "validation", status: result.status, message: messages[0], retriable: false },
+                fields: fieldErrors.map((error) => ({ field: error.field, message: error.message })),
+                form: this._element
+            });
         } else {
             // handle system errors
             const message = this._i18n("webexpress.webapp:error.request_failed")
-                .replace("{status}", resp.status);
+                .replace("{status}", result.status);
             const err = new Error(message);
-            err.status = resp.status;
-            err.response = resp;
+            err.status = result.status;
+            err.response = result.response;
             err.payload = json;
+            err.result = result;
             throw err;
         }
     }
 
     /**
-     * Sets the submitting state of the form.
-     * Prevents re-enabling the submit button if a delete confirmation is pending.
+     * Sets the submitting state of the form, which locks the fields while a request is
+     * out.
      * @param {boolean} state True to activate submitting mode; false to restore interactivity.
      */
     _setSubmitting(state) {
         this._submitting = !!state;
-        const submitBtn = this._element.querySelector('[type="submit"], button[name="submit"]');
-
-        Array.from(this._element.elements).forEach((el) => {
-            if (state) {
-                el.setAttribute("disabled", "disabled");
-            } else {
-                // check if we have a pending confirmation that requires the button to stay disabled
-                const isConfirmPending = this._confirmItem && this._confirmInput && this._confirmInput.value !== this._confirmItem;
-
-                if (el === submitBtn && isConfirmPending) {
-                    // keep disabled until confirm matches
-                } else {
-                    el.removeAttribute("disabled");
-                }
-            }
-        });
-
-        if (state) {
-            this._element.classList.add("wx-restform-submitting");
-        } else {
-            this._element.classList.remove("wx-restform-submitting");
-        }
-    }
-
-    /**
-     * Applies server-side field errors provided as a key-value map.
-     * @param {Object} errors A map of fieldName → message returned by the server.
-     */
-    _applyServerFieldErrors(errors) {
-        this.clearErrors();
-        if (!errors || typeof errors !== "object") {
-            return;
-        }
-
-        const messages = [];
-        for (const [name, msg] of Object.entries(errors)) {
-            const field = this._findFieldByName(name);
-            if (field) {
-                this._showFieldError(field, msg);
-            }
-            messages.push(msg);
-        }
-        this._displayAggregatedErrors(messages);
-    }
-
-    /**
-     * Applies server-side validation errors provided as an array.
-     * @param {Array} errorsArray The array of validation error objects returned by the server.
-     */
-    _applyServerArrayErrors(errorsArray) {
-        this.clearErrors();
-        if (!Array.isArray(errorsArray)) {
-            return;
-        }
-
-        const messages = [];
-        for (const err of errorsArray) {
-            if (!err) {
-                continue;
-            }
-            const msg = err.message || err.msg || err.Message || JSON.stringify(err);
-            const fieldName = err.field || err.Field;
-
-            if (fieldName) {
-                const field = this._findFieldByName(fieldName);
-                if (field) {
-                    this._showFieldError(field, msg);
-                }
-            }
-            messages.push(msg);
-        }
-        this._displayAggregatedErrors(messages);
     }
 
     /**
@@ -842,42 +1170,21 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Displays a visual error marker for a specific form field.
-     * @param {HTMLElement} field The form field to mark as invalid.
+     * Marks a field as invalid, next to the marks already shown.
+     * @param {HTMLElement|string} field The form field, or the name the server reported.
      * @param {string} message The error message associated with the field.
      */
     _showFieldError(field, message) {
-        if (!field || !(field instanceof HTMLElement)) {
+        if (!field) {
             return;
         }
 
-        if (this._fieldErrorMap.has(field)) {
-            this._fieldErrorMap.get(field).message = message;
-            return;
-        }
-
-        const marker = document.createElement("div");
-        marker.className = "wx-restform-field-marker";
-        const wrapper = document.createElement("div");
-        wrapper.className = "wx-restform-field-wrapper";
-
-        field.setAttribute("aria-invalid", "true");
-
-        if (field.parentNode) {
-            field.parentNode.insertBefore(wrapper, field);
-            wrapper.appendChild(marker);
-            wrapper.appendChild(field);
-            this._fieldErrorMap.set(field, { marker: marker, wrapper: wrapper, message: message });
-        } else {
-            // fallback for detached elements
-            field.style.boxSizing = "border-box";
-            field.style.borderLeft = "4px solid #dc3545";
-            this._fieldErrorMap.set(field, { marker: null, wrapper: null, message: message });
-        }
+        const others = this.state.fieldErrors.filter((error) => error.field !== field);
+        this.setState({ fieldErrors: others.concat([{ field: field, message: message }]) });
     }
 
     /**
-     * Renders aggregated error messages.
+     * Shows the form-level error list.
      * @param {Array<string>} messages The error messages to display.
      */
     _displayAggregatedErrors(messages) {
@@ -885,143 +1192,45 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
             return;
         }
 
-        if (!this._formErrorContainer) {
-            this._ensureContainer("wx-restform-error-container", "_formErrorContainer");
-        }
-
-        let el = this._formErrorContainer.querySelector(".wx-restform-error");
-        if (!el) {
-            el = document.createElement("div");
-            el.className = "wx-restform-error alert alert-danger";
-            this._formErrorContainer.appendChild(el);
-        }
-
-        const unique = Array.from(new Set(messages.filter(Boolean)));
-        const listItems = unique.map((m) => {
-            return `<li>${this._escapeHtml(String(m))}</li>`;
-        }).join("");
-        const intro = this._escapeHtml(this._i18n("webexpress.webapp:form.validation.errors"));
-
-        el.innerHTML = `<p>${intro}</p><ul>${listItems}</ul>`;
+        this.setState({ errors: messages.filter(Boolean).map(String) });
     }
 
     /**
-     * Clear all markers, unwrap fields and remove form-level messages.
+     * Clear all markers and remove the form-level error list.
      */
     clearErrors() {
-        for (const [field, info] of this._fieldErrorMap.entries()) {
-            if (field) {
-                field.removeAttribute("aria-invalid");
-            }
-
-            if (info) {
-                if (info.wrapper && info.wrapper.parentNode) {
-                    const parent = info.wrapper.parentNode;
-                    parent.insertBefore(field, info.wrapper);
-                    parent.removeChild(info.wrapper);
-                } else if (info.marker) {
-                    info.marker.remove();
-                } else if (field) {
-                    field.style.borderLeft = "";
-                }
-            }
-        }
-        this._fieldErrorMap.clear();
-
-        if (this._formErrorContainer) {
-            const el = this._formErrorContainer.querySelector(".wx-restform-error");
-            if (el) {
-                el.remove();
-            }
-        }
+        this.setState({ errors: [], fieldErrors: [] });
+        this._store.flush();
     }
 
     /**
-     * Handles an error by displaying a message and dispatching an error event.
+     * Handles an error by displaying a message and dispatching an error event. An error that
+     * carries the result of a failed request is reported on the data error event as well, in
+     * the normalized shape every control reports a failed load or save in.
      * @param {Error} error The error that occurred.
+     * @param {string} [action="save"] The action that failed: "load" or "save".
      */
-    _dispatchError(error) {
+    _dispatchError(error, action = "save") {
         const msg = (error && error.message) ? error.message : this._i18n("webexpress.webapp:error.generic");
         this._displayAggregatedErrors([msg]);
         this._dispatch(webexpress.webui.Event.UPLOAD_ERROR_EVENT, { error: error, form: this._element });
+
+        if (error && error.result && error.result.error) {
+            this._dispatch(webexpress.webui.Event.DATA_ERROR_EVENT, {
+                action: action,
+                error: Object.assign({}, error.result.error, { message: msg }),
+                form: this._element
+            });
+        }
     }
 
     /**
-     * Displays a delete confirmation prompt.
-     * Position: 4th (after prolog).
+     * Asks for the name of the item before a deletion: the submit stays held back
+     * until the typed text matches it.
      * @param {string|null} confirmItem The required text for enabling submit.
      */
     _displayDeletePrompt(confirmItem) {
-        // store state for _setSubmitting logic
-        this._confirmItem = confirmItem;
-        this._confirmInput = null;
-
-        if (!confirmItem) {
-            const btn = this._element.querySelector('[type="submit"], button[name="submit"]');
-            if (btn) {
-                btn.disabled = false;
-            }
-            return;
-        }
-
-        let confirmDiv = this._element.querySelector(".wx-restform-delete-confirm");
-        if (!confirmDiv) {
-            confirmDiv = document.createElement("div");
-            confirmDiv.className = "wx-restform-delete-confirm";
-        }
-        confirmDiv.innerHTML = "";
-
-        // template construction
-        const prompt = document.createElement("div");
-        prompt.setAttribute("role", "status");
-        prompt.innerHTML = this._i18n("webexpress.webapp:delete.confirmation.prompt")
-            .replace("{item}", `<strong>${this._escapeHtml(confirmItem)}</strong>`);
-
-        const input = document.createElement("input");
-        Object.assign(input, {
-            type: "text", className: "form-control", placeholder: confirmItem, autocomplete: "off"
-        });
-        input.setAttribute("aria-label", this._i18n("webexpress.webapp:delete.confirmation.input.aria-label", { item: confirmItem }));
-
-        // store input ref
-        this._confirmInput = input;
-
-        const errorDiv = document.createElement("div");
-        errorDiv.className = "text-danger";
-        errorDiv.style.display = "none";
-
-        confirmDiv.append(prompt, input, errorDiv);
-
-        // positioning logic
-        const container = this._element.querySelector(".modal-body") || this._element;
-        // insert after prolog, or confirm, or error, or at start
-        const ref = this._formPrologContainer || this._confirmContainer || this._formErrorContainer;
-
-        if (confirmDiv.parentNode !== container || (ref && confirmDiv.previousElementSibling !== ref)) {
-            if (confirmDiv.parentNode) {
-                confirmDiv.parentNode.removeChild(confirmDiv);
-            }
-            this._insertAfter(container, confirmDiv, ref);
-        }
-        this._deleteConfirmContainer = confirmDiv;
-
-        // interaction logic
-        const submitBtn = this._element.querySelector('[type="submit"]:not([data-noconfirm]), button[name="submit"]:not([data-noconfirm])');
-        if (submitBtn) {
-            submitBtn.disabled = true;
-        }
-
-        input.addEventListener("input", () => {
-            const v = input.value.trim();
-            const match = v === confirmItem;
-            errorDiv.style.display = (!match && v.length > 0) ? "" : "none";
-            if (!match && v.length > 0) {
-                errorDiv.textContent = this._i18n("webexpress.webapp:delete.confirmation.mismatch");
-            }
-            if (submitBtn) {
-                submitBtn.disabled = !match;
-            }
-        });
+        this.setState({ deleteConfirm: confirmItem ? { item: String(confirmItem), value: "" } : null });
     }
 
     /**
@@ -1057,11 +1266,12 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webui.Ctrl {
     }
 
     /**
-     * Dispose the control and remove listeners.
+     * Tears the form down: the submit listener goes with it, then the data base aborts the
+     * services and stops rendering.
      */
-    dispose() {
+    destroy() {
         this._element.removeEventListener("submit", this._onSubmitBound, true);
-        this._fieldErrorMap.clear();
+        super.destroy();
     }
 
     /**

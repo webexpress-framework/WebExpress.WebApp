@@ -6,7 +6,6 @@ namespace WebExpress.WebApp.Test.WebPage
     /// <summary>
     /// Tests the access-denied page.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestPageWebAppForbidden
     {
         /// <summary>

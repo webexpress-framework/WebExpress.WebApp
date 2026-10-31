@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -12,5 +13,11 @@ namespace WebExpress.WebApp.WebRestApi
     /// </remarks>
     public class RestApiCrudFormData : Dictionary<string, object>
     {
+        /// <summary>
+        /// Matches field names consistently across binding and direct access.
+        /// </summary>
+        public RestApiCrudFormData() : base(StringComparer.OrdinalIgnoreCase)
+        {
+        }
     }
 }

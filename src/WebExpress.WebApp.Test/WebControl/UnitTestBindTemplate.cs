@@ -6,7 +6,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests the BindTemplate binding class.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestBindTemplate
     {
         /// <summary>

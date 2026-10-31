@@ -7,7 +7,6 @@ namespace WebExpress.WebApp.Test.WebAttribute
     /// Unit tests for the ends with validation attribute.
     /// Ensures that strings not ending with the suffix are rejected.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestValidationEndsWith
     {
         /// <summary>

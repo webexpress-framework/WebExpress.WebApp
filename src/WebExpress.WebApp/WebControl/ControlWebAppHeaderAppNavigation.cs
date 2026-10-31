@@ -10,7 +10,7 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Represents the header navigation control for the web application.
+    /// Renders the main navigation shown within the WebApp header.
     /// </summary>
     public class ControlWebAppHeaderAppNavigation : ControlPanel, IControlWebAppHeaderAppNavigation
     {
@@ -125,23 +125,26 @@ namespace WebExpress.WebApp.WebControl
         {
             var preferences = Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControlNavigationItem, SectionAppNavigationPreferences>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ));
 
             var primary = Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControlNavigationItem, SectionAppNavigationPrimary>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ));
 
             var secondary = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControlNavigationItem, SectionAppNavigationSecondary>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             );
 
-            return new ControlPanelOverflow(Id)
+            return new ControlOverflow(Id)
             {
-                Classes = [Css.Concatenate("wx-appnavigation", GetClasses())],
-                Styles = [GetStyles()]
+                Classes = [Css.Concatenate("wx-appnavigation", GetClasses(renderContext))],
+                Styles = [GetStyles(renderContext)]
             }
                 .Add(preferences)
                 .Add(primary)

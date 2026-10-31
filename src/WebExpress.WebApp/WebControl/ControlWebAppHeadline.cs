@@ -11,7 +11,7 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// Headline for an web app.
+    /// Renders the headline area of a WebApp page, showing the page title and related actions.
     /// </summary>
     public class ControlWebAppHeadline : Control, IControlWebAppHeadline
     {
@@ -25,6 +25,13 @@ namespace WebExpress.WebApp.WebControl
         /// Gets or sets the title.
         /// </summary>
         public string Title { get; set; }
+
+        /// <summary>
+        /// Gets or sets the inline editor that makes the title editable in place. Without one
+        /// the title is read-only. The editor takes the place of the title, so its input
+        /// carries the value shown and its process handler stores the edited one.
+        /// </summary>
+        public IControlSmartEdit TitleEditor { get; set; }
 
         /// <summary>
         /// Gets the prologue area.
@@ -223,16 +230,19 @@ namespace WebExpress.WebApp.WebControl
 
             return new HtmlElementSectionHeader
             (
-                new ControlPanelFlex
+                new ControlFlex
                 (
                     null,
-                    prologue.Any() ? new ControlPanelFlex(null, [.. prologue])
+                    prologue.Any() ? new ControlFlex(null, [.. prologue])
                     {
                         Layout = _ => TypeLayoutFlex.Default,
                         Align = _ => TypeAlignFlex.Center,
                         Justify = _ => TypeJustifiedFlex.Start
                     } : null,
-                    new ControlText()
+                    TitleEditor is not null ? new ControlHeadlineTitle(TitleEditor)
+                    {
+                        Classes = ["h2", "me-2", "mb-0", "wx-webapp-headline-title"]
+                    } : new ControlText()
                     {
                         Text = _ => I18N.Translate
                         (
@@ -241,22 +251,24 @@ namespace WebExpress.WebApp.WebControl
                                 ? Title
                                 : renderContext.PageContext?.PageTitle
                         ),
-                        Format = _ => TypeFormatText.H2,
+                        // a page without a title has nothing to head: an empty heading is an empty
+                        // entry in the outline, so the slot stays a plain block
+                        Format = _ => string.IsNullOrWhiteSpace(Title ?? renderContext.PageContext?.PageTitle) ? TypeFormatText.Default : TypeFormatText.H2,
                         Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.None, PropertySpacing.Space.Two, PropertySpacing.Space.None, PropertySpacing.Space.Null)
                     },
-                    preferences.Any() ? new ControlPanelFlex(null, [.. preferences])
+                    preferences.Any() ? new ControlFlex(null, [.. preferences])
                     {
                         Layout = _ => TypeLayoutFlex.Default,
                         Align = _ => TypeAlignFlex.Center,
                         Justify = _ => TypeJustifiedFlex.Start
                     } : null,
-                    primary.Any() ? new ControlPanelFlex(null, [.. primary])
+                    primary.Any() ? new ControlFlex(null, [.. primary])
                     {
                         Layout = _ => TypeLayoutFlex.Default,
                         Align = _ => TypeAlignFlex.Center,
                         Justify = _ => TypeJustifiedFlex.Start
                     } : null,
-                    secondary.Any() ? new ControlPanelFlex(null, [.. secondary])
+                    secondary.Any() ? new ControlFlex(null, [.. secondary])
                     {
                         Layout = _ => TypeLayoutFlex.Default,
                         Align = _ => TypeAlignFlex.Center,
@@ -280,10 +292,44 @@ namespace WebExpress.WebApp.WebControl
             )
             {
                 Id = Id,
-                Class = Css.Concatenate("", GetClasses()),
-                Style = Style.Concatenate("display: block;", GetStyles()),
+                Class = Css.Concatenate("", GetClasses(renderContext)),
+                Style = Style.Concatenate("display: block;", GetStyles(renderContext)),
                 Role = role
             };
+        }
+
+        /// <summary>
+        /// Holds an editable page title. An h2 may only hold phrasing content, but the editor
+        /// swaps its read view for a form, so the title keeps its place in the outline through
+        /// the heading role instead. The level is stated, because assistive technology does not
+        /// agree on the level a bare heading role implies.
+        /// </summary>
+        private sealed class ControlHeadlineTitle : ControlPanel
+        {
+            /// <summary>
+            /// Initializes a new instance of the class.
+            /// </summary>
+            /// <param name="editor">The inline editor that shows and edits the title.</param>
+            public ControlHeadlineTitle(IControlSmartEdit editor)
+                : base(null, editor)
+            {
+                Role = _ => "heading";
+            }
+
+            /// <summary>
+            /// Converts the control to an HTML representation.
+            /// </summary>
+            /// <param name="renderContext">The context in which the control is rendered.</param>
+            /// <param name="visualTree">The visual tree representing the control's structure.</param>
+            /// <param name="content">The controls rendered within the panel.</param>
+            /// <returns>An HTML node representing the rendered control.</returns>
+            public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, IEnumerable<IControl> content)
+            {
+                var html = base.Render(renderContext, visualTree, content);
+                (html as HtmlElement)?.AddUserAttribute("aria-level", "2");
+
+                return html;
+            }
         }
     }
 }

@@ -16,19 +16,23 @@ webexpress.webapp.SearchCtrl = class extends webexpress.webui.Ctrl {
         this._isInitializing = true;
         
         // configuration
-        const cookieMode = this._getCookie("wx_search_mode");
+        this._storageKey = element.dataset.persistKey || (element.id ? `wx_search_mode_${element.id}` : null);
+        const storedMode = webexpress.webui.LocalStorage.getItem(this._storageKey);
         this._initialMode = "basic";
-        if (cookieMode === "wql" || cookieMode === "basic") {
-            this._initialMode = cookieMode;
+        if (storedMode === "wql" || storedMode === "basic") {
+            this._initialMode = storedMode;
         } else if (element.dataset.initial && (element.dataset.initial === "wql" || element.dataset.initial === "basic")) {
             this._initialMode = element.dataset.initial;
         }
 
-        this._uri = this._element.dataset.uri || null;
+        // the endpoint is authored in C# through the wx-service island; read it
+        // before the host is cleared, because the read consumes the island
+        const islandServices = webexpress.webapp.ServiceRegistry.fromElement(element);
+        this._service = islandServices.data || null;
+        this._uri = this._service ? this._service.baseUri : null;
 
         // clean up the dom element and set base classes for styling
         element.textContent = "";
-        element.removeAttribute("data-uri");
         element.removeAttribute("data-initial");
 
         // hosts and children
@@ -47,9 +51,69 @@ webexpress.webapp.SearchCtrl = class extends webexpress.webui.Ctrl {
         this._buildDom();
         this._initChildren();
         this._attachEventHandlers();
+        this._attachViewState(element);
         this._applyMode(this._initialMode);
-        
+
         this._isInitializing = false;
+    }
+
+    /**
+     * Wires the search to an enclosing ViewState when it was authored with
+     * Resource<T>().Model(path). Instead of the BindSearch control-to-control
+     * wire, a search or WQL change writes into the shared state and re-queries
+     * the bound resource. A single listener on the host catches every unified
+     * change the control re-emits, skipping the internal compatibility echo. A
+     * search without a resource binding stays standalone.
+     * @param {HTMLElement} element - the host element carrying the binding.
+     */
+    _attachViewState(element) {
+        this._viewState = null;
+        this._viewStateResource = element.getAttribute("data-wx-model-query")
+            || element.getAttribute("data-wx-resource")
+            || null;
+
+        if (!this._viewStateResource) {
+            return;
+        }
+
+        // the basic search writes this state key (defaulting to "search"); a WQL
+        // change always writes "wql", so the two modes stay mutually exclusive in
+        // the shared state exactly as the query state contract expects
+        this._searchStateKey = element.getAttribute("data-wx-model") || "search";
+
+        const viewStateId = element.getAttribute("data-wx-viewstate") || null;
+        webexpress.webapp.ViewStateRegistry.whenReady(element, viewStateId, (viewState) => {
+            this._viewState = viewState;
+        });
+
+        this._element.addEventListener(webexpress.webui.Event.CHANGE_FILTER_EVENT, (e) => {
+            // the compatibility echo is re-dispatched by this control itself and
+            // must not loop back into a second write
+            if (e.detail && e.detail._fromAdvanced) {
+                return;
+            }
+            this._writeSearchToViewState((e.detail && e.detail.value) || "", (e.detail && e.detail.searchType) || "basic");
+        });
+    }
+
+    /**
+     * Writes the current search or WQL text into the bound ViewState and
+     * re-queries the resource, resetting the page for the new query. A basic
+     * change writes the search key and clears wql; a WQL change writes wql and
+     * clears the search key.
+     * @param {string} value - the search or WQL text.
+     * @param {string} searchType - "basic" or "wql".
+     */
+    _writeSearchToViewState(value, searchType) {
+        if (!this._viewState) {
+            return;
+        }
+
+        const isWql = searchType === "wql";
+        const patch = { page: 0 };
+        patch[this._searchStateKey] = isWql ? null : value;
+        patch.wql = isWql ? value : null;
+        this._viewState.dispatch("viewstate/query", { resource: this._viewStateResource, patch: patch });
     }
 
     /**
@@ -128,11 +192,14 @@ webexpress.webapp.SearchCtrl = class extends webexpress.webui.Ctrl {
             this._basicCtrl = null;
         }
 
-        // wql wrapper and dataset uri
+        // wql wrapper, configured through a client built wx-service island so
+        // the nested prompt reads the same channel the server emits
         const wqlWrapper = document.createElement("div");
         wqlWrapper.className = "wx-webapp-wql-host";
         if (this._uri) {
-            wqlWrapper.dataset.uri = this._uri;
+            wqlWrapper.appendChild(webexpress.webapp.ServiceRegistry.islandElement({
+                name: "data", kind: "rest", baseUri: this._uri, method: "GET"
+            }));
         }
         // ensure wql wrapper fills width
         wqlWrapper.style.width = "100%";
@@ -163,12 +230,12 @@ webexpress.webapp.SearchCtrl = class extends webexpress.webui.Ctrl {
             this._applyMode(newMode);
             // focus the newly visible control
             if (this._initialMode === "basic") {
-                if (this._wqlCtrl && this._wqlCtrl._input) {
-                    this._wqlCtrl._input.focus();
+                if (this._basicCtrl && this._basicCtrl._searchInput) {
+                    this._basicCtrl._searchInput.focus({ preventScroll: true });
                 }
             } else {
-                if (this._basicCtrl && this._basicCtrl._searchInput) {
-                    this._basicCtrl._searchInput.focus();
+                if (this._wqlCtrl && this._wqlCtrl._input) {
+                    this._wqlCtrl._input.focus({ preventScroll: true });
                 }
             }
         });
@@ -268,31 +335,9 @@ webexpress.webapp.SearchCtrl = class extends webexpress.webui.Ctrl {
         // remember active mode
         this._initialMode = mode;
         
-        this._setCookie("wx_search_mode", mode, 30);
+        webexpress.webui.LocalStorage.setItem(this._storageKey, mode);
     }
 
-    /**
-     * Sets a cookie with the specified name, value, and optional expiration period in days.
-     * @param {string} name - The name of the cookie.
-     * @param {string} value - The value to store in the cookie.
-     * @param {number} [days] - The number of days until the cookie expires. If omitted, the cookie becomes a session cookie.
-     */
-    _setCookie(name, value, days) {
-        const expires = days
-            ? "; expires=" + new Date(Date.now() + days * 864e5).toUTCString()
-            : "";
-        document.cookie = name + "=" + encodeURIComponent(value) + expires + "; path=/";
-    }
-
-    /**
-     * Retrieves the value of a cookie by its name.
-     * @param {string} name - The name of the cookie to retrieve.
-     * @returns {string|null} The decoded cookie value, or null if the cookie does not exist.
-     */
-    _getCookie(name) {
-        const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]*)"));
-        return match ? decodeURIComponent(match[2]) : null;
-    }
 };
 
 // register the class in the controller

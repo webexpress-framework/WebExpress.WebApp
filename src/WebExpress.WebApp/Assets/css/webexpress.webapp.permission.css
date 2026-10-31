@@ -1,0 +1,90 @@
+/* the surface is the framework table, so only the toolbar above it, the assign
+   dialog and the chip cell need styling of their own; everything else is
+   inherited from wx-table */
+
+/* the children space themselves, because the progress bar the table base puts in
+   front of the table brings its own margin and a uniform gap would add to it */
+.wx-permission {
+    display: flex;
+    flex-direction: column;
+}
+
+/* the toolbar reads [title] [tools] … [assign]: the caption and the contributed
+   tools lead, the assign affordance sits on the side the table ends on, so it
+   reads as an action on the table rather than as its heading. It stands off
+   whatever the page puts above it; below it the progress bar and its margin
+   already separate it from the table, so it adds only a little */
+.wx-permission-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 0.5rem 0 0.25rem;
+}
+
+.wx-permission-title {
+    font-weight: 600;
+    color: var(--wx-webapp-text, var(--wx-body-color));
+    white-space: nowrap;
+}
+
+/* the tools take the width between the caption and the assign affordance, and a
+   field among them grows into it - a search box is meant to be typed into, not
+   to hug its placeholder - while an action keeps the size its label gives it */
+.wx-permission-tools {
+    display: flex;
+    align-items: center;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-width: 0;
+}
+
+.wx-permission-tools > * {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.wx-permission-tools > .btn,
+.wx-permission-tools > .btn-group,
+.wx-permission-tools > .dropdown {
+    flex: 0 0 auto;
+}
+
+.wx-permission-assign {
+    display: inline-flex;
+    align-items: center;
+    margin-left: auto;
+}
+
+/* the dialog stacks its fields, which is what leaves the chip picker the full
+   width its dual list needs */
+.wx-permission-assign-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.wx-permission-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.wx-permission-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--wx-webapp-text-2, var(--wx-webapp-text));
+}
+
+/* the required marker leans against its caption instead of floating behind the
+   gap a flex label would put between them */
+.wx-permission-label > .wx-form-required {
+    margin-left: 2px;
+}
+
+/* the move control renders its dual list at full height, which only fits while
+   the cell is in edit mode; the read view is a chip row and stays compact */
+.wx-permission .wx-grid-cell > .wx-smart-edit > .wx-move > .wx-move-list > ul {
+    height: 12rem;
+}

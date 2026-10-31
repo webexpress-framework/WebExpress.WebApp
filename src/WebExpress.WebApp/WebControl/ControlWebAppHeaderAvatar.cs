@@ -14,7 +14,7 @@ namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
     /// Avatar control for a web app header. Uses the avatar image as the interactive menu
-    /// button via <see cref="ControlRestAvatarDropdown"/> and supports dynamic item loading
+    /// button via <see cref="ControlDataAvatarDropdown"/> and supports dynamic item loading
     /// through a REST API endpoint.
     /// </summary>
     public class ControlWebAppHeaderAvatar : Control, IControlWebAppHeaderAvatar
@@ -153,7 +153,8 @@ namespace WebExpress.WebApp.WebControl
         {
             var avatar = WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlAvatar, SectionAppAvatar>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ).FirstOrDefault();
 
             username = avatar?.GetUsername(renderContext) ?? username;
@@ -190,17 +191,20 @@ namespace WebExpress.WebApp.WebControl
         {
             var preferences = Preferences.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppAvatarPreferences>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ));
 
             var primary = Primary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppAvatarPrimary>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ));
 
             var secondary = Secondary.Union(WebEx.ComponentHub.FragmentManager.GetFragments<FragmentControlDropdownItemLink, SectionAppAvatarSecondary>
             (
-                renderContext?.PageContext
+                renderContext?.PageContext,
+                renderContext?.Request
             ));
 
             if (preferences.Any() || primary.Any() || secondary.Any())

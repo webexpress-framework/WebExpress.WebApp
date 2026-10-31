@@ -123,7 +123,7 @@ webexpress.webapp.ChatCtrl = class extends webexpress.webui.Ctrl {
         this._sendButton = document.createElement("button");
         this._sendButton.type = "submit";
         this._sendButton.className = "btn btn-primary wx-chat-send";
-        this._sendButton.textContent = "Send";
+        this._sendButton.textContent = this._i18n("webexpress.webapp:chat.send", "Send");
         form.appendChild(this._sendButton);
 
         form.addEventListener("submit", (event) => {

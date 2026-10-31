@@ -8,7 +8,6 @@ namespace WebExpress.WebApp.Test.WebControl
     /// <summary>
     /// Tests action serialization and html attributes for plugin package actions.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestActionPluginPackage
     {
         /// <summary>

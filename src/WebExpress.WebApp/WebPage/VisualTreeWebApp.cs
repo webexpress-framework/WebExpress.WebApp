@@ -1,14 +1,15 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using WebExpress.WebApp.WebControl;
+using WebExpress.WebApp.WebFragment;
 using WebExpress.WebApp.WebSection;
+using WebExpress.WebApp.WebTheme;
 using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebComponent;
 using WebExpress.WebCore.WebEndpoint;
 using WebExpress.WebCore.WebHtml;
-using WebExpress.WebCore.WebIcon;
 using WebExpress.WebCore.WebPage;
 using WebExpress.WebCore.WebTheme;
 using WebExpress.WebCore.WebUri;
@@ -19,7 +20,7 @@ using WebExpress.WebUI.WebPage;
 namespace WebExpress.WebApp.WebPage
 {
     /// <summary>
-    /// Represents the visual tree of the web application.
+    /// The default page layout (visual tree) of a WebApp: the arrangement of header, sidebar, content, toolbar, and footer that pages are rendered into.
     /// </summary>
     public class VisualTreeWebApp : VisualTreeControl, IVisualTreeWebApp
     {
@@ -84,7 +85,7 @@ namespace WebExpress.WebApp.WebPage
         public ControlPopupNotification NotificationPopup { get; protected set; } = new ControlPopupNotification("wx-notificationpopup");
 
         /// <summary>
-        /// Gets or sets a delegate that returns the collection of domain names associated with 
+        /// Gets or sets a delegate that returns the collection of domain names associated with
         /// the current context.
         /// </summary>
         public Func<IEnumerable<string>> Domains { get; set; }
@@ -160,7 +161,14 @@ namespace WebExpress.WebApp.WebPage
             var body = new HtmlElementSectionBody();
             var renderContext = new RenderControlContext(context.RenderContext);
 
+            // the icon set is a preference of the whole application rather than of a page, so
+            // it is linked here instead of in every page's Process; it comes after the theme
+            // stylesheet a page may have chosen there, because its masks override that one
+            ThemePreferences.ApplyIconSet(context.RenderContext, this);
+
             // head
+            // assistive technology picks pronunciation rules from the document language
+            html.AddUserAttribute("lang", context.Request?.Culture?.Name);
             html.Head.Title = I18N.Translate(context.Request, Title);
             html.Head.Favicons = Favicons;
             html.Head.Base = Base?.ToString();
@@ -172,34 +180,100 @@ namespace WebExpress.WebApp.WebPage
 
             // body
             Header.AppTitle.SetTitle(html.Head.Title);
-            if (Theme?.ThemeMode == ThemeMode.Dark)
-            {
-                html.AddUserAttribute("data-bs-theme", "dark");
-            }
-            if (IconTheme == TypeIconTheme.Light)
-            {
-                html.AddUserAttribute("data-icon-theme", "light");
-            }
+            ThemePreferences.ApplyColorScheme(context.RenderContext, html, Theme);
 
             var preferences = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionBodyPreferences>
             (
                 renderContext?.PageContext
-            );
+            )
+                .Where(x => x is not IFragmentControlViewState);
 
             html.Body.Add(preferences.Select(x => x.Render(renderContext, this)));
             html.Body.Add(MessageQueueUri);
-            html.Body.Add(Header.Render(renderContext, this));
+
+            // render the ViewState fragments first, when present, found by
+            // their type across the body sections. They are hidden island hosts,
+            // so they sit early in the body, add nothing visible, and the
+            // bound controls resolve them by resource. The content sections
+            // exclude them so a ViewState is never rendered twice.
+            var viewStates = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControlViewState, SectionBodyPreferences>(renderContext?.PageContext)
+                .Concat(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControlViewState, SectionBodyPrimary>(renderContext?.PageContext))
+                .Concat(WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControlViewState, SectionBodySecondary>(renderContext?.PageContext));
+            html.Body.Add(viewStates.Select(x => x.Render(renderContext, this)));
+            html.Body.Add(RenderHeader(renderContext));
             html.Body.Add(Toast.Render(renderContext, this));
-            html.Body.Add(Breadcrumb.Render(renderContext, this));
-            html.Body.Add(Prologue.Render(renderContext, this));
+            html.Body.Add(RenderIntroduction(renderContext));
 
             var primary = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionBodyPrimary>
             (
                 renderContext?.PageContext
-            );
+            )
+                .Where(x => x is not IFragmentControlViewState);
             html.Body.Add(primary.Select(x => x.Render(renderContext, this)));
 
-            var split = new ControlPanelSplit
+            html.Body.Add(RenderMainContent(renderContext));
+
+            html.Body.Add(Epilogue.Render(renderContext, this));
+            html.Body.Add(RenderFooter(renderContext));
+            html.Body.Add(NotificationPopup.Render(renderContext, this));
+
+            html.Body.Scripts = [.. Scripts.Values];
+
+            var secondary = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionBodySecondary>
+            (
+                renderContext?.PageContext
+            )
+                .Where(x => x is not IFragmentControlViewState);
+
+            html.Body.Add(secondary.Select(x => x.Render(renderContext, this)));
+
+            var cookieBanners = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionCookieBanner>
+            (
+                renderContext?.PageContext
+            );
+            html.Body.Add(cookieBanners.Select(x => x.Render(renderContext, this)));
+
+            return html;
+        }
+
+        /// <summary>
+        /// Allows specialized layouts to supply their own navigation header.
+        /// </summary>
+        /// <param name="renderContext">The current request and page context.</param>
+        /// <returns>The application header.</returns>
+        protected virtual IHtmlNode RenderHeader(IRenderControlContext renderContext)
+        {
+            return Header.Render(renderContext, this);
+        }
+
+        /// <summary>
+        /// Allows specialized layouts to supply their own footer composition.
+        /// </summary>
+        /// <param name="renderContext">The current request and page context.</param>
+        /// <returns>The application footer.</returns>
+        protected virtual IHtmlNode RenderFooter(IRenderControlContext renderContext)
+        {
+            return Footer.Render(renderContext, this);
+        }
+
+        /// <summary>
+        /// Provides the introductory controls so specialized layouts can replace the application navigation.
+        /// </summary>
+        /// <param name="renderContext">The current request and page context.</param>
+        /// <returns>The introductory nodes in display order.</returns>
+        protected virtual IEnumerable<IHtmlNode> RenderIntroduction(IRenderControlContext renderContext)
+        {
+            return [Breadcrumb.Render(renderContext, this), Prologue.Render(renderContext, this)];
+        }
+
+        /// <summary>
+        /// Provides the main layout so specialized pages can omit the application sidebar.
+        /// </summary>
+        /// <param name="renderContext">The current request and page context.</param>
+        /// <returns>The main content layout.</returns>
+        protected virtual IHtmlNode RenderMainContent(IRenderControlContext renderContext)
+        {
+            var split = new ControlSplit
             (
                 "wx-split",
                 [Sidebar],
@@ -209,30 +283,15 @@ namespace WebExpress.WebApp.WebPage
                 Border = _ => new PropertyBorder(true),
                 Orientation = _ => TypeOrientationSplit.Horizontal,
                 SidePanelInitialSize = _ => 350,
-                SidePanelMinSize = _ => 45
+                SidePanelMinSize = _ => 45,
+                // the toggle that expands the sidebar again sits in the sidebar's
+                // own toolbar, so the collapse has to leave the icon rail standing
+                SidePanelCollapseSize = _ => 45
             };
 
-            html.Body.Add
-            (
-                split.Render(renderContext, this)
-                    .AddUserAttribute("data-wx-primary-action", "split")
-                    .AddUserAttribute("data-wx-primary-target", $"#wx-split-button-toggle")
-            );
-
-            html.Body.Add(Epilogue.Render(renderContext, this));
-            html.Body.Add(Footer.Render(renderContext, this));
-            html.Body.Add(NotificationPopup.Render(renderContext, this));
-
-            html.Body.Scripts = [.. Scripts.Values];
-
-            var secondary = WebEx.ComponentHub.FragmentManager.GetFragments<IFragmentControl, SectionBodySecondary>
-            (
-                renderContext?.PageContext
-            );
-
-            html.Body.Add(secondary.Select(x => x.Render(renderContext, this)));
-
-            return html;
+            return split.Render(renderContext, this)
+                .AddUserAttribute("data-wx-primary-action", "split")
+                .AddUserAttribute("data-wx-primary-target", "#wx-split-button-toggle");
         }
     }
 }

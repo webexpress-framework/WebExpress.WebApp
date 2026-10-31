@@ -7,7 +7,6 @@ namespace WebExpress.WebApp.Test.WebAttribute
     /// Unit tests for the date range validation attribute.
     /// Ensures that dates outside the allowed range are rejected.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestValidationDateRange
     {
         /// <summary>

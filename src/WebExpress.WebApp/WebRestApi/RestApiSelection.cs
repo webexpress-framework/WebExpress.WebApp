@@ -35,9 +35,9 @@ namespace WebExpress.WebApp.WebRestApi
         public IResponse Retrieve(IRequest request)
         {
             // default page size aligned with dropdown max entries
-            var defaultPageSize = "50";
-            var pageNumber = Convert.ToInt32(request.GetParameter("p")?.Value ?? "0");
-            var pageSize = Convert.ToInt32(request.GetParameter("l")?.Value ?? defaultPageSize);
+            const int defaultPageSize = 50;
+            var pageNumber = request.ParseIntParameter("p", 0);
+            var pageSize = request.ParseIntParameter("l", defaultPageSize);
             var search = request.GetParameter("q")?.Value ?? string.Empty;
             var wql = request.GetParameter("wql")?.Value ?? null;
             var filters = request.GetParameter("f")?.Value?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries) ?? [];
@@ -81,7 +81,7 @@ namespace WebExpress.WebApp.WebRestApi
             }
             catch (Exception ex)
             {
-                return new ResponseBadRequest(new StatusMessage($"Error processing request. {ex}"));
+                return RestApiFault.BadRequest(request, ex, "Error processing request.");
             }
         }
 
@@ -117,6 +117,14 @@ namespace WebExpress.WebApp.WebRestApi
         protected abstract IEnumerable<RestApiSelectionItem> RetrieveItems(IQuery<TIndexItem> query, IQueryContext context, IRequest request);
 
         /// <summary>
+        /// Returns how a WQL statement is turned into a query. The default evaluates the text
+        /// conditions as the index does, which only a provider running in memory can execute;
+        /// an endpoint backed by a database returns <see cref="WqlQueryMode.Translatable"/>,
+        /// so that its query provider can translate the filter into SQL.
+        /// </summary>
+        protected virtual WqlQueryMode QueryMode => WqlQueryMode.Exact;
+
+        /// <summary>
         /// Applies filtering criteria to the specified query based on the provided WQL statement.
         /// </summary>
         /// <param name="wqlStatement">
@@ -141,7 +149,7 @@ namespace WebExpress.WebApp.WebRestApi
                 return query;
             }
 
-            return wqlStatement.ToQuery();
+            return wqlStatement.ToQuery(QueryMode);
         }
 
         /// <summary>

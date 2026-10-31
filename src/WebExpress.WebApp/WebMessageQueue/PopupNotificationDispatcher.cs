@@ -17,7 +17,7 @@ namespace WebExpress.WebApp.WebMessageQueue
     {
         private readonly IMessageQueueManager _messageQueueManager;
         private readonly IComponentHub _componentHub;
-        private NotificationManager _notificationManager;
+        private INotificationManager _notificationManager;
         private bool _subscribed;
 
         /// <summary>
@@ -73,12 +73,9 @@ namespace WebExpress.WebApp.WebMessageQueue
                 return;
             }
 
-            // The request stored on the socket carries both the session and
-            // the application context, which is exactly what
-            // NotificationManager.GetNotifications expects. The notification
-            // manager API takes the concrete Request type; for any other
-            // implementation we skip the session-scoped replay.
-            var request = (socket as MessageQueueSocket)?.Request as WebCore.WebMessage.Request;
+            // the socket carries the upgrade request (a RequestWebSocket, not a Request), whose
+            // session is the one the page's notifications were stored under
+            var request = (socket as MessageQueueSocket)?.Request;
             if (request == null)
             {
                 return;
@@ -86,7 +83,7 @@ namespace WebExpress.WebApp.WebMessageQueue
 
             foreach (var notification in _notificationManager.GetNotifications(applicationContext, request))
             {
-                if (!IsStillValid(notification))
+                if (notification.IsExpired(DateTime.UtcNow))
                 {
                     continue;
                 }
@@ -159,20 +156,6 @@ namespace WebExpress.WebApp.WebMessageQueue
                 // swallow - never let a transport error tear down the
                 // notification manager event pipeline
             }
-        }
-
-        /// <summary>
-        /// Returns <c>true</c> if the notification has not yet expired.
-        /// A negative <see cref="INotification.Durability"/> means
-        /// indefinite lifetime.
-        /// </summary>
-        private static bool IsStillValid(INotification notification)
-        {
-            if (notification.Durability < 0)
-            {
-                return true;
-            }
-            return notification.Created.AddMilliseconds(notification.Durability) >= DateTime.Now;
         }
     }
 }

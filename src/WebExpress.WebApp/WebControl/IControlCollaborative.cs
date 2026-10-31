@@ -43,5 +43,26 @@ namespace WebExpress.WebApp.WebControl
         /// Gets or sets the user color used for presence and cursor visualization.
         /// </summary>
         Func<IRenderControlContext, string> UserColor { get; }
+
+        /// <summary>
+        /// Gets or sets the resolver of the element id the presence bar is docked into, for a
+        /// host that has a better place for "who is here" than an overlay of the shared area.
+        /// </summary>
+        Func<IRenderControlContext, string> PresenceHost { get; }
+
+        /// <summary>
+        /// Returns the scope of the shared documents in the container.
+        /// </summary>
+        Func<IRenderControlContext, string> Document { get; }
+
+        /// <summary>
+        /// Returns whether the shared documents are only followed, not changed.
+        /// </summary>
+        Func<IRenderControlContext, bool> ReadOnly { get; }
+
+        /// <summary>
+        /// Returns the id of the comment control keeping the texts of anchored comments.
+        /// </summary>
+        Func<IRenderControlContext, string> Comments { get; }
     }
 }

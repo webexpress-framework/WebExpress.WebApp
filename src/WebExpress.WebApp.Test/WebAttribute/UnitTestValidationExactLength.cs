@@ -7,7 +7,6 @@ namespace WebExpress.WebApp.Test.WebAttribute
     /// Unit tests for the exact length validation attribute.
     /// Ensures that strings not matching the exact length are rejected.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestValidationExactLength
     {
         /// <summary>

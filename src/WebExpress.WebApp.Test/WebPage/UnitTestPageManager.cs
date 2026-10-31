@@ -6,7 +6,6 @@ namespace WebExpress.WebApp.Test.WebPage
     /// <summary>
     /// Test the page manager.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestPageManager
     {
         /// <summary>

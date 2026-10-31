@@ -51,8 +51,8 @@ namespace WebExpress.WebApp.WebMessageQueue
 
         /// <summary>
         /// Interprets, validates and forwards the specified collaborative
-        /// payload to all clients that are part of the same collaborative
-        /// scope as the originating socket.
+        /// payload to all clients that are part of the same collaboration
+        /// group as the originating socket.
         /// </summary>
         /// <param name="source">
         /// The socket that received the raw message. Cannot be <c>null</c>.
@@ -75,6 +75,17 @@ namespace WebExpress.WebApp.WebMessageQueue
 
             if (string.IsNullOrWhiteSpace(rawPayload))
             {
+                return;
+            }
+
+            // operations of shared documents are sequenced, not broadcast
+            if (TryReadType(rawPayload, out var type) && CollaborativeMessageTypes.IsOperation(type))
+            {
+                if (_messageQueueManager.CollaborativeDocuments is { } documents)
+                {
+                    await documents.HandleAsync(source, rawPayload, cancellationToken);
+                }
+
                 return;
             }
 
@@ -194,6 +205,28 @@ namespace WebExpress.WebApp.WebMessageQueue
         }
 
         /// <summary>
+        /// Reads the message type without building the message.
+        /// </summary>
+        /// <param name="rawPayload">The raw JSON string.</param>
+        /// <param name="type">The type on success.</param>
+        /// <returns><c>true</c> if the payload carries a type.</returns>
+        private static bool TryReadType(string rawPayload, out string type)
+        {
+            type = null;
+
+            try
+            {
+                using var document = JsonDocument.Parse(rawPayload);
+
+                return document.RootElement.ValueKind == JsonValueKind.Object && TryGetString(document.RootElement, "type", out type);
+            }
+            catch (JsonException)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Reads a string property from the JSON root, returning <c>false</c>
         /// when the property is missing or not a string.
         /// </summary>
@@ -223,7 +256,8 @@ namespace WebExpress.WebApp.WebMessageQueue
             return type == CollaborativeMessageTypes.Presence
                 || type == CollaborativeMessageTypes.Cursor
                 || type == CollaborativeMessageTypes.Input
-                || type == CollaborativeMessageTypes.Caret;
+                || type == CollaborativeMessageTypes.Caret
+                || type == CollaborativeMessageTypes.Draft;
         }
 
         /// <summary>
@@ -277,6 +311,16 @@ namespace WebExpress.WebApp.WebMessageQueue
                 }
 
                 return session.Domains?.Any(d => _domains.Contains(d)) ?? false;
+            }
+
+            /// <summary>
+            /// Describes the address for the other instances of a cluster, where collaborators
+            /// of the same domains may be connected.
+            /// </summary>
+            /// <returns>The description.</returns>
+            public AddressDescriptor Describe()
+            {
+                return new AddressDescriptor { Domains = [.. _domains], ExcludeConnectionId = _senderConnectionId };
             }
         }
     }

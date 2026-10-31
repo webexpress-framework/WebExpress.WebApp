@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="WebExpress.WebApp.Test/WebExpress.WebApp.Test.csproj" />
+  <Project Path="WebExpress.WebApp/WebExpress.WebApp.csproj" />
+</Solution>

@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Extensions.Configuration;
 using System.Globalization;
 using System.Net;
 using System.Reflection;
@@ -36,7 +37,8 @@ namespace WebExpress.WebApp.Test.Fixture
         /// Create a fake server context.
         /// </summary>
         /// <returns>The server context.</returns>
-        public static IHttpServerContext CreateHttpServerContextMock()
+        /// <param name="configuration">The trusted authority metadata containing signing keys and protocol endpoints.</param>
+        public static IHttpServerContext CreateHttpServerContextMock(IConfigurationRoot configuration = null)
         {
             return new HttpServerContext
             (
@@ -46,6 +48,7 @@ namespace WebExpress.WebApp.Test.Fixture
                 Environment.CurrentDirectory,
                 Environment.CurrentDirectory,
                 Environment.CurrentDirectory,
+                configuration ?? new ConfigurationBuilder().Build(),
                 CultureInfo.GetCultureInfo("en"),
                 new Log() { LogMode = LogMode.Off },
                 null
@@ -56,7 +59,8 @@ namespace WebExpress.WebApp.Test.Fixture
         /// Create a component hub.
         /// </summary>
         /// <returns>The component hub.</returns>
-        public static ComponentHub CreateComponentHubMock()
+        /// <param name="configuration">The trusted authority metadata containing signing keys and protocol endpoints.</param>
+        public static ComponentHub CreateComponentHubMock(IConfigurationRoot configuration = null)
         {
             var ctorComponentHub = typeof(ComponentHub).GetConstructor
             (
@@ -66,13 +70,12 @@ namespace WebExpress.WebApp.Test.Fixture
                 null
             );
 
-            var componentHub = (ComponentHub)ctorComponentHub.Invoke([CreateHttpServerContextMock()]);
+            var componentHub = (ComponentHub)ctorComponentHub.Invoke([CreateHttpServerContextMock(configuration)]);
 
-            // set static field in the webex class
-            var type = typeof(WebEx);
-            var field = type.GetField("_componentHub", BindingFlags.Static | BindingFlags.NonPublic);
+            // bound to the calling test's flow so tests running side by side keep their own hub
+            var scoped = typeof(WebEx).GetField("_scopedComponentHub", BindingFlags.Static | BindingFlags.NonPublic);
 
-            field.SetValue(null, componentHub);
+            ((AsyncLocal<IComponentHub>)scoped.GetValue(null)).Value = componentHub;
 
             return componentHub;
         }
@@ -81,9 +84,10 @@ namespace WebExpress.WebApp.Test.Fixture
         /// Create a component hub and register the plugins.
         /// </summary>
         /// <returns>The component hub.</returns>
-        public static ComponentHub CreateAndRegisterComponentHubMock()
+        /// <param name="configuration">The trusted authority metadata containing signing keys and protocol endpoints.</param>
+        public static ComponentHub CreateAndRegisterComponentHubMock(IConfigurationRoot configuration = null)
         {
-            var componentHub = CreateComponentHubMock();
+            var componentHub = CreateComponentHubMock(configuration);
             var pluginManager = componentHub.PluginManager as PluginManager;
 
             var registerMethod = pluginManager.GetType().GetMethod("Register", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, []);

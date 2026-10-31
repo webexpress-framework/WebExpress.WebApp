@@ -4,7 +4,7 @@ using WebExpress.WebUI.WebControl;
 namespace WebExpress.WebApp.WebControl
 {
     /// <summary>
-    /// App navigator for a WebApp.
+    /// Contract for the app navigator in the WebApp header.
     /// </summary>
     public interface IControlWebAppHeaderAppNavigator : IControl
     {

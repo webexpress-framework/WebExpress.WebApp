@@ -3,7 +3,7 @@
 namespace WebExpress.WebApp.WebSection
 {
     /// <summary>
-    /// Represents the section app.avatar.secondary.
+    /// Names the 'app.avatar.secondary' slot of the WebApp page layout: a placeholder section into which fragments can be inserted to place content at that position.
     /// </summary>
     public class SectionAppAvatarSecondary : ISection
     {

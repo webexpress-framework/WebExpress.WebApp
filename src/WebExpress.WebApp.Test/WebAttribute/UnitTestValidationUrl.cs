@@ -7,7 +7,6 @@ namespace WebExpress.WebApp.Test.WebAttribute
     /// Unit tests for the url validation attribute.
     /// Ensures that invalid URLs are rejected.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestValidationUrl
     {
         /// <summary>

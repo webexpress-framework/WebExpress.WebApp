@@ -7,7 +7,6 @@ namespace WebExpress.WebApp.Test.WebAttribute
     /// Unit tests for the not equal validation attribute.
     /// Ensures that a specific disallowed value is rejected.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestValidationNotEqual
     {
         /// <summary>

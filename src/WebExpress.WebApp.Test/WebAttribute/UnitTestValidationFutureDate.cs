@@ -7,7 +7,6 @@ namespace WebExpress.WebApp.Test.WebAttribute
     /// Unit tests for the future date validation attribute.
     /// Ensures that past dates are rejected.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestValidationFutureDate
     {
         /// <summary>

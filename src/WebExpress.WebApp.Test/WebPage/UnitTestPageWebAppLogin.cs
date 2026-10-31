@@ -7,7 +7,6 @@ namespace WebExpress.WebApp.Test.WebPage
     /// <summary>
     /// Tests the abstract login page base class.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestPageWebAppLogin
     {
         /// <summary>

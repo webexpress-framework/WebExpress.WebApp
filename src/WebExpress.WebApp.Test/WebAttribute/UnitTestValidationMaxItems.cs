@@ -7,7 +7,6 @@ namespace WebExpress.WebApp.Test.WebAttribute
     /// Unit tests for the maximum items validation attribute.
     /// Ensures that collections exceeding the maximum size are rejected.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestValidationMaxItems
     {
         /// <summary>

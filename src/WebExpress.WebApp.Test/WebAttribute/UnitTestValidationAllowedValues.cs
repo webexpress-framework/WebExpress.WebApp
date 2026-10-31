@@ -7,7 +7,6 @@ namespace WebExpress.WebApp.Test.WebAttribute
     /// Unit tests for the allowed values validation attribute.
     /// Ensures that values outside the allowed set are rejected.
     /// </summary>
-    [Collection("NonParallelTests")]
     public class UnitTestValidationAllowedValues
     {
         /// <summary>
