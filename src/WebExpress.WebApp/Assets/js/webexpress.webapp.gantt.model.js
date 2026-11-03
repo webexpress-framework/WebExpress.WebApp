@@ -274,6 +274,7 @@ webexpress.webapp.ganttModel = {
             end: end ? this.formatIso(end) : null,
             duration: duration === null ? 1 : duration,
             progress: Math.round(progress),
+            rollupProgress: raw.rollupProgress !== false,
             resources: resources,
             parentId: raw.parentId !== undefined && raw.parentId !== null && raw.parentId !== ""
                 ? String(raw.parentId)
@@ -418,6 +419,9 @@ webexpress.webapp.ganttModel = {
      * Derives the dates and progress of every container from its subtree,
      * bottom-up: the start is the earliest child start, the end the latest
      * child end and the progress the duration-weighted mean of the leaves.
+     * A container delivered with rollupProgress false keeps its own progress
+     * and enters its parent's mean weighted by its own duration, so a server
+     * measure of completion is never overwritten by the leaves below it.
      * The tasks are mutated in place and returned, because the rollup runs
      * right after a normalisation or a mutation on data the caller owns.
      * @param {Array<object>} tasks - The task list.
@@ -445,13 +449,22 @@ webexpress.webapp.ganttModel = {
                     child.duration = sub.start !== null && sub.end !== null
                         ? this.workingDuration(sub.start, sub.end, calendar)
                         : child.duration;
-                    child.progress = sub.weight > 0 ? Math.round(sub.done / sub.weight) : child.progress;
                     child.type = "summary";
 
                     if (sub.start !== null && (start === null || sub.start < start)) { start = sub.start; }
                     if (sub.end !== null && (end === null || sub.end > end)) { end = sub.end; }
-                    weight += sub.weight;
-                    done += sub.done;
+
+                    if (child.rollupProgress === false) {
+                        // the server owns this container's progress, so its leaves no longer
+                        // speak for it upward either; the container counts as one block
+                        const childWeight = Math.max(1, child.duration);
+                        weight += childWeight;
+                        done += childWeight * child.progress;
+                    } else {
+                        child.progress = sub.weight > 0 ? Math.round(sub.done / sub.weight) : child.progress;
+                        weight += sub.weight;
+                        done += sub.done;
+                    }
                 } else {
                     const childStart = this.parseDate(child.start);
                     const childEnd = this.parseDate(child.end);
@@ -784,6 +797,7 @@ webexpress.webapp.ganttModel = {
             end: task.end,
             duration: task.duration,
             progress: task.progress,
+            rollupProgress: task.rollupProgress !== false,
             resources: task.resources.slice(),
             parentId: task.parentId,
             color: task.color,

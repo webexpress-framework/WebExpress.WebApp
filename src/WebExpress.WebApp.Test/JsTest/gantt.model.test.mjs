@@ -109,6 +109,35 @@ test("rollup derives container dates and duration weighted progress", () => {
     assert.equal(parent.progress, 83);
 });
 
+test("rollup keeps a container's delivered progress and weighs it by its duration", () => {
+    const { wxapp } = load();
+    const model = wxapp.ganttModel;
+
+    const tasks = model.normalizeProject({
+        tasks: [
+            { id: "root" },
+            { id: "s", parentId: "root", rollupProgress: false, progress: 40 },
+            { id: "a", parentId: "s", start: "2026-07-01", duration: 2, progress: 100 },
+            { id: "b", parentId: "s", start: "2026-07-03", duration: 2, progress: 100 },
+            { id: "c", parentId: "root", start: "2026-07-05", duration: 4, progress: 70 }
+        ]
+    }).tasks;
+
+    model.rollup(tasks);
+    const byId = new Map(tasks.map((t) => [t.id, t]));
+    const summary = byId.get("s");
+
+    assert.equal(summary.type, "summary");
+    assert.equal(summary.progress, 40, "the leaves would say 100");
+    assert.equal(summary.start, "2026-07-01", "the dates still roll up");
+    assert.equal(summary.end, "2026-07-05");
+    assert.equal(summary.duration, 4);
+    // (4 * 40 + 4 * 70) / 8 = 55, the leaves of s would give (4 * 100 + 4 * 70) / 8 = 85
+    assert.equal(byId.get("root").progress, 55);
+    assert.equal(model.taskToWire(summary).rollupProgress, false, "a save keeps the flag");
+    assert.equal(byId.get("root").rollupProgress, true);
+});
+
 test("flatten orders children after their parent and honours collapse", () => {
     const { wxapp } = load();
     const model = wxapp.ganttModel;

@@ -49,6 +49,16 @@ namespace WebExpress.WebApp.WebRestApi
         public int Progress { get; set; }
 
         /// <summary>
+        /// Gets or sets whether a container derives its progress from its subtree.
+        /// False keeps the delivered progress, for a server that tracks completion
+        /// of a container by its own measure rather than by the durations of the
+        /// children; the container's dates and duration still roll up. Leaves
+        /// ignore the flag. Null is read as true.
+        /// </summary>
+        [JsonPropertyName("rollupProgress")]
+        public bool? RollupProgress { get; set; } = true;
+
+        /// <summary>
         /// Gets or sets the resources assigned to the task.
         /// </summary>
         [JsonPropertyName("resources")]
