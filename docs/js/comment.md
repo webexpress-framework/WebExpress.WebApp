@@ -158,6 +158,11 @@ The composer is built around the WebExpress `EditorCtrl`. That means authors get
 
 Press `⌘/Ctrl + Enter` to submit. The submit button is disabled while the editor is empty.
 
+The composer starts collapsed to a one-line trigger. `data-expanded="true"` on the
+`wx-webapp-comment-composer` host (C#: `ControlDataCommentComposer.Expanded`) starts it expanded
+with the editor created but not focused, since only a user expanding it moves the focus. Cancel still
+collapses it.
+
 ## Use Case Examples
 
 A typical setup at the bottom of an object detail page:

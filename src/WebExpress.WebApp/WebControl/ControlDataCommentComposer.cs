@@ -107,6 +107,13 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, string> Categories { get; set; }
 
         /// <summary>
+        /// Gets or sets whether the composer starts expanded. A page whose purpose is writing a
+        /// comment shows the form right away; the editor is not focused, because only a user
+        /// expanding the composer asks for the focus.
+        /// </summary>
+        public Func<IRenderControlContext, bool> Expanded { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">Optional host element id.</param>
@@ -140,7 +147,8 @@ namespace WebExpress.WebApp.WebControl
                 .AddUserAttribute("data-current-user", CurrentUser?.Invoke(renderContext))
                 .AddUserAttribute("data-default-category", DefaultCategory?.Invoke(renderContext))
                 .AddUserAttribute("data-placeholder", Placeholder?.Invoke(renderContext))
-                .AddUserAttribute("data-categories", Categories?.Invoke(renderContext));
+                .AddUserAttribute("data-categories", Categories?.Invoke(renderContext))
+                .AddUserAttribute("data-expanded", Expanded?.Invoke(renderContext) == true ? "true" : null);
         }
     }
 }
