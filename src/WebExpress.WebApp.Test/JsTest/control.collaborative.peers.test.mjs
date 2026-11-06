@@ -139,6 +139,36 @@ test("what a peer types arrives in the local field", async () => {
     assert.equal(b.element.querySelector("input").value, "The Story of Lake Geneva");
 });
 
+test("rich text a peer writes reaches the local editor through its value, markup intact", async () => {
+    const rt = loadControl({ file: FILE });
+    const { a, b } = pair(rt);
+    const written = [];
+
+    const editors = [a, b].map((surface) => {
+        const host = rt.createElement("div");
+        host.id = "prose";
+        host.classList.add("wx-editor");
+        const surfaceElement = rt.createElement("div");
+        surfaceElement.setAttribute("contenteditable", "true");
+        surfaceElement.isContentEditable = true;
+        host.appendChild(surfaceElement);
+        surface.element.appendChild(host);
+        return { host, surface: surfaceElement };
+    });
+
+    // the editor controller of the receiving page, which owns the surface's value
+    rt.wx.Controller.instanceMap.set(editors[1].host, {
+        get value() { return written[written.length - 1] || ""; },
+        set value(markup) { written.push(markup); }
+    });
+
+    editors[0].surface.innerHTML = "<p>Lake <b>Geneva</b></p>";
+    a.element.dispatchEvent({ type: "input", target: editors[0].surface });
+    await settle();
+
+    assert.deepEqual(written, ["<p>Lake <b>Geneva</b></p>"], "the markup goes through the editor, not flattened to text");
+});
+
 test("nothing crosses between two surfaces on different channels", async () => {
     const rt = loadControl({ file: FILE });
     const { a, b } = pair(rt);
