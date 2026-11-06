@@ -1,6 +1,7 @@
 ﻿using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebControl;
 using WebExpress.WebCore.WebUri;
+using WebExpress.WebUI.WebControl;
 using WebExpress.WebUI.WebPage;
 
 namespace WebExpress.WebApp.Test.WebControl
@@ -83,6 +84,57 @@ namespace WebExpress.WebApp.Test.WebControl
 
             // validation
             AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
+
+        /// <summary>
+        /// Tests that a multi-select table tells the client so, carries the drag kinds and holds
+        /// its selection actions in a hidden bar.
+        /// </summary>
+        [Fact]
+        public void MultiSelectAndDragKinds()
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlDataTable("crew")
+            {
+                MultiSelect = _ => true,
+                DragKind = _ => "person",
+                DropKind = _ => "team"
+            }
+                .AddSelectionAction(new ControlButton() { Text = _ => "Assign" });
+
+            // act
+            var html = control.Render(context, visualTree).ToString();
+
+            // validation
+            Assert.Contains("data-multiselect=\"true\"", html);
+            Assert.Contains("data-drag-kind=\"person\"", html);
+            Assert.Contains("data-drop-kind=\"team\"", html);
+            Assert.Contains("<div class=\"wx-table-selection\" hidden>", html);
+            Assert.Contains("Assign", html);
+        }
+
+        /// <summary>
+        /// Tests that the selection bar is left out without multi-selection.
+        /// </summary>
+        [Fact]
+        public void SelectionActionsNeedMultiSelect()
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var context = UnitTestControlFixture.CreateRenderContextMock();
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlDataTable("crew")
+                .AddSelectionAction(new ControlButton() { Text = _ => "Assign" });
+
+            // act
+            var html = control.Render(context, visualTree).ToString();
+
+            // validation
+            Assert.DoesNotContain("wx-table-selection", html);
+            Assert.DoesNotContain("data-multiselect", html);
         }
     }
 }

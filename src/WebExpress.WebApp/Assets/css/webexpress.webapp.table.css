@@ -13,3 +13,31 @@
     margin-bottom: 0.5rem;
     color: var(--wx-body-color);
 }
+
+/* the actions for the chosen rows of a multi-selection; shown only while rows are chosen */
+.wx-table-selection {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--wx-border-radius);
+    background: var(--wx-tertiary-bg);
+    color: var(--wx-body-color);
+}
+
+.wx-table-selection[hidden] {
+    display: none;
+}
+
+.wx-table-selection-count {
+    font-weight: 600;
+    margin-right: auto;
+}
+
+.wx-table-check-column {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}

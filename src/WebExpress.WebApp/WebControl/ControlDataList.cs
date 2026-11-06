@@ -70,6 +70,19 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, string> TemplateFactory { get; set; }
 
         /// <summary>
+        /// Gets or sets the kind the items carry as sources of the drag-and-drop protocol, for
+        /// instance "issue"; a drop target can accept or refuse a drag by it. Null leaves them
+        /// undraggable.
+        /// </summary>
+        public Func<IRenderControlContext, string> DragKind { get; set; }
+
+        /// <summary>
+        /// Gets or sets the kind the items carry as drop targets of the drag-and-drop protocol,
+        /// so items can be dropped onto them. Null makes none a target.
+        /// </summary>
+        public Func<IRenderControlContext, string> DropKind { get; set; }
+
+        /// <summary>
         /// Gets or sets the optional initial state. When set, the control emits a
         /// data-wx-state island that the JavaScript Component seeds its store
         /// from on the first render, so the first paint can avoid a round trip.
@@ -110,6 +123,8 @@ namespace WebExpress.WebApp.WebControl
                 .AddUserAttribute("data-sortable", sortable ? "true" : null)
                 .AddUserAttribute("data-selectable", selectable ? "true" : null)
                 .AddUserAttribute("data-layout", layout?.ToClass())
+                .AddUserAttribute("data-drag-kind", DragKind?.Invoke(renderContext))
+                .AddUserAttribute("data-drop-kind", DropKind?.Invoke(renderContext))
                 .Add(Items.Select(x => x.Render(renderContext, visualTree)));
 
             html.EmitDataIslands(this, renderContext);

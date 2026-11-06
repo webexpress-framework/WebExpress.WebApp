@@ -76,18 +76,64 @@ test("column status assignments are provisional, support multiple values, and su
     assert.deepEqual(updates[1].columns[0].statusIds, ["open", "active"]);
 });
 
+/**
+ * Describes a drag of a card of the board onto a target, as the drag-and-drop protocol does.
+ * @param {object} rt - The runtime.
+ * @param {HTMLElement} host - The board host.
+ * @param {string} cardId - The dragged card.
+ * @param {HTMLElement} element - The card or cell under the pointer.
+ * @param {string} [position="into"] - Where the card lands at a card target.
+ * @returns {object} The detail of the protocol's events.
+ */
+function dragDetail(rt, host, cardId, element, position = "into") {
+    const kanban = rt.wx.KanbanCtrl;
+    return {
+        sources: [{ id: cardId, kind: kanban.CARD_KIND }],
+        origin: cardOf(host, cardId),
+        target: {
+            id: element.getAttribute("data-wx-drop"),
+            kind: element.getAttribute("data-wx-drop-kind"),
+            position: position,
+            element: element
+        },
+        effect: "move"
+    };
+}
+
+/**
+ * Drops a card of the board on a target through the protocol's drop event. The test DOM does
+ * not bubble, so the event is dispatched on the host, where the board listens.
+ * @param {object} rt - The runtime.
+ * @param {HTMLElement} host - The board host.
+ * @param {string} cardId - The dragged card.
+ * @param {HTMLElement} element - The card or cell it is dropped on.
+ * @param {string} [position] - Where the card lands at a card target.
+ */
+function drop(rt, host, cardId, element, position) {
+    host.dispatchEvent({ type: rt.wx.Event.DROP_EVENT, detail: dragDetail(rt, host, cardId, element, position), stopPropagation() {} });
+}
+
+/**
+ * Finds the rendered element of a card.
+ * @param {HTMLElement} host - The board host.
+ * @param {string} cardId - The card identifier.
+ * @returns {HTMLElement} The card element.
+ */
+function cardOf(host, cardId) {
+    return Array.from(host.querySelectorAll(".wx-kanban-card")).find((item) => item.dataset.cardId === cardId);
+}
+
 test("a cell drop waits for a choice and cancel leaves both location and status unchanged", () => {
-    const { board, card, updates } = setup();
-    board._dragCard = card;
-    board._onDropCell({ preventDefault() {} }, "work", null, null);
+    const rt = setup();
+    const { board, card, updates, host } = rt;
+    drop(rt, host, "a", cellOf(host, "work"));
     assert.equal(card.columnId, "todo");
     assert.equal(card.statusId, "open");
     assert.equal(updates.length, 0);
     assert.equal(board._statusDialog._footerDiv.querySelector(".btn-primary").disabled, true);
     fire(board._statusDialog._cancelButton, "click");
     assert.equal(updates.length, 0);
-    board._dragCard = card;
-    board._onDropCell({ preventDefault() {} }, "work", null, null);
+    drop(rt, host, "a", cellOf(host, "work"));
     choose(board, "review");
     assert.equal(card.columnId, "work");
     assert.equal(card.statusId, "review");
@@ -95,10 +141,9 @@ test("a cell drop waits for a choice and cancel leaves both location and status 
 });
 
 test("a card-relative drop preserves its insertion anchor while awaiting a choice", () => {
-    const { board, card, updates } = setup();
-    board._dragCard = card;
-    board._onDropWidget({ preventDefault() {} }, board._cards[1], "work", null, true);
-    board._dragCard = null;
+    const rt = setup();
+    const { board, card, updates, host } = rt;
+    drop(rt, host, "a", cardOf(host, "b"), "above");
     choose(board, "active");
     assert.equal(board._cards[0], card);
     assert.equal(updates.length, 1);
@@ -119,14 +164,17 @@ test("one permitted status moves immediately and an empty permission list blocks
 });
 
 /**
- * Drags over an element and reports whether the board accepted the drop there.
+ * Asks the board through the protocol's check event whether a card may land on a target.
+ * @param {object} rt - The runtime.
+ * @param {HTMLElement} host - The board host.
+ * @param {string} cardId - The dragged card.
  * @param {HTMLElement} element - The cell or card under the pointer.
- * @returns {boolean} True when the dragover was handled, which lets the browser drop.
+ * @returns {boolean} True when the board left the target accepted.
  */
-function dragOver(element) {
-    let handled = false;
-    element.dispatchEvent({ type: "dragover", target: element, preventDefault() { handled = true; }, stopPropagation() {} });
-    return handled;
+function accepts(rt, host, cardId, element) {
+    let refused = false;
+    host.dispatchEvent({ type: rt.wx.Event.DROP_CHECK_EVENT, detail: dragDetail(rt, host, cardId, element, "above"), preventDefault() { refused = true; } });
+    return !refused;
 }
 
 /**
@@ -140,33 +188,20 @@ function cellOf(host, colId) {
 }
 
 test("dragging over a column without a status open to the card shows it red and refuses the drop", () => {
-    const { board, card, host } = setup([]);
-    const work = cellOf(host, "work");
-    const todo = cellOf(host, "todo");
-    board._dragCard = card;
+    const rt = setup([]);
+    const { host } = rt;
 
-    assert.equal(dragOver(work), false, "the browser keeps the no-drop cursor and fires no drop");
-    assert.ok(work.classList.contains("wx-drag-blocked"));
-    const other = Array.from(host.querySelectorAll(".wx-kanban-card")).find((item) => item.dataset.cardId === "b");
-    assert.equal(dragOver(other), false, "a card inside the refused column refuses as well");
-
-    assert.equal(dragOver(todo), true, "the card's own column still takes a reorder");
-    assert.ok(!todo.classList.contains("wx-drag-blocked"));
-
-    board._clearDropTargets();
-    assert.ok(!work.classList.contains("wx-drag-blocked"), "the mark ends with the drag");
+    assert.equal(accepts(rt, host, "a", cellOf(host, "work")), false, "the protocol draws the cell refused and fires no drop");
+    assert.equal(accepts(rt, host, "a", cardOf(host, "b")), false, "a card inside the refused column refuses as well");
+    assert.equal(accepts(rt, host, "a", cellOf(host, "todo")), true, "the card's own column still takes a reorder");
 });
 
 test("a column with a status open to the card stays an ordinary drop target", () => {
-    const { board, card, host } = setup(["review"]);
-    const work = cellOf(host, "work");
-    board._dragCard = card;
-    assert.equal(dragOver(work), true);
-    assert.ok(!work.classList.contains("wx-drag-blocked"));
+    const rt = setup(["review"]);
+    const { board, host } = rt;
+    assert.equal(accepts(rt, host, "a", cellOf(host, "work")), true);
     board.updateData({ statuses: null });
-    board._dragCard = board._cards[0];
-    const cell = cellOf(host, "work");
-    assert.equal(dragOver(cell), true, "a board without status catalog never refuses");
+    assert.equal(accepts(rt, host, "a", cellOf(host, "work")), true, "a board without status catalog never refuses");
 });
 
 test("keyboard column moves obey status selection while same-column reordering preserves status", () => {

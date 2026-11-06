@@ -344,6 +344,12 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     // table layout persistence
     "table.heading": "Tabelle",
     "table.update.rejected": "Die Layoutänderung wurde nicht gespeichert und zurückgenommen.",
+    "table.select.all": "Alle Zeilen auswählen",
+    "table.select.row": "Zeile auswählen",
+    "table.selection.count": "{0} ausgewählt",
+    "table.selection.toolbar": "Aktionen für die ausgewählten Zeilen",
+    "tree.heading": "Baum",
+    "tree.move.rejected": "Das Verschieben wurde nicht gespeichert und zurückgenommen.",
 
     // paging (the info line the paged data controls render below their content)
     "paging.info": "Seite {0} von {1} / {2} von {3} Einträgen",

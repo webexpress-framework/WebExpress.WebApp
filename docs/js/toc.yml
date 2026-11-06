@@ -46,6 +46,10 @@
   href: wql.prompt.md
 - name: TabCtrl
   href: tab.md
+- name: TableCtrl
+  href: table.md
+- name: TreeCtrl
+  href: tree.md
 - name: TagCtrl
   href: tag.md
 - name: TrafficLightCtrl

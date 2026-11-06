@@ -102,6 +102,19 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, string> TemplateFactory { get; set; }
 
         /// <summary>
+        /// Gets or sets the kind the tiles carry as sources of the drag-and-drop protocol, for
+        /// instance "issue"; a drop target can accept or refuse a drag by it. Null leaves them
+        /// undraggable.
+        /// </summary>
+        public Func<IRenderControlContext, string> DragKind { get; set; }
+
+        /// <summary>
+        /// Gets or sets the kind the tiles carry as drop targets of the drag-and-drop protocol,
+        /// so items can be dropped onto them. Null makes none a target.
+        /// </summary>
+        public Func<IRenderControlContext, string> DropKind { get; set; }
+
+        /// <summary>
         /// Gets or sets the optional initial state, emitted as the data-wx-state island.
         /// </summary>
         public Func<IRenderControlContext, DataState> StateFactory { get; set; }
@@ -136,6 +149,8 @@ namespace WebExpress.WebApp.WebControl
             }
                 .AddUserAttribute("data-page-size", pageSize > 0 ? pageSize.ToString() : null)
                 .AddUserAttribute("data-heading-level", headingLevel?.ToString())
+                .AddUserAttribute("data-drag-kind", DragKind?.Invoke(renderContext))
+                .AddUserAttribute("data-drop-kind", DropKind?.Invoke(renderContext))
                 .EmitDataIslands(this, renderContext);
 
             bind?.ApplyUserAttributes(html);
