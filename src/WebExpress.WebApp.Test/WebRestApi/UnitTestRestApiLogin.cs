@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebRestApi;
+using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebIdentity;
 using WebExpress.WebCore.WebMessage;
 
@@ -383,6 +384,29 @@ namespace WebExpress.WebApp.Test.WebRestApi
             // assert
             Assert.Equal(401, result.Status);
             Assert.False(ParseResponseJson(result).GetProperty("success").GetBoolean());
+        }
+
+        /// <summary>
+        /// An issuer that throws - here because the deployment has no authentication block - is a
+        /// failed login with the session message, not a server error.
+        /// </summary>
+        [Fact]
+        public void Authenticate_IssuerThrows_ReturnsLoginError()
+        {
+            // arrange
+            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var user = UniqueUser();
+            var api = new TestRestApiLogin(user, "password123");
+            var request = CreateLoginRequest(user, "password123");
+
+            // act
+            var result = api.Authenticate(request);
+
+            // assert
+            Assert.Equal(401, result.Status);
+            var json = ParseResponseJson(result);
+            Assert.False(json.GetProperty("success").GetBoolean());
+            Assert.Equal(I18N.Translate(request, "webexpress.webapp:login.error.session"), json.GetProperty("message").GetString());
         }
 
         /// <summary>
