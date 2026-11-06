@@ -94,8 +94,11 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
         const mode = (ds.mode || "").toLowerCase();
         this.mode = ["new", "edit", "delete"].includes(mode) ? mode : (this.options.id ? "edit" : "new");
 
+        const success = (element.getAttribute("data-wx-success") || "").toLowerCase();
+        this._successAction = ["reload", "follow-uri"].includes(success) ? success : "none";
+
         // cleanup attributes
-        ["data-method", "data-json", "data-validate-on-submit", "data-show-inline-errors", "data-mode"]
+        ["data-method", "data-json", "data-validate-on-submit", "data-show-inline-errors", "data-mode", "data-wx-success"]
             .forEach((attr) => {
                 this._element.removeAttribute(attr);
             });
@@ -482,6 +485,34 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
         const html = (typeof message === "string" && message) ? message : this._confirmHtml;
         if (html) {
             this.setState({ confirm: String(html) });
+        }
+    }
+
+    /**
+     * Runs the success action the form was authored with.
+     * @param {object} json - The json answer of the server.
+     */
+    _runSuccessAction(json) {
+        if (this._successAction === "reload") {
+            window.location.reload();
+            return;
+        }
+
+        const uri = json && typeof json.uri === "string" ? json.uri : null;
+        if (this._successAction !== "follow-uri" || !uri) {
+            return;
+        }
+
+        // the answer names a page of this application; anything that is no http address, such
+        // as a javascript: url, is not followed
+        let target;
+        try {
+            target = new URL(uri, window.location.href);
+        } catch (_) {
+            return;
+        }
+        if (target.protocol === "http:" || target.protocol === "https:") {
+            window.location.assign(target.href);
         }
     }
 
@@ -1068,6 +1099,12 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
                 this._showConfirm(String(classification.message));
             } else if (this._confirmHtml) {
                 this._showConfirm(null);
+            }
+
+            // a tick later, so the listeners of the saved event - the dialog closing, the toast -
+            // have run before the page goes away
+            if (this._successAction !== "none") {
+                setTimeout(() => this._runSuccessAction(json), 0);
             }
         } else if (classification.kind === "validation") {
             const fieldErrors = [];
