@@ -12,6 +12,7 @@ using WebExpress.WebCore.WebRestApi;
 using WebExpress.WebCore.WebStatusPage;
 using WebExpress.WebIndex;
 using WebExpress.WebIndex.Queries;
+using ImageIconConverter = global::WebExpress.WebApp.WebRestApi.WebExpress.WebApp.WebRestApi.RestValueConverterImageIcon;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -59,6 +60,7 @@ namespace WebExpress.WebApp.WebRestApi
 
             // validate request (existingitem is null for new resources)
             var validationResult = Validate(existingItem, fieldMap, request);
+            var images = DetachImages(fieldMap, validationResult);
             if (!validationResult.IsValid)
             {
                 return new ResponseBadRequest
@@ -70,6 +72,8 @@ namespace WebExpress.WebApp.WebRestApi
 
             try
             {
+                AttachImages(existingItem, fieldMap, images, request);
+
                 // create or clone the resource
                 var newItem = default(TIndexItem);
                 var result = id is null
@@ -444,6 +448,7 @@ namespace WebExpress.WebApp.WebRestApi
 
             // validate the update request using the existing item and the payload
             var validation = Validate(existingItem, fieldMap, request);
+            var images = DetachImages(fieldMap, validation);
             if (!validation.IsValid)
             {
                 // validation failed → return structured error response
@@ -456,6 +461,8 @@ namespace WebExpress.WebApp.WebRestApi
             // apply the update (implemented by derived classes)
             try
             {
+                AttachImages(existingItem, fieldMap, images, request);
+
                 var result = Update(existingItem, fieldMap, request);
 
                 // notify domain listeners so open ViewStates re-query the changed data
@@ -568,6 +575,121 @@ namespace WebExpress.WebApp.WebRestApi
             return new RestApiCrudResultUpdate()
             {
             };
+        }
+
+        /// <summary>
+        /// Gets the limits a picture sent inline with a create or update has to meet. A picture
+        /// outside them is refused with the other validation errors, before anything is stored.
+        /// </summary>
+        protected virtual RestApiAvatarUploadOptions ImageOptions => new();
+
+        /// <summary>
+        /// Stores a picture that a create or update sent inline for a property bound by the image
+        /// converter, such as the upload of an avatar input. The address returned replaces the
+        /// inline picture in the field map, so the item keeps a link to the stored file instead
+        /// of the picture itself. Without an override nothing is stored and the item keeps the
+        /// picture as a data url.
+        /// </summary>
+        /// <param name="item">
+        /// The persisted item; null when a new item is created, the source when one is cloned.
+        /// </param>
+        /// <param name="field">The name of the property the picture belongs to.</param>
+        /// <param name="image">The decoded and checked picture.</param>
+        /// <param name="request">The HTTP request providing additional context.</param>
+        /// <returns>The address of the stored picture, or null to keep it inline.</returns>
+        protected virtual string StoreImage(TIndexItem item, string field, RestApiAvatarUpload image, IRequest request)
+        {
+            return null;
+        }
+
+        /// <summary>
+        /// Called when a create or update sends an empty entry for a property bound by the image
+        /// converter, which is how a form removes the picture. A field the form did not send at
+        /// all means the picture was not edited and reaches neither this hook nor the item.
+        /// </summary>
+        /// <param name="item">
+        /// The persisted item; null when a new item is created, the source when one is cloned.
+        /// </param>
+        /// <param name="field">The name of the property whose picture is removed.</param>
+        /// <param name="request">The HTTP request providing additional context.</param>
+        protected virtual void RemoveImage(TIndexItem item, string field, IRequest request)
+        {
+        }
+
+        /// <summary>
+        /// Takes the inline and the emptied pictures out of the field map and checks them. A field
+        /// that still holds the address it was given is left alone, it is the unchanged picture.
+        /// </summary>
+        /// <param name="fieldMap">The payload.</param>
+        /// <param name="validation">The validation result that collects a refused picture.</param>
+        /// <returns>The detached pictures by property name.</returns>
+        private List<(string Field, RestApiFormField<RestApiAvatarUpload> Image)> DetachImages(RestApiCrudFormData fieldMap, IRestApiValidationResult validation)
+        {
+            var images = new List<(string, RestApiFormField<RestApiAvatarUpload>)>();
+
+            foreach (var property in typeof(TIndexItem).GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            {
+                if (!fieldMap.TryGetValue(property.Name, out var raw) || !IsImageProperty(property))
+                {
+                    continue;
+                }
+
+                var text = raw is JsonElement element
+                    ? element.ValueKind switch
+                    {
+                        JsonValueKind.String => element.GetString(),
+                        JsonValueKind.Null => null,
+                        _ => element.ToString()
+                    }
+                    : raw?.ToString();
+
+                if (!string.IsNullOrWhiteSpace(text)
+                    && !text.StartsWith("file:", StringComparison.OrdinalIgnoreCase)
+                    && !text.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                images.Add((property.Name, fieldMap.DetachAvatar(property.Name, ImageOptions, validation)));
+            }
+
+            return images;
+        }
+
+        /// <summary>
+        /// Stores or removes the detached pictures and puts what the item keeps back into the field map.
+        /// </summary>
+        /// <param name="item">The persisted item, or null for a new one.</param>
+        /// <param name="fieldMap">The payload.</param>
+        /// <param name="images">The pictures taken out of the payload.</param>
+        /// <param name="request">The HTTP request providing additional context.</param>
+        private void AttachImages(TIndexItem item, RestApiCrudFormData fieldMap, List<(string Field, RestApiFormField<RestApiAvatarUpload> Image)> images, IRequest request)
+        {
+            foreach (var (field, image) in images)
+            {
+                if (image.State == RestApiFormFieldState.Empty)
+                {
+                    RemoveImage(item, field, request);
+                    fieldMap[field] = null;
+                }
+                else if (image.State == RestApiFormFieldState.Valid)
+                {
+                    fieldMap[field] = StoreImage(item, field, image.Value, request)
+                        ?? $"data:{image.Value.MediaType};base64,{Convert.ToBase64String(image.Value.Content)}";
+                }
+            }
+        }
+
+        /// <summary>
+        /// Determines whether a property is bound by the image converter.
+        /// </summary>
+        /// <param name="property">The property.</param>
+        /// <returns>True when the property holds a picture.</returns>
+        private static bool IsImageProperty(PropertyInfo property)
+        {
+            return property.GetCustomAttributes(inherit: true)
+                .OfType<RestConverterAttribute<ImageIconConverter>>()
+                .Any();
         }
 
         /// <summary>

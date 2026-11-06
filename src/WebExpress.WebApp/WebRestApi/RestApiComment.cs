@@ -74,7 +74,7 @@ namespace WebExpress.WebApp.WebRestApi
 
                 if (!string.IsNullOrWhiteSpace(wql))
                 {
-                    var parser = new WqlParser<TIndexItem>();
+                    var parser = CreateWqlParser();
                     var wqlStatement = parser.Parse(wql);
 
                     query = Filter(wqlStatement, query, request);
@@ -435,6 +435,17 @@ namespace WebExpress.WebApp.WebRestApi
         /// so that its query provider can translate the filter into SQL.
         /// </summary>
         protected virtual WqlQueryMode QueryMode => WqlQueryMode.Exact;
+
+        /// <summary>
+        /// Creates the parser the WQL of a request is read with. An endpoint registers its own
+        /// predicates and functions here, such as within("SD-12") over a precomputed set of
+        /// ids, so the statements of its clients may use them.
+        /// </summary>
+        /// <returns>The parser.</returns>
+        protected virtual WqlParser<TIndexItem> CreateWqlParser()
+        {
+            return new WqlParser<TIndexItem>();
+        }
 
         /// <summary>
         /// Applies filtering criteria to the specified query based on the provided 

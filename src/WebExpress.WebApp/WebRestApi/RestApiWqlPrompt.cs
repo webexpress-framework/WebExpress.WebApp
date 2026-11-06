@@ -237,7 +237,7 @@ namespace WebExpress.WebApp.WebRestApi
         /// </returns>
         protected virtual IWqlLookahead GetLookahead(string wql, IRequest request)
         {
-            var parser = new WqlParser<TIndexItem>();
+            var parser = CreateWqlParser();
             var ila = parser.Analyze(wql);
 
             return ila;
@@ -385,6 +385,17 @@ namespace WebExpress.WebApp.WebRestApi
         protected virtual IEnumerable<string> GetSuggestions(string prefix, string attribute)
         {
             return [];
+        }
+
+        /// <summary>
+        /// Creates the parser the WQL of a request is read with. An endpoint registers its own
+        /// predicates and functions here, such as within("SD-12") over a precomputed set of
+        /// ids, so the statements of its clients may use them.
+        /// </summary>
+        /// <returns>The parser.</returns>
+        protected virtual WqlParser<TIndexItem> CreateWqlParser()
+        {
+            return new WqlParser<TIndexItem>();
         }
     }
 }

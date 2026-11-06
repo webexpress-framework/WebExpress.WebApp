@@ -9,6 +9,7 @@ using WebExpress.WebCore.WebRestApi;
 using WebExpress.WebCore.WebStatusPage;
 using WebExpress.WebIndex;
 using WebExpress.WebIndex.Queries;
+using WebExpress.WebIndex.Wql;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -263,6 +264,43 @@ namespace WebExpress.WebApp.WebRestApi
         protected virtual IQueryContext CreateContext()
         {
             return new DefaultQueryContext();
+        }
+
+        /// <summary>
+        /// Returns how the criteria of a filter are turned into a query. The default evaluates the
+        /// text conditions as the index does, which only a provider running in memory can execute;
+        /// an endpoint backed by a database returns <see cref="WqlQueryMode.Translatable"/>,
+        /// so that its query provider can translate the criteria into SQL.
+        /// </summary>
+        protected virtual WqlQueryMode QueryMode => WqlQueryMode.Exact;
+
+        /// <summary>
+        /// Creates the parser the WQL of a request is read with. An endpoint registers its own
+        /// predicates and functions here, such as within("SD-12") over a precomputed set of
+        /// ids, so the statements of its clients may use them.
+        /// </summary>
+        /// <returns>The parser.</returns>
+        protected virtual WqlParser<TIndexItem> CreateWqlParser()
+        {
+            return new WqlParser<TIndexItem>();
+        }
+
+        /// <summary>
+        /// Turns the WQL criteria of a filter into a query in the endpoint's
+        /// <see cref="QueryMode"/>, for instance to count the matches shown as a badge.
+        /// </summary>
+        /// <param name="criteria">The WQL criteria.</param>
+        /// <returns>The query, or null for empty or unparsable criteria.</returns>
+        protected IQuery<TIndexItem> ToQuery(string criteria)
+        {
+            if (string.IsNullOrWhiteSpace(criteria))
+            {
+                return null;
+            }
+
+            var statement = CreateWqlParser().Parse(criteria);
+
+            return statement is null || statement.HasErrors ? null : statement.ToQuery(QueryMode);
         }
 
         /// <summary>
