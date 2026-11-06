@@ -92,6 +92,13 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, string> Value { get; set; }
 
         /// <summary>
+        /// Gets or sets the WQL query the search opens with. A query opens the search in WQL
+        /// mode, ahead of the mode the user last chose on the page, because a page that is
+        /// given a query - a saved search, a shared link - has to show that query.
+        /// </summary>
+        public Func<IRenderControlContext, string> Wql { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The control id.</param>
@@ -157,6 +164,7 @@ namespace WebExpress.WebApp.WebControl
         public virtual IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree, params IControl[] controls)
         {
             var value = Value?.Invoke(renderContext);
+            var wql = Wql?.Invoke(renderContext);
 
             var html = new HtmlElementTextContentDiv()
             {
@@ -166,7 +174,8 @@ namespace WebExpress.WebApp.WebControl
             }
                 .Add(controls.Select(x => x.Render(renderContext, visualTree)))
                 .EmitDataIslands(this, renderContext)
-                .AddUserAttribute("data-value", !string.IsNullOrEmpty(value) ? value : null);
+                .AddUserAttribute("data-value", !string.IsNullOrEmpty(value) ? value : null)
+                .AddUserAttribute("data-wql", !string.IsNullOrEmpty(wql) ? wql : null);
 
             return html;
         }

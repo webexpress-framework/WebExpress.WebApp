@@ -26,6 +26,7 @@ The host element carries the `wx-webapp-search` class. The controller creates th
 |`id`                  |Identifies the control and supplies its default persistence key. Use a stable, unique id across page loads. |`id="issue-search"` 
 |`data-initial`        |Initial presentation when no valid preference is stored. Accepts `basic` or `wql`; defaults to `basic`.     |`data-initial="wql"`
 |`data-value`          |Initial text of the embedded basic search field.                                                            |`data-value="release"`
+|`data-wql`            |Initial WQL query (C#: `ControlAdvancedSearch.Wql`). Opens the search in WQL mode, ahead of a stored mode.  |`data-wql="state = 'open'"`
 |`data-persist-key`    |Explicit localStorage key for the search mode. Overrides the key derived from the host id.                  |`data-persist-key="issue-search-mode"`
 |`data-wx-resource`    |Optional ViewState resource to query when the search changes.                                               |`data-wx-resource="issues"`
 |`data-wx-model-query` |Alternative resource binding; takes precedence over `data-wx-resource`.                                     |`data-wx-model-query="issues"`
@@ -53,9 +54,9 @@ The validation feedback distinguishes valid, invalid and unchecked submissions. 
 
 The selected `basic` or `wql` mode is stored in localStorage under `wx_search_mode_{id}`, or under `data-persist-key` when supplied. Distinct keys keep the preferences of multiple search controls independent.
 
-On initialization, a valid stored mode takes precedence over `data-initial`. Missing or invalid preferences fall back to the declared mode, then to `basic`. A control without an id or explicit storage key does not persist its mode. Blocked or full storage leaves the search usable.
+On initialization, `data-wql` wins over everything: a page given a query shows it. Otherwise a valid stored mode takes precedence over `data-initial`. Missing or invalid preferences fall back to the declared mode, then to `basic`. A control without an id or explicit storage key does not persist its mode. Blocked or full storage leaves the search usable.
 
-Only the presentation mode is retained as a UI preference. Search text remains in the embedded controls or the bound ViewState. Existing UI cookies are not read or migrated.
+Only the presentation mode is retained as a UI preference. Search text remains in the embedded controls or the bound ViewState. Children of the host, such as buttons added with `ControlAdvancedSearch.Add`, move into the extended content beside the input. Existing UI cookies are not read or migrated.
 
 ## Programmatic Control
 

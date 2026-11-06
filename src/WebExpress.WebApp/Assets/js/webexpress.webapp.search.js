@@ -18,8 +18,13 @@ webexpress.webapp.SearchCtrl = class extends webexpress.webui.Ctrl {
         // configuration
         this._storageKey = element.dataset.persistKey || (element.id ? `wx_search_mode_${element.id}` : null);
         const storedMode = webexpress.webui.LocalStorage.getItem(this._storageKey);
+        // a page that opens with a wql query - a saved search, a link - shows that query, so it
+        // outranks the mode the user last chose on this page
+        this._initialWql = element.getAttribute("data-wql");
         this._initialMode = "basic";
-        if (storedMode === "wql" || storedMode === "basic") {
+        if (this._initialWql !== null) {
+            this._initialMode = "wql";
+        } else if (storedMode === "wql" || storedMode === "basic") {
             this._initialMode = storedMode;
         } else if (element.dataset.initial && (element.dataset.initial === "wql" || element.dataset.initial === "basic")) {
             this._initialMode = element.dataset.initial;
@@ -31,9 +36,14 @@ webexpress.webapp.SearchCtrl = class extends webexpress.webui.Ctrl {
         this._service = islandServices.data || null;
         this._uri = this._service ? this._service.baseUri : null;
 
+        // the authored children move into the extended content, so they are taken before the
+        // host is cleared
+        this._originalChildren = Array.from(element.children);
+
         // clean up the dom element and set base classes for styling
         element.textContent = "";
         element.removeAttribute("data-initial");
+        element.removeAttribute("data-wql");
 
         // hosts and children
         this._basicHost = null;
@@ -122,8 +132,8 @@ webexpress.webapp.SearchCtrl = class extends webexpress.webui.Ctrl {
      * extended content container to the right of the input area.
      */
     _buildDom() {
-        // capture original children so they can be reparented into extended content
-        const originalChildren = Array.from(this._element.children);
+        const originalChildren = this._originalChildren || [];
+        this._originalChildren = null;
 
         // create outer container row
         const row = document.createElement("div");
@@ -208,6 +218,9 @@ webexpress.webapp.SearchCtrl = class extends webexpress.webui.Ctrl {
         // instantiate WQL prompt controller
         try {
             this._wqlCtrl = new webexpress.webapp.WqlPromptCtrl(wqlWrapper);
+            if (this._initialWql !== null) {
+                this._wqlCtrl.value = this._initialWql;
+            }
         } catch (err) {
             console.error("SearchAdvanced: failed to initialize WQL prompt:", err);
             this._wqlCtrl = null;
@@ -323,8 +336,9 @@ webexpress.webapp.SearchCtrl = class extends webexpress.webui.Ctrl {
             // show link labeled "Basic" to switch to simple
             this._toggleModeLink.textContent = "basic";
             this._toggleModeLink.setAttribute("aria-label", "switch to basic");
-            if (!this._isInitializing && this._wqlCtrl && this._wqlCtrl._input) {
-                const val = this._wqlCtrl._input.value;
+            if (!this._isInitializing && this._wqlCtrl) {
+                // the prompt's input is a contenteditable, which has no value of its own
+                const val = this._wqlCtrl.value || "";
                 this._dispatch(webexpress.webui.Event.CHANGE_FILTER_EVENT, {
                     value: val,
                     searchType: "wql"

@@ -59,5 +59,32 @@ namespace WebExpress.WebApp.Test.WebControl
             // validation
             AssertExtensions.EqualWithPlaceholders(expected, html);
         }
+
+        /// <summary>
+        /// Tests that a WQL query is handed to the client, which opens the search in WQL mode.
+        /// </summary>
+        /// <param name="wql">The WQL query.</param>
+        /// <param name="expected">The expected markup.</param>
+        [Theory]
+        [InlineData(null, @"<div id=""s"" class=""wx-webapp-search""></div>")]
+        [InlineData("state = 'open'", @"<div id=""s"" class=""wx-webapp-search"" data-wql=""state = 'open'""></div>")]
+        public void Wql(string wql, string expected)
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlAdvancedSearch("s")
+            {
+                Wql = _ => wql
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
     }
 }
