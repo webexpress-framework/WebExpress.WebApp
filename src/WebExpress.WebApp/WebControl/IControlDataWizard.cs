@@ -47,6 +47,12 @@ namespace WebExpress.WebApp.WebControl
         Func<IRenderControlContext, IIcon> FinishIcon { get; }
 
         /// <summary>
+        /// Gets what the wizard does once the server accepted its final submit: stay, reload
+        /// the page, or follow the uri of the answer.
+        /// </summary>
+        Func<IRenderControlContext, TypeRestFormSuccess> SuccessAction { get; }
+
+        /// <summary>
         /// Adds one or more pages to the wizard control.
         /// </summary>
         /// <param name="pages">The pages to add.</param>

@@ -169,5 +169,40 @@ namespace WebExpress.WebApp.Test.WebControl
             // validation
             AssertExtensions.EqualWithPlaceholders(expected, html);
         }
+
+        /// <summary>
+        /// Tests that the success action reaches the client only when the wizard does something after success.
+        /// </summary>
+        /// <param name="success">The success action.</param>
+        /// <param name="expected">The expected attribute value, or null for none.</param>
+        [Theory]
+        [InlineData(TypeRestFormSuccess.None, null)]
+        [InlineData(TypeRestFormSuccess.Reload, "reload")]
+        [InlineData(TypeRestFormSuccess.FollowUri, "follow-uri")]
+        public void SuccessAction(TypeRestFormSuccess success, string expected)
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlDataWizard("wizard")
+            {
+                SuccessAction = _ => success
+            };
+
+            // act
+            var html = control.Render(context, visualTree).ToString();
+
+            // validation
+            if (expected is null)
+            {
+                Assert.DoesNotContain("data-wx-success", html);
+            }
+            else
+            {
+                Assert.Contains($"data-wx-success=\"{expected}\"", html);
+            }
+        }
     }
 }
