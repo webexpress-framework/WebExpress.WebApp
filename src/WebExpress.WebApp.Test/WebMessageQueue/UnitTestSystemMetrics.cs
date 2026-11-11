@@ -121,7 +121,8 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
         {
             // arrange
             var manager = new BlockingMessageQueueManager();
-            using var dispatcher = new SystemMetricsDispatcher(manager);
+            // the timer stays off, otherwise a tick of its own lands in a slow run and adds sends
+            using var dispatcher = new SystemMetricsDispatcher(manager, Timeout.Infinite);
             var onTick = typeof(SystemMetricsDispatcher).GetMethod("OnTick", BindingFlags.NonPublic | BindingFlags.Instance);
 
             // act
