@@ -15,6 +15,8 @@ namespace WebExpress.WebApp.WebControl
     /// </summary>
     public class ControlDataTable : ControlPanel, IControlDataTable, IDataIsland, IViewStateBound
     {
+        private readonly List<IControl> _selectionActions = [];
+
         /// <summary>
         /// Retruns or sets the number of items to display on each page in a
         /// paginated collection.
@@ -74,6 +76,31 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, bool> Fill { get; set; } = _ => false;
 
         /// <summary>
+        /// Gets or sets whether rows can be chosen for a bulk action: a checkbox column, Ctrl
+        /// (Cmd) and Shift clicks, and the selection bar with <see cref="SelectionActions"/>.
+        /// The client announces every change with the selection changed event carrying the ids.
+        /// </summary>
+        public Func<IRenderControlContext, bool> MultiSelect { get; set; }
+
+        /// <summary>
+        /// Gets or sets the kind the rows carry as sources of the drag-and-drop protocol, for
+        /// instance "issue"; a drop target can accept or refuse a drag by it. Null leaves the rows
+        /// undraggable. A table with <see cref="MovableRow"/> keeps its own row moves instead.
+        /// </summary>
+        public Func<IRenderControlContext, string> DragKind { get; set; }
+
+        /// <summary>
+        /// Gets or sets the kind the rows carry as drop targets of the drag-and-drop protocol,
+        /// so items can be dropped onto a row. Null makes no row a target.
+        /// </summary>
+        public Func<IRenderControlContext, string> DropKind { get; set; }
+
+        /// <summary>
+        /// Gets the controls of the selection bar, shown above the table while rows are chosen.
+        /// </summary>
+        public IEnumerable<IControl> SelectionActions => _selectionActions;
+
+        /// <summary>
         /// Gets the data service descriptors of the control, emitted together as
         /// the data-wx-service island that the JavaScript engine consumes in
         /// preference to the legacy data-uri fallback, which keeps the endpoint
@@ -124,6 +151,19 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
+        /// Adds controls to the selection bar; they act on the chosen rows, whose ids the page
+        /// reads from the table or from the selection changed event.
+        /// </summary>
+        /// <param name="controls">The controls.</param>
+        /// <returns>The table for chaining.</returns>
+        public ControlDataTable AddSelectionAction(params IControl[] controls)
+        {
+            _selectionActions.AddRange(controls.Where(x => x is not null));
+
+            return this;
+        }
+
+        /// <summary>
         /// Converts the control to an HTML representation.
         /// </summary>
         /// <param name="renderContext">The context in which the control is rendered.</param>
@@ -133,6 +173,14 @@ namespace WebExpress.WebApp.WebControl
             var pageSize = PageSize?.Invoke(renderContext);
             var bind = Bind?.Invoke(renderContext);
             var fill = Fill?.Invoke(renderContext) ?? false;
+            var multiSelect = MultiSelect?.Invoke(renderContext) ?? false;
+            var selectionBar = multiSelect && _selectionActions.Count > 0
+                ? new HtmlElementTextContentDiv(_selectionActions.Select(x => x.Render(renderContext, visualTree)))
+                {
+                    Class = "wx-table-selection"
+                }
+                    .AddUserAttribute("hidden")
+                : null;
 
             var html = new HtmlElementTextContentDiv()
             {
@@ -143,6 +191,10 @@ namespace WebExpress.WebApp.WebControl
                 .AddUserAttribute("data-empty-text", WebExpress.WebCore.Internationalization.I18N.Translate(renderContext, EmptyText?.Invoke(renderContext)))
                 .AddUserAttribute("data-page-size", pageSize > 0 ? pageSize.ToString() : null)
                 .AddUserAttribute("data-movable-row", MovableRow?.Invoke(renderContext) == true ? "true" : null)
+                .AddUserAttribute("data-multiselect", multiSelect ? "true" : null)
+                .AddUserAttribute("data-drag-kind", DragKind?.Invoke(renderContext))
+                .AddUserAttribute("data-drop-kind", DropKind?.Invoke(renderContext))
+                .Add(selectionBar)
                 .EmitDataIslands(this, renderContext);
 
             bind?.ApplyUserAttributes(html);

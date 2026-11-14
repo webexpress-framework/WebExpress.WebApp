@@ -94,6 +94,14 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, IIcon> FinishIcon { get; set; }
 
         /// <summary>
+        /// Gets or sets what the wizard does once the server accepted its final submit: stay,
+        /// reload the page, or follow the uri of the answer. The client controller is a rest
+        /// form and runs the action after its own success handling, so the dialog is closed
+        /// and the confirmation shown first.
+        /// </summary>
+        public Func<IRenderControlContext, TypeRestFormSuccess> SuccessAction { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The control id.</param>
@@ -163,6 +171,7 @@ namespace WebExpress.WebApp.WebControl
             var method = Method?.Invoke(renderContext) ?? GetDefaultMethod(mode, itemId);
             var methodName = method != RequestMethod.NONE ? method.ToString() : null;
             var role = Role?.Invoke(renderContext);
+            var success = SuccessAction?.Invoke(renderContext) ?? TypeRestFormSuccess.None;
 
             // generate html. The method is carried twice on purpose: the controller reads
             // data-method but strips it from the dom once it has initialized, so only the
@@ -179,6 +188,7 @@ namespace WebExpress.WebApp.WebControl
                 .AddUserAttribute("data-method", methodName)
                 .AddUserAttribute("data-mode", mode.ToMode())
                 .AddUserAttribute("data-id", itemId?.ToString())
+                .AddUserAttribute("data-wx-success", success.ToValue())
                 .AddUserAttribute("data-finish-label", I18N.Translate(renderContext, FinishLabel?.Invoke(renderContext)))
                 .AddUserAttribute("data-finish-icon", (FinishIcon?.Invoke(renderContext) as Icon)?.Class)
                 .Add(pages.Select(x => x.Render(renderContext, visualTree)))

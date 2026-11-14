@@ -90,6 +90,13 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlFormContext, string> ItemId { get; set; }
 
         /// <summary>
+        /// Gets or sets what the form does once the server accepted it: stay, reload the page,
+        /// or follow the uri of the answer. The action runs after the form's own success
+        /// handling, so the dialog is closed and the confirmation shown first.
+        /// </summary>
+        public Func<IRenderControlFormContext, TypeRestFormSuccess> SuccessAction { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The control id.</param>
@@ -129,6 +136,7 @@ namespace WebExpress.WebApp.WebControl
             // method the server cannot answer
             var methodName = method != RequestMethod.NONE ? method.ToString() : null;
             var role = Role?.Invoke(renderContext);
+            var success = SuccessAction?.Invoke(renderContext) ?? TypeRestFormSuccess.None;
 
             // generate html. The method is carried twice on purpose: the controller reads
             // data-method but strips it from the dom once it has initialized, so only the
@@ -144,7 +152,8 @@ namespace WebExpress.WebApp.WebControl
             }
                 .AddUserAttribute("data-method", methodName)
                 .AddUserAttribute("data-mode", mode)
-                .AddUserAttribute("data-id", id?.ToString());
+                .AddUserAttribute("data-id", id?.ToString())
+                .AddUserAttribute("data-wx-success", success.ToValue());
 
             form.EmitDataIslands(this, renderContext);
 

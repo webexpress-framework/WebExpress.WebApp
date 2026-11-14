@@ -15,7 +15,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// Abstract base class for selection REST APIs based on indexed items.
     /// </summary>
     /// <typeparam name="TIndexItem">Type of the index item.</typeparam>
-    public abstract class RestApiSelection<TIndexItem> : IRestApi
+    public abstract class RestApiSelection<TIndexItem> : RestApiWql<TIndexItem>
         where TIndexItem : IIndexItem
     {
         /// <summary>
@@ -47,7 +47,7 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 if (!string.IsNullOrWhiteSpace(wql))
                 {
-                    var parser = new WqlParser<TIndexItem>();
+                    var parser = CreateWqlParser();
                     var wqlStatement = parser.Parse(wql);
 
                     query = Filter(wqlStatement, query, request);

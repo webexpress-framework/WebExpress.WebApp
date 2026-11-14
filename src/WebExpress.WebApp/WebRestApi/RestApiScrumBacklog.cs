@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -18,7 +18,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// </summary>
     /// <typeparam name="TIndexScrum">Type of the scrum sprint index item.</typeparam>
     /// <typeparam name="TIndexItem">Type of the index item.</typeparam>
-    public abstract class RestApiScrumBacklog<TIndexScrum, TIndexItem> : IRestApi
+    public abstract class RestApiScrumBacklog<TIndexScrum, TIndexItem> : RestApiWql<TIndexItem>
         where TIndexScrum : IIndexItem
         where TIndexItem : IIndexItem
     {
@@ -54,7 +54,7 @@ namespace WebExpress.WebApp.WebRestApi
 
                 if (!string.IsNullOrWhiteSpace(wql))
                 {
-                    var parser = new WqlParser<TIndexItem>();
+                    var parser = CreateWqlParser();
                     var wqlStatement = parser.Parse(wql);
 
                     query = Filter(wqlStatement, query, request);

@@ -28,6 +28,7 @@ The behavior of REST-based forms is defined entirely through declarative configu
 | `data-validate-on-submit` | Enables client-side validation before sending.
 | `data-show-inline-errors` | Displays error messages directly below the affected fields.
 | `data-mode`               | Force `new`, `edit` or `delete`
+| `data-wx-success`         | What happens after a successful save, a tick after the saved event's own listeners (dialog close, toast): `reload` reloads the page, `follow-uri` navigates to the `uri` of the JSON answer (http/https only). Omitted: the form stays. C#: `ControlDataForm.SuccessAction`, `ControlDataWizard.SuccessAction` (the wizard runs it after its final submit).
 | `data-id`                 | Primary key for Edit/Delete; appended as query parameter.
 
 ## Functionality and Behavior

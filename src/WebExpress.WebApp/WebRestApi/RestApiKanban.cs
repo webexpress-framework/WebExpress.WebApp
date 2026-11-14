@@ -10,6 +10,7 @@ using WebExpress.WebCore.WebRestApi;
 using WebExpress.WebCore.WebStatusPage;
 using WebExpress.WebIndex;
 using WebExpress.WebIndex.Queries;
+using WebExpress.WebIndex.Wql;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -17,7 +18,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// A REST API endpoint providing the kanban configuration and handling layout updates.
     /// </summary>
     /// <typeparam name="TIndexItem">Type of the index item.</typeparam>
-    public class RestApiKanban<TIndexItem> : IRestApi
+    public class RestApiKanban<TIndexItem> : RestApiWql<TIndexItem>
         where TIndexItem : IIndexItem
     {
         private static readonly JsonSerializerOptions _jsonOptions = new()
@@ -431,7 +432,36 @@ namespace WebExpress.WebApp.WebRestApi
         /// </returns>
         protected virtual IQuery<TIndexItem> ApplyWql(string wql, IQuery<TIndexItem> query, IRequest request)
         {
-            return query;
+            var filter = ToQuery(wql);
+
+            return filter is not null ? query.And(filter) : query;
+        }
+
+        /// <summary>
+        /// Returns how a WQL statement is turned into a query. The default evaluates the text
+        /// conditions as the index does, which only a provider running in memory can execute;
+        /// an endpoint backed by a database returns <see cref="WqlQueryMode.Translatable"/>,
+        /// so that its query provider can translate the filter into SQL.
+        /// </summary>
+        protected virtual WqlQueryMode QueryMode => WqlQueryMode.Exact;
+
+        /// <summary>
+        /// Turns a WQL text into a query in the endpoint's <see cref="QueryMode"/>. An override of
+        /// <see cref="ApplyWql"/> or <see cref="Filter"/> builds its queries here, so the mode is
+        /// decided in one place.
+        /// </summary>
+        /// <param name="wql">The WQL text.</param>
+        /// <returns>The query, or null for an empty or unparsable text.</returns>
+        protected IQuery<TIndexItem> ToQuery(string wql)
+        {
+            if (string.IsNullOrWhiteSpace(wql))
+            {
+                return null;
+            }
+
+            var statement = CreateWqlParser().Parse(wql);
+
+            return statement is null || statement.HasErrors ? null : statement.ToQuery(QueryMode);
         }
     }
 }

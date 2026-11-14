@@ -86,6 +86,10 @@ function form(options = {}) {
     }
     body.insertBefore(main, body.firstChild);
 
+    if (options.success) {
+        host.setAttribute("data-wx-success", options.success);
+    }
+
     rt.document.body.appendChild(host);
     formApi(host);
     const ctrl = new rt.wxapp.RestFormCtrl(host);
@@ -308,4 +312,66 @@ test("a form authored without a data service posts to its action through the ser
     assert.equal(requests[0].method, "POST");
     assert.deepEqual(Array.from(ctrl.state.errors), []);
     assert.equal(ctrl.state.confirm, "Saved");
+});
+
+/**
+ * Records what a success action asks of the browser's location.
+ * @param {object} rt - The loaded runtime.
+ * @returns {Array<Array<string>>} The recorded calls.
+ */
+function trackLocation(rt) {
+    const calls = [];
+    const location = rt.sandbox.window ? rt.sandbox.window.location : rt.sandbox.location;
+    location.assign = (uri) => calls.push(["assign", uri]);
+    location.reload = () => calls.push(["reload"]);
+    return calls;
+}
+
+/**
+ * Lets the deferred success action run.
+ * @returns {Promise<void>} Resolves after a macrotask.
+ */
+const settle = () => new Promise((resolve) => setTimeout(resolve, 5));
+
+test("a form that follows the answer navigates to its uri after the saved event", async () => {
+    const { rt, ctrl, host } = form({ success: "follow-uri" });
+    const calls = trackLocation(rt);
+    const order = [];
+    host.addEventListener(rt.wx.Event.SAVED_EVENT, () => order.push(calls.length));
+
+    ctrl._handleResult({ ok: true, status: 200, data: { uri: "/items/42" } });
+    assert.deepEqual(calls, [], "nothing happens before the own listeners ran");
+    await settle();
+
+    assert.deepEqual(order, [0], "the saved event came first");
+    assert.deepEqual(calls, [["assign", "http://localhost/items/42"]]);
+    assert.equal(host.hasAttribute("data-wx-success"), false);
+});
+
+test("a form that reloads reloads the page after success, and not after a refusal", async () => {
+    const { rt, ctrl } = form({ success: "reload" });
+    const calls = trackLocation(rt);
+
+    ctrl._handleResult({ ok: false, status: 400, data: { errors: { title: "taken" } } });
+    await settle();
+    assert.deepEqual(calls, []);
+
+    ctrl._handleResult({ ok: true, status: 200, data: {} });
+    await settle();
+    assert.deepEqual(calls, [["reload"]]);
+});
+
+test("a form follows no uri that is no http address, and stays without an action", async () => {
+    const follow = form({ success: "follow-uri" });
+    const followCalls = trackLocation(follow.rt);
+    follow.ctrl._handleResult({ ok: true, status: 200, data: { uri: "javascript:alert(1)" } });
+    follow.ctrl._handleResult({ ok: true, status: 200, data: {} });
+
+    const stay = form();
+    const stayCalls = trackLocation(stay.rt);
+    stay.ctrl._handleResult({ ok: true, status: 200, data: { uri: "/items/42" } });
+
+    await settle();
+    assert.deepEqual(followCalls, []);
+    assert.deepEqual(stayCalls, []);
 });

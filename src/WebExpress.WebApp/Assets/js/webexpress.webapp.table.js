@@ -66,7 +66,28 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
         webexpress.webapp.Data.readState(element);
         webexpress.webapp.ServiceRegistry.fromElement(element);
 
+        // the actions for a multi-selection are server markup; they are taken out before the
+        // base reads the host and placed above the table again by the view
+        const selectionBar = Array.from(element.children).find((x) => x.classList && x.classList.contains("wx-table-selection")) || null;
+        if (selectionBar) {
+            element.removeChild(selectionBar);
+        }
+
         super(element);
+
+        this._multiSelect = element.getAttribute("data-multiselect") === "true";
+        // a row of a movable table is moved by its grip; the drag-and-drop protocol would
+        // take the same drag, so the two exclude each other
+        this._dragKind = this._movableRow ? null : (element.getAttribute("data-drag-kind") || null);
+        this._dropKind = element.getAttribute("data-drop-kind") || null;
+        this._selectionBar = selectionBar;
+        this._selectionAnchor = null;
+        element.removeAttribute("data-multiselect");
+        element.removeAttribute("data-drag-kind");
+        element.removeAttribute("data-drop-kind");
+        if (this._dragKind) {
+            element.setAttribute("data-wx-drag-scope", "");
+        }
 
         // a data table has no switch for it and has always let its columns be hidden
         this._allowColumnRemove = true;
@@ -86,6 +107,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
         this._useStore(new webexpress.webapp.ViewState(element, {
             standalone: true,
             state: Object.assign({}, this.state, {
+                checked: [],
                 search: "",
                 wql: "",
                 filter: "",
@@ -277,6 +299,7 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
 
         return [
             this._renderToolbar(state),
+            this._renderSelectionBar(state),
             h("div", {
                 key: "progress",
                 class: "progress mb-2",
@@ -297,6 +320,236 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
                 ref: (el) => { this._infoDiv = el; }
             }, this._infoText(state, preview))
         ];
+    }
+
+    /**
+     * Places the actions of a multi-selection above the table. The bar shows only while rows
+     * are chosen and names how many.
+     * @param {object} state - The state.
+     * @returns {object|null} The bar virtual node, or null.
+     */
+    _renderSelectionBar(state) {
+        if (!this._multiSelect || !this._selectionBar) {
+            return null;
+        }
+        const h = webexpress.webui.h;
+        const count = (state.checked || []).length;
+
+        return webexpress.webui.Renderer.adopt(this._selectionBar, {
+            key: "selection",
+            role: "toolbar",
+            "aria-label": this._i18n("webexpress.webapp:table.selection.toolbar", "Actions for the selected rows"),
+            hidden: count === 0 ? true : null
+        }, [h("span", { key: "count", class: "wx-table-selection-count", role: "status" },
+            this._i18n("webexpress.webapp:table.selection.count", "{0} selected").replace("{0}", String(count))),
+        ...this._selectionBarContent()]);
+    }
+
+    /**
+     * Returns the server rendered actions of the selection bar, without the count the view adds.
+     * @returns {Array<object>} The adopted nodes.
+     */
+    _selectionBarContent() {
+        if (!this._selectionActions) {
+            this._selectionActions = Array.from(this._selectionBar.children);
+        }
+        return this._selectionActions.map((el, index) => webexpress.webui.Renderer.adopt(el, { key: "action-" + index }));
+    }
+
+    /**
+     * Gets the ids of the chosen rows.
+     * @returns {Array<string>} The ids.
+     */
+    get selection() {
+        return [...(this.state.checked || [])];
+    }
+
+    /**
+     * Chooses the rows of the given ids.
+     * @param {Array<string>} ids - The ids.
+     */
+    set selection(ids) {
+        this._setChecked(Array.isArray(ids) ? ids.map(String) : []);
+    }
+
+    /**
+     * Clears the multi-selection.
+     */
+    clearSelection() {
+        this._setChecked([]);
+    }
+
+    /**
+     * Stores the chosen rows and announces a change.
+     * @param {Array<string>} ids - The ids.
+     */
+    _setChecked(ids) {
+        const unique = [...new Set(ids)];
+        const previous = this.state.checked || [];
+        if (unique.length === previous.length && unique.every((x, i) => x === previous[i])) {
+            return;
+        }
+        this.setState({ checked: unique });
+        this._dispatch(webexpress.webui.Event.SELECTION_CHANGED_EVENT, { ids: [...unique] });
+    }
+
+    /**
+     * Returns the ids of the rows on screen, in display order, that can be chosen.
+     * @returns {Array<string>} The ids.
+     */
+    _visibleRowIds() {
+        const ids = [];
+        const walk = (rows) => {
+            for (const row of rows || []) {
+                if (row.id !== undefined && row.id !== null && row.id !== "" && !this._previewBody.includes(row)) {
+                    ids.push(String(row.id));
+                }
+                if (this._treeEnabled !== false && row.children?.length && row.expanded) {
+                    walk(row.children);
+                }
+            }
+        };
+        walk(this.state.rows);
+        return ids;
+    }
+
+    /**
+     * Chooses or releases a row: alone, added with Ctrl (Cmd), or as the range from the last
+     * chosen row with Shift.
+     * @param {Object} row - The row.
+     * @param {object} modifiers - shiftKey, ctrlKey and metaKey of the gesture.
+     */
+    _check(row, modifiers = {}) {
+        const id = String(row.id);
+        const checked = this.state.checked || [];
+
+        if (modifiers.shiftKey && this._selectionAnchor) {
+            const ids = this._visibleRowIds();
+            const from = ids.indexOf(this._selectionAnchor);
+            const to = ids.indexOf(id);
+            if (from >= 0 && to >= 0) {
+                const range = ids.slice(Math.min(from, to), Math.max(from, to) + 1);
+                this._setChecked([...checked, ...range]);
+                return;
+            }
+        }
+
+        this._selectionAnchor = id;
+        this._setChecked(checked.includes(id) ? checked.filter((x) => x !== id) : [...checked, id]);
+    }
+
+    /**
+     * Chooses every row on screen, or releases them when all are chosen.
+     */
+    _checkAll() {
+        const ids = this._visibleRowIds();
+        const checked = this.state.checked || [];
+        const all = ids.length > 0 && ids.every((x) => checked.includes(x));
+        this._setChecked(all ? checked.filter((x) => !ids.includes(x)) : [...checked, ...ids]);
+    }
+
+    /**
+     * Adds a row to the multi-selection on a click with Ctrl (Cmd) or Shift; a plain click
+     * selects the row as before.
+     * @param {Object} row - The clicked row.
+     * @param {Event} e - The click.
+     * @param {boolean} [renderNow=true] - Whether a plain selection renders at once.
+     */
+    _selectRowInternal(row, e, renderNow = true) {
+        if (this._multiSelect && e && (e.ctrlKey || e.metaKey || e.shiftKey) && row && row.id != null) {
+            this._check(row, e);
+            return;
+        }
+        super._selectRowInternal(row, e, renderNow);
+    }
+
+    /**
+     * Names the track of the checkbox column ahead of the grip.
+     * @returns {Array<string>} The track sizes.
+     */
+    _gridPrefixTracks() {
+        return [...(this._multiSelect ? ["2rem"] : []), ...super._gridPrefixTracks()];
+    }
+
+    /**
+     * Describes the header of the checkbox column: the checkbox that chooses every row.
+     * @param {object} state - The state.
+     * @returns {*} The header cells.
+     */
+    _renderHeadPrefix(state) {
+        if (!this._multiSelect) {
+            return super._renderHeadPrefix(state);
+        }
+        const h = webexpress.webui.h;
+        const ids = this._visibleRowIds();
+        const checked = state.checked || [];
+        const count = ids.filter((x) => checked.includes(x)).length;
+
+        return [h("div", { key: "__check", class: "wx-table-check-column", role: "columnheader" },
+            h("input", {
+                type: "checkbox",
+                class: "form-check-input",
+                checked: ids.length > 0 && count === ids.length,
+                "aria-label": this._i18n("webexpress.webapp:table.select.all", "Select all rows"),
+                ref: (el) => { el.indeterminate = count > 0 && count < ids.length; },
+                on: { click: () => this._checkAll() }
+            })), super._renderHeadPrefix(state)];
+    }
+
+    /**
+     * Describes the checkbox of a row ahead of its grip.
+     * @param {object} state - The state.
+     * @param {Object} row - The row.
+     * @returns {*} The leading cells.
+     */
+    _renderRowPrefix(state, row) {
+        if (!this._multiSelect) {
+            return super._renderRowPrefix(state, row);
+        }
+        const h = webexpress.webui.h;
+        const selectable = row.id !== undefined && row.id !== null && row.id !== "" && !this._previewBody.includes(row);
+
+        return [h("div", { key: "__check", class: "wx-grid-cell wx-table-check-column", role: this._cellRole },
+            selectable ? h("input", {
+                type: "checkbox",
+                class: "form-check-input",
+                checked: (state.checked || []).includes(String(row.id)),
+                "aria-label": this._i18n("webexpress.webapp:table.select.row", "Select row"),
+                on: { click: (e) => this._check(row, e) }
+            }) : null), super._renderRowPrefix(state, row)];
+    }
+
+    /**
+     * Describes the placeholder under the checkboxes in the footer.
+     * @param {object} state - The state.
+     * @returns {*} The footer cells.
+     */
+    _renderFootPrefix(state) {
+        if (!this._multiSelect) {
+            return super._renderFootPrefix(state);
+        }
+        return [webexpress.webui.h("div", { key: "__check", class: "wx-grid-cell wx-table-check-column", role: this._cellRole }),
+            super._renderFootPrefix(state)];
+    }
+
+    /**
+     * Marks a chosen row and makes a row a source or a target of the drag-and-drop protocol.
+     * A drag that starts on a chosen row carries every chosen row.
+     * @param {object} state - The state.
+     * @param {Object} row - The row.
+     * @returns {object|null} The attributes.
+     */
+    _rowAttributes(state, row) {
+        if (row.id === undefined || row.id === null || row.id === "" || this._previewBody.includes(row)) {
+            return null;
+        }
+        const attributes = webexpress.webui.DragDrop
+            ? webexpress.webui.DragDrop.attributes(row.id, { dragKind: this._dragKind, dropKind: this._dropKind })
+            : {};
+        if (this._multiSelect && (state.checked || []).includes(String(row.id))) {
+            attributes["aria-selected"] = "true";
+        }
+        return attributes;
     }
 
     /**
@@ -626,6 +879,13 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
         this._recalculateHasOptions();
         this._clampPage();
         this.render();
+
+        // a chosen row the new data no longer shows is released, so the bar never acts on rows
+        // that are gone - the usual end of a bulk action
+        if (this._multiSelect) {
+            const shown = new Set(this._visibleRowIds());
+            this._setChecked((this.state.checked || []).filter((x) => shown.has(x)));
+        }
 
         if (lost) {
             this._dispatch(webexpress.webui.Event.SELECT_ROW_EVENT, {

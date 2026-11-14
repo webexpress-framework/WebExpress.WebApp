@@ -29,6 +29,16 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
 
         super(element);
 
+        // the items as sources and targets of the drag-and-drop protocol of WebUI
+        this._dragKind = element.getAttribute("data-drag-kind") || null;
+        this._dropKind = element.getAttribute("data-drop-kind") || null;
+        element.removeAttribute("data-drag-kind");
+        element.removeAttribute("data-drop-kind");
+        if (this._dragKind) {
+            element.setAttribute("data-wx-drag-scope", "");
+        }
+        this._decorateDrag();
+
         // the resource a ViewState renders. when present, the list is a pure view of
         // a central resource owned by the enclosing ViewState; when absent,
         // the list owns its state and loads itself (standalone).
@@ -555,6 +565,30 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
         }
 
         this.load();
+    }
+
+    /**
+     * Renders the items and marks each as a source or a target of the drag-and-drop protocol.
+     */
+    _renderItems() {
+        super._renderItems();
+        this._decorateDrag();
+    }
+
+    /**
+     * Marks the rendered items with the attributes of the drag-and-drop protocol; the base
+     * builds them by hand, so the marks are set on the elements.
+     */
+    _decorateDrag() {
+        if (!this._dragKind && !this._dropKind) {
+            return;
+        }
+        for (const li of Array.from(this._list ? this._list.children : [])) {
+            const item = li._dataItemRef;
+            if (item && item.id !== undefined && item.id !== null) {
+                webexpress.webui.DragDrop.decorate(li, item.id, { dragKind: this._dragKind, dropKind: this._dropKind });
+            }
+        }
     }
 };
 

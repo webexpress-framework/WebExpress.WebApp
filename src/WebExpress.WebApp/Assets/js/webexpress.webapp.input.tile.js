@@ -16,12 +16,19 @@ webexpress.webapp.InputTileCtrl = class extends webexpress.webui.InputTileCtrl {
     _dropdownVisible = false;
     _dropdownInputAttached = false;
 
-    // static placeholder tiles (shown until data is loaded)
-    _placeholderTiles = [
-        { id: "ph1", label: "", icon: null, image: null, colorCss: "placeholder-glow", html: `<div class="placeholder col-8" style="height:2em"></div>` },
-        { id: "ph2", label: "", icon: null, image: null, colorCss: "placeholder-glow", html: `<div class="placeholder col-7" style="height:2em"></div>` },
-        { id: "ph3", label: "", icon: null, image: null, colorCss: "placeholder-glow", html: `<div class="placeholder col-4" style="height:2em"></div>` }
-    ];
+    /**
+     * Creates the placeholder tiles shown until data is loaded.
+     * @returns {Array<Object>} The placeholder tiles.
+     */
+    _placeholderTiles() {
+        return ["col-8", "col-7", "col-4"].map((width, i) => {
+            const bar = document.createElement("div");
+            bar.className = "placeholder " + width;
+            bar.style.height = "2em";
+
+            return { id: "ph" + (i + 1), label: "", icon: null, image: null, colorCss: "placeholder-glow", content: [bar] };
+        });
+    }
 
     /**
      * Constructs the REST tile picker.
@@ -44,7 +51,9 @@ webexpress.webapp.InputTileCtrl = class extends webexpress.webui.InputTileCtrl {
         this._searchBtn = document.createElement("button");
         this._searchBtn.type = "button";
         this._searchBtn.className = "btn btn-outline-secondary btn-sm position-relative";
-        this._searchBtn.innerHTML = '<i class="wx-icon-light wx-icon-light-search"></i>';
+        const searchIcon = document.createElement("i");
+        searchIcon.className = "wx-icon-light wx-icon-light-search";
+        this._searchBtn.appendChild(searchIcon);
         this._searchBtn.setAttribute("aria-label", this._i18n("webexpress.webapp:tile.search.show", "Show search field"));
         toolbarDiv.appendChild(this._searchBtn);
         element.insertBefore(toolbarDiv, this._tileList);
@@ -65,7 +74,10 @@ webexpress.webapp.InputTileCtrl = class extends webexpress.webui.InputTileCtrl {
         this._progressDiv = document.createElement("div");
         this._progressDiv.className = "progress mb-2";
         this._progressDiv.style.height = "0.5em";
-        this._progressDiv.innerHTML = `<div class="progress-bar progress-bar-striped progress-bar-animated" style="width:100%"></div>`;
+        const progressBar = document.createElement("div");
+        progressBar.className = "progress-bar progress-bar-striped progress-bar-animated";
+        progressBar.style.width = "100%";
+        this._progressDiv.appendChild(progressBar);
         this._progressDiv.style.visibility = "hidden";
         element.insertBefore(this._progressDiv, this._tileList);
 
@@ -95,7 +107,7 @@ webexpress.webapp.InputTileCtrl = class extends webexpress.webui.InputTileCtrl {
      */
     _showDropdown() {
         if (!this._filterCtrl) {
-            this._dropdownDiv.innerHTML = "";
+            this._dropdownDiv.replaceChildren();
             this._filterCtrl = new webexpress.webui.SearchCtrl(this._dropdownDiv);
         }
         
@@ -153,7 +165,7 @@ webexpress.webapp.InputTileCtrl = class extends webexpress.webui.InputTileCtrl {
      * Displays loading placeholders while loading tiles.
      */
     _showPlaceholders() {
-        this.tiles = this._placeholderTiles;
+        this.tiles = this._placeholderTiles();
         this._progressDiv.style.visibility = "visible";
         this._loading = true;
     }
@@ -219,7 +231,7 @@ webexpress.webapp.InputTileCtrl = class extends webexpress.webui.InputTileCtrl {
                             fallback = {
                                 id: selId,
                                 label: selId,
-                                html: "",
+                                content: [],
                                 class: "",
                                 icon: null,
                                 image: null,
@@ -243,7 +255,8 @@ webexpress.webapp.InputTileCtrl = class extends webexpress.webui.InputTileCtrl {
                     return {
                         id: t.id,
                         label: t.label || t.text || t.name || t.id,
-                        html: t.html ?? "",
+                        // the description is shown as text; the endpoint delivers no markup
+                        content: t.description ? [document.createTextNode(t.description)] : [],
                         class: t.class ?? "",
                         icon: t.icon ?? null,
                         image: t.image ?? null,

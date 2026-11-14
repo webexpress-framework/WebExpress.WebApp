@@ -17,7 +17,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// Abstract class providing table operations for REST API.
     /// </summary>
     /// <typeparam name="TIndexItem">Type of the index item.</typeparam>
-    public abstract class RestApiTable<TIndexItem> : IRestApi
+    public abstract class RestApiTable<TIndexItem> : RestApiWql<TIndexItem>
         where TIndexItem : IIndexItem
     {
         private static readonly JsonSerializerOptions _configurePayloadJsonOptions = new()
@@ -66,7 +66,7 @@ namespace WebExpress.WebApp.WebRestApi
 
                 if (!string.IsNullOrWhiteSpace(wql))
                 {
-                    var parser = new WqlParser<TIndexItem>();
+                    var parser = CreateWqlParser();
                     var wqlStatement = parser.Parse(wql);
 
                     query = Filter(wqlStatement, query, request);

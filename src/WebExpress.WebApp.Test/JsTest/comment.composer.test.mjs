@@ -123,6 +123,9 @@ function composer(options = {}) {
     if (options.defaultCategory) {
         element.dataset.defaultCategory = options.defaultCategory;
     }
+    if (options.expanded) {
+        element.setAttribute("data-expanded", "true");
+    }
     const ctrl = new wxapp.CommentComposerCtrl(element);
     return { ctrl, element, runtime, posted, editors: runtime.wx.EditorCtrl.instances };
 }
@@ -182,6 +185,22 @@ test("expanding creates the editor once and later renders leave it intact", asyn
     await settle();
     assert.equal(editors.length, 1, "a second expansion does not create a second editor");
     assert.equal(ctrl.state.labels, "ui, api");
+});
+
+test("a composer authored expanded shows the form and its editor without taking the focus", async () => {
+    const { ctrl, element, editors } = composer({ expanded: true });
+    await settle();
+    assert.ok(element.classList.contains("wx-comment-composer-expanded"));
+    assert.equal(element.hasAttribute("data-expanded"), false, "the host carries no authoring attribute");
+    assert.equal(editors.length, 1, "the editor exists right away");
+    assert.equal(editors[0].focused, false, "loading the page does not move the focus into the composer");
+
+    parts(element).cancel.dispatchEvent({ type: "click" });
+    await settle();
+    assert.equal(ctrl.state.expanded, false, "cancel still collapses it");
+    parts(element).trigger.dispatchEvent({ type: "click" });
+    await settle();
+    assert.equal(editors[0].focused, true, "a user expanding it again gets the focus");
 });
 
 test("categories loaded after the first render fill the picker", async () => {

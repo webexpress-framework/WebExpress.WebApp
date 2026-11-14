@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -18,7 +18,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// side of the file view control.
     /// </summary>
     /// <typeparam name="TIndexItem">Type of the index item.</typeparam>
-    public abstract class RestApiFile<TIndexItem> : IRestApi
+    public abstract class RestApiFile<TIndexItem> : RestApiWql<TIndexItem>
         where TIndexItem : IIndexItem
     {
         private static readonly JsonSerializerOptions _payloadJsonOptions = new()
@@ -63,7 +63,7 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 if (!string.IsNullOrWhiteSpace(wql))
                 {
-                    var parser = new WqlParser<TIndexItem>();
+                    var parser = CreateWqlParser();
                     var wqlStatement = parser.Parse(wql);
 
                     query = Filter(wqlStatement, query, request);

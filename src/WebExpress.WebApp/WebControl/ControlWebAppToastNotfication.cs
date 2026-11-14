@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using WebExpress.WebApp.WebSection;
 using WebExpress.WebCore;
 using WebExpress.WebCore.WebHtml;
@@ -138,22 +139,74 @@ namespace WebExpress.WebApp.WebControl
                 renderContext?.PageContext
             ));
 
-            if (!preferences.Any() && !primary.Any() && !secondary.Any())
+            // the bar is decided by what the children render, not by their presence: a fragment
+            // whose condition refuses or that renders no markup (null, an empty text) would
+            // otherwise leave an empty strip with nothing but its close button
+            var nodes = preferences
+                .Concat(primary)
+                .Concat(secondary)
+                .Select(x => x?.Render(renderContext, visualTree))
+                .Where(HasMarkup)
+                .Select(x => new ControlRenderedNode(x))
+                .ToList();
+
+            if (nodes.Count == 0)
             {
                 return null;
             }
 
-            var propertyCtlr = (preferences.Any() || primary.Any() || secondary.Any())
-                ? new ControlToast(Id)
-                {
-                    Classes = ["wx-toast"]
-                }
-                    .Add(preferences)
-                    .Add(primary)
-                    .Add(secondary)
-                : null;
+            return new ControlToast(Id)
+            {
+                Classes = ["wx-toast"]
+            }
+                .Add(nodes)
+                .Render(renderContext, visualTree);
+        }
 
-            return propertyCtlr?.Render(renderContext, visualTree);
+        /// <summary>
+        /// Tells whether a rendered child puts anything on the page.
+        /// </summary>
+        /// <param name="node">The rendered child, or null.</param>
+        /// <returns>True when the child serializes to more than whitespace.</returns>
+        private static bool HasMarkup(IHtmlNode node)
+        {
+            if (node is null)
+            {
+                return false;
+            }
+
+            var builder = new StringBuilder();
+            node.ToString(builder, 0);
+
+            return !string.IsNullOrWhiteSpace(builder.ToString());
+        }
+
+        /// <summary>
+        /// Carries a child that is already rendered into the toast, so no child renders twice.
+        /// </summary>
+        private sealed class ControlRenderedNode : Control
+        {
+            private readonly IHtmlNode _node;
+
+            /// <summary>
+            /// Initializes a new instance of the class.
+            /// </summary>
+            /// <param name="node">The rendered child.</param>
+            public ControlRenderedNode(IHtmlNode node)
+            {
+                _node = node;
+            }
+
+            /// <summary>
+            /// Returns the rendered child.
+            /// </summary>
+            /// <param name="renderContext">The context in which the control is rendered.</param>
+            /// <param name="visualTree">The visual tree representing the control's structure.</param>
+            /// <returns>The rendered child.</returns>
+            public override IHtmlNode Render(IRenderControlContext renderContext, IVisualTreeControl visualTree)
+            {
+                return _node;
+            }
         }
     }
 }

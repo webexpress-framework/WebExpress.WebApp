@@ -37,6 +37,7 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webapp.Data {
         // and the Data base aborts the service on teardown.
         const services = webexpress.webapp.ServiceRegistry.fromElement(element);
         const defaultCategory = element.dataset.defaultCategory || "general";
+        const expanded = element.getAttribute("data-expanded") === "true";
 
         let categories = {};
         let categoriesPreset = false;
@@ -51,7 +52,7 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webapp.Data {
 
         super(element, {
             services,
-            state: { expanded: false, categories: categories, category: defaultCategory, labels: "", submitting: false }
+            state: { expanded: expanded, categories: categories, category: defaultCategory, labels: "", submitting: false }
         });
 
         this._service = this.useService("data");
@@ -102,6 +103,7 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webapp.Data {
         element.removeAttribute("data-default-category");
         element.removeAttribute("data-placeholder");
         element.removeAttribute("data-categories");
+        element.removeAttribute("data-expanded");
         element.classList.add("wx-comment-composer");
 
         this.mount();
@@ -256,6 +258,12 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webapp.Data {
      */
     onMount(state) {
         this._syncHost(state);
+        // a composer that starts expanded gets its editor but not the focus: focusing is the
+        // answer to a user expanding it, and taking it on load would scroll the page to the composer
+        if (state.expanded) {
+            this._ensureEditor();
+        }
+        this._wasExpanded = state.expanded;
     }
 
     /**

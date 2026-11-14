@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using WebExpress.WebCore.Internationalization;
@@ -31,7 +31,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// </para>
     /// </remarks>
     /// <typeparam name="TIndexItem">Type of the index item.</typeparam>
-    public abstract class RestApiFeed<TIndexItem> : IRestApi
+    public abstract class RestApiFeed<TIndexItem> : RestApiWql<TIndexItem>
         where TIndexItem : IIndexItem
     {
         /// <summary>
@@ -70,7 +70,7 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 if (!string.IsNullOrWhiteSpace(wql))
                 {
-                    var parser = new WqlParser<TIndexItem>();
+                    var parser = CreateWqlParser();
                     var wqlStatement = parser.Parse(wql);
 
                     query = Filter(wqlStatement, query, request);

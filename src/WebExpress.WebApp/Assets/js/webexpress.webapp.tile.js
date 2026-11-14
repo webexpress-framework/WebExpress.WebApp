@@ -36,6 +36,19 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
 
         super(element);
 
+        // the tiles as sources and targets of the drag-and-drop protocol of WebUI; a movable
+        // tile set reorders its tiles by drag, which the protocol would take as well
+        this._dragKind = this._movable ? null : (element.getAttribute("data-drag-kind") || null);
+        this._dropKind = element.getAttribute("data-drop-kind") || null;
+        element.removeAttribute("data-drag-kind");
+        element.removeAttribute("data-drop-kind");
+        if (this._dragKind) {
+            element.setAttribute("data-wx-drag-scope", "");
+        }
+        for (const card of Array.from(element.querySelectorAll(".wx-tile-card"))) {
+            this._decorateDrag(card, card.dataset.tileId || card.getAttribute("data-tile-id"));
+        }
+
         // the resource a ViewState renders. when present, the tiles are a pure view
         // of a central resource the enclosing ViewState owns; when absent the control
         // owns its state and loads itself (standalone).
@@ -568,6 +581,28 @@ webexpress.webapp.TileCtrl = class extends webexpress.webui.TileCtrl {
      */
     paging(page = 0) {
         this.dispatch("tile/page", { page: page });
+    }
+
+    /**
+     * Builds a tile card and marks it as a source or a target of the drag-and-drop protocol.
+     * @param {Object} tile - Tile model.
+     * @returns {HTMLElement} Card element.
+     */
+    _buildCardElement(tile) {
+        const card = super._buildCardElement(tile);
+        this._decorateDrag(card, tile.id);
+        return card;
+    }
+
+    /**
+     * Sets the attributes of the drag-and-drop protocol on a card.
+     * @param {HTMLElement} card - The card.
+     * @param {string} id - The tile id.
+     */
+    _decorateDrag(card, id) {
+        if ((this._dragKind || this._dropKind) && id) {
+            webexpress.webui.DragDrop.decorate(card, id, { dragKind: this._dragKind, dropKind: this._dropKind });
+        }
     }
 };
 

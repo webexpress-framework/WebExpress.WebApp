@@ -67,6 +67,13 @@ namespace WebExpress.WebApp.WebRestApi
         public IEnumerable<string> Suggestions { get; set; } = [];
 
         /// <summary>
+        /// Gets or sets the suggestions that name a predicate or function. A suggestion is a bare
+        /// string, so the client learns here which ones it completes with their opening
+        /// parenthesis; without it the name would be read as an attribute.
+        /// </summary>
+        public IEnumerable<string> Calls { get; set; } = [];
+
+        /// <summary>
         /// Converts the current instance into a response object.
         /// </summary>
         /// <returns>A Response object representing the result of the conversion.</returns>
@@ -86,6 +93,7 @@ namespace WebExpress.WebApp.WebRestApi
                 currentExpressionType = CurrentExpressionType,
                 nextExpressionTypes = NextExpressionTypes,
                 suggestions = Suggestions,
+                calls = Calls,
                 errorMessage = ErrorMessage,
                 prefix = Prefix,
                 attribute = Attribute,

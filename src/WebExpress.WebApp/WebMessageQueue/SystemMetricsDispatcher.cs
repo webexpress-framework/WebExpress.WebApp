@@ -39,11 +39,25 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// Thrown when <paramref name="messageQueueManager"/> is <c>null</c>.
         /// </exception>
         public SystemMetricsDispatcher(IMessageQueueManager messageQueueManager)
+            : this(messageQueueManager, IntervalMilliseconds)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance with a custom sampling interval, so a test can
+        /// pass <see cref="Timeout.Infinite"/> and drive the ticks itself without the
+        /// timer interleaving its own.
+        /// </summary>
+        /// <param name="messageQueueManager">
+        /// The message queue manager used to forward the readings.
+        /// </param>
+        /// <param name="intervalMilliseconds">The sampling interval in milliseconds.</param>
+        internal SystemMetricsDispatcher(IMessageQueueManager messageQueueManager, int intervalMilliseconds)
         {
             _messageQueueManager = messageQueueManager
                 ?? throw new ArgumentNullException(nameof(messageQueueManager));
 
-            _timer = new Timer(OnTick, null, IntervalMilliseconds, IntervalMilliseconds);
+            _timer = new Timer(OnTick, null, intervalMilliseconds, intervalMilliseconds);
         }
 
         /// <summary>

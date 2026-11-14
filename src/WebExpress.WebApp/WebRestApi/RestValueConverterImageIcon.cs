@@ -31,6 +31,20 @@
 
                 if (rawValue is string uri)
                 {
+                    // an empty entry is how a form removes the picture
+                    if (string.IsNullOrWhiteSpace(uri))
+                    {
+                        return null;
+                    }
+
+                    // an avatar input posts its picture inline as file:<name>;data:<mime>;base64,...;
+                    // the name is only a hint for storage, the data url is the picture
+                    var dataIndex = uri.IndexOf(";data:", StringComparison.OrdinalIgnoreCase);
+                    if (uri.StartsWith("file:", StringComparison.OrdinalIgnoreCase) && dataIndex > 0)
+                    {
+                        uri = uri[(dataIndex + 1)..];
+                    }
+
                     return ImageIcon.FromString(uri);
                 }
 

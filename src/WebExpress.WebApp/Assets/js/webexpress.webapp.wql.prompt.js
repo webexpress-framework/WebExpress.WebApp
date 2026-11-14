@@ -836,6 +836,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
                     tokenStart: tokenStart,
                     tokenEnd: tokenEnd,
                     attribute: analyzeData.attribute,
+                    calls: new Set(Array.isArray(analyzeData.calls) ? analyzeData.calls : []),
                     quoted: analyzeData.quoted || false,
                     quote: analyzeData.quoted ? quote : null,
                     revision: revision,
@@ -1009,6 +1010,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         let tokenStart = this._currentContext.tokenStart;
         let tokenEnd = this._currentContext.tokenEnd;
         let insertion = value;
+        const call = this._currentContext.calls?.has(value) ?? false;
 
         // smart formatting logic per wql type; the type names are the
         // lower-cased WqlExpressionType enum names of the analyze endpoint.
@@ -1022,6 +1024,10 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
             insertion = value === "," ? ", " : value;
             tokenStart = cursorPos - blank.length;
             tokenEnd = cursorPos;
+        } else if (call) {
+            // the parser reads a name as a call only once its parenthesis follows, and one
+            // already written after the replaced name is kept rather than doubled
+            insertion = text[tokenEnd] === "(" ? value : `${value}(`;
         } else if (type === "openparenthesis") {
             insertion = `("${this._escapeLiteral(value, '"')}"`;
             tokenStart = cursorPos;
@@ -1032,7 +1038,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
                 : `"${this._escapeLiteral(value, '"')}"`;
         }
 
-        if (!this._currentContext.quoted && !insertion.endsWith(" ") && value !== "("
+        if (!this._currentContext.quoted && !insertion.endsWith(" ") && value !== "(" && !call
             && !/^\s/.test(text.slice(tokenEnd))) {
             insertion += " ";
         }
@@ -1089,6 +1095,8 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         // by the analyze endpoint
         const typeKeys = {
             attribute: "webexpress.webapp:wql.type.attribute",
+            function: "webexpress.webapp:wql.type.function",
+            predicate: "webexpress.webapp:wql.type.predicate",
             operator: "webexpress.webapp:wql.type.operator",
             parameter: "webexpress.webapp:wql.type.parameter",
             quotation: "webexpress.webapp:wql.type.parameter",

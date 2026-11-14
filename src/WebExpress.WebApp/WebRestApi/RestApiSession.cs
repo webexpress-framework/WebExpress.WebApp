@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Reflection;
 using System.Text.Json;
 using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
@@ -278,7 +279,8 @@ namespace WebExpress.WebApp.WebRestApi
         /// </summary>
         /// <remarks>
         /// The identity manager queues protected cookies for the outgoing response. A failed issuance
-        /// remains a login failure, and neither token is returned in the JSON response.
+        /// remains a login failure, and neither token is returned in the JSON response. An issuer
+        /// that throws is logged with its cause and treated as such a failure.
         /// </remarks>
         /// <param name="identity">The authenticated identity.</param>
         /// <param name="request">The original request.</param>
@@ -286,7 +288,23 @@ namespace WebExpress.WebApp.WebRestApi
         /// <returns>The issued credentials, or null if authentication could not be established.</returns>
         protected virtual IdentityTokenPair EstablishIdentity(IIdentity identity, IRequest request, bool rememberMe = true)
         {
-            return WebEx.ComponentHub.IdentityManager.Login(identity, request, rememberMe);
+            try
+            {
+                return WebEx.ComponentHub.IdentityManager.Login(identity, request, rememberMe);
+            }
+            catch (Exception ex)
+            {
+                // an issuer that cannot sign - typically a missing WebExpress:Authentication
+                // block - is a failed login, not a server error; the issuer may sit behind
+                // reflection, whose wrapper alone would hide the cause in the log
+                var cause = ex is TargetInvocationException { InnerException: not null } invocation
+                    ? invocation.InnerException
+                    : ex;
+
+                RestApiFault.Log(request, cause, "Credentials could not be issued");
+
+                return null;
+            }
         }
 
         /// <summary>

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -17,7 +17,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// Abstract base class for a watcher REST endpoint.
     /// </summary>
     /// <typeparam name="TIndexItem">Type of the index item.</typeparam>
-    public abstract class RestApiWatcher<TIndexItem> : IRestApi
+    public abstract class RestApiWatcher<TIndexItem> : RestApiWql<TIndexItem>
         where TIndexItem : IIndexItem
     {
         private static readonly JsonSerializerOptions _jsonOptions = new()
@@ -46,7 +46,7 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 if (!string.IsNullOrWhiteSpace(wql))
                 {
-                    var parser = new WqlParser<TIndexItem>();
+                    var parser = CreateWqlParser();
                     var wqlStatement = parser.Parse(wql);
 
                     query = Filter(wqlStatement, query, request);

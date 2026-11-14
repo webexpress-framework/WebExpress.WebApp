@@ -131,7 +131,7 @@ Object.defineProperty(NodeType, Symbol.hasInstance, {
 
 // the WebUI view layer (the renderer and the StateCtrl base), which WebUI includes
 // right after its core and the Data base of the engine extends
-const WEBUI_VIEW = ["webexpress.webui.renderer.js", "webexpress.webui.state.js"];
+const WEBUI_VIEW = ["webexpress.webui.renderer.js", "webexpress.webui.state.js", "webexpress.webui.dragdrop.js"];
 
 // the WebApp engine, in the load order the IncludeJavaScript attributes use
 const WEBAPP_ENGINE = [

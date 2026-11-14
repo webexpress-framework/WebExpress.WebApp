@@ -99,6 +99,8 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "wql.clear": "Clear input",
     "wql.type.input": "Input",
     "wql.type.attribute": "Attribute",
+    "wql.type.function": "Function",
+    "wql.type.predicate": "Condition",
     "wql.type.operator": "Operator",
     "wql.type.parameter": "Value",
     "wql.type.parenthesis.open": "Start List",
@@ -344,6 +346,12 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     // table layout persistence
     "table.heading": "Table",
     "table.update.rejected": "The layout change was not saved and has been taken back.",
+    "table.select.all": "Select all rows",
+    "table.select.row": "Select row",
+    "table.selection.count": "{0} selected",
+    "table.selection.toolbar": "Actions for the selected rows",
+    "tree.heading": "Tree",
+    "tree.move.rejected": "The move was not saved and has been taken back.",
 
     // paging (the info line the paged data controls render below their content)
     "paging.info": "Page {0} of {1} / {2} of {3} items",
