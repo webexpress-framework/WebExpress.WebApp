@@ -1089,6 +1089,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         // by the analyze endpoint
         const typeKeys = {
             attribute: "webexpress.webapp:wql.type.attribute",
+            function: "webexpress.webapp:wql.type.function",
             operator: "webexpress.webapp:wql.type.operator",
             parameter: "webexpress.webapp:wql.type.parameter",
             quotation: "webexpress.webapp:wql.type.parameter",

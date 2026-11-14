@@ -107,19 +107,22 @@ namespace WebExpress.WebApp.WebRestApi
                     prefix = currentToken.Token.Value[..offset];
                 }
 
-                // find the current attribute (look backwards for the last attribute-type token)
+                // find the current attribute (look backwards for the last attribute-type token);
+                // the arguments of a predicate belong to no attribute, so the search ends at its name
                 string currentAttribute = null;
                 if (referenceToken is not null)
                 {
                     var items = ila.Items.ToList();
                     var idx = items.IndexOf(referenceToken);
+                    var predicates = GetPredicateNames().ToHashSet(StringComparer.OrdinalIgnoreCase);
 
                     var previousAttribute = items
                         .Take(idx)
                         .Reverse()
-                        .FirstOrDefault(x => x.ExpressionType == WqlExpressionType.Attribute);
+                        .FirstOrDefault(x => x.ExpressionType == WqlExpressionType.Attribute ||
+                            x.ExpressionType == WqlExpressionType.Function && predicates.Contains(x.Token.Value ?? ""));
 
-                    if (previousAttribute is not null)
+                    if (previousAttribute?.ExpressionType == WqlExpressionType.Attribute)
                     {
                         currentAttribute = previousAttribute.Token.Value;
                     }
@@ -277,13 +280,20 @@ namespace WebExpress.WebApp.WebRestApi
                             .GetProperties()
                             .Select(p => p.Name)
                     );
+                    items.AddRange(GetPredicateNames());
                     break;
+                // a predicate stands where an attribute does, and a name being typed is read as
+                // an attribute until its parenthesis follows
                 case WqlExpressionType.Attribute:
+                case WqlExpressionType.Function:
+                    var attributes = type == WqlExpressionType.Attribute
+                        ? typeof(TIndexItem).GetProperties().Select(p => p.Name)
+                        : [];
+
                     items.AddRange
                     (
-                        typeof(TIndexItem)
-                            .GetProperties()
-                            .Select(p => p.Name)
+                        attributes
+                            .Concat(GetPredicateNames())
                             .Where
                             (
                                 name =>
@@ -388,14 +398,25 @@ namespace WebExpress.WebApp.WebRestApi
         }
 
         /// <summary>
-        /// Creates the parser the WQL of a request is read with. An endpoint registers its own
-        /// predicates and functions here, such as within("SD-12") over a precomputed set of
-        /// ids, so the statements of its clients may use them.
+        /// Returns the names of the predicates the statements may call, which are offered where
+        /// a condition may start.
+        /// </summary>
+        /// <returns>The predicate names.</returns>
+        protected virtual IEnumerable<string> GetPredicateNames()
+        {
+            return CreateWqlParser().PredicateNames;
+        }
+
+        /// <summary>
+        /// Creates the parser the WQL of a request is read with. It knows the functions and
+        /// predicates registered in the index manager; an endpoint registers predicates of its
+        /// own here, such as within("SD-12") over a precomputed set of ids, so the statements
+        /// of its clients may use them.
         /// </summary>
         /// <returns>The parser.</returns>
         protected virtual WqlParser<TIndexItem> CreateWqlParser()
         {
-            return new WqlParser<TIndexItem>();
+            return RestApiWqlParser.Create<TIndexItem>();
         }
     }
 }

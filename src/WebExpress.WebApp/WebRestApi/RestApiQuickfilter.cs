@@ -275,14 +275,15 @@ namespace WebExpress.WebApp.WebRestApi
         protected virtual WqlQueryMode QueryMode => WqlQueryMode.Exact;
 
         /// <summary>
-        /// Creates the parser the WQL of a request is read with. An endpoint registers its own
-        /// predicates and functions here, such as within("SD-12") over a precomputed set of
-        /// ids, so the statements of its clients may use them.
+        /// Creates the parser the WQL of a request is read with. It knows the functions and
+        /// predicates registered in the index manager; an endpoint registers predicates of its
+        /// own here, such as within("SD-12") over a precomputed set of ids, so the statements
+        /// of its clients may use them.
         /// </summary>
         /// <returns>The parser.</returns>
         protected virtual WqlParser<TIndexItem> CreateWqlParser()
         {
-            return new WqlParser<TIndexItem>();
+            return RestApiWqlParser.Create<TIndexItem>();
         }
 
         /// <summary>

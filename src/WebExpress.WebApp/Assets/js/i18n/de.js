@@ -99,6 +99,7 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "wql.clear": "Eingabe leeren",
     "wql.type.input": "Eingabe",
     "wql.type.attribute": "Attribut",
+    "wql.type.function": "Funktion",
     "wql.type.operator": "Operator",
     "wql.type.parameter": "Wert",
     "wql.type.parenthesis.open": "Listenstart",
