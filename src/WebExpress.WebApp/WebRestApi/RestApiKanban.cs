@@ -18,7 +18,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// A REST API endpoint providing the kanban configuration and handling layout updates.
     /// </summary>
     /// <typeparam name="TIndexItem">Type of the index item.</typeparam>
-    public class RestApiKanban<TIndexItem> : IRestApi
+    public class RestApiKanban<TIndexItem> : RestApiWql<TIndexItem>
         where TIndexItem : IIndexItem
     {
         private static readonly JsonSerializerOptions _jsonOptions = new()
@@ -444,18 +444,6 @@ namespace WebExpress.WebApp.WebRestApi
         /// so that its query provider can translate the filter into SQL.
         /// </summary>
         protected virtual WqlQueryMode QueryMode => WqlQueryMode.Exact;
-
-        /// <summary>
-        /// Creates the parser the WQL of a request is read with. It knows the functions and
-        /// predicates registered in the index manager; an endpoint registers predicates of its
-        /// own here, such as within("SD-12") over a precomputed set of ids, so the statements
-        /// of its clients may use them.
-        /// </summary>
-        /// <returns>The parser.</returns>
-        protected virtual WqlParser<TIndexItem> CreateWqlParser()
-        {
-            return RestApiWqlParser.Create<TIndexItem>();
-        }
 
         /// <summary>
         /// Turns a WQL text into a query in the endpoint's <see cref="QueryMode"/>. An override of

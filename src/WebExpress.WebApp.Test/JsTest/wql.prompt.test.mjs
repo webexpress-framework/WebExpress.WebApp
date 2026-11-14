@@ -313,6 +313,42 @@ test("a closing parenthesis after a chosen value closes the set and leaves room 
     assert.deepEqual(calls, [[12, 13, ") "]], 'the set reads ("A") ');
 });
 
+test("a predicate suggestion opens its call, so the next analysis reads a call and not an attribute", () => {
+    const { ctrl } = loadPrompt();
+    const calls = [];
+    ctrl.value = "wi";
+    ctrl._insertReplacementAt = (start, end, text) => calls.push([start, end, text]);
+    ctrl._currentContext = { type: "attribute", prefix: "wi", tokenStart: 0, tokenEnd: 2, quoted: false, calls: new Set(["within"]) };
+
+    ctrl._applySuggestion("within");
+
+    assert.deepEqual(calls, [[0, 2, "within("]], "no blank parts the name from its parenthesis");
+});
+
+test("a function suggestion keeps the parenthesis already written after the name", () => {
+    const { ctrl } = loadPrompt();
+    const calls = [];
+    ctrl.value = "no()";
+    ctrl._insertReplacementAt = (start, end, text) => calls.push([start, end, text]);
+    ctrl._currentContext = { type: "function", prefix: "no", tokenStart: 0, tokenEnd: 2, quoted: false, calls: new Set(["now"]) };
+
+    ctrl._applySuggestion("now");
+
+    assert.deepEqual(calls, [[0, 2, "now"]], "the call reads now() rather than now(()");
+});
+
+test("an attribute suggestion that is no call still ends with a blank", () => {
+    const { ctrl } = loadPrompt();
+    const calls = [];
+    ctrl.value = "wi";
+    ctrl._insertReplacementAt = (start, end, text) => calls.push([start, end, text]);
+    ctrl._currentContext = { type: "attribute", prefix: "wi", tokenStart: 0, tokenEnd: 2, quoted: false, calls: new Set(["within"]) };
+
+    ctrl._applySuggestion("Width");
+
+    assert.deepEqual(calls, [[0, 2, "Width "]]);
+});
+
 test("an operator suggestion is inserted as-is with a trailing space", () => {
     const { ctrl } = loadPrompt();
     const calls = armApply(ctrl, "operator", false);
@@ -378,7 +414,8 @@ test("a valid analyze response builds the context and clears the error state", a
                 prefix: "Hel",
                 attribute: "Text",
                 quoted: false,
-                suggestions: ["Hello", "Helena"]
+                suggestions: ["Hello", "Helena"],
+                calls: ["Helena"]
             }
         })
     });
@@ -394,6 +431,7 @@ test("a valid analyze response builds the context and clears the error state", a
     assert.equal(ctrl._currentContext.tokenStart, 0, "the prefix anchors the token start");
     assert.equal(ctrl._currentContext.attribute, "Text");
     assert.deepEqual(ctrl._suggestions, ["Hello", "Helena"]);
+    assert.deepEqual([...ctrl._currentContext.calls], ["Helena"], "the context knows which suggestions are calls");
     assert.ok(requests[0].indexOf("/api/items/analyze?wql=Hel") !== -1, "the analyze endpoint is called");
 });
 

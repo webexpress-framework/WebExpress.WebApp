@@ -17,7 +17,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// The type of index item that the API operates on. Must implement the IIndexItem interface.
     /// </typeparam>
     [IncludeSubPaths(true)]
-    public abstract class RestApiWqlPrompt<TIndexItem> : IRestApi
+    public abstract class RestApiWqlPrompt<TIndexItem> : RestApiWql<TIndexItem>
         where TIndexItem : IIndexItem
     {
         /// <summary>
@@ -62,7 +62,10 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 var wql = request.GetParameter("wql")?.Value ?? "";
                 var cursorPosition = request.GetParameter("c")?.Value ?? "0";
-                var ila = GetLookahead(wql, request);
+                // one parser serves the whole request, so the suggested names are the ones the
+                // statement is analyzed with
+                var parser = CreateWqlParser();
+                var ila = GetLookahead(parser, wql, request);
                 var pos = Convert.ToInt32(cursorPosition);
                 var lastToken = default(IWqlLookaheadToken);
                 var currentToken = default(IWqlLookaheadToken);
@@ -114,13 +117,11 @@ namespace WebExpress.WebApp.WebRestApi
                 {
                     var items = ila.Items.ToList();
                     var idx = items.IndexOf(referenceToken);
-                    var predicates = GetPredicateNames().ToHashSet(StringComparer.OrdinalIgnoreCase);
 
                     var previousAttribute = items
                         .Take(idx)
                         .Reverse()
-                        .FirstOrDefault(x => x.ExpressionType == WqlExpressionType.Attribute ||
-                            x.ExpressionType == WqlExpressionType.Function && predicates.Contains(x.Token.Value ?? ""));
+                        .FirstOrDefault(x => x.ExpressionType is WqlExpressionType.Attribute or WqlExpressionType.Predicate);
 
                     if (previousAttribute?.ExpressionType == WqlExpressionType.Attribute)
                     {
@@ -153,15 +154,38 @@ namespace WebExpress.WebApp.WebRestApi
 
                 // in follow mode every permissible next type contributes its
                 // suggestions (e.g. logical operators and order keywords after
-                // a completed condition); otherwise the current token's type
-                var suggestionTypes = followMode
-                    ? (referenceToken?.ExpectedNextTokens ?? []).Distinct()
-                    : new[] { currentExpressionType }.AsEnumerable();
-
-                var suggestions = suggestionTypes
-                    .SelectMany(type => GetSuggestions(type, prefix, currentAttribute))
+                // a completed condition); otherwise the current token's type. a
+                // name being typed is read as an attribute until its parenthesis
+                // follows, so it may still become a predicate wherever the token
+                // before it lets a condition start
+                var suggestionTypes = (followMode
+                    ? referenceToken?.ExpectedNextTokens ?? []
+                    : currentExpressionType == WqlExpressionType.Attribute &&
+                        (lastToken is null || lastToken.ExpectedNextTokens.Contains(WqlExpressionType.Predicate))
+                        ? [WqlExpressionType.Attribute, WqlExpressionType.Predicate]
+                        : [currentExpressionType])
+                    .SelectMany(type => type == WqlExpressionType.None
+                        ? new[] { WqlExpressionType.Attribute, WqlExpressionType.Predicate }
+                        : [type])
                     .Distinct()
                     .ToList();
+
+                var suggestions = new List<string>();
+                var calls = new List<string>();
+
+                foreach (var type in suggestionTypes)
+                {
+                    var names = GetSuggestions(parser, type, prefix, currentAttribute).ToList();
+
+                    suggestions.AddRange(names);
+
+                    if (type is WqlExpressionType.Predicate or WqlExpressionType.Function)
+                    {
+                        calls.AddRange(names);
+                    }
+                }
+
+                suggestions = suggestions.Distinct().ToList();
 
                 var preceding = referenceToken is null
                     ? []
@@ -194,6 +218,7 @@ namespace WebExpress.WebApp.WebRestApi
                     NextExpressionTypes = nextExpressionTypes,
                     ErrorMessage = errorMessage,
                     Suggestions = suggestions,
+                    Calls = calls.Distinct().Where(suggestions.Contains).ToList(),
                     Prefix = prefix,
                     Attribute = currentAttribute,
                     Quoted = quoted
@@ -228,6 +253,12 @@ namespace WebExpress.WebApp.WebRestApi
         /// Analyzes the specified WQL query and returns lookahead information that 
         /// describes the query's structure and expected elements.
         /// </summary>
+        /// <param name="parser">
+        /// The parser of the request, from <see cref="RestApiWql{TIndexItem}.CreateWqlParser"/>. The
+        /// suggested predicate and function names are taken from it, so an override analyzes with
+        /// it rather than with a parser of its own, and registers its predicates in
+        /// CreateWqlParser instead.
+        /// </param>
         /// <param name="wql">
         /// The WQL query string to analyze. This parameter must not be null or empty.
         /// </param>
@@ -235,21 +266,21 @@ namespace WebExpress.WebApp.WebRestApi
         /// The request context used for analysis. This parameter cannot be null.
         /// </param>
         /// <returns>
-        /// An instance of IWqlLookahead containing information about the parsed WQL 
+        /// An instance of IWqlLookahead containing information about the parsed WQL
         /// query.
         /// </returns>
-        protected virtual IWqlLookahead GetLookahead(string wql, IRequest request)
+        protected virtual IWqlLookahead GetLookahead(WqlParser<TIndexItem> parser, string wql, IRequest request)
         {
-            var parser = CreateWqlParser();
-            var ila = parser.Analyze(wql);
-
-            return ila;
+            return parser.Analyze(wql);
         }
 
         /// <summary>
-        /// Retrieves a list of suggested values based on the specified type, prefix, 
+        /// Retrieves a list of suggested values based on the specified type, prefix,
         /// and attribute.
         /// </summary>
+        /// <param name="parser">
+        /// The parser of the request, which names the predicates and functions a statement may call.
+        /// </param>
         /// <param name="type">
         /// The type of suggestions to retrieve.
         /// </param>
@@ -267,33 +298,25 @@ namespace WebExpress.WebApp.WebRestApi
         /// based on the provided parameters. The collection may be empty if no 
         /// suggestions are applicable.
         /// </returns>
-        protected virtual IEnumerable<string> GetSuggestions(WqlExpressionType type, string prefix, string attribute)
+        protected virtual IEnumerable<string> GetSuggestions(WqlParser<TIndexItem> parser, WqlExpressionType type, string prefix, string attribute)
         {
             var items = new List<string>();
 
             switch (type)
             {
-                case WqlExpressionType.None:
-                    items.AddRange
-                    (
-                        typeof(TIndexItem)
-                            .GetProperties()
-                            .Select(p => p.Name)
-                    );
-                    items.AddRange(GetPredicateNames());
-                    break;
-                // a predicate stands where an attribute does, and a name being typed is read as
-                // an attribute until its parenthesis follows
                 case WqlExpressionType.Attribute:
+                case WqlExpressionType.Predicate:
                 case WqlExpressionType.Function:
-                    var attributes = type == WqlExpressionType.Attribute
-                        ? typeof(TIndexItem).GetProperties().Select(p => p.Name)
-                        : [];
+                    var names = type switch
+                    {
+                        WqlExpressionType.Attribute => typeof(TIndexItem).GetProperties().Select(p => p.Name),
+                        WqlExpressionType.Predicate => parser.PredicateNames,
+                        _ => parser.FunctionNames
+                    };
 
                     items.AddRange
                     (
-                        attributes
-                            .Concat(GetPredicateNames())
+                        names
                             .Where
                             (
                                 name =>
@@ -387,36 +410,18 @@ namespace WebExpress.WebApp.WebRestApi
         /// and are influenced by the provided attribute.
         /// </summary>
         /// <param name="prefix">The prefix used to filter suggestions. This parameter must not be null or empty.</param>
-        /// <param name="attribute">An attribute that affects the context or criteria for generating suggestions.</param>
+        /// <param name="attribute">
+        /// The attribute the value is compared with, which affects the context or criteria for
+        /// generating suggestions. It is null where a value belongs to no attribute, such as an
+        /// argument of a predicate call like within("SD-12"), so an override must not rely on it.
+        /// </param>
         /// <returns>
-        /// An enumerable collection of strings containing suggestions that correspond 
+        /// An enumerable collection of strings containing suggestions that correspond
         /// to the given prefix and attribute. The collection will be empty if no suggestions are found.
         /// </returns>
         protected virtual IEnumerable<string> GetSuggestions(string prefix, string attribute)
         {
             return [];
-        }
-
-        /// <summary>
-        /// Returns the names of the predicates the statements may call, which are offered where
-        /// a condition may start.
-        /// </summary>
-        /// <returns>The predicate names.</returns>
-        protected virtual IEnumerable<string> GetPredicateNames()
-        {
-            return CreateWqlParser().PredicateNames;
-        }
-
-        /// <summary>
-        /// Creates the parser the WQL of a request is read with. It knows the functions and
-        /// predicates registered in the index manager; an endpoint registers predicates of its
-        /// own here, such as within("SD-12") over a precomputed set of ids, so the statements
-        /// of its clients may use them.
-        /// </summary>
-        /// <returns>The parser.</returns>
-        protected virtual WqlParser<TIndexItem> CreateWqlParser()
-        {
-            return RestApiWqlParser.Create<TIndexItem>();
         }
     }
 }

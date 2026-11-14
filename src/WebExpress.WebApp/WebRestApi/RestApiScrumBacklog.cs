@@ -18,7 +18,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// </summary>
     /// <typeparam name="TIndexScrum">Type of the scrum sprint index item.</typeparam>
     /// <typeparam name="TIndexItem">Type of the index item.</typeparam>
-    public abstract class RestApiScrumBacklog<TIndexScrum, TIndexItem> : IRestApi
+    public abstract class RestApiScrumBacklog<TIndexScrum, TIndexItem> : RestApiWql<TIndexItem>
         where TIndexScrum : IIndexItem
         where TIndexItem : IIndexItem
     {
@@ -646,18 +646,6 @@ namespace WebExpress.WebApp.WebRestApi
         /// so that its query provider can translate the filter into SQL.
         /// </summary>
         protected virtual WqlQueryMode QueryMode => WqlQueryMode.Exact;
-
-        /// <summary>
-        /// Creates the parser the WQL of a request is read with. It knows the functions and
-        /// predicates registered in the index manager; an endpoint registers predicates of its
-        /// own here, such as within("SD-12") over a precomputed set of ids, so the statements
-        /// of its clients may use them.
-        /// </summary>
-        /// <returns>The parser.</returns>
-        protected virtual WqlParser<TIndexItem> CreateWqlParser()
-        {
-            return RestApiWqlParser.Create<TIndexItem>();
-        }
 
         /// <summary>
         /// Applies filtering criteria to the specified query based on the provided 

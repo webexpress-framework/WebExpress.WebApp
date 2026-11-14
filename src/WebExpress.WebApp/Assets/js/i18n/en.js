@@ -100,6 +100,7 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "wql.type.input": "Input",
     "wql.type.attribute": "Attribute",
     "wql.type.function": "Function",
+    "wql.type.predicate": "Condition",
     "wql.type.operator": "Operator",
     "wql.type.parameter": "Value",
     "wql.type.parenthesis.open": "Start List",

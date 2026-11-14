@@ -9,7 +9,8 @@ namespace WebExpress.WebApp.Test.WebRestApi
 {
     /// <summary>
     /// Tests that the wql prompt offers the predicates of its parser where a condition may
-    /// start, and that the arguments of a predicate are not taken for values of an attribute.
+    /// start and its functions where a value may stand, and that the arguments of a predicate
+    /// are not taken for values of an attribute.
     /// </summary>
     public class UnitTestRestApiWqlPromptPredicates
     {
@@ -57,22 +58,86 @@ namespace WebExpress.WebApp.Test.WebRestApi
         [InlineData("within(\"A\") and Description ~ \"", 31, "value of Description")]
         public void Suggestions(string wql, int cursor, params string[] values)
         {
-            // arrange
+            // act
+            var (suggestions, _) = Analyze(wql, cursor);
+
+            // validation
+            Assert.Equal(values.Order(), suggestions.Order());
+        }
+
+        /// <summary>
+        /// Tests that a predicate is offered only where a condition may start and a scalar
+        /// function only where a value may stand, with the cursor at the end of the statement.
+        /// </summary>
+        /// <param name="wql">The statement typed so far.</param>
+        /// <param name="offered">A suggestion that is offered, or null.</param>
+        /// <param name="withheld">A suggestion that is not offered.</param>
+        [Theory]
+        [InlineData("Description ~ \"A item\" order by ", "Description", "within")]
+        [InlineData("Description ~ \"A item\" order by w", null, "within")]
+        [InlineData("within(\"A\", ", "value of nothing", "within")]
+        [InlineData("within(\"A\", ", "value of nothing", "now")]
+        [InlineData("Description ~ concat(Description, ", "now", "within")]
+        [InlineData("Description ~ concat(Description, ", "value of Description", "within")]
+        [InlineData("Description ~ no", null, "within")]
+        public void SuggestionsByPosition(string wql, string offered, string withheld)
+        {
+            // act
+            var (suggestions, _) = Analyze(wql, wql.Length);
+
+            // validation
+            if (offered is not null)
+            {
+                Assert.Contains(offered, suggestions);
+            }
+
+            Assert.DoesNotContain(withheld, suggestions);
+        }
+
+        /// <summary>
+        /// Tests that the names of predicates and functions are reported as calls, so the client
+        /// completes them with their opening parenthesis, while attributes and values are not.
+        /// </summary>
+        /// <param name="wql">The statement typed so far.</param>
+        /// <param name="cursor">The cursor position.</param>
+        /// <param name="calls">The expected calls.</param>
+        [Theory]
+        [InlineData("wi", 2, "within")]
+        [InlineData("Description ~ no()", 16, "now")]
+        [InlineData("", 0, "within")]
+        [InlineData("Description ~ \"A item\" order by ", 32)]
+        [InlineData("within(\"", 8)]
+        public void Calls(string wql, int cursor, params string[] calls)
+        {
+            // act
+            var (_, actual) = Analyze(wql, cursor);
+
+            // validation
+            Assert.Equal(calls.Order(), actual.Order());
+        }
+
+        /// <summary>
+        /// Asks the prompt for the suggestions at a cursor position.
+        /// </summary>
+        /// <param name="wql">The statement typed so far.</param>
+        /// <param name="cursor">The cursor position.</param>
+        /// <returns>The suggestions and those among them that are calls.</returns>
+        private static (List<string> Suggestions, List<string> Calls) Analyze(string wql, int cursor)
+        {
             _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             var prompt = new PredicatePrompt();
             var request = UnitTestControlFixture.CreateRequestMock(uri: $"/api/analyze?wql={Uri.EscapeDataString(wql)}&c={cursor}");
 
-            // act
             var result = prompt.Get(request);
 
-            // validation
             using var doc = JsonDocument.Parse(Encoding.UTF8.GetString((byte[])result.Content));
-            var suggestions = doc.RootElement.GetProperty("suggestions")
+
+            List<string> Read(string name) => doc.RootElement.GetProperty(name)
                 .EnumerateArray()
                 .Select(x => x.GetString())
                 .ToList();
 
-            Assert.Equal(values.Order(), suggestions.Order());
+            return (Read("suggestions"), Read("calls"));
         }
     }
 }
