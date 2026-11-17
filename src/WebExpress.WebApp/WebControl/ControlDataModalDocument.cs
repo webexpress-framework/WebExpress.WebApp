@@ -196,6 +196,21 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, string> CollaborationId { get; set; }
 
         /// <summary>
+        /// Gets or sets the resolver of the scope the shared surface is edited in.
+        /// </summary>
+        /// <remarks>
+        /// The channel decides who meets; the scope decides <i>what</i> they edit together, and
+        /// the two are not the same thing. The collaborative container sequences its operations
+        /// per document, and a document is the scope and the element id. Left unset, the scope is
+        /// the path and query of the page together with the container id, so the dialog opened
+        /// from the reading view and the same dialog on its own editor page share a channel but
+        /// transform against two different documents - each author's changes are applied to a
+        /// text the other one does not have. A scope naming the record, typically the same value
+        /// as the <see cref="CollaborationId"/>, puts every page that edits it on one document.
+        /// </remarks>
+        public Func<IRenderControlContext, string> Document { get; set; }
+
+        /// <summary>
         /// Gets the entries the host adds to the overflow menu.
         /// </summary>
         public IList<IControlDropdownItem> MoreItems => _moreItems;
@@ -415,6 +430,7 @@ namespace WebExpress.WebApp.WebControl
             var host = new ControlCollaborative(Channel(renderContext))
             {
                 Classes = ["wx-editor-form-collaborative"],
+                Document = Document,
 
                 // who is here belongs on the bar rather than over the document: the chips would
                 // otherwise float in the corner of the surface, where they cover what is being
