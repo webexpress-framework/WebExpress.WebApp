@@ -374,6 +374,19 @@ webexpress.webui.I18N.register("de", "webexpress.webapp", {
     "watcher.search.placeholder": "Person suchen…",
     "watcher.no.matches": "Keine Treffer",
 
+    // assignment
+    "assignment.caption": "Zuständig",
+    "assignment.placeholder": "Nicht zugewiesen",
+    "assignment.assign.me": "Mir zuweisen",
+    "assignment.unassign": "Zuweisung aufheben",
+    "assignment.assign.to": "Zuweisen an …",
+    "assignment.search.placeholder": "Person suchen…",
+    "assignment.search.label": "Neue zuständige Person suchen",
+    "assignment.no.matches": "Keine Treffer",
+    "assignment.heading": "Zuständig",
+    "assignment.forbidden": "Sie dürfen die Zuweisung nicht ändern.",
+    "assignment.update.rejected": "Die Zuweisung wurde nicht geändert.",
+
     // commnts
     "chat.send": "Senden",
     "tile.search.show": "Suchfeld anzeigen",

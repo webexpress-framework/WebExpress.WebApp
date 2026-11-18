@@ -427,6 +427,13 @@ kanban.refused.card=Die Karte oder ihr Ziel ist nicht mehr verfügbar.
 kanban.refused.status=Die Karte darf nicht in diesen Status wechseln. Der Workflow oder Ihre Berechtigungen haben sich geändert.
 kanban.refused.column=Die Spalte enthält einen Status, der nicht mehr verfügbar ist.
 
+# assignment: the row of the person responsible for an object
+assignment.caption=Zuständig
+assignment.placeholder=Nicht zugewiesen
+assignment.assign.me=Mir zuweisen
+assignment.unassign=Zuweisung aufheben
+assignment.assign.to=Zuweisen an …
+
 setting.title.certificate.label=Zertifikate
 setting.certificate.description=Prüfen Sie die konfigurierten Zertifikate und ihren aktuellen Gültigkeitsstatus. Ändern Sie Zertifikatsreferenzen und Warnschwellen in der Serverkonfiguration und starten Sie anschließend den Server neu.
 setting.certificate.empty.title=Keine Zertifikate geladen

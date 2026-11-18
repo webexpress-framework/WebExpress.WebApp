@@ -267,6 +267,35 @@ namespace WebExpress.WebApp.Test.WebData
         }
 
         /// <summary>
+        /// Tests that the assignment row declares its data service and its users service in
+        /// one typed call each, named as the client resolves them, with the domains derived
+        /// from the endpoint so lists bound to the same domain pick up a change.
+        /// </summary>
+        [Fact]
+        public void AssigneePresetsDeclareDataAndUsersService()
+        {
+            // arrange
+            UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+
+            // act
+            var assignee = new ControlDataAssignment()
+                .DataService<FakeCrudEndpoint>()
+                .UsersService<FakeEndpoint>();
+            var data = assignee.ServiceFactories[0](null).ToIslandElement().ToString();
+            var users = assignee.ServiceFactories[1](null).ToIslandElement().ToString();
+
+            // validation
+            Assert.Equal(2, assignee.ServiceFactories.Count);
+            Assert.Contains("name=\"data\"", data);
+            Assert.Contains("method=\"GET\"", data);
+            Assert.Contains("update-method=\"PUT\"", data);
+            Assert.Contains($"domains=\"{typeof(FakeDomainItem).FullName.ToLower()}\"", data);
+            Assert.Contains("name=\"users\"", users);
+            Assert.DoesNotContain("domains", users);
+            Assert.Equal(DataTypeName.Of<FakeEndpoint>(), assignee.UsersFactory(null));
+        }
+
+        /// <summary>
         /// Tests that the comment surface and the composer declare the image
         /// library and the link library of their editors in one typed call each,
         /// beside the upload service.

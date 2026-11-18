@@ -428,6 +428,13 @@ kanban.refused.card=The card or its destination is no longer available.
 kanban.refused.status=The card may not move to this status. The workflow or your permissions have changed.
 kanban.refused.column=The column contains a status that is no longer available.
 
+# assignment: the row of the person responsible for an object
+assignment.caption=Assignee
+assignment.placeholder=Unassigned
+assignment.assign.me=Assign to me
+assignment.unassign=Unassign
+assignment.assign.to=Assign to …
+
 setting.title.certificate.label=Certificates
 setting.certificate.description=Inspect the configured certificate inventory and its current validity status. Change certificate references and warning thresholds in the server configuration, then restart the server.
 setting.certificate.empty.title=No certificates loaded

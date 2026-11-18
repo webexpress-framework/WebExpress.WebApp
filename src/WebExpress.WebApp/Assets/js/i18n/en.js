@@ -374,6 +374,19 @@ webexpress.webui.I18N.register("en", "webexpress.webapp", {
     "watcher.search.placeholder": "Search person…",
     "watcher.no.matches": "No matches",
 
+    // assignment
+    "assignment.caption": "Assignee",
+    "assignment.placeholder": "Unassigned",
+    "assignment.assign.me": "Assign to me",
+    "assignment.unassign": "Unassign",
+    "assignment.assign.to": "Assign to …",
+    "assignment.search.placeholder": "Search person…",
+    "assignment.search.label": "Search for the new assignee",
+    "assignment.no.matches": "No matches",
+    "assignment.heading": "Assignee",
+    "assignment.forbidden": "You may not change the assignee.",
+    "assignment.update.rejected": "The assignee was not changed.",
+
     // comments
     "chat.send": "Send",
     "tile.search.show": "Show search field",

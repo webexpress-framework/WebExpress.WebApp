@@ -20,6 +20,8 @@ namespace WebExpress.WebApp.WebInclude
     [Asset("/assets/js/service/default.js")]
     [Asset("/assets/js/intent/default.js")]
     [Asset("/assets/js/bind/default.js")]
+    [Asset("/assets/js/webexpress.webapp.assignment.model.js")]
+    [Asset("/assets/js/webexpress.webapp.assignment.js")]
     [Asset("/assets/js/webexpress.webapp.avatar.dropdown.js")]
     [Asset("/assets/js/webexpress.webapp.chat.js")]
     [Asset("/assets/js/webexpress.webapp.collaborative.document.js")]

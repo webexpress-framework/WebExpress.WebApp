@@ -463,6 +463,47 @@ namespace WebExpress.WebApp.WebControl
         }
 
         /// <summary>
+        /// Declares the standard data service of the assignment row, which loads the
+        /// assignment with GET, assigns with PUT and unassigns with DELETE against the
+        /// same base.
+        /// </summary>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The assignment control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataAssignment DataService<TEndpoint>(this ControlDataAssignment control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            return AddPreset(control, DataServiceDescriptor.Data, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
+        }
+
+        /// <summary>
+        /// Declares the users service of the assignment row, which resolves the candidates
+        /// of the "assign to" search with GET. Without it the row offers only "assign to
+        /// me" and "unassign".
+        /// </summary>
+        /// <remarks>
+        /// As for the watcher, one call serves both modes: it declares the owned users island of
+        /// a standalone row and the binding to the ViewState users service of the same type. The
+        /// renderer emits the island only standalone and the binding only when the row renders a
+        /// ViewState resource.
+        /// </remarks>
+        /// <typeparam name="TEndpoint">The endpoint type that owns the route.</typeparam>
+        /// <param name="control">The assignment control.</param>
+        /// <param name="configure">An optional adjustment of the preset.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataAssignment UsersService<TEndpoint>(this ControlDataAssignment control, Action<DataServiceDescriptor> configure = null)
+            where TEndpoint : IEndpoint
+        {
+            if (control != null)
+            {
+                control.UsersFactory = _ => DataTypeName.Of<TEndpoint>();
+            }
+
+            return AddPreset(control, UsersPreset, Endpoint<TEndpoint>(), Domains<TEndpoint>(), configure);
+        }
+
+        /// <summary>
         /// Declares the standard data service of the permission surface, which
         /// queries the group-to-policy assignments with GET; the assign dialog,
         /// the inline editing of the policy chips and the revocation shape their
@@ -1281,6 +1322,15 @@ namespace WebExpress.WebApp.WebControl
         /// <returns>The control for chaining.</returns>
         public static ControlDataWatcher Resource<TResource>(this ControlDataWatcher control) where TResource : IDataResource
             => BindResource<ControlDataWatcher, TResource>(control);
+
+        /// <summary>
+        /// Binds the assignment row to a ViewState resource by type.
+        /// </summary>
+        /// <typeparam name="TResource">The resource type.</typeparam>
+        /// <param name="control">The assignment control.</param>
+        /// <returns>The control for chaining.</returns>
+        public static ControlDataAssignment Resource<TResource>(this ControlDataAssignment control) where TResource : IDataResource
+            => BindResource<ControlDataAssignment, TResource>(control);
 
         /// <summary>
         /// Binds the scrum sprint card to a ViewState resource by type.

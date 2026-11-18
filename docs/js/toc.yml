@@ -42,6 +42,8 @@
   href: search.suggestion.md
 - name: WatcherCtrl
   href: watcher.md
+- name: AssignmentCtrl
+  href: assignment.md
 - name: WqlPromptCtrl
   href: wql.prompt.md
 - name: TabCtrl
