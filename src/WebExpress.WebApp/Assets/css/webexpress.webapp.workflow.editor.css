@@ -293,12 +293,14 @@
     border: 1px solid var(--wx-we-border);
     border-radius: var(--wx-we-radius);
     background: var(--wx-we-surface);
-    overflow: hidden;
 }
 
+/* the nav rounds its own corners instead of the box clipping them, because a
+   clipping box would also cut off the rule picker that drops out of the panel */
 .wx-workflow-editor-tabs__nav {
     display: flex;
     background: var(--wx-we-surface-2);
+    border-radius: calc(var(--wx-we-radius) - 1px) calc(var(--wx-we-radius) - 1px) 0 0;
     border-bottom: 1px solid var(--wx-we-divider);
 }
 
@@ -322,6 +324,14 @@
 .wx-workflow-editor-tabs__tab:focus-visible {
     color: var(--wx-we-text-1);
     outline: none;
+}
+
+.wx-workflow-editor-tabs__tab:first-child {
+    border-top-left-radius: inherit;
+}
+
+.wx-workflow-editor-tabs__tab:last-child {
+    border-top-right-radius: inherit;
 }
 
 .wx-workflow-editor-tabs__tab.is-active {
