@@ -31,8 +31,8 @@ webexpress.webapp.workflowEditorModel = {
     },
 
     /**
-     * Reads the rule catalog (guards, validations, postfunctions) out of a
-     * response, defaulting each to an empty array.
+     * Reads the catalogs (guards, validations, postfunctions and the forms a
+     * transition may show) out of a response, defaulting each to an empty array.
      * @param {object} response - The raw workflow response.
      * @returns {object} The catalog object.
      */
@@ -41,7 +41,8 @@ webexpress.webapp.workflowEditorModel = {
         return {
             guards: Array.isArray(response.guards) ? response.guards : [],
             validations: Array.isArray(response.validations) ? response.validations : [],
-            postfunctions: Array.isArray(response.postfunctions) ? response.postfunctions : []
+            postfunctions: Array.isArray(response.postfunctions) ? response.postfunctions : [],
+            forms: Array.isArray(response.forms) ? response.forms : []
         };
     },
 

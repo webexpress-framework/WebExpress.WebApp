@@ -52,7 +52,7 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
     _workflowId = "";
 
     // cached catalogs sourced from the same REST response
-    _catalog = { guards: [], validations: [], postfunctions: [] };
+    _catalog = { guards: [], validations: [], postfunctions: [], forms: [] };
 
     // request state
     _destroyed = false;
@@ -1050,9 +1050,10 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
             edge.to || "",
             (val) => this._mutateEdge(edge, { to: val })));
 
-        body.appendChild(this._renderInputRow(
+        body.appendChild(this._renderSelectRow(
             this._i18n("webexpress.webui:workflow.editor.transition.form"),
-            "form", edge.form || "",
+            this._formOptions(edge.form || ""),
+            edge.form || "",
             (val) => this._mutateEdge(edge, { form: val })));
 
         body.appendChild(this._renderInputRow(
@@ -1081,6 +1082,25 @@ webexpress.webapp.WorkflowEditorCtrl = class extends webexpress.webui.GraphEdito
             }));
 
         return props;
+    }
+
+    /**
+     * Builds the choices of the transition's form picker: "no form" first, then
+     * the forms the server offers for this workflow.
+     * @param {string} current - The form the transition refers to, or "".
+     * @returns {{value:string,label:string}[]} The options.
+     */
+    _formOptions(current) {
+        const options = [{ value: "", label: this._i18n("webexpress.webui:workflow.editor.transition.form.none") }];
+        for (const form of this._catalog.forms || []) {
+            options.push({ value: String(form.id), label: form.label || String(form.id) });
+        }
+        // a form the server no longer offers stays listed, so the picker shows
+        // what is stored instead of silently pretending the transition has none
+        if (current && !options.some(o => o.value === current)) {
+            options.push({ value: current, label: current });
+        }
+        return options;
     }
 
     /**

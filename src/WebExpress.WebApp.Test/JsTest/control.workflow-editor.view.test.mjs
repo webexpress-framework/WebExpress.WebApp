@@ -81,6 +81,44 @@ test("the properties pane follows the selection and keeps the field being typed 
     assert.equal(ctrl._propsHost.querySelector(LABEL).value, "", "a new selection shows its own properties");
 });
 
+/**
+ * Returns the form picker of the transition properties: the select that offers "no form".
+ * @param {object} ctrl - The editor.
+ * @returns {object} The select.
+ */
+function formPicker(ctrl) {
+    return Array.from(ctrl._propsHost.querySelectorAll(LABEL))
+        .find(el => el.tagName === "SELECT" && el.children[0] && el.children[0].value === "");
+}
+
+test("the form of a transition is chosen from the forms the server offers", () => {
+    const { ctrl } = createEditor();
+    ctrl._catalog.forms = [{ id: "f1", label: "Resolve" }, { id: "f2", label: "Reopen" }];
+
+    ctrl._selectedEdgeId = "t1";
+    ctrl.render();
+    const picker = formPicker(ctrl);
+
+    assert.ok(picker, "the form is a picker, not a free text field");
+    assert.deepEqual(Array.from(picker.children).map(o => o.value), ["", "f1", "f2"], "no form first, then the offered forms");
+
+    picker.value = "f2";
+    picker.dispatchEvent({ type: "change", target: picker });
+
+    assert.equal(ctrl._model.edges[0].form, "f2", "the choice is the form's id");
+});
+
+test("a stored form the server no longer offers stays visible in the picker", () => {
+    const { ctrl } = createEditor();
+    ctrl._catalog.forms = [{ id: "f1", label: "Resolve" }];
+    ctrl._model.edges[0].form = "gone";
+
+    ctrl._selectedEdgeId = "t1";
+    ctrl.render();
+
+    assert.deepEqual(Array.from(formPicker(ctrl).children).map(o => o.value), ["", "f1", "gone"]);
+});
+
 test("the add-transition action shows the mode, which is state", () => {
     const { ctrl } = createEditor();
 

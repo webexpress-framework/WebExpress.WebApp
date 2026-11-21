@@ -55,8 +55,9 @@ host while building its canvas.
 ## Wire Format
 
 A single `GET` returns the whole editing context as a `RestApiWorkflowResult`: the workflow
-header, its states and transitions, and the catalogs of guards, validations and post
-functions the rule pickers offer. The autosave `PUT` mirrors that shape.
+header, its states and transitions, the catalogs of guards, validations and post
+functions the rule pickers offer, and the forms a transition may show before it runs. The
+autosave `PUT` mirrors that shape.
 
 ```jsonc
 {
@@ -76,14 +77,19 @@ functions the rule pickers offer. The autosave `PUT` mirrors that shape.
   "transitions": [
     {
       "id": "t1", "from": "draft", "to": "review", "label": "submit",
-      "description": "…", "form": "…",
+      "description": "…", "form": "f1",   // the id of an entry of "forms", or ""
       "color": "#5bc0de", "dasharray": "", "waypoints": [{ "x": 120, "y": 90 }],
       "guards": [], "validators": [], "postfunctions": []
     }
   ],
-  "guards": [], "validations": [], "postfunctions": []   // the catalogs
+  "guards": [], "validations": [], "postfunctions": [],  // the catalogs
+  "forms": [{ "id": "f1", "label": "Resolve" }]          // RestApiWorkflow.RetrieveForms
 }
 ```
+
+The transition's form is a picker over `forms`, headed by a "no form" entry. A stored form
+the catalog no longer lists stays selectable under its id, so the panel never pretends a
+transition has no form while one is still stored.
 
 The payload also accepts `nodes` / `edges` as aliases for `states` / `transitions`, and
 `source` / `target` as aliases for `from` / `to`. The save writes both spellings so a
