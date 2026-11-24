@@ -489,17 +489,35 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
     }
 
     /**
-     * Runs the success action the form was authored with.
-     * @param {object} json - The json answer of the server.
+     * Resolves the success action of a submit. A dialog that shows the form may override the
+     * action the form was authored with: a form written for a detail page reloads it, yet the
+     * board that opened the same form in its dialog refreshes itself and would lose its open
+     * tab, its selection and its scroll position to that reload.
+     *
+     * Asked before the dialog closes, because closing it ends the override.
+     * @returns {string} "none", "reload" or "follow-uri".
      */
-    _runSuccessAction(json) {
-        if (this._successAction === "reload") {
+    _resolveSuccessAction() {
+        const dialog = this._element?.closest?.(".modal");
+        const host = dialog ? webexpress.webui.Controller.getInstanceByElement(dialog) : null;
+        const override = host && host !== this ? host.successAction : null;
+
+        return ["none", "reload", "follow-uri"].includes(override) ? override : this._successAction;
+    }
+
+    /**
+     * Runs the success action of a submit.
+     * @param {object} json - The json answer of the server.
+     * @param {string} [action] - The resolved success action; the authored one when omitted.
+     */
+    _runSuccessAction(json, action = this._successAction) {
+        if (action === "reload") {
             window.location.reload();
             return;
         }
 
         const uri = json && typeof json.uri === "string" ? json.uri : null;
-        if (this._successAction !== "follow-uri" || !uri) {
+        if (action !== "follow-uri" || !uri) {
             return;
         }
 
@@ -1071,6 +1089,8 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
         const classification = webexpress.webapp.restFormModel.classifyResponse(result.ok, result.status, json);
 
         if (classification.kind === "success") {
+            const successAction = this._resolveSuccessAction();
+
             this.clearErrors();
             this.markPristine();
             if (typeof this.options.onSuccess === "function") {
@@ -1103,8 +1123,8 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
 
             // a tick later, so the listeners of the saved event - the dialog closing, the toast -
             // have run before the page goes away
-            if (this._successAction !== "none") {
-                setTimeout(() => this._runSuccessAction(json), 0);
+            if (successAction !== "none") {
+                setTimeout(() => this._runSuccessAction(json, successAction), 0);
             }
         } else if (classification.kind === "validation") {
             const fieldErrors = [];

@@ -67,5 +67,11 @@ namespace WebExpress.WebApp.WebControl
         /// instead of growing with its longest column.
         /// </summary>
         Func<IRenderControlContext, bool> Fill { get; }
+
+        /// <summary>
+        /// Gets the id of the page's form dialog in which the board opens the dialog a card move
+        /// needs (see <see cref="WebRestApi.RestApiKanbanCard.MoveDialogs"/>).
+        /// </summary>
+        Func<IRenderControlContext, string> MoveDialogModal { get; }
     }
 }

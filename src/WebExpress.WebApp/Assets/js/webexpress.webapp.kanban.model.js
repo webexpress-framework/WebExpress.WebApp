@@ -84,6 +84,7 @@ webexpress.webapp.kanbanModel = {
                 columnId: item.columnId,
                 statusId: item.statusId || null,
                 allowedStatusIds: this._normalizeStatusIds(item.allowedStatusIds),
+                moveDialogs: this._normalizeMoveDialogs(item.moveDialogs),
                 swimlaneId: item.swimlaneId,
                 label: item.label || "",
                 html: item.html || "",
@@ -115,6 +116,31 @@ webexpress.webapp.kanbanModel = {
     _normalizeStatusIds(value) {
         return value == null ? null : [...new Set((Array.isArray(value) ? value : [])
             .filter((id) => typeof id === "string" && id.length > 0))];
+    },
+
+    /**
+     * Keeps the dialog addresses of a card by destination status. A move into one of these
+     * statuses needs input the board cannot ask for itself, so the board opens the dialog
+     * instead of storing the drop. Entries without a usable address are dropped, which leaves
+     * the move to the board.
+     * @param {*} value - The dialog addresses by status identifier supplied by the service.
+     * @returns {object|null} The addresses by status identifier, or null when no move needs a dialog.
+     */
+    _normalizeMoveDialogs(value) {
+        if (!value || typeof value !== "object" || Array.isArray(value)) {
+            return null;
+        }
+
+        // a map without prototype, so a status named like an object member ("constructor")
+        // cannot resolve to one
+        const dialogs = Object.create(null);
+        for (const [statusId, uri] of Object.entries(value)) {
+            if (statusId.length > 0 && typeof uri === "string" && uri.trim().length > 0) {
+                dialogs[statusId] = uri.trim();
+            }
+        }
+
+        return Object.keys(dialogs).length > 0 ? dialogs : null;
     },
 
     /**

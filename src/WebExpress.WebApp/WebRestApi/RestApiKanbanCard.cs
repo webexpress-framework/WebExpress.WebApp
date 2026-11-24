@@ -22,6 +22,21 @@ namespace WebExpress.WebApp.WebRestApi
         public IEnumerable<string> AllowedStatusIds { get; set; }
 
         /// <summary>
+        /// Gets or sets the address of a dialog per destination status, for moves that need input
+        /// first, such as the form of a workflow transition. Null or an absent status lets the
+        /// board store the move itself.
+        /// </summary>
+        /// <remarks>
+        /// The board stores no move into a status listed here: it leaves the card where it was and
+        /// opens the dialog in the form dialog of the page, and the dialog's submit performs the
+        /// move. The dialog's form is told to keep the page, because the board reloads itself; the
+        /// same form opened elsewhere keeps its own success action. The endpoint refuses such a move
+        /// should a board that predates the dialog send it anyway.
+        /// </remarks>
+        [JsonPropertyName("moveDialogs")]
+        public IDictionary<string, string> MoveDialogs { get; set; }
+
+        /// <summary>
         /// Gets or sets the unique identifier for the card.
         /// </summary>
         [JsonPropertyName("id")]

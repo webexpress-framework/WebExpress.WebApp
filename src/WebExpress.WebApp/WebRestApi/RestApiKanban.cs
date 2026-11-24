@@ -246,6 +246,15 @@ namespace WebExpress.WebApp.WebRestApi
             {
                 throw new RestApiRefusal(I18N.Translate(request, "webexpress.webapp:kanban.refused.status"));
             }
+
+            // a move that needs input goes through its dialog, whose submit moves the card; this
+            // endpoint only sees it from a board loaded before the card named the dialog. the card
+            // is read from RetrieveCards like the board's, so no hook of its own is needed.
+            if (card.StatusId != move.StatusId && card.MoveDialogs != null
+                && card.MoveDialogs.TryGetValue(move.StatusId, out var dialog) && !string.IsNullOrWhiteSpace(dialog))
+            {
+                throw new RestApiRefusal(I18N.Translate(request, "webexpress.webapp:kanban.refused.dialog"));
+            }
         }
 
         /// <summary>

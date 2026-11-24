@@ -164,3 +164,24 @@ test("model loads the board and persists a move through a service", async () => 
     assert.deepEqual(JSON.parse(calls[1].body), { cardId: "i1", columnId: "c2", swimlaneId: null });
     assert.equal(moved.ok, true);
 });
+
+test("normalize board keeps the move dialogs of a card and drops entries without an address", () => {
+    const { wxapp } = load();
+    const board = wxapp.kanbanModel.normalizeBoard({
+        items: [
+            { id: "i1", columnId: "c1", moveDialogs: { done: " /transition/i1/done ", review: "", blocked: 7, constructor: "/transition/i1/constructor" } },
+            { id: "i2", columnId: "c1", moveDialogs: { review: "" } },
+            { id: "i3", columnId: "c1", moveDialogs: ["/transition/i3"] },
+            { id: "i4", columnId: "c1" }
+        ]
+    });
+
+    const dialogs = board.cards[0].moveDialogs;
+    assert.deepEqual(Object.keys(dialogs).sort(), ["constructor", "done"]);
+    assert.equal(dialogs.done, "/transition/i1/done");
+    assert.equal(dialogs.review, undefined, "an empty address leaves the move to the board");
+    assert.equal(dialogs.open, undefined, "a status without an entry needs no dialog");
+    assert.equal(board.cards[1].moveDialogs, null, "a card whose entries are all empty needs no dialog");
+    assert.equal(board.cards[2].moveDialogs, null, "a list is no map of statuses");
+    assert.equal(board.cards[3].moveDialogs, null);
+});

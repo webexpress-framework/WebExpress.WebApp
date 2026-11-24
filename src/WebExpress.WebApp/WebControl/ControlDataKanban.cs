@@ -169,6 +169,17 @@ namespace WebExpress.WebApp.WebControl
         public Func<IRenderControlContext, bool> Fill { get; set; } = _ => false;
 
         /// <summary>
+        /// Gets or sets the id of the page's form dialog in which the board opens the dialog a
+        /// card move needs (see <see cref="WebRestApi.RestApiKanbanCard.MoveDialogs"/>).
+        /// </summary>
+        /// <remarks>
+        /// Null keeps the client default <c>modal-form</c>, the id the applications give the
+        /// form dialog they place on every page. A page without that dialog opens the move
+        /// dialog as a page of its own.
+        /// </remarks>
+        public Func<IRenderControlContext, string> MoveDialogModal { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the class.
         /// </summary>
         /// <param name="id">The control id.</param>
@@ -197,6 +208,7 @@ namespace WebExpress.WebApp.WebControl
             var configurableSwimlane = ConfigurableSwimlane?.Invoke(renderContext) ?? false;
             var selectable = Selectable?.Invoke(renderContext) ?? true;
             var fill = Fill?.Invoke(renderContext) ?? false;
+            var moveDialogModal = MoveDialogModal?.Invoke(renderContext);
 
             var html = new HtmlElementTextContentDiv()
             {
@@ -217,6 +229,7 @@ namespace WebExpress.WebApp.WebControl
                 // emitted only to opt out, so the attribute stays absent on the common
                 // selectable board and the client default carries it
                 .AddUserAttribute("data-selectable", selectable ? null : "false")
+                .AddUserAttribute("data-move-dialog-modal", string.IsNullOrWhiteSpace(moveDialogModal) ? null : moveDialogModal)
                 .EmitDataIslands(this, renderContext);
 
             return html;

@@ -2,6 +2,11 @@
  * A REST-enabled Kanban control.
  * Fetches the configuration (columns, swimlanes) and cards from a REST endpoint.
  * Automatically synchronizes card movements with the server.
+ *
+ * A move into a status for which the card names a dialog (moveDialogs) needs input the board
+ * cannot ask for, such as the form of a workflow transition. The board stores no such move: it
+ * leaves the card where it was and opens the dialog in the form dialog of the page, whose
+ * submit moves the card, and loads the board again once the form reports success.
  */
 webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
 
@@ -10,6 +15,10 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
     _viewState = null;
     _statuses = null;
     _statusDialog = null;
+    // the id the applications give the form dialog they place on every page
+    _moveDialogModal = "modal-form";
+    // detaches the listeners of the open move dialog; null while none is open
+    _moveDialog = null;
 
     /**
      * Initializes the REST Kanban control.
@@ -22,6 +31,11 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
         webexpress.webapp.ServiceRegistry.fromElement(element);
 
         super(element);
+
+        if (element.dataset && element.dataset.moveDialogModal) {
+            this._moveDialogModal = element.dataset.moveDialogModal;
+        }
+        element.removeAttribute?.("data-move-dialog-modal");
 
         // the resource a ViewState renders. when present, the board is a pure view of
         // a central resource the enclosing ViewState owns; when absent it owns its
@@ -296,6 +310,12 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
                 || !this._availableStatuses(card, column).some((status) => status.id === selected[0])) {
                 return;
             }
+            const dialog = selected[0] !== card.statusId ? card.moveDialogs?.[selected[0]] : null;
+            if (dialog) {
+                // the dialog's submit moves the card; until then the card stays where it was
+                this._openMoveDialog(dialog);
+                return;
+            }
             card.statusId = selected[0];
             super._moveCard(card, colId, swimlaneId, targetCard, before);
         };
@@ -309,9 +329,83 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
     }
 
     /**
-     * Releases the separately owned status dialog when the board is removed.
+     * Opens the dialog a move needs in the form dialog of the page.
+     *
+     * The dialog is told to leave the page as it is after its form succeeded: a form written for
+     * a detail page reloads it, which would throw away the open tab, the selected card, the search
+     * and the scroll position only to show one card in its new column. The board loads itself
+     * instead. A page without a form dialog opens the dialog as a page of its own.
+     * @param {string} uri - The address of the dialog.
+     */
+    _openMoveDialog(uri) {
+        this._releaseMoveDialog();
+
+        const host = this._moveDialogModal ? document.getElementById(this._moveDialogModal) : null;
+        const modal = host ? webexpress.webui.Controller.getInstanceByElement(host) : null;
+
+        // a dialog that cannot be told to keep the page would reload it, so it counts as none
+        if (!modal || typeof modal.show !== "function" || !("successAction" in modal)) {
+            this._navigateTo(uri);
+            return;
+        }
+
+        const events = webexpress.webui.Event;
+        const onSuccess = () => {
+            this._releaseMoveDialog();
+            modal.hide();
+
+            // a board removed while the dialog was open has nothing left to show
+            if (this._element?.isConnected) {
+                this.update();
+            }
+        };
+        const onHide = () => this._releaseMoveDialog();
+
+        host.addEventListener(events.UPLOAD_SUCCESS_EVENT, onSuccess);
+        host.addEventListener(events.MODAL_HIDE_EVENT, onHide);
+        this._moveDialog = () => {
+            host.removeEventListener(events.UPLOAD_SUCCESS_EVENT, onSuccess);
+            host.removeEventListener(events.MODAL_HIDE_EVENT, onHide);
+        };
+
+        modal.uri = uri;
+        modal.successAction = "none";
+        modal.show();
+    }
+
+    /**
+     * Stops listening to the move dialog, so a later form in the same page dialog does not
+     * reload this board.
+     */
+    _releaseMoveDialog() {
+        const detach = this._moveDialog;
+        this._moveDialog = null;
+        detach?.();
+    }
+
+    /**
+     * Opens the dialog of a move as a page of its own. Only http addresses are followed, so
+     * an address such as a javascript: url never runs.
+     * @param {string} uri - The address of the dialog.
+     */
+    _navigateTo(uri) {
+        let target;
+        try {
+            target = new URL(uri, window.location.href);
+        } catch (_) {
+            return;
+        }
+        if (target.protocol === "http:" || target.protocol === "https:") {
+            window.location.assign(target.href);
+        }
+    }
+
+    /**
+     * Releases the separately owned status dialog and stops listening to an open move dialog,
+     * so a board removed while the dialog was open does nothing when its form succeeds.
      */
     destroy() {
+        this._releaseMoveDialog();
         this._statusDialog?.destroy();
         this._statusDialog = null;
         super.destroy();
