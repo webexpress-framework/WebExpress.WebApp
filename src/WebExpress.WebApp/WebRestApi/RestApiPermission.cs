@@ -47,8 +47,8 @@ namespace WebExpress.WebApp.WebRestApi
         [Method(RequestMethod.GET)]
         public virtual IResponse Retrieve(IRequest request)
         {
-            var pageNumber = request.ParseIntParameter("p", 0);
-            var pageSize = request.ParseIntParameter("l", 10);
+            var pageNumber = request.ParsePageNumber("p");
+            var pageSize = request.ParsePageSize("l", 10);
             var search = request.GetParameter("q")?.Value ?? string.Empty;
 
             try

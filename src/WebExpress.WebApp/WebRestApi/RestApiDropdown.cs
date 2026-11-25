@@ -37,8 +37,8 @@ namespace WebExpress.WebApp.WebRestApi
         {
             // default page size aligned with dropdown max entries
             const int defaultPageSize = 25;
-            var pageNumber = request.ParseIntParameter("p", 0);
-            var pageSize = request.ParseIntParameter("l", defaultPageSize);
+            var pageNumber = request.ParsePageNumber("p");
+            var pageSize = request.ParsePageSize("l", defaultPageSize);
             var filter = request.GetParameter("q")?.Value ?? string.Empty;
             var wql = request.GetParameter("wql")?.Value ?? null;
             var query = new Query<TIndexItem>() as IQuery<TIndexItem>; ;

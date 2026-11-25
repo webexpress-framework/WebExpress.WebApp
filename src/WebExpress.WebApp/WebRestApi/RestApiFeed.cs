@@ -59,8 +59,8 @@ namespace WebExpress.WebApp.WebRestApi
         [Method(RequestMethod.GET)]
         public IResponse Retrieve(IRequest request)
         {
-            var pageNumber = request.ParseIntParameter("p", 0);
-            var pageSize = request.ParseIntParameter("l", 5);
+            var pageNumber = request.ParsePageNumber("p");
+            var pageSize = request.ParsePageSize("l", 5);
             var search = request.GetParameter("q")?.Value ?? string.Empty;
             var wql = request.GetParameter("wql")?.Value ?? null;
             var filters = request.GetParameter("f")?.Value?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries) ?? [];
