@@ -56,6 +56,12 @@ The move operation intersects the target column assignments with the card's perm
 
 The reorder operation within a column preserves the current status, including moves between swimlanes. Cancelling a destination dialog sends no update. Incoming board data closes any pending dialog so a stale selection cannot overwrite a refreshed card. Successful status moves reload the board through its existing service or ViewState to refresh permitted transitions.
 
+## Loading
+
+While the board loads - the first time, after a move, or when another user changed its data - a thin progress bar above the columns (below the board menu) says so, as the table does. The bar keeps its place while it is hidden, so showing it moves nothing. The placeholders shimmer (`placeholder-glow`) only while there is no board on screen yet; a board on screen does not pulse on every reload.
+
+A reload bound to a ViewState first marks the resource slice as loading while it still carries the board as it was. The board renders a slice only when it brings a payload it has not shown yet, so a card just moved stays where it was dropped until the stored board arrives, instead of appearing once more in its old column.
+
 ## REST integration
 
 The server derives from `RestApiKanban<TIndexItem>` and overrides `RetrieveStatuses`, `RetrieveColumns`, and `RetrieveCards`. The corresponding DTOs expose `RestApiKanbanStatus`, `RestApiKanbanColumn.StatusIds`, `RestApiKanbanCard.StatusId`, `RestApiKanbanCard.AllowedStatusIds`, and `RestApiKanbanCard.MoveDialogs`. Column updates reach the existing `UpdateColumns` hook with assignments in `RestApiLayoutColumn.StatusIds`.

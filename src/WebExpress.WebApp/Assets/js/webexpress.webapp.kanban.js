@@ -7,6 +7,9 @@
  * cannot ask for, such as the form of a workflow transition. The board stores no such move: it
  * leaves the card where it was and opens the dialog in the form dialog of the page, whose
  * submit moves the card, and loads the board again once the form reports success.
+ *
+ * While the board loads, a thin progress bar above it says so, as the table does. Its place is
+ * kept while it is hidden, so showing it moves nothing.
  */
 webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
 
@@ -19,6 +22,8 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
     _moveDialogModal = "modal-form";
     // detaches the listeners of the open move dialog; null while none is open
     _moveDialog = null;
+    // the board payload the board was last rendered from
+    _appliedData = null;
 
     /**
      * Initializes the REST Kanban control.
@@ -108,17 +113,18 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
     _applySlice(slice) {
         slice = slice || {};
 
-        if (slice.data) {
+        // a reload first marks the slice loading and still carries the board it had; drawn
+        // again, that board put a card just moved back into its old column until the answer
+        // arrived. only a payload the board has not shown yet is rendered
+        if (slice.data && slice.data !== this._appliedData) {
+            this._appliedData = slice.data;
             this.updateData(slice.data);
         }
 
         // the slice is the record of the central load: it says whether a query is in
         // flight and whether the last one failed, and the board shows exactly that
         // rather than declaring the load over on every notification
-        const loading = !!slice.loading;
-
-        this._element.classList.toggle("placeholder-glow", loading);
-        this._loading = loading;
+        this._loading = !!slice.loading;
 
         if (slice.error) {
             console.error("kanban load failed:", webexpress.webapp.ServiceResult.describe({ error: slice.error }, { resource: this._resource }));
@@ -129,7 +135,10 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
     // is the store
 
     get _loading() { return this._store.getState().loading; }
-    set _loading(value) { this._store.setState({ loading: value }); }
+    set _loading(value) {
+        this._store.setState({ loading: value });
+        this._showProgress(!!value);
+    }
 
     /**
      * Fetches the board data including columns, swimlanes, and cards.
@@ -140,7 +149,6 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
         }
 
         this._loading = true;
-        this._element.classList.add("placeholder-glow");
 
         // the board settings wql filter narrows the server query when set
         const result = await this._service.query(this._filter ? { wql: this._filter } : {});
@@ -152,15 +160,71 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
             }
             // log error and reset state
             console.error("kanban load failed:", webexpress.webapp.ServiceResult.describe(result));
-            this._element.classList.remove("placeholder-glow");
             this._loading = false;
             return;
         }
 
         this.updateData(result.data);
 
-        this._element.classList.remove("placeholder-glow");
         this._loading = false;
+    }
+
+    /**
+     * Renders the board and places the progress bar above it again, since the board rebuilds
+     * the host on every render.
+     */
+    render() {
+        super.render();
+        this._placeProgress();
+    }
+
+    /**
+     * Places the progress bar below the board menu, or first when the board has none.
+     *
+     * The bar is no declared field: the base constructor renders before the fields of this
+     * class are initialised, and an initialiser would drop the bar that render created.
+     */
+    _placeProgress() {
+        const host = this._element;
+        if (!host) {
+            return;
+        }
+
+        if (!this._progressBar) {
+            const bar = document.createElement("div");
+            bar.className = "progress wx-kanban-progress";
+            bar.setAttribute("role", "status");
+            bar.style.height = "0.25rem";
+            bar.style.flex = "0 0 auto";
+            const fill = document.createElement("div");
+            fill.className = "progress-bar progress-bar-striped progress-bar-animated";
+            fill.style.width = "100%";
+            bar.appendChild(fill);
+            this._progressBar = bar;
+        }
+
+        const first = host.children[0] || null;
+        const anchor = first && first.classList && first.classList.contains("wx-kanban-toolbar") ? first.nextSibling : first;
+        host.insertBefore(this._progressBar, anchor);
+
+        this._showProgress(!!this._store?.getState().loading);
+    }
+
+    /**
+     * Shows or hides the progress of a load. The bar keeps its place while hidden, so the
+     * board does not move when a load starts or ends; the placeholders shimmer only while
+     * there is no board to look at yet, since a board on screen pulsing on every reload
+     * reads as flicker.
+     * @param {boolean} show - true while a load is in flight.
+     */
+    _showProgress(show) {
+        if (this._progressBar) {
+            this._progressBar.style.visibility = show ? "visible" : "hidden";
+            this._progressBar.setAttribute("aria-busy", show ? "true" : "false");
+        }
+
+        const empty = !(this._columns && this._columns.length) && !(this._cards && this._cards.length);
+        this._element?.classList.toggle("placeholder-glow", show && empty);
     }
     
     /**
