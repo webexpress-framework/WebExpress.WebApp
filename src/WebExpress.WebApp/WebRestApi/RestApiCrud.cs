@@ -870,7 +870,7 @@ namespace WebExpress.WebApp.WebRestApi
                         _ => null
                     };
 
-                    fieldMap[key.ToLower()] = parameter.Value;
+                    fieldMap[key.ToLowerInvariant()] = parameter.Value;
                 }
             }
 

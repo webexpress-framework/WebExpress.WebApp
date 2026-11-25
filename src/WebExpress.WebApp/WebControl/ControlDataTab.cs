@@ -233,7 +233,7 @@ namespace WebExpress.WebApp.WebControl
                 Class = Css.Concatenate("wx-webapp-tab", GetClasses(renderContext)),
                 Style = Css.Concatenate(GetStyles(renderContext), highlightStyles)
             }
-                .AddUserAttribute("data-layout", layout != TypeLayoutTab.Default ? layout.ToString().ToLower() : null)
+                .AddUserAttribute("data-layout", layout != TypeLayoutTab.Default ? layout.ToString().ToLowerInvariant() : null)
                 .AddUserAttribute("data-readonly", @readonly ? "true" : null)
                 .AddUserAttribute("data-movable-tab", movableTab ? "true" : null)
                 .AddUserAttribute("data-editable-tab", editableTab ? "true" : null)

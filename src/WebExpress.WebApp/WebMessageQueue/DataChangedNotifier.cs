@@ -27,7 +27,7 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// <returns>The wire name, or <c>null</c> when the type is absent.</returns>
         public static string DomainName(Type type)
         {
-            return type?.FullName?.ToLower();
+            return type?.FullName?.ToLowerInvariant();
         }
 
         /// <summary>

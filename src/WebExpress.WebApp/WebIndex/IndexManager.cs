@@ -80,7 +80,7 @@ namespace WebExpress.WebApp.WebIndex
             // language files and the wql parser's messages would surface as raw keys
             var webIndex = typeof(WebExpress.WebIndex.IndexManager).Assembly;
             (_componentHub?.InternationalizationManager as InternationalizationManager)?
-                .Register(webIndex, webIndex.GetName().Name.ToLower());
+                .Register(webIndex, webIndex.GetName().Name.ToLowerInvariant());
 
             _componentHub?.PluginManager?.AddPlugin += (s, pluginContext) =>
             {
