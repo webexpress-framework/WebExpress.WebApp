@@ -29,6 +29,35 @@ namespace WebExpress.WebApp.Test.WebRestApi
         }
 
         /// <summary>
+        /// An index item whose identity the binder must leave alone.
+        /// </summary>
+        private class Item : WebExpress.WebIndex.IIndexItem
+        {
+            public Guid Id { get; set; }
+            public string Name { get; set; }
+        }
+
+        /// <summary>
+        /// Verifies that a payload naming another id does not re-key the record it is bound
+        /// to, which overwrote or hijacked the record that id belongs to.
+        /// </summary>
+        [Fact]
+        public void BindTo_KeepsTheIdentityOfAnIndexItem()
+        {
+            // arrange
+            var id = Guid.NewGuid();
+            var target = new Item { Id = id, Name = "old" };
+            var payload = new RestApiCrudFormData { { "id", Guid.NewGuid().ToString() }, { "name", "new" } };
+
+            // act
+            payload.BindTo(target);
+
+            // validation
+            Assert.Equal(id, target.Id);
+            Assert.Equal("new", target.Name);
+        }
+
+        /// <summary>
         /// Verifies that a guid submitted as text reaches the property.
         /// </summary>
         [Fact]
