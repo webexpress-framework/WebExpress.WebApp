@@ -94,6 +94,8 @@ link links the selected text, or inserts the target's title if nothing was selec
 
 `Comment` objects are expected to carry `id`, `author`, `when`, `category`, `labels`, `body` (HTML), `pinned`, `likes` (array of user IDs), `reactions` (`{ "👍": ["u1","u2"], … }`), `edited` (`{ by, when }` or `null`), `collapsed`, and `replies` (`Reply[]`). `Reply` objects need `id`, `author`, `when`, and `body`. `User` objects need at least `id`, `name`, `initials`, `team`, and `color`.
 
+The bodies of comments and replies are shown to other users as HTML. `RestApiComment` reduces every body to what `HtmlSanitizer` (WebExpress.WebCore) keeps - in the payloads it receives and in the items and replies it returns, so a body stored before the sanitizing existed is covered as well: no script, no event handler, no `javascript:` link, no data attribute the client controls act on. A reply body is HTML too; plain text in it is encoded.
+
 ### Categories
 
 Each comment carries a category that drives its accent color and is offered as a filter in the toolbar. The default set covers `general`, `question`, `hint`, `status`, `decision`, and `solution`. The label text is resolved via i18n (`webexpress.webapp:comment.cat.general`, …); the colors are read from CSS variables (`--wx-webapp-cat-general`, `--wx-webapp-cat-general-bg`, …) so they can be re-themed without touching JavaScript.

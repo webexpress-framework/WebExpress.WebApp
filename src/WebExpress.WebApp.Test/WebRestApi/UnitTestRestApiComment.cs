@@ -340,5 +340,24 @@ namespace WebExpress.WebApp.Test.WebRestApi
             // validation
             Assert.Equal(404, result.Status);
         }
+
+        /// <summary>
+        /// Verifies that a comment body cannot carry script to other users: the payload a client
+        /// sends and the item an application returns are both reduced to sanitized html.
+        /// </summary>
+        [Fact]
+        public void CommentBodiesAreSanitized()
+        {
+            // arrange
+            var payload = JsonSerializer.Deserialize<RestApiCommentPayload>("{\"body\":\"<p>hi<img src=x onerror=alert(1)><script>alert(2)</script></p>\"}");
+            var item = new RestApiCommentItem { Body = "<a href=\"javascript:alert(1)\">x</a>" };
+            var reply = new RestApiCommentReply { Body = "1 < 2 <b onclick=alert(1)>b</b>" };
+
+            // validation
+            Assert.Equal("<p>hi<img src=\"x\"></p>", payload.Body);
+            Assert.Equal("<a>x</a>", item.Body);
+            Assert.Equal("1 &lt; 2 <b>b</b>", reply.Body);
+            Assert.Null(new RestApiCommentItem { Body = null }.Body);
+        }
     }
 }
