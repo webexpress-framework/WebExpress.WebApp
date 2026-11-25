@@ -289,7 +289,7 @@ namespace WebExpress.WebApp.WebControl
             else if (assignee is not null)
             {
                 var initials = string.IsNullOrWhiteSpace(assignee.Initials) ? InitialsOf(assignee.Name) : assignee.Initials;
-                avatar.Add(new HtmlText(WebUtility.HtmlEncode(initials)));
+                avatar.Add(new HtmlText(initials));
             }
 
             return avatar;
@@ -311,11 +311,11 @@ namespace WebExpress.WebApp.WebControl
             };
 
             text.AddUserAttribute("aria-live", "polite");
-            text.Add(new HtmlElementTextSemanticsSpan(new HtmlText(WebUtility.HtmlEncode(caption)))
+            text.Add(new HtmlElementTextSemanticsSpan(new HtmlText(caption))
             {
                 Class = "wx-assignment-caption"
             });
-            text.Add(new HtmlElementTextSemanticsSpan(new HtmlText(WebUtility.HtmlEncode(assignee is null ? placeholder : assignee.Name ?? string.Empty)))
+            text.Add(new HtmlElementTextSemanticsSpan(new HtmlText(assignee is null ? placeholder : assignee.Name ?? string.Empty))
             {
                 Class = "wx-assignment-name"
             });
@@ -349,7 +349,7 @@ namespace WebExpress.WebApp.WebControl
                 button.Add(symbol);
             }
 
-            button.Add(new HtmlElementTextSemanticsSpan(new HtmlText(WebUtility.HtmlEncode(text))));
+            button.Add(new HtmlElementTextSemanticsSpan(new HtmlText(text)));
 
             return button;
         }

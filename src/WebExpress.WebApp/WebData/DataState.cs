@@ -124,7 +124,7 @@ namespace WebExpress.WebApp.WebData
 
                 if (!string.IsNullOrEmpty(text))
                 {
-                    prop.Add(new HtmlText(WebUtility.HtmlEncode(text)));
+                    prop.Add(new HtmlText(text));
                 }
 
                 island.Add(prop);

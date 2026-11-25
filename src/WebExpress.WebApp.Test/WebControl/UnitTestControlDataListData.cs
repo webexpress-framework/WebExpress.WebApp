@@ -88,8 +88,8 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
-        /// Tests that state values are HTML encoded, so quotes in a value do not
-        /// break the markup.
+        /// Tests that state values are written as encoded text, so markup in a value
+        /// cannot close the island and become part of the page.
         /// </summary>
         [Fact]
         public void StateValuesAreHtmlEncoded()
@@ -100,14 +100,16 @@ namespace WebExpress.WebApp.Test.WebControl
             var visualTree = new VisualTreeControl(componentHub, context.PageContext);
             var control = new ControlDataList()
             {
-                StateFactory = _ => DataState.Create().Set("items", new[] { "a", "b" })
+                StateFactory = _ => DataState.Create().Set("items", new[] { "a", "b" }).Set("search", "</wx-prop><script>alert(1)</script>")
             };
 
             // act
             var html = control.Render(context, visualTree).ToString();
 
             // validation
-            Assert.Contains("<wx-prop name=\"items\" type=\"json\">[&quot;a&quot;,&quot;b&quot;]</wx-prop>", html);
+            Assert.Contains("<wx-prop name=\"items\" type=\"json\">[\"a\",\"b\"]</wx-prop>", html);
+            Assert.Contains("&lt;/wx-prop&gt;&lt;script&gt;", html);
+            Assert.DoesNotContain("<script>", html);
         }
     }
 }

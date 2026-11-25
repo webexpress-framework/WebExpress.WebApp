@@ -267,7 +267,7 @@ namespace WebExpress.WebApp.Test.WebControl
 
             // validation
             Assert.Contains("<wx-state hidden>", html);
-            Assert.Contains(@"<wx-prop name=""assignee"" type=""json"">{&quot;id&quot;:&quot;u1&quot;,&quot;name&quot;:&quot;Grace Hopper&quot;,&quot;image&quot;:null,&quot;initials&quot;:null}</wx-prop>", html);
+            Assert.Contains(@"<wx-prop name=""assignee"" type=""json"">{""id"":""u1"",""name"":""Grace Hopper"",""image"":null,""initials"":null}</wx-prop>", html);
             Assert.Contains(@"<wx-prop name=""self"" type=""json"">", html);
             Assert.Contains(@"<wx-prop name=""mayChange"" type=""boolean"">true</wx-prop>", html);
         }

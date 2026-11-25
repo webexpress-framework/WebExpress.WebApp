@@ -419,7 +419,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
 
             // validation
             Assert.Equal(400, result.Status);
-            Assert.Equal("error processing put request.", result.Content);
+            Assert.Equal("error processing put request.", JsonDocument.Parse(Encoding.UTF8.GetString((byte[])result.Content)).RootElement.GetProperty("message").GetString());
         }
 
         /// <summary>
@@ -461,7 +461,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
 
             // validation
             Assert.Equal(400, result.Status);
-            Assert.Equal("error processing put request.", result.Content);
+            Assert.Equal("error processing put request.", JsonDocument.Parse(Encoding.UTF8.GetString((byte[])result.Content)).RootElement.GetProperty("message").GetString());
         }
 
         /// <summary>
@@ -481,7 +481,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
 
             // validation
             Assert.Equal(400, result.Status);
-            Assert.Equal("error processing get request.", result.Content);
+            Assert.Equal("error processing get request.", JsonDocument.Parse(Encoding.UTF8.GetString((byte[])result.Content)).RootElement.GetProperty("message").GetString());
         }
 
         /// <summary>

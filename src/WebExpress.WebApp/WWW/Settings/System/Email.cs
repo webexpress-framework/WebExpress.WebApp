@@ -100,7 +100,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
                 var section = new ControlPanel { Classes = ["border", "rounded", "p-3", "mb-3"] };
                 section.Add(new ControlHtml
                 {
-                    Html = _ => new HtmlElementSectionH3(new HtmlText(WebUtility.HtmlEncode(profile.Name)))
+                    Html = _ => new HtmlElementSectionH3(new HtmlText(profile.Name))
                     {
                         Class = "h5 text-break"
                     }.ToString()
@@ -156,7 +156,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
         {
             return new ControlTableCellPanel().Add(new ControlHtml
             {
-                Html = _ => new HtmlElementTextSemanticsSpan(new HtmlText(WebUtility.HtmlEncode(value ?? ""))) { Class = "text-break", Style = "white-space: normal" }.ToString()
+                Html = _ => new HtmlElementTextSemanticsSpan(new HtmlText(value ?? "")) { Class = "text-break", Style = "white-space: normal" }.ToString()
             });
         }
 
