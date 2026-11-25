@@ -1,14 +1,15 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.Json;
-using WebExpress.WebCore;
+using System;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebCluster;
+using WebExpress.WebCore.WebEndpoint;
 using WebExpress.WebCore.WebIdentity;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
+using WebExpress.WebCore;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -17,7 +18,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// validates user credentials, tracks failed login attempts with exponential backoff,
     /// and permanently locks accounts after a specific amount of failures.
     /// </summary>
-    public abstract class RestApiSession : IRestApi
+    public abstract class RestApiSession : IRestApi, IPublicEndpoint
     {
         /// <summary>
         /// Gets the number of failed attempts after which the exponential time penalty starts.

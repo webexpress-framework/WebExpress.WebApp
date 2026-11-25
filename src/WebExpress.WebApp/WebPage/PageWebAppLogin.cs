@@ -1,11 +1,12 @@
-﻿using WebExpress.WebCore.WebPage;
+﻿using WebExpress.WebCore.WebEndpoint;
+using WebExpress.WebCore.WebPage;
 
 namespace WebExpress.WebApp.WebPage
 {
     /// <summary>
     /// Represents an abstract base class for a login web application page.
     /// </summary>
-    public abstract class PageWebAppLogin : IPage<VisualTreeWebAppLogin>
+    public abstract class PageWebAppLogin : IPage<VisualTreeWebAppLogin>, IPublicEndpoint
     {
         /// <summary>
         /// Initializes a new instance of the class.
