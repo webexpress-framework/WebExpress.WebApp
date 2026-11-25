@@ -63,8 +63,8 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
             var socket = new FakeSocket(new FakeClientSession { IdentityId = "a" });
 
             // act
-            await handler.HandleAsync(socket, "{\"type\":\"webexpress.webapp.chat.message\",\"channelId\":\"team\",\"sender\":\"admin\",\"text\":\"hi\"}");
-            await handler.HandleAsync(socket, "{\"type\":\"webexpress.webapp.chat.message\",\"channelId\":\"direct:b:c\",\"text\":\"spy\"}");
+            await handler.HandleAsync(socket, "{\"type\":\"webexpress.webapp.chat.message\",\"channelId\":\"team\",\"sender\":\"admin\",\"text\":\"hi\"}", TestContext.Current.CancellationToken);
+            await handler.HandleAsync(socket, "{\"type\":\"webexpress.webapp.chat.message\",\"channelId\":\"direct:b:c\",\"text\":\"spy\"}", TestContext.Current.CancellationToken);
 
             // validation
             var sent = Assert.Single(manager.Sent);
@@ -83,11 +83,11 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
             var handler = new ChatMessageHandler(new RecordingManager(), new ChatChannelStore());
             var member = new FakeSocket(new FakeClientSession { IdentityId = "a" });
             var outsider = new FakeSocket(new FakeClientSession { IdentityId = "c" });
-            await handler.HandleAsync(member, "{\"type\":\"webexpress.webapp.chat.message\",\"channelId\":\"direct:a:b\",\"text\":\"secret\"}");
+            await handler.HandleAsync(member, "{\"type\":\"webexpress.webapp.chat.message\",\"channelId\":\"direct:a:b\",\"text\":\"secret\"}", TestContext.Current.CancellationToken);
 
             // act
-            await handler.HandleAsync(outsider, "{\"type\":\"webexpress.webapp.chat.history.request\",\"channelId\":\"direct:a:b\"}");
-            await handler.HandleAsync(member, "{\"type\":\"webexpress.webapp.chat.history.request\",\"channelId\":\"direct:a:b\"}");
+            await handler.HandleAsync(outsider, "{\"type\":\"webexpress.webapp.chat.history.request\",\"channelId\":\"direct:a:b\"}", TestContext.Current.CancellationToken);
+            await handler.HandleAsync(member, "{\"type\":\"webexpress.webapp.chat.history.request\",\"channelId\":\"direct:a:b\"}", TestContext.Current.CancellationToken);
 
             // validation
             Assert.Empty(outsider.Received);
