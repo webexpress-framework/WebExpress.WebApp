@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using WebExpress.WebCore.WebComponent;
@@ -81,9 +82,15 @@ namespace WebExpress.WebApp.WebMessageQueue
                 return;
             }
 
+            // a global notification is meant for the users of the application, like its broadcast
+            // (see AddressApplication); a visitor who is not signed in gets those of the own session
+            var global = string.IsNullOrEmpty(session.IdentityId)
+                ? _notificationManager.GetNotifications(applicationContext, null).Select(x => x.Id).ToHashSet()
+                : [];
+
             foreach (var notification in _notificationManager.GetNotifications(applicationContext, request))
             {
-                if (notification.IsExpired(DateTime.UtcNow))
+                if (global.Contains(notification.Id) || notification.IsExpired(DateTime.UtcNow))
                 {
                     continue;
                 }

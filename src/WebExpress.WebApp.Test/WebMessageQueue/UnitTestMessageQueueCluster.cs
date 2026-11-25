@@ -184,8 +184,9 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
         }
 
         /// <summary>
-        /// Tests that a client connecting to another instance is shown the progress of a task
-        /// running elsewhere.
+        /// Tests that a signed-in client connecting to another instance is shown the progress of
+        /// a task running elsewhere, and that a visitor who is not signed in is shown no task:
+        /// tasks carry no owner, so their messages are meant for the users of the application.
         /// </summary>
         [Fact]
         public async Task TaskProgressIsReplayedAcrossInstances()
@@ -197,15 +198,20 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
             var task = a.TaskManager.CreateTask("cluster-task-" + Guid.NewGuid().ToString("N"));
             task.Progress = 42;
 
-            // act: a client connects to instance b
+            // act: a signed-in client and an anonymous visitor connect to instance b
             var b = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             b.ClusterManager.UseStore(new FileClusterStore(_directory));
-            var socket = new TestSocket(CreateClient("app-a", null, []));
+            var signedIn = CreateClient("app-a", null, []);
+            signedIn.IdentityId = "a";
+            var socket = new TestSocket(signedIn);
+            var anonymous = new TestSocket(CreateClient("app-a", null, []));
             await b.GetComponentManager<MessageQueueManager>().ReplayProgressTasksAsync(socket, TestContext.Current.CancellationToken);
+            await b.GetComponentManager<MessageQueueManager>().ReplayProgressTasksAsync(anonymous, TestContext.Current.CancellationToken);
 
             // validation
             var replayed = socket.Received.Select(x => JsonDocument.Parse(x).RootElement).Single(x => x.GetProperty("taskId").GetString() == task.Id);
             Assert.Equal(42, replayed.GetProperty("progress").GetInt32());
+            Assert.Empty(anonymous.Received);
         }
 
         /// <summary>
@@ -493,6 +499,7 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
             public IPluginContext PluginContext { get; set; }
             public IApplicationContext ApplicationContext { get; set; }
             public IEnumerable<string> Domains { get; set; } = [];
+            public string IdentityId { get; set; }
         }
     }
 }

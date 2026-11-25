@@ -55,6 +55,14 @@ namespace WebExpress.WebApp.WebMessageQueue
         public bool SystemAccessOnly { get; set; }
 
         /// <summary>
+        /// Gets or sets whether the client must have a signed-in caller. The queue admits
+        /// visitors who are not signed in, and a broadcast without an audience of its own is
+        /// meant for the users of the application only.
+        /// </summary>
+        [JsonPropertyName("signedIn")]
+        public bool SignedInOnly { get; set; }
+
+        /// <summary>
         /// Determines whether a client meets every criterion that is set.
         /// </summary>
         /// <param name="session">The client session.</param>
@@ -83,6 +91,11 @@ namespace WebExpress.WebApp.WebMessageQueue
             }
 
             if (SystemAccessOnly && !session.HasSystemAccess)
+            {
+                return false;
+            }
+
+            if (SignedInOnly && string.IsNullOrEmpty(session.IdentityId))
             {
                 return false;
             }

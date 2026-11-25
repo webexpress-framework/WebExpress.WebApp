@@ -107,6 +107,22 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
             Assert.False(address.Matches(new FakeClientSession { Domains = ["metrics"] }));
         }
 
+        /// <summary>
+        /// Verifies that a broadcast to the users of an application - a global notification, the
+        /// progress of a task - reaches signed-in callers only, here and on the other instances
+        /// of a cluster. The queue admits visitors who are not signed in.
+        /// </summary>
+        [Fact]
+        public void BroadcastsReachSignedInCallersOnly()
+        {
+            var address = new AddressApplication(null);
+
+            Assert.True(address.Matches(new FakeClientSession { IdentityId = "a" }));
+            Assert.False(address.Matches(new FakeClientSession()));
+            Assert.True(address.Describe().Matches(new FakeClientSession { IdentityId = "a" }));
+            Assert.False(address.Describe().Matches(new FakeClientSession()));
+        }
+
         private sealed class RecordingManager : IMessageQueueManager
         {
             internal readonly List<(IAddress Address, IMessage Message)> Sent = [];

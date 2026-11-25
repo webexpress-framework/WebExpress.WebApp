@@ -88,6 +88,13 @@ namespace WebExpress.WebApp.WebMessageQueue
                 return;
             }
 
+            // tasks carry no owner and their updates reach signed-in callers only (see
+            // AddressApplication), so a visitor who is not signed in is not shown them either
+            if (string.IsNullOrEmpty(socket.ClientSession?.IdentityId))
+            {
+                return;
+            }
+
             var applicationId = socket.ClientSession?.ApplicationContext?.ApplicationId;
 
             var messages = _taskManager.Tasks.Select(x => new ProgressTaskMessage(x, applicationId)).ToList();
