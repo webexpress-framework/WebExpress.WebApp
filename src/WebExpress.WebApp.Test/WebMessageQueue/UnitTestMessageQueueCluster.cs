@@ -120,6 +120,32 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
         }
 
         /// <summary>
+        /// Tests that only a connection that is gone is dropped: every failure removed the
+        /// connection while its socket stayed open, so the client silently received nothing more.
+        /// </summary>
+        [Fact]
+        public async Task OnlyClosedConnectionsAreDropped()
+        {
+            // arrange
+            var hub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var manager = hub.GetComponentManager<MessageQueueManager>();
+            var faulty = new TestSocket(CreateClient("app-a", null, ["my.order"])) { Failure = new InvalidOperationException("not serializable") };
+            var closed = new TestSocket(CreateClient("app-a", null, ["my.order"])) { Failure = new System.Net.WebSockets.WebSocketException("closed") };
+            manager.Register(Guid.NewGuid(), faulty).Register(Guid.NewGuid(), closed);
+            var address = new AddressDomain("my.order");
+
+            // act
+            await manager.SendAsync(address, new DataChangedMessage("my.order", DataChangeOperation.Updated, "7"), TestContext.Current.CancellationToken);
+            faulty.Failure = null;
+            closed.Failure = null;
+            await manager.SendAsync(address, new DataChangedMessage("my.order", DataChangeOperation.Updated, "8"), TestContext.Current.CancellationToken);
+
+            // validation
+            Assert.Single(faulty.Received);
+            Assert.Empty(closed.Received);
+        }
+
+        /// <summary>
         /// Tests that an address that cannot be described stays on its instance.
         /// </summary>
         [Fact]
@@ -374,6 +400,11 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
             internal readonly List<string> Received = [];
 
             /// <summary>
+            /// Gets or sets the failure the next sends raise, or null to deliver.
+            /// </summary>
+            internal Exception Failure { get; set; }
+
+            /// <summary>
             /// Gets the client session.
             /// </summary>
             public IClientSession ClientSession { get; } = clientSession;
@@ -386,6 +417,11 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
             /// <returns>A completed task.</returns>
             public Task SendAsync(IMessage message, CancellationToken cancellationToken = default)
             {
+                if (Failure is { } failure)
+                {
+                    return Task.FromException(failure);
+                }
+
                 lock (Received)
                 {
                     Received.Add(message.ToJson());

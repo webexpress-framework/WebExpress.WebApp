@@ -326,7 +326,11 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// <returns>A task that represents the asynchronous send operation.</returns>
         public async Task SendAsync(IMessage message, CancellationToken cancellationToken = default)
         {
-            await _socketConnection?.SendTextAsync(message.ToJson(), cancellationToken);
+            // awaiting the null of a connection that is not open yet threw a NullReferenceException
+            if (_socketConnection is { } connection)
+            {
+                await connection.SendTextAsync(message.ToJson(), cancellationToken);
+            }
         }
 
         /// <summary>
