@@ -171,6 +171,14 @@ export function loadEngine(options = {}) {
     vm.createContext(sandbox);
     vm.runInContext(BOOTSTRAP, sandbox, { filename: "bootstrap" });
 
+    // the address and markup helpers of the WebUI core, through which controls link and
+    // sanitize what they take from data
+    const core = fs.readFileSync(path.join(webuiAssetsJs, "webexpress.webui.js"), "utf8").replace(/\r\n/g, "\n");
+    for (const name of ["Url", "Html"]) {
+        const start = core.indexOf("webexpress.webui." + name + " = new class");
+        vm.runInContext(core.slice(start, core.indexOf("\n};", start) + 3), sandbox, { filename: name });
+    }
+
     // the WebUI view layer the Data base extends, which a page loads with the WebUI core
     for (const file of ["webexpress.webui.renderer.js", "webexpress.webui.state.js"]) {
         const full = path.join(webuiAssetsJs, file);

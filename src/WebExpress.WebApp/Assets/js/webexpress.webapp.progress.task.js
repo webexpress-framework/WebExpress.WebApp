@@ -139,7 +139,8 @@ webexpress.webapp.ProgressTaskCtrl = class extends webexpress.webui.Ctrl {
 
         this._progressInner.style.width = progress + "%";
         this._progressInner.setAttribute("aria-valuenow", String(progress));
-        this._message.innerHTML = message;
+        // the message comes from the task, which may quote user input
+        this._message.innerHTML = webexpress.webui.Html.sanitize(message);
         // an empty message would name the bar with nothing; the generic name takes over then
         if (message.replace(/<[^>]*>/g, "").trim()) {
             this._progressInner.setAttribute("aria-labelledby", this._message.id);

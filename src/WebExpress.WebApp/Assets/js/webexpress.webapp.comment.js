@@ -691,7 +691,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
                         this._i18n("webexpress.webapp:comment.delete", "Delete"), () => this._setFlag("confirmDelete", comment.id, true)))),
             editing
                 ? this._renderEditor(comment, state)
-                : [h("div", { key: "body", class: "wx-comment-body", html: comment.body || "" }), this._renderReactions(comment, state)],
+                : [h("div", { key: "body", class: "wx-comment-body", html: webexpress.webui.Html.sanitize(comment.body) }), this._renderReactions(comment, state)],
             h("footer", { key: "footer", class: "wx-comment-footer" },
                 !this._readonly && h("button", {
                     type: "button",
@@ -867,7 +867,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
         }
         this._editorHost = host;
         this._editorEditRef = null;
-        host.innerHTML = comment.body || "";
+        host.innerHTML = webexpress.webui.Html.sanitize(comment.body);
     }
 
     /**
@@ -887,7 +887,7 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
                 h("div", { class: "wx-comment-reply-head" },
                     h("span", { class: "wx-comment-reply-author" }, user.name),
                     h("span", { class: "wx-comment-reply-when" }, reply.when || "")),
-                h("div", { class: "wx-comment-reply-body", html: reply.body || "" })));
+                h("div", { class: "wx-comment-reply-body", html: webexpress.webui.Html.sanitize(reply.body) })));
     }
 
     /**
