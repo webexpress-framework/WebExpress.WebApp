@@ -47,6 +47,19 @@ namespace WebExpress.WebApp.Test
         /// </summary>
         /// <param name="request">The incoming request.</param>
         /// <returns>The assignments.</returns>
+        /// <summary>
+        /// Gets or sets whether the caller may change assignments; the tests of the endpoint
+        /// itself run as a caller who may.
+        /// </summary>
+        public bool AllowManage { get; set; } = true;
+
+        /// <summary>
+        /// Lets the tests choose whether the caller may change assignments.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns>The configured answer.</returns>
+        protected override bool CanManage(IRequest request) => AllowManage;
+
         protected override IEnumerable<RestApiPermissionItem> RetrieveAssignments(IRequest request) => _assignments;
 
         /// <summary>
