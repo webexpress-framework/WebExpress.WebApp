@@ -69,7 +69,7 @@ namespace WebExpress.WebApp.Test.WebPage
                 Assert.Contains("preference-selector-marker", html);
                 Assert.Contains("wx-webapp-dropdown-theme", html);
                 Assert.Contains("base-uri=\"/app/api/themes\"", html);
-                Assert.Contains("webexpress.webapp.dropdown.theme.js", html);
+                Assert.Matches(@"webexpress\.webapp\.dropdown\.theme\.[0-9a-f]{12}\.js", html);
                 Assert.Contains("TestThemeB", html);
                 Assert.Same(selected, tree.Theme);
             }
