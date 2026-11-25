@@ -121,3 +121,80 @@ test("list search re-queries the resource through the shared ViewState state", a
     assert.match(urls[1], /p=0/);
     assert.equal(viewState.getState().search, "grace", "the search lives in the shared ViewState state");
 });
+
+/**
+ * Returns the progress bar the list puts at its top.
+ * @param {object} list - The list control.
+ * @returns {HTMLElement} The progress element.
+ */
+function progressOf(list) {
+    const progress = list._progressDiv;
+    assert.equal(list._element.firstChild, progress, "the progress sits at the top of the list");
+    return progress;
+}
+
+test("list in a ViewState shows the progress while the central load is in flight, like the table", async () => {
+    const engine = load();
+    let answer = null;
+    engine.setFetch(() => new Promise((resolve) => { answer = resolve; }));
+
+    const { listHost } = buildViewStateWithList(engine);
+    const list = new engine.wxapp.ListCtrl(listHost);
+    await settle();
+
+    const progress = progressOf(list);
+    assert.equal(progress.style.visibility, "visible", "the progress shows while the resource loads");
+
+    answer({ ok: true, status: 200, json: async () => ({ items: [{ id: "a", text: "A" }], total: 1 }) });
+    await settle();
+    assert.equal(progress.style.visibility, "hidden", "and is hidden once the slice arrived");
+    assert.equal(list._items.length, 1);
+
+    list.search("grace");
+    await settle();
+    assert.equal(progress.style.visibility, "visible", "a search shows it again");
+    assert.equal(list._items.length, 1, "while the items on screen stay until the answer replaces them");
+});
+
+test("standalone list shows the progress for every load, and a superseded load leaves it to the newer one", async () => {
+    const engine = load();
+    const answers = [];
+    engine.setFetch((url, init) => new Promise((resolve) => {
+        answers.push(resolve);
+        // the service cancels a superseded query through the signal it passes along
+        init?.signal?.addEventListener?.("abort", () => {
+            const error = new Error("aborted");
+            error.name = "AbortError";
+            resolve(Promise.reject(error));
+        });
+    }));
+
+    const listHost = engine.createElement("div");
+    appendServiceIsland(engine.document, listHost, {
+        name: "data", kind: "rest", baseUri: "/api/orders", method: "GET",
+        query: { page: "p", search: "q" }, response: { items: "items", total: "total" }
+    });
+    engine.document.body.appendChild(listHost);
+    const list = new engine.wxapp.ListCtrl(listHost);
+    list._isVisible = () => true;
+    const progress = progressOf(list);
+
+    await settle();
+    assert.equal(progress.style.visibility, "visible", "the first load shows the progress");
+
+    answers[0]({ ok: true, status: 200, json: async () => ({ items: [{ id: "a", text: "A" }], total: 1 }) });
+    await settle();
+    assert.equal(progress.style.visibility, "hidden", "and the answer hides it");
+
+    list.load();
+    await settle();
+    assert.equal(progress.style.visibility, "visible", "a reload shows it again");
+
+    list.load();
+    await settle();
+    assert.equal(progress.style.visibility, "visible", "the newer query keeps it while the older one is cancelled");
+
+    answers[answers.length - 1]({ ok: true, status: 200, json: async () => ({ items: [], total: 0 }) });
+    await settle();
+    assert.equal(progress.style.visibility, "hidden", "until the newer query is answered");
+});
