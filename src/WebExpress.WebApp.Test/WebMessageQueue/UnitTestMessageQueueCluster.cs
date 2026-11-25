@@ -250,6 +250,36 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
         }
 
         /// <summary>
+        /// Tests that a remote change older than a local one does not overwrite it: local
+        /// changes recorded no version, so an older change arriving later won.
+        /// </summary>
+        [Fact]
+        public async Task OlderRemoteChangeDoesNotOverwriteANewerLocalOne()
+        {
+            // arrange
+            var a = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var transportA = new TestTransport();
+            a.ClusterManager.UseTransport(transportA);
+            var indexA = a.GetComponentManager<WebApp.WebIndex.IndexManager>();
+            var b = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var transportB = new TestTransport();
+            b.ClusterManager.UseTransport(transportB);
+            var indexB = b.GetComponentManager<WebApp.WebIndex.IndexManager>();
+            indexA.Create<ClusterIndexItem>(CultureInfo.InvariantCulture, IndexType.Memory);
+            indexB.Create<ClusterIndexItem>(CultureInfo.InvariantCulture, IndexType.Memory);
+            var id = Guid.NewGuid();
+
+            // act: a changes first, b later; a's change reaches b only afterwards
+            indexA.Insert(new ClusterIndexItem { Id = id, Text = "older" });
+            await Task.Delay(20, TestContext.Current.CancellationToken);
+            indexB.Insert(new ClusterIndexItem { Id = id, Text = "newer" });
+            await DeliverAsync(transportA, transportB);
+
+            // validation
+            Assert.Equal("newer", Assert.Single(indexB.All<ClusterIndexItem>()).Text);
+        }
+
+        /// <summary>
         /// Hands everything one test transport sent to another.
         /// </summary>
         /// <param name="from">The sending transport.</param>
