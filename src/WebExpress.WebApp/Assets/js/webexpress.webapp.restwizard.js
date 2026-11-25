@@ -414,7 +414,13 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
     }
 
     /**
-     * Injects HTML safely and executes embedded scripts.
+     * Injects the HTML of a step without running any script in it.
+     *
+     * The step is markup the server rendered; its controls come alive through the controller,
+     * which picks up every element inserted into the page. Scripts in it were recreated with
+     * their attributes, nonce included, which ran whatever a step carried - a script that found
+     * its way into a step's content as well - past the page's content security policy. No other
+     * dialog runs the scripts of loaded markup, and neither does the wizard.
      * @param {HTMLElement} container - The element to inject the HTML into.
      * @param {string} html - The raw HTML string.
      */
@@ -424,31 +430,14 @@ webexpress.webapp.RestWizardCtrl = class extends webexpress.webapp.RestFormCtrl 
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, "text/html");
         const fragment = document.createDocumentFragment();
-        const scripts = [];
+
+        doc.body.querySelectorAll("script").forEach((script) => script.remove());
 
         while (doc.body.firstChild) {
-            const node = doc.body.firstChild;
-            if (node.tagName === "SCRIPT") {
-                scripts.push(node);
-                doc.body.removeChild(node);
-            } else {
-                fragment.appendChild(node);
-            }
+            fragment.appendChild(doc.body.firstChild);
         }
 
         container.appendChild(fragment);
-
-        // execute extracted scripts
-        for (let i = 0; i < scripts.length; i++) {
-            const oldScript = scripts[i];
-            const newScript = document.createElement("script");
-
-            Array.from(oldScript.attributes).forEach((attr) => {
-                newScript.setAttribute(attr.name, attr.value);
-            });
-            newScript.textContent = oldScript.textContent;
-            container.appendChild(newScript);
-        }
     }
 
     /**
