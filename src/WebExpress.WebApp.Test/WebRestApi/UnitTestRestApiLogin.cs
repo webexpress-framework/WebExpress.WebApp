@@ -242,7 +242,8 @@ namespace WebExpress.WebApp.Test.WebRestApi
             // validation
             Assert.Equal(400, result.Status);
             Assert.True(ParseResponseJson(result).GetProperty("retryAfter").GetInt32() > 0);
-            Assert.Equal(1, store.Count(RestApiSession.StoreScope));
+            // one record for the account from this client, one for the client across accounts
+            Assert.Equal(2, store.Count(RestApiSession.StoreScope));
         }
 
         /// <summary>
@@ -638,6 +639,64 @@ namespace WebExpress.WebApp.Test.WebRestApi
                 + "\r\nContent-Type: application/json\r\n\r\n" + payload;
 
             return UnitTestControlFixture.CreateRequestMock(content, "/api/login");
+        }
+
+        /// <summary>
+        /// Verifies that failed attempts from one client lock the account for that client only;
+        /// keyed by the name alone, anybody could lock its owner out with a few wrong passwords.
+        /// </summary>
+        [Fact]
+        public void LockoutOfOneClientLeavesTheAccountOpenToAnother()
+        {
+            // arrange
+            _ = CreateAuthenticationHub();
+            var user = UniqueUser();
+            var api = new TestRestApiLogin(user, "password123") { PermanentAttempts = 1 };
+
+            // act
+            api.Authenticate(FromClient(CreateLoginRequest(user, "wrong"), "198.51.100.1"));
+            var attacker = ParseResponseJson(api.Authenticate(FromClient(CreateLoginRequest(user, "password123"), "198.51.100.1")));
+            var owner = ParseResponseJson(api.Authenticate(FromClient(CreateLoginRequest(user, "password123"), "198.51.100.2")));
+
+            // validation
+            Assert.False(attacker.GetProperty("success").GetBoolean());
+            Assert.True(owner.GetProperty("success").GetBoolean());
+        }
+
+        /// <summary>
+        /// Verifies that one client trying a password against many accounts (password spraying)
+        /// is throttled although no single account reaches its lockout.
+        /// </summary>
+        [Fact]
+        public void SprayingFromOneClientIsThrottled()
+        {
+            // arrange
+            _ = CreateAuthenticationHub();
+            var api = new TestRestApiLogin(UniqueUser(), "password123");
+            var address = "203.0.113." + Random.Shared.Next(1, 250);
+            JsonElement last = default;
+
+            // act
+            for (var i = 0; i < 12; i++)
+            {
+                last = ParseResponseJson(api.Authenticate(FromClient(CreateLoginRequest(UniqueUser(), "Summer2026!"), address)));
+            }
+
+            // validation
+            Assert.True(last.TryGetProperty("retryAfter", out var retryAfter) && retryAfter.GetInt32() > 0);
+        }
+
+        /// <summary>
+        /// Gives a request the client address the server would resolve for it.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <param name="address">The client address.</param>
+        /// <returns>The request.</returns>
+        private static IRequest FromClient(IRequest request, string address)
+        {
+            typeof(WebExpress.WebCore.WebMessage.RequestBase).GetProperty("ClientAddress")
+                .SetValue(request, System.Net.IPAddress.Parse(address));
+            return request;
         }
 
         /// <summary>
