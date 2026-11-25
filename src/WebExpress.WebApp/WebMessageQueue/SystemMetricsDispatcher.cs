@@ -124,7 +124,13 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// <param name="message">The reading.</param>
         private Task SendAsync(string metric, SystemMetricMessage message)
         {
-            var address = new AddressDomain(SystemMetricMessageTypes.Channel(metric));
+            // a client names the domains it observes itself, so subscribing the channel is not
+            // enough: the load of the server is shown to system administrators only
+            var address = new AddressDescriptor
+            {
+                Domains = [SystemMetricMessageTypes.Channel(metric)],
+                SystemAccessOnly = true
+            };
 
             return _messageQueueManager.SendAsync(address, message);
         }

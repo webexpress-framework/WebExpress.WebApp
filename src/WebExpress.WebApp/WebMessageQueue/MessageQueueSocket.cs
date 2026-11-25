@@ -45,8 +45,16 @@ namespace WebExpress.WebApp.WebMessageQueue
             EndpointId = _socketContext.EndpointId,
             PluginContext = _socketContext.PluginContext,
             ApplicationContext = _socketContext.ApplicationContext,
-            Domains = GetSessionDomains()
+            Domains = GetSessionDomains(),
+            IdentityId = Identity?.Id.ToString(),
+            HasSystemAccess = Identity?.PolicyNames?.Contains(typeof(WebCore.WebPolicies.SystemAccessPolicy).FullName) ?? false
         };
+
+        /// <summary>
+        /// Gets the signed-in caller of the connection, read from the credential of the request
+        /// that opened it.
+        /// </summary>
+        private WebCore.WebIdentity.IIdentity Identity => WebCore.WebEx.ComponentHub?.IdentityManager?.GetCurrentIdentity(_request);
 
         /// <summary>
         /// Gets the runtime domain subscription of this connection.
