@@ -120,6 +120,7 @@ namespace WebExpress.WebApp.WebPage
             // head
             // assistive technology picks pronunciation rules from the document language
             html.AddUserAttribute("lang", context.Request?.Culture?.Name);
+            html.AddUserAttribute(PendingAttribute);
             // the login stands in for whatever page was asked for, which usually leaves no title
             // of its own; the tab and the history still have to say what is shown
             html.Head.Title = I18N.Translate(context.Request, string.IsNullOrWhiteSpace(Title) ? "webexpress.webapp:login.title" : Title);
