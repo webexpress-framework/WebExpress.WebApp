@@ -69,7 +69,10 @@ namespace WebExpress.WebApp.Test.WebPage
                 Assert.Contains("preference-selector-marker", html);
                 Assert.Contains("wx-webapp-dropdown-theme", html);
                 Assert.Contains("base-uri=\"/app/api/themes\"", html);
-                Assert.Matches(@"webexpress\.webapp\.dropdown\.theme\.[0-9a-f]{12}\.js", html);
+                // the selector's script is linked on its own or within the bundle of its include
+                var include = hub.IncludeManager.GetIncludes(application)
+                    .Single(x => x.Files.Any(file => file.FileName.EndsWith("/webexpress.webapp.dropdown.theme.js")));
+                Assert.All(include.LinkedFiles, file => Assert.Contains(file.Route, html));
                 Assert.Contains("TestThemeB", html);
                 Assert.Same(selected, tree.Theme);
             }
