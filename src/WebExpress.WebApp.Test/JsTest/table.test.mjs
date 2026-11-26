@@ -171,6 +171,33 @@ test("a hidden table defers its query and runs it when the view becomes visible"
     assert.match(urls[1], /f=qf_mine/, "and it carries the filter entered while it was hidden");
 });
 
+test("a deferred query refreshed by a view switch is not loaded again by the visibility change", async () => {
+    const engine = load();
+    nameEvents(engine);
+
+    const urls = [];
+    engine.setFetch(async (url) => {
+        urls.push(url);
+        return { ok: true, status: 200, json: async () => ({ columns: [], rows: [], pagination: { page: 0, pageSize: 50, total: 0 } }) };
+    });
+
+    const table = new engine.wxapp.TableCtrl(buildStandaloneTable(engine));
+    await settle();
+
+    table._isVisible = () => false;
+    table.filter("qf_mine");
+    await settle();
+
+    // a view switch refreshes the table it shows, then announces the visibility
+    table._isVisible = () => true;
+    table.update();
+    engine.document.dispatchEvent({ type: engine.wx.Event.CHANGE_VISIBILITY_EVENT, detail: { visible: true } });
+    await settle();
+
+    assert.equal(urls.length, 2, "the deferred query is loaded once");
+    assert.match(urls[1], /f=qf_mine/);
+});
+
 test("a visible table is not re-queried by a visibility change", async () => {
     const engine = load();
     nameEvents(engine);

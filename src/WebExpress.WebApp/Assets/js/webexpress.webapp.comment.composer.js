@@ -147,7 +147,8 @@ webexpress.webapp.CommentComposerCtrl = class extends webexpress.webapp.Data {
         }
         try {
             const url = webexpress.webapp.commentComposerModel.categoriesUrl(this._uri);
-            const res = await webexpress.webapp.ServiceRegistry.request(url, { headers: { "Accept": "application/json" } });
+            const res = await webexpress.webapp.commentCategories.load(url,
+                () => webexpress.webapp.ServiceRegistry.request(url, { headers: { "Accept": "application/json" } }));
             if (!res.ok) throw new Error(res.error ? res.error.message : String(res.status));
             this.setState({ categories: this._normalizeCategories(res.data) });
         } catch (e) {

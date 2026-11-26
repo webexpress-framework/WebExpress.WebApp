@@ -372,9 +372,9 @@ webexpress.webapp.CommentCtrl = class extends webexpress.webapp.Data {
             this.setState({ categories: {} });
             return;
         }
-        const result = await this._service.request(
-            webexpress.webapp.commentModel.categoriesUrl(this._uri),
-            { headers: { "Accept": "application/json" } });
+        const url = webexpress.webapp.commentModel.categoriesUrl(this._uri);
+        const result = await webexpress.webapp.commentCategories.load(url,
+            () => this._service.request(url, { headers: { "Accept": "application/json" } }));
         if (result.ok) {
             this.setState({ categories: this._normalizeCategories(result.data) });
         } else {

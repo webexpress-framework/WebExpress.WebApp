@@ -51,6 +51,7 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         this._debounceTimer = null;
         this._abortController = null;
         this._historyTimer = null;
+        this._historyRequested = false;
         this._historyAbortController = null;
         this._validationAbortController = null;
         // analysis and validation are tied to the model's text revision; only the query history,
@@ -74,11 +75,10 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         this._attachViewState(element);
 
         if (this._apiUri) {
-            // load history asynchronously after initialization
-            this._historyTimer = setTimeout(() => {
-                this._historyTimer = null;
-                this._loadHistoryFromApi();
-            }, 200);
+            // the history is browsed from the focused prompt only, and a page carries a
+            // prompt per view - loaded at construction, each asked for the same history
+            // although at most one is ever used
+            this._listen(this._input, "focus", () => this._ensureHistory());
         } else {
             // standalone (no wx-service): the prompt is a syntax-highlighting WQL
             // editor only, with no server suggestions, history or validation. it
@@ -702,6 +702,18 @@ webexpress.webapp.WqlPromptCtrl = class extends webexpress.webui.Ctrl {
         if (!this._composing) {
             this._view.showSelection(this._model.selection, force);
         }
+    }
+
+    /**
+     * Loads the query history from the service once, the first time the prompt is focused.
+     */
+    _ensureHistory() {
+        if (this._historyRequested) {
+            return;
+        }
+
+        this._historyRequested = true;
+        this._loadHistoryFromApi();
     }
 
     /**

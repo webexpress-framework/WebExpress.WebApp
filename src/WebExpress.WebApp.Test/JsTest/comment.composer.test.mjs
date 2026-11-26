@@ -18,6 +18,8 @@ function load(options) {
     return loadEngine(Object.assign(
         {
             extraFiles: [
+                // the composer shares the category load of the comment list
+                webappAsset("webexpress.webapp.comment.model.js"),
                 webappAsset("webexpress.webapp.comment.composer.model.js"),
                 webappAsset("webexpress.webapp.comment.composer.js")
             ]

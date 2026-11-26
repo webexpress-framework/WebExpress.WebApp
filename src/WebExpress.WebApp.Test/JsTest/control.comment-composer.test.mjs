@@ -9,5 +9,5 @@ contract({
     file: "webexpress.webapp.comment.composer.js",
     selector: "wx-webapp-comment-composer",
     ctrl: "CommentComposerCtrl",
-    deps: ["webexpress.webapp.comment.composer.model.js"]
+    deps: ["webexpress.webapp.comment.model.js", "webexpress.webapp.comment.composer.model.js"]
 });

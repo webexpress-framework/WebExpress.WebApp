@@ -287,3 +287,38 @@ test("edit mode keeps the editor host and posts the drafted fields", async () =>
     assert.deepEqual(body.labels, ["a", "b"]);
     assert.equal(body.category, "general");
 });
+
+test("the comment list and its composer share one load of the categories", async () => {
+    const rt = load({
+        deps: [
+            "webexpress.webapp.comment.model.js",
+            "webexpress.webapp.comment.composer.model.js",
+            "webexpress.webapp.comment.composer.js"
+        ]
+    });
+    const urls = [];
+    rt.setFetch(async (url) => {
+        urls.push(String(url));
+        const categories = String(url).endsWith("/categories");
+        return { ok: true, status: 200, headers: { get: () => "application/json" }, json: async () => (categories ? [{ id: "general" }] : []) };
+    });
+
+    // both controls of a preview start together on the same endpoint
+    const list = rt.createElement("div");
+    appendServiceIsland(rt.document, list, { name: "data", kind: "rest", baseUri: "/api/comments", method: "GET", updateMethod: "PUT" });
+    const composer = rt.createElement("div");
+    appendServiceIsland(rt.document, composer, { name: "data", kind: "rest", baseUri: "/api/comments", method: "GET", createMethod: "POST" });
+
+    const listCtrl = new rt.wxapp.CommentCtrl(list);
+    const composerCtrl = new rt.wxapp.CommentComposerCtrl(composer);
+    await settle();
+    await settle();
+
+    assert.equal(urls.filter((url) => url.endsWith("/categories")).length, 1, "the categories are asked for once");
+    assert.deepEqual(Object.keys(listCtrl.store.getState().categories), ["general"]);
+    assert.deepEqual(Object.keys(composerCtrl.store.getState().categories), ["general"]);
+
+    // a later load asks again, so a category added meanwhile is not withheld
+    await listCtrl._loadCategories();
+    assert.equal(urls.filter((url) => url.endsWith("/categories")).length, 2);
+});
