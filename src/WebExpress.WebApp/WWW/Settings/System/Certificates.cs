@@ -108,7 +108,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
             // aliases may resemble translation keys and must retain their literal identity
             identity.Add(new ControlHtml
             {
-                Html = _ => new HtmlElementTextSemanticsB(WebUtility.HtmlEncode(certificate.Alias))
+                Html = _ => new HtmlElementTextSemanticsB(certificate.Alias)
                 {
                     Class = "text-break"
                 }.ToString()
@@ -145,7 +145,7 @@ namespace WebExpress.WebApp.WWW.Settings.System
         {
             return new ControlText
             {
-                Text = _ => WebUtility.HtmlEncode(I18N.Translate(renderContext, $"webexpress.webapp:setting.certificate.detail.{field}", value)),
+                Text = _ => I18N.Translate(renderContext, $"webexpress.webapp:setting.certificate.detail.{field}", value),
                 TextColor = _ => new PropertyColorText(TypeColorText.Secondary),
                 Size = _ => new PropertySizeText(TypeSizeText.Small),
                 Classes = ["text-break"]
@@ -204,15 +204,15 @@ namespace WebExpress.WebApp.WWW.Settings.System
         }
 
         /// <summary>
-        /// Prevents certificate metadata from becoming markup while making missing values explicit.
+        /// Makes missing certificate metadata explicit; the table cell encodes the text it shows.
         /// </summary>
         /// <param name="renderContext">The language context for the missing-value label.</param>
         /// <param name="value">The untrusted metadata value.</param>
-        /// <returns>The HTML-encoded text suitable for the table's text nodes.</returns>
+        /// <returns>The text, or the label for a missing value.</returns>
         private static string FormatText(IRenderContext renderContext, string value)
         {
-            return WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(value)
-                ? I18N.Translate(renderContext, "webexpress.webapp:setting.certificate.unavailable") : value);
+            return string.IsNullOrWhiteSpace(value)
+                ? I18N.Translate(renderContext, "webexpress.webapp:setting.certificate.unavailable") : value;
         }
     }
 }

@@ -39,6 +39,10 @@ webexpress.webapp.SearchSuggestionCtrl = class extends webexpress.webui.SearchCt
 
         super(element);
 
+        // the controller strips the registration class on mount, so the header sizing needs a
+        // marker of its own to tell this box from the plain search
+        element.classList.add("wx-search-endpoint");
+
         this._maxItems = Number.isFinite(maxItems) && maxItems > 0 ? maxItems : 10;
         this._queryParam = queryParam || "q";
         this._submitUri = submitUri || null;

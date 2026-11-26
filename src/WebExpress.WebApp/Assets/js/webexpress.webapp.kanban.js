@@ -2,6 +2,14 @@
  * A REST-enabled Kanban control.
  * Fetches the configuration (columns, swimlanes) and cards from a REST endpoint.
  * Automatically synchronizes card movements with the server.
+ *
+ * A move into a status for which the card names a dialog (moveDialogs) needs input the board
+ * cannot ask for, such as the form of a workflow transition. The board stores no such move: it
+ * leaves the card where it was and opens the dialog in the form dialog of the page, whose
+ * submit moves the card, and loads the board again once the form reports success.
+ *
+ * While the board loads, a thin progress bar above it says so, as the table does. Its place is
+ * kept while it is hidden, so showing it moves nothing.
  */
 webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
 
@@ -10,6 +18,12 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
     _viewState = null;
     _statuses = null;
     _statusDialog = null;
+    // the id the applications give the form dialog they place on every page
+    _moveDialogModal = "modal-form";
+    // detaches the listeners of the open move dialog; null while none is open
+    _moveDialog = null;
+    // the board payload the board was last rendered from
+    _appliedData = null;
 
     /**
      * Initializes the REST Kanban control.
@@ -22,6 +36,11 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
         webexpress.webapp.ServiceRegistry.fromElement(element);
 
         super(element);
+
+        if (element.dataset && element.dataset.moveDialogModal) {
+            this._moveDialogModal = element.dataset.moveDialogModal;
+        }
+        element.removeAttribute?.("data-move-dialog-modal");
 
         // the resource a ViewState renders. when present, the board is a pure view of
         // a central resource the enclosing ViewState owns; when absent it owns its
@@ -94,17 +113,18 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
     _applySlice(slice) {
         slice = slice || {};
 
-        if (slice.data) {
+        // a reload first marks the slice loading and still carries the board it had; drawn
+        // again, that board put a card just moved back into its old column until the answer
+        // arrived. only a payload the board has not shown yet is rendered
+        if (slice.data && slice.data !== this._appliedData) {
+            this._appliedData = slice.data;
             this.updateData(slice.data);
         }
 
         // the slice is the record of the central load: it says whether a query is in
         // flight and whether the last one failed, and the board shows exactly that
         // rather than declaring the load over on every notification
-        const loading = !!slice.loading;
-
-        this._element.classList.toggle("placeholder-glow", loading);
-        this._loading = loading;
+        this._loading = !!slice.loading;
 
         if (slice.error) {
             console.error("kanban load failed:", webexpress.webapp.ServiceResult.describe({ error: slice.error }, { resource: this._resource }));
@@ -115,7 +135,10 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
     // is the store
 
     get _loading() { return this._store.getState().loading; }
-    set _loading(value) { this._store.setState({ loading: value }); }
+    set _loading(value) {
+        this._store.setState({ loading: value });
+        this._showProgress(!!value);
+    }
 
     /**
      * Fetches the board data including columns, swimlanes, and cards.
@@ -126,7 +149,6 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
         }
 
         this._loading = true;
-        this._element.classList.add("placeholder-glow");
 
         // the board settings wql filter narrows the server query when set
         const result = await this._service.query(this._filter ? { wql: this._filter } : {});
@@ -138,15 +160,71 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
             }
             // log error and reset state
             console.error("kanban load failed:", webexpress.webapp.ServiceResult.describe(result));
-            this._element.classList.remove("placeholder-glow");
             this._loading = false;
             return;
         }
 
         this.updateData(result.data);
 
-        this._element.classList.remove("placeholder-glow");
         this._loading = false;
+    }
+
+    /**
+     * Renders the board and places the progress bar above it again, since the board rebuilds
+     * the host on every render.
+     */
+    render() {
+        super.render();
+        this._placeProgress();
+    }
+
+    /**
+     * Places the progress bar below the board menu, or first when the board has none.
+     *
+     * The bar is no declared field: the base constructor renders before the fields of this
+     * class are initialised, and an initialiser would drop the bar that render created.
+     */
+    _placeProgress() {
+        const host = this._element;
+        if (!host) {
+            return;
+        }
+
+        if (!this._progressBar) {
+            const bar = document.createElement("div");
+            bar.className = "progress wx-kanban-progress";
+            bar.setAttribute("role", "status");
+            bar.style.height = "0.25rem";
+            bar.style.flex = "0 0 auto";
+            const fill = document.createElement("div");
+            fill.className = "progress-bar progress-bar-striped progress-bar-animated";
+            fill.style.width = "100%";
+            bar.appendChild(fill);
+            this._progressBar = bar;
+        }
+
+        const first = host.children[0] || null;
+        const anchor = first && first.classList && first.classList.contains("wx-kanban-toolbar") ? first.nextSibling : first;
+        host.insertBefore(this._progressBar, anchor);
+
+        this._showProgress(!!this._store?.getState().loading);
+    }
+
+    /**
+     * Shows or hides the progress of a load. The bar keeps its place while hidden, so the
+     * board does not move when a load starts or ends; the placeholders shimmer only while
+     * there is no board to look at yet, since a board on screen pulsing on every reload
+     * reads as flicker.
+     * @param {boolean} show - true while a load is in flight.
+     */
+    _showProgress(show) {
+        if (this._progressBar) {
+            this._progressBar.style.visibility = show ? "visible" : "hidden";
+            this._progressBar.setAttribute("aria-busy", show ? "true" : "false");
+        }
+
+        const empty = !(this._columns && this._columns.length) && !(this._cards && this._cards.length);
+        this._element?.classList.toggle("placeholder-glow", show && empty);
     }
     
     /**
@@ -296,6 +374,12 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
                 || !this._availableStatuses(card, column).some((status) => status.id === selected[0])) {
                 return;
             }
+            const dialog = selected[0] !== card.statusId ? card.moveDialogs?.[selected[0]] : null;
+            if (dialog) {
+                // the dialog's submit moves the card; until then the card stays where it was
+                this._openMoveDialog(dialog);
+                return;
+            }
             card.statusId = selected[0];
             super._moveCard(card, colId, swimlaneId, targetCard, before);
         };
@@ -309,9 +393,83 @@ webexpress.webapp.KanbanCtrl = class extends webexpress.webui.KanbanCtrl {
     }
 
     /**
-     * Releases the separately owned status dialog when the board is removed.
+     * Opens the dialog a move needs in the form dialog of the page.
+     *
+     * The dialog is told to leave the page as it is after its form succeeded: a form written for
+     * a detail page reloads it, which would throw away the open tab, the selected card, the search
+     * and the scroll position only to show one card in its new column. The board loads itself
+     * instead. A page without a form dialog opens the dialog as a page of its own.
+     * @param {string} uri - The address of the dialog.
+     */
+    _openMoveDialog(uri) {
+        this._releaseMoveDialog();
+
+        const host = this._moveDialogModal ? document.getElementById(this._moveDialogModal) : null;
+        const modal = host ? webexpress.webui.Controller.getInstanceByElement(host) : null;
+
+        // a dialog that cannot be told to keep the page would reload it, so it counts as none
+        if (!modal || typeof modal.show !== "function" || !("successAction" in modal)) {
+            this._navigateTo(uri);
+            return;
+        }
+
+        const events = webexpress.webui.Event;
+        const onSuccess = () => {
+            this._releaseMoveDialog();
+            modal.hide();
+
+            // a board removed while the dialog was open has nothing left to show
+            if (this._element?.isConnected) {
+                this.update();
+            }
+        };
+        const onHide = () => this._releaseMoveDialog();
+
+        host.addEventListener(events.UPLOAD_SUCCESS_EVENT, onSuccess);
+        host.addEventListener(events.MODAL_HIDE_EVENT, onHide);
+        this._moveDialog = () => {
+            host.removeEventListener(events.UPLOAD_SUCCESS_EVENT, onSuccess);
+            host.removeEventListener(events.MODAL_HIDE_EVENT, onHide);
+        };
+
+        modal.uri = uri;
+        modal.successAction = "none";
+        modal.show();
+    }
+
+    /**
+     * Stops listening to the move dialog, so a later form in the same page dialog does not
+     * reload this board.
+     */
+    _releaseMoveDialog() {
+        const detach = this._moveDialog;
+        this._moveDialog = null;
+        detach?.();
+    }
+
+    /**
+     * Opens the dialog of a move as a page of its own. Only http addresses are followed, so
+     * an address such as a javascript: url never runs.
+     * @param {string} uri - The address of the dialog.
+     */
+    _navigateTo(uri) {
+        let target;
+        try {
+            target = new URL(uri, window.location.href);
+        } catch (_) {
+            return;
+        }
+        if (target.protocol === "http:" || target.protocol === "https:") {
+            window.location.assign(target.href);
+        }
+    }
+
+    /**
+     * Releases the separately owned status dialog and stops listening to an open move dialog,
+     * so a board removed while the dialog was open does nothing when its form succeeds.
      */
     destroy() {
+        this._releaseMoveDialog();
         this._statusDialog?.destroy();
         this._statusDialog = null;
         super.destroy();

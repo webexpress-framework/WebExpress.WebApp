@@ -1,7 +1,8 @@
 ﻿using System;
-using WebExpress.WebCore;
 using WebExpress.WebCore.Internationalization;
+using WebExpress.WebCore.WebEndpoint;
 using WebExpress.WebCore.WebPage;
+using WebExpress.WebCore;
 using WebExpress.WebUI.WebControl;
 
 namespace WebExpress.WebApp.WebPage
@@ -11,7 +12,7 @@ namespace WebExpress.WebApp.WebPage
     /// Terminates the current authenticated session and presents a confirmation message
     /// with a navigation link back to the login page.
     /// </summary>
-    public class PageWebAppLogout : IPage<VisualTreeWebApp>
+    public class PageWebAppLogout : IPage<VisualTreeWebApp>, IPublicEndpoint
     {
         /// <summary>
         /// Processing of the page.

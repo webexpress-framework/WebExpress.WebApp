@@ -419,7 +419,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
 
             // validation
             Assert.Equal(400, result.Status);
-            Assert.Equal("error processing put request.", result.Content);
+            Assert.Equal("error processing put request.", JsonDocument.Parse(Encoding.UTF8.GetString((byte[])result.Content)).RootElement.GetProperty("message").GetString());
         }
 
         /// <summary>
@@ -461,7 +461,7 @@ namespace WebExpress.WebApp.Test.WebRestApi
 
             // validation
             Assert.Equal(400, result.Status);
-            Assert.Equal("error processing put request.", result.Content);
+            Assert.Equal("error processing put request.", JsonDocument.Parse(Encoding.UTF8.GetString((byte[])result.Content)).RootElement.GetProperty("message").GetString());
         }
 
         /// <summary>
@@ -481,7 +481,67 @@ namespace WebExpress.WebApp.Test.WebRestApi
 
             // validation
             Assert.Equal(400, result.Status);
-            Assert.Equal("error processing get request.", result.Content);
+            Assert.Equal("error processing get request.", JsonDocument.Parse(Encoding.UTF8.GetString((byte[])result.Content)).RootElement.GetProperty("message").GetString());
+        }
+
+        /// <summary>
+        /// Verifies that the dialog addresses of a card travel by destination status, and that a
+        /// card without any leaves the board to store its moves.
+        /// </summary>
+        [Fact]
+        public void SerializeMoveDialogs()
+        {
+            // arrange
+            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var api = CreateStatusBoard();
+            api.Cards = [
+                new() { Id = "card", ColumnId = "todo", StatusId = "open", MoveDialogs = new Dictionary<string, string> { ["review"] = "/transition/card/review" } },
+                new() { Id = "plain", ColumnId = "todo", StatusId = "open" }
+            ];
+
+            // act
+            var result = api.Retrieve(UnitTestControlFixture.CreateRequestMock());
+            using var doc = JsonDocument.Parse(Encoding.UTF8.GetString((byte[])result.Content));
+            var items = doc.RootElement.GetProperty("items");
+
+            // validation
+            Assert.Equal("/transition/card/review", items[0].GetProperty("moveDialogs").GetProperty("review").GetString());
+            Assert.Equal(JsonValueKind.Null, items[1].GetProperty("moveDialogs").ValueKind);
+        }
+
+        /// <summary>
+        /// Verifies that a move which has to go through its dialog is refused with a reason, as a
+        /// board loaded before the card named the dialog would send it, while a move into a status
+        /// without a dialog and a reorder within the column are still stored.
+        /// </summary>
+        /// <param name="language">The Accept-Language of the request.</param>
+        /// <param name="expected">The reason the user is expected to read.</param>
+        [Theory]
+        [InlineData("de", "Dieser Wechsel benötigt weitere Angaben. Verschieben Sie die Karte erneut, um den Dialog zu öffnen.")]
+        [InlineData("en", "This move needs further input. Move the card again to open its dialog.")]
+        public void MoveNeedingDialogIsRefusedWithReason(string language, string expected)
+        {
+            // arrange
+            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var api = CreateStatusBoard();
+            var card = api.Cards.First();
+            card.AllowedStatusIds = ["active", "review"];
+            card.MoveDialogs = new Dictionary<string, string> { ["review"] = "/transition/card/review", ["active"] = "" };
+
+            // act
+            var refused = api.Update(CreateMoveRequest("work", "review", language));
+            var refusedMove = api.LastMove;
+            var direct = api.Update(CreateMoveRequest("work", "active", language));
+            var reordered = api.Update(CreateMoveRequest("todo", "open", language));
+
+            // validation
+            Assert.Equal(400, refused.Status);
+            using var doc = JsonDocument.Parse(Encoding.UTF8.GetString((byte[])refused.Content));
+            Assert.Equal(expected, doc.RootElement.GetProperty("message").GetString());
+            Assert.Null(refusedMove);
+            Assert.Equal(200, direct.Status);
+            Assert.Equal(200, reordered.Status);
+            Assert.Equal("todo", api.LastMove.ColumnId);
         }
 
         /// <summary>

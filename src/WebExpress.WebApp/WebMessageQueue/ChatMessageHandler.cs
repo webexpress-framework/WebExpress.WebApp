@@ -16,13 +16,18 @@ namespace WebExpress.WebApp.WebMessageQueue
     ///   <item>Validating the chat message type and the presence of a
     ///         <c>channelId</c>.</item>
     ///   <item>For <c>chat.message</c>: server-assigns the
-    ///         <c>messageId</c>, enriches the payload with routing info,
-    ///         appends to <see cref="ChatChannelStore"/> and broadcasts the
-    ///         authoritative copy to every connected client of the
-    ///         application - the receiver filters by channel id.</item>
+    ///         <c>messageId</c> and the sender - the signed-in caller of the
+    ///         connection - appends to <see cref="ChatChannelStore"/> and
+    ///         sends the authoritative copy to the clients of the application
+    ///         whose caller may access the channel.</item>
     ///   <item>For <c>chat.history.request</c>: replays the buffered
     ///         backlog for the requested channel back to the originating
     ///         socket only.</item>
+    ///   <item>Both are refused unless the caller of the connection may
+    ///         access the channel (<see cref="ChatChannelAccess"/>): the
+    ///         sender, the application and the recipients were taken from
+    ///         what the client sent, and every message and every history,
+    ///         direct messages included, reached every client.</item>
     /// </list>
     /// The structure intentionally mirrors
     /// <see cref="CollaborativeMessageHandler"/> so future message families
@@ -115,6 +120,11 @@ namespace WebExpress.WebApp.WebMessageQueue
                     return;
                 }
 
+                if (!ChatChannelAccess.IsAllowed(source.ClientSession?.IdentityId, channelId))
+                {
+                    return;
+                }
+
                 if (type == ChatMessageTypes.Message)
                 {
                     await BroadcastMessageAsync(source, root, channelId, cancellationToken);
@@ -151,8 +161,6 @@ namespace WebExpress.WebApp.WebMessageQueue
                 additional[property.Name] = property.Value.Clone();
             }
 
-            TryGetString(root, "sender", out var sender);
-            TryGetString(root, "applicationId", out var applicationId);
             TryGetString(root, "socketId", out var socketId);
 
             var session = source.ClientSession;
@@ -163,10 +171,10 @@ namespace WebExpress.WebApp.WebMessageQueue
             (
                 type: ChatMessageTypes.Message,
                 messageId: messageId,
-                applicationId: applicationId ?? session?.ApplicationContext?.ApplicationId,
+                applicationId: session?.ApplicationContext?.ApplicationId,
                 socketId: socketId,
                 connectionId: connectionId,
-                sender: sender,
+                sender: session?.IdentityId,
                 timestamp: DateTime.UtcNow
             )
             {
@@ -176,9 +184,12 @@ namespace WebExpress.WebApp.WebMessageQueue
             // persist for late joiners / reconnects
             _channelStore.Append(channelId, messageId, SerializeAsElement(message));
 
-            // broadcast within the originating application; receivers filter
-            // by channel id on the client side
-            var address = new AddressApplication(session?.ApplicationContext);
+            // only the clients of the application whose caller may access the channel receive it
+            var address = new AddressDescriptor
+            {
+                ApplicationId = session?.ApplicationContext?.ApplicationId,
+                ChatChannelId = channelId
+            };
             await _messageQueueManager.SendAsync(address, message, cancellationToken);
         }
 

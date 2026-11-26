@@ -1206,6 +1206,9 @@ webexpress.webapp.TableCtrl = class extends webexpress.webui.TableReorderableCtr
         }
         if (this._restUri) {
             if (this._isVisible()) {
+                // the query a hidden table remembered is the one loaded now; left pending,
+                // the visibility event that follows a view switch would load it a second time
+                this._pendingLoad = false;
                 this._load();
             }
         }

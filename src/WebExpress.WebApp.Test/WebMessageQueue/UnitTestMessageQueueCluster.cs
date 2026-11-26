@@ -120,6 +120,32 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
         }
 
         /// <summary>
+        /// Tests that only a connection that is gone is dropped: every failure removed the
+        /// connection while its socket stayed open, so the client silently received nothing more.
+        /// </summary>
+        [Fact]
+        public async Task OnlyClosedConnectionsAreDropped()
+        {
+            // arrange
+            var hub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var manager = hub.GetComponentManager<MessageQueueManager>();
+            var faulty = new TestSocket(CreateClient("app-a", null, ["my.order"])) { Failure = new InvalidOperationException("not serializable") };
+            var closed = new TestSocket(CreateClient("app-a", null, ["my.order"])) { Failure = new System.Net.WebSockets.WebSocketException("closed") };
+            manager.Register(Guid.NewGuid(), faulty).Register(Guid.NewGuid(), closed);
+            var address = new AddressDomain("my.order");
+
+            // act
+            await manager.SendAsync(address, new DataChangedMessage("my.order", DataChangeOperation.Updated, "7"), TestContext.Current.CancellationToken);
+            faulty.Failure = null;
+            closed.Failure = null;
+            await manager.SendAsync(address, new DataChangedMessage("my.order", DataChangeOperation.Updated, "8"), TestContext.Current.CancellationToken);
+
+            // validation
+            Assert.Single(faulty.Received);
+            Assert.Empty(closed.Received);
+        }
+
+        /// <summary>
         /// Tests that an address that cannot be described stays on its instance.
         /// </summary>
         [Fact]
@@ -158,8 +184,9 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
         }
 
         /// <summary>
-        /// Tests that a client connecting to another instance is shown the progress of a task
-        /// running elsewhere.
+        /// Tests that a signed-in client connecting to another instance is shown the progress of
+        /// a task running elsewhere, and that a visitor who is not signed in is shown no task:
+        /// tasks carry no owner, so their messages are meant for the users of the application.
         /// </summary>
         [Fact]
         public async Task TaskProgressIsReplayedAcrossInstances()
@@ -171,15 +198,20 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
             var task = a.TaskManager.CreateTask("cluster-task-" + Guid.NewGuid().ToString("N"));
             task.Progress = 42;
 
-            // act: a client connects to instance b
+            // act: a signed-in client and an anonymous visitor connect to instance b
             var b = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
             b.ClusterManager.UseStore(new FileClusterStore(_directory));
-            var socket = new TestSocket(CreateClient("app-a", null, []));
+            var signedIn = CreateClient("app-a", null, []);
+            signedIn.IdentityId = "a";
+            var socket = new TestSocket(signedIn);
+            var anonymous = new TestSocket(CreateClient("app-a", null, []));
             await b.GetComponentManager<MessageQueueManager>().ReplayProgressTasksAsync(socket, TestContext.Current.CancellationToken);
+            await b.GetComponentManager<MessageQueueManager>().ReplayProgressTasksAsync(anonymous, TestContext.Current.CancellationToken);
 
             // validation
             var replayed = socket.Received.Select(x => JsonDocument.Parse(x).RootElement).Single(x => x.GetProperty("taskId").GetString() == task.Id);
             Assert.Equal(42, replayed.GetProperty("progress").GetInt32());
+            Assert.Empty(anonymous.Received);
         }
 
         /// <summary>
@@ -221,6 +253,36 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
 
             // a replayed change is not sent back out
             Assert.Empty(transportB.Sent);
+        }
+
+        /// <summary>
+        /// Tests that a remote change older than a local one does not overwrite it: local
+        /// changes recorded no version, so an older change arriving later won.
+        /// </summary>
+        [Fact]
+        public async Task OlderRemoteChangeDoesNotOverwriteANewerLocalOne()
+        {
+            // arrange
+            var a = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var transportA = new TestTransport();
+            a.ClusterManager.UseTransport(transportA);
+            var indexA = a.GetComponentManager<WebApp.WebIndex.IndexManager>();
+            var b = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var transportB = new TestTransport();
+            b.ClusterManager.UseTransport(transportB);
+            var indexB = b.GetComponentManager<WebApp.WebIndex.IndexManager>();
+            indexA.Create<ClusterIndexItem>(CultureInfo.InvariantCulture, IndexType.Memory);
+            indexB.Create<ClusterIndexItem>(CultureInfo.InvariantCulture, IndexType.Memory);
+            var id = Guid.NewGuid();
+
+            // act: a changes first, b later; a's change reaches b only afterwards
+            indexA.Insert(new ClusterIndexItem { Id = id, Text = "older" });
+            await Task.Delay(20, TestContext.Current.CancellationToken);
+            indexB.Insert(new ClusterIndexItem { Id = id, Text = "newer" });
+            await DeliverAsync(transportA, transportB);
+
+            // validation
+            Assert.Equal("newer", Assert.Single(indexB.All<ClusterIndexItem>()).Text);
         }
 
         /// <summary>
@@ -374,6 +436,11 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
             internal readonly List<string> Received = [];
 
             /// <summary>
+            /// Gets or sets the failure the next sends raise, or null to deliver.
+            /// </summary>
+            internal Exception Failure { get; set; }
+
+            /// <summary>
             /// Gets the client session.
             /// </summary>
             public IClientSession ClientSession { get; } = clientSession;
@@ -386,6 +453,11 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
             /// <returns>A completed task.</returns>
             public Task SendAsync(IMessage message, CancellationToken cancellationToken = default)
             {
+                if (Failure is { } failure)
+                {
+                    return Task.FromException(failure);
+                }
+
                 lock (Received)
                 {
                     Received.Add(message.ToJson());
@@ -427,6 +499,7 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
             public IPluginContext PluginContext { get; set; }
             public IApplicationContext ApplicationContext { get; set; }
             public IEnumerable<string> Domains { get; set; } = [];
+            public string IdentityId { get; set; }
         }
     }
 }

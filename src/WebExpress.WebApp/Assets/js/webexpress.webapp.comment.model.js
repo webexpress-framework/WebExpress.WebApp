@@ -79,3 +79,34 @@ webexpress.webapp.commentModel = {
         return "/" + encodeURIComponent(id) + "/" + sub;
     }
 };
+
+/**
+ * The category loads of the comment endpoints that are in flight. The comment list and
+ * its composer are separate controls that start together and need the categories of
+ * the same endpoint, so each asked the server for the same set. A second caller joins
+ * the load in flight; once it settled the next caller asks again, so a category added
+ * meanwhile is not withheld.
+ */
+webexpress.webapp.commentCategories = {
+    _pending: new Map(),
+
+    /**
+     * Loads the categories of an endpoint, sharing a load of the same address in flight.
+     * @param {string} url - The categories url.
+     * @param {Function} send - Performs the request and resolves with a service result.
+     * @returns {Promise<object>} The service result.
+     */
+    load(url, send) {
+        const pending = this._pending.get(url);
+        if (pending) {
+            return pending;
+        }
+
+        const promise = Promise.resolve()
+            .then(send)
+            .finally(() => this._pending.delete(url));
+        this._pending.set(url, promise);
+
+        return promise;
+    }
+};

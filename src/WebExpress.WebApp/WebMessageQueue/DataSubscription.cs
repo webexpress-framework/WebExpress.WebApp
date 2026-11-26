@@ -89,7 +89,7 @@ namespace WebExpress.WebApp.WebMessageQueue
                     .Where(x => x.ValueKind == JsonValueKind.String)
                     .Select(x => x.GetString())
                     .Where(x => !string.IsNullOrWhiteSpace(x))
-                    .Select(x => x.Trim().ToLower())
+                    .Select(x => x.Trim().ToLowerInvariant())
                     .ToArray();
 
                 if (parsed.Length == 0)

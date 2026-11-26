@@ -214,34 +214,42 @@ namespace WebExpress.WebApp.WWW.Settings.System
         {
             return new ControlTableRow().Add
             (
-                new ControlTableCell { Text = _ => WebUtility.HtmlEncode(label) },
+                new ControlTableCell { Text = _ => label },
                 new ControlTableCellPanel().Add(value)
             );
         }
 
         /// <summary>
         /// Shows configured values as code, one per line. The values come from the configuration
-        /// file and are encoded, since a policy or origin must never turn into markup.
+        /// file; every line is its own text control, which encodes it, since a policy or origin
+        /// must never turn into markup.
         /// </summary>
         /// <param name="lines">The values.</param>
         /// <param name="noteKey">An optional translation key of a remark appended to the last line.</param>
         /// <param name="renderContext">The context used to translate the remark.</param>
-        /// <returns>The text control.</returns>
-        private static ControlText CreateCode(IEnumerable<string> lines, string noteKey = null, IRenderContext renderContext = null)
+        /// <returns>The control holding the lines.</returns>
+        private static IControl CreateCode(IEnumerable<string> lines, string noteKey = null, IRenderContext renderContext = null)
         {
-            var text = string.Join("<br/>", lines.Select(WebUtility.HtmlEncode));
+            var texts = lines.ToList();
 
-            if (noteKey is not null)
+            if (noteKey is not null && texts.Count > 0)
             {
-                text += " " + WebUtility.HtmlEncode(I18N.Translate(renderContext, noteKey));
+                texts[^1] += " " + I18N.Translate(renderContext, noteKey);
             }
 
-            return new ControlText
+            var panel = new ControlPanel();
+
+            foreach (var text in texts)
             {
-                Text = _ => text,
-                Format = _ => TypeFormatText.Code,
-                Classes = ["text-break"]
-            };
+                panel.Add(new ControlText
+                {
+                    Text = _ => text,
+                    Format = _ => TypeFormatText.Code,
+                    Classes = ["text-break", "d-block"]
+                });
+            }
+
+            return panel;
         }
 
         /// <summary>

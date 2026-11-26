@@ -67,7 +67,13 @@ namespace WebExpress.WebApp.WebRestApi
 
             Log(request, ex, message, member, line, file);
 
-            return new ResponseBadRequest(new StatusMessage(message));
+            // the generic message goes out in the shape of a refusal, as json: a rest client reads
+            // json, and an html page would carry the caller's text as markup
+            return new ResponseBadRequest
+            {
+                Content = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new { message }))
+            }
+                .AddHeaderContentType("application/json");
         }
 
         /// <summary>

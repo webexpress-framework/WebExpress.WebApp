@@ -269,6 +269,8 @@ namespace WebExpress.WebApp.WebMessageQueue
         {
             private readonly Guid _senderConnectionId;
             private readonly HashSet<string> _domains;
+            private readonly string _applicationId;
+            private readonly string _page;
 
             /// <summary>
             /// Initializes the address from the sender session.
@@ -277,6 +279,8 @@ namespace WebExpress.WebApp.WebMessageQueue
             public CollaborativeBroadcastAddress(IClientSession senderSession)
             {
                 _senderConnectionId = senderSession?.ConnectionId ?? Guid.Empty;
+                _applicationId = senderSession?.ApplicationContext?.ApplicationId;
+                _page = PageOf(senderSession);
                 _domains = new HashSet<string>
                 (
                     senderSession?.Domains ?? Enumerable.Empty<string>(),
@@ -305,9 +309,17 @@ namespace WebExpress.WebApp.WebMessageQueue
                     return false;
                 }
 
+                if (!string.Equals(session.ApplicationContext?.ApplicationId, _applicationId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+
+                // a sender in no domain reached every client - and, forwarded, every client of
+                // the cluster - with text the sender wrote; an anonymous container collaborates
+                // with the clients of the same page only
                 if (_domains.Count == 0)
                 {
-                    return true;
+                    return _page is not null && string.Equals(PageOf(session), _page, StringComparison.OrdinalIgnoreCase);
                 }
 
                 return session.Domains?.Any(d => _domains.Contains(d)) ?? false;
@@ -320,7 +332,23 @@ namespace WebExpress.WebApp.WebMessageQueue
             /// <returns>The description.</returns>
             public AddressDescriptor Describe()
             {
-                return new AddressDescriptor { Domains = [.. _domains], ExcludeConnectionId = _senderConnectionId };
+                // an empty descriptor matches every session on the other instances, and the page
+                // of an anonymous container cannot be described, so it stays on this instance
+                return _domains.Count == 0
+                    ? null
+                    : new AddressDescriptor { Domains = [.. _domains], ApplicationId = _applicationId, ExcludeConnectionId = _senderConnectionId };
+            }
+
+            /// <summary>
+            /// Reads the page a client session was opened on, without query or fragment.
+            /// </summary>
+            /// <param name="session">The client session.</param>
+            /// <returns>The path, or null when unknown.</returns>
+            private static string PageOf(IClientSession session)
+            {
+                var uri = session?.Uri?.ToString();
+
+                return string.IsNullOrEmpty(uri) ? null : uri.Split('?', '#')[0];
             }
         }
     }

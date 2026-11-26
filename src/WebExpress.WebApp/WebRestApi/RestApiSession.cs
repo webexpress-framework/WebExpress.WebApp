@@ -1,14 +1,15 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.Json;
-using WebExpress.WebCore;
+using System;
 using WebExpress.WebCore.Internationalization;
 using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebCluster;
+using WebExpress.WebCore.WebEndpoint;
 using WebExpress.WebCore.WebIdentity;
 using WebExpress.WebCore.WebMessage;
 using WebExpress.WebCore.WebRestApi;
+using WebExpress.WebCore;
 
 namespace WebExpress.WebApp.WebRestApi
 {
@@ -17,7 +18,7 @@ namespace WebExpress.WebApp.WebRestApi
     /// validates user credentials, tracks failed login attempts with exponential backoff,
     /// and permanently locks accounts after a specific amount of failures.
     /// </summary>
-    public abstract class RestApiSession : IRestApi
+    public abstract class RestApiSession : IRestApi, IPublicEndpoint
     {
         /// <summary>
         /// Gets the number of failed attempts after which the exponential time penalty starts.
@@ -49,6 +50,18 @@ namespace WebExpress.WebApp.WebRestApi
         /// administrator who wants to clear a lock at once.
         /// </remarks>
         protected virtual int PermanentLockoutDurationSeconds => 60 * 60;
+
+        /// <summary>
+        /// Gets the number of failed attempts from one client address, across all user names,
+        /// after which the address is throttled.
+        /// </summary>
+        /// <remarks>
+        /// The lockout of a user name alone let one client try one password against every account
+        /// (password spraying) without ever being slowed down. The attempts of an address are
+        /// counted as well and delay it exponentially; the address is never locked for good, since
+        /// many users may share it.
+        /// </remarks>
+        protected virtual int AddressPenaltyStartAttempts => 10;
 
         /// <summary>
         /// Tracks failed login attempts, keyed by application and user so a lockout is confined
@@ -140,13 +153,27 @@ namespace WebExpress.WebApp.WebRestApi
                 }
             }
 
+            if (IsAddressThrottled(request, out var addressSeconds))
+            {
+                return new RestApiSessionResult
+                {
+                    Success = false,
+                    Message = I18N.Translate(request, "webexpress.webapp:login.error.retryafter", addressSeconds),
+                    RetryAfter = addressSeconds
+                }.ToResponse();
+            }
+
             // validate credentials
             var identity = ValidateCredentials(normalizedUser, password);
 
             if (identity is not null)
             {
-                // clear failed attempts on successful login
+                // clear failed attempts on successful login, of the account and of the client
                 ResetFailedAttempts(request, normalizedUser);
+                if (AddressKey(request) is { } signedInAddress)
+                {
+                    RemoveAttempt(signedInAddress);
+                }
 
                 var tokens = EstablishIdentity(identity, request, rememberMe);
 
@@ -170,8 +197,12 @@ namespace WebExpress.WebApp.WebRestApi
                 }.ToResponse();
             }
 
-            // record failed attempt
+            // record failed attempt, for the account from this client and for the client itself
             RecordFailedAttempt(request, normalizedUser);
+            if (AddressKey(request) is { } failedAddress)
+            {
+                RecordFailure(failedAddress);
+            }
 
             // check if locked out after this attempt
             if (IsLockedOut(request, normalizedUser, out var retryAfter))
@@ -381,9 +412,17 @@ namespace WebExpress.WebApp.WebRestApi
         /// <param name="username">The username for which the attempt failed.</param>
         private void RecordFailedAttempt(IRequest request, string username)
         {
+            RecordFailure(LockoutKey(request, username));
+        }
+
+        /// <summary>
+        /// Counts a failed attempt under a lockout key.
+        /// </summary>
+        /// <param name="key">The lockout key.</param>
+        private void RecordFailure(string key)
+        {
             if (SharedStore is { } store)
             {
-                var key = LockoutKey(request, username);
                 var count = TryGetAttempt(key, out var existing) ? existing.Count + 1 : 1;
 
                 // read and write are not atomic across instances; two attempts landing at the
@@ -398,7 +437,7 @@ namespace WebExpress.WebApp.WebRestApi
             }
 
             FailedAttempts.AddOrUpdate(
-                LockoutKey(request, username),
+                key,
                 _ => new RestApiSessionFailedAttemptInfo { Count = 1, LastAttempt = DateTime.UtcNow },
                 (_, existing) =>
                 {
@@ -493,7 +532,76 @@ namespace WebExpress.WebApp.WebRestApi
         {
             var scope = request?.ApplicationContext?.ApplicationId ?? string.Empty;
 
-            return scope + "\n" + (username ?? string.Empty).ToLowerInvariant();
+            // the account is locked for the client that failed on it, not for everybody: keyed by
+            // the name alone, five wrong passwords from anywhere locked its owner out for an hour
+            return scope + "\n" + (username ?? string.Empty).ToLowerInvariant() + "\n" + ClientOf(request);
+        }
+
+        /// <summary>
+        /// Builds the key under which the failed attempts of a client address are counted.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns>The key, or null when the address is unknown.</returns>
+        private static string AddressKey(IRequest request)
+        {
+            // clients without a known address must not share one bucket and throttle each other
+            if (request?.ClientAddress is not { } address)
+            {
+                return null;
+            }
+
+            return (request.ApplicationContext?.ApplicationId ?? string.Empty) + "\naddress\n" + address;
+        }
+
+        /// <summary>
+        /// Reads the address of the client, as the server resolved it through its trusted proxies.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns>The address, or "unknown".</returns>
+        private static string ClientOf(IRequest request)
+        {
+            return request?.ClientAddress?.ToString() ?? "unknown";
+        }
+
+        /// <summary>
+        /// Tells whether the client address is throttled after too many failed attempts across
+        /// user names; the delay doubles with every further failure and lapses on its own.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <param name="remainingSeconds">Receives the seconds left.</param>
+        /// <returns>True while the address is throttled.</returns>
+        private bool IsAddressThrottled(IRequest request, out int remainingSeconds)
+        {
+            remainingSeconds = 0;
+
+            if (AddressKey(request) is not { } key || !TryGetAttempt(key, out var info))
+            {
+                return false;
+            }
+
+            var elapsed = DateTime.UtcNow - info.LastAttempt;
+
+            if (elapsed.TotalSeconds >= PermanentLockoutDurationSeconds)
+            {
+                RemoveAttempt(key);
+                return false;
+            }
+
+            if (info.Count < AddressPenaltyStartAttempts)
+            {
+                return false;
+            }
+
+            var exponent = Math.Min(16, info.Count - AddressPenaltyStartAttempts);
+            var penaltySeconds = Math.Min(PermanentLockoutDurationSeconds, BaseLockoutDelaySeconds * (1 << exponent));
+
+            if (elapsed.TotalSeconds >= penaltySeconds)
+            {
+                return false;
+            }
+
+            remainingSeconds = (int)Math.Ceiling(penaltySeconds - elapsed.TotalSeconds);
+            return true;
         }
     }
 }

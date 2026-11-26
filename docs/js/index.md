@@ -29,6 +29,7 @@ This section documents the JavaScript controllers and client-side behavior used 
 - [SearchSuggestionCtrl](search.suggestion.md)
 - [SlaCtrl](sla.md)
 - [WatcherCtrl](watcher.md)
+- [AssignmentCtrl](assignment.md)
 - [WqlPromptCtrl](wql.prompt.md)
 - [TabCtrl](tab.md)
 - [TableCtrl](table.md)

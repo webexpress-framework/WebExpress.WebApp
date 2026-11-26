@@ -92,6 +92,9 @@ namespace WebExpress.WebApp.WebRestApi
         /// is what a selection submits for its "none" entry — clears a property that can hold
         /// null and leaves one that cannot. A required reference is therefore never
         /// overwritten with an empty one, and an optional one can be cleared.</item>
+        /// <item>The identity of an index item - its <c>Id</c> - is never written. A payload
+        /// naming another id re-keyed the record it was bound to, overwriting or hijacking
+        /// the record that id belongs to.</item>
         /// </list>
         /// A value that cannot be converted at all leaves the property as it is; the binder
         /// reports nothing, so a payload whose entries have to be rejected rather than
@@ -115,8 +118,8 @@ namespace WebExpress.WebApp.WebRestApi
 
             foreach (var prop in properties)
             {
-                // skip properties that cannot be written to
-                if (!prop.CanWrite)
+                // skip properties that cannot be written to, and the identity of an index item
+                if (!prop.CanWrite || (target is global::WebExpress.WebIndex.IIndexItem && prop.Name == nameof(global::WebExpress.WebIndex.IIndexItem.Id)))
                 {
                     continue;
                 }

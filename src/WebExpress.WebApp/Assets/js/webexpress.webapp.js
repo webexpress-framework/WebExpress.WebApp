@@ -417,6 +417,8 @@ webexpress.webapp.Event = class {
     static WATCHER_ADDED_EVENT = "webexpress.webapp.watcher.added";
     // Event triggered when a watcher is removed
     static WATCHER_REMOVED_EVENT = "webexpress.webapp.watcher.removed";
+    // Event triggered when the assignee of an object was changed or removed
+    static ASSIGNMENT_CHANGED_EVENT = "webexpress.webapp.assignment.changed";
     // Event triggered when a tag is added
     static TAG_ADDED_EVENT = "webexpress.webapp.tag.added";
     // Event triggered when a tag is removed

@@ -23,6 +23,16 @@ namespace WebExpress.WebApp.WebMessageQueue
         public RequestMethod Method { get; set; }
 
         /// <summary>
+        /// Gets or sets the id of the signed-in caller who opened the connection, or null.
+        /// </summary>
+        public string IdentityId { get; set; }
+
+        /// <summary>
+        /// Gets or sets whether the caller holds the system access policy.
+        /// </summary>
+        public bool HasSystemAccess { get; set; }
+
+        /// <summary>
         /// Gets or sets the uri.
         /// </summary>
         public IUri Uri { get; set; }

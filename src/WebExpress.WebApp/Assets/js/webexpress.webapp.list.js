@@ -150,6 +150,18 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
      */
     _applySlice(slice) {
         slice = slice || {};
+
+        // the slice is the record of the central load: the progress shows while it says
+        // a query is in flight, not only until the next notification arrives
+        this._toggleProgress(!!slice.loading);
+
+        // a loading slice still carries the items already on screen (or none yet, while
+        // the placeholders stand in), so rendering it would only redo the last render
+        // and drop the placeholders before anything arrived
+        if (slice.loading) {
+            return;
+        }
+
         this._sliceTotal = Number(slice.total) || 0;
 
         const listUl = this._element.querySelector("ul.wx-list");
@@ -170,7 +182,6 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
         }
 
         this._syncPagerAndInfo();
-        this._progressDiv.style.visibility = "hidden";
     }
 
     // state accessors backed by the store, so the single source of truth is the
@@ -209,24 +220,27 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
      * @returns {Promise<void>} Resolves when the load completes.
      */
     async _load() {
-        this._progressDiv.style.display = "none";
-
         if (!this._service) {
+            this._toggleProgress(false);
             return;
         }
 
         this._store.setState({ loading: true, error: null });
+        this._toggleProgress(true);
 
         const params = webexpress.webapp.listModel.queryParams(this._store.getState());
         const result = await this._service.query(params);
 
         if (!result.ok) {
-            // ignore aborts (a newer query replaced this one); report the rest
-            if (result.error.kind !== "abort") {
-                console.error("the request could not be completed successfully:", webexpress.webapp.ServiceResult.describe(result));
-                this._store.setState({ loading: false, error: result.error });
+            // an abort means a newer query replaced this one and is still in flight, so
+            // the progress stays for it
+            if (result.error.kind === "abort") {
+                return;
             }
-            this._progressDiv.style.visibility = "hidden";
+
+            console.error("the request could not be completed successfully:", webexpress.webapp.ServiceResult.describe(result));
+            this._store.setState({ loading: false, error: result.error });
+            this._toggleProgress(false);
             return;
         }
 
@@ -269,8 +283,18 @@ webexpress.webapp.ListCtrl = class extends webexpress.webui.ListCtrl {
             page: this._page
         });
 
-        // hide progress
-        this._progressDiv.style.visibility = "hidden";
+        this._toggleProgress(false);
+    }
+
+    /**
+     * Shows or hides the progress of a load. Only the visibility changes, so the
+     * progress keeps its height and the items below do not jump when a load starts
+     * or ends.
+     * @param {boolean} show - true while a load is in flight.
+     */
+    _toggleProgress(show) {
+        this._progressDiv.style.visibility = show ? "visible" : "hidden";
+        this._progressDiv.setAttribute("aria-hidden", show ? "false" : "true");
     }
 
     /**

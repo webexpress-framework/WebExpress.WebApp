@@ -379,16 +379,18 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
         }
 
         /// <summary>
-        /// When the sender has no domain affiliation, the broadcast targets
-        /// every other connected session so that anonymous collaborative
-        /// containers continue to work.
+        /// When the sender has no domain affiliation, the broadcast reaches the clients of the
+        /// same page only, so anonymous collaborative containers keep working; it reached every
+        /// client before - and, forwarded, every client of the cluster.
         /// </summary>
         [Fact]
-        public async Task HandleAsync_BroadcastAddress_NoSenderDomains_TargetsEveryone()
+        public async Task HandleAsync_BroadcastAddress_NoSenderDomains_TargetsTheSamePageOnly()
         {
             var manager = new FakeMessageQueueManager();
             var handler = new CollaborativeMessageHandler(manager);
-            var source = CreateSocket(Guid.NewGuid());
+            var sender = CreateSession(Guid.NewGuid());
+            sender.Uri = new UriEndpoint("/app/board?x=1");
+            var source = new FakeMessageQueueSocket(sender);
 
             await handler.HandleAsync
             (
@@ -398,8 +400,13 @@ namespace WebExpress.WebApp.Test.WebMessageQueue
             );
 
             var send = Assert.Single(manager.Sends);
-            var peer = CreateSession(Guid.NewGuid(), "domain.x");
-            Assert.True(send.Address.Matches(peer));
+            var samePage = CreateSession(Guid.NewGuid());
+            samePage.Uri = new UriEndpoint("/app/board");
+            var otherPage = CreateSession(Guid.NewGuid(), "domain.x");
+            otherPage.Uri = new UriEndpoint("/app/other");
+            Assert.True(send.Address.Matches(samePage));
+            Assert.False(send.Address.Matches(otherPage));
+            Assert.Null(send.Address.Describe());
         }
 
         /// <summary>

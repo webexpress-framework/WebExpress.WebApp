@@ -307,6 +307,32 @@ namespace WebExpress.WebApp.Test.WebControl
         }
 
         /// <summary>
+        /// Tests that the document scope reaches the collaborative container, so the reading view
+        /// and the editor page of one record transform against the same document; unset, the
+        /// container scopes by the page and the container id, which differ between the two.
+        /// </summary>
+        [Fact]
+        public void TheDocumentScopeReachesTheCollaborativeContainer()
+        {
+            // arrange
+            var scoped = CreateControl();
+            scoped.Collaborative = _ => true;
+            scoped.CollaborationId = _ => "channel";
+            scoped.Document = _ => "prose-1";
+            var unscoped = CreateControl();
+            unscoped.Collaborative = _ => true;
+            unscoped.CollaborationId = _ => "channel";
+
+            // act
+            var withScope = Section(Render(scoped), @"<div id=""channel""", ">");
+            var withoutScope = Section(Render(unscoped), @"<div id=""channel""", ">");
+
+            // validation
+            Assert.Contains(@"data-collaborative-document=""prose-1""", withScope);
+            Assert.Matches(@"data-collaborative-document=""[^""]*#channel""", withoutScope);
+        }
+
+        /// <summary>
         /// Tests that a quiet bar is asked for as one attribute, so the controller builds its
         /// indicator hidden rather than leaving it out - what "no state" means is a quiet bar, not
         /// a form that stops tracking what was written.

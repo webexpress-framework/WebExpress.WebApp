@@ -69,7 +69,8 @@ namespace WebExpress.WebApp.WebRestApi
                     Transitions = RetrieveTransitions(id, context, request),
                     Guards = RetrieveGuards(id, context, request),
                     PostFunctions = RetrievePostFunctions(id, context, request),
-                    Validations = RetrieveValidations(id, context, request)
+                    Validations = RetrieveValidations(id, context, request),
+                    Forms = RetrieveForms(id, context, request)
                 }
                     .ToResponse();
             }
@@ -314,6 +315,31 @@ namespace WebExpress.WebApp.WebRestApi
         protected virtual IEnumerable<RestApiWorkflowGuard> RetrieveGuards(string workflowId, IQueryContext context, IRequest request)
         {
             // return empty by default
+            return [];
+        }
+
+        /// <summary>
+        /// Retrieves the forms a transition of the specified workflow may show before it runs,
+        /// which the editor offers in the transition's form picker.
+        /// </summary>
+        /// <remarks>
+        /// A source that returns none leaves the picker with only the "no form" entry, so a
+        /// workflow whose transitions never ask for input needs no override.
+        /// </remarks>
+        /// <param name="workflowId">
+        /// The unique identifier of the workflow whose transitions the forms are offered to.
+        /// </param>
+        /// <param name="context">
+        /// The query context providing access to the underlying data store.
+        /// </param>
+        /// <param name="request">
+        /// The current API request.
+        /// </param>
+        /// <returns>
+        /// The forms that may be chosen, in the order the picker lists them.
+        /// </returns>
+        protected virtual IEnumerable<RestApiWorkflowForm> RetrieveForms(string workflowId, IQueryContext context, IRequest request)
+        {
             return [];
         }
     }

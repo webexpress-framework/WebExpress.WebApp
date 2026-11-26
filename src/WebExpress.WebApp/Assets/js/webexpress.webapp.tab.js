@@ -1019,7 +1019,8 @@ webexpress.webapp.TabCtrl = class extends webexpress.webui.TabCtrl {
             if (mode === "text") {
                 target.textContent = finalValue;
             } else if (mode === "html") {
-                target.innerHTML = finalValue;
+                // bound values are data, so html bound from them is sanitized
+                target.innerHTML = webexpress.webui.Html.sanitize(finalValue);
             } else if (mode === "attr") {
                 if (name) {
                     target.setAttribute(name, finalValue);

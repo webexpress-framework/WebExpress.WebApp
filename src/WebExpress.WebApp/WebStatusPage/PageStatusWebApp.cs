@@ -70,7 +70,10 @@ namespace WebExpress.WebApp.WebStatusPage
             }
                 .Add(new ControlText()
                 {
+                    // the message is text and is encoded; the details of a failure span lines,
+                    // which a preformatted block keeps
                     Text = _ => StatusMessage,
+                    Format = _ => StatusMessage?.Contains('\n') == true ? TypeFormatText.Code : TypeFormatText.Default,
                     Margin = _ => new PropertySpacingMargin(PropertySpacing.Space.Two, PropertySpacing.Space.Three)
                 });
 

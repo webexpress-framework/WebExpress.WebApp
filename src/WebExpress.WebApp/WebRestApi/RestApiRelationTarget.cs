@@ -55,7 +55,7 @@ namespace WebExpress.WebApp.WebRestApi
                 var type = request.GetParameter("type")?.Value;
                 var system = request.GetParameter("system")?.Value;
                 var source = request.GetParameter("source")?.Value;
-                var limit = request.ParseIntParameter("l", DefaultLimit);
+                var limit = request.ParsePageSize("l", DefaultLimit);
 
                 var candidates = (RetrieveTargets(search.Trim(), type, system, request) ?? [])
                     .Where(x => x != null)

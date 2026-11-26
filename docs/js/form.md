@@ -28,8 +28,21 @@ The behavior of REST-based forms is defined entirely through declarative configu
 | `data-validate-on-submit` | Enables client-side validation before sending.
 | `data-show-inline-errors` | Displays error messages directly below the affected fields.
 | `data-mode`               | Force `new`, `edit` or `delete`
-| `data-wx-success`         | What happens after a successful save, a tick after the saved event's own listeners (dialog close, toast): `reload` reloads the page, `follow-uri` navigates to the `uri` of the JSON answer (http/https only). Omitted: the form stays. C#: `ControlDataForm.SuccessAction`, `ControlDataWizard.SuccessAction` (the wizard runs it after its final submit).
+| `data-wx-success`         | What happens after a successful save, a tick after the saved event's own listeners (dialog close, toast): `reload` reloads the page, `follow-uri` navigates to the `uri` of the JSON answer (http/https only). Omitted: the form stays. C#: `ControlDataForm.SuccessAction`, `ControlDataWizard.SuccessAction` (the wizard runs it after its final submit). A form dialog that shows the form can override it for one opening (`ModalFormCtrl.successAction`, see below).
 | `data-id`                 | Primary key for Edit/Delete; appended as query parameter.
+
+### Success action of a form in a dialog
+
+A form is written for the page it usually lives on: a transition form on a detail page reloads it to show the saved record. Opened in a dialog by a surface that refreshes itself, such as a board, the same reload throws away the state of that surface. The opener therefore tells the dialog what the form does instead, and the form asks the dialog around it before its own `data-wx-success`:
+
+```javascript
+const modal = webexpress.webui.Controller.getInstance("#modal-form");
+modal.uri = "/tasks/42/transition/review";
+modal.successAction = "none";   // "none", "reload" or "follow-uri"
+modal.show();
+```
+
+The override lasts for the current opening; when the dialog closes, it falls back to the action the dialog was authored with (`data-wx-success-action`, usually none), so the next opener of the same page dialog gets the form's own action again. Without an override nothing changes. The form resolves the action at the moment it succeeds, before the dialog closes. In C#, `ActionModal.SuccessAction` (`TypeModalSuccessAction`) emits the option on a button, a card or a row; the kanban board sets it itself for its move dialogs.
 
 ## Functionality and Behavior
 

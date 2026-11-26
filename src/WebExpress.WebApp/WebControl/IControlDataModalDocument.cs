@@ -99,6 +99,13 @@ namespace WebExpress.WebApp.WebControl
         Func<IRenderControlContext, string> CollaborationId { get; set; }
 
         /// <summary>
+        /// Gets or sets the resolver of the scope the shared surface is edited in. The scope names
+        /// the record rather than the page, so every page that opens the document - its reading
+        /// view and its own editor page alike - edits one and the same shared document.
+        /// </summary>
+        Func<IRenderControlContext, string> Document { get; set; }
+
+        /// <summary>
         /// Gets the entries the host adds to the overflow menu beside the control's own discard,
         /// for example a view of what publishing would change.
         /// </summary>

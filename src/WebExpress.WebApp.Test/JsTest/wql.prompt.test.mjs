@@ -1448,3 +1448,24 @@ test("every change of the text is announced as the value, while only a send anno
     assert.deepEqual(announced, ["a", "ab", "x = 1"], "typing and a program change the value alike, a repeat does not");
     assert.equal(ctrl._dispatched.length, 0, "nothing was sent");
 });
+
+test("the history is loaded once, when the prompt is first focused", async () => {
+    const { ctrl, requests, timers } = loadPrompt({
+        response: () => ({ ok: true, data: { history: ["a = 1"] } })
+    });
+    const history = () => requests.filter((url) => String(url).includes("/history")).length;
+
+    // a page carries a prompt per view, and only a focused one is ever browsed
+    for (const callback of Array.from(timers.values())) {
+        callback();
+    }
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(history(), 0, "nothing is loaded for a prompt nobody uses");
+
+    ctrl._input.dispatchEvent({ type: "focus" });
+    ctrl._input.dispatchEvent({ type: "focus" });
+    await new Promise((resolve) => setImmediate(resolve));
+
+    assert.equal(history(), 1, "the first focus loads the history, the next ones reuse it");
+    assert.deepEqual(Array.from(ctrl._history), ["a = 1"]);
+});

@@ -361,6 +361,60 @@ test("a form that reloads reloads the page after success, and not after a refusa
     assert.deepEqual(calls, [["reload"]]);
 });
 
+/**
+ * Puts a REST form into a form dialog of the page, as the dialog does when it shows a served
+ * form, and registers the dialog the way the controller does on a page.
+ * @param {object} built - The form built by form().
+ * @param {string|null} override - The success action the opener sets, or null for none.
+ * @returns {object} The dialog controller.
+ */
+function inDialog(built, override) {
+    const { rt, host } = built;
+    const dialog = rt.createElement("dialog");
+    rt.document.body.appendChild(dialog);
+    const modal = new rt.wx.ModalFormCtrl(dialog);
+    rt.wx.Controller.instanceMap.set(dialog, modal);
+    dialog.appendChild(host);
+    modal.successAction = override;
+    dialog.showModal();
+    return modal;
+}
+
+test("a dialog that keeps the page overrides the reload of the form it shows", async () => {
+    const built = form({ success: "reload" });
+    const calls = trackLocation(built.rt);
+    const modal = inDialog(built, "none");
+
+    built.ctrl._handleResult({ ok: true, status: 200, data: {} });
+    await settle();
+
+    assert.deepEqual(calls, [], "the page stays; the opener refreshes what it shows");
+    assert.equal(modal._element.open, false, "the dialog closed");
+    assert.equal(modal.successAction, null, "closing ended the override");
+});
+
+test("the same form in a dialog without an override reloads the page as before", async () => {
+    const built = form({ success: "reload" });
+    const calls = trackLocation(built.rt);
+    inDialog(built, null);
+
+    built.ctrl._handleResult({ ok: true, status: 200, data: {} });
+    await settle();
+
+    assert.deepEqual(calls, [["reload"]]);
+});
+
+test("an override can also ask a form without an action of its own to follow the answer", async () => {
+    const built = form();
+    const calls = trackLocation(built.rt);
+    inDialog(built, "follow-uri");
+
+    built.ctrl._handleResult({ ok: true, status: 200, data: { uri: "/items/7" } });
+    await settle();
+
+    assert.deepEqual(calls, [["assign", "http://localhost/items/7"]]);
+});
+
 test("a form follows no uri that is no http address, and stays without an action", async () => {
     const follow = form({ success: "follow-uri" });
     const followCalls = trackLocation(follow.rt);

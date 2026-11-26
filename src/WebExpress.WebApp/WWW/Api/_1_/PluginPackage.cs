@@ -39,6 +39,12 @@ namespace WebExpress.WebApp.WWW.Api.V1
         internal const long MaxPackageSizeBytes = 100 * 1024 * 1024;
 
         /// <summary>
+        /// The form field that carries the SHA-256 the publisher states for the package; a file
+        /// whose hash differs - altered on the way or swapped - is refused before it is installed.
+        /// </summary>
+        internal const string Sha256Parameter = "sha256";
+
+        /// <summary>
         /// The query parameter that asks the uninstallation to delete the shipped settings files too.
         /// </summary>
         internal const string RemoveSettingsParameter = "settings";
@@ -124,7 +130,7 @@ namespace WebExpress.WebApp.WWW.Api.V1
             {
                 using var stream = new MemoryStream(file.Data);
 
-                return packageManager.UploadPackage(stream, file.Value, true, MaxPackageSizeBytes);
+                return packageManager.UploadPackage(stream, file.Value, true, MaxPackageSizeBytes, ExpectedHash(request));
             });
         }
 
@@ -170,7 +176,7 @@ namespace WebExpress.WebApp.WWW.Api.V1
                     default:
                         using (var stream = new MemoryStream(file.Data))
                         {
-                            return packageManager.UpdatePackage(packageId, stream, file.Value, true, MaxPackageSizeBytes);
+                            return packageManager.UpdatePackage(packageId, stream, file.Value, true, MaxPackageSizeBytes, ExpectedHash(request));
                         }
                 }
             });
@@ -368,6 +374,18 @@ namespace WebExpress.WebApp.WWW.Api.V1
         private static Response CreateErrorResponse(string message)
         {
             return new ResponseBadRequest(new StatusMessage(message));
+        }
+
+        /// <summary>
+        /// Reads the SHA-256 the uploader states for the package, if any.
+        /// </summary>
+        /// <param name="request">The request.</param>
+        /// <returns>The hash, or null when none is given.</returns>
+        private static string ExpectedHash(Request request)
+        {
+            var value = request.GetParameter(Sha256Parameter)?.Value;
+
+            return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
         }
     }
 }

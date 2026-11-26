@@ -63,6 +63,18 @@ namespace WebExpress.WebApp.WebMessageQueue
         Guid ConnectionId { get; }
 
         /// <summary>
+        /// Gets the id of the signed-in caller who opened the connection, or null. It is read from
+        /// the credential of the connecting request, never from what the client sends later.
+        /// </summary>
+        string IdentityId => null;
+
+        /// <summary>
+        /// Gets whether the signed-in caller of the connection holds the system access policy,
+        /// which the system metrics require.
+        /// </summary>
+        bool HasSystemAccess => false;
+
+        /// <summary>
         /// Gets the endpoint id.
         /// </summary>
         IComponentId EndpointId { get; }

@@ -29,14 +29,6 @@ namespace WebExpress.WebApp.WebPage
         public IUri BreadcrumbUri { get; set; }
 
         /// <summary>
-        /// Gets the HTML element that contains the URI of the message queue used by the application.
-        /// </summary>
-        public HtmlElementTextContentDiv MessageQueueUri { get; } = new HtmlElementTextContentDiv()
-        {
-            Id = "webepress-webapp-message-queue"
-        };
-
-        /// <summary>
         /// Gets header control.
         /// </summary>
         public ControlWebAppHeader Header { get; } = new ControlWebAppHeader("wx-header");
@@ -128,6 +120,7 @@ namespace WebExpress.WebApp.WebPage
             // head
             // assistive technology picks pronunciation rules from the document language
             html.AddUserAttribute("lang", context.Request?.Culture?.Name);
+            html.AddUserAttribute(PendingAttribute);
             // the login stands in for whatever page was asked for, which usually leaves no title
             // of its own; the tab and the history still have to say what is shown
             html.Head.Title = I18N.Translate(context.Request, string.IsNullOrWhiteSpace(Title) ? "webexpress.webapp:login.title" : Title);
@@ -145,7 +138,8 @@ namespace WebExpress.WebApp.WebPage
             // the marker goes on the root, as on every other page: the client's dark mode
             // switch only ever rewrites the root, and a marker on the body would outrank it
             ThemePreferences.ApplyColorScheme(context.RenderContext, html, Theme);
-            html.Body.Add(MessageQueueUri);
+            // the page is shown to callers who are not signed in, who have no message queue: the
+            // socket refuses them, so the page names neither its address nor offers live popups
             html.Body.Add(Header.Render(renderContext, this));
             html.Body.Add(Toast.Render(renderContext, this));
             // the form is the content of the page, so it is the main landmark a reader jumps to
@@ -155,7 +149,6 @@ namespace WebExpress.WebApp.WebPage
                 Class = "d-flex h-100"
             });
             html.Body.Add(Footer.Render(renderContext, this));
-            html.Body.Add(NotificationPopup.Render(renderContext, this));
 
             html.Body.Scripts = [.. Scripts.Values];
 

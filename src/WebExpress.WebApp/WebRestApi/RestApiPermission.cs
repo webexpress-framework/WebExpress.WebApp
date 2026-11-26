@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using WebExpress.WebCore;
 using WebExpress.WebCore.WebAttribute;
 using WebExpress.WebCore.WebMessage;
+using WebExpress.WebCore.WebPolicies;
 using WebExpress.WebCore.WebRestApi;
 using WebExpress.WebCore.WebStatusPage;
 
@@ -47,8 +49,8 @@ namespace WebExpress.WebApp.WebRestApi
         [Method(RequestMethod.GET)]
         public virtual IResponse Retrieve(IRequest request)
         {
-            var pageNumber = request.ParseIntParameter("p", 0);
-            var pageSize = request.ParseIntParameter("l", 10);
+            var pageNumber = request.ParsePageNumber("p");
+            var pageSize = request.ParsePageSize("l", 10);
             var search = request.GetParameter("q")?.Value ?? string.Empty;
 
             try
@@ -87,6 +89,11 @@ namespace WebExpress.WebApp.WebRestApi
         [Method(RequestMethod.POST)]
         public virtual IResponse Create(IRequest request)
         {
+            if (!CanManage(request))
+            {
+                return new ResponseForbidden();
+            }
+
             try
             {
                 var segments = GetRelativeSegments(request);
@@ -119,6 +126,11 @@ namespace WebExpress.WebApp.WebRestApi
         [Method(RequestMethod.PUT)]
         public virtual IResponse Update(IRequest request)
         {
+            if (!CanManage(request))
+            {
+                return new ResponseForbidden();
+            }
+
             try
             {
                 var segments = GetRelativeSegments(request);
@@ -150,6 +162,11 @@ namespace WebExpress.WebApp.WebRestApi
         [Method(RequestMethod.DELETE)]
         public virtual IResponse Delete(IRequest request)
         {
+            if (!CanManage(request))
+            {
+                return new ResponseForbidden();
+            }
+
             try
             {
                 var segments = GetRelativeSegments(request);
@@ -185,6 +202,26 @@ namespace WebExpress.WebApp.WebRestApi
         /// <param name="request">The incoming request.</param>
         /// <returns>The assignments.</returns>
         protected abstract IEnumerable<RestApiPermissionItem> RetrieveAssignments(IRequest request);
+
+        /// <summary>
+        /// Decides whether the caller may change policy assignments.
+        /// </summary>
+        /// <remarks>
+        /// The endpoint grants rights; a subclass that carried no policy of its own let every
+        /// signed-in user assign any policy - system access among them - to their own group,
+        /// and endpoint policies are not inherited, so the base cannot declare one. Changes are
+        /// refused unless the caller holds system access; a subclass with a narrower rule of
+        /// its own overrides this.
+        /// </remarks>
+        /// <param name="request">The request.</param>
+        /// <returns>True when the caller may change assignments.</returns>
+        protected virtual bool CanManage(IRequest request)
+        {
+            var identityManager = WebEx.ComponentHub?.IdentityManager;
+            var identity = identityManager?.GetCurrentIdentity(request);
+
+            return identity is not null && identityManager.CheckAccess(identity, new SystemAccessPolicy());
+        }
 
         /// <summary>
         /// Persists a group-to-policy assignment. A group may carry several

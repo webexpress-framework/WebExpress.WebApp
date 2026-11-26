@@ -1,0 +1,185 @@
+/* the assignment row (ControlDataAssignment, webexpress.webapp.AssignmentCtrl): a round picture,
+   the caption in small letters above the name and the actions at the end of the row; the
+   controller drops the registration class on init, so the client marker carries the layout */
+.wx-webapp-assignment,
+.wx-assignment {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 0;
+    padding: 0.35rem 0.4rem;
+}
+
+/* initials in the emphasis text of the primary hue on its subtle wash, which keeps them
+   well above 4.5:1 in both themes; plain primary on its own tint does not */
+.wx-assignment-avatar {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    overflow: hidden;
+    border-radius: 50%;
+    background: var(--wx-primary-bg-subtle);
+    color: var(--wx-primary-text-emphasis);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.wx-assignment-avatar > img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.wx-assignment-empty > .wx-assignment-avatar {
+    background: transparent;
+    border: 1.5px dashed var(--wx-border-color);
+}
+
+.wx-assignment-text {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-width: 0;
+    line-height: 1.25;
+}
+
+.wx-assignment-caption {
+    color: var(--wx-secondary-color);
+    font-size: 0.75rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wx-assignment-name {
+    color: var(--wx-body-color);
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* the muted text colour reaches about 6.9:1 on the light and 7.5:1 on the dark body */
+.wx-assignment-empty .wx-assignment-name {
+    color: var(--wx-secondary-color);
+    font-weight: 400;
+    font-style: italic;
+}
+
+.wx-assignment-actions {
+    flex: 0 0 auto;
+    display: inline-flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.25rem;
+}
+
+/* the link colour alone falls to about 4.3:1 on a hover wash; a fifth of body colour keeps
+   it above 5:1 in both themes */
+.wx-assignment-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.45rem;
+    border: 0;
+    border-radius: var(--wx-border-radius);
+    background: transparent;
+    color: color-mix(in srgb, var(--wx-link-color) 80%, var(--wx-body-color));
+    font: inherit;
+    font-size: 0.8rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.wx-assignment-action:hover {
+    background: var(--wx-tertiary-bg);
+}
+
+.wx-assignment-action[aria-busy="true"] {
+    cursor: progress;
+    opacity: 0.75;
+}
+
+.wx-assignment-picker {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: 100;
+    flex-direction: column;
+    width: 17.5rem;
+    max-width: 100%;
+    max-height: 20rem;
+    margin-top: 0.25rem;
+    overflow: hidden;
+    background: var(--wx-body-bg);
+    color: var(--wx-body-color);
+    border: 1px solid var(--wx-border-color);
+    border-radius: var(--wx-border-radius);
+    box-shadow: var(--wx-box-shadow);
+}
+
+.wx-assignment-search {
+    width: 100%;
+    padding: 0.5rem 0.65rem;
+    border: 0;
+    border-bottom: 1px solid var(--wx-border-color);
+    background: transparent;
+    color: var(--wx-body-color);
+    font: inherit;
+    font-size: 0.85rem;
+}
+
+.wx-assignment-search::placeholder {
+    color: var(--wx-secondary-color);
+    opacity: 1;
+}
+
+.wx-assignment-results {
+    flex: 1 1 auto;
+    overflow-y: auto;
+}
+
+.wx-assignment-result {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+    padding: 0.4rem 0.65rem;
+    border: 0;
+    background: transparent;
+    color: var(--wx-body-color);
+    text-align: left;
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.wx-assignment-result:hover {
+    background: var(--wx-tertiary-bg);
+}
+
+.wx-assignment-result > .wx-assignment-avatar {
+    width: 1.5rem;
+    height: 1.5rem;
+    font-size: 0.6rem;
+}
+
+.wx-assignment-result-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wx-assignment-no-matches {
+    padding: 1rem;
+    text-align: center;
+    color: var(--wx-secondary-color);
+    font-size: 0.8rem;
+}

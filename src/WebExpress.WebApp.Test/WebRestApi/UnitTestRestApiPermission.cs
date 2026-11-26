@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using WebExpress.WebApp.Test.Fixture;
 using WebExpress.WebApp.WebRestApi;
@@ -417,6 +417,51 @@ namespace WebExpress.WebApp.Test.WebRestApi
             // validation
             Assert.NotNull(result);
             Assert.Equal(404, result.Status);
+        }
+
+        /// <summary>
+        /// Verifies that changing assignments is refused unless the caller may manage them: the
+        /// endpoint grants rights, and by default only a caller with system access may do so.
+        /// </summary>
+        [Fact]
+        public void Changes_AreRefused_WithoutManagementRight()
+        {
+            // arrange
+            _ = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var seed = new List<RestApiPermissionItem>
+            {
+                new() { GroupId = "g1", GroupName = "IT Support", PolicyId = "p1", PolicyName = "class_edit_policy" }
+            };
+            var api = new TestRestApiPermission(seed) { AllowManage = false };
+            var plain = new DefaultPermissionApi();
+
+            // act
+            var delete = api.Delete(UnitTestControlFixture.CreateRequestMock("", "https://example.com/g1"));
+            var anonymous = plain.Delete(UnitTestControlFixture.CreateRequestMock("", "https://example.com/g1"));
+
+            // validation
+            Assert.Equal(403, delete.Status);
+            Assert.Single(api.Assignments);
+            Assert.Equal(403, anonymous.Status);
+            Assert.False(plain.Removed);
+        }
+
+        /// <summary>
+        /// A permission endpoint that keeps the default management rule.
+        /// </summary>
+        private sealed class DefaultPermissionApi : RestApiPermission
+        {
+            /// <summary>
+            /// Gets whether an assignment was removed.
+            /// </summary>
+            public bool Removed { get; private set; }
+
+            protected override IEnumerable<RestApiPermissionItem> RetrieveAssignments(WebExpress.WebCore.WebMessage.IRequest request) =>
+                [new() { GroupId = "g1", GroupName = "IT Support", PolicyId = "p1", PolicyName = "class_edit_policy" }];
+
+            protected override RestApiPermissionItem AddAssignment(string groupId, string policyId, WebExpress.WebCore.WebMessage.IRequest request) => null;
+
+            protected override bool RemoveAssignment(string groupId, string policyId, WebExpress.WebCore.WebMessage.IRequest request) => Removed = true;
         }
     }
 }

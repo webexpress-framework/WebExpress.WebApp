@@ -45,8 +45,16 @@ namespace WebExpress.WebApp.WebMessageQueue
             EndpointId = _socketContext.EndpointId,
             PluginContext = _socketContext.PluginContext,
             ApplicationContext = _socketContext.ApplicationContext,
-            Domains = GetSessionDomains()
+            Domains = GetSessionDomains(),
+            IdentityId = Identity?.Id.ToString(),
+            HasSystemAccess = Identity?.PolicyNames?.Contains(typeof(WebCore.WebPolicies.SystemAccessPolicy).FullName) ?? false
         };
+
+        /// <summary>
+        /// Gets the signed-in caller of the connection, read from the credential of the request
+        /// that opened it.
+        /// </summary>
+        private WebCore.WebIdentity.IIdentity Identity => WebCore.WebEx.ComponentHub?.IdentityManager?.GetCurrentIdentity(_request);
 
         /// <summary>
         /// Gets the runtime domain subscription of this connection.
@@ -318,7 +326,11 @@ namespace WebExpress.WebApp.WebMessageQueue
         /// <returns>A task that represents the asynchronous send operation.</returns>
         public async Task SendAsync(IMessage message, CancellationToken cancellationToken = default)
         {
-            await _socketConnection?.SendTextAsync(message.ToJson(), cancellationToken);
+            // awaiting the null of a connection that is not open yet threw a NullReferenceException
+            if (_socketConnection is { } connection)
+            {
+                await connection.SendTextAsync(message.ToJson(), cancellationToken);
+            }
         }
 
         /// <summary>

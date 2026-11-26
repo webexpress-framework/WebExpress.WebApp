@@ -37,6 +37,9 @@ namespace WebExpress.WebApp.WebIndex
         [ThreadStatic]
         private static bool _replaying;
 
+        // replays are applied one at a time, so the version check and the write cannot interleave
+        private readonly object _applySync = new();
+
         private static readonly MethodInfo ApplyMethod = typeof(IndexManager)
             .GetMethod(nameof(Apply), BindingFlags.Instance | BindingFlags.NonPublic);
 
@@ -80,7 +83,7 @@ namespace WebExpress.WebApp.WebIndex
             // language files and the wql parser's messages would surface as raw keys
             var webIndex = typeof(WebExpress.WebIndex.IndexManager).Assembly;
             (_componentHub?.InternationalizationManager as InternationalizationManager)?
-                .Register(webIndex, webIndex.GetName().Name.ToLower());
+                .Register(webIndex, webIndex.GetName().Name.ToLowerInvariant());
 
             _componentHub?.PluginManager?.AddPlugin += (s, pluginContext) =>
             {
@@ -167,12 +170,29 @@ namespace WebExpress.WebApp.WebIndex
                 return;
             }
 
+            var time = DateTime.UtcNow.Ticks;
+            var id = e.Item?.Id ?? Guid.Empty;
+
+            // the local change is a version too; without it a remote change older than this one
+            // that arrived later overwrote it
+            lock (_applySync)
+            {
+                if (e.Kind == IndexChangeKind.Clear)
+                {
+                    _cleared.AddOrUpdate(e.ItemType, time, (_, known) => Math.Max(known, time));
+                }
+                else if (id != Guid.Empty)
+                {
+                    _versions.AddOrUpdate((e.ItemType, id), time, (_, known) => Math.Max(known, time));
+                }
+            }
+
             var change = new ClusterChange
             (
                 TypeName(e.ItemType),
                 e.Kind,
-                e.Item?.Id ?? Guid.Empty,
-                DateTime.UtcNow.Ticks,
+                id,
+                time,
                 e.Item is null ? null : JsonSerializer.SerializeToElement(e.Item, e.ItemType)
             );
 
@@ -207,7 +227,10 @@ namespace WebExpress.WebApp.WebIndex
 
             try
             {
-                ApplyMethod.MakeGenericMethod(type).Invoke(this, [change]);
+                lock (_applySync)
+                {
+                    ApplyMethod.MakeGenericMethod(type).Invoke(this, [change]);
+                }
             }
             catch (TargetInvocationException ex)
             {

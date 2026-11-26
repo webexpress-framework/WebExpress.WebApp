@@ -30,7 +30,7 @@ namespace WebExpress.WebApp.WebRestApi
         public virtual IResponse Retrieve(Request request)
         {
             // read value parameter
-            var value = request.GetParameter("v")?.Value?.ToLower()
+            var value = request.GetParameter("v")?.Value?.ToLowerInvariant()
                          ?? string.Empty;
             try
             {

@@ -152,5 +152,32 @@ namespace WebExpress.WebApp.Test.WebControl
             // validation
             AssertExtensions.EqualWithPlaceholders(expected, html);
         }
+
+        /// <summary>
+        /// Tests that the page dialog for move dialogs is named only when the board is told to use
+        /// another one than the client default.
+        /// </summary>
+        [Theory]
+        [InlineData(null, @"<div id=""*"" class=""wx-webapp-kanban""></div>")]
+        [InlineData(" ", @"<div id=""*"" class=""wx-webapp-kanban""></div>")]
+        [InlineData("transitions", @"<div id=""*"" class=""wx-webapp-kanban"" data-move-dialog-modal=""transitions""></div>")]
+        public void MoveDialogModal(string modal, string expected)
+        {
+            // arrange
+            var componentHub = UnitTestControlFixture.CreateAndRegisterComponentHubMock();
+            var application = componentHub.ApplicationManager.GetApplications(typeof(TestApplication)).FirstOrDefault();
+            var context = UnitTestControlFixture.CreateRenderContextMock(application);
+            var visualTree = new VisualTreeControl(componentHub, context.PageContext);
+            var control = new ControlDataKanban()
+            {
+                MoveDialogModal = _ => modal
+            };
+
+            // act
+            var html = control.Render(context, visualTree);
+
+            // validation
+            AssertExtensions.EqualWithPlaceholders(expected, html);
+        }
     }
 }

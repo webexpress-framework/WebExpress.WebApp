@@ -246,22 +246,40 @@ namespace WebExpress.WebApp.WebMessageQueue
                     continue;
                 }
 
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
+
                 try
                 {
                     await session.SendAsync(message, cancellationToken);
                 }
-                catch
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
-                    // mark failed sessions for cleanup
+                    // the caller gave up; the connection itself is fine
+                    break;
+                }
+                catch (Exception ex) when (ex is System.Net.WebSockets.WebSocketException or ObjectDisposedException or System.IO.IOException)
+                {
+                    // only a connection that is gone is dropped
                     closedSessions.Add(sessionId);
+                }
+                catch (Exception ex)
+                {
+                    // every failure dropped the connection from the registry while its socket
+                    // stayed open, so the client silently received nothing from then on; a
+                    // message that cannot be sent is logged, the live connection kept
+                    _httpServerContext?.Log?.Exception(ex);
                 }
             }
 
-            // remove closed or failed sessions
             foreach (var id in closedSessions)
             {
                 _connections.TryRemove(id, out _);
             }
+
+            cancellationToken.ThrowIfCancellationRequested();
         }
 
         /// <summary>

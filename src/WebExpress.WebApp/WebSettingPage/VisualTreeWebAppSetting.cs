@@ -54,6 +54,7 @@ namespace WebExpress.WebApp.WebSettingPage
             ThemePreferences.ApplyIconSet(context.RenderContext, this);
 
             var html = new HtmlElementRootHtml();
+            html.AddUserAttribute(PendingAttribute);
             var body = new HtmlElementSectionBody();
             var renderContext = new RenderControlContext(context.RenderContext);
 

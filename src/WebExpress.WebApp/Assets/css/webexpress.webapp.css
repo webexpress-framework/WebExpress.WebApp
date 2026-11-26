@@ -137,6 +137,14 @@ main {
     max-height: 3em;
 }
 
+/* the server-rendered entries are only the source the controller builds the menu from; until
+   the scripts have run they would stand as loose text in the navbar. Every one of these
+   controllers derives from a WebUI dropdown and marks its host with that one's client class. */
+:is(.wx-webapp-dropdown, .wx-webapp-dropdown-theme, .wx-webapp-dropdown-iconset):not(.wx-dropdown) > *,
+.wx-webapp-avatar-dropdown:not(.wx-avatar-dropdown) > * {
+    display: none;
+}
+
 .wx-appnavigation {
     font-size: clamp(0.8em, 1.3vw, 1em);
     display: flex;

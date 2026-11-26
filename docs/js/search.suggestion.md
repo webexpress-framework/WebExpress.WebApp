@@ -42,6 +42,8 @@ The control is bootstrapped from a single host element carrying the `wx-webapp-s
 
 The base constructor rewrites the host into the search box and the dropdown menu; the controller then fills the menu on every focus and keystroke.
 
+Mounting removes the `wx-webapp-search-suggestion` class from the host, so the mounted box is marked `wx-search wx-search-endpoint` instead; styles for the live box target that pair. Until the scripts have run, the server-rendered children are hidden and the host already takes the width of the box, so the navbar neither shows loose text nor shifts.
+
 ## Configuration
 
 The behavior is read from `data-` attributes on the host element, before the base constructor strips the attributes it owns.

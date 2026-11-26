@@ -166,7 +166,8 @@ webexpress.webapp.PopupNotificationCtrl = class extends webexpress.webui.Ctrl {
 
         const message = document.createElement("div");
         message.className = "wx-popup-message";
-        message.innerHTML = notification.message || "";
+        // a notification may quote what a user wrote, so its markup is sanitized
+        message.innerHTML = webexpress.webui.Html.sanitize(notification.message);
         content.appendChild(message);
 
         alert.appendChild(content);
@@ -237,7 +238,7 @@ webexpress.webapp.PopupNotificationCtrl = class extends webexpress.webui.Ctrl {
             data.heading.textContent = notification.heading || "";
         }
         if (notification.message !== previous.message) {
-            data.message.innerHTML = notification.message || "";
+            data.message.innerHTML = webexpress.webui.Html.sanitize(notification.message);
         }
         if (notification.icon !== previous.icon && data.icon && data.icon.tagName === "IMG") {
             data.icon.src = notification.icon || "";

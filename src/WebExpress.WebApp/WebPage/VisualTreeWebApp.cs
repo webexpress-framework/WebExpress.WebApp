@@ -102,7 +102,7 @@ namespace WebExpress.WebApp.WebPage
             var baseUri = RouteEndpoint.Combine(applicationContext?.Route, "webexpress.webapp/assets");
             var messageQueueUri = componentHub.SitemapManager
                 .GetUri<WWW.Ws.MessageQueue>(pageContext.ApplicationContext);
-            var domains = Domains?.Invoke() ?? pageContext.Domains?.Select(x => x.FullName.ToLower()) ?? [];
+            var domains = Domains?.Invoke() ?? pageContext.Domains?.Select(x => x.FullName.ToLowerInvariant()) ?? [];
 
             MessageQueueUri
                 .AddUserAttribute("data-wx-message-queue-url", messageQueueUri?.ToString())
@@ -169,6 +169,7 @@ namespace WebExpress.WebApp.WebPage
             // head
             // assistive technology picks pronunciation rules from the document language
             html.AddUserAttribute("lang", context.Request?.Culture?.Name);
+            html.AddUserAttribute(PendingAttribute);
             html.Head.Title = I18N.Translate(context.Request, Title);
             html.Head.Favicons = Favicons;
             html.Head.Base = Base?.ToString();

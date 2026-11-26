@@ -42,7 +42,7 @@ namespace WebExpress.WebApp.Test.WebData
 
             Assert.Contains("<wx-prop name=\"search\">invoice</wx-prop>", island);
             Assert.Contains("<wx-prop name=\"loading\" type=\"boolean\">false</wx-prop>", island);
-            Assert.Contains("<wx-prop name=\"items\" type=\"json\">[&quot;a&quot;,&quot;b&quot;]</wx-prop>", island);
+            Assert.Contains("<wx-prop name=\"items\" type=\"json\">[\"a\",\"b\"]</wx-prop>", island);
         }
 
         /// <summary>

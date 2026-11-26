@@ -112,6 +112,14 @@ function makeSearch(options = {}) {
     };
 }
 
+test("the mounted host keeps a marker of its own for the header sizing", () => {
+    const search = makeSearch();
+
+    // the registration class is gone once mounted, so the stylesheet cannot size the box by it
+    assert.ok(search.host.classList.contains("wx-search"));
+    assert.ok(search.host.classList.contains("wx-search-endpoint"), "the live box is told apart from the plain search");
+});
+
 test("the term and the entry cap travel in the query string", async () => {
     const search = makeSearch({
         maxItems: 5,
