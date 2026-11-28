@@ -97,3 +97,33 @@ test("restform destroy tears down without throwing", () => {
 
     assert.doesNotThrow(() => ctrl.destroy());
 });
+
+/**
+ * Verifies that switches submit boolean states while explicit checkbox values survive.
+ */
+test("restform submits switches as booleans and preserves explicit checkbox values", () => {
+    // arrange
+    const { wxapp, createElement } = load();
+    const element = createElement("form");
+    const checkbox = createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.name = "IsAbstract";
+    // browsers expose the default value even when the attribute is absent
+    checkbox.value = "on";
+    checkbox.checked = true;
+    element.elements = [checkbox];
+    const ctrl = new wxapp.RestFormCtrl(element);
+
+    // act
+    const enabled = ctrl._buildPayload();
+    checkbox.checked = false;
+    const disabled = ctrl._buildPayload();
+    checkbox.checked = true;
+    checkbox.setAttribute("value", "on");
+    const explicit = ctrl._buildPayload();
+
+    // validation
+    assert.equal(enabled.IsAbstract, true);
+    assert.equal(disabled.IsAbstract, false);
+    assert.equal(explicit.IsAbstract, "on");
+});

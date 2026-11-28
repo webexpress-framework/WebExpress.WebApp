@@ -950,7 +950,8 @@ webexpress.webapp.RestFormCtrl = class extends webexpress.webapp.Data {
             let value = (ctrl && typeof ctrl.value !== "undefined") ? ctrl.value : el.value;
 
             if (el.type === "checkbox") {
-                const val = el.checked ? (value || true) : false;
+                // switches have no value attribute; the browser default "on" is not a boolean
+                const val = el.checked ? (el.hasAttribute("value") ? (value || true) : true) : false;
                 if (!Object.prototype.hasOwnProperty.call(data, name)) {
                     data[name] = val;
                 } else {
